@@ -1,14 +1,13 @@
 # screens/components/buttons.py
 """
-Современные кнопки в стиле Material Design
+Современные кнопки с мягким зелёным цветом
 """
 from kivy.uix.button import Button
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.image import Image
-from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, RoundedRectangle
 from kivy.animation import Animation
-from kivy.properties import ListProperty, StringProperty, NumericProperty
+from kivy.properties import ListProperty
 from kivy.metrics import dp, sp
 from config.theme import theme
 from config.logger_config import get_logger
@@ -17,10 +16,10 @@ logger = get_logger('UI')
 
 
 class GradientButton(Button):
-    """Кнопка с градиентным фоном"""
+    """Кнопка с мягким зелёным фоном"""
 
-    gradient_start = ListProperty([0.4, 0.2, 0.9, 1])  # PRIMARY
-    gradient_end = ListProperty([0.2, 0.1, 0.5, 1])  # PRIMARY_VARIANT
+    gradient_start = ListProperty([0.46, 0.70, 0.71, 1])  # RGB: 118,179,182
+    gradient_end = ListProperty([0.35, 0.56, 0.57, 1])  # Тёмная версия
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -33,7 +32,7 @@ class GradientButton(Button):
         self.size = (dp(200), dp(50))
 
         with self.canvas.before:
-            # Градиент (упрощённо - сплошной цвет)
+            # Мягкий зелёный фон
             Color(*self.gradient_start)
             self.rect = RoundedRectangle(
                 pos=self.pos,
@@ -42,7 +41,7 @@ class GradientButton(Button):
             )
 
         self.bind(pos=self.update_rect, size=self.update_rect)
-        logger.debug('Создана градиентная кнопка')
+        logger.debug('Создана кнопка с мягким зелёным цветом')
 
     def update_rect(self, *args):
         self.rect.pos = self.pos
@@ -65,18 +64,20 @@ class IconButton(ButtonBehavior, Image):
 
 
 class FloatingActionButton(GradientButton):
-    """Плавающая кнопка действия (FAB)"""
+    """Плавающая кнопка действия (FAB) - мягкий зелёный"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.size = (dp(56), dp(56))
+        self.size = (dp(60), dp(60))
+        self.gradient_start = [0.46, 0.70, 0.71, 1]  # Мягкий зелёный
+        self.gradient_end = [0.35, 0.56, 0.57, 1]  # Тёмная версия
 
         with self.canvas.before:
-            Color(*theme.SECONDARY)
+            Color(*self.gradient_start)
             self.rect = RoundedRectangle(
                 pos=self.pos,
                 size=self.size,
-                radius=[dp(28)]
+                radius=[dp(30)]
             )
 
-        logger.debug('Создана FAB кнопка')
+        logger.debug('Создана FAB кнопка с мягким зелёным цветом')

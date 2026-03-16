@@ -1,12 +1,12 @@
 # screens/components/cards.py
 """
 Современные карточки для отображения контента
+В бежевых тонах
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
-from kivy.graphics import Color, RoundedRectangle, Rectangle
+from kivy.graphics import Color, RoundedRectangle
 from kivy.properties import StringProperty, NumericProperty, ListProperty
 from kivy.metrics import dp, sp
 from config.theme import theme
@@ -18,8 +18,8 @@ logger = get_logger('UI')
 class Card(ButtonBehavior, BoxLayout):
     """Базовая карточка с тенью и скруглением"""
 
-    background_color = ListProperty([1, 1, 1, 1])
-    elevation = NumericProperty(2)  # 1-5
+    background_color = ListProperty([1, 1, 1, 1])  # Белый
+    elevation = NumericProperty(2)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -31,15 +31,15 @@ class Card(ButtonBehavior, BoxLayout):
 
         # Рисуем фон с тенью
         with self.canvas.before:
-            # Тень
-            Color(0, 0, 0, 0.1 * self.elevation)
+            # Тень (очень мягкая для бежевого фона)
+            Color(0, 0, 0, 0.08 * self.elevation)
             self.shadow = RoundedRectangle(
                 pos=(self.x + dp(2), self.y - dp(2)),
                 size=self.size,
                 radius=[theme.CORNER_RADIUS]
             )
 
-            # Основной фон
+            # Основной фон (белый с лёгким бежевым оттенком)
             Color(*self.background_color)
             self.rect = RoundedRectangle(
                 pos=self.pos,
@@ -48,7 +48,6 @@ class Card(ButtonBehavior, BoxLayout):
             )
 
         self.bind(pos=self.update_rect, size=self.update_rect)
-        logger.debug('Создана карточка')
 
     def update_rect(self, *args):
         self.rect.pos = self.pos
@@ -56,16 +55,9 @@ class Card(ButtonBehavior, BoxLayout):
         self.shadow.pos = (self.x + dp(2), self.y - dp(2))
         self.shadow.size = self.size
 
-    def on_press(self):
-        """Анимация нажатия"""
-        self.opacity = 0.8
-
-    def on_release(self):
-        self.opacity = 1.0
-
 
 class SongCard(Card):
-    """Карточка песни с названием и исполнителем"""
+    """Карточка песни"""
 
     song_title = StringProperty('')
     artist = StringProperty('')
@@ -73,11 +65,12 @@ class SongCard(Card):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.height = dp(120)
+        self.background_color = [1, 1, 1, 1]  # Белый фон
 
-        # Контейнер для контента
+        # Контейнер
         content = BoxLayout(orientation='vertical', spacing=dp(4))
 
-        # Название песни
+        # Название песни (тёмно-серое)
         title_label = Label(
             text=self.song_title,
             font_size=theme.FONT_SIZE_H3,
@@ -88,7 +81,7 @@ class SongCard(Card):
         )
         title_label.bind(size=title_label.setter('text_size'))
 
-        # Исполнитель
+        # Исполнитель (серый)
         artist_label = Label(
             text=self.artist,
             font_size=theme.FONT_SIZE_BODY,
@@ -106,27 +99,26 @@ class SongCard(Card):
         self.bind(song_title=lambda x, y: setattr(title_label, 'text', y))
         self.bind(artist=lambda x, y: setattr(artist_label, 'text', y))
 
-        logger.debug(f'Создана карточка песни: {self.song_title}')
-
 
 class ChordCard(Card):
-    """Карточка аккорда"""
+    """Карточка аккорда с зелёным акцентом"""
 
     chord_name = StringProperty('')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.height = dp(100)
+        self.background_color = [1, 1, 1, 1]  # Белый фон
 
         # Контейнер
         content = BoxLayout()
 
-        # Название аккорда крупно
+        # Название аккорда (зелёное!)
         name_label = Label(
             text=self.chord_name,
             font_size=theme.FONT_SIZE_H1,
             bold=True,
-            color=theme.PRIMARY,
+            color=theme.PRIMARY,  # Теперь будет мягкий зелёный #76B3B6
             halign='center'
         )
         name_label.bind(size=name_label.setter('text_size'))
@@ -135,7 +127,6 @@ class ChordCard(Card):
         self.add_widget(content)
 
         self.bind(chord_name=lambda x, y: setattr(name_label, 'text', y))
-        logger.debug(f'Создана карточка аккорда: {self.chord_name}')
 
 
 class TermCard(Card):
@@ -147,11 +138,12 @@ class TermCard(Card):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.height = dp(150)
+        self.background_color = [1, 1, 1, 1]  # Белый фон
 
         # Контейнер
         content = BoxLayout(orientation='vertical', spacing=dp(4))
 
-        # Термин
+        # Термин (тёмно-серый)
         term_label = Label(
             text=self.term,
             font_size=theme.FONT_SIZE_H3,
@@ -162,7 +154,7 @@ class TermCard(Card):
         )
         term_label.bind(size=term_label.setter('text_size'))
 
-        # Определение
+        # Определение (серый)
         def_label = Label(
             text=self.definition,
             font_size=theme.FONT_SIZE_BODY,
@@ -179,5 +171,3 @@ class TermCard(Card):
 
         self.bind(term=lambda x, y: setattr(term_label, 'text', y))
         self.bind(definition=lambda x, y: setattr(def_label, 'text', y))
-
-        logger.debug(f'Создана карточка термина: {self.term}')
