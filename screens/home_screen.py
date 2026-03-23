@@ -1,10 +1,10 @@
 # screens/home_screen.py
 """
-Главный экран
+Главный экран с Material Icons
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp
 from config.theme import theme
@@ -28,11 +28,11 @@ class HomeScreen(MDScreen):
 
         # Заголовок
         title = MDLabel(
-            text="🎸 GuitarApp",
+            text="GuitarFuns",
             font_style="H3",
             halign="center",
             size_hint_y=None,
-            height=dp(100),
+            height=dp(80),
             theme_text_color="Primary"
         )
 
@@ -56,7 +56,8 @@ class HomeScreen(MDScreen):
         )
 
         tuner_btn = MDRaisedButton(
-            text="🎤 Открыть тюнер",
+            text="Открыть тюнер",
+            icon="tune",
             size_hint=(0.8, None),
             height=dp(50),
             pos_hint={"center_x": 0.5},
@@ -65,7 +66,8 @@ class HomeScreen(MDScreen):
         )
 
         songs_btn = MDRaisedButton(
-            text="🎵 Список песен",
+            text="Список песен",
+            icon="music-note",
             size_hint=(0.8, None),
             height=dp(50),
             pos_hint={"center_x": 0.5},
@@ -74,7 +76,8 @@ class HomeScreen(MDScreen):
         )
 
         chords_btn = MDRaisedButton(
-            text="🎸 Аккорды",
+            text="Аккорды",
+            icon="guitar-acoustic",
             size_hint=(0.8, None),
             height=dp(50),
             pos_hint={"center_x": 0.5},
@@ -86,10 +89,29 @@ class HomeScreen(MDScreen):
         buttons_layout.add_widget(songs_btn)
         buttons_layout.add_widget(chords_btn)
 
+        # Информационный блок
+        info_layout = MDBoxLayout(
+            orientation='vertical',
+            spacing=dp(5),
+            size_hint_y=None,
+            height=dp(80),
+            padding=[dp(10), 0, dp(10), 0]
+        )
+
+        info_label = MDLabel(
+            text="Нажмите на иконку 🌐 вверху, чтобы сменить язык",
+            font_style="Caption",
+            halign="center",
+            theme_text_color="Hint"
+        )
+
+        info_layout.add_widget(info_label)
+
         # Собираем всё вместе
         layout.add_widget(title)
         layout.add_widget(subtitle)
         layout.add_widget(buttons_layout)
+        layout.add_widget(info_layout)
 
         self.add_widget(layout)
 
