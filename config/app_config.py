@@ -1,36 +1,34 @@
 # config/app_config.py
-"""
-Общие настройки приложения
-"""
+import os
+import sys
 
 
 class AppConfig:
-    # Версия приложения
     VERSION = '1.0.0'
+    APP_NAME = 'GuitarFuns'
 
-    # Название
-    APP_NAME = 'GuitarApp'
+    # Определяем окружение
+    IS_DEVELOPMENT = os.getenv('ENVIRONMENT', 'development') == 'development'
 
-    # Настройки сервера
-    SERVER_URL = 'https://api.guitarapp.com'  # Заменишь на свой
-    API_TIMEOUT = 10  # секунд
+    # API URL - будем использовать реальный домен
+    # Пока DNS не обновился, можно использовать IP для теста
+    API_BASE_URL = "https://api.guitarfuns.ru"  # Когда DNS обновится
+    # API_BASE_URL = "http://217.179.51.161:8000"  # Временный IP для теста
 
-    # Настройки тюнера
-    TUNER_SAMPLE_RATE = 44100
-    TUNER_CHUNK_SIZE = 1024
+    # API endpoints
+    API_AUTH_LOGIN = f"{API_BASE_URL}/auth/login"
+    API_AUTH_REGISTER = f"{API_BASE_URL}/auth/register"
+    API_AUTH_GOOGLE = f"{API_BASE_URL}/auth/google"
+    API_AUTH_VK = f"{API_BASE_URL}/auth/vk"
+    API_AUTH_REFRESH = f"{API_BASE_URL}/auth/refresh"
+    API_AUTH_LOGOUT = f"{API_BASE_URL}/auth/logout"
+    API_USER_ME = f"{API_BASE_URL}/users/me"
+    API_USER_UPDATE = f"{API_BASE_URL}/users/me"
+    API_HEALTH = f"{API_BASE_URL}/health"
 
-    # Настройки путей
-    CHORD_IMAGES_DIR = 'chords_cache'
-
-    # Цвета приложения (для будущего использования)
-    COLORS = {
-        'primary': '#2196F3',
-        'secondary': '#FF9800',
-        'success': '#4CAF50',
-        'error': '#F44336',
-        'background': '#F5F5F5'
-    }
+    # Таймауты
+    CONNECTION_TIMEOUT = 10
+    READ_TIMEOUT = 30
 
 
-# Создаем глобальный экземпляр конфига
 config = AppConfig()

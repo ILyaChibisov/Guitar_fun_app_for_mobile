@@ -1,26 +1,26 @@
 # screens/home_screen.py
 """
-Главный экран: авторизация в карточке, быстрый доступ - кнопками
+Главный экран с авторизацией через Google и VK
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton, MDIconButton
+from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
-from kivymd.uix.scrollview import MDScrollView
+from kivymd.uix.dialog import MDDialog
 from kivymd.uix.snackbar import Snackbar
 from kivy.metrics import dp
 from kivy.animation import Animation
-from kivy.graphics import Color, Rectangle
-from kivy.utils import rgba
+from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import screen_logger
+from api.client import api
 
 logger = screen_logger('Home')
 
 
 class AuthButton(MDRaisedButton):
-    """Кнопка авторизации с иконкой и текстом"""
+    """Кнопка авторизации"""
 
     def __init__(self, icon, text, bg_color, text_color=[1, 1, 1, 1], **kwargs):
         super().__init__(**kwargs)
@@ -36,33 +36,31 @@ class AuthButton(MDRaisedButton):
         self.radius = [theme.CORNER_RADIUS_SMALL]
 
     def on_press(self):
-        """Анимация нажатия"""
         anim = Animation(opacity=0.8, duration=0.05)
         anim += Animation(opacity=1, duration=0.1)
         anim.start(self)
 
 
 class HomeScreen(MDScreen):
-    """Главный экран: авторизация в карточке, быстрый доступ - кнопками"""
+    """Главный экран с авторизацией через Google и VK"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.user = None
+
         # Устанавливаем цвет фона
+        from kivy.graphics import Color, Rectangle
+        from kivy.utils import rgba
         with self.canvas.before:
             Color(*rgba(theme.BACKGROUND))
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-
         self.bind(pos=self._update_bg, size=self._update_bg)
 
-        # Главный контейнер (скроллируемый)
-        scroll = MDScrollView(
-            size_hint=(1, 1),
-            bar_width=dp(4),
-            bar_color=theme.PRIMARY_LIGHT
-        )
+        # Главный контейнер
+        from kivymd.uix.scrollview import MDScrollView
+        scroll = MDScrollView(size_hint=(1, 1), bar_width=dp(4), bar_color=theme.PRIMARY_LIGHT)
 
-        # Основной контейнер с отступами
         layout = MDBoxLayout(
             orientation='vertical',
             padding=dp(20),
@@ -71,7 +69,7 @@ class HomeScreen(MDScreen):
             adaptive_height=True
         )
 
-        # === Заголовок приложения ===
+        # Заголовок
         title = MDLabel(
             text="GuitarFuns",
             font_style="H3",
@@ -82,11 +80,21 @@ class HomeScreen(MDScreen):
             bold=True
         )
 
-        # === КАРТОЧКА АВТОРИЗАЦИИ ===
+        # Статус авторизации
+        self.auth_status = MDLabel(
+            text="",
+            halign="center",
+            size_hint_y=None,
+            height=dp(40),
+            theme_text_color="Secondary",
+            font_style="Caption"
+        )
+
+        # Карточка авторизации
         auth_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(220),
+            height=dp(200),
             padding=dp(16),
             spacing=dp(12),
             elevation=4,
@@ -94,9 +102,8 @@ class HomeScreen(MDScreen):
             md_bg_color=theme.SURFACE
         )
 
-        # Заголовок карточки авторизации
         auth_title = MDLabel(
-            text="Авторизация",
+            text="Вход через соцсети",
             font_style="H6",
             halign="center",
             size_hint_y=None,
@@ -105,30 +112,41 @@ class HomeScreen(MDScreen):
             bold=True
         )
 
-        # Кнопка авторизации через Google
-        google_btn = AuthButton(
+        # Кнопка Google
+        self.google_btn = AuthButton(
             icon="google",
             text="Войти через Google",
             bg_color=[0.96, 0.96, 0.96, 1],
             text_color=[0.2, 0.2, 0.2, 1]
         )
-        google_btn.bind(on_release=self.login_google)
+        self.google_btn.bind(on_release=self.login_google)
 
-        # Кнопка авторизации через ВКонтакте
-        vk_btn = AuthButton(
+        # Кнопка VK
+        self.vk_btn = AuthButton(
             icon="vk",
             text="Войти через ВКонтакте",
             bg_color=[0.27, 0.55, 0.76, 1],
             text_color=[1, 1, 1, 1]
         )
-        vk_btn.bind(on_release=self.login_vk)
+        self.vk_btn.bind(on_release=self.login_vk)
 
-        # Собираем карточку авторизации
+        # Кнопка выхода (показывается только когда авторизован)
+        self.logout_btn = AuthButton(
+            icon="logout",
+            text="Выйти",
+            bg_color=[0.9, 0.9, 0.9, 1],
+            text_color=[0.5, 0.5, 0.5, 1]
+        )
+        self.logout_btn.bind(on_release=self.logout)
+        self.logout_btn.opacity = 0
+        self.logout_btn.disabled = True
+
         auth_card.add_widget(auth_title)
-        auth_card.add_widget(google_btn)
-        auth_card.add_widget(vk_btn)
+        auth_card.add_widget(self.google_btn)
+        auth_card.add_widget(self.vk_btn)
+        auth_card.add_widget(self.logout_btn)
 
-        # === БЛОК БЫСТРОГО ДОСТУПА (без карточки, просто кнопки) ===
+        # Быстрый доступ
         quick_title = MDLabel(
             text="Быстрый доступ",
             font_style="H6",
@@ -139,7 +157,6 @@ class HomeScreen(MDScreen):
             bold=True
         )
 
-        # Контейнер для кнопок быстрого доступа
         buttons_layout = MDBoxLayout(
             orientation='vertical',
             spacing=dp(10),
@@ -147,7 +164,6 @@ class HomeScreen(MDScreen):
             height=dp(170)
         )
 
-        # Кнопка тюнера
         tuner_btn = MDRaisedButton(
             text="Открыть тюнер",
             icon="tune",
@@ -161,7 +177,6 @@ class HomeScreen(MDScreen):
         )
         tuner_btn.radius = [theme.CORNER_RADIUS_SMALL]
 
-        # Кнопка списка песен
         songs_btn = MDRaisedButton(
             text="Список песен",
             icon="music-note",
@@ -169,13 +184,10 @@ class HomeScreen(MDScreen):
             height=dp(48),
             pos_hint={"center_x": 0.5},
             md_bg_color=theme.PRIMARY,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
             on_release=lambda x: self.navigate_to('songs')
         )
         songs_btn.radius = [theme.CORNER_RADIUS_SMALL]
 
-        # Кнопка аккордов
         chords_btn = MDRaisedButton(
             text="Аккорды",
             icon="guitar-acoustic",
@@ -183,8 +195,6 @@ class HomeScreen(MDScreen):
             height=dp(48),
             pos_hint={"center_x": 0.5},
             md_bg_color=theme.PRIMARY,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
             on_release=lambda x: self.navigate_to('chords')
         )
         chords_btn.radius = [theme.CORNER_RADIUS_SMALL]
@@ -193,52 +203,134 @@ class HomeScreen(MDScreen):
         buttons_layout.add_widget(songs_btn)
         buttons_layout.add_widget(chords_btn)
 
-        # === Добавляем все элементы в layout ===
         layout.add_widget(title)
+        layout.add_widget(self.auth_status)
         layout.add_widget(auth_card)
         layout.add_widget(quick_title)
         layout.add_widget(buttons_layout)
 
-        # Добавляем небольшой отступ снизу
         spacer = MDBoxLayout(size_hint_y=None, height=dp(20))
         layout.add_widget(spacer)
 
         scroll.add_widget(layout)
         self.add_widget(scroll)
 
-        logger.info('Главный экран создан: авторизация в карточке, быстрый доступ - кнопками')
+        # Проверяем авторизацию при запуске
+        Clock.schedule_once(self.check_auth, 1)
+
+        logger.info('Главный экран создан (Google/VK авторизация)')
 
     def _update_bg(self, *args):
-        """Обновляет фон при изменении размера"""
         self.bg_rect.pos = self.pos
         self.bg_rect.size = self.size
 
     def navigate_to(self, screen_name):
-        """Переход к другому экрану"""
         if hasattr(self, 'manager') and self.manager:
-            logger.info(f'Переход на экран: {screen_name}')
             self.manager.current = screen_name
+
+    def check_auth(self, dt):
+        """Проверяет авторизацию при запуске"""
+        if api.access_token:
+            self.auth_status.text = "🔐 Проверка авторизации..."
+            api.get_current_user(
+                on_success=self.on_auth_success,
+                on_failure=self.on_auth_failure
+            )
         else:
-            logger.error(f'Невозможно перейти на {screen_name}: менеджер экранов не найден')
+            self.auth_status.text = "👤 Не авторизован"
+
+    def on_auth_success(self, user):
+        """Успешная авторизация"""
+        self.user = user
+        self.auth_status.text = f"✅ Авторизован: {user.get('username')}"
+
+        # Скрываем кнопки входа, показываем кнопку выхода
+        self.google_btn.opacity = 0
+        self.google_btn.disabled = True
+        self.vk_btn.opacity = 0
+        self.vk_btn.disabled = True
+        self.logout_btn.opacity = 1
+        self.logout_btn.disabled = False
+
+        Snackbar(text=f"Добро пожаловать, {user.get('username')}! 🎸").open()
+        logger.info(f'Пользователь авторизован: {user.get("username")}')
+
+    def on_auth_failure(self, req, error):
+        """Ошибка авторизации"""
+        self.auth_status.text = "👤 Не авторизован"
+        logger.warning('Авторизация не пройдена')
 
     def login_google(self, instance):
-        """Обработчик авторизации через Google"""
+        """Вход через Google"""
         logger.info("Попытка входа через Google")
-        Snackbar(
-            text="🔐 Вход через Google будет доступен в следующей версии",
-            duration=2,
-            snackbar_x="10dp",
-            snackbar_y="10dp",
-            radius=[theme.CORNER_RADIUS_SMALL]
-        ).open()
+
+        self.auth_status.text = "⏳ Вход через Google..."
+
+        # TODO: Реальная интеграция с Google OAuth
+        # Сейчас имитация успешного входа
+        Clock.schedule_once(lambda dt: self.simulate_auth_success(
+            username="google_user",
+            email="user@gmail.com"
+        ), 1)
 
     def login_vk(self, instance):
-        """Обработчик авторизации через ВКонтакте"""
+        """Вход через ВКонтакте"""
         logger.info("Попытка входа через ВКонтакте")
-        Snackbar(
-            text="🔐 Вход через ВКонтакте будет доступен в следующей версии",
-            duration=2,
-            snackbar_x="10dp",
-            snackbar_y="10dp",
-            radius=[theme.CORNER_RADIUS_SMALL]
-        ).open()
+
+        self.auth_status.text = "⏳ Вход через ВКонтакте..."
+
+        # TODO: Реальная интеграция с VK OAuth
+        # Сейчас имитация успешного входа
+        Clock.schedule_once(lambda dt: self.simulate_auth_success(
+            username="vk_user",
+            email="user@vk.com"
+        ), 1)
+
+    def simulate_auth_success(self, username, email):
+        """Имитация успешной авторизации (временная заглушка)"""
+        # Сохраняем токены (заглушка)
+        api.access_token = "mock_access_token"
+        api.refresh_token = "mock_refresh_token"
+        api._save_tokens()
+
+        # Сохраняем данные пользователя
+        self.user = {
+            'id': 1,
+            'username': username,
+            'email': email,
+            'full_name': None,
+            'avatar_url': None
+        }
+        api.user_data = self.user
+
+        self.on_auth_success(self.user)
+
+    def logout(self, instance):
+        """Выход из аккаунта"""
+        self.auth_status.text = "⏳ Выход..."
+
+        api.logout(
+            on_success=self.on_logout_success,
+            on_failure=self.on_logout_failure
+        )
+
+    def on_logout_success(self, result):
+        """Успешный выход"""
+        self.user = None
+        self.auth_status.text = "👤 Не авторизован"
+
+        # Показываем кнопки входа, скрываем кнопку выхода
+        self.google_btn.opacity = 1
+        self.google_btn.disabled = False
+        self.vk_btn.opacity = 1
+        self.vk_btn.disabled = False
+        self.logout_btn.opacity = 0
+        self.logout_btn.disabled = True
+
+        Snackbar(text="👋 Вы вышли из аккаунта").open()
+        logger.info('Пользователь вышел')
+
+    def on_logout_failure(self, req, error):
+        """Ошибка выхода"""
+        self.auth_status.text = "👤 Не авторизован"
+        Snackbar(text="Ошибка выхода").open()
