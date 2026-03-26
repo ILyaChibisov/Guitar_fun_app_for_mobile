@@ -298,7 +298,7 @@ class GuitarFunsApp(MDApp):
         return top_bar
 
     def create_bottom_navigation(self):
-        """Создаёт нижнюю навигацию с Material Icons"""
+        """Создаёт нижнюю навигацию с иконками и текстом"""
 
         bottom_nav = MDBottomNavigation(
             size_hint=(1, 1),
@@ -306,21 +306,19 @@ class GuitarFunsApp(MDApp):
             selected_color_background=theme.PRIMARY
         )
 
-        # Элементы навигации (Material Icons)
+        # Элементы навигации
         nav_items = [
-            {"icon": "home", "text": "Главная", "screen": "home"},
-            {"icon": "music-note", "text": "Песни", "screen": "songs"},
-            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords"},
-            {"icon": "book", "text": "Словарь", "screen": "dictionary"},
-            {"icon": "tune", "text": "Тюнер", "screen": "tuner"},
-            {"icon": "heart", "text": "Избранное", "screen": "favorites"}
+            {"icon": "home", "text": "Главная", "screen": "home", "screen_class": "home_screen"},
+            {"icon": "music-note", "text": "Песни", "screen": "songs", "screen_class": "songs_screen"},
+            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords", "screen_class": "chords_screen"},
+            {"icon": "book", "text": "Словарь", "screen": "dictionary", "screen_class": "dictionary_screen"},
+            {"icon": "tune", "text": "Тюнер", "screen": "tuner", "screen_class": "tuner_screen"},
+            {"icon": "heart", "text": "Избранное", "screen": "favorites", "screen_class": "favorites_screen"},
         ]
 
         for item in nav_items:
-            # Создаём экран для каждого элемента
             screen = MDScreen(name=item["screen"])
 
-            # Добавляем контент в зависимости от экрана
             if item["screen"] == "home":
                 from screens.home_screen import HomeScreen
                 content = HomeScreen()
@@ -346,7 +344,6 @@ class GuitarFunsApp(MDApp):
                 content = FavoritesScreen()
                 screen.add_widget(content)
 
-            # Создаём элемент навигации
             nav_item = MDBottomNavigationItem(
                 name=item["screen"],
                 text=item["text"],
@@ -354,6 +351,22 @@ class GuitarFunsApp(MDApp):
             )
             nav_item.add_widget(screen)
             bottom_nav.add_widget(nav_item)
+
+        # ========== ДОБАВЛЯЕМ ТЕСТОВЫЙ ЭКРАН ==========
+        # Тестовый экран для проверки API
+        test_screen = MDScreen(name="test")
+        from screens.test_screen import TestScreen
+        test_content = TestScreen()
+        test_screen.add_widget(test_content)
+
+        test_nav_item = MDBottomNavigationItem(
+            name="test",
+            text="Тест",
+            icon="api"
+        )
+        test_nav_item.add_widget(test_screen)
+        bottom_nav.add_widget(test_nav_item)
+        # =============================================
 
         # Устанавливаем начальный экран
         bottom_nav.switch_tab("home")
