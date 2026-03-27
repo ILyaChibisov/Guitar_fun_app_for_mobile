@@ -1,13 +1,13 @@
 # screens/home_screen.py
 """
-Главный экран с авторизацией через Google и VK
+Главный экран с компактным модальным окном авторизации
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
-from kivymd.uix.dialog import MDDialog
+from kivymd.uix.textfield import MDTextField
 from kivymd.uix.snackbar import Snackbar
 from kivy.metrics import dp
 from kivy.animation import Animation
@@ -20,8 +20,6 @@ logger = screen_logger('Home')
 
 
 class AuthButton(MDRaisedButton):
-    """Кнопка авторизации"""
-
     def __init__(self, icon, text, bg_color, text_color=[1, 1, 1, 1], **kwargs):
         super().__init__(**kwargs)
         self.icon = icon
@@ -29,9 +27,9 @@ class AuthButton(MDRaisedButton):
         self.md_bg_color = bg_color
         self.theme_text_color = "Custom"
         self.text_color = text_color
-        self.size_hint = (1, None)
-        self.height = dp(56)
-        self.font_size = dp(16)
+        self.size_hint = (0.9, None)
+        self.height = dp(44)
+        self.font_size = dp(13)
         self.ripple_behavior = True
         self.radius = [theme.CORNER_RADIUS_SMALL]
 
@@ -41,15 +39,283 @@ class AuthButton(MDRaisedButton):
         anim.start(self)
 
 
-class HomeScreen(MDScreen):
-    """Главный экран с авторизацией через Google и VK"""
+class AuthModal(MDCard):
+    def __init__(self, on_close=None, on_login_success=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_close_callback = on_close
+        self.on_login_success_callback = on_login_success
 
+        self.orientation = 'vertical'
+        self.size_hint = (0.85, None)
+        self.height = dp(340)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.elevation = 4
+        self.radius = [theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS]
+        self.md_bg_color = theme.SURFACE
+        self.padding = [dp(16), dp(16), dp(16), dp(16)]
+        self.spacing = dp(10)
+
+        title = MDLabel(text="Войдите в свой аккаунт", font_style="H6", halign="center",
+                        size_hint_y=None, height=dp(32), theme_text_color="Primary", bold=True)
+        self.add_widget(title)
+
+        subtitle = MDLabel(text="чтобы получить доступ ко всем функциям приложения",
+                           font_style="Caption", halign="center", size_hint_y=None,
+                           height=dp(28), theme_text_color="Secondary")
+        self.add_widget(subtitle)
+
+        self.add_widget(MDBoxLayout(size_hint_y=None, height=dp(4)))
+
+        google_btn = AuthButton(icon="google", text="Войти через Google",
+                                bg_color=[0.96, 0.96, 0.96, 1], text_color=[0.2, 0.2, 0.2, 1])
+        google_btn.pos_hint = {'center_x': 0.5}
+        google_btn.bind(on_release=self.login_google)
+        self.add_widget(google_btn)
+
+        login_btn = AuthButton(icon="account", text="Войти по логину и паролю",
+                               bg_color=theme.PRIMARY_LIGHT, text_color=[1, 1, 1, 1])
+        login_btn.pos_hint = {'center_x': 0.5}
+        login_btn.bind(on_release=self.show_login_form)
+        self.add_widget(login_btn)
+
+        register_btn = AuthButton(icon="account-plus", text="Зарегистрироваться",
+                                  bg_color=theme.PRIMARY, text_color=[1, 1, 1, 1])
+        register_btn.pos_hint = {'center_x': 0.5}
+        register_btn.bind(on_release=self.show_register)
+        self.add_widget(register_btn)
+
+        skip_btn = MDRaisedButton(text="Пропустить", size_hint=(0.9, None), height=dp(40),
+                                  md_bg_color=[0.95, 0.95, 0.95, 1],
+                                  theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
+                                  on_release=self.close)
+        skip_btn.pos_hint = {'center_x': 0.5}
+        skip_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        self.add_widget(skip_btn)
+
+        self.login_modal = None
+        self.register_modal = None
+
+    def close(self, instance=None):
+        if self.on_close_callback:
+            self.on_close_callback()
+        self.parent.remove_widget(self)
+
+    def login_google(self, instance):
+        self.close()
+        Snackbar(text="Вход через Google будет доступен в следующей версии").open()
+
+    def show_login_form(self, instance):
+        self.close()
+        Clock.schedule_once(lambda dt: self.show_login_modal(), 0.2)
+
+    def show_login_modal(self):
+        if self.login_modal and self.login_modal.parent:
+            return
+        self.login_modal = LoginModal(on_close=self.on_login_close, on_login_success=self.on_login_success)
+        self.parent.add_widget(self.login_modal)
+
+    def on_login_close(self):
+        self.login_modal = None
+
+    def show_register(self, instance):
+        self.close()
+        Clock.schedule_once(lambda dt: self.show_register_modal(), 0.2)
+
+    def show_register_modal(self):
+        if self.register_modal and self.register_modal.parent:
+            return
+        self.register_modal = RegisterModal(on_close=self.on_register_close, on_register_success=self.on_register_success)
+        self.parent.add_widget(self.register_modal)
+
+    def on_register_close(self):
+        self.register_modal = None
+
+    def on_register_success(self):
+        self.register_modal = None
+        Snackbar(text="✅ Регистрация успешна! Теперь войдите.").open()
+
+    def on_login_success(self):
+        self.login_modal = None
+        if self.on_login_success_callback:
+            self.on_login_success_callback()
+
+
+class LoginModal(MDCard):
+    def __init__(self, on_close=None, on_login_success=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_close_callback = on_close
+        self.on_login_success_callback = on_login_success
+
+        self.orientation = 'vertical'
+        self.size_hint = (0.85, None)
+        self.height = dp(280)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.elevation = 4
+        self.radius = [theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS]
+        self.md_bg_color = theme.SURFACE
+        self.padding = [dp(16), dp(16), dp(16), dp(16)]
+        self.spacing = dp(12)
+
+        back_btn = MDIconButton(icon="arrow-left", pos_hint={'x': 0, 'top': 1},
+                                size_hint=(None, None), size=(dp(32), dp(32)),
+                                theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
+                                on_release=self.close)
+        self.add_widget(back_btn)
+
+        title = MDLabel(text="Вход в аккаунт", font_style="H6", halign="center",
+                        size_hint_y=None, height=dp(36), theme_text_color="Primary", bold=True)
+        self.add_widget(title)
+
+        self.username_field = MDTextField(hint_text="Имя пользователя или Email", mode="round",
+                                          size_hint_y=None, height=dp(56),
+                                          padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
+        self.add_widget(self.username_field)
+
+        self.password_field = MDTextField(hint_text="Пароль", mode="round", password=True,
+                                          size_hint_y=None, height=dp(56),
+                                          padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
+        self.add_widget(self.password_field)
+
+        buttons_box = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(44))
+
+        cancel_btn = MDRaisedButton(text="Отмена", size_hint=(0.5, 1),
+                                    md_bg_color=[0.95, 0.95, 0.95, 1],
+                                    theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
+                                    on_release=self.close)
+        cancel_btn.radius = [theme.CORNER_RADIUS_SMALL]
+
+        login_btn = MDRaisedButton(text="Войти", size_hint=(0.5, 1),
+                                   md_bg_color=theme.PRIMARY,
+                                   theme_text_color="Custom", text_color=[1, 1, 1, 1],
+                                   on_release=self.do_login)
+        login_btn.radius = [theme.CORNER_RADIUS_SMALL]
+
+        buttons_box.add_widget(cancel_btn)
+        buttons_box.add_widget(login_btn)
+        self.add_widget(buttons_box)
+
+    def close(self, instance=None):
+        if self.on_close_callback:
+            self.on_close_callback()
+        self.parent.remove_widget(self)
+
+    def do_login(self, instance):
+        username = self.username_field.text
+        password = self.password_field.text
+        if not username or not password:
+            Snackbar(text="Заполните все поля").open()
+            return
+        api.login(username=username, password=password,
+                  on_success=self.on_login_success, on_failure=self.on_login_failure)
+
+    def on_login_success(self, result):
+        Snackbar(text="✅ Вход выполнен успешно!").open()
+        self.close()
+        if self.on_login_success_callback:
+            self.on_login_success_callback()
+
+    def on_login_failure(self, req, error):
+        Snackbar(text="❌ Неверное имя пользователя или пароль").open()
+
+
+class RegisterModal(MDCard):
+    def __init__(self, on_close=None, on_register_success=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_close_callback = on_close
+        self.on_register_success_callback = on_register_success
+
+        self.orientation = 'vertical'
+        self.size_hint = (0.85, None)
+        self.height = dp(340)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.elevation = 4
+        self.radius = [theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS]
+        self.md_bg_color = theme.SURFACE
+        self.padding = [dp(16), dp(16), dp(16), dp(16)]
+        self.spacing = dp(8)
+
+        back_btn = MDIconButton(icon="arrow-left", pos_hint={'x': 0, 'top': 1},
+                                size_hint=(None, None), size=(dp(32), dp(32)),
+                                theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
+                                on_release=self.close)
+        self.add_widget(back_btn)
+
+        title = MDLabel(text="Регистрация", font_style="H6", halign="center",
+                        size_hint_y=None, height=dp(32), theme_text_color="Primary", bold=True)
+        self.add_widget(title)
+
+        self.username_field = MDTextField(hint_text="Имя пользователя", mode="round",
+                                          size_hint_y=None, height=dp(52),
+                                          padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
+        self.add_widget(self.username_field)
+
+        self.email_field = MDTextField(hint_text="Email", mode="round",
+                                       size_hint_y=None, height=dp(52),
+                                       padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
+        self.add_widget(self.email_field)
+
+        self.password_field = MDTextField(hint_text="Пароль", mode="round", password=True,
+                                          size_hint_y=None, height=dp(52),
+                                          padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
+        self.add_widget(self.password_field)
+
+        self.confirm_field = MDTextField(hint_text="Подтвердите пароль", mode="round", password=True,
+                                         size_hint_y=None, height=dp(52),
+                                         padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
+        self.add_widget(self.confirm_field)
+
+        buttons_box = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(44))
+
+        cancel_btn = MDRaisedButton(text="Отмена", size_hint=(0.5, 1),
+                                    md_bg_color=[0.95, 0.95, 0.95, 1],
+                                    theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
+                                    on_release=self.close)
+        cancel_btn.radius = [theme.CORNER_RADIUS_SMALL]
+
+        register_btn = MDRaisedButton(text="Зарегистрироваться", size_hint=(0.5, 1),
+                                      md_bg_color=theme.PRIMARY,
+                                      theme_text_color="Custom", text_color=[1, 1, 1, 1],
+                                      on_release=self.do_register)
+        register_btn.radius = [theme.CORNER_RADIUS_SMALL]
+
+        buttons_box.add_widget(cancel_btn)
+        buttons_box.add_widget(register_btn)
+        self.add_widget(buttons_box)
+
+    def close(self, instance=None):
+        if self.on_close_callback:
+            self.on_close_callback()
+        self.parent.remove_widget(self)
+
+    def do_register(self, instance):
+        username = self.username_field.text
+        email = self.email_field.text
+        password = self.password_field.text
+        confirm = self.confirm_field.text
+        if not username or not email or not password:
+            Snackbar(text="Заполните все поля").open()
+            return
+        if password != confirm:
+            Snackbar(text="Пароли не совпадают").open()
+            return
+        api.register(username=username, email=email, password=password, full_name=None,
+                     on_success=self.on_register_success, on_failure=self.on_register_failure)
+
+    def on_register_success(self, result):
+        self.close()
+        if self.on_register_success_callback:
+            self.on_register_success_callback()
+
+    def on_register_failure(self, req, error):
+        Snackbar(text="❌ Ошибка. Возможно, имя или email уже заняты.").open()
+
+
+class HomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
         self.user = None
+        self.auth_modal = None
 
-        # Устанавливаем цвет фона
         from kivy.graphics import Color, Rectangle
         from kivy.utils import rgba
         with self.canvas.before:
@@ -57,146 +323,35 @@ class HomeScreen(MDScreen):
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
-        # Главный контейнер
         from kivymd.uix.scrollview import MDScrollView
         scroll = MDScrollView(size_hint=(1, 1), bar_width=dp(4), bar_color=theme.PRIMARY_LIGHT)
 
-        layout = MDBoxLayout(
-            orientation='vertical',
-            padding=dp(20),
-            spacing=dp(20),
-            size_hint_y=None,
-            adaptive_height=True
-        )
+        layout = MDBoxLayout(orientation='vertical', padding=dp(20), spacing=dp(20),
+                             size_hint_y=None, adaptive_height=True)
 
-        # Заголовок
-        title = MDLabel(
-            text="GuitarFuns",
-            font_style="H3",
-            halign="center",
-            size_hint_y=None,
-            height=dp(100),
-            theme_text_color="Primary",
-            bold=True
-        )
+        title = MDLabel(text="GuitarFuns", font_style="H3", halign="center",
+                        size_hint_y=None, height=dp(80), theme_text_color="Primary", bold=True)
+        self.auth_status = MDLabel(text="", halign="center", size_hint_y=None, height=dp(30),
+                                   theme_text_color="Secondary", font_style="Caption")
+        quick_title = MDLabel(text="Быстрый доступ", font_style="H6", halign="center",
+                              size_hint_y=None, height=dp(36), theme_text_color="Primary", bold=True)
 
-        # Статус авторизации
-        self.auth_status = MDLabel(
-            text="",
-            halign="center",
-            size_hint_y=None,
-            height=dp(40),
-            theme_text_color="Secondary",
-            font_style="Caption"
-        )
+        buttons_layout = MDBoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, height=dp(156))
 
-        # Карточка авторизации
-        auth_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(200),
-            padding=dp(16),
-            spacing=dp(12),
-            elevation=4,
-            radius=[theme.CORNER_RADIUS],
-            md_bg_color=theme.SURFACE
-        )
-
-        auth_title = MDLabel(
-            text="Вход через соцсети",
-            font_style="H6",
-            halign="center",
-            size_hint_y=None,
-            height=dp(36),
-            theme_text_color="Primary",
-            bold=True
-        )
-
-        # Кнопка Google
-        self.google_btn = AuthButton(
-            icon="google",
-            text="Войти через Google",
-            bg_color=[0.96, 0.96, 0.96, 1],
-            text_color=[0.2, 0.2, 0.2, 1]
-        )
-        self.google_btn.bind(on_release=self.login_google)
-
-        # Кнопка VK
-        self.vk_btn = AuthButton(
-            icon="vk",
-            text="Войти через ВКонтакте",
-            bg_color=[0.27, 0.55, 0.76, 1],
-            text_color=[1, 1, 1, 1]
-        )
-        self.vk_btn.bind(on_release=self.login_vk)
-
-        # Кнопка выхода (показывается только когда авторизован)
-        self.logout_btn = AuthButton(
-            icon="logout",
-            text="Выйти",
-            bg_color=[0.9, 0.9, 0.9, 1],
-            text_color=[0.5, 0.5, 0.5, 1]
-        )
-        self.logout_btn.bind(on_release=self.logout)
-        self.logout_btn.opacity = 0
-        self.logout_btn.disabled = True
-
-        auth_card.add_widget(auth_title)
-        auth_card.add_widget(self.google_btn)
-        auth_card.add_widget(self.vk_btn)
-        auth_card.add_widget(self.logout_btn)
-
-        # Быстрый доступ
-        quick_title = MDLabel(
-            text="Быстрый доступ",
-            font_style="H6",
-            halign="center",
-            size_hint_y=None,
-            height=dp(40),
-            theme_text_color="Primary",
-            bold=True
-        )
-
-        buttons_layout = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(10),
-            size_hint_y=None,
-            height=dp(170)
-        )
-
-        tuner_btn = MDRaisedButton(
-            text="Открыть тюнер",
-            icon="tune",
-            size_hint=(0.8, None),
-            height=dp(48),
-            pos_hint={"center_x": 0.5},
-            md_bg_color=theme.PRIMARY,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            on_release=lambda x: self.navigate_to('tuner')
-        )
+        tuner_btn = MDRaisedButton(text="Тюнер", icon="tune", size_hint=(0.8, None), height=dp(44),
+                                   pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
+                                   theme_text_color="Custom", text_color=[1, 1, 1, 1],
+                                   on_release=lambda x: self.navigate_to('tuner'))
         tuner_btn.radius = [theme.CORNER_RADIUS_SMALL]
 
-        songs_btn = MDRaisedButton(
-            text="Список песен",
-            icon="music-note",
-            size_hint=(0.8, None),
-            height=dp(48),
-            pos_hint={"center_x": 0.5},
-            md_bg_color=theme.PRIMARY,
-            on_release=lambda x: self.navigate_to('songs')
-        )
+        songs_btn = MDRaisedButton(text="Песни", icon="music-note", size_hint=(0.8, None), height=dp(44),
+                                   pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
+                                   on_release=lambda x: self.navigate_to('songs'))
         songs_btn.radius = [theme.CORNER_RADIUS_SMALL]
 
-        chords_btn = MDRaisedButton(
-            text="Аккорды",
-            icon="guitar-acoustic",
-            size_hint=(0.8, None),
-            height=dp(48),
-            pos_hint={"center_x": 0.5},
-            md_bg_color=theme.PRIMARY,
-            on_release=lambda x: self.navigate_to('chords')
-        )
+        chords_btn = MDRaisedButton(text="Аккорды", icon="guitar-acoustic", size_hint=(0.8, None), height=dp(44),
+                                    pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
+                                    on_release=lambda x: self.navigate_to('chords'))
         chords_btn.radius = [theme.CORNER_RADIUS_SMALL]
 
         buttons_layout.add_widget(tuner_btn)
@@ -205,7 +360,6 @@ class HomeScreen(MDScreen):
 
         layout.add_widget(title)
         layout.add_widget(self.auth_status)
-        layout.add_widget(auth_card)
         layout.add_widget(quick_title)
         layout.add_widget(buttons_layout)
 
@@ -215,10 +369,8 @@ class HomeScreen(MDScreen):
         scroll.add_widget(layout)
         self.add_widget(scroll)
 
-        # Проверяем авторизацию при запуске
         Clock.schedule_once(self.check_auth, 1)
-
-        logger.info('Главный экран создан (Google/VK авторизация)')
+        logger.info('Главный экран создан')
 
     def _update_bg(self, *args):
         self.bg_rect.pos = self.pos
@@ -229,108 +381,40 @@ class HomeScreen(MDScreen):
             self.manager.current = screen_name
 
     def check_auth(self, dt):
-        """Проверяет авторизацию при запуске"""
         if api.access_token:
-            self.auth_status.text = "🔐 Проверка авторизации..."
-            api.get_current_user(
-                on_success=self.on_auth_success,
-                on_failure=self.on_auth_failure
-            )
+            self.auth_status.text = "🔐 Проверка..."
+            api.get_current_user(on_success=self.on_auth_success, on_failure=self.on_auth_failure)
         else:
-            self.auth_status.text = "👤 Не авторизован"
+            self.auth_status.text = "👤 Гость"
+            self.show_auth_modal()
 
     def on_auth_success(self, user):
-        """Успешная авторизация"""
         self.user = user
-        self.auth_status.text = f"✅ Авторизован: {user.get('username')}"
-
-        # Скрываем кнопки входа, показываем кнопку выхода
-        self.google_btn.opacity = 0
-        self.google_btn.disabled = True
-        self.vk_btn.opacity = 0
-        self.vk_btn.disabled = True
-        self.logout_btn.opacity = 1
-        self.logout_btn.disabled = False
-
-        Snackbar(text=f"Добро пожаловать, {user.get('username')}! 🎸").open()
+        self.auth_status.text = f"✅ {user.get('username')}"
         logger.info(f'Пользователь авторизован: {user.get("username")}')
 
     def on_auth_failure(self, req, error):
-        """Ошибка авторизации"""
-        self.auth_status.text = "👤 Не авторизован"
-        logger.warning('Авторизация не пройдена')
+        self.auth_status.text = "👤 Гость"
+        self.show_auth_modal()
 
-    def login_google(self, instance):
-        """Вход через Google"""
-        logger.info("Попытка входа через Google")
+    def show_auth_modal(self):
+        if self.auth_modal and self.auth_modal.parent:
+            return
+        self.auth_modal = AuthModal(on_close=self.on_modal_close, on_login_success=self.on_login_success)
+        self.add_widget(self.auth_modal)
 
-        self.auth_status.text = "⏳ Вход через Google..."
+    def on_modal_close(self):
+        self.auth_modal = None
 
-        # TODO: Реальная интеграция с Google OAuth
-        # Сейчас имитация успешного входа
-        Clock.schedule_once(lambda dt: self.simulate_auth_success(
-            username="google_user",
-            email="user@gmail.com"
-        ), 1)
+    def on_login_success(self):
+        self.auth_modal = None
+        self.check_auth(0)
 
-    def login_vk(self, instance):
-        """Вход через ВКонтакте"""
-        logger.info("Попытка входа через ВКонтакте")
-
-        self.auth_status.text = "⏳ Вход через ВКонтакте..."
-
-        # TODO: Реальная интеграция с VK OAuth
-        # Сейчас имитация успешного входа
-        Clock.schedule_once(lambda dt: self.simulate_auth_success(
-            username="vk_user",
-            email="user@vk.com"
-        ), 1)
-
-    def simulate_auth_success(self, username, email):
-        """Имитация успешной авторизации (временная заглушка)"""
-        # Сохраняем токены (заглушка)
-        api.access_token = "mock_access_token"
-        api.refresh_token = "mock_refresh_token"
-        api._save_tokens()
-
-        # Сохраняем данные пользователя
-        self.user = {
-            'id': 1,
-            'username': username,
-            'email': email,
-            'full_name': None,
-            'avatar_url': None
-        }
-        api.user_data = self.user
-
-        self.on_auth_success(self.user)
-
-    def logout(self, instance):
-        """Выход из аккаунта"""
-        self.auth_status.text = "⏳ Выход..."
-
-        api.logout(
-            on_success=self.on_logout_success,
-            on_failure=self.on_logout_failure
-        )
-
-    def on_logout_success(self, result):
-        """Успешный выход"""
-        self.user = None
-        self.auth_status.text = "👤 Не авторизован"
-
-        # Показываем кнопки входа, скрываем кнопку выхода
-        self.google_btn.opacity = 1
-        self.google_btn.disabled = False
-        self.vk_btn.opacity = 1
-        self.vk_btn.disabled = False
-        self.logout_btn.opacity = 0
-        self.logout_btn.disabled = True
-
-        Snackbar(text="👋 Вы вышли из аккаунта").open()
-        logger.info('Пользователь вышел')
-
-    def on_logout_failure(self, req, error):
-        """Ошибка выхода"""
-        self.auth_status.text = "👤 Не авторизован"
-        Snackbar(text="Ошибка выхода").open()
+    def open_profile(self):
+        """Открывает профиль - вызывается из верхней панели"""
+        if api.is_authenticated():
+            Snackbar(text=f"Вы вошли как {api.user_data.get('username')} 🎸").open()
+            logger.info(f'Открыт профиль: {api.user_data.get("username")}')
+        else:
+            logger.info('Не авторизован, показываем окно авторизации')
+            self.show_auth_modal()

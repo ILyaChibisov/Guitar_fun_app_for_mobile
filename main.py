@@ -2,7 +2,6 @@
 """
 Главный файл приложения GuitarFuns
 С верхней панелью и нижней навигацией
-Все иконки - Material Icons (кроссплатформенные)
 """
 import os
 from kivy.core.window import Window
@@ -27,7 +26,7 @@ from kivymd.uix.bottomnavigation import MDBottomNavigation, MDBottomNavigationIt
 # Наши модули
 from config.app_config import config
 from config.theme import theme
-from screens.manager import setup_screen_manager
+from api.client import api
 
 # Настройка окна для разработки
 if os.name == 'nt':
@@ -39,7 +38,7 @@ logger = app_logger()
 
 
 class LanguageSelector(MDBoxLayout):
-    """Компонент выбора языка с Material Icons (кроссплатформенный)"""
+    """Компонент выбора языка"""
 
     def __init__(self, current_lang="ru", on_change_callback=None, **kwargs):
         super().__init__(**kwargs)
@@ -50,82 +49,46 @@ class LanguageSelector(MDBoxLayout):
         self.current_lang = current_lang
         self.on_change_callback = on_change_callback
 
-        # Material Icons для языков
         self.lang_icons = {
-            "ru": "language-russian",
-            "en": "alphabet-latin",
-            "de": "alphabet-latin",
-            "fr": "alphabet-latin",
-            "it": "alphabet-latin",
-            "pt": "alphabet-latin",
-            "zh": "alphabet-chinese"
+            "ru": "language-russian", "en": "alphabet-latin", "de": "alphabet-latin",
+            "fr": "alphabet-latin", "it": "alphabet-latin", "pt": "alphabet-latin", "zh": "alphabet-chinese"
         }
 
-        # Краткие коды языков
         self.lang_codes = {
-            "ru": "RU", "en": "EN", "de": "DE",
-            "fr": "FR", "it": "IT", "pt": "PT", "zh": "中文"
+            "ru": "RU", "en": "EN", "de": "DE", "fr": "FR", "it": "IT", "pt": "PT", "zh": "中文"
         }
 
-        # Контейнер для кнопки
         self.button_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, 1),
-            spacing=dp(4),
-            md_bg_color=theme.PRIMARY_LIGHT,
-            radius=[dp(8), dp(8), dp(8), dp(8)],
+            orientation='horizontal', size_hint=(1, 1), spacing=dp(4),
+            md_bg_color=theme.PRIMARY_LIGHT, radius=[dp(8), dp(8), dp(8), dp(8)],
             padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
-        # Иконка языка
         self.current_icon = MDIconButton(
             icon=self.lang_icons.get(current_lang, "translate"),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            size_hint=(None, 1),
-            width=dp(28),
-            md_bg_color=[0, 0, 0, 0]
+            theme_text_color="Custom", text_color=[1, 1, 1, 1],
+            size_hint=(None, 1), width=dp(28), md_bg_color=[0, 0, 0, 0]
         )
 
-        # Код языка
         self.current_code = MDLabel(
-            text=self.lang_codes[current_lang],
-            font_size=sp(11),
-            size_hint=(None, 1),
-            width=dp(36),
-            halign="center",
-            valign="middle",
-            bold=True,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1]
+            text=self.lang_codes[current_lang], font_size=sp(11),
+            size_hint=(None, 1), width=dp(36), halign="center", valign="middle",
+            bold=True, theme_text_color="Custom", text_color=[1, 1, 1, 1]
         )
 
-        # Стрелка вниз
         self.arrow = MDIconButton(
-            icon="chevron-down",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            size_hint=(None, 1),
-            width=dp(24),
-            md_bg_color=[0, 0, 0, 0]
+            icon="chevron-down", theme_text_color="Custom", text_color=[1, 1, 1, 1],
+            size_hint=(None, 1), width=dp(24), md_bg_color=[0, 0, 0, 0]
         )
 
         self.button_container.add_widget(self.current_icon)
         self.button_container.add_widget(self.current_code)
         self.button_container.add_widget(self.arrow)
-
         self.add_widget(self.button_container)
-
-        # Делаем весь контейнер кликабельным
         self.button_container.bind(on_touch_down=self.on_click)
-
-        # Создаём меню
         self.create_language_menu()
 
     def create_language_menu(self):
-        """Создаёт меню выбора языка"""
-        menu_items = []
-
         languages = [
             {"code": "ru", "name": "Русский", "icon": "language-russian"},
             {"code": "en", "name": "English", "icon": "alphabet-latin"},
@@ -135,91 +98,73 @@ class LanguageSelector(MDBoxLayout):
             {"code": "pt", "name": "Português", "icon": "alphabet-latin"},
             {"code": "zh", "name": "中文", "icon": "alphabet-chinese"}
         ]
-
+        menu_items = []
         for lang in languages:
             is_current = (lang["code"] == self.current_lang)
             menu_items.append({
-                "text": lang["name"],
-                "viewclass": "OneLineListItem",
+                "text": lang["name"], "viewclass": "OneLineListItem",
                 "on_release": lambda x=lang["code"]: self.change_language(x),
                 "theme_text_color": "Primary" if is_current else "Secondary",
                 "left_icon": lang["icon"]
             })
-
         self.language_menu = MDDropdownMenu(
-            caller=self.button_container,
-            items=menu_items,
-            width=dp(180),
-            max_height=dp(400),
-            position="bottom",
-            radius=[theme.CORNER_RADIUS_SMALL]
+            caller=self.button_container, items=menu_items, width=dp(180),
+            max_height=dp(400), position="bottom", radius=[theme.CORNER_RADIUS_SMALL]
         )
 
     def on_click(self, instance, touch):
-        """Обработчик нажатия"""
         if self.button_container.collide_point(*touch.pos):
             self.open_language_menu()
             return True
         return False
 
     def open_language_menu(self):
-        """Открывает меню выбора языка"""
         self.language_menu.open()
 
     def change_language(self, lang_code):
-        """Изменяет язык"""
         self.current_lang = lang_code
-
-        # Обновляем отображение
         self.current_icon.icon = self.lang_icons.get(lang_code, "translate")
         self.current_code.text = self.lang_codes.get(lang_code, lang_code.upper())
-
-        # Закрываем меню
         self.language_menu.dismiss()
-
-        # Вызываем callback
         if self.on_change_callback:
             self.on_change_callback(lang_code)
 
 
 class GuitarFunsApp(MDApp):
-    """Главный класс приложения GuitarFuns"""
+    """Главный класс приложения"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.title = "GuitarFuns"
         self.current_language = "ru"
         self.profile_dialog = None
+        self.auth_dialog = None
         self.settings_dialog = None
         self.support_dialog = None
         self.language_selector = None
+        self.home_screen = None  # Сохраняем ссылку на HomeScreen
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info('🎸 ' + '=' * 50)
 
     def build(self):
-        """Создаёт интерфейс приложения"""
         logger.debug('Создание интерфейса...')
 
-        # Настройка темы KivyMD
         self.theme_cls.primary_palette = "Teal"
         self.theme_cls.primary_hue = "300"
         self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
-        # Создаём нижнюю навигацию с экранами
+        # Создаём нижнюю навигацию
         bottom_nav = self.create_bottom_navigation()
 
-        # Создаём корневой контейнер
         from kivy.uix.floatlayout import FloatLayout
         root = FloatLayout()
 
-        # Верхняя панель
         top_bar = self.create_top_bar()
         root.add_widget(top_bar)
 
-        # Нижняя навигация
         bottom_nav.size_hint = (1, 0.9)
         bottom_nav.pos_hint = {'y': 0}
         root.add_widget(bottom_nav)
@@ -228,63 +173,36 @@ class GuitarFunsApp(MDApp):
         return root
 
     def create_top_bar(self):
-        """Создаёт верхнюю панель с Material Icons"""
-
         top_bar = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(60),
-            padding=[theme.PADDING, 0, theme.PADDING, 0],
-            spacing=theme.PADDING,
-            md_bg_color=theme.PRIMARY,
-            pos_hint={'top': 1}
+            orientation='horizontal', size_hint=(1, None), height=dp(60),
+            padding=[theme.PADDING, 0, theme.PADDING, 0], spacing=theme.PADDING,
+            md_bg_color=theme.PRIMARY, pos_hint={'top': 1}
         )
 
-        # Логотип / Название приложения
         logo = MDLabel(
-            text="GuitarFuns",
-            font_style="H6",
-            size_hint_x=0.4,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True
+            text="GuitarFuns", font_style="H6", size_hint_x=0.4,
+            theme_text_color="Custom", text_color=[1, 1, 1, 1], bold=True
         )
 
-        # Контейнер для иконок справа
-        icons_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_x=0.6,
-            spacing=dp(8)
-        )
+        icons_container = MDBoxLayout(orientation='horizontal', size_hint_x=0.6, spacing=dp(8))
 
-        # Иконка личного кабинета (Material Icon)
         profile_btn = MDIconButton(
-            icon="account-circle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
+            icon="account-circle", theme_text_color="Custom", text_color=[1, 1, 1, 1],
             on_release=self.open_profile
         )
 
-        # Иконка настроек (Material Icon)
         settings_btn = MDIconButton(
-            icon="cog",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
+            icon="cog", theme_text_color="Custom", text_color=[1, 1, 1, 1],
             on_release=self.open_settings
         )
 
-        # Иконка поддержки (Material Icon)
         support_btn = MDIconButton(
-            icon="help-circle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
+            icon="help-circle", theme_text_color="Custom", text_color=[1, 1, 1, 1],
             on_release=self.open_support
         )
 
-        # Выбор языка
         self.language_selector = LanguageSelector(
-            current_lang="ru",
-            on_change_callback=self.change_language
+            current_lang="ru", on_change_callback=self.change_language
         )
 
         icons_container.add_widget(profile_btn)
@@ -294,34 +212,28 @@ class GuitarFunsApp(MDApp):
 
         top_bar.add_widget(logo)
         top_bar.add_widget(icons_container)
-
         return top_bar
 
     def create_bottom_navigation(self):
-        """Создаёт нижнюю навигацию с иконками и текстом"""
-
         bottom_nav = MDBottomNavigation(
-            size_hint=(1, 1),
-            panel_color=[1, 1, 1, 1],
-            selected_color_background=theme.PRIMARY
+            size_hint=(1, 1), panel_color=[1, 1, 1, 1], selected_color_background=theme.PRIMARY
         )
 
-        # Элементы навигации
         nav_items = [
-            {"icon": "home", "text": "Главная", "screen": "home", "screen_class": "home_screen"},
-            {"icon": "music-note", "text": "Песни", "screen": "songs", "screen_class": "songs_screen"},
-            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords", "screen_class": "chords_screen"},
-            {"icon": "book", "text": "Словарь", "screen": "dictionary", "screen_class": "dictionary_screen"},
-            {"icon": "tune", "text": "Тюнер", "screen": "tuner", "screen_class": "tuner_screen"},
-            {"icon": "heart", "text": "Избранное", "screen": "favorites", "screen_class": "favorites_screen"},
+            {"icon": "home", "text": "Главная", "screen": "home"},
+            {"icon": "music-note", "text": "Песни", "screen": "songs"},
+            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords"},
+            {"icon": "book", "text": "Словарь", "screen": "dictionary"},
+            {"icon": "tune", "text": "Тюнер", "screen": "tuner"},
+            {"icon": "heart", "text": "Избранное", "screen": "favorites"}
         ]
 
         for item in nav_items:
             screen = MDScreen(name=item["screen"])
-
             if item["screen"] == "home":
                 from screens.home_screen import HomeScreen
-                content = HomeScreen()
+                self.home_screen = HomeScreen()  # Сохраняем ссылку
+                content = self.home_screen
                 screen.add_widget(content)
             elif item["screen"] == "songs":
                 from screens.songs_screen import SongsScreen
@@ -344,129 +256,50 @@ class GuitarFunsApp(MDApp):
                 content = FavoritesScreen()
                 screen.add_widget(content)
 
-            nav_item = MDBottomNavigationItem(
-                name=item["screen"],
-                text=item["text"],
-                icon=item["icon"]
-            )
+            nav_item = MDBottomNavigationItem(name=item["screen"], text=item["text"], icon=item["icon"])
             nav_item.add_widget(screen)
             bottom_nav.add_widget(nav_item)
 
-        # ========== ДОБАВЛЯЕМ ТЕСТОВЫЙ ЭКРАН ==========
-        # Тестовый экран для проверки API
-        test_screen = MDScreen(name="test")
-        from screens.test_screen import TestScreen
-        test_content = TestScreen()
-        test_screen.add_widget(test_content)
-
-        test_nav_item = MDBottomNavigationItem(
-            name="test",
-            text="Тест",
-            icon="api"
-        )
-        test_nav_item.add_widget(test_screen)
-        bottom_nav.add_widget(test_nav_item)
-        # =============================================
-
-        # Устанавливаем начальный экран
         bottom_nav.switch_tab("home")
-
         return bottom_nav
 
     def open_profile(self, instance):
-        """Открывает профиль пользователя"""
-        logger.info("Открыт профиль пользователя")
+        """Открывает профиль - вызывает метод из HomeScreen"""
+        logger.info("Нажата иконка личного кабинета")
 
-        if not self.profile_dialog:
-            self.profile_dialog = MDDialog(
-                title="Личный кабинет",
-                text="Войдите в аккаунт, чтобы сохранять избранные песни и аккорды",
-                buttons=[
-                    MDFlatButton(
-                        text="ВОЙТИ",
-                        theme_text_color="Custom",
-                        text_color=theme.PRIMARY,
-                        on_release=self.show_login_dialog
-                    ),
-                    MDFlatButton(
-                        text="РЕГИСТРАЦИЯ",
-                        theme_text_color="Custom",
-                        text_color=theme.PRIMARY,
-                        on_release=self.show_register_dialog
-                    ),
-                    MDFlatButton(
-                        text="ОТМЕНА",
-                        theme_text_color="Custom",
-                        text_color=theme.TEXT_SECONDARY,
-                        on_release=lambda x: self.profile_dialog.dismiss()
-                    )
-                ]
-            )
-        self.profile_dialog.open()
-
-    def show_login_dialog(self, instance):
-        """Показывает диалог входа"""
-        if self.profile_dialog:
-            self.profile_dialog.dismiss()
-        Snackbar(text="Форма входа будет добавлена позже").open()
-
-    def show_register_dialog(self, instance):
-        """Показывает диалог регистрации"""
-        if self.profile_dialog:
-            self.profile_dialog.dismiss()
-        Snackbar(text="Форма регистрации будет добавлена позже").open()
+        if self.home_screen and hasattr(self.home_screen, 'open_profile'):
+            self.home_screen.open_profile()
+        else:
+            logger.warning("HomeScreen не найден или не имеет метода open_profile")
 
     def open_settings(self, instance):
-        """Открывает настройки"""
         logger.info("Открыты настройки")
-
         if not self.settings_dialog:
             self.settings_dialog = MDDialog(
-                title="Настройки",
-                text="Здесь будут настройки приложения",
-                buttons=[
-                    MDFlatButton(
-                        text="ЗАКРЫТЬ",
-                        theme_text_color="Custom",
-                        text_color=theme.PRIMARY,
-                        on_release=lambda x: self.settings_dialog.dismiss()
-                    )
-                ]
+                title="⚙️ Настройки", text="Здесь будут настройки приложения",
+                buttons=[MDFlatButton(text="ЗАКРЫТЬ", on_release=lambda x: self.settings_dialog.dismiss())]
             )
         self.settings_dialog.open()
 
     def open_support(self, instance):
-        """Открывает поддержку"""
         logger.info("Открыта поддержка")
-
         if not self.support_dialog:
             self.support_dialog = MDDialog(
-                title="Поддержка",
+                title="🆘 Поддержка",
                 text="Свяжитесь с нами:\n\n📧 Email: support@guitarfuns.com\n\n📱 Telegram: @guitarfuns_bot",
-                buttons=[
-                    MDFlatButton(
-                        text="ЗАКРЫТЬ",
-                        theme_text_color="Custom",
-                        text_color=theme.PRIMARY,
-                        on_release=lambda x: self.support_dialog.dismiss()
-                    )
-                ]
+                buttons=[MDFlatButton(text="ЗАКРЫТЬ", on_release=lambda x: self.support_dialog.dismiss())]
             )
         self.support_dialog.open()
 
     def change_language(self, lang_code):
-        """Изменяет язык приложения"""
         self.current_language = lang_code
-
         lang_names = {"ru": "Русский", "en": "English", "de": "Deutsch",
                       "fr": "Français", "it": "Italiano", "pt": "Português", "zh": "中文"}
         lang_name = lang_names.get(lang_code, lang_code)
-
         logger.info(f"Язык изменён на: {lang_name} ({lang_code})")
         Snackbar(text=f"Язык изменён на {lang_name}").open()
 
     def on_start(self):
-        """Вызывается после запуска"""
         logger.info('Приложение GuitarFuns запущено')
 
     def on_pause(self):
