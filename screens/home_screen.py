@@ -15,8 +15,115 @@ from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
+import threading
+import webbrowser
+import http.server
+import socketserver
+import urllib.parse
 
 logger = screen_logger('Home')
+
+
+# ============ Локальный сервер для OAuth callback ============
+
+class OAuthCallbackHandler(http.server.SimpleHTTPRequestHandler):
+    """Обработчик callback от Google OAuth"""
+
+    tokens = None
+
+    def do_GET(self):
+        """Обрабатывает GET запрос с токенами"""
+        parsed = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(parsed.query)
+
+        # Извлекаем токены
+        access_token = query.get('access_token', [None])[0]
+        refresh_token = query.get('refresh_token', [None])[0]
+
+        if access_token:
+            OAuthCallbackHandler.tokens = {
+                'access_token': access_token,
+                'refresh_token': refresh_token
+            }
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.end_headers()
+            # Используем обычную строку, закодированную в utf-8
+            html = """
+            <html>
+            <body style="text-align:center; padding:50px; font-family:sans-serif;">
+            <h2>✅ Авторизация успешна!</h2>
+            <p>Можете закрыть это окно и вернуться в приложение.</p>
+            <script>setTimeout(window.close, 2000);</script>
+            </body>
+            </html>
+            """
+            self.wfile.write(html.encode('utf-8'))
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.end_headers()
+            html = """
+            <html>
+            <body style="text-align:center; padding:50px;font-family:sans-serif;">
+            <h2>🔄 Авторизация...</h2>
+            <p>Подождите, идёт обработка...</p>
+            </body>
+            </html>
+            """
+            self.wfile.write(html.encode('utf-8'))
+
+    def log_message(self, format, *args):
+        """Отключаем логи сервера"""
+        pass
+
+
+class OAuthServer:
+    """Локальный сервер для приёма Google OAuth callback"""
+
+    _instance = None
+    port = 8080
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        self._initialized = True
+        self.server = None
+        self.thread = None
+
+    def start(self):
+        """Запускает сервер в отдельном потоке"""
+        if self.server:
+            return
+
+        handler = OAuthCallbackHandler
+        self.server = socketserver.TCPServer(("127.0.0.1", self.port), handler)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        logger.info(f"OAuth сервер запущен на порту {self.port}")
+
+    def stop(self):
+        """Останавливает сервер"""
+        if self.server:
+            self.server.shutdown()
+            self.server = None
+            logger.info("OAuth сервер остановлен")
+
+    def get_tokens(self):
+        """Возвращает полученные токены и очищает их"""
+        tokens = OAuthCallbackHandler.tokens
+        OAuthCallbackHandler.tokens = None
+        return tokens
+
+
+# Глобальный экземпляр OAuth сервера
+oauth_server = OAuthServer()
 
 
 class AuthButton(MDRaisedButton):
@@ -44,6 +151,7 @@ class AuthModal(MDCard):
         super().__init__(**kwargs)
         self.on_close_callback = on_close
         self.on_login_success_callback = on_login_success
+        self.waiting_for_callback = False
 
         self.orientation = 'vertical'
         self.size_hint = (0.85, None)
@@ -95,14 +203,68 @@ class AuthModal(MDCard):
         self.login_modal = None
         self.register_modal = None
 
+        # Запускаем OAuth сервер
+        oauth_server.start()
+
     def close(self, instance=None):
+        if self.waiting_for_callback:
+            Clock.unschedule(self.check_callback)
         if self.on_close_callback:
             self.on_close_callback()
         self.parent.remove_widget(self)
 
     def login_google(self, instance):
+        """Вход через Google"""
         self.close()
-        Snackbar(text="Вход через Google будет доступен в следующей версии").open()
+        self.start_google_oauth()
+
+    def start_google_oauth(self):
+        """Запускает Google OAuth процесс"""
+        self.waiting_for_callback = True
+
+        # Формируем URL с локальным callback
+        redirect_uri = f"http://127.0.0.1:{oauth_server.port}/callback"
+        auth_url = f"{api.config.API_BASE_URL}/auth/google/login?redirect_uri={urllib.parse.quote(redirect_uri)}"
+
+        # Открываем браузер
+        webbrowser.open(auth_url)
+
+        # Начинаем ожидание callback
+        Clock.schedule_interval(self.check_callback, 1)
+
+    def check_callback(self, dt):
+        """Проверяет, пришёл ли callback"""
+        if not self.waiting_for_callback:
+            return False
+
+        tokens = oauth_server.get_tokens()
+        if tokens and tokens.get('access_token'):
+            self.waiting_for_callback = False
+            Clock.unschedule(self.check_callback)
+            self.process_tokens(tokens['access_token'], tokens.get('refresh_token'))
+            return False
+        return True
+
+    def process_tokens(self, access_token, refresh_token):
+        """Обрабатывает полученные токены"""
+        api.access_token = access_token
+        api.refresh_token = refresh_token
+        api._save_tokens()
+
+        api.get_current_user(
+            on_success=self.on_oauth_success,
+            on_failure=self.on_oauth_failure
+        )
+
+    def on_oauth_success(self, user):
+        """Успешный OAuth вход"""
+        Snackbar(text=f"Добро пожаловать, {user.get('username')}! 🎸").open()
+        if self.on_login_success_callback:
+            self.on_login_success_callback()
+
+    def on_oauth_failure(self, req, error):
+        """Ошибка OAuth входа"""
+        Snackbar(text="❌ Ошибка авторизации через Google").open()
 
     def show_login_form(self, instance):
         self.close()
@@ -124,7 +286,8 @@ class AuthModal(MDCard):
     def show_register_modal(self):
         if self.register_modal and self.register_modal.parent:
             return
-        self.register_modal = RegisterModal(on_close=self.on_register_close, on_register_success=self.on_register_success)
+        self.register_modal = RegisterModal(on_close=self.on_register_close,
+                                            on_register_success=self.on_register_success)
         self.parent.add_widget(self.register_modal)
 
     def on_register_close(self):
