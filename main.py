@@ -20,12 +20,13 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDIconButton, MDFlatButton, MDRaisedButton
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.snackbar import Snackbar
+from kivymd.uix.snackbar import MDSnackbar
 from kivymd.uix.bottomnavigation import MDBottomNavigation, MDBottomNavigationItem
 
 # Наши модули
 from config.app_config import config
 from config.theme import theme
+from screens.manager import setup_screen_manager
 from api.client import api
 
 # Настройка окна для разработки
@@ -35,6 +36,17 @@ if os.name == 'nt':
     Window.left = 50
 
 logger = app_logger()
+
+
+def show_snackbar(message):
+    """Показывает уведомление"""
+    snack = MDSnackbar()
+    snack.text = message
+    snack.snackbar_x = "10dp"
+    snack.snackbar_y = "10dp"
+    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
+                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
+    snack.open()
 
 
 class LanguageSelector(MDBoxLayout):
@@ -142,7 +154,9 @@ class GuitarFunsApp(MDApp):
         self.settings_dialog = None
         self.support_dialog = None
         self.language_selector = None
-        self.home_screen = None  # Сохраняем ссылку на HomeScreen
+        self.screen_manager = None
+        self.home_screen = None
+        self.bottom_nav = None
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
@@ -156,8 +170,11 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
-        # Создаём нижнюю навигацию
-        bottom_nav = self.create_bottom_navigation()
+        # Создаём менеджер экранов
+        self.screen_manager = setup_screen_manager()
+
+        # Создаём нижнюю навигацию и СОХРАНЯЕМ ссылку
+        self.bottom_nav = self.create_bottom_navigation()
 
         from kivy.uix.floatlayout import FloatLayout
         root = FloatLayout()
@@ -165,9 +182,9 @@ class GuitarFunsApp(MDApp):
         top_bar = self.create_top_bar()
         root.add_widget(top_bar)
 
-        bottom_nav.size_hint = (1, 0.9)
-        bottom_nav.pos_hint = {'y': 0}
-        root.add_widget(bottom_nav)
+        self.bottom_nav.size_hint = (1, 0.9)
+        self.bottom_nav.pos_hint = {'y': 0}
+        root.add_widget(self.bottom_nav)
 
         logger.info('Интерфейс успешно создан')
         return root
@@ -215,24 +232,31 @@ class GuitarFunsApp(MDApp):
         return top_bar
 
     def create_bottom_navigation(self):
+        """Создаёт нижнюю навигацию с иконками и текстом"""
+
         bottom_nav = MDBottomNavigation(
-            size_hint=(1, 1), panel_color=[1, 1, 1, 1], selected_color_background=theme.PRIMARY
+            size_hint=(1, 1),
+            panel_color=[1, 1, 1, 1],
+            selected_color_background=theme.PRIMARY
         )
 
+        # Элементы навигации
         nav_items = [
-            {"icon": "home", "text": "Главная", "screen": "home"},
-            {"icon": "music-note", "text": "Песни", "screen": "songs"},
-            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords"},
-            {"icon": "book", "text": "Словарь", "screen": "dictionary"},
-            {"icon": "tune", "text": "Тюнер", "screen": "tuner"},
-            {"icon": "heart", "text": "Избранное", "screen": "favorites"}
+            {"icon": "home", "text": "Главная", "screen": "home", "screen_class": "home_screen"},
+            {"icon": "music-note", "text": "Песни", "screen": "songs", "screen_class": "songs_screen"},
+            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords", "screen_class": "chords_screen"},
+            {"icon": "book", "text": "Словарь", "screen": "dictionary", "screen_class": "dictionary_screen"},
+            {"icon": "tune", "text": "Тюнер", "screen": "tuner", "screen_class": "tuner_screen"},
+            {"icon": "heart", "text": "Избранное", "screen": "favorites", "screen_class": "favorites_screen"},
+            {"icon": "account", "text": "Профиль", "screen": "profile", "screen_class": "profile_screen"}
         ]
 
         for item in nav_items:
             screen = MDScreen(name=item["screen"])
+
             if item["screen"] == "home":
                 from screens.home_screen import HomeScreen
-                self.home_screen = HomeScreen()  # Сохраняем ссылку
+                self.home_screen = HomeScreen()
                 content = self.home_screen
                 screen.add_widget(content)
             elif item["screen"] == "songs":
@@ -255,6 +279,10 @@ class GuitarFunsApp(MDApp):
                 from screens.favorites_screen import FavoritesScreen
                 content = FavoritesScreen()
                 screen.add_widget(content)
+            elif item["screen"] == "profile":
+                from screens.profile_screen import ProfileScreen
+                content = ProfileScreen()
+                screen.add_widget(content)
 
             nav_item = MDBottomNavigationItem(name=item["screen"], text=item["text"], icon=item["icon"])
             nav_item.add_widget(screen)
@@ -264,13 +292,22 @@ class GuitarFunsApp(MDApp):
         return bottom_nav
 
     def open_profile(self, instance):
-        """Открывает профиль - вызывает метод из HomeScreen"""
+        """Открывает профиль пользователя"""
         logger.info("Нажата иконка личного кабинета")
 
-        if self.home_screen and hasattr(self.home_screen, 'open_profile'):
-            self.home_screen.open_profile()
+        if api.is_authenticated():
+            # Переключаемся на вкладку профиля в нижней навигации
+            if self.bottom_nav:
+                self.bottom_nav.switch_tab("profile")
+                logger.info("Переход на вкладку профиля")
+            else:
+                logger.warning("Bottom navigation не найден")
         else:
-            logger.warning("HomeScreen не найден или не имеет метода open_profile")
+            # Показываем окно авторизации
+            if self.home_screen and hasattr(self.home_screen, 'open_profile'):
+                self.home_screen.open_profile()
+            else:
+                logger.warning("HomeScreen не найден")
 
     def open_settings(self, instance):
         logger.info("Открыты настройки")
@@ -297,7 +334,7 @@ class GuitarFunsApp(MDApp):
                       "fr": "Français", "it": "Italiano", "pt": "Português", "zh": "中文"}
         lang_name = lang_names.get(lang_code, lang_code)
         logger.info(f"Язык изменён на: {lang_name} ({lang_code})")
-        Snackbar(text=f"Язык изменён на {lang_name}").open()
+        show_snackbar(f"Язык изменён на {lang_name}")
 
     def on_start(self):
         logger.info('Приложение GuitarFuns запущено')

@@ -8,7 +8,7 @@ from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.snackbar import Snackbar
+from kivymd.uix.snackbar import MDSnackbar
 from kivy.metrics import dp
 from kivy.animation import Animation
 from kivy.clock import Clock
@@ -20,9 +20,13 @@ logger = screen_logger('Home')
 
 
 def show_snackbar(message):
-    """Вспомогательная функция для показа Snackbar"""
-    snack = Snackbar()
+    """Показывает уведомление"""
+    snack = MDSnackbar()
     snack.text = message
+    snack.snackbar_x = "10dp"
+    snack.snackbar_y = "10dp"
+    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
+                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
     snack.open()
 
 
@@ -204,6 +208,9 @@ class RegisterModal(MDCard):
         confirm = self.confirm_field.text
         if not username or not email or not password:
             show_snackbar("Заполните все поля")
+            return
+        if len(password) > 72:
+            show_snackbar("Пароль слишком длинный (максимум 72 символа)")
             return
         if password != confirm:
             show_snackbar("Пароли не совпадают")
@@ -464,9 +471,17 @@ class HomeScreen(MDScreen):
         logger.error(f'OAuth ошибка: {error}')
 
     def open_profile(self):
+        """Открывает профиль - вызывается из верхней панели"""
         if api.is_authenticated():
-            show_snackbar(f"Вы вошли как {api.user_data.get('username')} 🎸")
-            logger.info(f'Открыт профиль: {api.user_data.get("username")}')
+            # Переход на экран профиля через менеджер (для ScreenManager) или через bottom_nav
+            if hasattr(self, 'manager') and self.manager:
+                # Проверяем, есть ли экран profile в ScreenManager
+                if 'profile' in self.manager.screen_names:
+                    self.manager.current = 'profile'
+                else:
+                    show_snackbar(f"Вы вошли как {api.user_data.get('username')} 🎸")
+            else:
+                show_snackbar(f"Вы вошли как {api.user_data.get('username')} 🎸")
         else:
             logger.info('Не авторизован, показываем окно авторизации')
             self.show_auth_modal()

@@ -225,7 +225,16 @@ class APIClient:
         )
 
     def login(self, username, password, on_success=None, on_failure=None):
-        data = {'username': username, 'password': password}
+        """Вход по username/password (form-data)"""
+        data = urllib.parse.urlencode({
+            'username': username,
+            'password': password
+        })
+
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+        }
 
         def _on_success(req, result):
             self.access_token = result.get('access_token')
@@ -235,36 +244,39 @@ class APIClient:
             if on_success:
                 on_success(result)
 
-        return self._request(
+        def _on_failure(req, error):
+            Logger.error(f'❌ Ошибка входа: {error}')
+            if on_failure:
+                on_failure(req, error)
+
+        req = UrlRequest(
             url=config.API_AUTH_LOGIN,
             method='POST',
-            data=data,
+            req_body=data,
+            req_headers=headers,
             on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
+            on_failure=_on_failure,
+            on_error=self._on_error,
+            timeout=config.CONNECTION_TIMEOUT
         )
+        return req
 
     def google_login(self, on_success=None, on_failure=None):
         """Начинает вход через Google с callback на локальный сервер"""
         self.waiting_for_callback = True
 
-        # Запускаем локальный сервер
         oauth_server.start()
 
-        # Формируем URL с redirect_uri на локальный сервер
         redirect_uri = f"http://127.0.0.1:{oauth_server.port}/callback"
         auth_url = f"{self.config.API_BASE_URL}/auth/google/login?redirect_uri={urllib.parse.quote(redirect_uri)}"
 
-        # Открываем браузер
         webbrowser.open(auth_url)
 
-        # Начинаем проверку callback
         self._check_callback_interval = Clock.schedule_interval(
             lambda dt: self._check_callback(on_success, on_failure), 1
         )
 
     def _check_callback(self, on_success, on_failure):
-        """Проверяет, пришёл ли callback от Google"""
         if not self.waiting_for_callback:
             return False
 
@@ -277,7 +289,6 @@ class APIClient:
             self.refresh_token = tokens.get('refresh_token')
             self._save_tokens()
 
-            # Получаем данные пользователя
             self.get_current_user(
                 on_success=on_success,
                 on_failure=on_failure
@@ -286,19 +297,45 @@ class APIClient:
         return True
 
     def logout(self, on_success=None, on_failure=None):
+        """Выход из системы (refresh_token как query параметр)"""
+
         def _on_success(req, result):
             self._clear_tokens()
             Logger.info('✅ Выход выполнен')
             if on_success:
                 on_success(result)
 
-        return self._request(
-            url=config.API_AUTH_LOGOUT,
+        def _on_failure(req, error):
+            Logger.error(f'❌ Ошибка выхода: {error}')
+            if on_failure:
+                on_failure(req, error)
+
+        # Если нет refresh_token, просто очищаем локально
+        if not self.refresh_token:
+            self._clear_tokens()
+            if on_success:
+                on_success({})
+            return
+
+        # Отправляем refresh_token как query параметр
+        url = f"{config.API_AUTH_LOGOUT}?refresh_token={self.refresh_token}"
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+
+        req = UrlRequest(
+            url=url,
             method='POST',
-            data={'refresh_token': self.refresh_token},
+            req_body=None,
+            req_headers=headers,
             on_success=_on_success,
-            on_failure=on_failure
+            on_failure=_on_failure,
+            on_error=self._on_error,
+            timeout=config.CONNECTION_TIMEOUT
         )
+        return req
 
     def get_current_user(self, on_success=None, on_failure=None):
         def _on_success(req, result):

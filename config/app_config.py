@@ -4,17 +4,10 @@ import os
 
 class AppConfig:
     VERSION = '1.0.0'
-    APP_NAME = 'GuitarFans'
+    APP_NAME = 'GuitarFuns'
 
     # API URL (используем домен)
-    # Если настроен Nginx на порт 80:
     API_BASE_URL = "https://guitarfans.ru/api"
-
-    # Если Nginx ещё не настроен, используй с портом:
-    # API_BASE_URL = "http://guitarfans.ru:8000"
-
-    # Для отладки на телефоне в локальной сети:
-    # API_BASE_URL = "http://192.168.1.100:8000"  # IP твоего компьютера
 
     # API endpoints
     API_AUTH_LOGIN = f"{API_BASE_URL}/auth/login"
