@@ -8,7 +8,7 @@ class AppConfig:
 
     # API URL (используем домен)
     # Если настроен Nginx на порт 80:
-    API_BASE_URL = "http://guitarfans.ru"
+    API_BASE_URL = "https://guitarfans.ru/api"
 
     # Если Nginx ещё не настроен, используй с портом:
     # API_BASE_URL = "http://guitarfans.ru:8000"

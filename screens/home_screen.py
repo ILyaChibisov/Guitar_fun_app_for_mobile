@@ -15,115 +15,15 @@ from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
-import threading
-import webbrowser
-import http.server
-import socketserver
-import urllib.parse
 
 logger = screen_logger('Home')
 
 
-# ============ Локальный сервер для OAuth callback ============
-
-class OAuthCallbackHandler(http.server.SimpleHTTPRequestHandler):
-    """Обработчик callback от Google OAuth"""
-
-    tokens = None
-
-    def do_GET(self):
-        """Обрабатывает GET запрос с токенами"""
-        parsed = urllib.parse.urlparse(self.path)
-        query = urllib.parse.parse_qs(parsed.query)
-
-        # Извлекаем токены
-        access_token = query.get('access_token', [None])[0]
-        refresh_token = query.get('refresh_token', [None])[0]
-
-        if access_token:
-            OAuthCallbackHandler.tokens = {
-                'access_token': access_token,
-                'refresh_token': refresh_token
-            }
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html; charset=utf-8')
-            self.end_headers()
-            # Используем обычную строку, закодированную в utf-8
-            html = """
-            <html>
-            <body style="text-align:center; padding:50px; font-family:sans-serif;">
-            <h2>✅ Авторизация успешна!</h2>
-            <p>Можете закрыть это окно и вернуться в приложение.</p>
-            <script>setTimeout(window.close, 2000);</script>
-            </body>
-            </html>
-            """
-            self.wfile.write(html.encode('utf-8'))
-        else:
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html; charset=utf-8')
-            self.end_headers()
-            html = """
-            <html>
-            <body style="text-align:center; padding:50px;font-family:sans-serif;">
-            <h2>🔄 Авторизация...</h2>
-            <p>Подождите, идёт обработка...</p>
-            </body>
-            </html>
-            """
-            self.wfile.write(html.encode('utf-8'))
-
-    def log_message(self, format, *args):
-        """Отключаем логи сервера"""
-        pass
-
-
-class OAuthServer:
-    """Локальный сервер для приёма Google OAuth callback"""
-
-    _instance = None
-    port = 8080
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
-
-    def __init__(self):
-        if self._initialized:
-            return
-        self._initialized = True
-        self.server = None
-        self.thread = None
-
-    def start(self):
-        """Запускает сервер в отдельном потоке"""
-        if self.server:
-            return
-
-        handler = OAuthCallbackHandler
-        self.server = socketserver.TCPServer(("127.0.0.1", self.port), handler)
-        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
-        self.thread.start()
-        logger.info(f"OAuth сервер запущен на порту {self.port}")
-
-    def stop(self):
-        """Останавливает сервер"""
-        if self.server:
-            self.server.shutdown()
-            self.server = None
-            logger.info("OAuth сервер остановлен")
-
-    def get_tokens(self):
-        """Возвращает полученные токены и очищает их"""
-        tokens = OAuthCallbackHandler.tokens
-        OAuthCallbackHandler.tokens = None
-        return tokens
-
-
-# Глобальный экземпляр OAuth сервера
-oauth_server = OAuthServer()
+def show_snackbar(message):
+    """Вспомогательная функция для показа Snackbar"""
+    snack = Snackbar()
+    snack.text = message
+    snack.open()
 
 
 class AuthButton(MDRaisedButton):
@@ -146,166 +46,10 @@ class AuthButton(MDRaisedButton):
         anim.start(self)
 
 
-class AuthModal(MDCard):
-    def __init__(self, on_close=None, on_login_success=None, **kwargs):
-        super().__init__(**kwargs)
-        self.on_close_callback = on_close
-        self.on_login_success_callback = on_login_success
-        self.waiting_for_callback = False
-
-        self.orientation = 'vertical'
-        self.size_hint = (0.85, None)
-        self.height = dp(340)
-        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-        self.elevation = 4
-        self.radius = [theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS]
-        self.md_bg_color = theme.SURFACE
-        self.padding = [dp(16), dp(16), dp(16), dp(16)]
-        self.spacing = dp(10)
-
-        title = MDLabel(text="Войдите в свой аккаунт", font_style="H6", halign="center",
-                        size_hint_y=None, height=dp(32), theme_text_color="Primary", bold=True)
-        self.add_widget(title)
-
-        subtitle = MDLabel(text="чтобы получить доступ ко всем функциям приложения",
-                           font_style="Caption", halign="center", size_hint_y=None,
-                           height=dp(28), theme_text_color="Secondary")
-        self.add_widget(subtitle)
-
-        self.add_widget(MDBoxLayout(size_hint_y=None, height=dp(4)))
-
-        google_btn = AuthButton(icon="google", text="Войти через Google",
-                                bg_color=[0.96, 0.96, 0.96, 1], text_color=[0.2, 0.2, 0.2, 1])
-        google_btn.pos_hint = {'center_x': 0.5}
-        google_btn.bind(on_release=self.login_google)
-        self.add_widget(google_btn)
-
-        login_btn = AuthButton(icon="account", text="Войти по логину и паролю",
-                               bg_color=theme.PRIMARY_LIGHT, text_color=[1, 1, 1, 1])
-        login_btn.pos_hint = {'center_x': 0.5}
-        login_btn.bind(on_release=self.show_login_form)
-        self.add_widget(login_btn)
-
-        register_btn = AuthButton(icon="account-plus", text="Зарегистрироваться",
-                                  bg_color=theme.PRIMARY, text_color=[1, 1, 1, 1])
-        register_btn.pos_hint = {'center_x': 0.5}
-        register_btn.bind(on_release=self.show_register)
-        self.add_widget(register_btn)
-
-        skip_btn = MDRaisedButton(text="Пропустить", size_hint=(0.9, None), height=dp(40),
-                                  md_bg_color=[0.95, 0.95, 0.95, 1],
-                                  theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
-                                  on_release=self.close)
-        skip_btn.pos_hint = {'center_x': 0.5}
-        skip_btn.radius = [theme.CORNER_RADIUS_SMALL]
-        self.add_widget(skip_btn)
-
-        self.login_modal = None
-        self.register_modal = None
-
-        # Запускаем OAuth сервер
-        oauth_server.start()
-
-    def close(self, instance=None):
-        if self.waiting_for_callback:
-            Clock.unschedule(self.check_callback)
-        if self.on_close_callback:
-            self.on_close_callback()
-        self.parent.remove_widget(self)
-
-    def login_google(self, instance):
-        """Вход через Google"""
-        self.close()
-        self.start_google_oauth()
-
-    def start_google_oauth(self):
-        """Запускает Google OAuth процесс"""
-        self.waiting_for_callback = True
-
-        # Формируем URL с локальным callback
-        redirect_uri = f"http://127.0.0.1:{oauth_server.port}/callback"
-        auth_url = f"{api.config.API_BASE_URL}/auth/google/login?redirect_uri={urllib.parse.quote(redirect_uri)}"
-
-        # Открываем браузер
-        webbrowser.open(auth_url)
-
-        # Начинаем ожидание callback
-        Clock.schedule_interval(self.check_callback, 1)
-
-    def check_callback(self, dt):
-        """Проверяет, пришёл ли callback"""
-        if not self.waiting_for_callback:
-            return False
-
-        tokens = oauth_server.get_tokens()
-        if tokens and tokens.get('access_token'):
-            self.waiting_for_callback = False
-            Clock.unschedule(self.check_callback)
-            self.process_tokens(tokens['access_token'], tokens.get('refresh_token'))
-            return False
-        return True
-
-    def process_tokens(self, access_token, refresh_token):
-        """Обрабатывает полученные токены"""
-        api.access_token = access_token
-        api.refresh_token = refresh_token
-        api._save_tokens()
-
-        api.get_current_user(
-            on_success=self.on_oauth_success,
-            on_failure=self.on_oauth_failure
-        )
-
-    def on_oauth_success(self, user):
-        """Успешный OAuth вход"""
-        Snackbar(text=f"Добро пожаловать, {user.get('username')}! 🎸").open()
-        if self.on_login_success_callback:
-            self.on_login_success_callback()
-
-    def on_oauth_failure(self, req, error):
-        """Ошибка OAuth входа"""
-        Snackbar(text="❌ Ошибка авторизации через Google").open()
-
-    def show_login_form(self, instance):
-        self.close()
-        Clock.schedule_once(lambda dt: self.show_login_modal(), 0.2)
-
-    def show_login_modal(self):
-        if self.login_modal and self.login_modal.parent:
-            return
-        self.login_modal = LoginModal(on_close=self.on_login_close, on_login_success=self.on_login_success)
-        self.parent.add_widget(self.login_modal)
-
-    def on_login_close(self):
-        self.login_modal = None
-
-    def show_register(self, instance):
-        self.close()
-        Clock.schedule_once(lambda dt: self.show_register_modal(), 0.2)
-
-    def show_register_modal(self):
-        if self.register_modal and self.register_modal.parent:
-            return
-        self.register_modal = RegisterModal(on_close=self.on_register_close,
-                                            on_register_success=self.on_register_success)
-        self.parent.add_widget(self.register_modal)
-
-    def on_register_close(self):
-        self.register_modal = None
-
-    def on_register_success(self):
-        self.register_modal = None
-        Snackbar(text="✅ Регистрация успешна! Теперь войдите.").open()
-
-    def on_login_success(self):
-        self.login_modal = None
-        if self.on_login_success_callback:
-            self.on_login_success_callback()
-
-
 class LoginModal(MDCard):
-    def __init__(self, on_close=None, on_login_success=None, **kwargs):
+    def __init__(self, parent_screen, on_close=None, on_login_success=None, **kwargs):
         super().__init__(**kwargs)
+        self.parent_screen = parent_screen
         self.on_close_callback = on_close
         self.on_login_success_callback = on_login_success
 
@@ -360,30 +104,32 @@ class LoginModal(MDCard):
     def close(self, instance=None):
         if self.on_close_callback:
             self.on_close_callback()
-        self.parent.remove_widget(self)
+        if self.parent:
+            self.parent.remove_widget(self)
 
     def do_login(self, instance):
         username = self.username_field.text
         password = self.password_field.text
         if not username or not password:
-            Snackbar(text="Заполните все поля").open()
+            show_snackbar("Заполните все поля")
             return
         api.login(username=username, password=password,
                   on_success=self.on_login_success, on_failure=self.on_login_failure)
 
     def on_login_success(self, result):
-        Snackbar(text="✅ Вход выполнен успешно!").open()
+        show_snackbar("✅ Вход выполнен успешно!")
         self.close()
         if self.on_login_success_callback:
             self.on_login_success_callback()
 
     def on_login_failure(self, req, error):
-        Snackbar(text="❌ Неверное имя пользователя или пароль").open()
+        show_snackbar("❌ Неверное имя пользователя или пароль")
 
 
 class RegisterModal(MDCard):
-    def __init__(self, on_close=None, on_register_success=None, **kwargs):
+    def __init__(self, parent_screen, on_close=None, on_register_success=None, **kwargs):
         super().__init__(**kwargs)
+        self.parent_screen = parent_screen
         self.on_close_callback = on_close
         self.on_register_success_callback = on_register_success
 
@@ -448,7 +194,8 @@ class RegisterModal(MDCard):
     def close(self, instance=None):
         if self.on_close_callback:
             self.on_close_callback()
-        self.parent.remove_widget(self)
+        if self.parent:
+            self.parent.remove_widget(self)
 
     def do_register(self, instance):
         username = self.username_field.text
@@ -456,21 +203,134 @@ class RegisterModal(MDCard):
         password = self.password_field.text
         confirm = self.confirm_field.text
         if not username or not email or not password:
-            Snackbar(text="Заполните все поля").open()
+            show_snackbar("Заполните все поля")
             return
         if password != confirm:
-            Snackbar(text="Пароли не совпадают").open()
+            show_snackbar("Пароли не совпадают")
             return
         api.register(username=username, email=email, password=password, full_name=None,
                      on_success=self.on_register_success, on_failure=self.on_register_failure)
 
     def on_register_success(self, result):
+        show_snackbar("✅ Регистрация успешна! Теперь войдите.")
         self.close()
         if self.on_register_success_callback:
             self.on_register_success_callback()
 
     def on_register_failure(self, req, error):
-        Snackbar(text="❌ Ошибка. Возможно, имя или email уже заняты.").open()
+        show_snackbar("❌ Ошибка. Возможно, имя или email уже заняты.")
+
+
+class AuthModal(MDCard):
+    def __init__(self, parent_screen, on_close=None, on_login_success=None, **kwargs):
+        super().__init__(**kwargs)
+        self.parent_screen = parent_screen
+        self.on_close_callback = on_close
+        self.on_login_success_callback = on_login_success
+
+        self.orientation = 'vertical'
+        self.size_hint = (0.85, None)
+        self.height = dp(340)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.elevation = 4
+        self.radius = [theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS]
+        self.md_bg_color = theme.SURFACE
+        self.padding = [dp(16), dp(16), dp(16), dp(16)]
+        self.spacing = dp(10)
+
+        title = MDLabel(text="Войдите в свой аккаунт", font_style="H6", halign="center",
+                        size_hint_y=None, height=dp(32), theme_text_color="Primary", bold=True)
+        self.add_widget(title)
+
+        subtitle = MDLabel(text="чтобы получить доступ ко всем функциям приложения",
+                           font_style="Caption", halign="center", size_hint_y=None,
+                           height=dp(28), theme_text_color="Secondary")
+        self.add_widget(subtitle)
+
+        self.add_widget(MDBoxLayout(size_hint_y=None, height=dp(4)))
+
+        google_btn = AuthButton(icon="google", text="Войти через Google",
+                                bg_color=[0.96, 0.96, 0.96, 1], text_color=[0.2, 0.2, 0.2, 1])
+        google_btn.pos_hint = {'center_x': 0.5}
+        google_btn.bind(on_release=self.on_google_click)
+        self.add_widget(google_btn)
+
+        login_btn = AuthButton(icon="account", text="Войти по логину и паролю",
+                               bg_color=theme.PRIMARY_LIGHT, text_color=[1, 1, 1, 1])
+        login_btn.pos_hint = {'center_x': 0.5}
+        login_btn.bind(on_release=self.show_login_form)
+        self.add_widget(login_btn)
+
+        register_btn = AuthButton(icon="account-plus", text="Зарегистрироваться",
+                                  bg_color=theme.PRIMARY, text_color=[1, 1, 1, 1])
+        register_btn.pos_hint = {'center_x': 0.5}
+        register_btn.bind(on_release=self.show_register)
+        self.add_widget(register_btn)
+
+        skip_btn = MDRaisedButton(text="Пропустить", size_hint=(0.9, None), height=dp(40),
+                                  md_bg_color=[0.95, 0.95, 0.95, 1],
+                                  theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
+                                  on_release=self.close)
+        skip_btn.pos_hint = {'center_x': 0.5}
+        skip_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        self.add_widget(skip_btn)
+
+        self.login_modal = None
+        self.register_modal = None
+
+    def on_google_click(self, instance):
+        self.close()
+        if self.on_login_success_callback:
+            self.on_login_success_callback('google')
+
+    def close(self, instance=None):
+        if self.on_close_callback:
+            self.on_close_callback()
+        if self.parent:
+            self.parent.remove_widget(self)
+
+    def show_login_form(self, instance):
+        self.close()
+        Clock.schedule_once(lambda dt: self._show_login_modal(), 0.2)
+
+    def _show_login_modal(self):
+        if self.login_modal and self.login_modal.parent:
+            return
+        self.login_modal = LoginModal(
+            parent_screen=self.parent_screen,
+            on_close=self.on_login_close,
+            on_login_success=self.on_login_form_success
+        )
+        self.parent_screen.add_widget(self.login_modal)
+
+    def on_login_close(self):
+        self.login_modal = None
+
+    def on_login_form_success(self):
+        self.login_modal = None
+        if self.on_login_success_callback:
+            self.on_login_success_callback('login_form')
+
+    def show_register(self, instance):
+        self.close()
+        Clock.schedule_once(lambda dt: self._show_register_modal(), 0.2)
+
+    def _show_register_modal(self):
+        if self.register_modal and self.register_modal.parent:
+            return
+        self.register_modal = RegisterModal(
+            parent_screen=self.parent_screen,
+            on_close=self.on_register_close,
+            on_register_success=self.on_register_form_success
+        )
+        self.parent_screen.add_widget(self.register_modal)
+
+    def on_register_close(self):
+        self.register_modal = None
+
+    def on_register_form_success(self):
+        self.register_modal = None
+        show_snackbar("✅ Регистрация успешна! Теперь войдите.")
 
 
 class HomeScreen(MDScreen):
@@ -563,20 +423,49 @@ class HomeScreen(MDScreen):
     def show_auth_modal(self):
         if self.auth_modal and self.auth_modal.parent:
             return
-        self.auth_modal = AuthModal(on_close=self.on_modal_close, on_login_success=self.on_login_success)
+        self.auth_modal = AuthModal(
+            parent_screen=self,
+            on_close=self.on_modal_close,
+            on_login_success=self.on_login_success
+        )
         self.add_widget(self.auth_modal)
 
     def on_modal_close(self):
         self.auth_modal = None
 
-    def on_login_success(self):
+    def on_login_success(self, provider=None):
         self.auth_modal = None
-        self.check_auth(0)
+
+        if provider == 'google':
+            self.login_google()
+        elif provider == 'login_form':
+            self.check_auth(0)
+        else:
+            self.check_auth(0)
+
+    def login_google(self):
+        self.auth_status.text = "🌐 Открываем Google..."
+
+        api.google_login(
+            on_success=self.on_oauth_success,
+            on_failure=self.on_oauth_failure
+        )
+
+    def on_oauth_success(self, user):
+        self.user = user
+        self.auth_status.text = f"✅ {user.get('username')}"
+        show_snackbar(f"Добро пожаловать, {user.get('username')}! 🎸")
+        logger.info(f'Пользователь авторизован: {user.get("username")}')
+        api.user_data = user
+
+    def on_oauth_failure(self, req, error):
+        self.auth_status.text = "👤 Гость"
+        show_snackbar("❌ Ошибка авторизации через Google")
+        logger.error(f'OAuth ошибка: {error}')
 
     def open_profile(self):
-        """Открывает профиль - вызывается из верхней панели"""
         if api.is_authenticated():
-            Snackbar(text=f"Вы вошли как {api.user_data.get('username')} 🎸").open()
+            show_snackbar(f"Вы вошли как {api.user_data.get('username')} 🎸")
             logger.info(f'Открыт профиль: {api.user_data.get("username")}')
         else:
             logger.info('Не авторизован, показываем окно авторизации')
