@@ -6,6 +6,11 @@
 import os
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
+from kivy.uix.screenmanager import ScreenManager
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.animation import Animation
 
 # Настройка логирования
 from config.logger_config import setup_logging, app_logger
@@ -21,7 +26,7 @@ from kivymd.uix.button import MDIconButton, MDFlatButton, MDRaisedButton
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.snackbar import MDSnackbar
-from kivymd.uix.bottomnavigation import MDBottomNavigation, MDBottomNavigationItem
+from kivymd.uix.floatlayout import MDFloatLayout
 
 # Наши модули
 from config.app_config import config
@@ -47,6 +52,72 @@ def show_snackbar(message):
     snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
                     theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
     snack.open()
+
+
+class BottomNavItem(BoxLayout):
+    """Элемент нижней навигации с иконкой и текстом"""
+
+    def __init__(self, icon, text, screen_name, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint = (1, 1)
+        self.spacing = dp(2)
+        self.screen_name = screen_name
+
+        # Иконка
+        self.icon_btn = MDIconButton(
+            icon=icon,
+            theme_text_color="Custom",
+            text_color=theme.TEXT_SECONDARY,
+            size_hint=(1, 0.6),
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        # Универсальный маленький шрифт
+        self.text_label = MDLabel(
+            text=text,
+            font_size=sp(8),
+            size_hint=(1, 0.4),
+            halign="center",
+            theme_text_color="Custom",
+            text_color=theme.TEXT_SECONDARY,
+            bold=False
+        )
+
+        self.add_widget(self.icon_btn)
+        self.add_widget(self.text_label)
+
+    def set_active(self, active):
+        if active:
+            self.icon_btn.text_color = theme.PRIMARY
+            self.text_label.text_color = theme.PRIMARY
+            self.text_label.bold = True
+        else:
+            self.icon_btn.text_color = theme.TEXT_SECONDARY
+            self.text_label.text_color = theme.TEXT_SECONDARY
+            self.text_label.bold = False
+
+    def set_active(self, active):
+        """Устанавливает активное состояние"""
+        if active:
+            self.icon_btn.text_color = theme.PRIMARY
+            self.text_label.text_color = theme.PRIMARY
+            self.text_label.bold = True
+        else:
+            self.icon_btn.text_color = theme.TEXT_SECONDARY
+            self.text_label.text_color = theme.TEXT_SECONDARY
+            self.text_label.bold = False
+
+    def set_active(self, active):
+        """Устанавливает активное состояние"""
+        if active:
+            self.icon_btn.text_color = theme.PRIMARY
+            self.text_label.text_color = theme.PRIMARY
+            self.text_label.bold = True
+        else:
+            self.icon_btn.text_color = theme.TEXT_SECONDARY
+            self.text_label.text_color = theme.TEXT_SECONDARY
+            self.text_label.bold = False
 
 
 class LanguageSelector(MDBoxLayout):
@@ -156,7 +227,7 @@ class GuitarFunsApp(MDApp):
         self.language_selector = None
         self.screen_manager = None
         self.home_screen = None
-        self.bottom_nav = None
+        self.nav_items = []
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
@@ -172,19 +243,21 @@ class GuitarFunsApp(MDApp):
 
         # Создаём менеджер экранов
         self.screen_manager = setup_screen_manager()
+        self.screen_manager.bind(current=self.on_screen_change)
 
-        # Создаём нижнюю навигацию и СОХРАНЯЕМ ссылку
-        self.bottom_nav = self.create_bottom_navigation()
+        # Корневой контейнер
+        root = MDBoxLayout(orientation='vertical')
 
-        from kivy.uix.floatlayout import FloatLayout
-        root = FloatLayout()
-
+        # Верхняя панель
         top_bar = self.create_top_bar()
         root.add_widget(top_bar)
 
-        self.bottom_nav.size_hint = (1, 0.9)
-        self.bottom_nav.pos_hint = {'y': 0}
-        root.add_widget(self.bottom_nav)
+        # Менеджер экранов
+        root.add_widget(self.screen_manager)
+
+        # Нижняя навигация
+        bottom_nav = self.create_bottom_navigation()
+        root.add_widget(bottom_nav)
 
         logger.info('Интерфейс успешно создан')
         return root
@@ -193,7 +266,7 @@ class GuitarFunsApp(MDApp):
         top_bar = MDBoxLayout(
             orientation='horizontal', size_hint=(1, None), height=dp(60),
             padding=[theme.PADDING, 0, theme.PADDING, 0], spacing=theme.PADDING,
-            md_bg_color=theme.PRIMARY, pos_hint={'top': 1}
+            md_bg_color=theme.PRIMARY
         )
 
         logo = MDLabel(
@@ -232,78 +305,73 @@ class GuitarFunsApp(MDApp):
         return top_bar
 
     def create_bottom_navigation(self):
-        """Создаёт нижнюю навигацию с иконками и текстом"""
+        """Создаёт нижнюю навигацию с иконками"""
 
-        bottom_nav = MDBottomNavigation(
-            size_hint=(1, 1),
-            panel_color=[1, 1, 1, 1],
-            selected_color_background=theme.PRIMARY
+        bottom_nav = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(60),
+            padding=[theme.PADDING, dp(4), theme.PADDING, dp(4)],
+            spacing=dp(4),
+            md_bg_color=theme.SURFACE
         )
+
+        # Добавляем тень сверху
+        from kivy.graphics import Color, Rectangle
+        with bottom_nav.canvas.before:
+            Color(0, 0, 0, 0.05)
+            bottom_nav.shadow = Rectangle(pos=(bottom_nav.x, bottom_nav.y + bottom_nav.height - dp(1)),
+                                          size=(bottom_nav.width, dp(1)))
+
+        def update_shadow(instance, value):
+            bottom_nav.shadow.pos = (bottom_nav.x, bottom_nav.y + bottom_nav.height - dp(1))
+            bottom_nav.shadow.size = (bottom_nav.width, dp(1))
+
+        bottom_nav.bind(pos=update_shadow, size=update_shadow)
 
         # Элементы навигации
         nav_items = [
-            {"icon": "home", "text": "Главная", "screen": "home", "screen_class": "home_screen"},
-            {"icon": "music-note", "text": "Песни", "screen": "songs", "screen_class": "songs_screen"},
-            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords", "screen_class": "chords_screen"},
-            {"icon": "book", "text": "Словарь", "screen": "dictionary", "screen_class": "dictionary_screen"},
-            {"icon": "tune", "text": "Тюнер", "screen": "tuner", "screen_class": "tuner_screen"},
-            {"icon": "heart", "text": "Избранное", "screen": "favorites", "screen_class": "favorites_screen"},
-            {"icon": "account", "text": "Профиль", "screen": "profile", "screen_class": "profile_screen"}
+            {"icon": "home", "text": "Главная", "screen": "home"},
+            {"icon": "music-note", "text": "Песни", "screen": "songs"},
+            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords"},
+            {"icon": "book", "text": "Словарь", "screen": "dictionary"},
+            {"icon": "tune", "text": "Тюнер", "screen": "tuner"},
+            {"icon": "heart", "text": "Избранное", "screen": "favorites"}
         ]
 
         for item in nav_items:
-            screen = MDScreen(name=item["screen"])
-
-            if item["screen"] == "home":
-                from screens.home_screen import HomeScreen
-                self.home_screen = HomeScreen()
-                content = self.home_screen
-                screen.add_widget(content)
-            elif item["screen"] == "songs":
-                from screens.songs_screen import SongsScreen
-                content = SongsScreen()
-                screen.add_widget(content)
-            elif item["screen"] == "chords":
-                from screens.chords_screen import ChordsScreen
-                content = ChordsScreen()
-                screen.add_widget(content)
-            elif item["screen"] == "dictionary":
-                from screens.dictionary_screen import DictionaryScreen
-                content = DictionaryScreen()
-                screen.add_widget(content)
-            elif item["screen"] == "tuner":
-                from screens.tuner_screen import TunerScreen
-                content = TunerScreen()
-                screen.add_widget(content)
-            elif item["screen"] == "favorites":
-                from screens.favorites_screen import FavoritesScreen
-                content = FavoritesScreen()
-                screen.add_widget(content)
-            elif item["screen"] == "profile":
-                from screens.profile_screen import ProfileScreen
-                content = ProfileScreen()
-                screen.add_widget(content)
-
-            nav_item = MDBottomNavigationItem(name=item["screen"], text=item["text"], icon=item["icon"])
-            nav_item.add_widget(screen)
+            nav_item = BottomNavItem(
+                icon=item["icon"],
+                text=item["text"],
+                screen_name=item["screen"]
+            )
+            nav_item.icon_btn.bind(on_release=lambda x, s=item["screen"]: self.on_nav_press(s))
             bottom_nav.add_widget(nav_item)
+            self.nav_items.append(nav_item)
 
-        bottom_nav.switch_tab("home")
+        # Устанавливаем активный элемент по умолчанию
+        if self.nav_items:
+            self.nav_items[0].set_active(True)
+
         return bottom_nav
+
+    def on_nav_press(self, screen_name):
+        """Обработчик нажатия на элемент навигации"""
+        if self.screen_manager and self.screen_manager.current != screen_name:
+            self.screen_manager.current = screen_name
+
+    def on_screen_change(self, instance, value):
+        """Обновляет активные элементы при смене экрана"""
+        for item in self.nav_items:
+            item.set_active(item.screen_name == value)
 
     def open_profile(self, instance):
         """Открывает профиль пользователя"""
         logger.info("Нажата иконка личного кабинета")
 
         if api.is_authenticated():
-            # Переключаемся на вкладку профиля в нижней навигации
-            if self.bottom_nav:
-                self.bottom_nav.switch_tab("profile")
-                logger.info("Переход на вкладку профиля")
-            else:
-                logger.warning("Bottom navigation не найден")
+            self.screen_manager.current = "profile"
         else:
-            # Показываем окно авторизации
             if self.home_screen and hasattr(self.home_screen, 'open_profile'):
                 self.home_screen.open_profile()
             else:
@@ -336,19 +404,6 @@ class GuitarFunsApp(MDApp):
         logger.info(f"Язык изменён на: {lang_name} ({lang_code})")
         show_snackbar(f"Язык изменён на {lang_name}")
 
-    def on_start(self):
-        logger.info('Приложение GuitarFuns запущено')
-
-    def on_pause(self):
-        logger.debug('Приложение свернуто')
-        return True
-
-    def on_resume(self):
-        logger.debug('Приложение восстановлено')
-
-    def on_stop(self):
-        logger.info('Приложение закрыто')
-
     def show_auth_modal(self, on_success=None):
         """Показывает модальное окно авторизации"""
         from screens.home_screen import AuthModal
@@ -360,6 +415,28 @@ class GuitarFunsApp(MDApp):
                 on_login_success=on_success
             )
             self.home_screen.add_widget(self.home_screen.auth_modal)
+
+    def switch_screen(self, screen_name):
+        """Переключает экран (для вызова из других модулей)"""
+        if self.screen_manager and self.screen_manager.current != screen_name:
+            self.screen_manager.current = screen_name
+            logger.info(f"Переключение на экран: {screen_name}")
+
+    def on_start(self):
+        logger.info('Приложение GuitarFuns запущено')
+        if self.screen_manager:
+            self.home_screen = self.screen_manager.get_screen('home')
+            logger.info("Ссылка на home_screen сохранена")
+
+    def on_pause(self):
+        logger.debug('Приложение свернуто')
+        return True
+
+    def on_resume(self):
+        logger.debug('Приложение восстановлено')
+
+    def on_stop(self):
+        logger.info('Приложение закрыто')
 
 
 if __name__ == '__main__':

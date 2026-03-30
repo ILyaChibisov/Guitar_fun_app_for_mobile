@@ -2,6 +2,7 @@
 """
 Экран песен с алфавитной навигацией и поиском
 """
+from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDIconButton
@@ -44,7 +45,6 @@ class LoadingSpinner(MDBoxLayout):
         self.size_hint = (1, 1)
         self.spacing = dp(16)
 
-        # Используем обычный ProgressBar без indeterminate
         self.progress = MDProgressBar(
             size_hint=(0.8, None),
             height=dp(4),
@@ -53,7 +53,6 @@ class LoadingSpinner(MDBoxLayout):
             max=100
         )
 
-        # Анимация для имитации загрузки
         self.anim = None
 
         self.label = MDLabel(
@@ -100,7 +99,6 @@ class ArtistCard(MDCard):
         self.md_bg_color = theme.SURFACE
         self.elevation = 1
 
-        # Заголовок
         self.header = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(32))
 
         self.icon = MDLabel(text="🎸", font_size=dp(18), size_hint_x=0.1)
@@ -117,7 +115,6 @@ class ArtistCard(MDCard):
                                            disabled=True)
         self.add_widget(self.songs_container)
 
-        # Индикатор загрузки внутри карточки
         self.loading_spinner = LoadingSpinner(size_hint_y=None, height=dp(60), opacity=0, disabled=True)
         self.add_widget(self.loading_spinner)
 
@@ -135,15 +132,11 @@ class ArtistCard(MDCard):
         self.loading_spinner.start_animation()
         self.songs_container.opacity = 0
 
-        # TODO: реальный запрос к API
-        # api.get_songs_by_artist(self.artist, on_success=self.on_songs_loaded, on_failure=self.on_load_failed)
-
-        # Временные тестовые数据
-        Clock.schedule_once(lambda dt: self.on_songs_loaded([
-            {"title": "Группа крови", "tabs_count": 2, "song_id": 1},
-            {"title": "Кукушка", "tabs_count": 1, "song_id": 2},
-            {"title": "Звезда по имени Солнце", "tabs_count": 1, "song_id": 3},
-        ]), 0.5)
+        api.get_songs_by_artist(
+            artist=self.artist,
+            on_success=self.on_songs_loaded,
+            on_failure=self.on_load_failed
+        )
 
     def on_songs_loaded(self, songs):
         """Обработчик загрузки песен"""
@@ -168,7 +161,8 @@ class ArtistCard(MDCard):
 
         for song in self.songs:
             song_btn = MDRaisedButton(
-                text=f"{song['title']} ({song['tabs_count']} подборов)" if song['tabs_count'] > 1 else song['title'],
+                text=f"{song['title']} ({song.get('tabs_count', 1)} подборов)" if song.get('tabs_count', 1) > 1 else
+                song['title'],
                 size_hint=(1, None),
                 height=dp(40),
                 md_bg_color=[0.95, 0.95, 0.95, 1],
@@ -226,7 +220,7 @@ class ResultCard(MDCard):
         self.elevation = 1
 
         artist_label = MDLabel(
-            text=f"🎸 {song['artist']}",
+            text=f"🎸 {song.get('artist', '')}",
             font_style="Subtitle2",
             size_hint_y=None,
             height=dp(22),
@@ -235,15 +229,16 @@ class ResultCard(MDCard):
         )
 
         title_label = MDLabel(
-            text=song['title'],
+            text=song.get('title', ''),
             font_style="Body2",
             size_hint_y=None,
             height=dp(22),
             theme_text_color="Secondary"
         )
 
+        tabs_count = song.get('tabs_count', 1)
         info_label = MDLabel(
-            text=f"{song['tabs_count']} подборов" if song['tabs_count'] > 1 else "1 подбор",
+            text=f"{tabs_count} подборов" if tabs_count > 1 else "1 подбор",
             font_style="Caption",
             size_hint_y=None,
             height=dp(18),
@@ -273,7 +268,6 @@ class SongsScreen(MDScreen):
         self.is_loading = False
         self.loading_spinner = None
 
-        # Устанавливаем цвет фона
         from kivy.graphics import Color, Rectangle
         from kivy.utils import rgba
         with self.canvas.before:
@@ -281,7 +275,6 @@ class SongsScreen(MDScreen):
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
-        # Главный контейнер
         self.layout = MDBoxLayout(orientation='vertical', padding=dp(8), spacing=dp(8))
 
         # Поисковая строка
@@ -384,8 +377,15 @@ class SongsScreen(MDScreen):
 
     def load_letters(self):
         """Загружает список букв, для которых есть песни"""
-        # TODO: реальный запрос к API
-        pass
+        api.get_alphabet(
+            on_success=self.on_letters_loaded,
+            on_failure=self.on_load_failed
+        )
+
+    def on_letters_loaded(self, letters):
+        """Обработчик загрузки букв"""
+        self.hide_loading()
+        logger.info(f"Активные буквы: {letters}")
 
     def on_letter_press(self, letter):
         """Обработчик нажатия на букву"""
@@ -398,17 +398,11 @@ class SongsScreen(MDScreen):
     def load_artists_by_letter(self, letter):
         """Загружает исполнителей по букве"""
         self.show_loading()
-
-        # TODO: реальный запрос к API
-        # api.get_artists_by_letter(letter, on_success=self.on_artists_loaded, on_failure=self.on_load_failed)
-
-        # Временные тестовые данные
-        Clock.schedule_once(lambda dt: self.on_artists_loaded([
-            {"artist": "Кино"},
-            {"artist": "Король и Шут"},
-            {"artist": "КняZz"},
-            {"artist": "Калинов Мост"},
-        ]), 0.5)
+        api.get_artists_by_letter(
+            letter=letter,
+            on_success=self.on_artists_loaded,
+            on_failure=self.on_load_failed
+        )
 
     def on_artists_loaded(self, artists):
         """Отображает список исполнителей"""
@@ -429,18 +423,73 @@ class SongsScreen(MDScreen):
 
         for artist_data in artists:
             artist = artist_data.get('artist')
-            card = ArtistCard(artist=artist, on_song_click=self.on_song_selected)
-            self.content_container.add_widget(card)
+            if artist:
+                card = ArtistCard(artist=artist, on_song_click=self.on_song_selected)
+                self.content_container.add_widget(card)
 
     def on_song_selected(self, song):
         """Обработчик выбора песни"""
         logger.info(f"Выбрана песня: {song}")
 
-        if hasattr(self, 'manager') and self.manager:
-            song_detail_screen = self.manager.get_screen('song_detail')
-            if song_detail_screen:
-                song_detail_screen.set_song(song['song_id'])
-                self.manager.current = 'song_detail'
+        self.show_loading()
+        api.get_tabs_by_song(
+            artist=song['artist'],
+            title=song['title'],
+            on_success=lambda tabs: self.on_tabs_loaded(song, tabs),
+            on_failure=self.on_load_failed
+        )
+
+    def on_tabs_loaded(self, song, tabs):
+        """Обработчик загрузки подборов песни"""
+        self.hide_loading()
+
+        if not tabs:
+            show_snackbar("Нет доступных подборов для этой песни")
+            return
+
+        logger.info(f"Загружено {len(tabs)} подборов для песни: {song['artist']} - {song['title']}")
+        logger.info(f"self.manager = {self.manager}")
+
+        # Пробуем получить менеджер через self.manager
+        manager = self.manager
+
+        # Если self.manager None, пробуем через app
+        if not manager:
+            logger.warning("self.manager is None, пытаемся через app")
+            app = MDApp.get_running_app()
+            if hasattr(app, 'screen_manager'):
+                manager = app.screen_manager
+                logger.info(f"Найден app.screen_manager: {manager}")
+
+        if not manager:
+            logger.error("ScreenManager не найден!")
+            show_snackbar("Ошибка навигации: менеджер экранов не найден")
+            return
+
+        logger.info(f"Доступные экраны: {manager.screen_names}")
+
+        if 'song_detail' not in manager.screen_names:
+            logger.error("Экран 'song_detail' не найден в ScreenManager!")
+            show_snackbar("Ошибка: экран песни не найден")
+            return
+
+        song_detail_screen = manager.get_screen('song_detail')
+        if song_detail_screen:
+            if hasattr(song_detail_screen, 'set_song_data'):
+                song_detail_screen.set_song_data(
+                    song_id=tabs[0]['id'],
+                    artist=song['artist'],
+                    title=song['title'],
+                    tabs=tabs
+                )
+                manager.current = 'song_detail'
+                logger.info(f"Переход на экран песни: {song['artist']} - {song['title']}")
+            else:
+                logger.error("Метод set_song_data не найден в SongDetailScreen")
+                show_snackbar("Ошибка: метод set_song_data не найден")
+        else:
+            logger.error("Экран song_detail не найден в ScreenManager")
+            show_snackbar("Ошибка: экран песни не найден")
 
     def do_search(self, instance):
         """Выполняет поиск"""
@@ -456,17 +505,13 @@ class SongsScreen(MDScreen):
     def search_results(self, query):
         """Отображает результаты поиска"""
         self.show_loading()
-
-        # TODO: реальный запрос к API
-        # api.search_songs(query, on_success=self.on_search_results, on_failure=self.on_load_failed)
-
-        # Временные тестовые данные
-        Clock.schedule_once(lambda dt: self.on_search_results([
-            {"artist": "Кино", "title": "Группа крови", "tabs_count": 2, "song_id": 1},
-            {"artist": "Кино", "title": "Кукушка", "tabs_count": 1, "song_id": 2},
-            {"artist": "Король и Шут", "title": "Прыгну со скалы", "tabs_count": 2, "song_id": 3},
-            {"artist": "Король и Шут", "title": "Лесник", "tabs_count": 1, "song_id": 4},
-        ]), 0.5)
+        api.search_songs(
+            query=query,
+            search_type="general",
+            limit=50,
+            on_success=self.on_search_results,
+            on_failure=self.on_load_failed
+        )
 
     def on_search_results(self, results):
         """Отображает результаты поиска"""
@@ -486,8 +531,28 @@ class SongsScreen(MDScreen):
             return
 
         for song in results:
-            card = ResultCard(song=song, on_click=self.on_song_selected)
+            card = ResultCard(
+                song={
+                    'artist': song.get('artist', ''),
+                    'title': song.get('title', ''),
+                    'tabs_count': song.get('tabs_count', 1),
+                    'song_id': song.get('song_id', 0)
+                },
+                on_click=self.on_search_song_selected
+            )
             self.content_container.add_widget(card)
+
+    def on_search_song_selected(self, song):
+        """Обработчик выбора песни из результатов поиска"""
+        logger.info(f"Выбрана песня из поиска: {song}")
+
+        self.show_loading()
+        api.get_tabs_by_song(
+            artist=song['artist'],
+            title=song['title'],
+            on_success=lambda tabs: self.on_tabs_loaded(song, tabs),
+            on_failure=self.on_load_failed
+        )
 
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
