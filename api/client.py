@@ -171,12 +171,19 @@ class APIClient:
 
     def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
         headers = self._get_headers(include_auth)
+        print(f"DEBUG _request: {method} {url}")
+
+        def wrapped_on_success(req, result):
+            print(f"DEBUG _request: wrapped_on_success called")
+            if on_success:
+                on_success(req, result)
+
         req = UrlRequest(
             url=url,
             method=method,
             req_body=json.dumps(data) if data else None,
             req_headers=headers,
-            on_success=on_success,
+            on_success=wrapped_on_success,
             on_failure=on_failure or self._on_failure,
             on_error=self._on_error,
             timeout=config.CONNECTION_TIMEOUT
@@ -384,7 +391,7 @@ class APIClient:
         """Получить все буквы, для которых есть песни"""
 
         def _on_success(req, result):
-            Logger.info('✅ Получен алфавит')
+            print(f"DEBUG API: get_alphabet _on_success called")
             if on_success:
                 on_success(result.get('letters', []))
 
@@ -398,27 +405,43 @@ class APIClient:
 
     def get_artists_by_letter(self, letter: str, on_success=None, on_failure=None):
         """Получить исполнителей по букве"""
+        import urllib.parse
         encoded_letter = urllib.parse.quote(letter, safe='')
 
+        print(f"DEBUG API: get_artists_by_letter called for letter: {letter}")
+        print(f"DEBUG API: URL: {self.config.API_BASE_URL}/songs/artists/{encoded_letter}")
+
         def _on_success(req, result):
-            Logger.info(f'✅ Получены исполнители на букву {letter}')
+            print(f"DEBUG API: _on_success called")
+            print(f"DEBUG API: result type: {type(result)}")
+            print(f"DEBUG API: result keys: {result.keys() if isinstance(result, dict) else 'not dict'}")
+
+            artists = result.get('artists', []) if isinstance(result, dict) else []
+            print(f"DEBUG API: artists count: {len(artists)}")
+
             if on_success:
-                on_success(result.get('artists', []))
+                on_success(artists)
+
+        def _on_failure(req, error):
+            print(f"DEBUG API: _on_failure called, error: {error}")
+            if on_failure:
+                on_failure(req, error)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}",
             method='GET',
             on_success=_on_success,
-            on_failure=on_failure,
+            on_failure=_on_failure,
             include_auth=False
         )
 
     def get_songs_by_artist(self, artist: str, on_success=None, on_failure=None):
         """Получить песни исполнителя"""
+        import urllib.parse
         encoded_artist = urllib.parse.quote(artist, safe='')
 
         def _on_success(req, result):
-            Logger.info(f'✅ Получены песни исполнителя {artist}')
+            print(f"DEBUG API: get_songs_by_artist _on_success called")
             if on_success:
                 on_success(result.get('songs', []))
 
@@ -432,11 +455,12 @@ class APIClient:
 
     def get_tabs_by_song(self, artist: str, title: str, on_success=None, on_failure=None):
         """Получить подборы песни"""
+        import urllib.parse
         encoded_artist = urllib.parse.quote(artist, safe='')
         encoded_title = urllib.parse.quote(title, safe='')
 
         def _on_success(req, result):
-            Logger.info(f'✅ Получены подборы песни {artist} - {title}')
+            print(f"DEBUG API: get_tabs_by_song _on_success called")
             if on_success:
                 on_success(result.get('tabs', []))
 
@@ -452,7 +476,7 @@ class APIClient:
         """Получить конкретный подбор по ID"""
 
         def _on_success(req, result):
-            Logger.info(f'✅ Получен подбор {song_id}')
+            print(f"DEBUG API: get_tab _on_success called for id: {song_id}")
             if on_success:
                 on_success(result)
 
@@ -514,10 +538,11 @@ class APIClient:
 
     def search_songs(self, query: str, search_type: str = "general", limit: int = 50, on_success=None, on_failure=None):
         """Поиск песен"""
+        import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
 
         def _on_success(req, result):
-            Logger.info(f'✅ Результаты поиска: {len(result.get("results", []))}')
+            print(f"DEBUG API: search_songs _on_success called")
             if on_success:
                 on_success(result.get('results', []))
 

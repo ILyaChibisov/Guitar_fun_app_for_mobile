@@ -4,7 +4,6 @@
 """
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDRaisedButton
-from kivymd.uix.gridlayout import MDGridLayout
 from kivy.metrics import dp
 from kivy.properties import StringProperty
 from config.theme import theme
@@ -55,7 +54,7 @@ class AlphabetKeyboard(MDBoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint_y = None
-        self.height = dp(210)  # 7 рядов * 30dp
+        self.height = dp(210)
         self.spacing = dp(2)
         self.padding = [dp(8), dp(2), dp(8), dp(2)]
 
@@ -90,5 +89,6 @@ class AlphabetKeyboard(MDBoxLayout):
 
     def _on_letter_click(self, letter):
         """Обработчик нажатия на букву"""
+        print(f"DEBUG Keyboard: Нажата буква: {letter}")
         if self.on_letter_press:
             self.on_letter_press(letter)

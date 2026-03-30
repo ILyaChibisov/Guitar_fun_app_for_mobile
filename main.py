@@ -97,27 +97,6 @@ class BottomNavItem(BoxLayout):
             self.text_label.text_color = theme.TEXT_SECONDARY
             self.text_label.bold = False
 
-    def set_active(self, active):
-        """Устанавливает активное состояние"""
-        if active:
-            self.icon_btn.text_color = theme.PRIMARY
-            self.text_label.text_color = theme.PRIMARY
-            self.text_label.bold = True
-        else:
-            self.icon_btn.text_color = theme.TEXT_SECONDARY
-            self.text_label.text_color = theme.TEXT_SECONDARY
-            self.text_label.bold = False
-
-    def set_active(self, active):
-        """Устанавливает активное состояние"""
-        if active:
-            self.icon_btn.text_color = theme.PRIMARY
-            self.text_label.text_color = theme.PRIMARY
-            self.text_label.bold = True
-        else:
-            self.icon_btn.text_color = theme.TEXT_SECONDARY
-            self.text_label.text_color = theme.TEXT_SECONDARY
-            self.text_label.bold = False
 
 
 class LanguageSelector(MDBoxLayout):

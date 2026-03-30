@@ -160,9 +160,10 @@ class ArtistCard(MDCard):
         self.songs_container.clear_widgets()
 
         for song in self.songs:
+            tabs_count = song.get('tabs_count', 1)
+            text = f"{song['title']} ({tabs_count} подборов)" if tabs_count > 1 else song['title']
             song_btn = MDRaisedButton(
-                text=f"{song['title']} ({song.get('tabs_count', 1)} подборов)" if song.get('tabs_count', 1) > 1 else
-                song['title'],
+                text=text,
                 size_hint=(1, None),
                 height=dp(40),
                 md_bg_color=[0.95, 0.95, 0.95, 1],
@@ -267,6 +268,7 @@ class SongsScreen(MDScreen):
         self.search_mode = False
         self.is_loading = False
         self.loading_spinner = None
+        self.artists_cache = {}
 
         from kivy.graphics import Color, Rectangle
         from kivy.utils import rgba
@@ -316,7 +318,8 @@ class SongsScreen(MDScreen):
         self.layout.add_widget(self.lang_layout)
 
         # Клавиатура с буквами
-        self.keyboard = AlphabetKeyboard(on_letter_press=self.on_letter_press)
+        self.keyboard = AlphabetKeyboard()
+        self.keyboard.on_letter_press = self.on_letter_press
         self.layout.add_widget(self.keyboard)
 
         # Контейнер для контента
@@ -374,9 +377,11 @@ class SongsScreen(MDScreen):
         self.current_language = language
         self.keyboard.set_language(language)
         self.lang_label.text = "🇷🇺 Русский" if language == 'ru' else "🇬🇧 English"
+        self.artists_cache = {}
 
     def load_letters(self):
         """Загружает список букв, для которых есть песни"""
+        self.show_loading()
         api.get_alphabet(
             on_success=self.on_letters_loaded,
             on_failure=self.on_load_failed
@@ -388,24 +393,39 @@ class SongsScreen(MDScreen):
         logger.info(f"Активные буквы: {letters}")
 
     def on_letter_press(self, letter):
-        """Обработчик нажатия на букву"""
+        """Обработчик нажатия на букву - переход на экран исполнителей"""
         logger.info(f"Выбрана буква: {letter}")
-        self.current_letter = letter
-        self.search_mode = False
-        self.search_field.text = ""
-        self.load_artists_by_letter(letter)
+
+        if hasattr(self, 'manager') and self.manager:
+            artists_screen = self.manager.get_screen('artists_by_letter')
+            if artists_screen:
+                artists_screen.set_letter(letter)
+                self.manager.current = 'artists_by_letter'
 
     def load_artists_by_letter(self, letter):
         """Загружает исполнителей по букве"""
+        print(f"DEBUG: load_artists_by_letter ВЫЗВАН для буквы: {letter}")
         self.show_loading()
+
+        def on_success(artists):
+            print(f"DEBUG: on_success ВЫЗВАН, artists count: {len(artists)}")
+            self.on_artists_loaded(artists)
+
+        def on_failure(req, error):
+            print(f"DEBUG: on_failure ВЫЗВАН, error: {error}")
+            self.on_load_failed(req, error)
+
         api.get_artists_by_letter(
             letter=letter,
-            on_success=self.on_artists_loaded,
-            on_failure=self.on_load_failed
+            on_success=on_success,
+            on_failure=on_failure
         )
 
     def on_artists_loaded(self, artists):
         """Отображает список исполнителей"""
+        print(f"=== DEBUG: on_artists_loaded ===")
+        print(f"Количество: {len(artists)}")
+
         self.hide_loading()
         self.content_container.clear_widgets()
 
@@ -424,8 +444,38 @@ class SongsScreen(MDScreen):
         for artist_data in artists:
             artist = artist_data.get('artist')
             if artist:
-                card = ArtistCard(artist=artist, on_song_click=self.on_song_selected)
+                # Упрощённая карточка исполнителя без загрузки песен внутри
+                card = MDCard(
+                    orientation='vertical',
+                    size_hint=(1, None),
+                    height=dp(50),
+                    padding=dp(12),
+                    radius=[theme.CORNER_RADIUS_SMALL],
+                    md_bg_color=theme.SURFACE,
+                    elevation=1,
+                    on_release=lambda x, a=artist: self.on_artist_selected(a)
+                )
+
+                artist_label = MDLabel(
+                    text=f"🎸 {artist}",
+                    font_style="Subtitle1",
+                    size_hint_y=None,
+                    height=dp(30),
+                    theme_text_color="Primary",
+                    bold=True
+                )
+                card.add_widget(artist_label)
                 self.content_container.add_widget(card)
+
+    def on_artist_selected(self, artist):
+        """Выбор исполнителя - переход на экран его песен"""
+        logger.info(f"Выбран исполнитель: {artist}")
+
+        if hasattr(self, 'manager') and self.manager:
+            artist_songs_screen = self.manager.get_screen('artist_songs')
+            if artist_songs_screen:
+                artist_songs_screen.set_artist(artist)
+                self.manager.current = 'artist_songs'
 
     def on_song_selected(self, song):
         """Обработчик выбора песни"""
@@ -448,48 +498,18 @@ class SongsScreen(MDScreen):
             return
 
         logger.info(f"Загружено {len(tabs)} подборов для песни: {song['artist']} - {song['title']}")
-        logger.info(f"self.manager = {self.manager}")
 
-        # Пробуем получить менеджер через self.manager
-        manager = self.manager
-
-        # Если self.manager None, пробуем через app
-        if not manager:
-            logger.warning("self.manager is None, пытаемся через app")
-            app = MDApp.get_running_app()
-            if hasattr(app, 'screen_manager'):
-                manager = app.screen_manager
-                logger.info(f"Найден app.screen_manager: {manager}")
-
-        if not manager:
-            logger.error("ScreenManager не найден!")
-            show_snackbar("Ошибка навигации: менеджер экранов не найден")
-            return
-
-        logger.info(f"Доступные экраны: {manager.screen_names}")
-
-        if 'song_detail' not in manager.screen_names:
-            logger.error("Экран 'song_detail' не найден в ScreenManager!")
-            show_snackbar("Ошибка: экран песни не найден")
-            return
-
-        song_detail_screen = manager.get_screen('song_detail')
-        if song_detail_screen:
-            if hasattr(song_detail_screen, 'set_song_data'):
-                song_detail_screen.set_song_data(
-                    song_id=tabs[0]['id'],
-                    artist=song['artist'],
-                    title=song['title'],
-                    tabs=tabs
-                )
-                manager.current = 'song_detail'
-                logger.info(f"Переход на экран песни: {song['artist']} - {song['title']}")
-            else:
-                logger.error("Метод set_song_data не найден в SongDetailScreen")
-                show_snackbar("Ошибка: метод set_song_data не найден")
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'switch_screen'):
+            app.current_song_data = {
+                'song_id': tabs[0]['id'],
+                'artist': song['artist'],
+                'title': song['title'],
+                'tabs': tabs
+            }
+            app.switch_screen('song_detail')
         else:
-            logger.error("Экран song_detail не найден в ScreenManager")
-            show_snackbar("Ошибка: экран песни не найден")
+            logger.error("Не удалось переключить экран")
 
     def do_search(self, instance):
         """Выполняет поиск"""

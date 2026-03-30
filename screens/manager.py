@@ -3,6 +3,8 @@ from kivy.uix.screenmanager import ScreenManager
 from config.logger_config import get_logger
 from .home_screen import HomeScreen
 from .songs_screen import SongsScreen
+from .artists_by_letter_screen import ArtistsByLetterScreen  # Новый экран
+from .artist_songs_screen import ArtistSongsScreen
 from .chords_screen import ChordsScreen
 from .dictionary_screen import DictionaryScreen
 from .tuner_screen import TunerScreen
@@ -18,6 +20,8 @@ def setup_screen_manager():
 
     sm.add_widget(HomeScreen(name='home'))
     sm.add_widget(SongsScreen(name='songs'))
+    sm.add_widget(ArtistsByLetterScreen(name='artists_by_letter'))  # Новый
+    sm.add_widget(ArtistSongsScreen(name='artist_songs'))
     sm.add_widget(ChordsScreen(name='chords'))
     sm.add_widget(DictionaryScreen(name='dictionary'))
     sm.add_widget(TunerScreen(name='tuner'))
