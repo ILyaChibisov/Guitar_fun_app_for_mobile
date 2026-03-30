@@ -244,7 +244,6 @@ class ProfileScreen(MDScreen):
         if hasattr(app, 'bottom_nav') and app.bottom_nav:
             app.bottom_nav.switch_tab("home")
         else:
-            # Fallback: если bottom_nav нет, пытаемся через manager
             if hasattr(self, 'manager') and self.manager:
                 self.manager.current = 'home'
 
@@ -264,12 +263,26 @@ class ProfileScreen(MDScreen):
         self.update_ui()
 
     def on_user_load_failed(self, req, error):
-        show_snackbar("❌ Не удалось загрузить данные профиля")
-        logger.error(f'Ошибка загрузки профиля: {error}')
-        # Если токен недействителен, очищаем его и возвращаемся на главную
-        if 'Invalid token' in str(error):
+        """Обработчик ошибки загрузки профиля"""
+        error_msg = str(error)
+        logger.error(f'Ошибка загрузки профиля: {error_msg}')
+
+        # Проверяем, что ошибка связана с авторизацией
+        if 'Not authenticated' in error_msg or 'Invalid token' in error_msg:
+            logger.info('Токен недействителен, очищаем и показываем авторизацию')
             api._clear_tokens()
-        self.go_back(None)
+            show_snackbar("🔐 Сессия истекла. Пожалуйста, войдите снова.")
+
+            # Закрываем экран профиля и показываем окно авторизации
+            self.go_back(None)
+
+            # Показываем окно авторизации
+            app = MDApp.get_running_app()
+            if hasattr(app, 'home_screen') and app.home_screen:
+                app.home_screen.show_auth_modal()
+        else:
+            show_snackbar("❌ Не удалось загрузить данные профиля")
+            self.go_back(None)
 
     def update_ui(self):
         """Обновляет интерфейс данными пользователя"""
@@ -390,7 +403,7 @@ class ProfileScreen(MDScreen):
         def on_logout_success(result):
             show_snackbar("👋 Вы вышли из аккаунта")
 
-            # Переключаемся на вкладку "Главная" в нижней навигации
+            # Переключаемся на вкладку "Главная"
             app = MDApp.get_running_app()
             if hasattr(app, 'bottom_nav') and app.bottom_nav:
                 app.bottom_nav.switch_tab("home")

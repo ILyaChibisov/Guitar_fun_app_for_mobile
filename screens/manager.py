@@ -8,6 +8,7 @@ from .dictionary_screen import DictionaryScreen
 from .tuner_screen import TunerScreen
 from .favorites_screen import FavoritesScreen
 from .profile_screen import ProfileScreen
+from .song_detail_screen import SongDetailScreen
 
 logger = get_logger('ScreenManager')
 
@@ -22,6 +23,7 @@ def setup_screen_manager():
     sm.add_widget(TunerScreen(name='tuner'))
     sm.add_widget(FavoritesScreen(name='favorites'))
     sm.add_widget(ProfileScreen(name='profile'))
+    sm.add_widget(SongDetailScreen(name='song_detail'))
 
     logger.info(f'Загружено {len(sm.screens)} экранов')
 

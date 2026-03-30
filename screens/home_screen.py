@@ -424,8 +424,18 @@ class HomeScreen(MDScreen):
         logger.info(f'Пользователь авторизован: {user.get("username")}')
 
     def on_auth_failure(self, req, error):
-        self.auth_status.text = "👤 Гость"
-        self.show_auth_modal()
+        """Ошибка авторизации"""
+        error_msg = str(error)
+        logger.warning(f'Авторизация не пройдена: {error_msg}')
+
+        if 'Not authenticated' in error_msg or 'Invalid token' in error_msg:
+            # Токен недействителен, очищаем его
+            api._clear_tokens()
+            self.auth_status.text = "👤 Гость"
+            self.show_auth_modal()
+        else:
+            self.auth_status.text = "👤 Гость"
+            self.show_auth_modal()
 
     def show_auth_modal(self):
         if self.auth_modal and self.auth_modal.parent:

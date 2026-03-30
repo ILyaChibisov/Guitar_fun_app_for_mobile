@@ -349,6 +349,18 @@ class GuitarFunsApp(MDApp):
     def on_stop(self):
         logger.info('Приложение закрыто')
 
+    def show_auth_modal(self, on_success=None):
+        """Показывает модальное окно авторизации"""
+        from screens.home_screen import AuthModal
+
+        if self.home_screen and not self.home_screen.auth_modal:
+            self.home_screen.auth_modal = AuthModal(
+                parent_screen=self.home_screen,
+                on_close=lambda: setattr(self.home_screen, 'auth_modal', None),
+                on_login_success=on_success
+            )
+            self.home_screen.add_widget(self.home_screen.auth_modal)
+
 
 if __name__ == '__main__':
     GuitarFunsApp().run()
