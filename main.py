@@ -224,6 +224,10 @@ class GuitarFunsApp(MDApp):
         self.screen_manager = setup_screen_manager()
         self.screen_manager.bind(current=self.on_screen_change)
 
+        # 👇 ЯВНО УСТАНАВЛИВАЕМ НАЧАЛЬНЫЙ ЭКРАН
+        print("🔴 main: явно устанавливаем home")
+        self.screen_manager.current = 'home'
+
         # Корневой контейнер
         root = MDBoxLayout(orientation='vertical')
 
@@ -341,14 +345,17 @@ class GuitarFunsApp(MDApp):
 
     def on_screen_change(self, instance, value):
         """Обновляет активные элементы при смене экрана"""
+        print(f"🔴🔴🔴 СМЕНА ЭКРАНА: {value} 🔴🔴🔴")  # 👈 ДОБАВЬТЕ
         for item in self.nav_items:
             item.set_active(item.screen_name == value)
 
     def open_profile(self, instance):
         """Открывает профиль пользователя"""
+        print("🔴🔴🔴 open_profile ВЫЗВАН 🔴🔴🔴")  # 👈 ДОБАВЬТЕ
         logger.info("Нажата иконка личного кабинета")
 
         if api.is_authenticated():
+            print("🔴 open_profile: переход в profile")  # 👈 ДОБАВЬТЕ
             self.screen_manager.current = "profile"
         else:
             if self.home_screen and hasattr(self.home_screen, 'open_profile'):

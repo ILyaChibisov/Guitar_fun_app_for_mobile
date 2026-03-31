@@ -411,14 +411,17 @@ class HomeScreen(MDScreen):
             self.manager.current = screen_name
 
     def check_auth(self, dt):
+        print(f"🔴 check_auth ВЫЗВАН, api.access_token = {api.access_token}")
         if api.access_token:
             self.auth_status.text = "🔐 Проверка..."
+            # 👇 НЕ ДОБАВЛЯЙТЕ переход на profile здесь
             api.get_current_user(on_success=self.on_auth_success, on_failure=self.on_auth_failure)
         else:
             self.auth_status.text = "👤 Гость"
             self.show_auth_modal()
 
     def on_auth_success(self, user):
+        print("🔴 on_auth_success ВЫЗВАН")  # 👈 ДОБАВЬТЕ
         self.user = user
         self.auth_status.text = f"✅ {user.get('username')}"
         logger.info(f'Пользователь авторизован: {user.get("username")}')
@@ -495,3 +498,8 @@ class HomeScreen(MDScreen):
         else:
             logger.info('Не авторизован, показываем окно авторизации')
             self.show_auth_modal()
+
+    def on_pre_enter(self):
+        """Вызывается перед входом на экран"""
+        print("🔴 HOME SCREEN: on_pre_enter ВЫЗВАН")
+        return super().on_pre_enter()

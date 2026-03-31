@@ -164,6 +164,19 @@ class ProfileScreen(MDScreen):
         name_box.add_widget(name_icon)
         name_box.add_widget(self.fullname_label)
 
+        # Роль
+        role_box = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(40),
+            spacing=dp(8)
+        )
+        role_icon = MDIconButton(icon="shield-account", size_hint=(None, 1), width=dp(40),
+                                 theme_text_color="Custom", text_color=theme.TEXT_SECONDARY)
+        self.role_label = MDLabel(text="", font_style="Body1", theme_text_color="Secondary")
+        role_box.add_widget(role_icon)
+        role_box.add_widget(self.role_label)
+
         # Дата регистрации
         date_box = MDBoxLayout(
             orientation='horizontal',
@@ -180,13 +193,14 @@ class ProfileScreen(MDScreen):
         info_card.add_widget(info_title)
         info_card.add_widget(email_box)
         info_card.add_widget(name_box)
+        info_card.add_widget(role_box)
         info_card.add_widget(date_box)
 
         # Кнопки действий
         actions_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(130),
+            height=dp(180),
             padding=dp(16),
             spacing=dp(12),
             elevation=2,
@@ -204,7 +218,22 @@ class ProfileScreen(MDScreen):
             text_color=[1, 1, 1, 1],
             on_release=self.show_change_password_dialog
         )
-        change_password_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        change_password_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
+
+        # Кнопка админ-панели (видна только администраторам)
+        self.admin_btn = MDRaisedButton(
+            text="👑 Админ-панель",
+            icon="shield-account",
+            size_hint=(1, None),
+            height=dp(44),
+            md_bg_color=theme.PRIMARY_DARK,
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            on_release=self.open_admin_panel
+        )
+        self.admin_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.admin_btn.opacity = 0
+        self.admin_btn.disabled = True
 
         logout_btn = MDRaisedButton(
             text="Выйти из аккаунта",
@@ -216,9 +245,10 @@ class ProfileScreen(MDScreen):
             text_color=theme.TEXT_SECONDARY,
             on_release=self.logout
         )
-        logout_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        logout_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         actions_card.add_widget(change_password_btn)
+        actions_card.add_widget(self.admin_btn)
         actions_card.add_widget(logout_btn)
 
         layout.add_widget(title)
@@ -292,10 +322,27 @@ class ProfileScreen(MDScreen):
         username = self.user.get('username', 'user')
         email = self.user.get('email', 'не указан')
         full_name = self.user.get('full_name') or 'не указано'
+        role = self.user.get('role', 'user')
+
+        # Отображаем роль на русском
+        role_display = {
+            'admin': '👑 Администратор',
+            'user': '👤 Пользователь',
+            'moderator': '🛡️ Модератор'
+        }.get(role, f'👤 {role}')
 
         self.username_label.text = f"@{username}"
         self.email_label.text = email
         self.fullname_label.text = full_name
+        self.role_label.text = role_display
+
+        # Показываем кнопку админки, если пользователь - администратор
+        if api.is_admin():
+            self.admin_btn.opacity = 1
+            self.admin_btn.disabled = False
+        else:
+            self.admin_btn.opacity = 0
+            self.admin_btn.disabled = True
 
         # Форматируем дату регистрации
         created_at = self.user.get('created_at')
@@ -308,6 +355,18 @@ class ProfileScreen(MDScreen):
                 self.date_label.text = 'неизвестно'
         else:
             self.date_label.text = 'неизвестно'
+
+    def open_admin_panel(self, instance):
+        """Открывает админ-панель"""
+        if api.is_admin():
+            if hasattr(self, 'manager') and self.manager:
+                # Проверяем, есть ли экран admin
+                if 'admin' not in self.manager.screen_names:
+                    from screens.admin_screen import AdminScreen
+                    self.manager.add_widget(AdminScreen(name='admin'))
+                self.manager.current = 'admin'
+        else:
+            show_snackbar("❌ У вас нет прав администратора")
 
     def show_change_password_dialog(self, instance):
         """Показывает диалог смены пароля"""
@@ -420,3 +479,13 @@ class ProfileScreen(MDScreen):
             on_success=on_logout_success,
             on_failure=on_logout_failure
         )
+
+    def on_pre_enter(self):
+        """Вызывается перед входом на экран"""
+        print("🔴🔴🔴 PROFILE SCREEN: on_pre_enter ВЫЗВАН 🔴🔴🔴")
+        return super().on_pre_enter()
+
+    def on_enter(self):
+        """Вызывается при входе на экран"""
+        print("🔴🔴🔴 PROFILE SCREEN: on_enter ВЫЗВАН 🔴🔴🔴")
+        return super().on_enter()

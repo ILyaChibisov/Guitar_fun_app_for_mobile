@@ -129,6 +129,7 @@ class APIClient:
         self.config = config
         self.waiting_for_callback = False
         self._load_tokens()
+        print("🔴🔴🔴 APIClient __init__ завершён 🔴🔴🔴")
 
     def _load_tokens(self):
         try:
@@ -136,15 +137,18 @@ class APIClient:
             if store.exists('tokens'):
                 self.access_token = store.get('tokens')['access_token']
                 self.refresh_token = store.get('tokens')['refresh_token']
+                print(f"🔴 API: Токены загружены: access_token={self.access_token[:50]}...")
                 Logger.info('API: Токены загружены')
         except Exception as e:
             Logger.debug(f'API: Нет сохранённых токенов - {e}')
+            print(f"🔴 API: Нет сохранённых токенов - {e}")
 
     def _save_tokens(self):
         try:
             store = JsonStore('auth.json')
             store.put('tokens', access_token=self.access_token, refresh_token=self.refresh_token)
             Logger.info('API: Токены сохранены')
+            print("🔴 API: Токены сохранены")
         except Exception as e:
             Logger.error(f'API: Ошибка сохранения токенов - {e}')
 
@@ -157,6 +161,7 @@ class APIClient:
             self.refresh_token = None
             self.user_data = None
             Logger.info('API: Токены очищены')
+            print("🔴 API: Токены очищены")
         except Exception as e:
             Logger.error(f'API: Ошибка очистки токенов - {e}')
 
@@ -171,10 +176,10 @@ class APIClient:
 
     def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
         headers = self._get_headers(include_auth)
-        print(f"DEBUG _request: {method} {url}")
+        print(f"🔴🔴🔴 _request: {method} {url} 🔴🔴🔴")
 
         def wrapped_on_success(req, result):
-            print(f"DEBUG _request: wrapped_on_success called")
+            print(f"🔴🔴🔴 _request: wrapped_on_success called for {url} 🔴🔴🔴")
             if on_success:
                 on_success(req, result)
 
@@ -192,9 +197,11 @@ class APIClient:
 
     def _on_failure(self, req, error):
         Logger.error(f'API: Ошибка запроса - {error}')
+        print(f"🔴 API: Ошибка запроса - {error}")
 
     def _on_error(self, req, error):
         Logger.error(f'API: Критическая ошибка - {error}')
+        print(f"🔴 API: Критическая ошибка - {error}")
 
     # ============ AUTH METHODS ============
 
@@ -343,14 +350,21 @@ class APIClient:
         return req
 
     def get_current_user(self, on_success=None, on_failure=None):
+        """Получение текущего пользователя"""
+        print("🔴🔴🔴 get_current_user ВЫЗВАН 🔴🔴🔴")
+
         def _on_success(req, result):
+            print("🔴🔴🔴 get_current_user _on_success ВЫЗВАН 🔴🔴🔴")
+            print(f"🔴🔴🔴 get_current_user result: {result}")
             self.user_data = result
             Logger.info(f'✅ Получен пользователь: {result.get("username")}')
             if on_success:
                 on_success(result)
 
         def _on_failure(req, error):
+            print(f"🔴🔴🔴 get_current_user _on_failure ВЫЗВАН, error: {error} 🔴🔴🔴")
             if error == 401 and self.refresh_token:
+                print("🔴🔴🔴 get_current_user: 401, пробуем обновить токен 🔴🔴🔴")
                 self.refresh_access_token(
                     on_success=lambda x: self.get_current_user(on_success, on_failure),
                     on_failure=on_failure
@@ -366,7 +380,10 @@ class APIClient:
         )
 
     def refresh_access_token(self, on_success=None, on_failure=None):
+        print("🔴🔴🔴 refresh_access_token ВЫЗВАН 🔴🔴🔴")
+
         def _on_success(req, result):
+            print("🔴🔴🔴 refresh_access_token _on_success ВЫЗВАН 🔴🔴🔴")
             self.access_token = result.get('access_token')
             self._save_tokens()
             Logger.info('✅ Токен обновлён')
@@ -552,6 +569,135 @@ class APIClient:
             on_success=_on_success,
             on_failure=on_failure,
             include_auth=False
+        )
+
+    # ============ АДМИН МЕТОДЫ ============
+
+    def is_admin(self) -> bool:
+        """Проверяет, является ли текущий пользователь администратором"""
+        if not self.user_data:
+            return False
+        return self.user_data.get('role') == 'admin'
+
+    def get_user_role(self) -> str:
+        """Возвращает роль текущего пользователя"""
+        if not self.user_data:
+            return 'guest'
+        return self.user_data.get('role', 'user')
+
+    def get_all_users(self, on_success=None, on_failure=None, limit=100, offset=0):
+        """Получить список всех пользователей (только для админов)"""
+
+        def _on_success(req, result):
+            if on_success:
+                on_success(result)
+
+        def _on_failure(req, error):
+            if on_failure:
+                on_failure(req, error)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/admin/users?limit={limit}&offset={offset}",
+            method='GET',
+            on_success=_on_success,
+            on_failure=_on_failure,
+            include_auth=True
+        )
+
+    def update_user_role(self, user_id: int, role: str, on_success=None, on_failure=None):
+        """Изменить роль пользователя (только для админов)"""
+
+        def _on_success(req, result):
+            if on_success:
+                on_success(result)
+
+        def _on_failure(req, error):
+            if on_failure:
+                on_failure(req, error)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/role",
+            method='PUT',
+            data={'role': role},
+            on_success=_on_success,
+            on_failure=_on_failure,
+            include_auth=True
+        )
+
+    def ban_user(self, user_id: int, on_success=None, on_failure=None):
+        """Заблокировать пользователя"""
+
+        def _on_success(req, result):
+            if on_success:
+                on_success(result)
+
+        def _on_failure(req, error):
+            if on_failure:
+                on_failure(req, error)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/ban",
+            method='POST',
+            on_success=_on_success,
+            on_failure=_on_failure,
+            include_auth=True
+        )
+
+    def unban_user(self, user_id: int, on_success=None, on_failure=None):
+        """Разблокировать пользователя"""
+
+        def _on_success(req, result):
+            if on_success:
+                on_success(result)
+
+        def _on_failure(req, error):
+            if on_failure:
+                on_failure(req, error)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/unban",
+            method='POST',
+            on_success=_on_success,
+            on_failure=_on_failure,
+            include_auth=True
+        )
+
+    def get_admin_stats(self, on_success=None, on_failure=None):
+        """Получить статистику для админ-панели"""
+
+        def _on_success(req, result):
+            if on_success:
+                on_success(result)
+
+        def _on_failure(req, error):
+            if on_failure:
+                on_failure(req, error)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/admin/stats",
+            method='GET',
+            on_success=_on_success,
+            on_failure=_on_failure,
+            include_auth=True
+        )
+
+    def scan_songs(self, on_success=None, on_failure=None):
+        """Запустить сканирование песен (только для админов)"""
+
+        def _on_success(req, result):
+            if on_success:
+                on_success(result)
+
+        def _on_failure(req, error):
+            if on_failure:
+                on_failure(req, error)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/admin/scan",
+            method='POST',
+            on_success=_on_success,
+            on_failure=_on_failure,
+            include_auth=True
         )
 
 
