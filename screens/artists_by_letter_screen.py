@@ -188,10 +188,15 @@ class ArtistsByLetterScreen(MDScreen):
         self.load_artists()
 
     def load_artists(self):
-        """Загружает исполнителей по букве"""
+        """Загружает исполнителей по букве/цифре"""
         self.show_loading()
+
+        # Если буква — цифра, отправляем её как есть
+        # API на сервере должен обрабатывать отдельные цифры
+        letter = self.current_letter
+
         api.get_artists_by_letter(
-            letter=self.current_letter,
+            letter=letter,
             on_success=self.on_artists_loaded,
             on_failure=self.on_load_failed
         )

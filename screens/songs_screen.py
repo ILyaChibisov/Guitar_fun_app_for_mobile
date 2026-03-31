@@ -393,8 +393,8 @@ class SongsScreen(MDScreen):
         logger.info(f"Активные буквы: {letters}")
 
     def on_letter_press(self, letter):
-        """Обработчик нажатия на букву - переход на экран исполнителей"""
-        logger.info(f"Выбрана буква: {letter}")
+        """Обработчик нажатия на букву/цифру - переход на экран исполнителей"""
+        logger.info(f"Выбрана буква/цифра: {letter}")
 
         if hasattr(self, 'manager') and self.manager:
             artists_screen = self.manager.get_screen('artists_by_letter')

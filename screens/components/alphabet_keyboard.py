@@ -1,6 +1,7 @@
 # screens/components/alphabet_keyboard.py
 """
 Максимально компактная клавиатура с буквами (по 5 кнопок в ряду)
+Цифры идут вместе с буквами, всё по 5 штук в ряду
 """
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDRaisedButton
@@ -24,12 +25,12 @@ class SuperCompactLetterButton(MDRaisedButton):
 
 
 class AlphabetKeyboard(MDBoxLayout):
-    """Супер компактная клавиатура — по 5 кнопок в ряду"""
+    """Супер компактная клавиатура — по 5 кнопок в ряду (буквы + цифры)"""
 
     current_language = StringProperty('ru')
     on_letter_press = None
 
-    # Русский алфавит (7 рядов по 5 букв + 1 ряд)
+    # Русский алфавит + цифры (все ряды по 5 кнопок)
     RUSSIAN_ROWS = [
         ['А', 'Б', 'В', 'Г', 'Д'],
         ['Е', 'Ё', 'Ж', 'З', 'И'],
@@ -37,24 +38,28 @@ class AlphabetKeyboard(MDBoxLayout):
         ['О', 'П', 'Р', 'С', 'Т'],
         ['У', 'Ф', 'Х', 'Ц', 'Ч'],
         ['Ш', 'Щ', 'Ъ', 'Ы', 'Ь'],
-        ['Э', 'Ю', 'Я', '0-9', '#']
+        ['Э', 'Ю', 'Я', '0', '1'],
+        ['2', '3', '4', '5', '6'],
+        ['7', '8', '9', '#']
     ]
 
-    # Английский алфавит (5 рядов по 5-6 букв + 1 ряд)
+    # Английский алфавит + цифры (все ряды по 5 кнопок)
     ENGLISH_ROWS = [
         ['A', 'B', 'C', 'D', 'E'],
         ['F', 'G', 'H', 'I', 'J'],
         ['K', 'L', 'M', 'N', 'O'],
         ['P', 'Q', 'R', 'S', 'T'],
         ['U', 'V', 'W', 'X', 'Y'],
-        ['Z', '0-9', '#']
+        ['Z', '0', '1', '2', '3'],
+        ['4', '5', '6', '7', '8'],
+        ['9', '#']
     ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint_y = None
-        self.height = dp(210)
+        self.height = dp(260)
         self.spacing = dp(2)
         self.padding = [dp(8), dp(2), dp(8), dp(2)]
 
@@ -84,6 +89,13 @@ class AlphabetKeyboard(MDBoxLayout):
                 btn = SuperCompactLetterButton(letter=letter)
                 btn.bind(on_release=lambda x, l=letter: self._on_letter_click(l))
                 row_layout.add_widget(btn)
+
+            # Если в ряду меньше 5 кнопок, добавляем заглушки для выравнивания
+            if len(row) < 5:
+                empty_count = 5 - len(row)
+                for _ in range(empty_count):
+                    spacer = MDBoxLayout(size_hint=(1, 1))
+                    row_layout.add_widget(spacer)
 
             self.add_widget(row_layout)
 
