@@ -42,7 +42,7 @@ class AuthButton(MDRaisedButton):
         self.height = dp(44)
         self.font_size = dp(13)
         self.ripple_behavior = True
-        self.radius = [theme.CORNER_RADIUS_SMALL]
+        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
     def on_press(self):
         anim = Animation(opacity=0.8, duration=0.05)
@@ -62,7 +62,7 @@ class LoginModal(MDCard):
         self.height = dp(280)
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         self.elevation = 4
-        self.radius = [theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS]
+        self.radius = [theme.CORNER_RADIUS] * 4
         self.md_bg_color = theme.SURFACE
         self.padding = [dp(16), dp(16), dp(16), dp(16)]
         self.spacing = dp(12)
@@ -93,13 +93,13 @@ class LoginModal(MDCard):
                                     md_bg_color=[0.95, 0.95, 0.95, 1],
                                     theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
                                     on_release=self.close)
-        cancel_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        cancel_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         login_btn = MDRaisedButton(text="Войти", size_hint=(0.5, 1),
                                    md_bg_color=theme.PRIMARY,
                                    theme_text_color="Custom", text_color=[1, 1, 1, 1],
                                    on_release=self.do_login)
-        login_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        login_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         buttons_box.add_widget(cancel_btn)
         buttons_box.add_widget(login_btn)
@@ -142,7 +142,7 @@ class RegisterModal(MDCard):
         self.height = dp(340)
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         self.elevation = 4
-        self.radius = [theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS]
+        self.radius = [theme.CORNER_RADIUS] * 4
         self.md_bg_color = theme.SURFACE
         self.padding = [dp(16), dp(16), dp(16), dp(16)]
         self.spacing = dp(8)
@@ -183,13 +183,13 @@ class RegisterModal(MDCard):
                                     md_bg_color=[0.95, 0.95, 0.95, 1],
                                     theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
                                     on_release=self.close)
-        cancel_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        cancel_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         register_btn = MDRaisedButton(text="Зарегистрироваться", size_hint=(0.5, 1),
                                       md_bg_color=theme.PRIMARY,
                                       theme_text_color="Custom", text_color=[1, 1, 1, 1],
                                       on_release=self.do_register)
-        register_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        register_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         buttons_box.add_widget(cancel_btn)
         buttons_box.add_widget(register_btn)
@@ -240,7 +240,7 @@ class AuthModal(MDCard):
         self.height = dp(340)
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         self.elevation = 4
-        self.radius = [theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS, theme.CORNER_RADIUS]
+        self.radius = [theme.CORNER_RADIUS] * 4
         self.md_bg_color = theme.SURFACE
         self.padding = [dp(16), dp(16), dp(16), dp(16)]
         self.spacing = dp(10)
@@ -279,7 +279,7 @@ class AuthModal(MDCard):
                                   theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
                                   on_release=self.close)
         skip_btn.pos_hint = {'center_x': 0.5}
-        skip_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        skip_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(skip_btn)
 
         self.login_modal = None
@@ -345,6 +345,7 @@ class HomeScreen(MDScreen):
         super().__init__(**kwargs)
         self.user = None
         self.auth_modal = None
+        self.auth_check_done = False  # Флаг для предотвращения повторной проверки
 
         from kivy.graphics import Color, Rectangle
         from kivy.utils import rgba
@@ -372,17 +373,17 @@ class HomeScreen(MDScreen):
                                    pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
                                    theme_text_color="Custom", text_color=[1, 1, 1, 1],
                                    on_release=lambda x: self.navigate_to('tuner'))
-        tuner_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        tuner_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         songs_btn = MDRaisedButton(text="Песни", icon="music-note", size_hint=(0.8, None), height=dp(44),
                                    pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
                                    on_release=lambda x: self.navigate_to('songs'))
-        songs_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        songs_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         chords_btn = MDRaisedButton(text="Аккорды", icon="guitar-acoustic", size_hint=(0.8, None), height=dp(44),
                                     pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
                                     on_release=lambda x: self.navigate_to('chords'))
-        chords_btn.radius = [theme.CORNER_RADIUS_SMALL]
+        chords_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         buttons_layout.add_widget(tuner_btn)
         buttons_layout.add_widget(songs_btn)
@@ -411,20 +412,25 @@ class HomeScreen(MDScreen):
             self.manager.current = screen_name
 
     def check_auth(self, dt):
+        # Защита от повторного вызова
+        if self.auth_check_done:
+            return
+        self.auth_check_done = True
+
         print(f"🔴 check_auth ВЫЗВАН, api.access_token = {api.access_token}")
         if api.access_token:
             self.auth_status.text = "🔐 Проверка..."
-            # 👇 НЕ ДОБАВЛЯЙТЕ переход на profile здесь
             api.get_current_user(on_success=self.on_auth_success, on_failure=self.on_auth_failure)
         else:
             self.auth_status.text = "👤 Гость"
             self.show_auth_modal()
 
     def on_auth_success(self, user):
-        print("🔴 on_auth_success ВЫЗВАН")  # 👈 ДОБАВЬТЕ
+        print("🔴 on_auth_success ВЫЗВАН")
         self.user = user
         self.auth_status.text = f"✅ {user.get('username')}"
         logger.info(f'Пользователь авторизован: {user.get("username")}')
+        # НЕ ПЕРЕХОДИМ В ПРОФИЛЬ АВТОМАТИЧЕСКИ
 
     def on_auth_failure(self, req, error):
         """Ошибка авторизации"""
@@ -486,9 +492,7 @@ class HomeScreen(MDScreen):
     def open_profile(self):
         """Открывает профиль - вызывается из верхней панели"""
         if api.is_authenticated():
-            # Переход на экран профиля через менеджер (для ScreenManager) или через bottom_nav
             if hasattr(self, 'manager') and self.manager:
-                # Проверяем, есть ли экран profile в ScreenManager
                 if 'profile' in self.manager.screen_names:
                     self.manager.current = 'profile'
                 else:

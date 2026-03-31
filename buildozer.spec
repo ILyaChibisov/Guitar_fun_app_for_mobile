@@ -15,8 +15,8 @@ source.dir = .
 # Расширения файлов для включения
 source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 
-# Требования (ОЧЕНЬ ВАЖНО!)
-requirements = python3,kivy,kivymd,requests,pillow,plyer,urllib3
+# Требования (ДОБАВЛЯЕМ certifi и idna для SSL)
+requirements = python3,kivy==2.3.0,kivymd==1.1.1,requests==2.31.0,pillow==10.1.0,plyer==2.1.1,urllib3==2.1.0,certifi,idna,chardet
 
 # Версия приложения
 version = 1.0.0
@@ -24,8 +24,8 @@ version = 1.0.0
 # Ориентация
 orientation = portrait
 
-# Разрешения Android
-android.permissions = INTERNET, ACCESS_NETWORK_STATE
+# Разрешения Android (ДОБАВЛЯЕМ ACCESS_WIFI_STATE)
+android.permissions = INTERNET, ACCESS_NETWORK_STATE, ACCESS_WIFI_STATE
 
 # Иконка (если есть)
 # icon.filename = %(source.dir)s/icon.png
@@ -38,6 +38,12 @@ android.api = 33
 android.minapi = 21
 android.ndk = 23b
 android.sdk = 33
+
+# ВАЖНО: включаем AndroidX (нужно для KivyMD на новых Android)
+android.enable_androidx = True
+
+# ВАЖНО: разрешаем сетевые запросы
+android.add_network_security_config = True
 
 # Автоматически принимать лицензии
 android.accept_sdk_license = True

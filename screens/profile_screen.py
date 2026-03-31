@@ -39,6 +39,7 @@ class ProfileScreen(MDScreen):
         self.name = 'profile'
         self.user = None
         self.change_password_dialog = None
+        self._data_loaded = False  # Флаг для предотвращения повторной загрузки
 
         # Устанавливаем цвет фона
         from kivy.graphics import Color, Rectangle
@@ -91,7 +92,7 @@ class ProfileScreen(MDScreen):
             padding=dp(16),
             spacing=dp(8),
             elevation=2,
-            radius=[theme.CORNER_RADIUS],
+            radius=[theme.CORNER_RADIUS] * 4,
             md_bg_color=theme.SURFACE
         )
 
@@ -121,11 +122,11 @@ class ProfileScreen(MDScreen):
         info_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(180),
+            height=dp(220),
             padding=dp(16),
             spacing=dp(12),
             elevation=2,
-            radius=[theme.CORNER_RADIUS],
+            radius=[theme.CORNER_RADIUS] * 4,
             md_bg_color=theme.SURFACE
         )
 
@@ -204,7 +205,7 @@ class ProfileScreen(MDScreen):
             padding=dp(16),
             spacing=dp(12),
             elevation=2,
-            radius=[theme.CORNER_RADIUS],
+            radius=[theme.CORNER_RADIUS] * 4,
             md_bg_color=theme.SURFACE
         )
 
@@ -259,7 +260,7 @@ class ProfileScreen(MDScreen):
         scroll.add_widget(layout)
         self.add_widget(scroll)
 
-        # Загружаем данные пользователя
+        # Загружаем данные пользователя (только один раз)
         Clock.schedule_once(self.load_user_data, 0.5)
 
         logger.info('Экран профиля создан')
@@ -278,7 +279,13 @@ class ProfileScreen(MDScreen):
                 self.manager.current = 'home'
 
     def load_user_data(self, dt):
-        """Загружает данные пользователя"""
+        """Загружает данные пользователя (только один раз)"""
+        # Защита от повторной загрузки
+        if self._data_loaded:
+            return
+        self._data_loaded = True
+
+        print("🔴 ProfileScreen: load_user_data ВЫЗВАН")
         if api.user_data:
             self.user = api.user_data
             self.update_ui()
@@ -482,10 +489,10 @@ class ProfileScreen(MDScreen):
 
     def on_pre_enter(self):
         """Вызывается перед входом на экран"""
-        print("🔴🔴🔴 PROFILE SCREEN: on_pre_enter ВЫЗВАН 🔴🔴🔴")
+        print("🔴 PROFILE SCREEN: on_pre_enter ВЫЗВАН")
         return super().on_pre_enter()
 
     def on_enter(self):
         """Вызывается при входе на экран"""
-        print("🔴🔴🔴 PROFILE SCREEN: on_enter ВЫЗВАН 🔴🔴🔴")
+        print("🔴 PROFILE SCREEN: on_enter ВЫЗВАН")
         return super().on_enter()

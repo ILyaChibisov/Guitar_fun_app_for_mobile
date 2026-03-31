@@ -129,7 +129,6 @@ class APIClient:
         self.config = config
         self.waiting_for_callback = False
         self._load_tokens()
-        print("🔴🔴🔴 APIClient __init__ завершён 🔴🔴🔴")
 
     def _load_tokens(self):
         try:
