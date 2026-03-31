@@ -12,7 +12,6 @@ from kivymd.uix.snackbar import MDSnackbar
 from kivymd.uix.progressbar import MDProgressBar
 from kivy.metrics import dp
 from kivy.animation import Animation
-from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
@@ -21,7 +20,6 @@ logger = screen_logger('SongDetail')
 
 
 def show_snackbar(message, bg_color=None):
-    """Показывает уведомление"""
     snack = MDSnackbar()
     snack.text = message
     snack.snackbar_x = "10dp"
@@ -34,8 +32,6 @@ def show_snackbar(message, bg_color=None):
 
 
 class LoadingSpinner(MDBoxLayout):
-    """Индикатор загрузки"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
@@ -49,9 +45,7 @@ class LoadingSpinner(MDBoxLayout):
             value=50,
             max=100
         )
-
         self.anim = None
-
         self.label = MDLabel(
             text="Загрузка...",
             halign="center",
@@ -60,31 +54,25 @@ class LoadingSpinner(MDBoxLayout):
             size_hint_y=None,
             height=dp(30)
         )
-
         self.add_widget(self.progress)
         self.add_widget(self.label)
 
     def start_animation(self):
-        """Запускает анимацию загрузки"""
         self.anim = Animation(value=100, duration=1) + Animation(value=0, duration=1)
         self.anim.repeat = True
         self.anim.start(self.progress)
 
     def stop_animation(self):
-        """Останавливает анимацию загрузки"""
         if self.anim:
             self.anim.cancel(self.progress)
         self.progress.value = 0
 
 
 class SongDetailScreen(MDScreen):
-    """Экран просмотра песни"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'song_detail'
         self.song_id = None
-        self.current_tab_index = 0
         self.current_tab_id = None
         self.tabs = []
         self.is_liked = False
@@ -138,43 +126,6 @@ class SongDetailScreen(MDScreen):
             bold=True
         )
 
-        # Пагинация подборов
-        self.pagination_layout = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(48),
-            spacing=dp(16),
-            pos_hint={'center_x': 0.5}
-        )
-
-        self.prev_tab_btn = MDIconButton(
-            icon="chevron-left",
-            theme_text_color="Custom",
-            text_color=theme.PRIMARY,
-            on_release=self.prev_tab,
-            disabled=True
-        )
-
-        self.tab_info = MDLabel(
-            text="",
-            halign="center",
-            font_style="Body1",
-            theme_text_color="Secondary",
-            size_hint_x=0.6
-        )
-
-        self.next_tab_btn = MDIconButton(
-            icon="chevron-right",
-            theme_text_color="Custom",
-            text_color=theme.PRIMARY,
-            on_release=self.next_tab,
-            disabled=True
-        )
-
-        self.pagination_layout.add_widget(self.prev_tab_btn)
-        self.pagination_layout.add_widget(self.tab_info)
-        self.pagination_layout.add_widget(self.next_tab_btn)
-
         # Текст песни
         self.content_scroll = MDScrollView(size_hint=(1, 1))
         self.content_label = MDLabel(
@@ -187,7 +138,7 @@ class SongDetailScreen(MDScreen):
         self.content_label.bind(texture_size=self.content_label.setter('size'))
         self.content_scroll.add_widget(self.content_label)
 
-        # Нижняя панель с кнопками
+        # Нижняя панель
         self.bottom_bar = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -254,7 +205,6 @@ class SongDetailScreen(MDScreen):
         self.main_layout = MDBoxLayout(orientation='vertical')
         self.main_layout.add_widget(self.top_bar)
         self.main_layout.add_widget(self.title_label)
-        self.main_layout.add_widget(self.pagination_layout)
         self.main_layout.add_widget(self.content_scroll)
         self.main_layout.add_widget(self.bottom_bar)
 
@@ -267,10 +217,8 @@ class SongDetailScreen(MDScreen):
         self.bg_rect.size = self.size
 
     def show_loading(self):
-        """Показывает индикатор загрузки"""
         if self.is_loading:
             return
-
         self.is_loading = True
         self.loading_spinner = LoadingSpinner()
         self.add_widget(self.loading_spinner)
@@ -279,7 +227,6 @@ class SongDetailScreen(MDScreen):
         self.main_layout.disabled = True
 
     def hide_loading(self):
-        """Скрывает индикатор загрузки"""
         self.is_loading = False
         if self.loading_spinner:
             self.loading_spinner.stop_animation()
@@ -288,67 +235,9 @@ class SongDetailScreen(MDScreen):
         self.main_layout.opacity = 1
         self.main_layout.disabled = False
 
-    def set_song_data(self, song_id: int, artist: str, title: str, tabs: list):
-        """Устанавливает данные песни и загружает текст первого подбора"""
-        logger.info(f"set_song_data вызван: {artist} - {title}, подборов: {len(tabs)}")
-        self.song_id = song_id
-        self.artist = artist
-        self.title = title
-        self.tabs = tabs
-        self.current_tab_index = 0
-
-        self.title_label.text = f"🎸 {self.artist} — {self.title}"
-
-        # Загружаем текст для первого подбора
-        if tabs and len(tabs) > 0:
-            tab = tabs[0]
-            self.current_tab_id = tab['id']
-            self.in_favorites_count = tab.get('in_favorites_count', 0)
-            self.is_liked = tab.get('is_liked', False)
-            self.is_favorite = tab.get('is_favorite', False)
-
-            # Обновляем отображение пагинации
-            self._update_tab_info()
-            self._update_pagination_buttons()
-            self.update_stats_display()
-            self.update_buttons_state()
-
-            # Загружаем текст подбора
-            self.load_tab_content(tab['id'])
-
-        logger.info(f"Экран песни обновлён: {self.title_label.text}")
-
-    def load_tab_content(self, tab_id: int):
-        """Загружает текст подбора по ID"""
-        self.show_loading()
-        api.get_tab(
-            song_id=tab_id,
-            on_success=self.on_tab_content_loaded,
-            on_failure=self.on_tab_content_failed
-        )
-
-    def on_tab_content_loaded(self, data):
-        """Обработчик загрузки текста подбора"""
-        content = data.get('content', 'Текст не загружен')
-        self.content_label.text = content
-        self.content_label.texture_update()
-        self.content_label.height = self.content_label.texture_size[1]
-
-        # Обновляем статистику
-        self.views_label.text = f"👁️ {data.get('views', 0)}"
-        self.like_count.text = str(data.get('likes', 0))
-
-        self.hide_loading()
-        logger.info(f"Текст подбора загружен, длина: {len(content)} символов")
-
-    def on_tab_content_failed(self, req, error):
-        """Обработчик ошибки загрузки текста"""
-        self.hide_loading()
-        self.content_label.text = f"Ошибка загрузки текста: {error}"
-        logger.error(f"Ошибка загрузки текста подбора {self.current_tab_id}: {error}")
-
     def set_song(self, song_id):
-        """Загружает песню по ID (для совместимости)"""
+        """Устанавливает ID песни и загружает данные"""
+        logger.info(f"set_song called with id: {song_id}")
         self.song_id = song_id
         self.load_song_data()
 
@@ -363,8 +252,12 @@ class SongDetailScreen(MDScreen):
 
     def on_song_loaded(self, data):
         """Отображает загруженные данные"""
+        logger.info(f"on_song_loaded called, data keys: {data.keys() if data else 'None'}")
+
         self.artist = data.get('artist')
         self.title = data.get('title')
+        self.current_tab_id = data.get('id')
+
         self.tabs = [{
             "id": data.get('id'),
             "tab_number": data.get('tab_number', 1),
@@ -379,11 +272,21 @@ class SongDetailScreen(MDScreen):
 
         self.title_label.text = f"🎸 {self.artist} — {self.title}"
 
-        self.update_tab_display()
-        self.update_stats_display()
-        self.update_buttons_state()
+        # Обновляем текст песни
+        content = data.get('content', 'Текст не загружен')
+        self.content_label.text = content
+        self.content_label.texture_update()
+        self.content_label.height = self.content_label.texture_size[1]
 
+        # Обновляем статистику
+        self.like_count.text = str(data.get('likes', 0))
+        self.views_label.text = f"👁️ {data.get('views', 0)}"
+        self.favorite_count.text = str(self.in_favorites_count)
+
+        self.update_buttons_state()
         self.hide_loading()
+
+        logger.info(f"Песня загружена: {self.artist} - {self.title}, длина текста: {len(content)}")
 
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
@@ -392,156 +295,35 @@ class SongDetailScreen(MDScreen):
         logger.error(f"Ошибка загрузки песни {self.song_id}: {error}")
         self.go_back(None)
 
-    def _update_tab_info(self):
-        """Обновляет информацию о текущем подборе"""
-        if not self.tabs:
-            return
-        tab = self.tabs[self.current_tab_index]
-        tab_name = f" ({tab.get('tab_name')})" if tab.get('tab_name') else ""
-        self.tab_info.text = f"Подбор {tab['tab_number']} из {len(self.tabs)}{tab_name}"
-
-    def _update_pagination_buttons(self):
-        """Обновляет состояние кнопок пагинации"""
-        if not self.tabs:
-            self.prev_tab_btn.disabled = True
-            self.next_tab_btn.disabled = True
-            return
-        self.prev_tab_btn.disabled = (self.current_tab_index == 0)
-        self.next_tab_btn.disabled = (self.current_tab_index == len(self.tabs) - 1)
-
-    def update_stats_display(self):
-        """Обновляет отображение статистики"""
-        self.favorite_count.text = str(self.in_favorites_count)
-
     def update_buttons_state(self):
         """Обновляет состояние кнопок лайка и избранного"""
         if api.is_authenticated():
             self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
+            self.like_btn.text_color = theme.ERROR if self.is_liked else theme.TEXT_SECONDARY
             self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
+            self.favorite_btn.text_color = theme.WARNING if self.is_favorite else theme.TEXT_SECONDARY
         else:
             self.like_btn.disabled = True
             self.favorite_btn.disabled = True
 
-    def prev_tab(self, instance):
-        """Предыдущий подбор"""
-        if self.current_tab_index > 0:
-            self.current_tab_index -= 1
-            tab = self.tabs[self.current_tab_index]
-            self.current_tab_id = tab['id']
-            self.is_liked = tab.get('is_liked', False)
-            self.is_favorite = tab.get('is_favorite', False)
-            self.load_tab_content(tab['id'])
-            self._update_tab_info()
-            self._update_pagination_buttons()
-            self.update_stats_display()
-            self.update_buttons_state()
-
-    def next_tab(self, instance):
-        """Следующий подбор"""
-        if self.current_tab_index < len(self.tabs) - 1:
-            self.current_tab_index += 1
-            tab = self.tabs[self.current_tab_index]
-            self.current_tab_id = tab['id']
-            self.is_liked = tab.get('is_liked', False)
-            self.is_favorite = tab.get('is_favorite', False)
-            self.load_tab_content(tab['id'])
-            self._update_tab_info()
-            self._update_pagination_buttons()
-            self.update_stats_display()
-            self.update_buttons_state()
-
     def toggle_like(self, instance):
-        """Переключает лайк"""
         if not api.is_authenticated():
-            self.show_auth_required()
+            show_snackbar("🔐 Войдите, чтобы ставить лайки")
             return
-
-        self.show_loading()
-        api.toggle_like(
-            song_id=self.current_tab_id,
-            on_success=self.on_like_toggled,
-            on_failure=self.on_action_failed
-        )
-
-    def on_like_toggled(self, result):
-        """Обработчик ответа на лайк"""
-        self.is_liked = result.get('liked', False)
-        new_likes = result.get('total_likes', 0)
-
-        if self.tabs and self.current_tab_index < len(self.tabs):
-            self.tabs[self.current_tab_index]['likes'] = new_likes
-
-        self.like_count.text = str(new_likes)
-        self.update_buttons_state()
-        self.hide_loading()
-
-        show_snackbar("❤️ +1" if self.is_liked else "❤️ -1")
+        show_snackbar("❤️ +1 (заглушка)")
 
     def toggle_favorite(self, instance):
-        """Переключает избранное"""
         if not api.is_authenticated():
-            self.show_auth_required()
+            show_snackbar("🔐 Войдите, чтобы добавлять в избранное")
             return
-
-        self.show_loading()
-
-        if self.is_favorite:
-            api.remove_from_favorites(
-                song_id=self.current_tab_id,
-                on_success=self.on_favorite_toggled,
-                on_failure=self.on_action_failed
-            )
-        else:
-            api.add_to_favorites(
-                song_id=self.current_tab_id,
-                on_success=self.on_favorite_toggled,
-                on_failure=self.on_action_failed
-            )
-
-    def on_favorite_toggled(self, result):
-        """Обработчик ответа на избранное"""
-        self.is_favorite = result.get('favorited', False)
-        self.in_favorites_count = result.get('total_favorites', 0)
-
-        self.favorite_count.text = str(self.in_favorites_count)
-        self.update_buttons_state()
-        self.hide_loading()
-
-        if self.is_favorite:
-            show_snackbar("⭐ Добавлено в избранное", theme.WARNING)
-        else:
-            show_snackbar("❌ Удалено из избранного")
-
-    def on_action_failed(self, req, error):
-        """Обработчик ошибки действия"""
-        error_msg = str(error)
-        self.hide_loading()
-
-        if 'Not authenticated' in error_msg or 'Invalid token' in error_msg:
-            show_snackbar("🔐 Сессия истекла. Пожалуйста, войдите снова.")
-            api._clear_tokens()
-            app = MDApp.get_running_app()
-            if hasattr(app, 'home_screen') and app.home_screen:
-                app.home_screen.show_auth_modal()
-        else:
-            show_snackbar(f"Ошибка: {error_msg}")
-
-        logger.error(f"Ошибка действия: {error_msg}")
+        show_snackbar("⭐ Добавлено в избранное (заглушка)")
 
     def share_song(self, instance):
-        """Поделиться песней (заглушка)"""
         show_snackbar("🔄 Функция будет доступна в следующей версии")
 
     def open_menu(self, instance):
-        """Открывает меню (заглушка)"""
         show_snackbar("📋 Меню будет доступно в следующей версии")
 
-    def show_auth_required(self):
-        """Показывает сообщение о необходимости авторизации"""
-        show_snackbar("🔐 Войдите, чтобы выполнить это действие")
-
     def go_back(self, instance):
-        """Возврат на предыдущий экран"""
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'switch_screen'):
-            app.switch_screen('songs')
+        if hasattr(self, 'manager') and self.manager:
+            self.manager.current = 'artist_songs'

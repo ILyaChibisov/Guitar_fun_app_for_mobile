@@ -236,16 +236,15 @@ class ArtistSongsScreen(MDScreen):
         logger.info(f"Загружено {len(songs)} песен для {self.artist}")
 
     def on_song_selected(self, song):
-        """Выбор песни - загрузка подборов и переход на экран деталей"""
-        logger.info(f"Выбрана песня: {song['title']}")
+        """Выбор песни - переход на экран деталей с song_id"""
+        logger.info(f"Выбрана песня: {song['title']}, song_id: {song.get('song_id')}")
 
-        self.show_loading()
-        api.get_tabs_by_song(
-            artist=self.artist,
-            title=song['title'],
-            on_success=lambda tabs: self.on_tabs_loaded(song, tabs),
-            on_failure=self.on_load_failed
-        )
+        # Переход на экран деталей с song_id
+        if hasattr(self, 'manager') and self.manager:
+            song_detail_screen = self.manager.get_screen('song_detail')
+            if song_detail_screen:
+                song_detail_screen.set_song(song.get('song_id'))
+                self.manager.current = 'song_detail'
 
     def on_tabs_loaded(self, song, tabs):
         """Загрузка подборов песни"""
