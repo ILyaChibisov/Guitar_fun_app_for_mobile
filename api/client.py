@@ -9,7 +9,6 @@ import socketserver
 import urllib.parse
 import webbrowser
 import requests
-import ssl
 import warnings
 from kivy.logger import Logger
 from kivy.storage.jsonstore import JsonStore
@@ -18,10 +17,6 @@ from config.app_config import config
 
 # Отключаем предупреждения SSL
 warnings.filterwarnings("ignore", category=Warning)
-try:
-    ssl._create_default_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass  # Игнорируем, если атрибут не найден
 
 import urllib3
 
@@ -197,9 +192,7 @@ class APIClient:
         return headers
 
     def _request_sync(self, url, method='GET', data=None, include_auth=True):
-        """
-        Синхронный запрос (для использования в потоках)
-        """
+        """Синхронный запрос"""
         headers = self._get_headers(include_auth)
         print(f"🔴🔴🔴 _request_sync: {method} {url} 🔴🔴🔴")
 
@@ -224,48 +217,39 @@ class APIClient:
 
         except requests.exceptions.SSLError as e:
             Logger.error(f'API: SSL ошибка - {e}')
-            print(f"🔴 API: SSL ошибка - {e}")
-            raise
+            raise Exception(f"SSL error: {e}")
         except requests.exceptions.ConnectionError as e:
             Logger.error(f'API: Ошибка соединения - {e}')
-            print(f"🔴 API: Ошибка соединения - {e}")
-            raise
+            raise Exception(f"Connection error: {e}")
         except requests.exceptions.Timeout as e:
             Logger.error(f'API: Таймаут - {e}')
-            print(f"🔴 API: Таймаут - {e}")
-            raise
+            raise Exception(f"Timeout: {e}")
         except requests.exceptions.HTTPError as e:
-            Logger.error(f'API: HTTP ошибка {e.response.status_code} - {e}')
-            print(f"🔴 API: HTTP ошибка {e.response.status_code} - {e}")
-            raise
+            Logger.error(f'API: HTTP ошибка {e.response.status_code}')
+            raise Exception(f"HTTP {e.response.status_code}")
         except Exception as e:
             Logger.error(f'API: Ошибка запроса - {e}')
-            print(f"🔴 API: Ошибка запроса - {e}")
             raise
 
     def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
-        """
-        Асинхронный запрос (запускает в отдельном потоке)
-        """
+        """Асинхронный запрос"""
 
         def worker():
             try:
                 result = self._request_sync(url, method, data, include_auth)
-                # Вызываем callback в главном потоке
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(result), 0)
             except Exception as e:
                 if on_failure:
                     Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
                 else:
-                    self._on_error(None, str(e))
+                    Logger.error(f'API: Ошибка - {e}')
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
         return thread
 
     def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
-        """Универсальный метод для запросов"""
         return self._request_async(url, method, data, on_success, on_failure, include_auth)
 
     def _on_failure(self, req, error):
@@ -326,12 +310,11 @@ class APIClient:
             if on_success:
                 on_success(result)
 
-        def _on_failure(req, error):
+        def _on_failure(error):
             Logger.error(f'❌ Ошибка входа: {error}')
             if on_failure:
-                on_failure(req, error)
+                on_failure(None, error)
 
-        # Для form-data нужно изменить Content-Type
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
         def worker():
@@ -346,8 +329,8 @@ class APIClient:
                 response.raise_for_status()
                 result = response.json()
                 Clock.schedule_once(lambda dt: _on_success(result), 0)
-            except Exception as e:
-                Clock.schedule_once(lambda dt: _on_failure(None, str(e)), 0)
+            except Exception as ex:
+                Clock.schedule_once(lambda dt: _on_failure(str(ex)), 0)
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
@@ -430,27 +413,43 @@ class APIClient:
             if on_success:
                 on_success(result)
 
-        def _on_failure(req, error):
+        def _on_failure(error):
             print(f"🔴🔴🔴 get_current_user _on_failure ВЫЗВАН, error: {error} 🔴🔴🔴")
-            if error == "401" or "401" in str(error) or "Not authenticated" in str(error):
+            if "401" in str(error) or "Unauthorized" in str(error):
                 if self.refresh_token:
                     print("🔴🔴🔴 get_current_user: 401, пробуем обновить токен 🔴🔴🔴")
+
+                    def on_refresh_success(x):
+                        self.get_current_user(on_success, on_failure)
+
                     self.refresh_access_token(
-                        on_success=lambda x: self.get_current_user(on_success, on_failure),
+                        on_success=on_refresh_success,
                         on_failure=on_failure
                     )
                 else:
                     if on_failure:
-                        on_failure(req, error)
-            elif on_failure:
-                on_failure(req, error)
+                        on_failure(None, error)
+            else:
+                if on_failure:
+                    on_failure(None, error)
 
-        return self._request(
-            url=config.API_USER_ME,
-            method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure
-        )
+        def worker():
+            try:
+                response = self.session.get(
+                    config.API_USER_ME,
+                    headers=self._get_headers(include_auth=True),
+                    timeout=config.CONNECTION_TIMEOUT,
+                    verify=False
+                )
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: _on_success(result), 0)
+            except Exception as ex:
+                Clock.schedule_once(lambda dt: _on_failure(str(ex)), 0)
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        return thread
 
     def refresh_access_token(self, on_success=None, on_failure=None):
         print("🔴🔴🔴 refresh_access_token ВЫЗВАН 🔴🔴🔴")
@@ -463,14 +462,28 @@ class APIClient:
             if on_success:
                 on_success(result)
 
-        return self._request(
-            url=config.API_AUTH_REFRESH,
-            method='POST',
-            data={'refresh_token': self.refresh_token},
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
-        )
+        def _on_failure(error):
+            if on_failure:
+                on_failure(None, error)
+
+        def worker():
+            try:
+                response = self.session.post(
+                    config.API_AUTH_REFRESH,
+                    json={'refresh_token': self.refresh_token},
+                    headers=self._get_headers(include_auth=False),
+                    timeout=config.CONNECTION_TIMEOUT,
+                    verify=False
+                )
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: _on_success(result), 0)
+            except Exception as ex:
+                Clock.schedule_once(lambda dt: _on_failure(str(ex)), 0)
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        return thread
 
     def is_authenticated(self):
         return self.access_token is not None and self.user_data is not None
@@ -503,12 +516,8 @@ class APIClient:
 
         def _on_success(result):
             print(f"DEBUG API: _on_success called")
-            print(f"DEBUG API: result type: {type(result)}")
-            print(f"DEBUG API: result keys: {result.keys() if isinstance(result, dict) else 'not dict'}")
-
             artists = result.get('artists', []) if isinstance(result, dict) else []
             print(f"DEBUG API: artists count: {len(artists)}")
-
             if on_success:
                 on_success(artists)
 
