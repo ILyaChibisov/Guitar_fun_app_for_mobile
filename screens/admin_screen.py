@@ -7,7 +7,6 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivymd.uix.tab import MDTabsBase
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivy.metrics import dp
 from kivy.clock import Clock
@@ -100,11 +99,6 @@ class UserCard(MDCard):
     def _toggle_ban(self):
         if self.on_ban:
             self.on_ban(self.user)
-
-
-class Tab(MDFloatLayout, MDTabsBase):
-    """Вкладка для админ-панели"""
-    pass
 
 
 class AdminScreen(MDScreen):
@@ -211,8 +205,9 @@ class AdminScreen(MDScreen):
         tabs = MDTabs(size_hint=(1, 1))
 
         # Вкладка статистики
-        stats_tab = Tab(text="📊 Статистика")
+        stats_tab = MDFloatLayout()
         stats_layout = MDBoxLayout(orientation='vertical', padding=dp(16), spacing=dp(16))
+        stats_tab.add_widget(stats_layout)
 
         stats_card = MDCard(
             orientation='vertical',
@@ -253,11 +248,12 @@ class AdminScreen(MDScreen):
         scan_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         stats_layout.add_widget(scan_btn)
 
-        stats_tab.add_widget(stats_layout)
+        # Добавляем вкладку статистики
         tabs.add_widget(stats_tab)
+        tabs.ids.tab_manager.get_tab(0).text = "📊 Статистика"
 
         # Вкладка пользователей
-        users_tab = Tab(text="👥 Пользователи")
+        users_tab = MDFloatLayout()
         users_scroll = MDScrollView()
         users_container = MDBoxLayout(orientation='vertical', spacing=dp(8), size_hint_y=None, adaptive_height=True)
 
@@ -272,6 +268,7 @@ class AdminScreen(MDScreen):
         users_scroll.add_widget(users_container)
         users_tab.add_widget(users_scroll)
         tabs.add_widget(users_tab)
+        tabs.ids.tab_manager.get_tab(1).text = "👥 Пользователи"
 
         self.main_layout.add_widget(tabs)
         self.hide_loading()
