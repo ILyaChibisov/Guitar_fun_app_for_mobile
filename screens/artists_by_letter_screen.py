@@ -35,10 +35,10 @@ class LoadingSpinner(MDBoxLayout):
         self.label = MDLabel(
             text="Загрузка исполнителей...",
             halign="center",
-            font_style="Body1",
             theme_text_color="Secondary",
             size_hint_y=None,
-            height=dp(30)
+            height=dp(30),
+            font_size=dp(14)
         )
         self.add_widget(self.progress)
         self.add_widget(self.label)
@@ -72,11 +72,11 @@ class ArtistCard(MDCard):
 
         artist_label = MDLabel(
             text=f"🎸 {artist}",
-            font_style="Subtitle1",
             size_hint_y=None,
             height=dp(32),
             theme_text_color="Primary",
-            bold=True
+            bold=True,
+            font_size=dp(14)
         )
         self.add_widget(artist_label)
         self.bind(on_release=self.on_click)
@@ -113,12 +113,11 @@ class ArtistsByLetterScreen(MDScreen):
             md_bg_color=theme.PRIMARY
         )
 
-        self.back_btn = MDIconButton(
-            icon="arrow-left",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            on_release=self.go_back
-        )
+        self.back_btn = MDIconButton()
+        self.back_btn.icon = "arrow-left"
+        self.back_btn.theme_text_color = "Custom"
+        self.back_btn.text_color = [1, 1, 1, 1]
+        self.back_btn.on_release = self.go_back
 
         self.title_label = MDLabel(
             text="",
@@ -126,7 +125,8 @@ class ArtistsByLetterScreen(MDScreen):
             size_hint_x=0.7,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
-            bold=True
+            bold=True,
+            font_size=dp(18)
         )
 
         self.top_bar.add_widget(self.back_btn)
@@ -193,10 +193,10 @@ class ArtistsByLetterScreen(MDScreen):
             no_data_label = MDLabel(
                 text="Нет исполнителей на эту букву",
                 halign="center",
-                font_style="Body1",
                 theme_text_color="Secondary",
                 size_hint_y=None,
-                height=dp(100)
+                height=dp(100),
+                font_size=dp(14)
             )
             self.content_container.add_widget(no_data_label)
             return
