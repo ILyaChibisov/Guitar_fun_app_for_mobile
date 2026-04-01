@@ -366,7 +366,7 @@ class ProfileScreen(MDScreen):
 
         self.old_password = MDTextField(
             hint_text="Текущий пароль",
-            mode="round",
+            mode="filled",
             password=True,
             size_hint_y=None,
             height=dp(56)
@@ -374,7 +374,7 @@ class ProfileScreen(MDScreen):
 
         self.new_password = MDTextField(
             hint_text="Новый пароль",
-            mode="round",
+            mode="filled",
             password=True,
             size_hint_y=None,
             height=dp(56)
@@ -382,7 +382,7 @@ class ProfileScreen(MDScreen):
 
         self.confirm_password = MDTextField(
             hint_text="Подтвердите новый пароль",
-            mode="round",
+            mode="filled",
             password=True,
             size_hint_y=None,
             height=dp(56)

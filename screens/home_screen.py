@@ -18,26 +18,6 @@ from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout
 logger = screen_logger('Home')
 
 
-class AuthButton(MDRaisedButton):
-    def __init__(self, icon, text, bg_color, text_color=[1, 1, 1, 1], **kwargs):
-        super().__init__(**kwargs)
-        self.icon = icon
-        self.text = text
-        self.md_bg_color = bg_color
-        self.theme_text_color = "Custom"
-        self.text_color = text_color
-        self.size_hint = (0.9, None)
-        self.height = dp(44)
-        self.font_size = dp(13)
-        self.ripple_behavior = True
-        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
-
-    def on_press(self):
-        anim = Animation(opacity=0.8, duration=0.05)
-        anim += Animation(opacity=1, duration=0.1)
-        anim.start(self)
-
-
 class LoginModal(MDCard):
     def __init__(self, parent_screen, on_close=None, on_login_success=None, **kwargs):
         super().__init__(**kwargs)
@@ -61,16 +41,17 @@ class LoginModal(MDCard):
                                 on_release=self.close)
         self.add_widget(back_btn)
 
-        title = MDLabel(text="Вход в аккаунт", font_style="H6", halign="center",
-                        size_hint_y=None, height=dp(36), theme_text_color="Primary", bold=True)
+        title = MDLabel(text="Вход в аккаунт", halign="center",
+                        size_hint_y=None, height=dp(36), theme_text_color="Primary",
+                        bold=True, font_size=dp(20))
         self.add_widget(title)
 
-        self.username_field = MDTextField(hint_text="Имя пользователя или Email", mode="round",
+        self.username_field = MDTextField(hint_text="Имя пользователя или Email", mode="filled",
                                           size_hint_y=None, height=dp(56),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.username_field)
 
-        self.password_field = MDTextField(hint_text="Пароль", mode="round", password=True,
+        self.password_field = MDTextField(hint_text="Пароль", mode="filled", password=True,
                                           size_hint_y=None, height=dp(56),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.password_field)
@@ -78,14 +59,10 @@ class LoginModal(MDCard):
         buttons_box = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(44))
 
         cancel_btn = MDRaisedButton(text="Отмена", size_hint=(0.5, 1),
-                                    md_bg_color=[0.95, 0.95, 0.95, 1],
-                                    theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
                                     on_release=self.close)
         cancel_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         login_btn = MDRaisedButton(text="Войти", size_hint=(0.5, 1),
-                                   md_bg_color=theme.PRIMARY,
-                                   theme_text_color="Custom", text_color=[1, 1, 1, 1],
                                    on_release=self.do_login)
         login_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
@@ -141,26 +118,27 @@ class RegisterModal(MDCard):
                                 on_release=self.close)
         self.add_widget(back_btn)
 
-        title = MDLabel(text="Регистрация", font_style="H6", halign="center",
-                        size_hint_y=None, height=dp(32), theme_text_color="Primary", bold=True)
+        title = MDLabel(text="Регистрация", halign="center",
+                        size_hint_y=None, height=dp(32), theme_text_color="Primary",
+                        bold=True, font_size=dp(20))
         self.add_widget(title)
 
-        self.username_field = MDTextField(hint_text="Имя пользователя", mode="round",
+        self.username_field = MDTextField(hint_text="Имя пользователя", mode="filled",
                                           size_hint_y=None, height=dp(52),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.username_field)
 
-        self.email_field = MDTextField(hint_text="Email", mode="round",
+        self.email_field = MDTextField(hint_text="Email", mode="filled",
                                        size_hint_y=None, height=dp(52),
                                        padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.email_field)
 
-        self.password_field = MDTextField(hint_text="Пароль", mode="round", password=True,
+        self.password_field = MDTextField(hint_text="Пароль", mode="filled", password=True,
                                           size_hint_y=None, height=dp(52),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.password_field)
 
-        self.confirm_field = MDTextField(hint_text="Подтвердите пароль", mode="round", password=True,
+        self.confirm_field = MDTextField(hint_text="Подтвердите пароль", mode="filled", password=True,
                                          size_hint_y=None, height=dp(52),
                                          padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.confirm_field)
@@ -168,14 +146,10 @@ class RegisterModal(MDCard):
         buttons_box = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(44))
 
         cancel_btn = MDRaisedButton(text="Отмена", size_hint=(0.5, 1),
-                                    md_bg_color=[0.95, 0.95, 0.95, 1],
-                                    theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
                                     on_release=self.close)
         cancel_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         register_btn = MDRaisedButton(text="Зарегистрироваться", size_hint=(0.5, 1),
-                                      md_bg_color=theme.PRIMARY,
-                                      theme_text_color="Custom", text_color=[1, 1, 1, 1],
                                       on_release=self.do_register)
         register_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
@@ -233,39 +207,54 @@ class AuthModal(MDCard):
         self.padding = [dp(16), dp(16), dp(16), dp(16)]
         self.spacing = dp(10)
 
-        title = MDLabel(text="Войдите в свой аккаунт", font_style="H6", halign="center",
-                        size_hint_y=None, height=dp(32), theme_text_color="Primary", bold=True)
+        title = MDLabel(text="Войдите в свой аккаунт", halign="center",
+                        size_hint_y=None, height=dp(32), theme_text_color="Primary",
+                        bold=True, font_size=dp(20))
         self.add_widget(title)
 
         subtitle = MDLabel(text="чтобы получить доступ ко всем функциям приложения",
-                           font_style="Caption", halign="center", size_hint_y=None,
-                           height=dp(28), theme_text_color="Secondary")
+                           halign="center", size_hint_y=None,
+                           height=dp(28), theme_text_color="Secondary", font_size=dp(12))
         self.add_widget(subtitle)
 
         self.add_widget(MDBoxLayout(size_hint_y=None, height=dp(4)))
 
-        google_btn = AuthButton(icon="google", text="Войти через Google",
-                                bg_color=[0.96, 0.96, 0.96, 1], text_color=[0.2, 0.2, 0.2, 1])
+        google_btn = MDRaisedButton(
+            text="Войти через Google",
+            size_hint=(0.9, None),
+            height=dp(44),
+            on_release=self.on_google_click
+        )
         google_btn.pos_hint = {'center_x': 0.5}
-        google_btn.bind(on_release=self.on_google_click)
+        google_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(google_btn)
 
-        login_btn = AuthButton(icon="account", text="Войти по логину и паролю",
-                               bg_color=theme.PRIMARY_LIGHT, text_color=[1, 1, 1, 1])
+        login_btn = MDRaisedButton(
+            text="Войти по логину и паролю",
+            size_hint=(0.9, None),
+            height=dp(44),
+            on_release=self.show_login_form
+        )
         login_btn.pos_hint = {'center_x': 0.5}
-        login_btn.bind(on_release=self.show_login_form)
+        login_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(login_btn)
 
-        register_btn = AuthButton(icon="account-plus", text="Зарегистрироваться",
-                                  bg_color=theme.PRIMARY, text_color=[1, 1, 1, 1])
+        register_btn = MDRaisedButton(
+            text="Зарегистрироваться",
+            size_hint=(0.9, None),
+            height=dp(44),
+            on_release=self.show_register
+        )
         register_btn.pos_hint = {'center_x': 0.5}
-        register_btn.bind(on_release=self.show_register)
+        register_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(register_btn)
 
-        skip_btn = MDRaisedButton(text="Пропустить", size_hint=(0.9, None), height=dp(40),
-                                  md_bg_color=[0.95, 0.95, 0.95, 1],
-                                  theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
-                                  on_release=self.close)
+        skip_btn = MDRaisedButton(
+            text="Пропустить",
+            size_hint=(0.9, None),
+            height=dp(40),
+            on_release=self.close
+        )
         skip_btn.pos_hint = {'center_x': 0.5}
         skip_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(skip_btn)
@@ -349,29 +338,42 @@ class HomeScreen(MDScreen):
         layout = MDBoxLayout(orientation='vertical', padding=dp(20), spacing=dp(20),
                              size_hint_y=None, adaptive_height=True)
 
-        title = MDLabel(text="GuitarFuns", font_style="H3", halign="center",
-                        size_hint_y=None, height=dp(80), theme_text_color="Primary", bold=True)
+        title = MDLabel(text="GuitarFuns", halign="center",
+                        size_hint_y=None, height=dp(80), theme_text_color="Primary",
+                        bold=True, font_size=dp(36))
         self.auth_status = MDLabel(text="", halign="center", size_hint_y=None, height=dp(30),
-                                   theme_text_color="Secondary", font_style="Caption")
-        quick_title = MDLabel(text="Быстрый доступ", font_style="H6", halign="center",
-                              size_hint_y=None, height=dp(36), theme_text_color="Primary", bold=True)
+                                   theme_text_color="Secondary", font_size=dp(12))
+        quick_title = MDLabel(text="Быстрый доступ", halign="center",
+                              size_hint_y=None, height=dp(36), theme_text_color="Primary",
+                              bold=True, font_size=dp(18))
 
         buttons_layout = MDBoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, height=dp(156))
 
-        tuner_btn = MDRaisedButton(text="Тюнер", icon="tune", size_hint=(0.8, None), height=dp(44),
-                                   pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
-                                   theme_text_color="Custom", text_color=[1, 1, 1, 1],
-                                   on_release=lambda x: self.navigate_to('tuner'))
+        tuner_btn = MDRaisedButton(
+            text="Тюнер",
+            size_hint=(0.8, None),
+            height=dp(44),
+            on_release=lambda x: self.navigate_to('tuner')
+        )
+        tuner_btn.pos_hint = {"center_x": 0.5}
         tuner_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
-        songs_btn = MDRaisedButton(text="Песни", icon="music-note", size_hint=(0.8, None), height=dp(44),
-                                   pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
-                                   on_release=lambda x: self.navigate_to('songs'))
+        songs_btn = MDRaisedButton(
+            text="Песни",
+            size_hint=(0.8, None),
+            height=dp(44),
+            on_release=lambda x: self.navigate_to('songs')
+        )
+        songs_btn.pos_hint = {"center_x": 0.5}
         songs_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
-        chords_btn = MDRaisedButton(text="Аккорды", icon="guitar-acoustic", size_hint=(0.8, None), height=dp(44),
-                                    pos_hint={"center_x": 0.5}, md_bg_color=theme.PRIMARY,
-                                    on_release=lambda x: self.navigate_to('chords'))
+        chords_btn = MDRaisedButton(
+            text="Аккорды",
+            size_hint=(0.8, None),
+            height=dp(44),
+            on_release=lambda x: self.navigate_to('chords')
+        )
+        chords_btn.pos_hint = {"center_x": 0.5}
         chords_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         buttons_layout.add_widget(tuner_btn)

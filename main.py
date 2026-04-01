@@ -87,6 +87,9 @@ from utils.kivy_imports import (
     MDLabel, MDBoxLayout, MDScreen, MDDialog, Snackbar
 )
 
+# Импортируем MDApp
+from kivymd.app import MDApp
+
 # Наши модули
 from config.app_config import config
 from config.theme import theme
