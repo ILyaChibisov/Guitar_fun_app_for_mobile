@@ -7,17 +7,42 @@ import os
 import sys
 import ssl
 import warnings
+import traceback
+
+
+# ============ ОБРАБОТКА НЕПЕРЕХВАЧЕННЫХ ОШИБОК ============
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """Глобальный перехватчик ошибок для отладки"""
+    error_msg = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    print("=" * 50)
+    print("FATAL ERROR:")
+    print(error_msg)
+    print("=" * 50)
+
+    # Попытка записать ошибку в файл (на Android)
+    try:
+        import android
+        with open('/sdcard/guitarfuns_crash.log', 'w') as f:
+            f.write(error_msg)
+    except:
+        pass
+
+    # Вызываем стандартный обработчик
+    if hasattr(sys, '__excepthook__'):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+
+sys.excepthook = handle_exception
+# =========================================================
 
 # ============ ОТКЛЮЧАЕМ SSL ПРОВЕРКУ ДЛЯ ВСЕХ ПЛАТФОРМ ============
 # Отключаем предупреждения SSL
 warnings.filterwarnings("ignore", category=Warning)
 
-# Отключаем проверку SSL для всех HTTPS запросов
-ssl._create_default_https_context = ssl._create_unverified_context
-
 # Для urllib3
 try:
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -26,11 +51,18 @@ except ImportError:
 try:
     import requests
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
     requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 except ImportError:
     pass
 
-# Для Kivy UrlRequest - устанавливаем глобальную переменную
+# Отключаем проверку SSL глобально
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+
+# Для Kivy UrlRequest
 os.environ['SSL_CERT_FILE'] = ''
 os.environ['REQUESTS_CA_BUNDLE'] = ''
 # ================================================================
