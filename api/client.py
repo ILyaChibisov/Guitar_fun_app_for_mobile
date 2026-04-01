@@ -14,6 +14,11 @@ from kivy.storage.jsonstore import JsonStore
 from kivy.clock import Clock
 from config.app_config import config
 
+# Отключаем предупреждения SSL для разработки
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 # ============ Локальный сервер для OAuth callback ============
 
@@ -130,6 +135,12 @@ class APIClient:
         self.waiting_for_callback = False
         self._load_tokens()
 
+        # Создаем сессию с отключенной проверкой SSL для разработки
+        import requests
+        self.session = requests.Session()
+        self.session.verify = False  # Отключаем проверку SSL
+        Logger.warning("⚠️ РЕЖИМ РАЗРАБОТКИ: SSL проверка ОТКЛЮЧЕНА!")
+
     def _load_tokens(self):
         try:
             store = JsonStore('auth.json')
@@ -182,6 +193,9 @@ class APIClient:
             if on_success:
                 on_success(req, result)
 
+        # Отключаем проверку SSL для разработки
+        ca_file = False
+
         req = UrlRequest(
             url=url,
             method=method,
@@ -190,7 +204,8 @@ class APIClient:
             on_success=wrapped_on_success,
             on_failure=on_failure or self._on_failure,
             on_error=self._on_error,
-            timeout=config.CONNECTION_TIMEOUT
+            timeout=config.CONNECTION_TIMEOUT,
+            ca_file=ca_file  # False = отключаем проверку SSL
         )
         return req
 
@@ -262,6 +277,8 @@ class APIClient:
             if on_failure:
                 on_failure(req, error)
 
+        ca_file = False  # Отключаем проверку SSL
+
         req = UrlRequest(
             url=config.API_AUTH_LOGIN,
             method='POST',
@@ -270,7 +287,8 @@ class APIClient:
             on_success=_on_success,
             on_failure=_on_failure,
             on_error=self._on_error,
-            timeout=config.CONNECTION_TIMEOUT
+            timeout=config.CONNECTION_TIMEOUT,
+            ca_file=ca_file
         )
         return req
 
@@ -336,6 +354,8 @@ class APIClient:
             'Accept': 'application/json'
         }
 
+        ca_file = False  # Отключаем проверку SSL
+
         req = UrlRequest(
             url=url,
             method='POST',
@@ -344,7 +364,8 @@ class APIClient:
             on_success=_on_success,
             on_failure=_on_failure,
             on_error=self._on_error,
-            timeout=config.CONNECTION_TIMEOUT
+            timeout=config.CONNECTION_TIMEOUT,
+            ca_file=ca_file
         )
         return req
 
