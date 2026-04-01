@@ -5,30 +5,16 @@
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
-from kivymd.uix.snackbar import MDSnackbar
-from kivymd.uix.progressbar import MDProgressBar
 from kivy.metrics import dp
 from kivy.animation import Animation
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
+from utils.notifications import notify
+from utils.kivy_imports import MDIconButton, MDBoxLayout, MDProgressBar
 
 logger = screen_logger('SongDetail')
-
-
-def show_snackbar(message, bg_color=None):
-    snack = MDSnackbar()
-    snack.text = message
-    snack.snackbar_x = "10dp"
-    snack.snackbar_y = "10dp"
-    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
-    if bg_color:
-        snack.md_bg_color = bg_color
-    snack.open()
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -252,7 +238,7 @@ class SongDetailScreen(MDScreen):
 
     def on_song_loaded(self, data):
         """Отображает загруженные данные"""
-        logger.info(f"on_song_loaded called, data keys: {data.keys() if data else 'None'}")
+        logger.info(f"on_song_loaded called")
 
         self.artist = data.get('artist')
         self.title = data.get('title')
@@ -286,12 +272,12 @@ class SongDetailScreen(MDScreen):
         self.update_buttons_state()
         self.hide_loading()
 
-        logger.info(f"Песня загружена: {self.artist} - {self.title}, длина текста: {len(content)}")
+        logger.info(f"Песня загружена: {self.artist} - {self.title}")
 
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
         self.hide_loading()
-        show_snackbar(f"Ошибка загрузки песни: {error}")
+        notify.error(f"Ошибка загрузки песни: {error}")
         logger.error(f"Ошибка загрузки песни {self.song_id}: {error}")
         self.go_back(None)
 
@@ -308,21 +294,21 @@ class SongDetailScreen(MDScreen):
 
     def toggle_like(self, instance):
         if not api.is_authenticated():
-            show_snackbar("🔐 Войдите, чтобы ставить лайки")
+            notify.warning("Войдите, чтобы ставить лайки")
             return
-        show_snackbar("❤️ +1 (заглушка)")
+        notify.info("❤️ +1 (заглушка)")
 
     def toggle_favorite(self, instance):
         if not api.is_authenticated():
-            show_snackbar("🔐 Войдите, чтобы добавлять в избранное")
+            notify.warning("Войдите, чтобы добавлять в избранное")
             return
-        show_snackbar("⭐ Добавлено в избранное (заглушка)")
+        notify.info("⭐ Добавлено в избранное (заглушка)")
 
     def share_song(self, instance):
-        show_snackbar("🔄 Функция будет доступна в следующей версии")
+        notify.info("🔄 Функция будет доступна в следующей версии")
 
     def open_menu(self, instance):
-        show_snackbar("📋 Меню будет доступно в следующей версии")
+        notify.info("📋 Меню будет доступно в следующей версии")
 
     def go_back(self, instance):
         if hasattr(self, 'manager') and self.manager:

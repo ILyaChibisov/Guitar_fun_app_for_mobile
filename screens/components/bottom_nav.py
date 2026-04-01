@@ -11,10 +11,10 @@ from kivy.animation import Animation
 from kivy.properties import StringProperty, BooleanProperty
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle
-from kivy.utils import rgba
 
 from config.theme import theme
 from config.logger_config import get_logger
+from utils.kivy_imports import MDIconButton, MDBoxLayout
 
 logger = get_logger('UI')
 
@@ -182,3 +182,7 @@ class BottomNav(BoxLayout):
 
         # Переключаем экран
         self.sm.current = screen_name
+
+    def switch_tab(self, screen_name):
+        """Метод для совместимости с main.py"""
+        self.switch_to(screen_name)

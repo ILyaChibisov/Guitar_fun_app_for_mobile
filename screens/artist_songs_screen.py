@@ -2,34 +2,19 @@
 """
 Экран списка песен выбранного исполнителя
 """
-from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivymd.uix.snackbar import MDSnackbar
-from kivymd.uix.progressbar import MDProgressBar
 from kivy.metrics import dp
 from kivy.animation import Animation
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
+from utils.notifications import notify
+from utils.kivy_imports import MDIconButton, MDBoxLayout, MDProgressBar
 
 logger = screen_logger('ArtistSongs')
-
-
-def show_snackbar(message, bg_color=None):
-    snack = MDSnackbar()
-    snack.text = message
-    snack.snackbar_x = "10dp"
-    snack.snackbar_y = "10dp"
-    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
-    if bg_color:
-        snack.md_bg_color = bg_color
-    snack.open()
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -239,35 +224,16 @@ class ArtistSongsScreen(MDScreen):
         """Выбор песни - переход на экран деталей с song_id"""
         logger.info(f"Выбрана песня: {song['title']}, song_id: {song.get('song_id')}")
 
-        # Переход на экран деталей с song_id
         if hasattr(self, 'manager') and self.manager:
             song_detail_screen = self.manager.get_screen('song_detail')
             if song_detail_screen:
                 song_detail_screen.set_song(song.get('song_id'))
                 self.manager.current = 'song_detail'
 
-    def on_tabs_loaded(self, song, tabs):
-        """Загрузка подборов песни"""
-        self.hide_loading()
-
-        if not tabs:
-            show_snackbar("Нет доступных подборов для этой песни")
-            return
-
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'switch_screen'):
-            app.current_song_data = {
-                'song_id': tabs[0]['id'],
-                'artist': self.artist,
-                'title': song['title'],
-                'tabs': tabs
-            }
-            app.switch_screen('song_detail')
-
     def on_load_failed(self, req, error):
         """Ошибка загрузки"""
         self.hide_loading()
-        show_snackbar(f"Ошибка загрузки: {error}")
+        notify.error(f"Ошибка загрузки: {error}")
         logger.error(f"Ошибка загрузки: {error}")
 
     def go_back(self, instance):

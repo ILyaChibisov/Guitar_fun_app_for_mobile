@@ -4,33 +4,20 @@
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivymd.uix.snackbar import MDSnackbar
 from kivymd.uix.tab import MDTabsBase
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivy.metrics import dp
 from kivy.clock import Clock
-from kivy.uix.screenmanager import Screen
-
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
+from utils.notifications import notify
+from utils.kivy_imports import MDRaisedButton, MDIconButton, MDProgressBar
 
 logger = screen_logger('Admin')
-
-
-def show_snackbar(message, bg_color=None):
-    snack = MDSnackbar()
-    snack.text = message
-    snack.snackbar_x = "10dp"
-    snack.snackbar_y = "10dp"
-    snack.radius = [theme.CORNER_RADIUS_SMALL] * 4
-    if bg_color:
-        snack.md_bg_color = bg_color
-    snack.open()
 
 
 class UserCard(MDCard):
@@ -129,7 +116,6 @@ class AdminScreen(MDScreen):
         self.users = []
         self.stats = {}
 
-        # Фон
         from kivy.graphics import Color, Rectangle
         from kivy.utils import rgba
         with self.canvas.before:
@@ -191,7 +177,7 @@ class AdminScreen(MDScreen):
 
         # Проверяем права
         if not api.is_admin():
-            show_snackbar("❌ У вас нет прав администратора")
+            notify.error("У вас нет прав администратора")
             self.go_back(None)
             return
 
@@ -295,11 +281,11 @@ class AdminScreen(MDScreen):
         new_role = 'admin' if user.get('role') != 'admin' else 'user'
 
         def on_success(result):
-            show_snackbar(f"✅ Роль пользователя {user['username']} изменена на {new_role}")
+            notify.success(f"Роль пользователя {user['username']} изменена на {new_role}")
             self.load_data(0)
 
         def on_failure(req, error):
-            show_snackbar(f"❌ Ошибка: {error}")
+            notify.error(f"Ошибка: {error}")
 
         api.update_user_role(user['id'], new_role, on_success=on_success, on_failure=on_failure)
 
@@ -309,11 +295,11 @@ class AdminScreen(MDScreen):
 
         def on_success(result):
             action = "заблокирован" if is_active else "разблокирован"
-            show_snackbar(f"✅ Пользователь {user['username']} {action}")
+            notify.success(f"Пользователь {user['username']} {action}")
             self.load_data(0)
 
         def on_failure(req, error):
-            show_snackbar(f"❌ Ошибка: {error}")
+            notify.error(f"Ошибка: {error}")
 
         if is_active:
             api.ban_user(user['id'], on_success=on_success, on_failure=on_failure)
@@ -327,16 +313,21 @@ class AdminScreen(MDScreen):
             added = result.get('added', 0)
             skipped = result.get('skipped', 0)
             errors = result.get('errors', 0)
-            show_snackbar(f"✅ Сканирование завершено: +{added} новых, пропущено {skipped}, ошибок {errors}")
+            notify.success(f"Сканирование завершено: +{added} новых, пропущено {skipped}, ошибок {errors}")
 
         def on_failure(req, error):
-            show_snackbar(f"❌ Ошибка сканирования: {error}")
+            notify.error(f"Ошибка сканирования: {error}")
 
         api.scan_songs(on_success=on_success, on_failure=on_failure)
 
+    def on_load_failed(self, req, error):
+        """Ошибка загрузки"""
+        self.hide_loading()
+        notify.error(f"Ошибка загрузки: {error}")
+        self.go_back(None)
+
     def show_loading(self):
         """Показывает индикатор загрузки"""
-        from kivymd.uix.progressbar import MDProgressBar
         self.loading = MDProgressBar(value=50, max=100, size_hint=(1, 0.01))
         self.main_layout.add_widget(self.loading)
 

@@ -2,34 +2,19 @@
 """
 Экран списка исполнителей по выбранной букве
 """
-from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivymd.uix.snackbar import MDSnackbar
-from kivymd.uix.progressbar import MDProgressBar
 from kivy.metrics import dp
 from kivy.animation import Animation
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
+from utils.notifications import notify
+from utils.kivy_imports import MDIconButton, MDBoxLayout, MDProgressBar
 
 logger = screen_logger('ArtistsByLetter')
-
-
-def show_snackbar(message, bg_color=None):
-    snack = MDSnackbar()
-    snack.text = message
-    snack.snackbar_x = "10dp"
-    snack.snackbar_y = "10dp"
-    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
-    if bg_color:
-        snack.md_bg_color = bg_color
-    snack.open()
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -191,8 +176,6 @@ class ArtistsByLetterScreen(MDScreen):
         """Загружает исполнителей по букве/цифре"""
         self.show_loading()
 
-        # Если буква — цифра, отправляем её как есть
-        # API на сервере должен обрабатывать отдельные цифры
         letter = self.current_letter
 
         api.get_artists_by_letter(
@@ -239,7 +222,7 @@ class ArtistsByLetterScreen(MDScreen):
     def on_load_failed(self, req, error):
         """Ошибка загрузки"""
         self.hide_loading()
-        show_snackbar(f"Ошибка загрузки: {error}")
+        notify.error(f"Ошибка загрузки: {error}")
         logger.error(f"Ошибка загрузки: {error}")
 
     def go_back(self, instance):

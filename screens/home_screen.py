@@ -4,30 +4,18 @@
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton, MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.snackbar import MDSnackbar
 from kivy.metrics import dp
 from kivy.animation import Animation
 from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
+from utils.notifications import notify
+from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout
 
 logger = screen_logger('Home')
-
-
-def show_snackbar(message):
-    """Показывает уведомление"""
-    snack = MDSnackbar()
-    snack.text = message
-    snack.snackbar_x = "10dp"
-    snack.snackbar_y = "10dp"
-    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
-    snack.open()
 
 
 class AuthButton(MDRaisedButton):
@@ -115,19 +103,19 @@ class LoginModal(MDCard):
         username = self.username_field.text
         password = self.password_field.text
         if not username or not password:
-            show_snackbar("Заполните все поля")
+            notify.warning("Заполните все поля")
             return
         api.login(username=username, password=password,
                   on_success=self.on_login_success, on_failure=self.on_login_failure)
 
     def on_login_success(self, result):
-        show_snackbar("✅ Вход выполнен успешно!")
+        notify.success("Вход выполнен успешно!")
         self.close()
         if self.on_login_success_callback:
             self.on_login_success_callback()
 
     def on_login_failure(self, req, error):
-        show_snackbar("❌ Неверное имя пользователя или пароль")
+        notify.error("Неверное имя пользователя или пароль")
 
 
 class RegisterModal(MDCard):
@@ -207,25 +195,25 @@ class RegisterModal(MDCard):
         password = self.password_field.text
         confirm = self.confirm_field.text
         if not username or not email or not password:
-            show_snackbar("Заполните все поля")
+            notify.warning("Заполните все поля")
             return
         if len(password) > 72:
-            show_snackbar("Пароль слишком длинный (максимум 72 символа)")
+            notify.warning("Пароль слишком длинный (максимум 72 символа)")
             return
         if password != confirm:
-            show_snackbar("Пароли не совпадают")
+            notify.warning("Пароли не совпадают")
             return
         api.register(username=username, email=email, password=password, full_name=None,
                      on_success=self.on_register_success, on_failure=self.on_register_failure)
 
     def on_register_success(self, result):
-        show_snackbar("✅ Регистрация успешна! Теперь войдите.")
+        notify.success("Регистрация успешна! Теперь войдите.")
         self.close()
         if self.on_register_success_callback:
             self.on_register_success_callback()
 
     def on_register_failure(self, req, error):
-        show_snackbar("❌ Ошибка. Возможно, имя или email уже заняты.")
+        notify.error("Ошибка. Возможно, имя или email уже заняты.")
 
 
 class AuthModal(MDCard):
@@ -337,15 +325,16 @@ class AuthModal(MDCard):
 
     def on_register_form_success(self):
         self.register_modal = None
-        show_snackbar("✅ Регистрация успешна! Теперь войдите.")
+        notify.success("Регистрация успешна! Теперь войдите.")
 
 
 class HomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.name = 'home'
         self.user = None
         self.auth_modal = None
-        self.auth_check_done = False  # Флаг для предотвращения повторной проверки
+        self.auth_check_done = False
 
         from kivy.graphics import Color, Rectangle
         from kivy.utils import rgba
@@ -412,12 +401,10 @@ class HomeScreen(MDScreen):
             self.manager.current = screen_name
 
     def check_auth(self, dt):
-        # Защита от повторного вызова
         if self.auth_check_done:
             return
         self.auth_check_done = True
 
-        print(f"🔴 check_auth ВЫЗВАН, api.access_token = {api.access_token}")
         if api.access_token:
             self.auth_status.text = "🔐 Проверка..."
             api.get_current_user(on_success=self.on_auth_success, on_failure=self.on_auth_failure)
@@ -426,19 +413,15 @@ class HomeScreen(MDScreen):
             self.show_auth_modal()
 
     def on_auth_success(self, user):
-        print("🔴 on_auth_success ВЫЗВАН")
         self.user = user
         self.auth_status.text = f"✅ {user.get('username')}"
         logger.info(f'Пользователь авторизован: {user.get("username")}')
-        # НЕ ПЕРЕХОДИМ В ПРОФИЛЬ АВТОМАТИЧЕСКИ
 
     def on_auth_failure(self, req, error):
-        """Ошибка авторизации"""
         error_msg = str(error)
         logger.warning(f'Авторизация не пройдена: {error_msg}')
 
         if 'Not authenticated' in error_msg or 'Invalid token' in error_msg:
-            # Токен недействителен, очищаем его
             api._clear_tokens()
             self.auth_status.text = "👤 Гость"
             self.show_auth_modal()
@@ -480,30 +463,27 @@ class HomeScreen(MDScreen):
     def on_oauth_success(self, user):
         self.user = user
         self.auth_status.text = f"✅ {user.get('username')}"
-        show_snackbar(f"Добро пожаловать, {user.get('username')}! 🎸")
+        notify.success(f"Добро пожаловать, {user.get('username')}! 🎸")
         logger.info(f'Пользователь авторизован: {user.get("username")}')
         api.user_data = user
 
     def on_oauth_failure(self, req, error):
         self.auth_status.text = "👤 Гость"
-        show_snackbar("❌ Ошибка авторизации через Google")
+        notify.error("Ошибка авторизации через Google")
         logger.error(f'OAuth ошибка: {error}')
 
     def open_profile(self):
-        """Открывает профиль - вызывается из верхней панели"""
         if api.is_authenticated():
             if hasattr(self, 'manager') and self.manager:
                 if 'profile' in self.manager.screen_names:
                     self.manager.current = 'profile'
                 else:
-                    show_snackbar(f"Вы вошли как {api.user_data.get('username')} 🎸")
+                    notify.info(f"Вы вошли как {api.user_data.get('username')} 🎸")
             else:
-                show_snackbar(f"Вы вошли как {api.user_data.get('username')} 🎸")
+                notify.info(f"Вы вошли как {api.user_data.get('username')} 🎸")
         else:
             logger.info('Не авторизован, показываем окно авторизации')
             self.show_auth_modal()
 
     def on_pre_enter(self):
-        """Вызывается перед входом на экран"""
-        print("🔴 HOME SCREEN: on_pre_enter ВЫЗВАН")
         return super().on_pre_enter()

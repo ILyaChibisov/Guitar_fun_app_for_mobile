@@ -5,30 +5,18 @@
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton, MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.snackbar import MDSnackbar
 from kivy.metrics import dp
 from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
+from utils.notifications import notify
+from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout, MDFlatButton, MDScrollView
 
 logger = screen_logger('Profile')
-
-
-def show_snackbar(message):
-    """Показывает уведомление"""
-    snack = MDSnackbar()
-    snack.text = message
-    snack.snackbar_x = "10dp"
-    snack.snackbar_y = "10dp"
-    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
-    snack.open()
 
 
 class ProfileScreen(MDScreen):
@@ -39,9 +27,8 @@ class ProfileScreen(MDScreen):
         self.name = 'profile'
         self.user = None
         self.change_password_dialog = None
-        self._data_loaded = False  # Флаг для предотвращения повторной загрузки
+        self._data_loaded = False
 
-        # Устанавливаем цвет фона
         from kivy.graphics import Color, Rectangle
         from kivy.utils import rgba
         with self.canvas.before:
@@ -62,7 +49,6 @@ class ProfileScreen(MDScreen):
         self.add_widget(self.back_btn)
 
         # Основной контейнер
-        from kivymd.uix.scrollview import MDScrollView
         scroll = MDScrollView(size_hint=(1, 1))
 
         layout = MDBoxLayout(
@@ -260,7 +246,6 @@ class ProfileScreen(MDScreen):
         scroll.add_widget(layout)
         self.add_widget(scroll)
 
-        # Загружаем данные пользователя (только один раз)
         Clock.schedule_once(self.load_user_data, 0.5)
 
         logger.info('Экран профиля создан')
@@ -280,12 +265,10 @@ class ProfileScreen(MDScreen):
 
     def load_user_data(self, dt):
         """Загружает данные пользователя (только один раз)"""
-        # Защита от повторной загрузки
         if self._data_loaded:
             return
         self._data_loaded = True
 
-        print("🔴 ProfileScreen: load_user_data ВЫЗВАН")
         if api.user_data:
             self.user = api.user_data
             self.update_ui()
@@ -304,21 +287,18 @@ class ProfileScreen(MDScreen):
         error_msg = str(error)
         logger.error(f'Ошибка загрузки профиля: {error_msg}')
 
-        # Проверяем, что ошибка связана с авторизацией
         if 'Not authenticated' in error_msg or 'Invalid token' in error_msg:
             logger.info('Токен недействителен, очищаем и показываем авторизацию')
             api._clear_tokens()
-            show_snackbar("🔐 Сессия истекла. Пожалуйста, войдите снова.")
+            notify.warning("Сессия истекла. Пожалуйста, войдите снова.")
 
-            # Закрываем экран профиля и показываем окно авторизации
             self.go_back(None)
 
-            # Показываем окно авторизации
             app = MDApp.get_running_app()
             if hasattr(app, 'home_screen') and app.home_screen:
                 app.home_screen.show_auth_modal()
         else:
-            show_snackbar("❌ Не удалось загрузить данные профиля")
+            notify.error("Не удалось загрузить данные профиля")
             self.go_back(None)
 
     def update_ui(self):
@@ -331,7 +311,6 @@ class ProfileScreen(MDScreen):
         full_name = self.user.get('full_name') or 'не указано'
         role = self.user.get('role', 'user')
 
-        # Отображаем роль на русском
         role_display = {
             'admin': '👑 Администратор',
             'user': '👤 Пользователь',
@@ -343,7 +322,6 @@ class ProfileScreen(MDScreen):
         self.fullname_label.text = full_name
         self.role_label.text = role_display
 
-        # Показываем кнопку админки, если пользователь - администратор
         if api.is_admin():
             self.admin_btn.opacity = 1
             self.admin_btn.disabled = False
@@ -351,7 +329,6 @@ class ProfileScreen(MDScreen):
             self.admin_btn.opacity = 0
             self.admin_btn.disabled = True
 
-        # Форматируем дату регистрации
         created_at = self.user.get('created_at')
         if created_at:
             try:
@@ -367,13 +344,12 @@ class ProfileScreen(MDScreen):
         """Открывает админ-панель"""
         if api.is_admin():
             if hasattr(self, 'manager') and self.manager:
-                # Проверяем, есть ли экран admin
                 if 'admin' not in self.manager.screen_names:
                     from screens.admin_screen import AdminScreen
                     self.manager.add_widget(AdminScreen(name='admin'))
                 self.manager.current = 'admin'
         else:
-            show_snackbar("❌ У вас нет прав администратора")
+            notify.error("У вас нет прав администратора")
 
     def show_change_password_dialog(self, instance):
         """Показывает диалог смены пароля"""
@@ -421,13 +397,13 @@ class ProfileScreen(MDScreen):
             type="custom",
             content_cls=content,
             buttons=[
-                MDRaisedButton(
+                MDFlatButton(
                     text="Отмена",
                     theme_text_color="Custom",
                     text_color=theme.TEXT_SECONDARY,
                     on_release=lambda x: self.change_password_dialog.dismiss()
                 ),
-                MDRaisedButton(
+                MDFlatButton(
                     text="Сменить",
                     theme_text_color="Custom",
                     text_color=theme.PRIMARY,
@@ -444,42 +420,39 @@ class ProfileScreen(MDScreen):
         confirm = self.confirm_password.text
 
         if not old or not new:
-            show_snackbar("Заполните все поля")
+            notify.warning("Заполните все поля")
             return
 
         if new != confirm:
-            show_snackbar("Новые пароли не совпадают")
+            notify.warning("Новые пароли не совпадают")
             return
 
         if len(new) < 4:
-            show_snackbar("Пароль должен быть не менее 4 символов")
+            notify.warning("Пароль должен быть не менее 4 символов")
             return
 
         if len(new) > 72:
-            show_snackbar("Пароль слишком длинный (максимум 72 символа)")
+            notify.warning("Пароль слишком длинный (максимум 72 символа)")
             return
 
-        # TODO: Отправить запрос на смену пароля
-        show_snackbar("Функция смены пароля будет добавлена в следующей версии")
+        notify.info("Функция смены пароля будет добавлена в следующей версии")
         self.change_password_dialog.dismiss()
 
     def logout(self, instance):
         """Выход из аккаунта"""
 
         def on_logout_success(result):
-            show_snackbar("👋 Вы вышли из аккаунта")
+            notify.success("Вы вышли из аккаунта")
 
-            # Переключаемся на вкладку "Главная"
             app = MDApp.get_running_app()
             if hasattr(app, 'bottom_nav') and app.bottom_nav:
                 app.bottom_nav.switch_tab("home")
 
-            # Обновляем главный экран
             if hasattr(app, 'home_screen') and app.home_screen:
                 app.home_screen.check_auth(0)
 
         def on_logout_failure(req, error):
-            show_snackbar("❌ Ошибка выхода")
+            notify.error("Ошибка выхода")
             logger.error(f'Ошибка выхода: {error}')
 
         api.logout(
@@ -488,11 +461,7 @@ class ProfileScreen(MDScreen):
         )
 
     def on_pre_enter(self):
-        """Вызывается перед входом на экран"""
-        print("🔴 PROFILE SCREEN: on_pre_enter ВЫЗВАН")
         return super().on_pre_enter()
 
     def on_enter(self):
-        """Вызывается при входе на экран"""
-        print("🔴 PROFILE SCREEN: on_enter ВЫЗВАН")
         return super().on_enter()

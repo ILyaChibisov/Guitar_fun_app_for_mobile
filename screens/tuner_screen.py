@@ -7,6 +7,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp
 from config.logger_config import screen_logger
+from utils.kivy_imports import MDBoxLayout
 
 logger = screen_logger('Tuner')
 
@@ -16,6 +17,7 @@ class TunerScreen(MDScreen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.name = 'tuner'
 
         layout = MDBoxLayout(
             orientation='vertical',

@@ -3,11 +3,10 @@
 Максимально компактная клавиатура с буквами (по 5 кнопок в ряду)
 Цифры идут вместе с буквами, всё по 5 штук в ряду
 """
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDRaisedButton
 from kivy.metrics import dp
 from kivy.properties import StringProperty
 from config.theme import theme
+from utils.kivy_imports import MDRaisedButton, MDBoxLayout
 
 
 class SuperCompactLetterButton(MDRaisedButton):

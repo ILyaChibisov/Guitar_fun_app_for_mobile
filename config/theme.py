@@ -22,6 +22,12 @@ class Theme:
     TEXT_PRIMARY = "#4A4A4A"
     TEXT_SECONDARY = "#7A7A7A"
 
+    # Цвета для уведомлений
+    SUCCESS = [0.3, 0.7, 0.3, 1]
+    ERROR = [0.8, 0.3, 0.3, 1]
+    WARNING = [0.9, 0.7, 0.2, 1]
+    INFO = [0.46, 0.70, 0.71, 1]
+
     # Отступы
     PADDING = 16
     PADDING_SMALL = 8

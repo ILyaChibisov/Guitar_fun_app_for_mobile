@@ -81,22 +81,19 @@ from config.logger_config import setup_logging, app_logger
 
 setup_logging(level='debug')
 
-# Импорты KivyMD
-from kivymd.app import MDApp
-from kivymd.uix.label import MDLabel
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDIconButton, MDFlatButton, MDRaisedButton
-from kivymd.uix.menu import MDDropdownMenu
-from kivymd.uix.dialog import MDDialog
-from kivymd.uix.snackbar import MDSnackbar
-from kivymd.uix.floatlayout import MDFloatLayout
+# Импорты KivyMD с использованием наших утилит
+from utils.kivy_imports import (
+    MDRaisedButton, MDIconButton, MDFlatButton,
+    MDLabel, MDBoxLayout, MDScreen, MDDialog, Snackbar
+)
 
 # Наши модули
 from config.app_config import config
 from config.theme import theme
 from screens.manager import setup_screen_manager
 from api.client import api
+from api.network_handler import network_manager
+from utils.notifications import notify
 
 # Настройка окна для разработки
 if os.name == 'nt':
@@ -105,17 +102,6 @@ if os.name == 'nt':
     Window.left = 50
 
 logger = app_logger()
-
-
-def show_snackbar(message):
-    """Показывает уведомление"""
-    snack = MDSnackbar()
-    snack.text = message
-    snack.snackbar_x = "10dp"
-    snack.snackbar_y = "10dp"
-    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
-    snack.open()
 
 
 class BottomNavItem(BoxLayout):
@@ -214,6 +200,7 @@ class LanguageSelector(MDBoxLayout):
         self.create_language_menu()
 
     def create_language_menu(self):
+        from kivymd.uix.menu import MDDropdownMenu
         languages = [
             {"code": "ru", "name": "Русский", "icon": "language-russian"},
             {"code": "en", "name": "English", "icon": "alphabet-latin"},
@@ -304,6 +291,9 @@ class GuitarFunsApp(MDApp):
         # Нижняя навигация
         bottom_nav = self.create_bottom_navigation()
         root.add_widget(bottom_nav)
+
+        # Запускаем мониторинг сети
+        network_manager.start_monitoring()
 
         logger.info('Интерфейс успешно создан')
         return root
@@ -428,7 +418,8 @@ class GuitarFunsApp(MDApp):
         logger.info("Открыты настройки")
         if not self.settings_dialog:
             self.settings_dialog = MDDialog(
-                title="⚙️ Настройки", text="Здесь будут настройки приложения",
+                title="⚙️ Настройки",
+                text="Здесь будут настройки приложения",
                 buttons=[MDFlatButton(text="ЗАКРЫТЬ", on_release=lambda x: self.settings_dialog.dismiss())]
             )
         self.settings_dialog.open()
@@ -449,7 +440,7 @@ class GuitarFunsApp(MDApp):
                       "fr": "Français", "it": "Italiano", "pt": "Português", "zh": "中文"}
         lang_name = lang_names.get(lang_code, lang_code)
         logger.info(f"Язык изменён на: {lang_name} ({lang_code})")
-        show_snackbar(f"Язык изменён на {lang_name}")
+        notify.info(f"Язык изменён на {lang_name}")
 
     def show_auth_modal(self, on_success=None):
         """Показывает модальное окно авторизации"""
@@ -484,6 +475,7 @@ class GuitarFunsApp(MDApp):
 
     def on_stop(self):
         logger.info('Приложение закрыто')
+        network_manager.stop_monitoring()
 
 
 if __name__ == '__main__':

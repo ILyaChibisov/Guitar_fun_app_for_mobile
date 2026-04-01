@@ -14,6 +14,7 @@ from kivy.logger import Logger
 from kivy.storage.jsonstore import JsonStore
 from kivy.clock import Clock
 from config.app_config import config
+from api.ssl_config import get_requests_session
 
 # Отключаем предупреждения SSL
 warnings.filterwarnings("ignore", category=Warning)
@@ -137,15 +138,14 @@ class APIClient:
         self.config = config
         self.waiting_for_callback = False
 
-        # Создаем сессию requests с отключенной проверкой SSL
-        self.session = requests.Session()
-        self.session.verify = False  # Отключаем проверку SSL
+        # Создаем сессию с правильной SSL настройкой
+        self.session = get_requests_session()
+
         self.session.headers.update({
             'User-Agent': 'GuitarFuns/1.0',
             'Accept': 'application/json'
         })
 
-        Logger.warning("⚠️ РЕЖИМ РАЗРАБОТКИ: SSL проверка ОТКЛЮЧЕНА!")
         self._load_tokens()
 
     def _load_tokens(self):
@@ -154,18 +154,15 @@ class APIClient:
             if store.exists('tokens'):
                 self.access_token = store.get('tokens')['access_token']
                 self.refresh_token = store.get('tokens')['refresh_token']
-                print(f"🔴 API: Токены загружены: access_token={self.access_token[:50]}...")
                 Logger.info('API: Токены загружены')
         except Exception as e:
             Logger.debug(f'API: Нет сохранённых токенов - {e}')
-            print(f"🔴 API: Нет сохранённых токенов - {e}")
 
     def _save_tokens(self):
         try:
             store = JsonStore('auth.json')
             store.put('tokens', access_token=self.access_token, refresh_token=self.refresh_token)
             Logger.info('API: Токены сохранены')
-            print("🔴 API: Токены сохранены")
         except Exception as e:
             Logger.error(f'API: Ошибка сохранения токенов - {e}')
 
@@ -178,7 +175,6 @@ class APIClient:
             self.refresh_token = None
             self.user_data = None
             Logger.info('API: Токены очищены')
-            print("🔴 API: Токены очищены")
         except Exception as e:
             Logger.error(f'API: Ошибка очистки токенов - {e}')
 
@@ -194,7 +190,6 @@ class APIClient:
     def _request_sync(self, url, method='GET', data=None, include_auth=True):
         """Синхронный запрос"""
         headers = self._get_headers(include_auth)
-        print(f"🔴🔴🔴 _request_sync: {method} {url} 🔴🔴🔴")
 
         try:
             if method == 'GET':
@@ -252,14 +247,6 @@ class APIClient:
 
     def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
         return self._request_async(url, method, data, on_success, on_failure, include_auth)
-
-    def _on_failure(self, req, error):
-        Logger.error(f'API: Ошибка запроса - {error}')
-        print(f"🔴 API: Ошибка запроса - {error}")
-
-    def _on_error(self, req, error):
-        Logger.error(f'API: Критическая ошибка - {error}')
-        print(f"🔴 API: Критическая ошибка - {error}")
 
     # ============ AUTH METHODS ============
 
@@ -324,8 +311,7 @@ class APIClient:
                     config.API_AUTH_LOGIN,
                     data=data,
                     headers=headers,
-                    timeout=config.CONNECTION_TIMEOUT,
-                    verify=False
+                    timeout=config.CONNECTION_TIMEOUT
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -405,22 +391,16 @@ class APIClient:
 
     def get_current_user(self, on_success=None, on_failure=None):
         """Получение текущего пользователя"""
-        print("🔴🔴🔴 get_current_user ВЫЗВАН 🔴🔴🔴")
 
         def _on_success(result):
-            print("🔴🔴🔴 get_current_user _on_success ВЫЗВАН 🔴🔴🔴")
-            print(f"🔴🔴🔴 get_current_user result: {result}")
             self.user_data = result
             Logger.info(f'✅ Получен пользователь: {result.get("username")}')
             if on_success:
                 on_success(result)
 
         def _on_failure(error):
-            print(f"🔴🔴🔴 get_current_user _on_failure ВЫЗВАН, error: {error} 🔴🔴🔴")
             if "401" in str(error) or "Unauthorized" in str(error):
                 if self.refresh_token:
-                    print("🔴🔴🔴 get_current_user: 401, пробуем обновить токен 🔴🔴🔴")
-
                     def on_refresh_success(x):
                         self.get_current_user(on_success, on_failure)
 
@@ -440,8 +420,7 @@ class APIClient:
                 response = self.session.get(
                     config.API_USER_ME,
                     headers=self._get_headers(include_auth=True),
-                    timeout=config.CONNECTION_TIMEOUT,
-                    verify=False
+                    timeout=config.CONNECTION_TIMEOUT
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -455,10 +434,8 @@ class APIClient:
         return thread
 
     def refresh_access_token(self, on_success=None, on_failure=None):
-        print("🔴🔴🔴 refresh_access_token ВЫЗВАН 🔴🔴🔴")
 
         def _on_success(result):
-            print("🔴🔴🔴 refresh_access_token _on_success ВЫЗВАН 🔴🔴🔴")
             self.access_token = result.get('access_token')
             self._save_tokens()
             Logger.info('✅ Токен обновлён')
@@ -475,8 +452,7 @@ class APIClient:
                     config.API_AUTH_REFRESH,
                     json={'refresh_token': self.refresh_token},
                     headers=self._get_headers(include_auth=False),
-                    timeout=config.CONNECTION_TIMEOUT,
-                    verify=False
+                    timeout=config.CONNECTION_TIMEOUT
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -498,7 +474,6 @@ class APIClient:
         """Получить все буквы, для которых есть песни"""
 
         def _on_success(result):
-            print(f"DEBUG API: get_alphabet _on_success called")
             if on_success:
                 on_success(result.get('letters', []))
 
@@ -515,26 +490,16 @@ class APIClient:
         import urllib.parse
         encoded_letter = urllib.parse.quote(letter, safe='')
 
-        print(f"DEBUG API: get_artists_by_letter called for letter: {letter}")
-        print(f"DEBUG API: URL: {self.config.API_BASE_URL}/songs/artists/{encoded_letter}")
-
         def _on_success(result):
-            print(f"DEBUG API: _on_success called")
             artists = result.get('artists', []) if isinstance(result, dict) else []
-            print(f"DEBUG API: artists count: {len(artists)}")
             if on_success:
                 on_success(artists)
-
-        def _on_failure(req, error):
-            print(f"DEBUG API: _on_failure called, error: {error}")
-            if on_failure:
-                on_failure(req, error)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}",
             method='GET',
             on_success=_on_success,
-            on_failure=_on_failure,
+            on_failure=on_failure,
             include_auth=False
         )
 
@@ -544,7 +509,6 @@ class APIClient:
         encoded_artist = urllib.parse.quote(artist, safe='')
 
         def _on_success(result):
-            print(f"DEBUG API: get_songs_by_artist _on_success called")
             if on_success:
                 on_success(result.get('songs', []))
 
@@ -563,7 +527,6 @@ class APIClient:
         encoded_title = urllib.parse.quote(title, safe='')
 
         def _on_success(result):
-            print(f"DEBUG API: get_tabs_by_song _on_success called")
             if on_success:
                 on_success(result.get('tabs', []))
 
@@ -579,7 +542,6 @@ class APIClient:
         """Получить конкретный подбор по ID"""
 
         def _on_success(result):
-            print(f"DEBUG API: get_tab _on_success called for id: {song_id}")
             if on_success:
                 on_success(result)
 
@@ -645,7 +607,6 @@ class APIClient:
         encoded_query = urllib.parse.quote(query, safe='')
 
         def _on_success(result):
-            print(f"DEBUG API: search_songs _on_success called")
             if on_success:
                 on_success(result.get('results', []))
 

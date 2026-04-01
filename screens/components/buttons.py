@@ -11,6 +11,7 @@ from kivy.properties import ListProperty
 from kivy.metrics import dp, sp
 from config.theme import theme
 from config.logger_config import get_logger
+from utils.kivy_imports import MDRaisedButton, MDIconButton
 
 logger = get_logger('UI')
 
@@ -25,8 +26,8 @@ class GradientButton(Button):
         super().__init__(**kwargs)
         self.background_normal = ''
         self.background_color = (0, 0, 0, 0)
-        self.font_size = theme.FONT_SIZE_BODY
-        self.color = theme.TEXT_ON_PRIMARY
+        self.font_size = theme.FONT_SIZE_BODY if hasattr(theme, 'FONT_SIZE_BODY') else sp(14)
+        self.color = theme.TEXT_PRIMARY if hasattr(theme, 'TEXT_PRIMARY') else [1, 1, 1, 1]
         self.bold = True
         self.size_hint = (None, None)
         self.size = (dp(200), dp(50))

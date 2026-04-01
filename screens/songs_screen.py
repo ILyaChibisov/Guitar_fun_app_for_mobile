@@ -2,16 +2,11 @@
 """
 Экран песен с алфавитной навигацией и поиском
 """
-from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton, MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivymd.uix.snackbar import MDSnackbar
-from kivymd.uix.progressbar import MDProgressBar
 from kivy.metrics import dp
 from kivy.clock import Clock
 from kivy.animation import Animation
@@ -19,21 +14,10 @@ from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
 from screens.components.alphabet_keyboard import AlphabetKeyboard
+from utils.notifications import notify
+from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout, MDProgressBar
 
 logger = screen_logger('Songs')
-
-
-def show_snackbar(message, bg_color=None):
-    """Показывает уведомление"""
-    snack = MDSnackbar()
-    snack.text = message
-    snack.snackbar_x = "10dp"
-    snack.snackbar_y = "10dp"
-    snack.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
-    if bg_color:
-        snack.md_bg_color = bg_color
-    snack.open()
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -78,130 +62,6 @@ class LoadingSpinner(MDBoxLayout):
         if self.anim:
             self.anim.cancel(self.progress)
         self.progress.value = 0
-
-
-class ArtistCard(MDCard):
-    """Карточка исполнителя"""
-
-    def __init__(self, artist, on_song_click=None, **kwargs):
-        super().__init__(**kwargs)
-        self.artist = artist
-        self.on_song_click_callback = on_song_click
-        self.expanded = False
-        self.songs = []
-        self.is_loading = False
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, None)
-        self.height = dp(48)
-        self.padding = [dp(12), dp(8), dp(12), dp(8)]
-        self.radius = [theme.CORNER_RADIUS_SMALL]
-        self.md_bg_color = theme.SURFACE
-        self.elevation = 1
-
-        self.header = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(32))
-
-        self.icon = MDLabel(text="🎸", font_size=dp(18), size_hint_x=0.1)
-        self.title = MDLabel(text=artist, font_style="Subtitle1", size_hint_x=0.8, bold=True)
-        self.arrow = MDIconButton(icon="chevron-down", size_hint_x=0.1,
-                                  theme_text_color="Custom", text_color=theme.TEXT_SECONDARY)
-
-        self.header.add_widget(self.icon)
-        self.header.add_widget(self.title)
-        self.header.add_widget(self.arrow)
-        self.add_widget(self.header)
-
-        self.songs_container = MDBoxLayout(orientation='vertical', spacing=dp(4), size_hint_y=None, opacity=0,
-                                           disabled=True)
-        self.add_widget(self.songs_container)
-
-        self.loading_spinner = LoadingSpinner(size_hint_y=None, height=dp(60), opacity=0, disabled=True)
-        self.add_widget(self.loading_spinner)
-
-        self.bind(on_release=self.toggle)
-
-    def load_songs(self):
-        """Загружает песни исполнителя"""
-        if self.songs:
-            self.show_songs()
-            return
-
-        self.is_loading = True
-        self.loading_spinner.opacity = 1
-        self.loading_spinner.disabled = False
-        self.loading_spinner.start_animation()
-        self.songs_container.opacity = 0
-
-        api.get_songs_by_artist(
-            artist=self.artist,
-            on_success=self.on_songs_loaded,
-            on_failure=self.on_load_failed
-        )
-
-    def on_songs_loaded(self, songs):
-        """Обработчик загрузки песен"""
-        self.songs = songs
-        self.is_loading = False
-        self.loading_spinner.stop_animation()
-        self.loading_spinner.opacity = 0
-        self.loading_spinner.disabled = True
-        self.show_songs()
-
-    def on_load_failed(self, req, error):
-        """Обработчик ошибки загрузки"""
-        self.is_loading = False
-        self.loading_spinner.stop_animation()
-        self.loading_spinner.opacity = 0
-        self.loading_spinner.disabled = True
-        show_snackbar(f"Ошибка загрузки песен: {error}")
-
-    def show_songs(self):
-        """Отображает список песен"""
-        self.songs_container.clear_widgets()
-
-        for song in self.songs:
-            tabs_count = song.get('tabs_count', 1)
-            text = f"{song['title']} ({tabs_count} подборов)" if tabs_count > 1 else song['title']
-            song_btn = MDRaisedButton(
-                text=text,
-                size_hint=(1, None),
-                height=dp(40),
-                md_bg_color=[0.95, 0.95, 0.95, 1],
-                theme_text_color="Custom",
-                text_color=theme.TEXT_PRIMARY,
-                font_size=dp(12),
-                on_release=lambda x, s=song: self._on_song_click(s)
-            )
-            song_btn.radius = [theme.CORNER_RADIUS_SMALL]
-            self.songs_container.add_widget(song_btn)
-
-        self.songs_container.height = len(self.songs) * dp(44)
-
-        if self.expanded:
-            self.songs_container.opacity = 1
-            self.songs_container.disabled = False
-            self.height = dp(48) + self.songs_container.height + dp(8)
-
-    def toggle(self, instance):
-        """Раскрывает/скрывает список песен"""
-        if not self.expanded and not self.songs and not self.is_loading:
-            self.load_songs()
-            return
-
-        self.expanded = not self.expanded
-        self.songs_container.opacity = 1 if self.expanded else 0
-        self.songs_container.disabled = not self.expanded
-        self.arrow.icon = "chevron-up" if self.expanded else "chevron-down"
-
-        if self.expanded:
-            self.height = dp(48) + self.songs_container.height + dp(8)
-        else:
-            self.height = dp(48)
-
-    def _on_song_click(self, song):
-        """Обработчик нажатия на песню"""
-        if self.on_song_click_callback:
-            self.on_song_click_callback(song)
 
 
 class ResultCard(MDCard):
@@ -404,15 +264,12 @@ class SongsScreen(MDScreen):
 
     def load_artists_by_letter(self, letter):
         """Загружает исполнителей по букве"""
-        print(f"DEBUG: load_artists_by_letter ВЫЗВАН для буквы: {letter}")
         self.show_loading()
 
         def on_success(artists):
-            print(f"DEBUG: on_success ВЫЗВАН, artists count: {len(artists)}")
             self.on_artists_loaded(artists)
 
         def on_failure(req, error):
-            print(f"DEBUG: on_failure ВЫЗВАН, error: {error}")
             self.on_load_failed(req, error)
 
         api.get_artists_by_letter(
@@ -423,9 +280,6 @@ class SongsScreen(MDScreen):
 
     def on_artists_loaded(self, artists):
         """Отображает список исполнителей"""
-        print(f"=== DEBUG: on_artists_loaded ===")
-        print(f"Количество: {len(artists)}")
-
         self.hide_loading()
         self.content_container.clear_widgets()
 
@@ -444,7 +298,6 @@ class SongsScreen(MDScreen):
         for artist_data in artists:
             artist = artist_data.get('artist')
             if artist:
-                # Упрощённая карточка исполнителя без загрузки песен внутри
                 card = MDCard(
                     orientation='vertical',
                     size_hint=(1, None),
@@ -494,7 +347,7 @@ class SongsScreen(MDScreen):
         self.hide_loading()
 
         if not tabs:
-            show_snackbar("Нет доступных подборов для этой песни")
+            notify.warning("Нет доступных подборов для этой песни")
             return
 
         logger.info(f"Загружено {len(tabs)} подборов для песни: {song['artist']} - {song['title']}")
@@ -515,7 +368,7 @@ class SongsScreen(MDScreen):
         """Выполняет поиск"""
         query = self.search_field.text.strip()
         if len(query) < 2:
-            show_snackbar("Введите минимум 2 символа для поиска")
+            notify.warning("Введите минимум 2 символа для поиска")
             return
 
         logger.info(f"Поиск: {query}")
@@ -577,5 +430,5 @@ class SongsScreen(MDScreen):
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
         self.hide_loading()
-        show_snackbar(f"Ошибка загрузки: {error}")
+        notify.error(f"Ошибка загрузки: {error}")
         logger.error(f"Ошибка загрузки: {error}")
