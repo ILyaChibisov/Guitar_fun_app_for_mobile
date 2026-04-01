@@ -239,11 +239,12 @@ class APIClient:
                 result = self._request_sync(url, method, data, include_auth)
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(result), 0)
-            except Exception as e:
+            except Exception as err:
                 if on_failure:
-                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+                    error_msg = str(err)
+                    Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
                 else:
-                    Logger.error(f'API: Ошибка - {e}')
+                    Logger.error(f'API: Ошибка - {err}')
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
@@ -329,8 +330,9 @@ class APIClient:
                 response.raise_for_status()
                 result = response.json()
                 Clock.schedule_once(lambda dt: _on_success(result), 0)
-            except Exception as ex:
-                Clock.schedule_once(lambda dt: _on_failure(str(ex)), 0)
+            except Exception as err:
+                error_msg = str(err)
+                Clock.schedule_once(lambda dt: _on_failure(error_msg), 0)
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
@@ -444,8 +446,9 @@ class APIClient:
                 response.raise_for_status()
                 result = response.json()
                 Clock.schedule_once(lambda dt: _on_success(result), 0)
-            except Exception as ex:
-                Clock.schedule_once(lambda dt: _on_failure(str(ex)), 0)
+            except Exception as err:
+                error_msg = str(err)
+                Clock.schedule_once(lambda dt: _on_failure(error_msg), 0)
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
@@ -478,8 +481,9 @@ class APIClient:
                 response.raise_for_status()
                 result = response.json()
                 Clock.schedule_once(lambda dt: _on_success(result), 0)
-            except Exception as ex:
-                Clock.schedule_once(lambda dt: _on_failure(str(ex)), 0)
+            except Exception as err:
+                error_msg = str(err)
+                Clock.schedule_once(lambda dt: _on_failure(error_msg), 0)
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
