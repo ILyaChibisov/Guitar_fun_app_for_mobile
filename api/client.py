@@ -2,6 +2,16 @@
 """
 HTTP клиент для работы с сервером
 """
+import ssl
+import warnings
+
+# Отключаем проверку SSL
+ssl._create_default_https_context = ssl._create_unverified_context
+warnings.filterwarnings("ignore", category=Warning)
+
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 import json
 import threading
 import http.server

@@ -4,6 +4,37 @@
 С верхней панелью и нижней навигацией
 """
 import os
+import sys
+import ssl
+import warnings
+
+# ============ ОТКЛЮЧАЕМ SSL ПРОВЕРКУ ДЛЯ ВСЕХ ПЛАТФОРМ ============
+# Отключаем предупреждения SSL
+warnings.filterwarnings("ignore", category=Warning)
+
+# Отключаем проверку SSL для всех HTTPS запросов
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Для urllib3
+try:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+except ImportError:
+    pass
+
+# Для requests
+try:
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except ImportError:
+    pass
+
+# Для Kivy UrlRequest - устанавливаем глобальную переменную
+os.environ['SSL_CERT_FILE'] = ''
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+# ================================================================
+
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
 from kivy.uix.screenmanager import ScreenManager
@@ -11,6 +42,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.animation import Animation
+from kivy.utils import platform
 
 # Настройка логирования
 from config.logger_config import setup_logging, app_logger
@@ -96,7 +128,6 @@ class BottomNavItem(BoxLayout):
             self.icon_btn.text_color = theme.TEXT_SECONDARY
             self.text_label.text_color = theme.TEXT_SECONDARY
             self.text_label.bold = False
-
 
 
 class LanguageSelector(MDBoxLayout):
@@ -210,6 +241,7 @@ class GuitarFunsApp(MDApp):
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
+        logger.info(f'🎸 Платформа: {platform}')
         logger.info('🎸 ' + '=' * 50)
 
     def build(self):
@@ -224,8 +256,7 @@ class GuitarFunsApp(MDApp):
         self.screen_manager = setup_screen_manager()
         self.screen_manager.bind(current=self.on_screen_change)
 
-        # 👇 ЯВНО УСТАНАВЛИВАЕМ НАЧАЛЬНЫЙ ЭКРАН
-        print("🔴 main: явно устанавливаем home")
+        # Устанавливаем начальный экран
         self.screen_manager.current = 'home'
 
         # Корневой контейнер
@@ -307,8 +338,9 @@ class GuitarFunsApp(MDApp):
                                           size=(bottom_nav.width, dp(1)))
 
         def update_shadow(instance, value):
-            bottom_nav.shadow.pos = (bottom_nav.x, bottom_nav.y + bottom_nav.height - dp(1))
-            bottom_nav.shadow.size = (bottom_nav.width, dp(1))
+            if hasattr(bottom_nav, 'shadow'):
+                bottom_nav.shadow.pos = (bottom_nav.x, bottom_nav.y + bottom_nav.height - dp(1))
+                bottom_nav.shadow.size = (bottom_nav.width, dp(1))
 
         bottom_nav.bind(pos=update_shadow, size=update_shadow)
 
@@ -345,17 +377,14 @@ class GuitarFunsApp(MDApp):
 
     def on_screen_change(self, instance, value):
         """Обновляет активные элементы при смене экрана"""
-        print(f"🔴🔴🔴 СМЕНА ЭКРАНА: {value} 🔴🔴🔴")  # 👈 ДОБАВЬТЕ
         for item in self.nav_items:
             item.set_active(item.screen_name == value)
 
     def open_profile(self, instance):
         """Открывает профиль пользователя"""
-        print("🔴🔴🔴 open_profile ВЫЗВАН 🔴🔴🔴")  # 👈 ДОБАВЬТЕ
         logger.info("Нажата иконка личного кабинета")
 
         if api.is_authenticated():
-            print("🔴 open_profile: переход в profile")  # 👈 ДОБАВЬТЕ
             self.screen_manager.current = "profile"
         else:
             if self.home_screen and hasattr(self.home_screen, 'open_profile'):
