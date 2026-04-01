@@ -2,29 +2,27 @@
 """
 HTTP клиент для работы с сервером
 """
-import ssl
-import warnings
-
-# Отключаем проверку SSL
-ssl._create_default_https_context = ssl._create_unverified_context
-warnings.filterwarnings("ignore", category=Warning)
-
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 import json
 import threading
 import http.server
 import socketserver
 import urllib.parse
 import webbrowser
-from kivy.network.urlrequest import UrlRequest
+import requests
+import ssl
+import warnings
 from kivy.logger import Logger
 from kivy.storage.jsonstore import JsonStore
 from kivy.clock import Clock
 from config.app_config import config
 
-# Отключаем предупреждения SSL для разработки
+# Отключаем предупреждения SSL
+warnings.filterwarnings("ignore", category=Warning)
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass  # Игнорируем, если атрибут не найден
+
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -143,13 +141,17 @@ class APIClient:
         self.user_data = None
         self.config = config
         self.waiting_for_callback = False
-        self._load_tokens()
 
-        # Создаем сессию с отключенной проверкой SSL для разработки
-        import requests
+        # Создаем сессию requests с отключенной проверкой SSL
         self.session = requests.Session()
         self.session.verify = False  # Отключаем проверку SSL
+        self.session.headers.update({
+            'User-Agent': 'GuitarFuns/1.0',
+            'Accept': 'application/json'
+        })
+
         Logger.warning("⚠️ РЕЖИМ РАЗРАБОТКИ: SSL проверка ОТКЛЮЧЕНА!")
+        self._load_tokens()
 
     def _load_tokens(self):
         try:
@@ -194,30 +196,77 @@ class APIClient:
             headers['Authorization'] = f'Bearer {self.access_token}'
         return headers
 
-    def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
+    def _request_sync(self, url, method='GET', data=None, include_auth=True):
+        """
+        Синхронный запрос (для использования в потоках)
+        """
         headers = self._get_headers(include_auth)
-        print(f"🔴🔴🔴 _request: {method} {url} 🔴🔴🔴")
+        print(f"🔴🔴🔴 _request_sync: {method} {url} 🔴🔴🔴")
 
-        def wrapped_on_success(req, result):
-            print(f"🔴🔴🔴 _request: wrapped_on_success called for {url} 🔴🔴🔴")
-            if on_success:
-                on_success(req, result)
+        try:
+            if method == 'GET':
+                response = self.session.get(url, headers=headers, timeout=config.CONNECTION_TIMEOUT)
+            elif method == 'POST':
+                if data and isinstance(data, dict):
+                    response = self.session.post(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
+                else:
+                    response = self.session.post(url, data=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
+            elif method == 'PUT':
+                response = self.session.put(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
+            elif method == 'DELETE':
+                response = self.session.delete(url, headers=headers, timeout=config.CONNECTION_TIMEOUT)
+            else:
+                response = self.session.request(method, url, json=data, headers=headers,
+                                                timeout=config.CONNECTION_TIMEOUT)
 
-        # Отключаем проверку SSL для разработки
-        ca_file = False
+            response.raise_for_status()
+            return response.json() if response.content else None
 
-        req = UrlRequest(
-            url=url,
-            method=method,
-            req_body=json.dumps(data) if data else None,
-            req_headers=headers,
-            on_success=wrapped_on_success,
-            on_failure=on_failure or self._on_failure,
-            on_error=self._on_error,
-            timeout=config.CONNECTION_TIMEOUT,
-            ca_file=ca_file  # False = отключаем проверку SSL
-        )
-        return req
+        except requests.exceptions.SSLError as e:
+            Logger.error(f'API: SSL ошибка - {e}')
+            print(f"🔴 API: SSL ошибка - {e}")
+            raise
+        except requests.exceptions.ConnectionError as e:
+            Logger.error(f'API: Ошибка соединения - {e}')
+            print(f"🔴 API: Ошибка соединения - {e}")
+            raise
+        except requests.exceptions.Timeout as e:
+            Logger.error(f'API: Таймаут - {e}')
+            print(f"🔴 API: Таймаут - {e}")
+            raise
+        except requests.exceptions.HTTPError as e:
+            Logger.error(f'API: HTTP ошибка {e.response.status_code} - {e}')
+            print(f"🔴 API: HTTP ошибка {e.response.status_code} - {e}")
+            raise
+        except Exception as e:
+            Logger.error(f'API: Ошибка запроса - {e}')
+            print(f"🔴 API: Ошибка запроса - {e}")
+            raise
+
+    def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
+        """
+        Асинхронный запрос (запускает в отдельном потоке)
+        """
+
+        def worker():
+            try:
+                result = self._request_sync(url, method, data, include_auth)
+                # Вызываем callback в главном потоке
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(result), 0)
+            except Exception as e:
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+                else:
+                    self._on_error(None, str(e))
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        return thread
+
+    def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
+        """Универсальный метод для запросов"""
+        return self._request_async(url, method, data, on_success, on_failure, include_auth)
 
     def _on_failure(self, req, error):
         Logger.error(f'API: Ошибка запроса - {error}')
@@ -230,7 +279,7 @@ class APIClient:
     # ============ AUTH METHODS ============
 
     def check_health(self, on_success=None, on_failure=None):
-        def _on_success(req, result):
+        def _on_success(result):
             Logger.info('✅ Сервер доступен')
             if on_success:
                 on_success(result)
@@ -248,7 +297,7 @@ class APIClient:
         if full_name:
             data['full_name'] = full_name
 
-        def _on_success(req, result):
+        def _on_success(result):
             Logger.info(f'✅ Регистрация успешна: {username}')
             if on_success:
                 on_success(result)
@@ -269,12 +318,7 @@ class APIClient:
             'password': password
         })
 
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json'
-        }
-
-        def _on_success(req, result):
+        def _on_success(result):
             self.access_token = result.get('access_token')
             self.refresh_token = result.get('refresh_token')
             self._save_tokens()
@@ -287,20 +331,27 @@ class APIClient:
             if on_failure:
                 on_failure(req, error)
 
-        ca_file = False  # Отключаем проверку SSL
+        # Для form-data нужно изменить Content-Type
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
-        req = UrlRequest(
-            url=config.API_AUTH_LOGIN,
-            method='POST',
-            req_body=data,
-            req_headers=headers,
-            on_success=_on_success,
-            on_failure=_on_failure,
-            on_error=self._on_error,
-            timeout=config.CONNECTION_TIMEOUT,
-            ca_file=ca_file
-        )
-        return req
+        def worker():
+            try:
+                response = self.session.post(
+                    config.API_AUTH_LOGIN,
+                    data=data,
+                    headers=headers,
+                    timeout=config.CONNECTION_TIMEOUT,
+                    verify=False
+                )
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: _on_success(result), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: _on_failure(None, str(e)), 0)
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        return thread
 
     def google_login(self, on_success=None, on_failure=None):
         """Начинает вход через Google с callback на локальный сервер"""
@@ -340,7 +391,7 @@ class APIClient:
     def logout(self, on_success=None, on_failure=None):
         """Выход из системы (refresh_token как query параметр)"""
 
-        def _on_success(req, result):
+        def _on_success(result):
             self._clear_tokens()
             Logger.info('✅ Выход выполнен')
             if on_success:
@@ -359,31 +410,19 @@ class APIClient:
 
         url = f"{config.API_AUTH_LOGOUT}?refresh_token={self.refresh_token}"
 
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-
-        ca_file = False  # Отключаем проверку SSL
-
-        req = UrlRequest(
+        return self._request(
             url=url,
             method='POST',
-            req_body=None,
-            req_headers=headers,
             on_success=_on_success,
             on_failure=_on_failure,
-            on_error=self._on_error,
-            timeout=config.CONNECTION_TIMEOUT,
-            ca_file=ca_file
+            include_auth=False
         )
-        return req
 
     def get_current_user(self, on_success=None, on_failure=None):
         """Получение текущего пользователя"""
         print("🔴🔴🔴 get_current_user ВЫЗВАН 🔴🔴🔴")
 
-        def _on_success(req, result):
+        def _on_success(result):
             print("🔴🔴🔴 get_current_user _on_success ВЫЗВАН 🔴🔴🔴")
             print(f"🔴🔴🔴 get_current_user result: {result}")
             self.user_data = result
@@ -393,12 +432,16 @@ class APIClient:
 
         def _on_failure(req, error):
             print(f"🔴🔴🔴 get_current_user _on_failure ВЫЗВАН, error: {error} 🔴🔴🔴")
-            if error == 401 and self.refresh_token:
-                print("🔴🔴🔴 get_current_user: 401, пробуем обновить токен 🔴🔴🔴")
-                self.refresh_access_token(
-                    on_success=lambda x: self.get_current_user(on_success, on_failure),
-                    on_failure=on_failure
-                )
+            if error == "401" or "401" in str(error) or "Not authenticated" in str(error):
+                if self.refresh_token:
+                    print("🔴🔴🔴 get_current_user: 401, пробуем обновить токен 🔴🔴🔴")
+                    self.refresh_access_token(
+                        on_success=lambda x: self.get_current_user(on_success, on_failure),
+                        on_failure=on_failure
+                    )
+                else:
+                    if on_failure:
+                        on_failure(req, error)
             elif on_failure:
                 on_failure(req, error)
 
@@ -412,7 +455,7 @@ class APIClient:
     def refresh_access_token(self, on_success=None, on_failure=None):
         print("🔴🔴🔴 refresh_access_token ВЫЗВАН 🔴🔴🔴")
 
-        def _on_success(req, result):
+        def _on_success(result):
             print("🔴🔴🔴 refresh_access_token _on_success ВЫЗВАН 🔴🔴🔴")
             self.access_token = result.get('access_token')
             self._save_tokens()
@@ -437,7 +480,7 @@ class APIClient:
     def get_alphabet(self, on_success=None, on_failure=None):
         """Получить все буквы, для которых есть песни"""
 
-        def _on_success(req, result):
+        def _on_success(result):
             print(f"DEBUG API: get_alphabet _on_success called")
             if on_success:
                 on_success(result.get('letters', []))
@@ -458,7 +501,7 @@ class APIClient:
         print(f"DEBUG API: get_artists_by_letter called for letter: {letter}")
         print(f"DEBUG API: URL: {self.config.API_BASE_URL}/songs/artists/{encoded_letter}")
 
-        def _on_success(req, result):
+        def _on_success(result):
             print(f"DEBUG API: _on_success called")
             print(f"DEBUG API: result type: {type(result)}")
             print(f"DEBUG API: result keys: {result.keys() if isinstance(result, dict) else 'not dict'}")
@@ -487,7 +530,7 @@ class APIClient:
         import urllib.parse
         encoded_artist = urllib.parse.quote(artist, safe='')
 
-        def _on_success(req, result):
+        def _on_success(result):
             print(f"DEBUG API: get_songs_by_artist _on_success called")
             if on_success:
                 on_success(result.get('songs', []))
@@ -506,7 +549,7 @@ class APIClient:
         encoded_artist = urllib.parse.quote(artist, safe='')
         encoded_title = urllib.parse.quote(title, safe='')
 
-        def _on_success(req, result):
+        def _on_success(result):
             print(f"DEBUG API: get_tabs_by_song _on_success called")
             if on_success:
                 on_success(result.get('tabs', []))
@@ -522,7 +565,7 @@ class APIClient:
     def get_tab(self, song_id: int, on_success=None, on_failure=None):
         """Получить конкретный подбор по ID"""
 
-        def _on_success(req, result):
+        def _on_success(result):
             print(f"DEBUG API: get_tab _on_success called for id: {song_id}")
             if on_success:
                 on_success(result)
@@ -538,7 +581,7 @@ class APIClient:
     def toggle_like(self, song_id: int, on_success=None, on_failure=None):
         """Поставить/убрать лайк"""
 
-        def _on_success(req, result):
+        def _on_success(result):
             Logger.info(f'✅ Лайк переключён для {song_id}')
             if on_success:
                 on_success(result)
@@ -554,7 +597,7 @@ class APIClient:
     def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
         """Добавить в избранное"""
 
-        def _on_success(req, result):
+        def _on_success(result):
             Logger.info(f'✅ Добавлено в избранное {song_id}')
             if on_success:
                 on_success(result)
@@ -570,7 +613,7 @@ class APIClient:
     def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
         """Удалить из избранного"""
 
-        def _on_success(req, result):
+        def _on_success(result):
             Logger.info(f'✅ Удалено из избранного {song_id}')
             if on_success:
                 on_success(result)
@@ -588,7 +631,7 @@ class APIClient:
         import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
 
-        def _on_success(req, result):
+        def _on_success(result):
             print(f"DEBUG API: search_songs _on_success called")
             if on_success:
                 on_success(result.get('results', []))
@@ -617,116 +660,62 @@ class APIClient:
 
     def get_all_users(self, on_success=None, on_failure=None, limit=100, offset=0):
         """Получить список всех пользователей (только для админов)"""
-
-        def _on_success(req, result):
-            if on_success:
-                on_success(result)
-
-        def _on_failure(req, error):
-            if on_failure:
-                on_failure(req, error)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/admin/users?limit={limit}&offset={offset}",
             method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
+            on_success=on_success,
+            on_failure=on_failure,
             include_auth=True
         )
 
     def update_user_role(self, user_id: int, role: str, on_success=None, on_failure=None):
         """Изменить роль пользователя (только для админов)"""
-
-        def _on_success(req, result):
-            if on_success:
-                on_success(result)
-
-        def _on_failure(req, error):
-            if on_failure:
-                on_failure(req, error)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/role",
             method='PUT',
             data={'role': role},
-            on_success=_on_success,
-            on_failure=_on_failure,
+            on_success=on_success,
+            on_failure=on_failure,
             include_auth=True
         )
 
     def ban_user(self, user_id: int, on_success=None, on_failure=None):
         """Заблокировать пользователя"""
-
-        def _on_success(req, result):
-            if on_success:
-                on_success(result)
-
-        def _on_failure(req, error):
-            if on_failure:
-                on_failure(req, error)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/ban",
             method='POST',
-            on_success=_on_success,
-            on_failure=_on_failure,
+            on_success=on_success,
+            on_failure=on_failure,
             include_auth=True
         )
 
     def unban_user(self, user_id: int, on_success=None, on_failure=None):
         """Разблокировать пользователя"""
-
-        def _on_success(req, result):
-            if on_success:
-                on_success(result)
-
-        def _on_failure(req, error):
-            if on_failure:
-                on_failure(req, error)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/unban",
             method='POST',
-            on_success=_on_success,
-            on_failure=_on_failure,
+            on_success=on_success,
+            on_failure=on_failure,
             include_auth=True
         )
 
     def get_admin_stats(self, on_success=None, on_failure=None):
         """Получить статистику для админ-панели"""
-
-        def _on_success(req, result):
-            if on_success:
-                on_success(result)
-
-        def _on_failure(req, error):
-            if on_failure:
-                on_failure(req, error)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/admin/stats",
             method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
+            on_success=on_success,
+            on_failure=on_failure,
             include_auth=True
         )
 
     def scan_songs(self, on_success=None, on_failure=None):
         """Запустить сканирование песен (только для админов)"""
-
-        def _on_success(req, result):
-            if on_success:
-                on_success(result)
-
-        def _on_failure(req, error):
-            if on_failure:
-                on_failure(req, error)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/admin/scan",
             method='POST',
-            on_success=_on_success,
-            on_failure=_on_failure,
+            on_success=on_success,
+            on_failure=on_failure,
             include_auth=True
         )
 
