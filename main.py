@@ -82,11 +82,10 @@ from config.logger_config import setup_logging, app_logger
 setup_logging(level='debug')
 
 # Импорты KivyMD с использованием наших утилит
-from kivymd.app import MDApp
-from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDButton, MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.dialog import MDDialog
+from utils.kivy_imports import (
+    MDRaisedButton, MDIconButton, MDFlatButton,
+    MDLabel, MDBoxLayout, MDScreen, MDDialog, Snackbar
+)
 
 # Импортируем MDApp
 from kivymd.app import MDApp
@@ -119,12 +118,12 @@ class BottomNavItem(BoxLayout):
         self.screen_name = screen_name
 
         # Иконка
-        self.icon_btn = MDIconButton(
-            size_hint=(1, 0.6)
-        )
+        self.icon_btn = MDIconButton()
         self.icon_btn.icon = icon
-        self.icon_btn.icon_color = theme.TEXT_SECONDARY
-        self.icon_btn.theme_icon_color = "Custom"
+        self.icon_btn.theme_text_color = "Custom"
+        self.icon_btn.text_color = theme.TEXT_SECONDARY
+        self.icon_btn.size_hint = (1, 0.6)
+        self.icon_btn.md_bg_color = [0, 0, 0, 0]
 
         # Универсальный маленький шрифт
         self.text_label = MDLabel(
@@ -142,11 +141,11 @@ class BottomNavItem(BoxLayout):
 
     def set_active(self, active):
         if active:
-            self.icon_btn.icon_color = theme.PRIMARY
+            self.icon_btn.text_color = theme.PRIMARY
             self.text_label.text_color = theme.PRIMARY
             self.text_label.bold = True
         else:
-            self.icon_btn.icon_color = theme.TEXT_SECONDARY
+            self.icon_btn.text_color = theme.TEXT_SECONDARY
             self.text_label.text_color = theme.TEXT_SECONDARY
             self.text_label.bold = False
 
@@ -178,12 +177,13 @@ class LanguageSelector(MDBoxLayout):
             padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
-        self.current_icon = MDIconButton(
-            size_hint=(None, 1), width=dp(28)
-        )
+        self.current_icon = MDIconButton()
         self.current_icon.icon = self.lang_icons.get(current_lang, "translate")
-        self.current_icon.icon_color = [1, 1, 1, 1]
-        self.current_icon.theme_icon_color = "Custom"
+        self.current_icon.theme_text_color = "Custom"
+        self.current_icon.text_color = [1, 1, 1, 1]
+        self.current_icon.size_hint = (None, 1)
+        self.current_icon.width = dp(28)
+        self.current_icon.md_bg_color = [0, 0, 0, 0]
 
         self.current_code = MDLabel(
             text=self.lang_codes[current_lang], font_size=sp(11),
@@ -191,12 +191,13 @@ class LanguageSelector(MDBoxLayout):
             bold=True, theme_text_color="Custom", text_color=[1, 1, 1, 1]
         )
 
-        self.arrow = MDIconButton(
-            size_hint=(None, 1), width=dp(24)
-        )
+        self.arrow = MDIconButton()
         self.arrow.icon = "chevron-down"
-        self.arrow.icon_color = [1, 1, 1, 1]
-        self.arrow.theme_icon_color = "Custom"
+        self.arrow.theme_text_color = "Custom"
+        self.arrow.text_color = [1, 1, 1, 1]
+        self.arrow.size_hint = (None, 1)
+        self.arrow.width = dp(24)
+        self.arrow.md_bg_color = [0, 0, 0, 0]
 
         self.button_container.add_widget(self.current_icon)
         self.button_container.add_widget(self.current_code)
@@ -311,34 +312,34 @@ class GuitarFunsApp(MDApp):
             md_bg_color=theme.PRIMARY
         )
 
-        # Исправлено: убран font_style="H6", добавлен font_size
         logo = MDLabel(
-            text="GuitarFuns", font_size=sp(18), size_hint_x=0.4,
-            theme_text_color="Custom", text_color=[1, 1, 1, 1], bold=True
+            text="GuitarFuns",
+            font_size=dp(20),
+            size_hint_x=0.4,
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            bold=True
         )
 
         icons_container = MDBoxLayout(orientation='horizontal', size_hint_x=0.6, spacing=dp(8))
 
-        profile_btn = MDIconButton(
-            on_release=self.open_profile
-        )
+        profile_btn = MDIconButton()
         profile_btn.icon = "account-circle"
-        profile_btn.icon_color = [1, 1, 1, 1]
-        profile_btn.theme_icon_color = "Custom"
+        profile_btn.theme_text_color = "Custom"
+        profile_btn.text_color = [1, 1, 1, 1]
+        profile_btn.on_release = self.open_profile
 
-        settings_btn = MDIconButton(
-            on_release=self.open_settings
-        )
+        settings_btn = MDIconButton()
         settings_btn.icon = "cog"
-        settings_btn.icon_color = [1, 1, 1, 1]
-        settings_btn.theme_icon_color = "Custom"
+        settings_btn.theme_text_color = "Custom"
+        settings_btn.text_color = [1, 1, 1, 1]
+        settings_btn.on_release = self.open_settings
 
-        support_btn = MDIconButton(
-            on_release=self.open_support
-        )
+        support_btn = MDIconButton()
         support_btn.icon = "help-circle"
-        support_btn.icon_color = [1, 1, 1, 1]
-        support_btn.theme_icon_color = "Custom"
+        support_btn.theme_text_color = "Custom"
+        support_btn.text_color = [1, 1, 1, 1]
+        support_btn.on_release = self.open_support
 
         self.language_selector = LanguageSelector(
             current_lang="ru", on_change_callback=self.change_language
@@ -354,7 +355,7 @@ class GuitarFunsApp(MDApp):
         return top_bar
 
     def create_bottom_navigation(self):
-        """Создаёт нижнюю навигацию с иконками"""
+        """Создаёт нижнюю навигацию с иконками - без тени и полоски"""
 
         bottom_nav = MDBoxLayout(
             orientation='horizontal',
@@ -365,28 +366,13 @@ class GuitarFunsApp(MDApp):
             md_bg_color=theme.SURFACE
         )
 
-        # Добавляем тень сверху
-        from kivy.graphics import Color, Rectangle
-        with bottom_nav.canvas.before:
-            Color(0, 0, 0, 0.05)
-            bottom_nav.shadow = Rectangle(pos=(bottom_nav.x, bottom_nav.y + bottom_nav.height - dp(1)),
-                                          size=(bottom_nav.width, dp(1)))
-
-        def update_shadow(instance, value):
-            if hasattr(bottom_nav, 'shadow'):
-                bottom_nav.shadow.pos = (bottom_nav.x, bottom_nav.y + bottom_nav.height - dp(1))
-                bottom_nav.shadow.size = (bottom_nav.width, dp(1))
-
-        bottom_nav.bind(pos=update_shadow, size=update_shadow)
-
         # Элементы навигации
         nav_items = [
-            {"icon": "home", "text": "Главная", "screen": "home"},
-            {"icon": "music-note", "text": "Песни", "screen": "songs"},
-            {"icon": "guitar-acoustic", "text": "Аккорды", "screen": "chords"},
-            {"icon": "book", "text": "Словарь", "screen": "dictionary"},
-            {"icon": "tune", "text": "Тюнер", "screen": "tuner"},
-            {"icon": "heart", "text": "Избранное", "screen": "favorites"}
+            {"icon": "home", "text": "Home", "screen": "home"},
+            {"icon": "music-note", "text": "Library", "screen": "songs"},
+            {"icon": "guitar-acoustic", "text": "Chords", "screen": "chords"},
+            {"icon": "tune", "text": "Tuner", "screen": "tuner"},
+            {"icon": "account-circle", "text": "Profile", "screen": "profile"}
         ]
 
         for item in nav_items:
@@ -430,34 +416,20 @@ class GuitarFunsApp(MDApp):
     def open_settings(self, instance):
         logger.info("Открыты настройки")
         if not self.settings_dialog:
-            close_btn = MDButton(
-                text="ЗАКРЫТЬ",
-                theme_text_color="Custom",
-                text_color=theme.TEXT_SECONDARY,
-                on_release=lambda x: self.settings_dialog.dismiss(),
-                style="text"
-            )
             self.settings_dialog = MDDialog(
                 title="⚙️ Настройки",
                 text="Здесь будут настройки приложения",
-                buttons=[close_btn]
+                buttons=[MDFlatButton(text="ЗАКРЫТЬ", on_release=lambda x: self.settings_dialog.dismiss())]
             )
         self.settings_dialog.open()
 
     def open_support(self, instance):
         logger.info("Открыта поддержка")
         if not self.support_dialog:
-            close_btn = MDButton(
-                text="ЗАКРЫТЬ",
-                theme_text_color="Custom",
-                text_color=theme.TEXT_SECONDARY,
-                on_release=lambda x: self.support_dialog.dismiss(),
-                style="text"
-            )
             self.support_dialog = MDDialog(
                 title="🆘 Поддержка",
                 text="Свяжитесь с нами:\n\n📧 Email: support@guitarfuns.com\n\n📱 Telegram: @guitarfuns_bot",
-                buttons=[close_btn]
+                buttons=[MDFlatButton(text="ЗАКРЫТЬ", on_release=lambda x: self.support_dialog.dismiss())]
             )
         self.support_dialog.open()
 
