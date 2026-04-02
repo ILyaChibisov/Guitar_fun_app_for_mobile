@@ -4,17 +4,17 @@
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
+from kivymd.uix.card import MDCard
+from kivymd.uix.button import MDButton, MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
-from kivymd.uix.card import MDCard
-from kivymd.uix.floatlayout import MDFloatLayout
-from kivy.metrics import dp
+from kivy.metrics import dp, sp
 from kivy.clock import Clock
+from kivy.uix.progressbar import ProgressBar
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
 from utils.notifications import notify
-from utils.kivy_imports import MDRaisedButton, MDIconButton, MDProgressBar
 
 logger = screen_logger('Admin')
 
@@ -45,8 +45,8 @@ class UserCard(MDCard):
 
         # Данные
         data_layout = MDBoxLayout(orientation='vertical', size_hint_x=0.6)
-        username = MDLabel(text=user.get('username', ''), font_style="Subtitle1", bold=True)
-        email = MDLabel(text=user.get('email', 'нет email'), font_style="Caption", theme_text_color="Secondary")
+        username = MDLabel(text=user.get('username', ''), font_size=sp(14), bold=True)
+        email = MDLabel(text=user.get('email', 'нет email'), font_size=sp(11), theme_text_color="Secondary")
         data_layout.add_widget(username)
         data_layout.add_widget(email)
 
@@ -54,7 +54,7 @@ class UserCard(MDCard):
         role_layout = MDBoxLayout(orientation='vertical', size_hint_x=0.25)
         role_label = MDLabel(
             text=f"Роль: {user.get('role', 'user')}",
-            font_style="Caption",
+            font_size=sp(11),
             theme_text_color="Secondary",
             size_hint_y=0.5
         )
@@ -68,22 +68,24 @@ class UserCard(MDCard):
         actions_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(36), spacing=dp(8))
 
         # Кнопка смены роли
-        role_btn = MDRaisedButton(
-            text="Сделать админом" if user.get('role') != 'admin' else "Убрать админа",
+        role_btn = MDButton(
             size_hint=(0.5, 1),
-            md_bg_color=theme.PRIMARY_LIGHT if user.get('role') != 'admin' else theme.PRIMARY_DARK,
-            font_size=dp(10)
+            style="filled"
         )
+        role_btn.text = "Сделать админом" if user.get('role') != 'admin' else "Убрать админа"
+        role_btn.md_bg_color = theme.PRIMARY_LIGHT if user.get('role') != 'admin' else theme.PRIMARY_DARK
+        role_btn.font_size = dp(10)
         role_btn.bind(on_release=lambda x: self._change_role())
 
         # Кнопка бана
         is_banned = not user.get('is_active', True)
-        ban_btn = MDRaisedButton(
-            text="Разблокировать" if is_banned else "Заблокировать",
+        ban_btn = MDButton(
             size_hint=(0.5, 1),
-            md_bg_color=[0.8, 0.3, 0.3, 1] if not is_banned else [0.3, 0.7, 0.3, 1],
-            font_size=dp(10)
+            style="filled"
         )
+        ban_btn.text = "Разблокировать" if is_banned else "Заблокировать"
+        ban_btn.md_bg_color = [0.8, 0.3, 0.3, 1] if not is_banned else [0.3, 0.7, 0.3, 1]
+        ban_btn.font_size = dp(10)
         ban_btn.bind(on_release=lambda x: self._toggle_ban())
 
         actions_layout.add_widget(role_btn)
@@ -127,16 +129,19 @@ class AdminScreen(MDScreen):
             md_bg_color=theme.PRIMARY
         )
 
+        # Кнопка назад
         self.back_btn = MDIconButton(
-            icon="arrow-left",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
+            size_hint=(None, None),
+            size=(dp(48), dp(48)),
             on_release=self.go_back
         )
+        self.back_btn.icon = "arrow-left"
+        self.back_btn.icon_color = [1, 1, 1, 1]
+        self.back_btn.theme_icon_color = "Custom"
 
         self.title_label = MDLabel(
             text="👑 Админ-панель",
-            font_style="H6",
+            font_size=sp(18),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             bold=True
@@ -205,9 +210,7 @@ class AdminScreen(MDScreen):
         tabs = MDTabs(size_hint=(1, 1))
 
         # Вкладка статистики
-        stats_tab = MDFloatLayout()
-        stats_layout = MDBoxLayout(orientation='vertical', padding=dp(16), spacing=dp(16))
-        stats_tab.add_widget(stats_layout)
+        stats_tab = MDBoxLayout(orientation='vertical', padding=dp(16), spacing=dp(16))
 
         stats_card = MDCard(
             orientation='vertical',
@@ -220,7 +223,7 @@ class AdminScreen(MDScreen):
             md_bg_color=theme.SURFACE
         )
 
-        stats_card.add_widget(MDLabel(text="📈 Общая статистика", font_style="H6", bold=True))
+        stats_card.add_widget(MDLabel(text="📈 Общая статистика", font_size=sp(18), bold=True))
 
         # Данные статистики
         stats_data = self.stats.get('data', {})
@@ -233,27 +236,24 @@ class AdminScreen(MDScreen):
         ]
 
         for item in stat_items:
-            stats_card.add_widget(MDLabel(text=item, font_style="Body1"))
+            stats_card.add_widget(MDLabel(text=item, font_size=sp(14)))
 
-        stats_layout.add_widget(stats_card)
+        stats_tab.add_widget(stats_card)
 
         # Кнопка сканирования песен
-        scan_btn = MDRaisedButton(
-            text="🔄 Сканировать новые песни",
+        scan_btn = MDButton(
             size_hint=(1, None),
             height=dp(48),
-            md_bg_color=theme.PRIMARY,
-            on_release=self.scan_songs
+            on_release=self.scan_songs,
+            style="filled"
         )
+        scan_btn.text = "🔄 Сканировать новые песни"
+        scan_btn.md_bg_color = theme.PRIMARY
         scan_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
-        stats_layout.add_widget(scan_btn)
-
-        # Добавляем вкладку статистики
-        tabs.add_widget(stats_tab)
-        tabs.ids.tab_manager.get_tab(0).text = "📊 Статистика"
+        stats_tab.add_widget(scan_btn)
 
         # Вкладка пользователей
-        users_tab = MDFloatLayout()
+        users_tab = MDBoxLayout(orientation='vertical')
         users_scroll = MDScrollView()
         users_container = MDBoxLayout(orientation='vertical', spacing=dp(8), size_hint_y=None, adaptive_height=True)
 
@@ -267,8 +267,15 @@ class AdminScreen(MDScreen):
 
         users_scroll.add_widget(users_container)
         users_tab.add_widget(users_scroll)
+
+        # Добавляем вкладки
+        tabs.add_widget(stats_tab)
         tabs.add_widget(users_tab)
-        tabs.ids.tab_manager.get_tab(1).text = "👥 Пользователи"
+
+        # Устанавливаем заголовки вкладок
+        if hasattr(tabs, 'ids') and hasattr(tabs.ids, 'tab_manager'):
+            tabs.ids.tab_manager.get_tab(0).text = "📊 Статистика"
+            tabs.ids.tab_manager.get_tab(1).text = "👥 Пользователи"
 
         self.main_layout.add_widget(tabs)
         self.hide_loading()
@@ -325,7 +332,7 @@ class AdminScreen(MDScreen):
 
     def show_loading(self):
         """Показывает индикатор загрузки"""
-        self.loading = MDProgressBar(value=50, max=100, size_hint=(1, 0.01))
+        self.loading = ProgressBar(value=50, max=100, size_hint=(1, 0.01))
         self.main_layout.add_widget(self.loading)
 
     def hide_loading(self):

@@ -7,14 +7,16 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.textfield import MDTextField
+from kivymd.uix.button import MDButton, MDIconButton
+from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
-from kivy.metrics import dp
+from kivy.metrics import dp, sp
 from kivy.clock import Clock
+from kivy.uix.scrollview import ScrollView
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
 from utils.notifications import notify
-from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout, MDFlatButton, MDScrollView
 
 logger = screen_logger('Profile')
 
@@ -36,20 +38,20 @@ class ProfileScreen(MDScreen):
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
-        # Кнопка назад
+        # Кнопка назад - создаем без параметров в конструкторе
         self.back_btn = MDIconButton(
-            icon="arrow-left",
             pos_hint={'x': 0, 'top': 1},
             size_hint=(None, None),
             size=(dp(48), dp(48)),
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY,
             on_release=self.go_back
         )
+        self.back_btn.icon = "arrow-left"
+        self.back_btn.icon_color = theme.TEXT_SECONDARY
+        self.back_btn.theme_icon_color = "Custom"
         self.add_widget(self.back_btn)
 
         # Основной контейнер
-        scroll = MDScrollView(size_hint=(1, 1))
+        scroll = ScrollView(size_hint=(1, 1))
 
         layout = MDBoxLayout(
             orientation='vertical',
@@ -62,7 +64,7 @@ class ProfileScreen(MDScreen):
         # Заголовок
         title = MDLabel(
             text="Личный кабинет",
-            font_style="H4",
+            font_size=sp(24),
             halign="center",
             size_hint_y=None,
             height=dp(60),
@@ -84,7 +86,7 @@ class ProfileScreen(MDScreen):
 
         self.avatar_label = MDLabel(
             text="👤",
-            font_style="H1",
+            font_size=sp(40),
             halign="center",
             size_hint_y=None,
             height=dp(80),
@@ -93,7 +95,7 @@ class ProfileScreen(MDScreen):
 
         self.username_label = MDLabel(
             text="",
-            font_style="H5",
+            font_size=sp(20),
             halign="center",
             size_hint_y=None,
             height=dp(40),
@@ -118,7 +120,7 @@ class ProfileScreen(MDScreen):
 
         info_title = MDLabel(
             text="Информация",
-            font_style="H6",
+            font_size=sp(16),
             size_hint_y=None,
             height=dp(30),
             theme_text_color="Primary",
@@ -132,9 +134,15 @@ class ProfileScreen(MDScreen):
             height=dp(40),
             spacing=dp(8)
         )
-        email_icon = MDIconButton(icon="email", size_hint=(None, 1), width=dp(40),
-                                  theme_text_color="Custom", text_color=theme.TEXT_SECONDARY)
-        self.email_label = MDLabel(text="", font_style="Body1", theme_text_color="Secondary")
+        email_icon = MDIconButton(
+            size_hint=(None, 1),
+            width=dp(40)
+        )
+        email_icon.icon = "email"
+        email_icon.icon_color = theme.TEXT_SECONDARY
+        email_icon.theme_icon_color = "Custom"
+
+        self.email_label = MDLabel(text="", font_size=sp(14), theme_text_color="Secondary")
         email_box.add_widget(email_icon)
         email_box.add_widget(self.email_label)
 
@@ -145,9 +153,15 @@ class ProfileScreen(MDScreen):
             height=dp(40),
             spacing=dp(8)
         )
-        name_icon = MDIconButton(icon="account", size_hint=(None, 1), width=dp(40),
-                                 theme_text_color="Custom", text_color=theme.TEXT_SECONDARY)
-        self.fullname_label = MDLabel(text="", font_style="Body1", theme_text_color="Secondary")
+        name_icon = MDIconButton(
+            size_hint=(None, 1),
+            width=dp(40)
+        )
+        name_icon.icon = "account"
+        name_icon.icon_color = theme.TEXT_SECONDARY
+        name_icon.theme_icon_color = "Custom"
+
+        self.fullname_label = MDLabel(text="", font_size=sp(14), theme_text_color="Secondary")
         name_box.add_widget(name_icon)
         name_box.add_widget(self.fullname_label)
 
@@ -158,9 +172,15 @@ class ProfileScreen(MDScreen):
             height=dp(40),
             spacing=dp(8)
         )
-        role_icon = MDIconButton(icon="shield-account", size_hint=(None, 1), width=dp(40),
-                                 theme_text_color="Custom", text_color=theme.TEXT_SECONDARY)
-        self.role_label = MDLabel(text="", font_style="Body1", theme_text_color="Secondary")
+        role_icon = MDIconButton(
+            size_hint=(None, 1),
+            width=dp(40)
+        )
+        role_icon.icon = "shield-account"
+        role_icon.icon_color = theme.TEXT_SECONDARY
+        role_icon.theme_icon_color = "Custom"
+
+        self.role_label = MDLabel(text="", font_size=sp(14), theme_text_color="Secondary")
         role_box.add_widget(role_icon)
         role_box.add_widget(self.role_label)
 
@@ -171,9 +191,15 @@ class ProfileScreen(MDScreen):
             height=dp(40),
             spacing=dp(8)
         )
-        date_icon = MDIconButton(icon="calendar", size_hint=(None, 1), width=dp(40),
-                                 theme_text_color="Custom", text_color=theme.TEXT_SECONDARY)
-        self.date_label = MDLabel(text="", font_style="Body1", theme_text_color="Secondary")
+        date_icon = MDIconButton(
+            size_hint=(None, 1),
+            width=dp(40)
+        )
+        date_icon.icon = "calendar"
+        date_icon.icon_color = theme.TEXT_SECONDARY
+        date_icon.theme_icon_color = "Custom"
+
+        self.date_label = MDLabel(text="", font_size=sp(14), theme_text_color="Secondary")
         date_box.add_widget(date_icon)
         date_box.add_widget(self.date_label)
 
@@ -195,43 +221,46 @@ class ProfileScreen(MDScreen):
             md_bg_color=theme.SURFACE
         )
 
-        change_password_btn = MDRaisedButton(
-            text="Сменить пароль",
-            icon="lock",
+        change_password_btn = MDButton(
             size_hint=(1, None),
             height=dp(44),
-            md_bg_color=theme.PRIMARY,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            on_release=self.show_change_password_dialog
+            on_release=self.show_change_password_dialog,
+            style="filled"
         )
+        change_password_btn.text = "Сменить пароль"
+        change_password_btn.icon = "lock"
+        change_password_btn.md_bg_color = theme.PRIMARY
+        change_password_btn.theme_text_color = "Custom"
+        change_password_btn.text_color = [1, 1, 1, 1]
         change_password_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         # Кнопка админ-панели (видна только администраторам)
-        self.admin_btn = MDRaisedButton(
-            text="👑 Админ-панель",
-            icon="shield-account",
+        self.admin_btn = MDButton(
             size_hint=(1, None),
             height=dp(44),
-            md_bg_color=theme.PRIMARY_DARK,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            on_release=self.open_admin_panel
+            on_release=self.open_admin_panel,
+            style="filled"
         )
+        self.admin_btn.text = "👑 Админ-панель"
+        self.admin_btn.icon = "shield-account"
+        self.admin_btn.md_bg_color = theme.PRIMARY_DARK
+        self.admin_btn.theme_text_color = "Custom"
+        self.admin_btn.text_color = [1, 1, 1, 1]
         self.admin_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.admin_btn.opacity = 0
         self.admin_btn.disabled = True
 
-        logout_btn = MDRaisedButton(
-            text="Выйти из аккаунта",
-            icon="logout",
+        logout_btn = MDButton(
             size_hint=(1, None),
             height=dp(44),
-            md_bg_color=[0.9, 0.9, 0.9, 1],
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY,
-            on_release=self.logout
+            on_release=self.logout,
+            style="filled"
         )
+        logout_btn.text = "Выйти из аккаунта"
+        logout_btn.icon = "logout"
+        logout_btn.md_bg_color = [0.9, 0.9, 0.9, 1]
+        logout_btn.theme_text_color = "Custom"
+        logout_btn.text_color = theme.TEXT_SECONDARY
         logout_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         actions_card.add_widget(change_password_btn)
@@ -392,24 +421,27 @@ class ProfileScreen(MDScreen):
         content.add_widget(self.new_password)
         content.add_widget(self.confirm_password)
 
+        cancel_btn = MDButton(
+            text="Отмена",
+            theme_text_color="Custom",
+            text_color=theme.TEXT_SECONDARY,
+            on_release=lambda x: self.change_password_dialog.dismiss(),
+            style="text"
+        )
+
+        change_btn = MDButton(
+            text="Сменить",
+            theme_text_color="Custom",
+            text_color=theme.PRIMARY,
+            on_release=self.do_change_password,
+            style="text"
+        )
+
         self.change_password_dialog = MDDialog(
             title="Смена пароля",
             type="custom",
             content_cls=content,
-            buttons=[
-                MDFlatButton(
-                    text="Отмена",
-                    theme_text_color="Custom",
-                    text_color=theme.TEXT_SECONDARY,
-                    on_release=lambda x: self.change_password_dialog.dismiss()
-                ),
-                MDFlatButton(
-                    text="Сменить",
-                    theme_text_color="Custom",
-                    text_color=theme.PRIMARY,
-                    on_release=self.do_change_password
-                )
-            ]
+            buttons=[cancel_btn, change_btn]
         )
         self.change_password_dialog.open()
 

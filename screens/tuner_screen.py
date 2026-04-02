@@ -4,8 +4,7 @@
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.metrics import dp
+from kivy.metrics import dp, sp
 from config.logger_config import screen_logger
 from utils.kivy_imports import MDBoxLayout
 
@@ -27,7 +26,8 @@ class TunerScreen(MDScreen):
         label = MDLabel(
             text="🎤 Тюнер\n\nЗдесь будет гитарный тюнер",
             halign="center",
-            font_style="H5"
+            font_size=sp(20),
+            theme_text_color="Primary"
         )
 
         layout.add_widget(label)

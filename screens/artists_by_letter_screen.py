@@ -6,13 +6,15 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivy.metrics import dp
+from kivymd.uix.button import MDButton, MDIconButton
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.metrics import dp, sp
 from kivy.animation import Animation
+from kivy.uix.progressbar import ProgressBar
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
 from utils.notifications import notify
-from utils.kivy_imports import MDIconButton, MDBoxLayout, MDProgressBar
 
 logger = screen_logger('ArtistsByLetter')
 
@@ -24,7 +26,7 @@ class LoadingSpinner(MDBoxLayout):
         self.size_hint = (1, 1)
         self.spacing = dp(16)
 
-        self.progress = MDProgressBar(
+        self.progress = ProgressBar(
             size_hint=(0.8, None),
             height=dp(4),
             pos_hint={'center_x': 0.5},
@@ -35,10 +37,10 @@ class LoadingSpinner(MDBoxLayout):
         self.label = MDLabel(
             text="Загрузка исполнителей...",
             halign="center",
+            font_size=sp(14),
             theme_text_color="Secondary",
             size_hint_y=None,
-            height=dp(30),
-            font_size=dp(14)
+            height=dp(30)
         )
         self.add_widget(self.progress)
         self.add_widget(self.label)
@@ -72,11 +74,11 @@ class ArtistCard(MDCard):
 
         artist_label = MDLabel(
             text=f"🎸 {artist}",
+            font_size=sp(14),
             size_hint_y=None,
             height=dp(32),
             theme_text_color="Primary",
-            bold=True,
-            font_size=dp(14)
+            bold=True
         )
         self.add_widget(artist_label)
         self.bind(on_release=self.on_click)
@@ -113,20 +115,23 @@ class ArtistsByLetterScreen(MDScreen):
             md_bg_color=theme.PRIMARY
         )
 
-        self.back_btn = MDIconButton()
+        # Кнопка назад - создаем без параметров в конструкторе
+        self.back_btn = MDIconButton(
+            size_hint=(None, None),
+            size=(dp(48), dp(48)),
+            on_release=self.go_back
+        )
         self.back_btn.icon = "arrow-left"
-        self.back_btn.theme_text_color = "Custom"
-        self.back_btn.text_color = [1, 1, 1, 1]
-        self.back_btn.on_release = self.go_back
+        self.back_btn.icon_color = [1, 1, 1, 1]
+        self.back_btn.theme_icon_color = "Custom"
 
         self.title_label = MDLabel(
             text="",
-            font_style="H6",
+            font_size=sp(18),
             size_hint_x=0.7,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
-            bold=True,
-            font_size=dp(18)
+            bold=True
         )
 
         self.top_bar.add_widget(self.back_btn)
@@ -193,10 +198,10 @@ class ArtistsByLetterScreen(MDScreen):
             no_data_label = MDLabel(
                 text="Нет исполнителей на эту букву",
                 halign="center",
+                font_size=sp(14),
                 theme_text_color="Secondary",
                 size_hint_y=None,
-                height=dp(100),
-                font_size=dp(14)
+                height=dp(100)
             )
             self.content_container.add_widget(no_data_label)
             return

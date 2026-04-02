@@ -6,13 +6,15 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivy.metrics import dp
+from kivymd.uix.button import MDButton, MDIconButton
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.metrics import dp, sp
 from kivy.animation import Animation
+from kivy.uix.progressbar import ProgressBar
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
 from utils.notifications import notify
-from utils.kivy_imports import MDIconButton, MDBoxLayout, MDProgressBar
 
 logger = screen_logger('ArtistSongs')
 
@@ -24,7 +26,7 @@ class LoadingSpinner(MDBoxLayout):
         self.size_hint = (1, 1)
         self.spacing = dp(16)
 
-        self.progress = MDProgressBar(
+        self.progress = ProgressBar(
             size_hint=(0.8, None),
             height=dp(4),
             pos_hint={'center_x': 0.5},
@@ -35,7 +37,7 @@ class LoadingSpinner(MDBoxLayout):
         self.label = MDLabel(
             text="Загрузка песен...",
             halign="center",
-            font_style="Body1",
+            font_size=sp(14),
             theme_text_color="Secondary",
             size_hint_y=None,
             height=dp(30)
@@ -73,7 +75,7 @@ class SongCard(MDCard):
         # Название песни
         title_label = MDLabel(
             text=song['title'],
-            font_style="Subtitle1",
+            font_size=sp(14),
             size_hint_y=None,
             height=dp(30),
             theme_text_color="Primary",
@@ -84,7 +86,7 @@ class SongCard(MDCard):
         tabs_count = song.get('tabs_count', 1)
         info_label = MDLabel(
             text=f"{tabs_count} подборов" if tabs_count > 1 else "1 подбор",
-            font_style="Caption",
+            font_size=sp(11),
             size_hint_y=None,
             height=dp(20),
             theme_text_color="Hint"
@@ -129,15 +131,17 @@ class ArtistSongsScreen(MDScreen):
         )
 
         self.back_btn = MDIconButton(
-            icon="arrow-left",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
+            size_hint=(None, None),
+            size=(dp(48), dp(48)),
             on_release=self.go_back
         )
+        self.back_btn.icon = "arrow-left"
+        self.back_btn.icon_color = [1, 1, 1, 1]
+        self.back_btn.theme_icon_color = "Custom"
 
         self.title_label = MDLabel(
             text="",
-            font_style="H6",
+            font_size=sp(18),
             size_hint_x=0.7,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
@@ -206,7 +210,7 @@ class ArtistSongsScreen(MDScreen):
             no_data_label = MDLabel(
                 text="Нет песен у этого исполнителя",
                 halign="center",
-                font_style="Body1",
+                font_size=sp(14),
                 theme_text_color="Secondary",
                 size_hint_y=None,
                 height=dp(100)
