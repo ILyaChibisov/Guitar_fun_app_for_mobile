@@ -2,26 +2,29 @@
 """
 Экран песен с алфавитной навигацией и поиском
 """
+from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivy.metrics import dp
+from kivymd.uix.button import MDButton, MDIconButton
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.animation import Animation
+from kivy.uix.progressbar import ProgressBar
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
 from screens.components.alphabet_keyboard import AlphabetKeyboard
 from utils.notifications import notify
-from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout, MDProgressBar
 
 logger = screen_logger('Songs')
 
 
 class LoadingSpinner(MDBoxLayout):
-    """Индикатор загрузки"""
+    """Индикатор загрузки - упрощенная версия"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -29,7 +32,8 @@ class LoadingSpinner(MDBoxLayout):
         self.size_hint = (1, 1)
         self.spacing = dp(16)
 
-        self.progress = MDProgressBar(
+        # Используем обычный ProgressBar вместо MDProgressBar
+        self.progress = ProgressBar(
             size_hint=(0.8, None),
             height=dp(4),
             pos_hint={'center_x': 0.5},
@@ -42,7 +46,7 @@ class LoadingSpinner(MDBoxLayout):
         self.label = MDLabel(
             text="Загрузка...",
             halign="center",
-            font_style="Body1",
+            font_size=sp(14),
             theme_text_color="Secondary",
             size_hint_y=None,
             height=dp(30)
@@ -82,7 +86,7 @@ class ResultCard(MDCard):
 
         artist_label = MDLabel(
             text=f"🎸 {song.get('artist', '')}",
-            font_style="Subtitle2",
+            font_size=sp(13),
             size_hint_y=None,
             height=dp(22),
             theme_text_color="Primary",
@@ -91,7 +95,7 @@ class ResultCard(MDCard):
 
         title_label = MDLabel(
             text=song.get('title', ''),
-            font_style="Body2",
+            font_size=sp(12),
             size_hint_y=None,
             height=dp(22),
             theme_text_color="Secondary"
@@ -100,7 +104,7 @@ class ResultCard(MDCard):
         tabs_count = song.get('tabs_count', 1)
         info_label = MDLabel(
             text=f"{tabs_count} подборов" if tabs_count > 1 else "1 подбор",
-            font_style="Caption",
+            font_size=sp(10),
             size_hint_y=None,
             height=dp(18),
             theme_text_color="Hint"
@@ -144,21 +148,22 @@ class SongsScreen(MDScreen):
 
         self.search_field = MDTextField(
             hint_text="Поиск песен или исполнителей...",
-            mode="round",
+            mode="filled",
             size_hint_x=0.8,
             font_size=dp(13),
             height=dp(48)
         )
 
-        self.search_btn = MDRaisedButton(
-            text="Найти",
+        self.search_btn = MDButton(
             size_hint_x=0.2,
             height=dp(48),
-            md_bg_color=theme.PRIMARY,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            on_release=self.do_search
+            on_release=self.do_search,
+            style="filled"
         )
+        self.search_btn.text = "Найти"
+        self.search_btn.md_bg_color = theme.PRIMARY
+        self.search_btn.theme_text_color = "Custom"
+        self.search_btn.text_color = [1, 1, 1, 1]
         self.search_btn.radius = [theme.CORNER_RADIUS_SMALL]
 
         self.search_layout.add_widget(self.search_field)
@@ -169,7 +174,7 @@ class SongsScreen(MDScreen):
         self.lang_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(36), spacing=dp(8))
 
         self.lang_left_btn = MDIconButton(icon="chevron-left", on_release=self.prev_language, size_hint_x=0.1)
-        self.lang_label = MDLabel(text="🇷🇺 Русский", halign="center", font_style="Body2", size_hint_x=0.8)
+        self.lang_label = MDLabel(text="🇷🇺 Русский", halign="center", font_size=sp(12), size_hint_x=0.8)
         self.lang_right_btn = MDIconButton(icon="chevron-right", on_release=self.next_language, size_hint_x=0.1)
 
         self.lang_layout.add_widget(self.lang_left_btn)
@@ -287,7 +292,7 @@ class SongsScreen(MDScreen):
             no_data_label = MDLabel(
                 text="Нет исполнителей на эту букву",
                 halign="center",
-                font_style="Body1",
+                font_size=sp(14),
                 theme_text_color="Secondary",
                 size_hint_y=None,
                 height=dp(100)
@@ -311,7 +316,7 @@ class SongsScreen(MDScreen):
 
                 artist_label = MDLabel(
                     text=f"🎸 {artist}",
-                    font_style="Subtitle1",
+                    font_size=sp(14),
                     size_hint_y=None,
                     height=dp(30),
                     theme_text_color="Primary",
@@ -395,7 +400,7 @@ class SongsScreen(MDScreen):
             no_results_label = MDLabel(
                 text="Ничего не найдено",
                 halign="center",
-                font_style="Body1",
+                font_size=sp(14),
                 theme_text_color="Secondary",
                 size_hint_y=None,
                 height=dp(100)

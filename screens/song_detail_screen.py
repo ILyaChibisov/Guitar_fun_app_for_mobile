@@ -6,13 +6,15 @@ from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.scrollview import MDScrollView
-from kivy.metrics import dp
+from kivymd.uix.button import MDButton, MDIconButton
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.metrics import dp, sp
 from kivy.animation import Animation
+from kivy.uix.progressbar import ProgressBar
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
 from utils.notifications import notify
-from utils.kivy_imports import MDIconButton, MDBoxLayout, MDProgressBar
 
 logger = screen_logger('SongDetail')
 
@@ -24,7 +26,7 @@ class LoadingSpinner(MDBoxLayout):
         self.size_hint = (1, 1)
         self.spacing = dp(16)
 
-        self.progress = MDProgressBar(
+        self.progress = ProgressBar(
             size_hint=(0.8, None),
             height=dp(4),
             pos_hint={'center_x': 0.5},
@@ -35,7 +37,7 @@ class LoadingSpinner(MDBoxLayout):
         self.label = MDLabel(
             text="Загрузка...",
             halign="center",
-            font_style="Body1",
+            font_size=sp(14),
             theme_text_color="Secondary",
             size_hint_y=None,
             height=dp(30)
@@ -82,19 +84,25 @@ class SongDetailScreen(MDScreen):
             spacing=dp(8)
         )
 
+        # Кнопка назад
         self.back_btn = MDIconButton(
-            icon="arrow-left",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
+            size_hint=(None, None),
+            size=(dp(48), dp(48)),
             on_release=self.go_back
         )
+        self.back_btn.icon = "arrow-left"
+        self.back_btn.icon_color = theme.TEXT_PRIMARY
+        self.back_btn.theme_icon_color = "Custom"
 
+        # Кнопка меню
         self.menu_btn = MDIconButton(
-            icon="dots-vertical",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
+            size_hint=(None, None),
+            size=(dp(48), dp(48)),
             on_release=self.open_menu
         )
+        self.menu_btn.icon = "dots-vertical"
+        self.menu_btn.icon_color = theme.TEXT_PRIMARY
+        self.menu_btn.theme_icon_color = "Custom"
 
         self.top_bar.add_widget(self.back_btn)
         spacer = MDBoxLayout()
@@ -104,7 +112,7 @@ class SongDetailScreen(MDScreen):
         # Название песни
         self.title_label = MDLabel(
             text="",
-            font_style="H5",
+            font_size=sp(20),
             halign="center",
             size_hint_y=None,
             height=dp(60),
@@ -116,7 +124,7 @@ class SongDetailScreen(MDScreen):
         self.content_scroll = MDScrollView(size_hint=(1, 1))
         self.content_label = MDLabel(
             text="",
-            font_style="Body1",
+            font_size=sp(14),
             size_hint_y=None,
             theme_text_color="Primary",
             markup=True
@@ -134,42 +142,53 @@ class SongDetailScreen(MDScreen):
             md_bg_color=theme.SURFACE
         )
 
+        # Кнопка лайка
         self.like_btn = MDIconButton(
-            icon="heart-outline",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY,
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
             on_release=self.toggle_like
         )
+        self.like_btn.icon = "heart-outline"
+        self.like_btn.icon_color = theme.TEXT_SECONDARY
+        self.like_btn.theme_icon_color = "Custom"
+
         self.like_count = MDLabel(
             text="0",
-            font_style="Caption",
+            font_size=sp(11),
             size_hint_x=0.1,
             theme_text_color="Secondary"
         )
 
+        # Кнопка избранного
         self.favorite_btn = MDIconButton(
-            icon="star-outline",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY,
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
             on_release=self.toggle_favorite
         )
+        self.favorite_btn.icon = "star-outline"
+        self.favorite_btn.icon_color = theme.TEXT_SECONDARY
+        self.favorite_btn.theme_icon_color = "Custom"
+
         self.favorite_count = MDLabel(
             text="0",
-            font_style="Caption",
+            font_size=sp(11),
             size_hint_x=0.1,
             theme_text_color="Secondary"
         )
 
+        # Кнопка поделиться
         self.share_btn = MDIconButton(
-            icon="share-variant",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY,
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
             on_release=self.share_song
         )
+        self.share_btn.icon = "share-variant"
+        self.share_btn.icon_color = theme.TEXT_SECONDARY
+        self.share_btn.theme_icon_color = "Custom"
 
         self.views_label = MDLabel(
             text="👁️ 0",
-            font_style="Caption",
+            font_size=sp(11),
             size_hint_x=0.2,
             theme_text_color="Secondary",
             halign="right"
@@ -285,9 +304,9 @@ class SongDetailScreen(MDScreen):
         """Обновляет состояние кнопок лайка и избранного"""
         if api.is_authenticated():
             self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
-            self.like_btn.text_color = theme.ERROR if self.is_liked else theme.TEXT_SECONDARY
+            self.like_btn.icon_color = [0.8, 0.3, 0.3, 1] if self.is_liked else theme.TEXT_SECONDARY
             self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
-            self.favorite_btn.text_color = theme.WARNING if self.is_favorite else theme.TEXT_SECONDARY
+            self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 1] if self.is_favorite else theme.TEXT_SECONDARY
         else:
             self.like_btn.disabled = True
             self.favorite_btn.disabled = True
