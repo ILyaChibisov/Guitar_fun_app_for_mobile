@@ -397,8 +397,13 @@ class HomeScreen(MDScreen):
         # Функция для создания кнопки на главном экране
         def create_main_button(text, icon_name, callback):
             btn = MDButton(style="filled")
-            btn.size_hint = (0.85, None)
-            btn.height = dp(52)
+            # Важно: устанавливаем theme_width="Custom" и задаем конкретную ширину
+            btn.theme_width = "Custom"
+            btn.width = dp(200)  # Фиксированная ширина
+            btn.size_hint_x = None  # Отключаем автоматическое масштабирование по горизонтали
+            btn.size_hint = (None, None)  # Полностью отключаем size_hint
+            btn.width = dp(200)
+            btn.height = dp(56)
             btn.pos_hint = {"center_x": 0.5}
             btn.md_bg_color = theme.PRIMARY
             btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
@@ -424,6 +429,7 @@ class HomeScreen(MDScreen):
 
             # Принудительно обновляем позиции дочерних элементов
             Clock.schedule_once(lambda dt: btn.adjust_pos(), 0.1)
+            Clock.schedule_once(lambda dt: btn.adjust_width(), 0.1)
 
             return btn
 
