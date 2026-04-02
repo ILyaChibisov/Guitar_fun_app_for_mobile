@@ -6,7 +6,9 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.button import MDButton, MDIconButton
+from kivymd.uix.button import (
+    MDButton, MDButtonText, MDIconButton, MDButtonIcon
+)
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp, sp
 from kivy.animation import Animation
@@ -36,6 +38,7 @@ class LoginModal(MDCard):
         self.padding = [dp(16), dp(16), dp(16), dp(16)]
         self.spacing = dp(12)
 
+        # Кнопка "Назад"
         back_btn = MDIconButton()
         back_btn.icon = "arrow-left"
         back_btn.icon_color = theme.TEXT_SECONDARY
@@ -60,25 +63,26 @@ class LoginModal(MDCard):
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.password_field)
 
+        # Контейнер для кнопок
         buttons_box = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(44))
 
+        # Кнопка "Отмена"
         cancel_btn = MDButton(style="filled")
-        cancel_btn.text = "Отмена"
         cancel_btn.size_hint = (0.5, 1)
         cancel_btn.md_bg_color = [0.95, 0.95, 0.95, 1]
-        cancel_btn.theme_text_color = "Custom"
-        cancel_btn.text_color = theme.TEXT_SECONDARY
         cancel_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         cancel_btn.bind(on_release=self.close)
+        cancel_btn_text = MDButtonText(text="Отмена", theme_text_color="Custom", text_color=theme.TEXT_SECONDARY)
+        cancel_btn.add_widget(cancel_btn_text)
 
+        # Кнопка "Войти"
         login_btn = MDButton(style="filled")
-        login_btn.text = "Войти"
         login_btn.size_hint = (0.5, 1)
         login_btn.md_bg_color = theme.PRIMARY
-        login_btn.theme_text_color = "Custom"
-        login_btn.text_color = [1, 1, 1, 1]
         login_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         login_btn.bind(on_release=self.do_login)
+        login_btn_text = MDButtonText(text="Войти", theme_text_color="Custom", text_color=[1, 1, 1, 1])
+        login_btn.add_widget(login_btn_text)
 
         buttons_box.add_widget(cancel_btn)
         buttons_box.add_widget(login_btn)
@@ -163,22 +167,20 @@ class RegisterModal(MDCard):
         buttons_box = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(44))
 
         cancel_btn = MDButton(style="filled")
-        cancel_btn.text = "Отмена"
         cancel_btn.size_hint = (0.5, 1)
         cancel_btn.md_bg_color = [0.95, 0.95, 0.95, 1]
-        cancel_btn.theme_text_color = "Custom"
-        cancel_btn.text_color = theme.TEXT_SECONDARY
         cancel_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         cancel_btn.bind(on_release=self.close)
+        cancel_btn_text = MDButtonText(text="Отмена", theme_text_color="Custom", text_color=theme.TEXT_SECONDARY)
+        cancel_btn.add_widget(cancel_btn_text)
 
         register_btn = MDButton(style="filled")
-        register_btn.text = "Зарегистрироваться"
         register_btn.size_hint = (0.5, 1)
         register_btn.md_bg_color = theme.PRIMARY
-        register_btn.theme_text_color = "Custom"
-        register_btn.text_color = [1, 1, 1, 1]
         register_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         register_btn.bind(on_release=self.do_register)
+        register_btn_text = MDButtonText(text="Зарегистрироваться", theme_text_color="Custom", text_color=[1, 1, 1, 1])
+        register_btn.add_widget(register_btn_text)
 
         buttons_box.add_widget(cancel_btn)
         buttons_box.add_widget(register_btn)
@@ -226,7 +228,7 @@ class AuthModal(MDCard):
 
         self.orientation = 'vertical'
         self.size_hint = (0.85, None)
-        self.height = dp(340)
+        self.height = dp(420)
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         self.elevation = 4
         self.radius = [theme.CORNER_RADIUS] * 4
@@ -243,61 +245,64 @@ class AuthModal(MDCard):
                            height=dp(28), theme_text_color="Secondary")
         self.add_widget(subtitle)
 
-        self.add_widget(MDBoxLayout(size_hint_y=None, height=dp(4)))
+        self.add_widget(MDBoxLayout(size_hint_y=None, height=dp(8)))
 
-        # Google кнопка
+        # Кнопка "Войти через Google"
         google_btn = MDButton(style="filled")
-        google_btn.text = "Войти через Google"
-        google_btn.icon = "google"
         google_btn.size_hint = (0.9, None)
-        google_btn.height = dp(44)
+        google_btn.height = dp(48)
         google_btn.pos_hint = {'center_x': 0.5}
         google_btn.md_bg_color = [0.96, 0.96, 0.96, 1]
-        google_btn.theme_text_color = "Custom"
-        google_btn.text_color = [0.2, 0.2, 0.2, 1]
         google_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         google_btn.bind(on_release=self.on_google_click)
+        google_btn_icon = MDButtonIcon(icon="google", theme_icon_color="Custom", icon_color=[0.2, 0.2, 0.2, 1])
+        google_btn_text = MDButtonText(text="Войти через Google", theme_text_color="Custom",
+                                       text_color=[0.2, 0.2, 0.2, 1], font_size=dp(13))
+        google_btn.add_widget(google_btn_icon)
+        google_btn.add_widget(google_btn_text)
         self.add_widget(google_btn)
 
-        # Вход по логину
+        # Кнопка "Войти по логину и паролю"
         login_btn = MDButton(style="filled")
-        login_btn.text = "Войти по логину и паролю"
-        login_btn.icon = "account"
         login_btn.size_hint = (0.9, None)
-        login_btn.height = dp(44)
+        login_btn.height = dp(48)
         login_btn.pos_hint = {'center_x': 0.5}
         login_btn.md_bg_color = theme.PRIMARY_LIGHT
-        login_btn.theme_text_color = "Custom"
-        login_btn.text_color = [1, 1, 1, 1]
         login_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         login_btn.bind(on_release=self.show_login_form)
+        login_btn_icon = MDButtonIcon(icon="account", theme_icon_color="Custom", icon_color=[1, 1, 1, 1])
+        login_btn_text = MDButtonText(text="Войти по логину и паролю", theme_text_color="Custom",
+                                      text_color=[1, 1, 1, 1], font_size=dp(13))
+        login_btn.add_widget(login_btn_icon)
+        login_btn.add_widget(login_btn_text)
         self.add_widget(login_btn)
 
-        # Регистрация
+        # Кнопка "Зарегистрироваться"
         register_btn = MDButton(style="filled")
-        register_btn.text = "Зарегистрироваться"
-        register_btn.icon = "account-plus"
         register_btn.size_hint = (0.9, None)
-        register_btn.height = dp(44)
+        register_btn.height = dp(48)
         register_btn.pos_hint = {'center_x': 0.5}
         register_btn.md_bg_color = theme.PRIMARY
-        register_btn.theme_text_color = "Custom"
-        register_btn.text_color = [1, 1, 1, 1]
         register_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         register_btn.bind(on_release=self.show_register)
+        register_btn_icon = MDButtonIcon(icon="account-plus", theme_icon_color="Custom", icon_color=[1, 1, 1, 1])
+        register_btn_text = MDButtonText(text="Зарегистрироваться", theme_text_color="Custom", text_color=[1, 1, 1, 1],
+                                         font_size=dp(13))
+        register_btn.add_widget(register_btn_icon)
+        register_btn.add_widget(register_btn_text)
         self.add_widget(register_btn)
 
-        # Пропустить
+        # Кнопка "Пропустить"
         skip_btn = MDButton(style="filled")
-        skip_btn.text = "Пропустить"
         skip_btn.size_hint = (0.9, None)
-        skip_btn.height = dp(40)
+        skip_btn.height = dp(44)
         skip_btn.pos_hint = {'center_x': 0.5}
         skip_btn.md_bg_color = [0.95, 0.95, 0.95, 1]
-        skip_btn.theme_text_color = "Custom"
-        skip_btn.text_color = theme.TEXT_SECONDARY
         skip_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         skip_btn.bind(on_release=self.close)
+        skip_btn_text = MDButtonText(text="Пропустить", theme_text_color="Custom", text_color=theme.TEXT_SECONDARY,
+                                     font_size=dp(13))
+        skip_btn.add_widget(skip_btn_text)
         self.add_widget(skip_btn)
 
         self.login_modal = None
@@ -374,6 +379,7 @@ class HomeScreen(MDScreen):
         self.bind(pos=self._update_bg, size=self._update_bg)
 
         from kivymd.uix.scrollview import MDScrollView
+
         scroll = MDScrollView(size_hint=(1, 1), bar_width=dp(4), bar_color=theme.PRIMARY_LIGHT)
 
         layout = MDBoxLayout(orientation='vertical', padding=dp(20), spacing=dp(20),
@@ -386,46 +392,44 @@ class HomeScreen(MDScreen):
         quick_title = MDLabel(text="Быстрый доступ", font_size=sp(18), halign="center",
                               size_hint_y=None, height=dp(36), theme_text_color="Primary", bold=True)
 
-        buttons_layout = MDBoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, height=dp(156))
+        buttons_layout = MDBoxLayout(orientation='vertical', spacing=dp(12), size_hint_y=None, height=dp(180))
 
-        # Тюнер
-        tuner_btn = MDButton(style="filled")
-        tuner_btn.text = "Тюнер"
-        tuner_btn.icon = "tune"
-        tuner_btn.size_hint = (0.8, None)
-        tuner_btn.height = dp(44)
-        tuner_btn.pos_hint = {"center_x": 0.5}
-        tuner_btn.md_bg_color = theme.PRIMARY
-        tuner_btn.theme_text_color = "Custom"
-        tuner_btn.text_color = [1, 1, 1, 1]
-        tuner_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
-        tuner_btn.bind(on_release=lambda x: self.navigate_to('tuner'))
+        # Функция для создания кнопки на главном экране
+        def create_main_button(text, icon_name, callback):
+            btn = MDButton(style="filled")
+            btn.size_hint = (0.85, None)
+            btn.height = dp(52)
+            btn.pos_hint = {"center_x": 0.5}
+            btn.md_bg_color = theme.PRIMARY
+            btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
+            btn.bind(on_release=callback)
 
-        # Песни
-        songs_btn = MDButton(style="filled")
-        songs_btn.text = "Песни"
-        songs_btn.icon = "music-note"
-        songs_btn.size_hint = (0.8, None)
-        songs_btn.height = dp(44)
-        songs_btn.pos_hint = {"center_x": 0.5}
-        songs_btn.md_bg_color = theme.PRIMARY
-        songs_btn.theme_text_color = "Custom"
-        songs_btn.text_color = [1, 1, 1, 1]
-        songs_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
-        songs_btn.bind(on_release=lambda x: self.navigate_to('songs'))
+            # Иконка
+            btn_icon = MDButtonIcon(
+                icon=icon_name,
+                theme_icon_color="Custom",
+                icon_color=[1, 1, 1, 1]
+            )
 
-        # Аккорды
-        chords_btn = MDButton(style="filled")
-        chords_btn.text = "Аккорды"
-        chords_btn.icon = "guitar-acoustic"
-        chords_btn.size_hint = (0.8, None)
-        chords_btn.height = dp(44)
-        chords_btn.pos_hint = {"center_x": 0.5}
-        chords_btn.md_bg_color = theme.PRIMARY
-        chords_btn.theme_text_color = "Custom"
-        chords_btn.text_color = [1, 1, 1, 1]
-        chords_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
-        chords_btn.bind(on_release=lambda x: self.navigate_to('chords'))
+            # Текст
+            btn_text = MDButtonText(
+                text=text,
+                theme_text_color="Custom",
+                text_color=[1, 1, 1, 1],
+                font_size=dp(14)
+            )
+
+            btn.add_widget(btn_icon)
+            btn.add_widget(btn_text)
+
+            # Принудительно обновляем позиции дочерних элементов
+            Clock.schedule_once(lambda dt: btn.adjust_pos(), 0.1)
+
+            return btn
+
+        tuner_btn = create_main_button("Тюнер", "tune", lambda x: self.navigate_to('tuner'))
+        songs_btn = create_main_button("Песни", "music-note", lambda x: self.navigate_to('songs'))
+        chords_btn = create_main_button("Аккорды", "guitar-acoustic", lambda x: self.navigate_to('chords'))
 
         buttons_layout.add_widget(tuner_btn)
         buttons_layout.add_widget(songs_btn)
