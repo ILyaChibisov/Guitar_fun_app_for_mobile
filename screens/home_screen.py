@@ -424,9 +424,9 @@ class HomeScreen(MDScreen):
     def load_background(self):
         """Загружает фоновое изображение"""
         possible_paths = [
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'background.png'),
-            os.path.join(os.path.dirname(__file__), '..', 'assets', 'background.png'),
-            'assets/background.png',
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'background.jpg'),
+            os.path.join(os.path.dirname(__file__), '..', 'assets', 'background.jpg'),
+            'assets/background.jpg',
         ]
 
         bg_path = None

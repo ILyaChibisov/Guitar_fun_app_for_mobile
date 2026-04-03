@@ -125,7 +125,7 @@ class BottomNavItem(BoxLayout):
         self.icon_btn.size_hint = (1, 0.6)
         self.icon_btn.md_bg_color = [0, 0, 0, 0]
 
-        # Универсальный маленький шрифт
+        # Текст под иконкой
         self.text_label = MDLabel(
             text=text,
             font_size=sp(8),
@@ -151,7 +151,7 @@ class BottomNavItem(BoxLayout):
 
 
 class LanguageSelector(MDBoxLayout):
-    """Компонент выбора языка"""
+    """Компонент выбора языка (прозрачный)"""
 
     def __init__(self, current_lang="ru", on_change_callback=None, **kwargs):
         super().__init__(**kwargs)
@@ -171,9 +171,13 @@ class LanguageSelector(MDBoxLayout):
             "ru": "RU", "en": "EN", "de": "DE", "fr": "FR", "it": "IT", "pt": "PT", "zh": "中文"
         }
 
+        # Прозрачный контейнер
         self.button_container = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, 1), spacing=dp(4),
-            md_bg_color=theme.PRIMARY_LIGHT, radius=[dp(8), dp(8), dp(8), dp(8)],
+            orientation='horizontal',
+            size_hint=(1, 1),
+            spacing=dp(4),
+            md_bg_color=[0, 0, 0, 0],  # прозрачный
+            radius=[dp(8), dp(8), dp(8), dp(8)],
             padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
@@ -186,9 +190,15 @@ class LanguageSelector(MDBoxLayout):
         self.current_icon.md_bg_color = [0, 0, 0, 0]
 
         self.current_code = MDLabel(
-            text=self.lang_codes[current_lang], font_size=sp(11),
-            size_hint=(None, 1), width=dp(36), halign="center", valign="middle",
-            bold=True, theme_text_color="Custom", text_color=[1, 1, 1, 1]
+            text=self.lang_codes[current_lang],
+            font_size=sp(11),
+            size_hint=(None, 1),
+            width=dp(36),
+            halign="center",
+            valign="middle",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1]
         )
 
         self.arrow = MDIconButton()
@@ -288,14 +298,14 @@ class GuitarFunsApp(MDApp):
         # Корневой контейнер
         root = MDBoxLayout(orientation='vertical')
 
-        # Верхняя панель
+        # Верхняя панель (прозрачная)
         top_bar = self.create_top_bar()
         root.add_widget(top_bar)
 
         # Менеджер экранов
         root.add_widget(self.screen_manager)
 
-        # Нижняя навигация
+        # Нижняя навигация (без тени)
         bottom_nav = self.create_bottom_navigation()
         root.add_widget(bottom_nav)
 
@@ -306,12 +316,17 @@ class GuitarFunsApp(MDApp):
         return root
 
     def create_top_bar(self):
+        """Создаёт прозрачную верхнюю панель с белыми иконками"""
         top_bar = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, None), height=dp(60),
-            padding=[theme.PADDING, 0, theme.PADDING, 0], spacing=theme.PADDING,
-            md_bg_color=theme.PRIMARY
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(60),
+            padding=[theme.PADDING, 0, theme.PADDING, 0],
+            spacing=theme.PADDING,
+            md_bg_color=[0, 0, 0, 0]  # полностью прозрачный фон
         )
 
+        # Логотип (белый)
         logo = MDLabel(
             text="GuitarFuns",
             font_size=dp(20),
@@ -321,29 +336,49 @@ class GuitarFunsApp(MDApp):
             bold=True
         )
 
-        icons_container = MDBoxLayout(orientation='horizontal', size_hint_x=0.6, spacing=dp(8))
+        # Контейнер для иконок
+        icons_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=0.6,
+            spacing=dp(8)
+        )
 
+        # Иконка профиля
         profile_btn = MDIconButton()
         profile_btn.icon = "account-circle"
         profile_btn.theme_text_color = "Custom"
         profile_btn.text_color = [1, 1, 1, 1]
+        profile_btn.md_bg_color = [0, 0, 0, 0]
         profile_btn.on_release = self.open_profile
 
+        # Иконка настроек
         settings_btn = MDIconButton()
         settings_btn.icon = "cog"
         settings_btn.theme_text_color = "Custom"
         settings_btn.text_color = [1, 1, 1, 1]
+        settings_btn.md_bg_color = [0, 0, 0, 0]
         settings_btn.on_release = self.open_settings
 
+        # Иконка поддержки
         support_btn = MDIconButton()
         support_btn.icon = "help-circle"
         support_btn.theme_text_color = "Custom"
         support_btn.text_color = [1, 1, 1, 1]
+        support_btn.md_bg_color = [0, 0, 0, 0]
         support_btn.on_release = self.open_support
 
+        # LanguageSelector с прозрачным фоном и белыми элементами
         self.language_selector = LanguageSelector(
-            current_lang="ru", on_change_callback=self.change_language
+            current_lang="ru",
+            on_change_callback=self.change_language
         )
+        # Дополнительно убеждаемся, что фон прозрачный и текст белый
+        self.language_selector.button_container.md_bg_color = [0, 0, 0, 0]
+        self.language_selector.current_icon.text_color = [1, 1, 1, 1]
+        self.language_selector.current_code.text_color = [1, 1, 1, 1]
+        self.language_selector.arrow.text_color = [1, 1, 1, 1]
+        self.language_selector.current_icon.md_bg_color = [0, 0, 0, 0]
+        self.language_selector.arrow.md_bg_color = [0, 0, 0, 0]
 
         icons_container.add_widget(profile_btn)
         icons_container.add_widget(settings_btn)
@@ -356,7 +391,6 @@ class GuitarFunsApp(MDApp):
 
     def create_bottom_navigation(self):
         """Создаёт нижнюю навигацию с иконками - без тени и полоски"""
-
         bottom_nav = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -366,7 +400,6 @@ class GuitarFunsApp(MDApp):
             md_bg_color=theme.SURFACE
         )
 
-        # Элементы навигации
         nav_items = [
             {"icon": "home", "text": "Home", "screen": "home"},
             {"icon": "music-note", "text": "Library", "screen": "songs"},
@@ -385,26 +418,21 @@ class GuitarFunsApp(MDApp):
             bottom_nav.add_widget(nav_item)
             self.nav_items.append(nav_item)
 
-        # Устанавливаем активный элемент по умолчанию
         if self.nav_items:
             self.nav_items[0].set_active(True)
 
         return bottom_nav
 
     def on_nav_press(self, screen_name):
-        """Обработчик нажатия на элемент навигации"""
         if self.screen_manager and self.screen_manager.current != screen_name:
             self.screen_manager.current = screen_name
 
     def on_screen_change(self, instance, value):
-        """Обновляет активные элементы при смене экрана"""
         for item in self.nav_items:
             item.set_active(item.screen_name == value)
 
     def open_profile(self, instance):
-        """Открывает профиль пользователя"""
         logger.info("Нажата иконка личного кабинета")
-
         if api.is_authenticated():
             self.screen_manager.current = "profile"
         else:
@@ -442,9 +470,7 @@ class GuitarFunsApp(MDApp):
         notify.info(f"Язык изменён на {lang_name}")
 
     def show_auth_modal(self, on_success=None):
-        """Показывает модальное окно авторизации"""
         from screens.home_screen import AuthModal
-
         if self.home_screen and not self.home_screen.auth_modal:
             self.home_screen.auth_modal = AuthModal(
                 parent_screen=self.home_screen,
@@ -454,7 +480,6 @@ class GuitarFunsApp(MDApp):
             self.home_screen.add_widget(self.home_screen.auth_modal)
 
     def switch_screen(self, screen_name):
-        """Переключает экран (для вызова из других модулей)"""
         if self.screen_manager and self.screen_manager.current != screen_name:
             self.screen_manager.current = screen_name
             logger.info(f"Переключение на экран: {screen_name}")
