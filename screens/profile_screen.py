@@ -38,7 +38,7 @@ class ProfileScreen(MDScreen):
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
-        # Кнопка назад - создаем без параметров в конструкторе
+        # Кнопка назад
         self.back_btn = MDIconButton(
             pos_hint={'x': 0, 'top': 1},
             size_hint=(None, None),
@@ -213,7 +213,7 @@ class ProfileScreen(MDScreen):
         actions_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(180),
+            height=dp(160),
             padding=dp(16),
             spacing=dp(12),
             elevation=2,
@@ -289,12 +289,10 @@ class ProfileScreen(MDScreen):
         """Возврат на главный экран через bottom_nav"""
         app = MDApp.get_running_app()
         if hasattr(app, 'bottom_nav') and app.bottom_nav:
-            # Проверяем, есть ли экран home в навигации
             try:
                 app.bottom_nav.switch_tab("home")
             except Exception as e:
                 logger.error(f'Ошибка переключения на home: {e}')
-                # Fallback:直接用 screen manager
                 if hasattr(self, 'manager') and self.manager:
                     self.manager.current = 'home'
         else:

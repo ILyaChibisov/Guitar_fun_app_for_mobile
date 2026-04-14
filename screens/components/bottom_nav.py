@@ -43,7 +43,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
         self.spacing = dp(2)
-        self.padding = [0, dp(5), 0, 0]
+        self.padding = [0, dp(4), 0, 0]
 
         # Контейнер для иконки
         self.icon_container = MDBoxLayout(
@@ -57,7 +57,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         # Текст под иконкой
         self.text_label = Label(
             text=self.text,
-            font_size=sp(10),
+            font_size=sp(9),
             size_hint=(1, 0.4),
             color=theme.TEXT_SECONDARY,
             bold=False,
@@ -88,7 +88,7 @@ class NavItem(ButtonBehavior, BoxLayout):
                     texture = core_img.texture
                     self.custom_image = Image(
                         texture=texture,
-                        size_hint=(0.7, 0.7),
+                        size_hint=(0.65, 0.65),
                         pos_hint={'center_x': 0.5, 'center_y': 0.5},
                         allow_stretch=True,
                         keep_ratio=True
@@ -101,7 +101,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         # Если иконка не загрузилась - показываем заглушку
         self.custom_image = Label(
             text="?",
-            font_size=sp(20),
+            font_size=sp(18),
             size_hint=(1, 1),
             color=theme.TEXT_SECONDARY,
             halign='center',
@@ -123,7 +123,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
     def on_press(self):
         """Анимация нажатия"""
-        anim = Animation(opacity=0.6, duration=0.05)
+        anim = Animation(opacity=0.7, duration=0.05)
         anim += Animation(opacity=1, duration=0.1)
         anim.start(self)
 
@@ -135,18 +135,13 @@ class BottomNav(BoxLayout):
         super().__init__(**kwargs)
         self.sm = screen_manager
         self.size_hint = (1, None)
-        self.height = dp(65)
-        self.padding = [theme.PADDING, dp(5), theme.PADDING, dp(5)]
-        self.spacing = dp(5)
+        self.height = dp(58)
+        self.padding = [dp(6), dp(3), dp(6), dp(3)]
+        self.spacing = dp(2)
 
         with self.canvas.before:
             Color(1, 1, 1, 1)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-            Color(0, 0, 0, 0.05)
-            self.top_line = Rectangle(
-                pos=(self.x, self.y + self.height - dp(1)),
-                size=(self.width, dp(1))
-            )
 
         self.bind(pos=self.update_rect, size=self.update_rect)
 
@@ -179,8 +174,6 @@ class BottomNav(BoxLayout):
     def update_rect(self, *args):
         self.bg_rect.pos = self.pos
         self.bg_rect.size = self.size
-        self.top_line.pos = (self.x, self.y + self.height - dp(1))
-        self.top_line.size = (self.width, dp(1))
 
     def on_screen_changed(self, screen_name):
         for item, item_data in zip(self.items, self.nav_items):
