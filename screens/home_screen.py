@@ -18,6 +18,15 @@ from utils.notifications import notify
 from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout
 import os
 
+# Импортируем ассеты из пакета data
+try:
+    from data import Assets, load_asset_as_bytes
+
+    HAS_ASSETS = True
+except ImportError:
+    HAS_ASSETS = False
+    print("⚠️ Модуль data не найден")
+
 logger = screen_logger('Home')
 
 
@@ -422,7 +431,50 @@ class HomeScreen(MDScreen):
         logger.info('Главный экран создан')
 
     def load_background(self):
-        """Загружает фоновое изображение"""
+        """Загружает фоновое изображение из встроенных ассетов"""
+        try:
+            from kivy.core.image import Image as CoreImage
+            from io import BytesIO
+
+            if HAS_ASSETS:
+                # Варианты названий ассета
+                asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
+
+                bg_data = None
+                for name in asset_names:
+                    bg_data = load_asset_as_bytes(name)
+                    if bg_data:
+                        logger.info(f"Фон загружен из ассета: {name}")
+                        break
+
+                if bg_data:
+                    img = CoreImage(BytesIO(bg_data), ext="jpg")
+
+                    with self.canvas.before:
+                        Color(1, 1, 1, 1)
+                        self.bg_image = Rectangle(
+                            texture=img.texture,
+                            pos=self.pos,
+                            size=self.size
+                        )
+                    self.bind(pos=self._update_bg_image, size=self._update_bg_image)
+                    logger.info('Фон успешно загружен из встроенных ассетов')
+                    return
+                else:
+                    logger.warning('Ассет фона не найден, пробуем загрузить из файла')
+            else:
+                logger.warning('Модуль data не найден, пробуем загрузить из файла')
+
+        except ImportError as e:
+            logger.warning(f'Модуль data не найден: {e}')
+        except Exception as e:
+            logger.error(f'Ошибка загрузки фона из ассетов: {e}')
+
+        # Fallback: загружаем из файловой системы
+        self.load_background_from_file()
+
+    def load_background_from_file(self):
+        """Загружает фон из файловой системы (fallback)"""
         possible_paths = [
             os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'background.jpg'),
             os.path.join(os.path.dirname(__file__), '..', 'assets', 'background.jpg'),
@@ -445,15 +497,16 @@ class HomeScreen(MDScreen):
                         size=self.size
                     )
                 self.bind(pos=self._update_bg_image, size=self._update_bg_image)
-                logger.info(f'Фоновое изображение загружено: {bg_path}')
+                logger.info(f'Фон загружен из файла: {bg_path}')
             except Exception as e:
-                logger.error(f'Ошибка загрузки фона: {e}')
+                logger.error(f'Ошибка загрузки фона из файла: {e}')
                 self.set_default_background()
         else:
             logger.warning('Фоновое изображение не найдено')
             self.set_default_background()
 
     def _update_bg_image(self, *args):
+        """Обновляет позицию и размер фона"""
         if self.bg_image:
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size

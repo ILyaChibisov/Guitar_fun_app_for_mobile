@@ -275,7 +275,9 @@ class ProfileScreen(MDScreen):
         scroll.add_widget(layout)
         self.add_widget(scroll)
 
-        Clock.schedule_once(self.load_user_data, 0.5)
+        # НЕ загружаем данные автоматически при создании
+        # Данные загрузятся при входе на экран через on_pre_enter
+        # Clock.schedule_once(self.load_user_data, 0.5)  # <-- ЗАКОММЕНТИРОВАНО
 
         logger.info('Экран профиля создан')
 
@@ -287,10 +289,23 @@ class ProfileScreen(MDScreen):
         """Возврат на главный экран через bottom_nav"""
         app = MDApp.get_running_app()
         if hasattr(app, 'bottom_nav') and app.bottom_nav:
-            app.bottom_nav.switch_tab("home")
+            # Проверяем, есть ли экран home в навигации
+            try:
+                app.bottom_nav.switch_tab("home")
+            except Exception as e:
+                logger.error(f'Ошибка переключения на home: {e}')
+                # Fallback:直接用 screen manager
+                if hasattr(self, 'manager') and self.manager:
+                    self.manager.current = 'home'
         else:
             if hasattr(self, 'manager') and self.manager:
                 self.manager.current = 'home'
+
+    def on_pre_enter(self):
+        """Вызывается перед показом экрана - загружаем данные"""
+        if not self._data_loaded:
+            self.load_user_data(0)
+        return super().on_pre_enter()
 
     def load_user_data(self, dt):
         """Загружает данные пользователя (только один раз)"""
@@ -316,13 +331,13 @@ class ProfileScreen(MDScreen):
         error_msg = str(error)
         logger.error(f'Ошибка загрузки профиля: {error_msg}')
 
-        if 'Not authenticated' in error_msg or 'Invalid token' in error_msg:
-            logger.info('Токен недействителен, очищаем и показываем авторизацию')
+        if 'Not authenticated' in error_msg or 'Invalid token' in error_msg or '401' in error_msg or '404' in error_msg:
+            logger.info('Токен недействителен или профиль не найден, очищаем и показываем авторизацию')
             api._clear_tokens()
             notify.warning("Сессия истекла. Пожалуйста, войдите снова.")
-
+            # Возвращаемся на главный экран
             self.go_back(None)
-
+            # Показываем модальное окно авторизации
             app = MDApp.get_running_app()
             if hasattr(app, 'home_screen') and app.home_screen:
                 app.home_screen.show_auth_modal()
@@ -491,9 +506,6 @@ class ProfileScreen(MDScreen):
             on_success=on_logout_success,
             on_failure=on_logout_failure
         )
-
-    def on_pre_enter(self):
-        return super().on_pre_enter()
 
     def on_enter(self):
         return super().on_enter()

@@ -19,7 +19,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     print(error_msg)
     print("=" * 50)
 
-    # Попытка записать ошибку в файл (на Android)
     try:
         import android
         with open('/sdcard/guitarfuns_crash.log', 'w') as f:
@@ -27,7 +26,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     except:
         pass
 
-    # Вызываем стандартный обработчик
     if hasattr(sys, '__excepthook__'):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
@@ -36,10 +34,8 @@ sys.excepthook = handle_exception
 # =========================================================
 
 # ============ ОТКЛЮЧАЕМ SSL ПРОВЕРКУ ДЛЯ ВСЕХ ПЛАТФОРМ ============
-# Отключаем предупреждения SSL
 warnings.filterwarnings("ignore", category=Warning)
 
-# Для urllib3
 try:
     import urllib3
 
@@ -47,7 +43,6 @@ try:
 except ImportError:
     pass
 
-# Для requests
 try:
     import requests
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -56,13 +51,11 @@ try:
 except ImportError:
     pass
 
-# Отключаем проверку SSL глобально
 try:
     ssl._create_default_https_context = ssl._create_unverified_context
 except AttributeError:
     pass
 
-# Для Kivy UrlRequest
 os.environ['SSL_CERT_FILE'] = ''
 os.environ['REQUESTS_CA_BUNDLE'] = ''
 # ================================================================
@@ -75,6 +68,8 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.animation import Animation
 from kivy.utils import platform
+from kivy.core.image import Image as CoreImage
+from io import BytesIO
 
 # Настройка логирования
 from config.logger_config import setup_logging, app_logger
@@ -87,7 +82,6 @@ from utils.kivy_imports import (
     MDLabel, MDBoxLayout, MDScreen, MDDialog, Snackbar
 )
 
-# Импортируем MDApp
 from kivymd.app import MDApp
 
 # Наши модули
@@ -98,6 +92,19 @@ from api.client import api
 from api.network_handler import network_manager
 from utils.notifications import notify
 
+# Импортируем компонент нижней навигации
+from screens.components.bottom_nav import BottomNav
+
+# Импортируем ассеты
+try:
+    from data import Assets, load_asset_as_bytes, load_asset_as_base64
+
+    HAS_ASSETS = True
+    print("✅ Модуль ассетов загружен")
+except ImportError as e:
+    HAS_ASSETS = False
+    print(f"⚠️ Модуль ассетов не найден: {e}")
+
 # Настройка окна для разработки
 if os.name == 'nt':
     Window.size = (400, 750)
@@ -105,49 +112,6 @@ if os.name == 'nt':
     Window.left = 50
 
 logger = app_logger()
-
-
-class BottomNavItem(BoxLayout):
-    """Элемент нижней навигации с иконкой и текстом"""
-
-    def __init__(self, icon, text, screen_name, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.spacing = dp(2)
-        self.screen_name = screen_name
-
-        # Иконка
-        self.icon_btn = MDIconButton()
-        self.icon_btn.icon = icon
-        self.icon_btn.theme_text_color = "Custom"
-        self.icon_btn.text_color = theme.TEXT_SECONDARY
-        self.icon_btn.size_hint = (1, 0.6)
-        self.icon_btn.md_bg_color = [0, 0, 0, 0]
-
-        # Текст под иконкой
-        self.text_label = MDLabel(
-            text=text,
-            font_size=sp(8),
-            size_hint=(1, 0.4),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY,
-            bold=False
-        )
-
-        self.add_widget(self.icon_btn)
-        self.add_widget(self.text_label)
-
-    def set_active(self, active):
-        if active:
-            self.icon_btn.text_color = theme.PRIMARY
-            self.text_label.text_color = theme.PRIMARY
-            self.text_label.bold = True
-        else:
-            self.icon_btn.text_color = theme.TEXT_SECONDARY
-            self.text_label.text_color = theme.TEXT_SECONDARY
-            self.text_label.bold = False
 
 
 class LanguageSelector(MDBoxLayout):
@@ -171,12 +135,11 @@ class LanguageSelector(MDBoxLayout):
             "ru": "RU", "en": "EN", "de": "DE", "fr": "FR", "it": "IT", "pt": "PT", "zh": "中文"
         }
 
-        # Прозрачный контейнер
         self.button_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
             spacing=dp(4),
-            md_bg_color=[0, 0, 0, 0],  # прозрачный
+            md_bg_color=[0, 0, 0, 0],
             radius=[dp(8), dp(8), dp(8), dp(8)],
             padding=[dp(8), dp(4), dp(8), dp(4)]
         )
@@ -273,7 +236,7 @@ class GuitarFunsApp(MDApp):
         self.language_selector = None
         self.screen_manager = None
         self.home_screen = None
-        self.nav_items = []
+        self.bottom_nav = None
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
@@ -290,24 +253,21 @@ class GuitarFunsApp(MDApp):
 
         # Создаём менеджер экранов
         self.screen_manager = setup_screen_manager()
-        self.screen_manager.bind(current=self.on_screen_change)
-
-        # Устанавливаем начальный экран
         self.screen_manager.current = 'home'
 
         # Корневой контейнер
         root = MDBoxLayout(orientation='vertical')
 
-        # Верхняя панель (прозрачная)
+        # Верхняя панель
         top_bar = self.create_top_bar()
         root.add_widget(top_bar)
 
         # Менеджер экранов
         root.add_widget(self.screen_manager)
 
-        # Нижняя навигация (без тени)
-        bottom_nav = self.create_bottom_navigation()
-        root.add_widget(bottom_nav)
+        # Нижняя навигация (используем компонент из screens/components)
+        self.bottom_nav = BottomNav(self.screen_manager)
+        root.add_widget(self.bottom_nav)
 
         # Запускаем мониторинг сети
         network_manager.start_monitoring()
@@ -323,7 +283,7 @@ class GuitarFunsApp(MDApp):
             height=dp(60),
             padding=[theme.PADDING, 0, theme.PADDING, 0],
             spacing=theme.PADDING,
-            md_bg_color=[0, 0, 0, 0]  # полностью прозрачный фон
+            md_bg_color=[0, 0, 0, 0]
         )
 
         # Логотип (белый)
@@ -372,7 +332,6 @@ class GuitarFunsApp(MDApp):
             current_lang="ru",
             on_change_callback=self.change_language
         )
-        # Дополнительно убеждаемся, что фон прозрачный и текст белый
         self.language_selector.button_container.md_bg_color = [0, 0, 0, 0]
         self.language_selector.current_icon.text_color = [1, 1, 1, 1]
         self.language_selector.current_code.text_color = [1, 1, 1, 1]
@@ -388,48 +347,6 @@ class GuitarFunsApp(MDApp):
         top_bar.add_widget(logo)
         top_bar.add_widget(icons_container)
         return top_bar
-
-    def create_bottom_navigation(self):
-        """Создаёт нижнюю навигацию с иконками - без тени и полоски"""
-        bottom_nav = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(60),
-            padding=[theme.PADDING, dp(4), theme.PADDING, dp(4)],
-            spacing=dp(4),
-            md_bg_color=theme.SURFACE
-        )
-
-        nav_items = [
-            {"icon": "home", "text": "Home", "screen": "home"},
-            {"icon": "music-note", "text": "Library", "screen": "songs"},
-            {"icon": "guitar-acoustic", "text": "Chords", "screen": "chords"},
-            {"icon": "tune", "text": "Tuner", "screen": "tuner"},
-            {"icon": "account-circle", "text": "Profile", "screen": "profile"}
-        ]
-
-        for item in nav_items:
-            nav_item = BottomNavItem(
-                icon=item["icon"],
-                text=item["text"],
-                screen_name=item["screen"]
-            )
-            nav_item.icon_btn.bind(on_release=lambda x, s=item["screen"]: self.on_nav_press(s))
-            bottom_nav.add_widget(nav_item)
-            self.nav_items.append(nav_item)
-
-        if self.nav_items:
-            self.nav_items[0].set_active(True)
-
-        return bottom_nav
-
-    def on_nav_press(self, screen_name):
-        if self.screen_manager and self.screen_manager.current != screen_name:
-            self.screen_manager.current = screen_name
-
-    def on_screen_change(self, instance, value):
-        for item in self.nav_items:
-            item.set_active(item.screen_name == value)
 
     def open_profile(self, instance):
         logger.info("Нажата иконка личного кабинета")
@@ -486,6 +403,17 @@ class GuitarFunsApp(MDApp):
 
     def on_start(self):
         logger.info('Приложение GuitarFuns запущено')
+
+        # Проверяем наличие ассетов
+        if HAS_ASSETS:
+            assets_list = Assets.list_assets()
+            logger.info(f'📦 Загружено ассетов: {len(assets_list)}')
+            for asset_name in assets_list:
+                meta = Assets.get_metadata(asset_name)
+                logger.debug(f'   🖼️  {asset_name}: {meta["original"]} ({meta["size"]} bytes)')
+        else:
+            logger.warning('Модуль assets.py не найден, используем файловую систему')
+
         if self.screen_manager:
             self.home_screen = self.screen_manager.get_screen('home')
             logger.info("Ссылка на home_screen сохранена")
