@@ -1,6 +1,7 @@
 # screens/chords_screen.py
 """
 Экран гитарных аккордов
+Использует спрайты для отображения нот и пальцев
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
@@ -139,15 +140,16 @@ class TypeButton(ButtonBehavior, MDBoxLayout):
 
 
 class ChordButton(ButtonBehavior, MDBoxLayout):
-    def __init__(self, chord_name, chord_variants, on_press_callback, **kwargs):
+    def __init__(self, chord_name, chord_variants, **kwargs):
         super().__init__(**kwargs)
         self.chord_name = chord_name
         self.chord_variants = chord_variants
-        self.on_press_callback = on_press_callback
         self.orientation = 'vertical'
         self.size_hint = (None, 1)
         self.width = dp(60)
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
+
+        print(f"DEBUG BUTTON INIT: {chord_name} получил {len(chord_variants)} вариантов")
 
         with self.canvas.before:
             self.bg_color = Color(*rgba(theme.SURFACE))
@@ -164,15 +166,10 @@ class ChordButton(ButtonBehavior, MDBoxLayout):
         self.add_widget(self.label)
 
         self.bind(pos=self._update_bg, size=self._update_bg)
-        self.bind(on_release=self._on_press)
 
     def _update_bg(self, *args):
         self.bg_rect.pos = self.pos
         self.bg_rect.size = self.size
-
-    def _on_press(self, instance):
-        if self.on_press_callback:
-            self.on_press_callback(self.chord_variants)
 
 
 class PaginatedTypeSelector(MDBoxLayout):
@@ -346,7 +343,7 @@ class ChordsScreen(MDScreen):
                                         size_hint_y=None, height=dp(30))
         main_layout.add_widget(self.chord_desc_label)
 
-        # ===== ГРИФ С НОТАМИ (RelativeLayout) =====
+        # ===== ГРИФ С НОТАМИ =====
         griff_container = MDBoxLayout(
             size_hint=(1, None),
             height=dp(280),
@@ -373,9 +370,10 @@ class ChordsScreen(MDScreen):
             logger.error(f"Ошибка загрузки фона: {e}")
 
         # ===== Панель управления =====
-        bottom_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(44), spacing=dp(8),
+        bottom_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(50), spacing=dp(8),
                                     padding=[dp(4), dp(4), dp(4), dp(4)])
 
+        # Кнопки режима
         self.finger_btn = MDRaisedButton(text="🖐 Пальцы", on_release=lambda x: self.set_mode("finger"))
         self.finger_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.finger_btn.md_bg_color = theme.PRIMARY
@@ -386,13 +384,30 @@ class ChordsScreen(MDScreen):
         self.note_btn.md_bg_color = theme.TEXT_SECONDARY
         bottom_layout.add_widget(self.note_btn)
 
-        self.prev_btn = MDIconButton(icon="chevron-left", on_release=self.prev_variant)
+        # Кнопки навигации по вариантам
+        self.prev_btn = MDIconButton(
+            icon="chevron-left",
+            on_release=self.prev_variant,
+            size_hint=(None, None),
+            size=(dp(40), dp(40))
+        )
         bottom_layout.add_widget(self.prev_btn)
 
-        self.variant_label = MDLabel(text="Вариант 1", halign="center", size_hint_x=0.25, font_size=sp(11))
+        self.variant_label = MDLabel(
+            text="Вариант 1",
+            halign="center",
+            size_hint_x=0.25,
+            font_size=sp(12),
+            bold=True
+        )
         bottom_layout.add_widget(self.variant_label)
 
-        self.next_btn = MDIconButton(icon="chevron-right", on_release=self.next_variant)
+        self.next_btn = MDIconButton(
+            icon="chevron-right",
+            on_release=self.next_variant,
+            size_hint=(None, None),
+            size=(dp(40), dp(40))
+        )
         bottom_layout.add_widget(self.next_btn)
 
         main_layout.add_widget(bottom_layout)
@@ -417,6 +432,7 @@ class ChordsScreen(MDScreen):
         self.bg_rect.size = self.size
 
     def scan_chords(self):
+        """Сканирует папку chords и загружает аккорды"""
         chords_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'chords')
         if not os.path.exists(chords_dir):
             os.makedirs(chords_dir, exist_ok=True)
@@ -441,22 +457,35 @@ class ChordsScreen(MDScreen):
                         chord_name = chord_name.replace('!', '|')
                         chord_name = chord_name.replace('$', '/')
 
+                        # Извлекаем номер варианта из имени файла
+                        import re
+                        variant_match = re.search(r'_(\d+)\.py$', f)
+                        if variant_match:
+                            variant_num = int(variant_match.group(1))
+                        else:
+                            variant_num = metadata.get('variant', 1)
+
+                        chord_id = f"{chord_name}_v{variant_num}"
+
                         self.all_chords.append({
+                            'id': chord_id,
                             'name': chord_name,
-                            'variant': metadata.get('variant', 1),
+                            'variant': variant_num,
                             'type': metadata.get('type', ''),
                             'description': metadata.get('description', ''),
                             'path': full_path,
                             'module': module
                         })
+                        print(f"DEBUG SCAN: Загружен {chord_name} вариант {variant_num} из {f}")
                     except Exception as e:
                         logger.error(f"Ошибка загрузки {f}: {e}")
 
-        logger.info(f"Загружено аккордов: {len(self.all_chords)}")
+        print(f"DEBUG SCAN: Всего загружено аккордов: {len(self.all_chords)}")
         self.update_chords_list()
         self.load_first_chord()
 
     def update_chords_list(self):
+        """Обновляет список кнопок аккордов по текущим фильтрам"""
         self.chords_container.clear_widgets()
 
         filtered = []
@@ -469,11 +498,14 @@ class ChordsScreen(MDScreen):
                 continue
             filtered.append(chord)
 
+        print(f"DEBUG UPDATE: Найдено аккордов для {self.current_tonality}/{self.current_type}: {len(filtered)}")
+
         if not filtered:
             no_chords = MDLabel(text="Нет аккордов", size_hint_x=None, width=dp(100))
             self.chords_container.add_widget(no_chords)
             return
 
+        # Группируем по имени аккорда
         chords_by_name = {}
         for chord in filtered:
             name = chord['name']
@@ -482,12 +514,30 @@ class ChordsScreen(MDScreen):
             chords_by_name[name].append(chord)
 
         for name, variants in chords_by_name.items():
+            variants.sort(key=lambda x: x['variant'])
+            print(f"DEBUG UPDATE: {name} - {len(variants)} вариантов")
+
             short_name = name.split('|')[0]
-            btn = ChordButton(chord_name=short_name, chord_variants=variants,
-                              on_press_callback=self.load_chord_variants)
+            btn = ChordButton(
+                chord_name=short_name,
+                chord_variants=variants
+            )
+            # ВАЖНО: используем bind с фиксацией variants
+            btn.bind(on_release=lambda x, v=variants: self.load_chord_variants(v))
             self.chords_container.add_widget(btn)
 
         self.chords_container.add_widget(MDBoxLayout(size_hint_x=None, width=dp(8)))
+
+    def on_chord_button_press(self, instance):
+        """Обработчик нажатия на кнопку аккорда"""
+        print(f"DEBUG PRESS: Нажата кнопка {instance.chord_name}")
+        print(f"DEBUG PRESS: variants_data = {getattr(instance, 'variants_data', None)}")
+        if hasattr(instance, 'variants_data'):
+            variants = instance.variants_data
+            print(f"DEBUG PRESS: передаю {len(variants)} вариантов")
+            self.load_chord_variants(variants)
+        else:
+            print("DEBUG PRESS: Нет variants_data!")
 
     def extract_tonality(self, chord_name):
         if not chord_name:
@@ -502,6 +552,10 @@ class ChordsScreen(MDScreen):
         return main_name[0] if main_name else ""
 
     def load_first_chord(self):
+        """Загружает первый аккорд из текущего списка со ВСЕМИ вариантами"""
+        # Находим первое имя аккорда, подходящее под фильтры
+        first_chord_name = None
+
         for chord in self.all_chords:
             tonality = self.extract_tonality(chord['name'])
             if tonality != self.current_tonality:
@@ -509,19 +563,63 @@ class ChordsScreen(MDScreen):
             chord_types = chord['type'].split('|') if chord['type'] else []
             if self.current_type not in chord_types:
                 continue
-            self.load_chord_variants([chord])
+            first_chord_name = chord['name']
+            break
+
+        if first_chord_name is None:
+            print("DEBUG FIRST: Не найдено подходящих аккордов")
             return
 
+        # Собираем ВСЕ варианты этого аккорда
+        all_variants = []
+        for chord in self.all_chords:
+            if chord['name'] == first_chord_name:
+                all_variants.append(chord)
+
+        all_variants.sort(key=lambda x: x['variant'])
+        print(f"DEBUG FIRST: Загружаю первый аккорд {first_chord_name} с {len(all_variants)} вариантами")
+        self.load_chord_variants(all_variants)
+
     def load_chord_variants(self, variants):
+        """Загружает варианты аккорда"""
+        print(f"DEBUG LOAD: Получено variants типа {type(variants)}")
+        print(f"DEBUG LOAD: Длина: {len(variants) if variants else 0}")
+
         if not variants:
+            print("DEBUG LOAD: variants пуст!")
             return
+
+        # Если variants - список, и первый элемент - тоже список
+        if isinstance(variants, list) and len(variants) > 0:
+            if isinstance(variants[0], list):
+                variants = variants[0]
+                print(f"DEBUG LOAD: Распакован вложенный список, теперь {len(variants)} вариантов")
+
+        # Если variants - это не список, а словарь
+        if isinstance(variants, dict):
+            # Преобразуем значения словаря в список
+            variants = list(variants.values())
+            print(f"DEBUG LOAD: Преобразован словарь в список, {len(variants)} вариантов")
+
+        # Проверяем, что все элементы - словари с ключом 'variant'
+        if isinstance(variants, list) and len(variants) > 0:
+            if not isinstance(variants[0], dict):
+                print(f"DEBUG LOAD: Ошибка! Первый элемент не словарь, а {type(variants[0])}")
+                return
+
+        variants.sort(key=lambda x: x['variant'])
         self.current_variants = variants
         self.current_variant_index = 0
+        print(f"DEBUG LOAD: Загружено {len(variants)} вариантов")
+        for v in variants:
+            print(f"  - {v['name']} вариант {v['variant']}")
         self.load_current_variant()
 
     def load_current_variant(self):
+        """Загружает текущий вариант аккорда"""
         if not self.current_variants:
             return
+
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
 
@@ -531,21 +629,40 @@ class ChordsScreen(MDScreen):
         self.chord_desc_label.text = variant.get('description', '')
         self.variant_label.text = f"Вариант {variant['variant']}"
 
-        # Отображаем аккорд на грифе
-        self.chord_renderer.load_chord(self.current_chord_module)
-        self.chord_renderer.set_mode(self.current_mode)
+        print(f"DEBUG CURRENT: Загружен вариант {variant['variant']} для {full_name}")
+        print(f"DEBUG CURRENT: Индекс {self.current_variant_index} из {len(self.current_variants)}")
+
+        if hasattr(self, 'chord_renderer'):
+            self.chord_renderer.load_chord(self.current_chord_module)
+            self.chord_renderer.set_mode(self.current_mode)
+        else:
+            print("DEBUG: chord_renderer не найден!")
 
     def prev_variant(self, instance):
-        if self.current_variants:
+        """Предыдущий вариант"""
+        if self.current_variants and len(self.current_variants) > 1:
+            old_index = self.current_variant_index
             self.current_variant_index = (self.current_variant_index - 1) % len(self.current_variants)
+            print(f"DEBUG PREV: Переключение с варианта {old_index + 1} на {self.current_variant_index + 1}")
             self.load_current_variant()
+        else:
+            print(
+                f"DEBUG PREV: Нет других вариантов (всего {len(self.current_variants) if self.current_variants else 0})")
 
     def next_variant(self, instance):
-        if self.current_variants:
+        """Следующий вариант"""
+        if self.current_variants and len(self.current_variants) > 1:
+            old_index = self.current_variant_index
             self.current_variant_index = (self.current_variant_index + 1) % len(self.current_variants)
+            print(f"DEBUG NEXT: Переключение с варианта {old_index + 1} на {self.current_variant_index + 1}")
             self.load_current_variant()
+        else:
+            print(
+                f"DEBUG NEXT: Нет других вариантов (всего {len(self.current_variants) if self.current_variants else 0})")
 
     def set_mode(self, mode):
+        """Устанавливает режим отображения"""
+        print(f"DEBUG: Смена режима на {mode}")
         self.current_mode = mode
         if mode == "finger":
             self.finger_btn.md_bg_color = theme.PRIMARY
@@ -554,10 +671,12 @@ class ChordsScreen(MDScreen):
             self.finger_btn.md_bg_color = theme.TEXT_SECONDARY
             self.note_btn.md_bg_color = theme.PRIMARY
 
-        if self.current_chord_module:
+        # Обновляем отображение для текущего аккорда
+        if self.current_chord_module and hasattr(self, 'chord_renderer'):
             self.chord_renderer.set_mode(mode)
 
     def on_tonality_selected(self, tonality):
+        print(f"DEBUG: Выбрана тональность {tonality}")
         self.current_tonality = tonality
         for t, btn in self.tonality_buttons.items():
             btn.set_active(t == tonality)
@@ -565,6 +684,7 @@ class ChordsScreen(MDScreen):
         self.load_first_chord()
 
     def on_type_selected(self, chord_type):
+        print(f"DEBUG: Выбран тип {chord_type}")
         self.current_type = chord_type
         self.type_selector.set_selected(chord_type)
         self.update_chords_list()
@@ -576,29 +696,40 @@ class ChordsScreen(MDScreen):
             return
         search_normalized = search_text.lower().replace('/', '$')
 
-        found = None
+        found_chord = None
         for chord in self.all_chords:
             name = chord['name'].lower()
             name_normalized = name.replace('/', '$')
             if search_normalized == name_normalized:
-                found = chord
+                found_chord = chord
                 break
             if '|' in name:
                 for alt in name.split('|'):
                     alt_normalized = alt.strip().replace('/', '$')
                     if search_normalized == alt_normalized:
-                        found = chord
+                        found_chord = chord
                         break
-                if found:
+                if found_chord:
                     break
 
-        if found:
-            tonality = self.extract_tonality(found['name'])
+        if found_chord:
+            print(f"DEBUG SEARCH: Найден аккорд {found_chord['name']}")
+
+            # Собираем ВСЕ варианты найденного аккорда
+            all_variants = []
+            for chord in self.all_chords:
+                if chord['name'] == found_chord['name']:
+                    all_variants.append(chord)
+
+            all_variants.sort(key=lambda x: x['variant'])
+
+            tonality = self.extract_tonality(found_chord['name'])
             self.on_tonality_selected(tonality)
-            chord_types = found['type'].split('|') if found['type'] else []
+            chord_types = found_chord['type'].split('|') if found_chord['type'] else []
             if chord_types:
                 self.on_type_selected(chord_types[0])
-            self.load_chord_variants([found])
+
+            self.load_chord_variants(all_variants)  # ← передаём ВСЕ варианты
             self.search_field.text = ""
         else:
             notify.warning(f"Аккорд '{search_text}' не найден")
