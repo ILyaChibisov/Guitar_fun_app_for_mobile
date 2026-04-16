@@ -18,7 +18,9 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.core.window import Window
 from kivy.uix.image import Image
+from kivy.core.image import Image as CoreImage
 from io import BytesIO
+import os
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -26,11 +28,25 @@ from utils.notifications import notify
 from utils.kivy_imports import MDRaisedButton
 from screens.chord_renderer import ChordRenderer
 
-import os
 import importlib.util
 import re
 
 logger = screen_logger('Chords')
+
+# Попытка импорта ассетов
+try:
+    from data import Assets, load_asset_as_bytes
+
+    HAS_ASSETS = True
+except ImportError:
+    HAS_ASSETS = False
+
+
+    def load_asset_as_bytes(name):
+        return None
+
+
+    logger.warning("Модуль data не найден, ассеты не будут загружены")
 
 TONALITIES = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
 
@@ -148,8 +164,6 @@ class ChordButton(ButtonBehavior, MDBoxLayout):
         self.size_hint = (None, 1)
         self.width = dp(60)
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
-
-        print(f"DEBUG BUTTON INIT: {chord_name} получил {len(chord_variants)} вариантов")
 
         with self.canvas.before:
             self.bg_color = Color(*rgba(theme.SURFACE))
@@ -277,18 +291,112 @@ class ChordsScreen(MDScreen):
         self.current_variant_index = 0
         self.current_mode = "finger"
 
+        # Для фонового изображения (как в home_screen)
+        self.bg_image = None
+        self.bg_rect = None
+
         self.init_ui()
+        self.load_background()  # ← Загружаем фон как в home_screen
         self.scan_chords()
 
         logger.info('Экран аккордов создан')
 
-    def init_ui(self):
-        from kivy.uix.scrollview import ScrollView
+    def load_background(self):
+        """Загружает фоновое изображение из встроенных ассетов (как в home_screen)"""
+        try:
+            from kivy.core.image import Image as CoreImage
+            from io import BytesIO
 
+            if HAS_ASSETS:
+                # Варианты названий ассета
+                asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
+
+                bg_data = None
+                for name in asset_names:
+                    bg_data = load_asset_as_bytes(name)
+                    if bg_data:
+                        logger.info(f"Фон для аккордов загружен из ассета: {name}")
+                        break
+
+                if bg_data:
+                    img = CoreImage(BytesIO(bg_data), ext="jpg")
+
+                    with self.canvas.before:
+                        Color(1, 1, 1, 1)
+                        self.bg_image = Rectangle(
+                            texture=img.texture,
+                            pos=self.pos,
+                            size=self.size
+                        )
+                    self.bind(pos=self._update_bg_image, size=self._update_bg_image)
+                    logger.info('Фон для экрана аккордов успешно загружен из встроенных ассетов')
+                    return
+                else:
+                    logger.warning('Ассет фона для аккордов не найден, пробуем загрузить из файла')
+            else:
+                logger.warning('Модуль data не найден, пробуем загрузить из файла')
+
+        except ImportError as e:
+            logger.warning(f'Модуль data не найден: {e}')
+        except Exception as e:
+            logger.error(f'Ошибка загрузки фона для аккордов из ассетов: {e}')
+
+        # Fallback: загружаем из файловой системы (как в home_screen)
+        self.load_background_from_file()
+
+    def load_background_from_file(self):
+        """Загружает фон из файловой системы (fallback) - как в home_screen"""
+        possible_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'background.jpg'),
+            os.path.join(os.path.dirname(__file__), '..', 'assets', 'background.jpg'),
+            'assets/background.jpg',
+        ]
+
+        bg_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                bg_path = path
+                break
+
+        if bg_path:
+            try:
+                with self.canvas.before:
+                    Color(1, 1, 1, 1)
+                    self.bg_image = Rectangle(
+                        source=bg_path,
+                        pos=self.pos,
+                        size=self.size
+                    )
+                self.bind(pos=self._update_bg_image, size=self._update_bg_image)
+                logger.info(f'Фон для аккордов загружен из файла: {bg_path}')
+            except Exception as e:
+                logger.error(f'Ошибка загрузки фона для аккордов из файла: {e}')
+                self.set_default_background()
+        else:
+            logger.warning('Фоновое изображение для аккордов не найдено')
+            self.set_default_background()
+
+    def set_default_background(self):
+        """Устанавливает стандартный цвет фона (как в home_screen)"""
         with self.canvas.before:
             Color(*rgba(theme.BACKGROUND))
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
+
+    def _update_bg_image(self, *args):
+        """Обновляет позицию и размер фонового изображения"""
+        if self.bg_image:
+            self.bg_image.pos = self.pos
+            self.bg_image.size = self.size
+
+    def _update_bg(self, *args):
+        """Обновляет цветовой фон"""
+        if hasattr(self, 'bg_rect') and self.bg_rect:
+            self.bg_rect.pos = self.pos
+            self.bg_rect.size = self.size
+
+    def init_ui(self):
+        from kivy.uix.scrollview import ScrollView
 
         scroll = ScrollView(size_hint=(1, 1))
         main_layout = MDBoxLayout(orientation='vertical', padding=dp(8), spacing=dp(6), size_hint_y=None)
@@ -298,6 +406,8 @@ class ChordsScreen(MDScreen):
         search_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(44), spacing=dp(8))
         self.search_field = MDTextField(hint_text="Поиск аккорда (например: A, C#m, Bb...)", mode="filled",
                                         size_hint_x=0.8, font_size=dp(12))
+        # Делаем поле поиска полупрозрачным
+        self.search_field.md_bg_color = [0, 0, 0, 0.6]
         self.search_btn = MDRaisedButton(text="Найти", size_hint_x=0.2, on_release=self.on_search)
         self.search_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         search_layout.add_widget(self.search_field)
@@ -306,7 +416,8 @@ class ChordsScreen(MDScreen):
 
         # ===== Тональности =====
         tonality_label = MDLabel(text="Выберите тональность", halign="center", size_hint_y=None, height=dp(24),
-                                 font_size=sp(12), bold=True, theme_text_color="Primary")
+                                 font_size=sp(12), bold=True, theme_text_color="Custom",
+                                 text_color=[1, 1, 1, 0.9])
         main_layout.add_widget(tonality_label)
 
         tonality_scroll = ScrollView(size_hint_y=None, height=dp(46), do_scroll_x=True, do_scroll_y=False)
@@ -326,7 +437,8 @@ class ChordsScreen(MDScreen):
 
         # ===== Типы аккордов =====
         type_label = MDLabel(text="Выберите тип аккорда", halign="center", size_hint_y=None, height=dp(24),
-                             font_size=sp(12), bold=True, theme_text_color="Primary")
+                             font_size=sp(12), bold=True, theme_text_color="Custom",
+                             text_color=[1, 1, 1, 0.9])
         main_layout.add_widget(type_label)
 
         self.type_selector = PaginatedTypeSelector(items=CHORD_TYPES, items_per_page=4,
@@ -335,12 +447,13 @@ class ChordsScreen(MDScreen):
 
         # ===== Название аккорда =====
         self.chord_name_label = MDLabel(text="Выберите аккорд", halign="center", font_size=sp(16), bold=True,
-                                        size_hint_y=None, height=dp(36), theme_text_color="Primary")
+                                        size_hint_y=None, height=dp(36), theme_text_color="Custom",
+                                        text_color=[1, 1, 1, 1])
         main_layout.add_widget(self.chord_name_label)
 
         # ===== Описание аккорда =====
-        self.chord_desc_label = MDLabel(text="", halign="center", font_size=sp(10), theme_text_color="Secondary",
-                                        size_hint_y=None, height=dp(30))
+        self.chord_desc_label = MDLabel(text="", halign="center", font_size=sp(10), theme_text_color="Custom",
+                                        text_color=[1, 1, 1, 0.7], size_hint_y=None, height=dp(30))
         main_layout.add_widget(self.chord_desc_label)
 
         # ===== ГРИФ С НОТАМИ =====
@@ -367,13 +480,13 @@ class ChordsScreen(MDScreen):
             else:
                 logger.warning("Фон грифа не найден")
         except Exception as e:
-            logger.error(f"Ошибка загрузки фона: {e}")
+            logger.error(f"Ошибка загрузки фона грифа: {e}")
 
         # ===== Панель управления =====
         bottom_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(50), spacing=dp(8),
                                     padding=[dp(4), dp(4), dp(4), dp(4)])
 
-        # Кнопки режима
+        # Кнопки режима - делаем их контрастными
         self.finger_btn = MDRaisedButton(text="🖐 Пальцы", on_release=lambda x: self.set_mode("finger"))
         self.finger_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.finger_btn.md_bg_color = theme.PRIMARY
@@ -398,7 +511,9 @@ class ChordsScreen(MDScreen):
             halign="center",
             size_hint_x=0.25,
             font_size=sp(12),
-            bold=True
+            bold=True,
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1]
         )
         bottom_layout.add_widget(self.variant_label)
 
@@ -414,7 +529,8 @@ class ChordsScreen(MDScreen):
 
         # ===== Список аккордов =====
         chords_label = MDLabel(text="Доступные аккорды:", halign="center", size_hint_y=None, height=dp(24),
-                               font_size=sp(11), bold=True, theme_text_color="Primary")
+                               font_size=sp(11), bold=True, theme_text_color="Custom",
+                               text_color=[1, 1, 1, 0.9])
         main_layout.add_widget(chords_label)
 
         self.chords_scroll = ScrollView(size_hint_y=None, height=dp(46), do_scroll_x=True, do_scroll_y=False)
@@ -426,10 +542,6 @@ class ChordsScreen(MDScreen):
 
         scroll.add_widget(main_layout)
         self.add_widget(scroll)
-
-    def _update_bg(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
 
     def scan_chords(self):
         """Сканирует папку chords и загружает аккорды"""
@@ -458,17 +570,14 @@ class ChordsScreen(MDScreen):
                         chord_name = chord_name.replace('$', '/')
 
                         # Извлекаем номер варианта из имени файла
-                        import re
                         variant_match = re.search(r'_(\d+)\.py$', f)
                         if variant_match:
                             variant_num = int(variant_match.group(1))
                         else:
                             variant_num = metadata.get('variant', 1)
 
-                        chord_id = f"{chord_name}_v{variant_num}"
-
                         self.all_chords.append({
-                            'id': chord_id,
+                            'id': f"{chord_name}_v{variant_num}",
                             'name': chord_name,
                             'variant': variant_num,
                             'type': metadata.get('type', ''),
@@ -476,11 +585,9 @@ class ChordsScreen(MDScreen):
                             'path': full_path,
                             'module': module
                         })
-                        print(f"DEBUG SCAN: Загружен {chord_name} вариант {variant_num} из {f}")
                     except Exception as e:
                         logger.error(f"Ошибка загрузки {f}: {e}")
 
-        print(f"DEBUG SCAN: Всего загружено аккордов: {len(self.all_chords)}")
         self.update_chords_list()
         self.load_first_chord()
 
@@ -498,10 +605,9 @@ class ChordsScreen(MDScreen):
                 continue
             filtered.append(chord)
 
-        print(f"DEBUG UPDATE: Найдено аккордов для {self.current_tonality}/{self.current_type}: {len(filtered)}")
-
         if not filtered:
-            no_chords = MDLabel(text="Нет аккордов", size_hint_x=None, width=dp(100))
+            no_chords = MDLabel(text="Нет аккордов", size_hint_x=None, width=dp(100),
+                                theme_text_color="Custom", text_color=[1, 1, 1, 0.7])
             self.chords_container.add_widget(no_chords)
             return
 
@@ -515,29 +621,16 @@ class ChordsScreen(MDScreen):
 
         for name, variants in chords_by_name.items():
             variants.sort(key=lambda x: x['variant'])
-            print(f"DEBUG UPDATE: {name} - {len(variants)} вариантов")
 
             short_name = name.split('|')[0]
             btn = ChordButton(
                 chord_name=short_name,
                 chord_variants=variants
             )
-            # ВАЖНО: используем bind с фиксацией variants
             btn.bind(on_release=lambda x, v=variants: self.load_chord_variants(v))
             self.chords_container.add_widget(btn)
 
         self.chords_container.add_widget(MDBoxLayout(size_hint_x=None, width=dp(8)))
-
-    def on_chord_button_press(self, instance):
-        """Обработчик нажатия на кнопку аккорда"""
-        print(f"DEBUG PRESS: Нажата кнопка {instance.chord_name}")
-        print(f"DEBUG PRESS: variants_data = {getattr(instance, 'variants_data', None)}")
-        if hasattr(instance, 'variants_data'):
-            variants = instance.variants_data
-            print(f"DEBUG PRESS: передаю {len(variants)} вариантов")
-            self.load_chord_variants(variants)
-        else:
-            print("DEBUG PRESS: Нет variants_data!")
 
     def extract_tonality(self, chord_name):
         if not chord_name:
@@ -553,7 +646,6 @@ class ChordsScreen(MDScreen):
 
     def load_first_chord(self):
         """Загружает первый аккорд из текущего списка со ВСЕМИ вариантами"""
-        # Находим первое имя аккорда, подходящее под фильтры
         first_chord_name = None
 
         for chord in self.all_chords:
@@ -567,7 +659,6 @@ class ChordsScreen(MDScreen):
             break
 
         if first_chord_name is None:
-            print("DEBUG FIRST: Не найдено подходящих аккордов")
             return
 
         # Собираем ВСЕ варианты этого аккорда
@@ -577,42 +668,30 @@ class ChordsScreen(MDScreen):
                 all_variants.append(chord)
 
         all_variants.sort(key=lambda x: x['variant'])
-        print(f"DEBUG FIRST: Загружаю первый аккорд {first_chord_name} с {len(all_variants)} вариантами")
         self.load_chord_variants(all_variants)
 
     def load_chord_variants(self, variants):
         """Загружает варианты аккорда"""
-        print(f"DEBUG LOAD: Получено variants типа {type(variants)}")
-        print(f"DEBUG LOAD: Длина: {len(variants) if variants else 0}")
-
         if not variants:
-            print("DEBUG LOAD: variants пуст!")
             return
 
         # Если variants - список, и первый элемент - тоже список
         if isinstance(variants, list) and len(variants) > 0:
             if isinstance(variants[0], list):
                 variants = variants[0]
-                print(f"DEBUG LOAD: Распакован вложенный список, теперь {len(variants)} вариантов")
 
         # Если variants - это не список, а словарь
         if isinstance(variants, dict):
-            # Преобразуем значения словаря в список
             variants = list(variants.values())
-            print(f"DEBUG LOAD: Преобразован словарь в список, {len(variants)} вариантов")
 
-        # Проверяем, что все элементы - словари с ключом 'variant'
+        # Проверяем, что все элементы - словари
         if isinstance(variants, list) and len(variants) > 0:
             if not isinstance(variants[0], dict):
-                print(f"DEBUG LOAD: Ошибка! Первый элемент не словарь, а {type(variants[0])}")
                 return
 
         variants.sort(key=lambda x: x['variant'])
         self.current_variants = variants
         self.current_variant_index = 0
-        print(f"DEBUG LOAD: Загружено {len(variants)} вариантов")
-        for v in variants:
-            print(f"  - {v['name']} вариант {v['variant']}")
         self.load_current_variant()
 
     def load_current_variant(self):
@@ -629,40 +708,24 @@ class ChordsScreen(MDScreen):
         self.chord_desc_label.text = variant.get('description', '')
         self.variant_label.text = f"Вариант {variant['variant']}"
 
-        print(f"DEBUG CURRENT: Загружен вариант {variant['variant']} для {full_name}")
-        print(f"DEBUG CURRENT: Индекс {self.current_variant_index} из {len(self.current_variants)}")
-
         if hasattr(self, 'chord_renderer'):
             self.chord_renderer.load_chord(self.current_chord_module)
             self.chord_renderer.set_mode(self.current_mode)
-        else:
-            print("DEBUG: chord_renderer не найден!")
 
     def prev_variant(self, instance):
         """Предыдущий вариант"""
         if self.current_variants and len(self.current_variants) > 1:
-            old_index = self.current_variant_index
             self.current_variant_index = (self.current_variant_index - 1) % len(self.current_variants)
-            print(f"DEBUG PREV: Переключение с варианта {old_index + 1} на {self.current_variant_index + 1}")
             self.load_current_variant()
-        else:
-            print(
-                f"DEBUG PREV: Нет других вариантов (всего {len(self.current_variants) if self.current_variants else 0})")
 
     def next_variant(self, instance):
         """Следующий вариант"""
         if self.current_variants and len(self.current_variants) > 1:
-            old_index = self.current_variant_index
             self.current_variant_index = (self.current_variant_index + 1) % len(self.current_variants)
-            print(f"DEBUG NEXT: Переключение с варианта {old_index + 1} на {self.current_variant_index + 1}")
             self.load_current_variant()
-        else:
-            print(
-                f"DEBUG NEXT: Нет других вариантов (всего {len(self.current_variants) if self.current_variants else 0})")
 
     def set_mode(self, mode):
         """Устанавливает режим отображения"""
-        print(f"DEBUG: Смена режима на {mode}")
         self.current_mode = mode
         if mode == "finger":
             self.finger_btn.md_bg_color = theme.PRIMARY
@@ -671,12 +734,10 @@ class ChordsScreen(MDScreen):
             self.finger_btn.md_bg_color = theme.TEXT_SECONDARY
             self.note_btn.md_bg_color = theme.PRIMARY
 
-        # Обновляем отображение для текущего аккорда
         if self.current_chord_module and hasattr(self, 'chord_renderer'):
             self.chord_renderer.set_mode(mode)
 
     def on_tonality_selected(self, tonality):
-        print(f"DEBUG: Выбрана тональность {tonality}")
         self.current_tonality = tonality
         for t, btn in self.tonality_buttons.items():
             btn.set_active(t == tonality)
@@ -684,7 +745,6 @@ class ChordsScreen(MDScreen):
         self.load_first_chord()
 
     def on_type_selected(self, chord_type):
-        print(f"DEBUG: Выбран тип {chord_type}")
         self.current_type = chord_type
         self.type_selector.set_selected(chord_type)
         self.update_chords_list()
@@ -713,9 +773,6 @@ class ChordsScreen(MDScreen):
                     break
 
         if found_chord:
-            print(f"DEBUG SEARCH: Найден аккорд {found_chord['name']}")
-
-            # Собираем ВСЕ варианты найденного аккорда
             all_variants = []
             for chord in self.all_chords:
                 if chord['name'] == found_chord['name']:
@@ -729,7 +786,7 @@ class ChordsScreen(MDScreen):
             if chord_types:
                 self.on_type_selected(chord_types[0])
 
-            self.load_chord_variants(all_variants)  # ← передаём ВСЕ варианты
+            self.load_chord_variants(all_variants)
             self.search_field.text = ""
         else:
             notify.warning(f"Аккорд '{search_text}' не найден")
