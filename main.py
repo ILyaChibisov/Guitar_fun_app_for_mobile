@@ -356,27 +356,24 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
-        # Создаём корневой виджет с фоном
         root = RootWidget()
 
-        # ===== ВЕРХНЯЯ ПАНЕЛЬ (прозрачная) =====
+        # ===== ВЕРХНЯЯ ПАНЕЛЬ =====
         top_bar = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(56),
             padding=[dp(12), dp(8), dp(12), dp(8)],
             spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
-            pos_hint={'top': 1}  # Прижимаем к верху
+            md_bg_color=[0, 0, 0, 0],
+            pos_hint={'top': 1}
         )
 
-        # Загружаем иконки
         home_icon_data = self.load_icon("home_png")
         profile_icon_data = self.load_icon("profile_png")
         support_icon_data = self.load_icon("support_png")
         language_icon_data = self.load_icon("language_png")
 
-        # Левая часть - иконка дома
         left_box = MDBoxLayout(size_hint_x=0.2, md_bg_color=[0, 0, 0, 0])
         if home_icon_data:
             home_btn = AnimatedImageButton(
@@ -390,11 +387,9 @@ class GuitarFunsApp(MDApp):
             left_box.add_widget(home_btn)
         top_bar.add_widget(left_box)
 
-        # Центральная часть (пустая)
         center_box = MDBoxLayout(size_hint_x=0.5, md_bg_color=[0, 0, 0, 0])
         top_bar.add_widget(center_box)
 
-        # Правая часть - профиль, поддержка, язык
         right_box = MDBoxLayout(
             size_hint_x=0.3,
             spacing=dp(6),
@@ -433,24 +428,18 @@ class GuitarFunsApp(MDApp):
         right_box.add_widget(self.language_selector)
 
         top_bar.add_widget(right_box)
-
-        # Добавляем верхнюю панель
         root.add_widget(top_bar)
 
-        # ScreenManager (с отступом сверху, чтобы не перекрывать иконки)
+        # ScreenManager
         self.screen_manager = setup_screen_manager()
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
-        self.screen_manager.size_hint = (1, 0.9)  # Уменьшаем высоту, чтобы не перекрывать иконки
-        self.screen_manager.pos_hint = {'y': 0}  # Прижимаем к низу
         root.add_widget(self.screen_manager)
 
-        # Нижняя панель навигации
+        # ===== НИЖНЯЯ ПАНЕЛЬ - ТОЛЬКО ОДИН РАЗ =====
         self.bottom_nav = BottomNav(self.screen_manager)
-        self.bottom_nav.size_hint = (1, None)
-        self.bottom_nav.height = dp(56)
-        self.bottom_nav.pos_hint = {'y': 0}
-        root.add_widget(self.bottom_nav)
+        root.add_widget(self.bottom_nav)  # НЕ НУЖНО УСТАНАВЛИВАТЬ height и pos_hint - ЭТО УЖЕ ЕСТЬ В КЛАССЕ
+        # ==========================================
 
         network_manager.start_monitoring()
 
