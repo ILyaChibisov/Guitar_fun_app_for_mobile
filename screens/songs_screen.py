@@ -136,10 +136,10 @@ class SongsScreen(MDScreen):
 
         from kivy.graphics import Color, Rectangle
         from kivy.utils import rgba
-        with self.canvas.before:
-            Color(*rgba(theme.BACKGROUND))
-            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-        self.bind(pos=self._update_bg, size=self._update_bg)
+        # with self.canvas.before:
+        #     Color(*rgba(theme.BACKGROUND))
+        #     self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        # self.bind(pos=self._update_bg, size=self._update_bg)
 
         self.layout = MDBoxLayout(orientation='vertical', padding=dp(8), spacing=dp(8))
 

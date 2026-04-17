@@ -341,6 +341,7 @@ class HomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'home'
+
         self.user = None
         self.auth_modal = None
         self.auth_check_done = False
@@ -431,13 +432,12 @@ class HomeScreen(MDScreen):
         logger.info('Главный экран создан')
 
     def load_background(self):
-        """Загружает фоновое изображение из встроенных ассетов"""
+        """Загружает фоновое изображение и растягивает на весь экран"""
         try:
             from kivy.core.image import Image as CoreImage
             from io import BytesIO
 
             if HAS_ASSETS:
-                # Варианты названий ассета
                 asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
 
                 bg_data = None
@@ -450,6 +450,7 @@ class HomeScreen(MDScreen):
                 if bg_data:
                     img = CoreImage(BytesIO(bg_data), ext="jpg")
 
+                    # НЕ ОЧИЩАЕМ canvas.before, просто добавляем поверх
                     with self.canvas.before:
                         Color(1, 1, 1, 1)
                         self.bg_image = Rectangle(
@@ -457,21 +458,23 @@ class HomeScreen(MDScreen):
                             pos=self.pos,
                             size=self.size
                         )
+
+                    # Привязываем обновление при изменении размера
                     self.bind(pos=self._update_bg_image, size=self._update_bg_image)
-                    logger.info('Фон успешно загружен из встроенных ассетов')
+
+                    logger.info(f'Фон загружен')
                     return
-                else:
-                    logger.warning('Ассет фона не найден, пробуем загрузить из файла')
-            else:
-                logger.warning('Модуль data не найден, пробуем загрузить из файла')
-
-        except ImportError as e:
-            logger.warning(f'Модуль data не найден: {e}')
         except Exception as e:
-            logger.error(f'Ошибка загрузки фона из ассетов: {e}')
+            logger.error(f'Ошибка загрузки фона: {e}')
 
-        # Fallback: загружаем из файловой системы
+        # Если фон не загрузился, пробуем из файла
         self.load_background_from_file()
+
+    def _update_bg_image(self, *args):
+        """Обновляет позицию и размер фона - растягивает на весь экран"""
+        if self.bg_image:
+            self.bg_image.pos = self.pos
+            self.bg_image.size = self.size
 
     def load_background_from_file(self):
         """Загружает фон из файловой системы (fallback)"""
@@ -500,28 +503,6 @@ class HomeScreen(MDScreen):
                 logger.info(f'Фон загружен из файла: {bg_path}')
             except Exception as e:
                 logger.error(f'Ошибка загрузки фона из файла: {e}')
-                self.set_default_background()
-        else:
-            logger.warning('Фоновое изображение не найдено')
-            self.set_default_background()
-
-    def _update_bg_image(self, *args):
-        """Обновляет позицию и размер фона"""
-        if self.bg_image:
-            self.bg_image.pos = self.pos
-            self.bg_image.size = self.size
-
-    def set_default_background(self):
-        """Устанавливает стандартный цвет фона"""
-        with self.canvas.before:
-            Color(*rgba(theme.BACKGROUND))
-            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-        self.bind(pos=self._update_bg, size=self._update_bg)
-
-    def _update_bg(self, *args):
-        if hasattr(self, 'bg_rect'):
-            self.bg_rect.pos = self.pos
-            self.bg_rect.size = self.size
 
     def navigate_to(self, screen_name):
         if hasattr(self, 'manager') and self.manager:
