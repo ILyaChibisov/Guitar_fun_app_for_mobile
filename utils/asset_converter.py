@@ -16,9 +16,13 @@ class AssetConverter:
     SUPPORTED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.gif'}
 
     def __init__(self, assets_dir: str = "assets", output_dir: str = "data"):
-        self.assets_dir = self._find_assets_dir(assets_dir)
-        # НАХОДИМ КОРЕНЬ ПРОЕКТА (где находится main.py)
+        # Находим корень проекта
         self.project_root = self._find_project_root()
+
+        # Папка с исходными ассетами - относительно корня проекта
+        self.assets_dir = self._find_assets_dir(assets_dir)
+
+        # Выходная папка - в корне проекта (не в utils!)
         self.output_dir = self.project_root / output_dir
         self.output_file = self.output_dir / "assets.py"
         self.converted_count = 0
@@ -27,25 +31,37 @@ class AssetConverter:
     def _find_project_root(self) -> Path:
         """Находит корень проекта (где находится main.py или папка assets)"""
         # Начинаем поиск от текущего файла (utils/asset_converter.py)
-        current = Path(__file__).parent
+        current = Path(__file__).resolve().parent  # это /путь/к/проекту/utils
 
-        # Поднимаемся вверх, пока не найдём main.py или папку assets
-        for parent in [current] + list(current.parents):
-            # Проверяем наличие main.py
-            if (parent / "main.py").exists():
-                print(f"📁 Корень проекта найден: {parent}")
-                return parent
-            # Проверяем наличие папки assets
-            if (parent / "assets").exists():
-                print(f"📁 Корень проекта найден: {parent}")
-                return parent
+        # Сначала проверяем родительскую папку (корень проекта)
+        parent = current.parent
+        if (parent / "main.py").exists() or (parent / "assets").exists():
+            print(f"📁 Корень проекта найден: {parent}")
+            return parent
+
+        # Если нет, поднимаемся выше в поисках main.py
+        for candidate in [current] + list(current.parents):
+            if (candidate / "main.py").exists():
+                print(f"📁 Корень проекта найден: {candidate}")
+                return candidate
+            if (candidate / "assets").exists():
+                print(f"📁 Корень проекта найден: {candidate}")
+                return candidate
 
         # Если не нашли, возвращаем текущую рабочую директорию
-        print(f"📁 Корень проекта: {Path.cwd()}")
+        print(f"📁 Корень проекта (по умолчанию): {Path.cwd()}")
         return Path.cwd()
 
     def _find_assets_dir(self, assets_dir: str) -> Path:
-        """Ищет папку assets в разных местах"""
+        """Ищет папку assets в корне проекта"""
+        # Сначала ищем в корне проекта
+        root_assets = self.project_root / assets_dir
+
+        if root_assets.exists() and root_assets.is_dir():
+            print(f"✅ Найдена папка ассетов: {root_assets}")
+            return root_assets
+
+        # Если нет, пробуем другие варианты (для обратной совместимости)
         possible_paths = [
             Path(assets_dir),  # Прямой путь
             Path(__file__).parent.parent / assets_dir,  # На 2 уровня выше (из utils/)
@@ -59,7 +75,6 @@ class AssetConverter:
                 return path
 
         # Если не найдена, создаём в корне проекта
-        root_assets = self._find_project_root() / assets_dir
         print(f"📁 Папка {assets_dir} не найдена, создаём: {root_assets}")
         root_assets.mkdir(parents=True, exist_ok=True)
 
