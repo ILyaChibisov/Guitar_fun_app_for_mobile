@@ -36,28 +36,25 @@ class NavItem(ButtonBehavior, BoxLayout):
     text = StringProperty('')
     active = BooleanProperty(False)
 
-    # Делаем параметры свойствами Kivy для автоматического обновления
-    icon_size = NumericProperty(BottomNavConfig.ICON_SIZE)
-    icon_height = NumericProperty(BottomNavConfig.ICON_CONTAINER_HEIGHT)
-    font_size = NumericProperty(BottomNavConfig.FONT_SIZE)
-    spacing_val = NumericProperty(BottomNavConfig.SPACING)
-    top_padding = NumericProperty(BottomNavConfig.TOP_PADDING)
-
-    def __init__(self, icon_asset, text, **kwargs):
+    def __init__(self, icon_asset, text, screen_name, **kwargs):
         super().__init__(**kwargs)
         self.icon_asset = icon_asset
         self.text = text
+        self.screen_name = screen_name
+
+        # Получаем настройки для этой кнопки
+        self.config = BottomNavConfig.get_button_config(screen_name)
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
 
-        # Применяем начальные настройки
-        self.spacing = dp(self.spacing_val)
-        self.padding = [0, dp(self.top_padding), 0, 0]
+        # Применяем настройки
+        self.spacing = dp(self.config['spacing'])
+        self.padding = [0, dp(self.config['top_padding']), 0, 0]
 
         # Создаём контейнер
         self.icon_container = MDBoxLayout(
-            size_hint=(1, self.icon_height),
+            size_hint=(1, self.config['icon_height']),
             orientation='vertical'
         )
 
@@ -67,8 +64,8 @@ class NavItem(ButtonBehavior, BoxLayout):
         # Текст
         self.text_label = Label(
             text=self.text,
-            font_size=sp(self.font_size),
-            size_hint=(1, 1 - self.icon_height),
+            font_size=sp(self.config['font_size']),
+            size_hint=(1, 1 - self.config['icon_height']),
             color=theme.TEXT_SECONDARY,
             bold=False,
             markup=False,
@@ -79,38 +76,13 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.add_widget(self.icon_container)
         self.add_widget(self.text_label)
 
-        # Привязываем обновление при изменении свойств
-        self.bind(icon_size=self._reload_icon)
-        self.bind(icon_height=self._update_container)
-        self.bind(font_size=self._update_font)
-        self.bind(spacing_val=self._update_spacing)
-        self.bind(top_padding=self._update_padding)
-
         self.update_state(None, self.active)
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
     def _reload_icon(self, *args):
-        """Перезагружает иконку с новым размером"""
+        """Перезагружает иконку"""
         self._load_icon()
-
-    def _update_container(self, *args):
-        """Обновляет контейнер"""
-        self.icon_container.size_hint = (1, self.icon_height)
-        self.text_label.size_hint = (1, 1 - self.icon_height)
-        self._reload_icon()
-
-    def _update_font(self, *args):
-        """Обновляет шрифт"""
-        self.text_label.font_size = sp(self.font_size)
-
-    def _update_spacing(self, *args):
-        """Обновляет расстояние"""
-        self.spacing = dp(self.spacing_val)
-
-    def _update_padding(self, *args):
-        """Обновляет отступ"""
-        self.padding = [0, dp(self.top_padding), 0, 0]
 
     def _load_icon(self):
         """Загружает иконку с текущим размером"""
@@ -124,7 +96,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
                     self.custom_image = Image(
                         texture=core_img.texture,
-                        size_hint=(self.icon_size, self.icon_size),
+                        size_hint=(self.config['icon_size'], self.config['icon_size']),
                         pos_hint={'center_x': 0.5, 'center_y': 0.5},
                         allow_stretch=True,
                         keep_ratio=True
@@ -168,7 +140,7 @@ class BottomNav(BoxLayout):
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Берём настройки из конфига
+        # Применяем настройки из конфига
         self.height = dp(BottomNavConfig.PANEL_HEIGHT)
         self.padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
@@ -176,18 +148,18 @@ class BottomNav(BoxLayout):
 
         # Меню
         self.nav_items = [
+            ('home_png', 'Главная', 'home'),
             ('songs_png', 'Песни', 'songs'),
             ('chords_png', 'Аккорды', 'chords'),
             ('tuner_png', 'Тюнер', 'tuner'),
-            ('dictionary_png', 'Словарь', 'dictionary'),
             ('favorites_png', 'Избранное', 'favorites')
         ]
 
         self.items = []
 
         for icon, text, screen in self.nav_items:
-            item = NavItem(icon, text)
-            item.active = (screen == 'songs')
+            item = NavItem(icon, text, screen)
+            item.active = (screen == 'home')
             item.bind(on_press=lambda x, s=screen: self.switch_to(s))
             self.add_widget(item)
             self.items.append(item)
@@ -220,3 +192,20 @@ class BottomNav(BoxLayout):
 
     def switch_tab(self, screen_name):
         self.switch_to(screen_name)
+
+    def reload_config(self):
+        """Перезагружает конфигурацию и обновляет панель"""
+        self.height = dp(BottomNavConfig.PANEL_HEIGHT)
+        self.padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
+        self.spacing = dp(BottomNavConfig.PANEL_SPACING)
+
+        # Обновляем каждую кнопку
+        for item, (_, _, screen) in zip(self.items, self.nav_items):
+            new_config = BottomNavConfig.get_button_config(screen)
+            item.config = new_config
+            item.spacing = dp(new_config['spacing'])
+            item.padding = [0, dp(new_config['top_padding']), 0, 0]
+            item.icon_container.size_hint = (1, new_config['icon_height'])
+            item.text_label.font_size = sp(new_config['font_size'])
+            item.text_label.size_hint = (1, 1 - new_config['icon_height'])
+            item._reload_icon()

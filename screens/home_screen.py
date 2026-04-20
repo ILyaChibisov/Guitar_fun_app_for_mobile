@@ -6,26 +6,18 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.textfield import MDTextField
-from kivy.metrics import dp
-from kivy.graphics import Color, Rectangle
-from kivy.utils import rgba
-from kivy.animation import Animation
+from kivy.metrics import dp, sp
 from kivy.clock import Clock
+from kivy.animation import Animation
+from kivy.uix.boxlayout import BoxLayout
+
 from config.theme import theme
+from config.carousel_config import CarouselConfig
 from config.logger_config import screen_logger
+from screens.components.carousel import MainCarousel
 from api.client import api
 from utils.notifications import notify
 from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout
-import os
-
-# Импортируем ассеты из пакета data
-try:
-    from data import Assets, load_asset_as_bytes
-
-    HAS_ASSETS = True
-except ImportError:
-    HAS_ASSETS = False
-    print("⚠️ Модуль data не найден")
 
 logger = screen_logger('Home')
 
@@ -346,15 +338,21 @@ class HomeScreen(MDScreen):
         self.auth_modal = None
         self.auth_check_done = False
 
-        # Фоновое изображение
-        self.bg_image = None
-        self.load_background()
+        # Делаем экран прозрачным
+        self.md_bg_color = [0, 0, 0, 0]
 
         # Основной контейнер
-        self.layout = MDBoxLayout(orientation='vertical', padding=[dp(20), dp(40), dp(20), dp(20)])
+        self.layout = MDBoxLayout(
+            orientation='vertical',
+            padding=[dp(16), dp(16), dp(16), dp(16)],
+            spacing=dp(10)
+        )
+
+        # Верхний спейсер для центрирования
+        self.top_spacer = BoxLayout(size_hint_y=0.2)
 
         # Заголовок
-        title = MDLabel(
+        self.title = MDLabel(
             text="GuitarFuns",
             font_size=dp(36),
             bold=True,
@@ -362,150 +360,33 @@ class HomeScreen(MDScreen):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             size_hint_y=None,
-            height=dp(80)
+            height=dp(50)
         )
-        self.layout.add_widget(title)
 
-        # Статус авторизации
-        self.auth_status = MDLabel(
-            text="",
-            halign="center",
-            size_hint_y=None,
-            height=dp(30),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8],
-            font_size=dp(12)
+        # Карусель
+        self.carousel = MainCarousel(
+            screen_manager=self.manager,
+            on_item_selected=self._on_carousel_item_selected
         )
-        self.layout.add_widget(self.auth_status)
 
-        # Быстрый доступ
-        quick_title = MDLabel(
-            text="Быстрый доступ",
-            halign="center",
-            size_hint_y=None,
-            height=dp(36),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True,
-            font_size=dp(18)
-        )
-        self.layout.add_widget(quick_title)
+        # Нижний спейсер для центрирования
+        self.bottom_spacer = BoxLayout(size_hint_y=0.2)
 
-        # Кнопки
-        buttons_layout = MDBoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, height=dp(156))
-
-        tuner_btn = MDRaisedButton(
-            text="Тюнер",
-            size_hint=(0.8, None),
-            height=dp(44),
-            on_release=lambda x: self.navigate_to('tuner')
-        )
-        tuner_btn.pos_hint = {"center_x": 0.5}
-        tuner_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
-
-        songs_btn = MDRaisedButton(
-            text="Песни",
-            size_hint=(0.8, None),
-            height=dp(44),
-            on_release=lambda x: self.navigate_to('songs')
-        )
-        songs_btn.pos_hint = {"center_x": 0.5}
-        songs_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
-
-        chords_btn = MDRaisedButton(
-            text="Аккорды",
-            size_hint=(0.8, None),
-            height=dp(44),
-            on_release=lambda x: self.navigate_to('chords')
-        )
-        chords_btn.pos_hint = {"center_x": 0.5}
-        chords_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
-
-        buttons_layout.add_widget(tuner_btn)
-        buttons_layout.add_widget(songs_btn)
-        buttons_layout.add_widget(chords_btn)
-        self.layout.add_widget(buttons_layout)
+        # Добавляем всё в layout
+        self.layout.add_widget(self.top_spacer)
+        self.layout.add_widget(self.title)
+        self.layout.add_widget(self.carousel)
+        self.layout.add_widget(self.bottom_spacer)
 
         self.add_widget(self.layout)
 
         Clock.schedule_once(self.check_auth, 1)
         logger.info('Главный экран создан')
 
-    def load_background(self):
-        """Загружает фоновое изображение и растягивает на весь экран"""
-        try:
-            from kivy.core.image import Image as CoreImage
-            from io import BytesIO
-
-            if HAS_ASSETS:
-                asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
-
-                bg_data = None
-                for name in asset_names:
-                    bg_data = load_asset_as_bytes(name)
-                    if bg_data:
-                        logger.info(f"Фон загружен из ассета: {name}")
-                        break
-
-                if bg_data:
-                    img = CoreImage(BytesIO(bg_data), ext="jpg")
-
-                    # НЕ ОЧИЩАЕМ canvas.before, просто добавляем поверх
-                    with self.canvas.before:
-                        Color(1, 1, 1, 1)
-                        self.bg_image = Rectangle(
-                            texture=img.texture,
-                            pos=self.pos,
-                            size=self.size
-                        )
-
-                    # Привязываем обновление при изменении размера
-                    self.bind(pos=self._update_bg_image, size=self._update_bg_image)
-
-                    logger.info(f'Фон загружен')
-                    return
-        except Exception as e:
-            logger.error(f'Ошибка загрузки фона: {e}')
-
-        # Если фон не загрузился, пробуем из файла
-        self.load_background_from_file()
-
-    def _update_bg_image(self, *args):
-        """Обновляет позицию и размер фона - растягивает на весь экран"""
-        if self.bg_image:
-            self.bg_image.pos = self.pos
-            self.bg_image.size = self.size
-
-    def load_background_from_file(self):
-        """Загружает фон из файловой системы (fallback)"""
-        possible_paths = [
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'background.jpg'),
-            os.path.join(os.path.dirname(__file__), '..', 'assets', 'background.jpg'),
-            'assets/background.jpg',
-        ]
-
-        bg_path = None
-        for path in possible_paths:
-            if os.path.exists(path):
-                bg_path = path
-                break
-
-        if bg_path:
-            try:
-                with self.canvas.before:
-                    Color(1, 1, 1, 1)
-                    self.bg_image = Rectangle(
-                        source=bg_path,
-                        pos=self.pos,
-                        size=self.size
-                    )
-                self.bind(pos=self._update_bg_image, size=self._update_bg_image)
-                logger.info(f'Фон загружен из файла: {bg_path}')
-            except Exception as e:
-                logger.error(f'Ошибка загрузки фона из файла: {e}')
-
-    def navigate_to(self, screen_name):
+    def _on_carousel_item_selected(self, screen_name):
+        """Обработчик выбора элемента из карусели"""
         if hasattr(self, 'manager') and self.manager:
+            self.manager.transition.direction = 'left'
             self.manager.current = screen_name
 
     def check_auth(self, dt):
@@ -514,15 +395,12 @@ class HomeScreen(MDScreen):
         self.auth_check_done = True
 
         if api.access_token:
-            self.auth_status.text = "🔐 Проверка..."
             api.get_current_user(on_success=self.on_auth_success, on_failure=self.on_auth_failure)
         else:
-            self.auth_status.text = "👤 Гость"
             self.show_auth_modal()
 
     def on_auth_success(self, user):
         self.user = user
-        self.auth_status.text = f"✅ {user.get('username')}"
         logger.info(f'Пользователь авторизован: {user.get("username")}')
 
     def on_auth_failure(self, req, error):
@@ -531,10 +409,8 @@ class HomeScreen(MDScreen):
 
         if 'Not authenticated' in error_msg or 'Invalid token' in error_msg:
             api._clear_tokens()
-            self.auth_status.text = "👤 Гость"
             self.show_auth_modal()
         else:
-            self.auth_status.text = "👤 Гость"
             self.show_auth_modal()
 
     def show_auth_modal(self):
@@ -560,7 +436,6 @@ class HomeScreen(MDScreen):
             self.check_auth(0)
 
     def login_google(self):
-        self.auth_status.text = "🌐 Открываем Google..."
         api.google_login(
             on_success=self.on_oauth_success,
             on_failure=self.on_oauth_failure
@@ -568,13 +443,11 @@ class HomeScreen(MDScreen):
 
     def on_oauth_success(self, user):
         self.user = user
-        self.auth_status.text = f"✅ {user.get('username')}"
         notify.success(f"Добро пожаловать, {user.get('username')}! 🎸")
         logger.info(f'Пользователь авторизован: {user.get("username")}')
         api.user_data = user
 
     def on_oauth_failure(self, req, error):
-        self.auth_status.text = "👤 Гость"
         notify.error("Ошибка авторизации через Google")
         logger.error(f'OAuth ошибка: {error}')
 
@@ -592,4 +465,11 @@ class HomeScreen(MDScreen):
             self.show_auth_modal()
 
     def on_pre_enter(self):
+        if hasattr(self, 'carousel'):
+            self.carousel.start_auto_scroll()
         return super().on_pre_enter()
+
+    def on_leave(self):
+        if hasattr(self, 'carousel'):
+            self.carousel.stop_auto_scroll()
+        return super().on_leave()

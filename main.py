@@ -9,7 +9,8 @@ import warnings
 import traceback
 from kivy.core.window import Window
 from kivy.utils import platform
-
+from screens.components.top_nav import TopNav
+from config.top_nav_config import TopNavConfig
 
 # ============ ОБРАБОТКА НЕПЕРЕХВАЧЕННЫХ ОШИБОК ============
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -356,79 +357,17 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
+        # Применяем настройки для карусели
+        from config.carousel_config import CarouselConfig
+        CarouselConfig.apply_preset('normal')  # можно 'small', 'normal', 'large', 'tablet'
+
         root = RootWidget()
 
-        # ===== ВЕРХНЯЯ ПАНЕЛЬ =====
-        top_bar = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(56),
-            padding=[dp(12), dp(8), dp(12), dp(8)],
-            spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'top': 1}
-        )
-
-        home_icon_data = self.load_icon("home_png")
-        profile_icon_data = self.load_icon("profile_png")
-        support_icon_data = self.load_icon("support_png")
-        language_icon_data = self.load_icon("language_png")
-
-        left_box = MDBoxLayout(size_hint_x=0.2, md_bg_color=[0, 0, 0, 0])
-        if home_icon_data:
-            home_btn = AnimatedImageButton(
-                normal_icon_data=home_icon_data,
-                size_hint=(None, None),
-                size=(dp(36), dp(36)),
-                allow_stretch=True,
-                keep_ratio=True
-            )
-            home_btn.bind(on_release=lambda x: self.switch_to_home())
-            left_box.add_widget(home_btn)
-        top_bar.add_widget(left_box)
-
-        center_box = MDBoxLayout(size_hint_x=0.5, md_bg_color=[0, 0, 0, 0])
-        top_bar.add_widget(center_box)
-
-        right_box = MDBoxLayout(
-            size_hint_x=0.3,
-            spacing=dp(6),
-            md_bg_color=[0, 0, 0, 0]
-        )
-
-        if profile_icon_data:
-            profile_btn = AnimatedImageButton(
-                normal_icon_data=profile_icon_data,
-                size_hint=(None, None),
-                size=(dp(36), dp(36)),
-                allow_stretch=True,
-                keep_ratio=True
-            )
-            profile_btn.bind(on_release=self.open_profile)
-            right_box.add_widget(profile_btn)
-
-        if support_icon_data:
-            support_btn = AnimatedImageButton(
-                normal_icon_data=support_icon_data,
-                size_hint=(None, None),
-                size=(dp(36), dp(36)),
-                allow_stretch=True,
-                keep_ratio=True
-            )
-            support_btn.bind(on_release=self.open_support)
-            right_box.add_widget(support_btn)
-
-        self.language_selector = LanguageSelector(
-            current_lang="ru",
-            on_change_callback=self.change_language,
-            icon_data=language_icon_data
-        )
-        self.language_selector.size_hint = (None, None)
-        self.language_selector.size = (dp(70), dp(32))
-        right_box.add_widget(self.language_selector)
-
-        top_bar.add_widget(right_box)
-        root.add_widget(top_bar)
+        # Верхняя панель
+        from screens.components.top_nav import TopNav
+        self.top_nav = TopNav(self.screen_manager)
+        self.top_nav.set_app(self)
+        root.add_widget(self.top_nav)
 
         # ScreenManager
         self.screen_manager = setup_screen_manager()
@@ -436,10 +375,10 @@ class GuitarFunsApp(MDApp):
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
         root.add_widget(self.screen_manager)
 
-        # ===== НИЖНЯЯ ПАНЕЛЬ - ТОЛЬКО ОДИН РАЗ =====
+        # Нижняя панель
+        from screens.components.bottom_nav import BottomNav
         self.bottom_nav = BottomNav(self.screen_manager)
-        root.add_widget(self.bottom_nav)  # НЕ НУЖНО УСТАНАВЛИВАТЬ height и pos_hint - ЭТО УЖЕ ЕСТЬ В КЛАССЕ
-        # ==========================================
+        root.add_widget(self.bottom_nav)
 
         network_manager.start_monitoring()
 

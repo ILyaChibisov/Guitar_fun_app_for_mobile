@@ -1,94 +1,71 @@
-# screens/components/bottom_nav.py
+# screens/components/top_nav.py
 """
-Современная нижняя навигация
-Активный пункт - мягкий зелёный (RGB: 118,179,182)
-Иконки ТОЛЬКО из ассетов
+Верхняя панель навигации с плавающими иконками
 """
-from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.behaviors import ButtonBehavior
-from kivy.uix.label import Label
 from kivy.uix.image import Image
-from kivy.animation import Animation
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.uix.label import Label
 from kivy.metrics import dp, sp
-from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from io import BytesIO
 
 from config.theme import theme
+from config.top_nav_config import TopNavConfig
 from config.logger_config import get_logger
-from utils.kivy_imports import MDIconButton, MDBoxLayout
+from screens.components.language_selector import LanguageSelector
+from utils.kivy_imports import MDBoxLayout
 
 logger = get_logger('UI')
 
-# Пытаемся импортировать ассеты
 try:
     from data import load_asset_as_bytes
 
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
+    def load_asset_as_bytes(name):
+        return None
+
+
     logger.warning("Модуль data не найден")
 
 
-class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации с иконкой из ассета и текстом"""
+class TopIcon(ButtonBehavior, MDBoxLayout):
+    """Иконка верхней панели"""
 
-    icon_asset = StringProperty('')
-    text = StringProperty('')
-    active = BooleanProperty(False)
-
-    def __init__(self, **kwargs):
+    def __init__(self, icon_asset, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
+        self.icon_asset = icon_asset
+        self.on_press_callback = on_press_callback
+
         self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.spacing = dp(1)  # Уменьшено с dp(2)
-        self.padding = [0, dp(2), 0, 0]  # Уменьшено с [0, dp(4), 0, 0]
+        self.size_hint = (None, None)
+        self.size = TopNavConfig.ICON_SIZE
+        self.spacing = 0
+        self.padding = 0
 
-        # Контейнер для иконки
-        self.icon_container = MDBoxLayout(
-            size_hint=(1, 0.6),
-            orientation='vertical'
-        )
-
+        self.icon_container = MDBoxLayout(size_hint=(1, 1), orientation='vertical')
         self.custom_image = None
         self._load_icon()
 
-        # Текст под иконкой
-        self.text_label = Label(
-            text=self.text,
-            font_size=sp(8),  # Уменьшено с sp(9)
-            size_hint=(1, 0.4),
-            color=theme.TEXT_SECONDARY,
-            bold=False,
-            markup=False,
-            halign='center',
-            valign='top'
-        )
-
         self.add_widget(self.icon_container)
-        self.add_widget(self.text_label)
-
-        self.update_state(None, self.active)
-        self.bind(active=self.update_state)
-        self.bind(icon_asset=self._on_icon_change)
-
-        logger.debug(f'Создан элемент нижней навигации: {self.text}')
+        self.bind(on_release=self._on_press)
 
     def _load_icon(self):
-        """Загружает иконку из ассета"""
+        """Загружает иконку"""
         self.icon_container.clear_widgets()
-        self.custom_image = None
 
         if HAS_ASSETS and self.icon_asset:
             try:
                 icon_data = load_asset_as_bytes(self.icon_asset)
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
-                    texture = core_img.texture
                     self.custom_image = Image(
-                        texture=texture,
-                        size_hint=(0.55, 0.55),  # Уменьшено с 0.65
+                        texture=core_img.texture,
+                        size_hint=(0.75, 0.75),
                         pos_hint={'center_x': 0.5, 'center_y': 0.5},
                         allow_stretch=True,
                         keep_ratio=True
@@ -96,12 +73,11 @@ class NavItem(ButtonBehavior, BoxLayout):
                     self.icon_container.add_widget(self.custom_image)
                     return
             except Exception as e:
-                logger.error(f'Ошибка загрузки иконки {self.icon_asset}: {e}')
+                logger.error(f'Ошибка загрузки иконки: {e}')
 
-        # Если иконка не загрузилась - показываем заглушку
         self.custom_image = Label(
             text="?",
-            font_size=sp(14),  # Уменьшено с sp(18)
+            font_size=sp(18),
             size_hint=(1, 1),
             color=theme.TEXT_SECONDARY,
             halign='center',
@@ -109,90 +85,73 @@ class NavItem(ButtonBehavior, BoxLayout):
         )
         self.icon_container.add_widget(self.custom_image)
 
-    def _on_icon_change(self, instance, value):
-        self._load_icon()
-
-    def update_state(self, instance, value):
-        """Обновляет внешний вид - активный становится мягким зелёным"""
-        if value:
-            self.text_label.color = theme.PRIMARY
-            self.text_label.bold = True
-        else:
-            self.text_label.color = theme.TEXT_SECONDARY
-            self.text_label.bold = False
-
-    def on_press(self):
-        """Анимация нажатия"""
-        anim = Animation(opacity=0.7, duration=0.05)
-        anim += Animation(opacity=1, duration=0.1)
-        anim.start(self)
+    def _on_press(self, instance):
+        if self.on_press_callback:
+            self.on_press_callback(instance)
 
 
-class BottomNav(BoxLayout):
-    """Нижняя панель навигации"""
+class TopNav(FloatLayout):
+    """Верхняя панель навигации"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
-        self.size_hint = (1, None)
+        self.size_hint = (1, 1)
 
-        # ===== НАСТРОЙКИ ПАНЕЛИ =====
-        self.height = dp(42)
-        self.padding = [dp(2), dp(1), dp(2), dp(1)]
-        self.spacing = dp(0)
-        self.md_bg_color = [0, 0, 0, 0]  # ← ПРОЗРАЧНЫЙ ФОН
-        # =============================
+        self.icons = []
+        self.app = None
+        self.language_selector = None
 
-        # НИЖНЕЕ МЕНЮ
-        self.nav_items = [
-            {'icon_asset': 'songs_png', 'text': 'Песни', 'screen': 'songs'},
-            {'icon_asset': 'chords_png', 'text': 'Аккорды', 'screen': 'chords'},
-            {'icon_asset': 'tuner_png', 'text': 'Тюнер', 'screen': 'tuner'},
-            {'icon_asset': 'dictionary_png', 'text': 'Словарь', 'screen': 'dictionary'},
-            {'icon_asset': 'favorites_png', 'text': 'Избранное', 'screen': 'favorites'}
-        ]
+        self._create_icons()
 
-        self.items = []
+    def set_app(self, app):
+        """Устанавливает ссылку на приложение"""
+        self.app = app
 
-        for item_data in self.nav_items:
-            item = NavItem(
-                icon_asset=item_data['icon_asset'],
-                text=item_data['text']
-            )
-            item.active = (item_data['screen'] == 'songs')
-            item.bind(on_press=lambda x, screen=item_data['screen']: self.switch_to(screen))
-            self.add_widget(item)
-            self.items.append(item)
+    def _create_icons(self):
+        """Создаёт иконки"""
+        # Иконка пользователя (слева)
+        user_icon = TopIcon(
+            icon_asset='profile_png',
+            on_press_callback=self._on_user_press
+        )
+        user_icon.pos_hint = {'x': 0.02, 'top': TopNavConfig.TOP_OFFSET}
+        self.add_widget(user_icon)
+        self.icons.append(user_icon)
 
-        if hasattr(screen_manager, 'add_observer'):
-            screen_manager.add_observer(self.on_screen_changed)
+        # Иконка поддержки (справа)
+        support_icon = TopIcon(
+            icon_asset='support_png',
+            on_press_callback=self._on_support_press
+        )
+        support_icon.pos_hint = {'right': 0.18, 'top': TopNavConfig.TOP_OFFSET}
+        self.add_widget(support_icon)
+        self.icons.append(support_icon)
 
-        logger.info('Нижняя навигация создана (иконки из ассетов)')
+        # LanguageSelector (самый правый)
+        self.language_selector = LanguageSelector(
+            on_language_change=self._on_language_changed
+        )
+        self.language_selector.pos_hint = TopNavConfig.LANGUAGE_ICON_POS
+        self.add_widget(self.language_selector)
 
-    # Удалите метод update_rect, если он есть
-    # def update_rect(self, *args):
-    #     pass
+    def _on_user_press(self, instance):
+        """Обработчик нажатия на пользователя"""
+        if self.app and hasattr(self.app, 'open_profile'):
+            self.app.open_profile(instance)
 
-    def on_screen_changed(self, screen_name):
-        for item, item_data in zip(self.items, self.nav_items):
-            item.active = (item_data['screen'] == screen_name)
+    def _on_support_press(self, instance):
+        """Обработчик нажатия на поддержку"""
+        if self.app and hasattr(self.app, 'open_support'):
+            self.app.open_support(instance)
 
-    def switch_to(self, screen_name):
-        if not self.sm or self.sm.current == screen_name:
-            return
+    def _on_language_changed(self, lang_code):
+        """Обработчик смены языка"""
+        if self.app and hasattr(self.app, 'change_language'):
+            self.app.change_language(lang_code)
 
-        for item, item_data in zip(self.items, self.nav_items):
-            item.active = (item_data['screen'] == screen_name)
-
-        try:
-            current_index = next(i for i, d in enumerate(self.nav_items) if d['screen'] == self.sm.current)
-            new_index = next(i for i, d in enumerate(self.nav_items) if d['screen'] == screen_name)
-            direction = 'left' if new_index > current_index else 'right'
-        except StopIteration:
-            direction = 'left'
-
-        self.sm.transition.direction = direction
-        self.sm.current = screen_name
-
-    def switch_tab(self, screen_name):
-        self.switch_to(screen_name)
+    def get_current_language(self):
+        """Возвращает текущий язык"""
+        if self.language_selector:
+            return self.language_selector.get_current_lang()
+        return 'ru'
