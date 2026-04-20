@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации с плавающими иконками
+Верхняя панель навигации с плавающими иконками и выбором языка
 """
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -75,6 +75,7 @@ class TopIcon(ButtonBehavior, MDBoxLayout):
             except Exception as e:
                 logger.error(f'Ошибка загрузки иконки: {e}')
 
+        # Заглушка
         self.custom_image = Label(
             text="?",
             font_size=sp(18),
@@ -105,7 +106,7 @@ class TopNav(FloatLayout):
         self._create_icons()
 
     def set_app(self, app):
-        """Устанавливает ссылку на приложение"""
+        """Устанавливает ссылку на главное приложение"""
         self.app = app
 
     def _create_icons(self):
@@ -119,7 +120,7 @@ class TopNav(FloatLayout):
         self.add_widget(user_icon)
         self.icons.append(user_icon)
 
-        # Иконка поддержки (справа)
+        # Иконка поддержки (справа, перед выбором языка)
         support_icon = TopIcon(
             icon_asset='support_png',
             on_press_callback=self._on_support_press
@@ -132,7 +133,7 @@ class TopNav(FloatLayout):
         self.language_selector = LanguageSelector(
             on_language_change=self._on_language_changed
         )
-        self.language_selector.pos_hint = TopNavConfig.LANGUAGE_ICON_POS
+        self.language_selector.pos_hint = TopNavConfig.LANGUAGE_SELECTOR_POS
         self.add_widget(self.language_selector)
 
     def _on_user_press(self, instance):
@@ -155,3 +156,13 @@ class TopNav(FloatLayout):
         if self.language_selector:
             return self.language_selector.get_current_lang()
         return 'ru'
+
+    def set_current_language(self, lang_code):
+        """Устанавливает текущий язык программно"""
+        if self.language_selector:
+            self.language_selector.set_current_lang(lang_code)
+
+    def update_icon_sizes(self, size):
+        """Обновляет размер всех иконок"""
+        for icon in self.icons:
+            icon.size = size

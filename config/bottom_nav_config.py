@@ -10,96 +10,97 @@ class BottomNavConfig:
     """Настройки нижней панели"""
 
     # ========== НАСТРОЙКИ ПАНЕЛИ ==========
-    PANEL_HEIGHT = 52  # Высота панели (40-70)
+    PANEL_HEIGHT = 76  # Высота панели
     PANEL_PADDING = [4, 2, 4, 2]  # Отступы [лево, верх, право, низ]
-    PANEL_SPACING = 0  # Расстояние между кнопками (0-8)
+    PANEL_SPACING = 0  # Расстояние между кнопками
     PANEL_BG_COLOR = [1, 1, 1, 1]  # Цвет фона (белый)
 
     # ========== НАСТРОЙКИ ПО УМОЛЧАНИЮ ==========
-    DEFAULT_ICON_SIZE = 0.75
-    DEFAULT_ICON_CONTAINER_HEIGHT = 0.7
-    DEFAULT_FONT_SIZE = 7
+    DEFAULT_ICON_SIZE = 0.85
+    DEFAULT_ICON_CONTAINER_HEIGHT = 0.85
+    DEFAULT_FONT_SIZE = 12
     DEFAULT_SPACING = 0
     DEFAULT_TOP_PADDING = 0
 
     # ========== НАСТРОЙКИ ДЛЯ РАЗНЫХ ЭКРАНОВ (ПРЕСЕТЫ) ==========
     SCREEN_PRESETS = {
-        'small': {  # Маленькие телефоны (ширина < 340)
+        'small': {
             'PANEL_HEIGHT': 48,
             'PANEL_PADDING': [2, 1, 2, 1],
             'PANEL_SPACING': 0,
             'DEFAULT_ICON_SIZE': 0.70,
             'DEFAULT_ICON_CONTAINER_HEIGHT': 0.68,
-            'DEFAULT_FONT_SIZE': 6,
+            'DEFAULT_FONT_SIZE': 10,
             'DEFAULT_SPACING': 0,
             'DEFAULT_TOP_PADDING': 0
         },
-        'normal': {  # Средние телефоны (ширина 340-400)
+        'normal': {
             'PANEL_HEIGHT': 52,
             'PANEL_PADDING': [4, 2, 4, 2],
             'PANEL_SPACING': 0,
             'DEFAULT_ICON_SIZE': 0.75,
             'DEFAULT_ICON_CONTAINER_HEIGHT': 0.70,
-            'DEFAULT_FONT_SIZE': 7,
+            'DEFAULT_FONT_SIZE': 11,
             'DEFAULT_SPACING': 0,
             'DEFAULT_TOP_PADDING': 0
         },
-        'large': {  # Большие телефоны (ширина 400-600)
+        'large': {
             'PANEL_HEIGHT': 56,
             'PANEL_PADDING': [6, 2, 6, 2],
             'PANEL_SPACING': 2,
             'DEFAULT_ICON_SIZE': 0.78,
             'DEFAULT_ICON_CONTAINER_HEIGHT': 0.72,
-            'DEFAULT_FONT_SIZE': 8,
+            'DEFAULT_FONT_SIZE': 12,
             'DEFAULT_SPACING': 1,
             'DEFAULT_TOP_PADDING': 1
         },
-        'tablet': {  # Планшеты (ширина > 600)
+        'tablet': {
             'PANEL_HEIGHT': 64,
             'PANEL_PADDING': [8, 4, 8, 4],
             'PANEL_SPACING': 4,
             'DEFAULT_ICON_SIZE': 0.85,
             'DEFAULT_ICON_CONTAINER_HEIGHT': 0.75,
-            'DEFAULT_FONT_SIZE': 10,
+            'DEFAULT_FONT_SIZE': 14,
             'DEFAULT_SPACING': 2,
             'DEFAULT_TOP_PADDING': 2
         }
     }
 
     # ========== ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ ДЛЯ КАЖДОЙ КНОПКИ ==========
+    # Убрали 'dictionary' (Словарь), добавили 'home' (Главная)
     BUTTONS_CONFIG = {
+        'home': {
+            'icon_size': 0.90,
+            'icon_height': 0.75,
+            'font_size': 12,
+            'spacing': 1,
+            'top_padding': 2
+        },
         'songs': {
             'icon_size': 0.90,
             'icon_height': 0.75,
-            'font_size': 8,
+            'font_size': 12,
             'spacing': 1,
             'top_padding': 2
         },
         'chords': {
             'icon_size': 0.85,
             'icon_height': 0.72,
-            'font_size': 8,
+            'font_size': 12,
             'spacing': 1,
             'top_padding': 2
         },
         'tuner': {
             'icon_size': 0.85,
             'icon_height': 0.72,
-            'font_size': 8,
-            'spacing': 1,
-            'top_padding': 2
-        },
-        'dictionary': {
-            'icon_size': 0.80,
-            'icon_height': 0.70,
-            'font_size': 7,
+            'font_size': 12,
             'spacing': 1,
             'top_padding': 2
         },
         'favorites': {
             'icon_size': 0.85,
             'icon_height': 0.72,
-            'font_size': 7,
+            'font_size': 11,
             'spacing': 1,
             'top_padding': 2
         },

@@ -494,6 +494,10 @@ class GuitarFunsApp(MDApp):
         if HAS_ASSETS:
             assets_list = Assets.list_assets()
             logger.info(f'📦 Загружено ассетов: {len(assets_list)}')
+            rus_flag = self.load_icon("rus_png")
+            eng_flag = self.load_icon("eng_png")
+            logger.info(f"Русский флаг: {'загружен' if rus_flag else 'НЕ загружен'}")
+            logger.info(f"Английский флаг: {'загружен' if eng_flag else 'НЕ загружен'}")
         if self.screen_manager:
             self.home_screen = self.screen_manager.get_screen('home')
             logger.info("Ссылка на home_screen сохранена")
