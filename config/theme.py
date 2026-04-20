@@ -35,6 +35,7 @@ class Theme:
     # Скругления
     CORNER_RADIUS = 18
     CORNER_RADIUS_SMALL = 10
+    CORNER_RADIUS_MEDIUM = 14
 
     # Анимация
     ANIMATION_DURATION = 0.25

@@ -109,31 +109,29 @@ class TopNav(FloatLayout):
         """Устанавливает ссылку на главное приложение"""
         self.app = app
 
+    # В top_nav.py, в _create_icons():
     def _create_icons(self):
-        """Создаёт иконки"""
         # Иконка пользователя (слева)
         user_icon = TopIcon(
             icon_asset='profile_png',
             on_press_callback=self._on_user_press
         )
-        user_icon.pos_hint = {'x': 0.02, 'top': TopNavConfig.TOP_OFFSET}
+        user_icon.pos_hint = {'x': 0.02, 'top': 0.96}
         self.add_widget(user_icon)
-        self.icons.append(user_icon)
 
-        # Иконка поддержки (справа, перед выбором языка)
+        # Иконка поддержки (справа)
         support_icon = TopIcon(
             icon_asset='support_png',
             on_press_callback=self._on_support_press
         )
-        support_icon.pos_hint = {'right': 0.18, 'top': TopNavConfig.TOP_OFFSET}
+        support_icon.pos_hint = {'right': 0.18, 'top': 0.96}
         self.add_widget(support_icon)
-        self.icons.append(support_icon)
 
-        # LanguageSelector (самый правый)
+        # LanguageSelector
         self.language_selector = LanguageSelector(
             on_language_change=self._on_language_changed
         )
-        self.language_selector.pos_hint = TopNavConfig.LANGUAGE_SELECTOR_POS
+        self.language_selector.pos_hint = {'right': 0.97, 'top': 0.96}
         self.add_widget(self.language_selector)
 
     def _on_user_press(self, instance):
