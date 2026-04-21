@@ -867,7 +867,6 @@ class ChordsScreen(MDScreen):
             padding=[dp(0), dp(0), dp(0), dp(0)]
         )
 
-        # Поле ввода
         self.search_field = MDTextField(
             hint_text="Поиск аккорда",
             mode="filled",
@@ -879,11 +878,12 @@ class ChordsScreen(MDScreen):
             theme_line_color="Custom",
             line_color_normal=[0, 0, 0, 0],
             line_color_focus=[0, 0, 0, 0],
-            theme_bg_color="Custom",  # Включаем кастомный цвет фона
-            fill_color_normal=[0, 0, 0, 0],  # Цвет вне фокуса
-            fill_color_focus=[0, 0, 0, 0],  # Тот же цвет в фокусе (не меняется)
-            text_color_normal=[0, 0, 0, 0],
-            text_color_focus=[0, 0, 0, 0]
+            theme_bg_color="Custom",
+            fill_color_normal=[0, 0, 0, 0],
+            fill_color_focus=[0, 0, 0, 0],
+            text_color_normal=[0, 0, 0, 0],  # Цвет введённого текста
+            text_color_focus=[0, 0, 0, 0],
+            hint_text_color=[0.5, 0.5, 0.5, 1]  # Серый цвет подсказки (50% серый)
         )
 
         # Кнопка очистки
@@ -988,7 +988,7 @@ class ChordsScreen(MDScreen):
         action_icons_layout = MDBoxLayout(
             orientation='horizontal',
             size_hint_x=None,
-            width=dp(110),
+            width=dp(80),
             spacing=dp(8),
             padding=[dp(4), dp(2), dp(4), dp(2)]
         )
@@ -1020,7 +1020,7 @@ class ChordsScreen(MDScreen):
         variants_panel = MDBoxLayout(
             orientation='horizontal',
             size_hint_x=None,
-            width=dp(130),
+            width=dp(180),
             spacing=dp(6),
             padding=[dp(4), dp(2), dp(4), dp(2)]
         )
@@ -1030,7 +1030,7 @@ class ChordsScreen(MDScreen):
             text="Позиция",
             font_size=sp(12),
             size_hint_x=None,
-            width=dp(50),
+            width=dp(70),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.8],
             bold=True,
