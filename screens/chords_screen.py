@@ -988,7 +988,7 @@ class ChordsScreen(MDScreen):
         action_icons_layout = MDBoxLayout(
             orientation='horizontal',
             size_hint_x=None,
-            width=dp(80),
+            width=dp(40),
             spacing=dp(8),
             padding=[dp(4), dp(2), dp(4), dp(2)]
         )
