@@ -1,4 +1,4 @@
-# screens/chords_screen.py (обновленный)
+# screens/chords_screen.py
 """
 Экран гитарных аккордов
 """
@@ -57,21 +57,47 @@ CHORD_TYPES = [
 ]
 
 
+class TitleCard(MDCard):
+    """Единый стиль для заголовка (Тон, Тип, Аккорд, Позиция)"""
+
+    def __init__(self, title, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint_x = None
+        self.width = dp(60)
+        self.height = dp(36)
+        self.radius = [dp(8)]
+        self.md_bg_color = "#E8DCC8"  # Бежевый
+        self.elevation = 0
+        self.padding = [dp(4), dp(2), dp(4), dp(2)]
+
+        self.title_label = MDLabel(
+            text=title,
+            font_size=sp(12),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=theme.TEXT_PRIMARY,
+            bold=True
+        )
+        self.add_widget(self.title_label)
+
+
+# screens/chords_screen.py - обновленный класс TonalityRow
+
 class TonalityButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка тональности"""
+    """Кнопка тональности (компактная)"""
 
     def __init__(self, text, is_active=False, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.btn_text = text
         self.on_press_callback = on_press_callback
-        self.size_hint = (None, 1)
-        self.width = dp(42)
-        self.padding = [dp(4), dp(2), dp(4), dp(2)]
-        self.radius = [dp(6)]
+        self.size_hint = (1, 1)  # Растягивается равномерно
+        self.padding = [dp(2), dp(2), dp(2), dp(2)]
 
         self.label = MDLabel(
             text=text,
-            font_size=sp(13),
+            font_size=sp(12),
             halign="center",
             valign="middle",
             theme_text_color="Custom"
@@ -80,7 +106,6 @@ class TonalityButton(ButtonBehavior, MDBoxLayout):
         self.set_active(is_active)
         self.bind(on_release=self._on_press)
 
-        # Фон для кнопки
         self.bg_color = [0, 0, 0, 0]
         with self.canvas.before:
             Color(*self.bg_color)
@@ -95,13 +120,11 @@ class TonalityButton(ButtonBehavior, MDBoxLayout):
         if is_active:
             self.label.text_color = [1, 1, 1, 1]
             self.label.bold = True
-            self.bg_color = [0.9, 0.6, 0.2, 1]  # Оранжевый фон
-            self.radius = [dp(6)]
+            self.bg_color = [0.46, 0.70, 0.71, 1]  # Твой мягкий зелёный
         else:
-            self.label.text_color = [1, 1, 1, 0.7]
+            self.label.text_color = [0, 0, 0, 1]  # Чёрный текст
             self.label.bold = False
-            self.bg_color = [0.46, 0.70, 0.71, 0.3]  # Прозрачный зелёный
-            self.radius = [dp(6)]
+            self.bg_color = [0, 0, 0, 0]
         self.canvas.before.clear()
         with self.canvas.before:
             Color(*self.bg_color)
@@ -113,92 +136,102 @@ class TonalityButton(ButtonBehavior, MDBoxLayout):
 
 
 class TonalityRow(MDBoxLayout):
-    """Строка тональностей с заголовком в бежевом квадрате"""
+    """Строка тональностей в стиле Ultimate Guitar"""
 
-    def __init__(self, items, on_item_selected=None, **kwargs):
+    def __init__(self, on_item_selected=None, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'horizontal'
+        self.orientation = 'vertical'
         self.size_hint_y = None
-        self.height = dp(44)
-        self.spacing = dp(8)
-        self.padding = [dp(8), dp(4), dp(8), dp(4)]
+        self.height = dp(70)
+        self.spacing = dp(6)
+        self.padding = [dp(12), dp(4), dp(12), dp(4)]
 
-        self.items = items
         self.on_item_selected = on_item_selected
         self.current_selected = "A"
-        self.buttons = []
 
-        # Заголовок "Тон" в бежевом квадрате
-        self.title_card = MDCard(
-            orientation='vertical',
-            size_hint_x=None,
-            width=dp(50),
-            height=dp(36),
-            radius=[dp(8)],
-            md_bg_color="#E8DCC8",  # Бежевый цвет
-            elevation=0,
-            padding=[dp(4), dp(2), dp(4), dp(2)]
+        # Заголовок "Тональность" по центру, белым цветом
+        title_layout = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(22),
+            spacing=dp(8)
         )
 
         self.title_label = MDLabel(
-            text="Тон",
-            font_size=sp(12),
+            text="Тональность",
+            font_size=sp(13),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
+            text_color=[1, 1, 1, 1],  # Белый цвет
             bold=True
         )
-        self.title_card.add_widget(self.title_label)
-        self.add_widget(self.title_card)
 
-        # Контейнер для кнопок тональностей (скроллируемый)
-        self.scroll = MDScrollView(
-            size_hint_x=0.85,
-            do_scroll_x=True,
-            do_scroll_y=False
+        # Центрируем заголовок
+        title_layout.add_widget(MDBoxLayout(size_hint_x=1))
+        title_layout.add_widget(self.title_label)
+        title_layout.add_widget(MDBoxLayout(size_hint_x=1))
+
+        self.add_widget(title_layout)
+
+        # Серая полоска с тональностями (как поиск)
+        # Используем MDCard с закруглениями как у поиска
+        self.tonality_card = MDCard(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(42),  # Такая же высота как у поиска
+            radius=[theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
+                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL],
+            md_bg_color="#E8E8E8",  # Мягкий серый
+            elevation=0,
+            padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
+        # Контейнер для кнопок тональностей (равномерное распределение)
         self.buttons_container = MDBoxLayout(
             orientation='horizontal',
-            size_hint_x=None,
-            spacing=dp(6),
-            padding=[dp(2), dp(2), dp(2), dp(2)]
+            spacing=dp(2),
+            size_hint_x=1,  # Растягивается на всю ширину
+            adaptive_width=False
         )
 
-        # Создаем кнопки
-        for item in items:
+        # Создаем кнопки для всех 12 тональностей с равными отступами
+        self.buttons = []
+        tonality_list = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
+
+        for tonality in tonality_list:
             btn = TonalityButton(
-                text=item,
-                is_active=(item == self.current_selected),
-                on_press_callback=self.on_button_press
+                text=tonality,
+                is_active=(tonality == self.current_selected),
+                on_press_callback=self.on_tonality_press
             )
             self.buttons.append(btn)
             self.buttons_container.add_widget(btn)
 
-        self.buttons_container.bind(minimum_width=self.buttons_container.setter('width'))
-        self.scroll.add_widget(self.buttons_container)
-        self.add_widget(self.scroll)
+        self.tonality_card.add_widget(self.buttons_container)
+        self.add_widget(self.tonality_card)
 
-    def on_button_press(self, item):
-        self.current_selected = item
-        for btn in self.buttons:
-            btn.set_active(btn.btn_text == item)
+    def on_tonality_press(self, tonality):
+        """Обработчик нажатия на тональность"""
+        self.set_selected(tonality)
         if self.on_item_selected:
-            self.on_item_selected(item)
+            self.on_item_selected(tonality)
 
-    def set_selected(self, item):
-        self.current_selected = item
+    def set_selected(self, tonality):
+        """Устанавливает активную тональность"""
+        self.current_selected = tonality
         for btn in self.buttons:
-            btn.set_active(btn.btn_text == item)
+            btn.set_active(btn.btn_text == tonality)
 
 
 class TypeButton(ButtonBehavior, MDBoxLayout):
+    """Кнопка типа аккорда"""
+
     def __init__(self, text, is_active=False, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.btn_text = text
         self.on_press_callback = on_press_callback
-        self.size_hint = (None, 1)
+        self.size_hint = (1, 1)
         self.width = dp(54)
         self.padding = [dp(4), dp(2), dp(4), dp(2)]
         self.radius = [dp(6)]
@@ -214,7 +247,6 @@ class TypeButton(ButtonBehavior, MDBoxLayout):
         self.set_active(is_active)
         self.bind(on_release=self._on_press)
 
-        # Фон для кнопки
         self.bg_color = [0, 0, 0, 0]
         with self.canvas.before:
             Color(*self.bg_color)
@@ -229,11 +261,11 @@ class TypeButton(ButtonBehavior, MDBoxLayout):
         if is_active:
             self.label.text_color = [1, 1, 1, 1]
             self.label.bold = True
-            self.bg_color = [0.9, 0.6, 0.2, 1]  # Оранжевый фон
+            self.bg_color = [0.9, 0.6, 0.2, 1]
         else:
             self.label.text_color = [1, 1, 1, 0.7]
             self.label.bold = False
-            self.bg_color = [0.46, 0.70, 0.71, 0.3]  # Прозрачный зелёный
+            self.bg_color = [0, 0, 0, 0]
         self.canvas.before.clear()
         with self.canvas.before:
             Color(*self.bg_color)
@@ -244,93 +276,14 @@ class TypeButton(ButtonBehavior, MDBoxLayout):
             self.on_press_callback(self.btn_text)
 
 
-class TypeRow(MDBoxLayout):
-    """Строка типов аккордов"""
-
-    def __init__(self, items, on_item_selected=None, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'horizontal'
-        self.size_hint_y = None
-        self.height = dp(44)
-        self.spacing = dp(8)
-        self.padding = [dp(8), dp(4), dp(8), dp(4)]
-
-        self.items = items
-        self.on_item_selected = on_item_selected
-        self.current_selected = "Major"
-        self.buttons = []
-
-        # Заголовок "Тип" в бежевом квадрате
-        self.title_card = MDCard(
-            orientation='vertical',
-            size_hint_x=None,
-            width=dp(50),
-            height=dp(36),
-            radius=[dp(8)],
-            md_bg_color="#E8DCC8",
-            elevation=0,
-            padding=[dp(4), dp(2), dp(4), dp(2)]
-        )
-
-        self.title_label = MDLabel(
-            text="Тип",
-            font_size=sp(12),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
-            bold=True
-        )
-        self.title_card.add_widget(self.title_label)
-        self.add_widget(self.title_card)
-
-        # Контейнер для кнопок типов (скроллируемый)
-        self.scroll = MDScrollView(
-            size_hint_x=0.85,
-            do_scroll_x=True,
-            do_scroll_y=False
-        )
-
-        self.buttons_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_x=None,
-            spacing=dp(6),
-            padding=[dp(2), dp(2), dp(2), dp(2)]
-        )
-
-        # Создаем кнопки
-        for item in items:
-            btn = TypeButton(
-                text=item,
-                is_active=(item == self.current_selected),
-                on_press_callback=self.on_button_press
-            )
-            self.buttons.append(btn)
-            self.buttons_container.add_widget(btn)
-
-        self.buttons_container.bind(minimum_width=self.buttons_container.setter('width'))
-        self.scroll.add_widget(self.buttons_container)
-        self.add_widget(self.scroll)
-
-    def on_button_press(self, item):
-        self.current_selected = item
-        for btn in self.buttons:
-            btn.set_active(btn.btn_text == item)
-        if self.on_item_selected:
-            self.on_item_selected(item)
-
-    def set_selected(self, item):
-        self.current_selected = item
-        for btn in self.buttons:
-            btn.set_active(btn.btn_text == item)
-
-
 class ChordButton(ButtonBehavior, MDBoxLayout):
+    """Кнопка аккорда"""
+
     def __init__(self, text, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.btn_text = text
         self.on_press_callback = on_press_callback
-        self.size_hint = (None, 1)
+        self.size_hint = (1, 1)
         self.width = dp(58)
         self.padding = [dp(4), dp(2), dp(4), dp(2)]
         self.radius = [dp(6)]
@@ -347,8 +300,7 @@ class ChordButton(ButtonBehavior, MDBoxLayout):
         self.add_widget(self.label)
         self.bind(on_release=self._on_press)
 
-        # Фон для кнопки
-        self.bg_color = [0.46, 0.70, 0.71, 0.3]
+        self.bg_color = [0, 0, 0, 0]
         with self.canvas.before:
             Color(*self.bg_color)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
@@ -360,9 +312,11 @@ class ChordButton(ButtonBehavior, MDBoxLayout):
 
     def set_active(self, is_active):
         if is_active:
-            self.bg_color = [0.9, 0.6, 0.2, 1]  # Оранжевый фон
+            self.bg_color = [0.9, 0.6, 0.2, 1]
+            self.label.text_color = [1, 1, 1, 1]
         else:
-            self.bg_color = [0.46, 0.70, 0.71, 0.3]  # Прозрачный зелёный
+            self.bg_color = [0, 0, 0, 0]
+            self.label.text_color = [1, 1, 1, 0.9]
         self.canvas.before.clear()
         with self.canvas.before:
             Color(*self.bg_color)
@@ -373,8 +327,136 @@ class ChordButton(ButtonBehavior, MDBoxLayout):
             self.on_press_callback(self.btn_text)
 
 
+class VariantButton(ButtonBehavior, MDBoxLayout):
+    """Кнопка варианта аккорда (компактная, с цифрой)"""
+
+    def __init__(self, text, is_active=False, on_press_callback=None, **kwargs):
+        super().__init__(**kwargs)
+        self.btn_text = text
+        self.on_press_callback = on_press_callback
+        self.size_hint = (1, 1)
+        self.width = dp(36)
+        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.radius = [dp(6)]
+
+        self.label = MDLabel(
+            text=text,
+            font_size=sp(12),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom"
+        )
+        self.add_widget(self.label)
+        self.set_active(is_active)
+        self.bind(on_release=self._on_press)
+
+        self.bg_color = [0, 0, 0, 0]
+        with self.canvas.before:
+            Color(*self.bg_color)
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
+    def _update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+
+    def set_active(self, is_active):
+        if is_active:
+            self.label.text_color = [1, 1, 1, 1]
+            self.label.bold = True
+            self.bg_color = [0.9, 0.6, 0.2, 1]
+        else:
+            self.label.text_color = [1, 1, 1, 0.7]
+            self.label.bold = False
+            self.bg_color = [0, 0, 0, 0]
+        self.canvas.before.clear()
+        with self.canvas.before:
+            Color(*self.bg_color)
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+
+    def _on_press(self, instance):
+        if self.on_press_callback:
+            self.on_press_callback(self.btn_text)
+
+
+class ScrollableRow(MDBoxLayout):
+    """Универсальная скроллируемая строка с заголовком (для типов)"""
+
+    def __init__(self, title, items=[], button_class=None, on_item_selected=None, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint_y = None
+        self.height = dp(44)
+        self.spacing = dp(8)
+        self.padding = [dp(8), dp(4), dp(8), dp(4)]
+
+        self.items = items
+        self.button_class = button_class
+        self.on_item_selected = on_item_selected
+        self.current_selected = None
+        self.buttons = []
+
+        self.title_card = TitleCard(title=title)
+        self.add_widget(self.title_card)
+
+        self.scroll = MDScrollView(
+            size_hint_x=0.8,
+            do_scroll_x=True,
+            do_scroll_y=False
+        )
+
+        self.buttons_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=None,
+            spacing=dp(6),
+            padding=[dp(2), dp(2), dp(2), dp(2)]
+        )
+
+        for item in items:
+            btn = button_class(
+                text=item,
+                is_active=False,
+                on_press_callback=self.on_button_press
+            )
+            self.buttons.append(btn)
+            self.buttons_container.add_widget(btn)
+
+        self.buttons_container.bind(minimum_width=self.buttons_container.setter('width'))
+        self.scroll.add_widget(self.buttons_container)
+        self.add_widget(self.scroll)
+
+    def on_button_press(self, item):
+        self.current_selected = item
+        for btn in self.buttons:
+            if hasattr(btn, 'set_active'):
+                btn.set_active(btn.btn_text == item)
+        if self.on_item_selected:
+            self.on_item_selected(item)
+
+    def set_selected(self, item):
+        self.current_selected = item
+        for btn in self.buttons:
+            if hasattr(btn, 'set_active'):
+                btn.set_active(btn.btn_text == item)
+
+    def set_items(self, new_items):
+        self.buttons_container.clear_widgets()
+        self.buttons.clear()
+
+        for item in new_items:
+            btn = self.button_class(
+                text=item,
+                is_active=False,
+                on_press_callback=self.on_button_press
+            )
+            self.buttons.append(btn)
+            self.buttons_container.add_widget(btn)
+
+        self.buttons_container.bind(minimum_width=self.buttons_container.setter('width'))
+
+
 class ChordsRow(MDBoxLayout):
-    """Строка аккордов"""
+    """Строка аккордов (скроллируемая)"""
 
     def __init__(self, on_item_selected=None, **kwargs):
         super().__init__(**kwargs)
@@ -389,33 +471,11 @@ class ChordsRow(MDBoxLayout):
         self.buttons = []
         self.chords_data = {}
 
-        # Заголовок "Аккорд" в бежевом квадрате
-        self.title_card = MDCard(
-            orientation='vertical',
-            size_hint_x=None,
-            width=dp(50),
-            height=dp(36),
-            radius=[dp(8)],
-            md_bg_color="#E8DCC8",
-            elevation=0,
-            padding=[dp(4), dp(2), dp(4), dp(2)]
-        )
-
-        self.title_label = MDLabel(
-            text="Аккорд",
-            font_size=sp(12),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
-            bold=True
-        )
-        self.title_card.add_widget(self.title_label)
+        self.title_card = TitleCard(title="Аккорд")
         self.add_widget(self.title_card)
 
-        # Контейнер для кнопок аккордов (скроллируемый)
         self.scroll = MDScrollView(
-            size_hint_x=0.85,
+            size_hint_x=0.8,
             do_scroll_x=True,
             do_scroll_y=False
         )
@@ -432,7 +492,6 @@ class ChordsRow(MDBoxLayout):
         self.add_widget(self.scroll)
 
     def set_chords(self, chords_list):
-        """Обновляет список аккордов"""
         self.buttons_container.clear_widgets()
         self.buttons.clear()
         self.chords_data.clear()
@@ -463,8 +522,96 @@ class ChordsRow(MDBoxLayout):
         return self.chords_data.get(chord_name)
 
 
-class ModeButton(ButtonBehavior, MDBoxLayout):
-    def __init__(self, icon_name, is_active=False, on_press_callback=None, **kwargs):
+class VariantsRow(MDBoxLayout):
+    """Строка вариантов аккорда (все варианты в одной строке)"""
+
+    def __init__(self, on_item_selected=None, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint_y = None
+        self.height = dp(44)
+        self.spacing = dp(4)
+        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+
+        self.on_item_selected = on_item_selected
+        self.current_selected = None
+        self.buttons = []
+        self.variants_count = 0
+
+        # Заголовок "Позиция"
+        self.title_card = MDCard(
+            orientation='vertical',
+            size_hint_x=None,
+            width=dp(60),
+            height=dp(36),
+            radius=[dp(8)],
+            md_bg_color="#E8DCC8",
+            elevation=0,
+            padding=[dp(4), dp(2), dp(4), dp(2)]
+        )
+
+        self.title_label = MDLabel(
+            text="Позиция",
+            font_size=sp(11),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=theme.TEXT_PRIMARY,
+            bold=True
+        )
+        self.title_card.add_widget(self.title_label)
+        self.add_widget(self.title_card)
+
+        # Контейнер для кнопок вариантов
+        self.buttons_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=0.75,
+            spacing=dp(4),
+            padding=[dp(2), dp(2), dp(2), dp(2)]
+        )
+
+        self.add_widget(self.buttons_container)
+
+    def set_variants(self, count, current_index=0):
+        """Обновляет список вариантов"""
+        self.buttons_container.clear_widgets()
+        self.buttons.clear()
+        self.variants_count = count
+
+        for i in range(count):
+            btn = VariantButton(
+                text=str(i + 1),
+                is_active=(i == current_index),
+                on_press_callback=self.on_button_press
+            )
+            self.buttons.append(btn)
+            self.buttons_container.add_widget(btn)
+
+        if self.buttons:
+            self.current_selected = self.buttons[current_index].btn_text
+
+    def set_current_variant(self, index):
+        """Устанавливает текущий выбранный вариант"""
+        for i, btn in enumerate(self.buttons):
+            btn.set_active(i == index)
+        if 0 <= index < len(self.buttons):
+            self.current_selected = self.buttons[index].btn_text
+
+    def on_button_press(self, item):
+        for i, btn in enumerate(self.buttons):
+            if btn.btn_text == item:
+                btn.set_active(True)
+                self.current_selected = item
+                if self.on_item_selected:
+                    self.on_item_selected(i)
+            else:
+                btn.set_active(False)
+
+
+class ChordActionButton(ButtonBehavior, MDBoxLayout):
+    """Кнопка действий (пальцы, ноты, звук)"""
+
+    def __init__(self, icon_name, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.icon_name = icon_name
         self.on_press_callback = on_press_callback
@@ -504,9 +651,7 @@ class ChordsScreen(MDScreen):
         self.current_variant_index = 0
         self.current_mode = "finger"
 
-        # Делаем фон экрана прозрачным
         self.md_bg_color = [0, 0, 0, 0]
-
         self.bg_image = None
 
         self.init_ui()
@@ -541,13 +686,40 @@ class ChordsScreen(MDScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
+    def clean_description(self, description, chord_names):
+        """Очищает описание от повторяющихся фраз и заменяет ! на |"""
+        if not description:
+            return ""
+
+        # Заменяем ! на |
+        description = description.replace('!', '|')
+
+        # Разбиваем по разделителю |
+        parts = description.split('|')
+        unique_parts = []
+        seen = set()
+
+        for part in parts:
+            part_clean = part.strip()
+            if part_clean and part_clean not in seen:
+                # Проверяем, не является ли часть названием аккорда
+                is_chord_name = False
+                for chord_name in chord_names:
+                    if part_clean.lower() == chord_name.lower():
+                        is_chord_name = True
+                        break
+                if not is_chord_name:
+                    seen.add(part_clean)
+                    unique_parts.append(part_clean)
+
+        return ' | '.join(unique_parts)
+
     def init_ui(self):
         from kivy.uix.scrollview import ScrollView
         from kivy.uix.widget import Widget
 
         scroll = ScrollView(size_hint=(1, 1))
 
-        # Основной контейнер
         main_layout = MDBoxLayout(
             orientation='vertical',
             padding=[dp(12), dp(2), dp(12), dp(8)],
@@ -556,7 +728,7 @@ class ChordsScreen(MDScreen):
         )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        # Отступ сверху (чтобы не перекрывать верхние иконки)
+        # Отступ сверху
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
 
@@ -621,23 +793,38 @@ class ChordsScreen(MDScreen):
 
         # Строка тональностей
         self.tonality_row = TonalityRow(
-            items=TONALITIES,
             on_item_selected=self.on_tonality_selected
         )
         main_layout.add_widget(self.tonality_row)
+        self.tonality_row.set_selected("A")
 
         # Строка типов аккордов
-        self.type_row = TypeRow(
+        self.type_row = ScrollableRow(
+            title="Тип",
             items=CHORD_TYPES,
+            button_class=TypeButton,
             on_item_selected=self.on_type_selected
         )
         main_layout.add_widget(self.type_row)
+        self.type_row.set_selected("Major")
 
         # Строка аккордов
         self.chords_row = ChordsRow(on_item_selected=self.on_chord_selected)
         main_layout.add_widget(self.chords_row)
 
-        # Название аккорда
+        # Строка вариантов
+        self.variants_row = VariantsRow(on_item_selected=self.on_variant_selected)
+        main_layout.add_widget(self.variants_row)
+
+        # ========== БЛОК С ГРИФОМ ==========
+        griff_block = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(320),
+            spacing=dp(4)
+        )
+
+        # Название аккорда (над картинкой)
         self.chord_name_label = MDLabel(
             text="Выберите аккорд",
             halign="center",
@@ -648,85 +835,66 @@ class ChordsScreen(MDScreen):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1]
         )
-        main_layout.add_widget(self.chord_name_label)
+        griff_block.add_widget(self.chord_name_label)
 
-        # Гриф
+        # Гриф (картинка)
         griff_container = MDBoxLayout(
             size_hint=(1, None),
-            height=dp(260),
+            height=dp(220),
             padding=[dp(8), dp(4), dp(8), dp(4)]
         )
         self.chord_renderer = ChordRenderer()
         griff_container.add_widget(self.chord_renderer)
-        main_layout.add_widget(griff_container)
+        griff_block.add_widget(griff_container)
 
-        # Описание аккорда
+        # Описание аккорда (под картинкой)
         self.chord_desc_label = MDLabel(
             text="",
             halign="center",
-            font_size=sp(8),
+            font_size=sp(9),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.6],
             size_hint_y=None,
-            height=dp(20)
+            height=dp(40),
+            markup=True
         )
-        main_layout.add_widget(self.chord_desc_label)
+        griff_block.add_widget(self.chord_desc_label)
 
-        # Нижняя панель управления
-        bottom_layout = MDBoxLayout(
+        # Иконки действий (пальцы, ноты, звук) по центру
+        action_icons_layout = MDBoxLayout(
             orientation='horizontal',
-            size_hint_y=None,
-            height=dp(52),
-            spacing=dp(12),
-            padding=[dp(16), dp(4), dp(16), dp(4)]
+            size_hint=(1, None),
+            height=dp(50),
+            spacing=dp(20),
+            padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
-        self.finger_btn = ModeButton(
+        # Кнопка "пальцы"
+        self.finger_btn = ChordActionButton(
             icon_name="fingers_png",
             on_press_callback=lambda x: self.set_mode("finger")
         )
-        bottom_layout.add_widget(self.finger_btn)
+        action_icons_layout.add_widget(self.finger_btn)
 
-        self.note_btn = ModeButton(
+        # Кнопка "ноты"
+        self.note_btn = ChordActionButton(
             icon_name="notes_png",
             on_press_callback=lambda x: self.set_mode("note")
         )
-        bottom_layout.add_widget(self.note_btn)
+        action_icons_layout.add_widget(self.note_btn)
 
-        bottom_layout.add_widget(MDBoxLayout(size_hint_x=0.25))
-
-        self.prev_variant_btn = MDIconButton(
-            icon="chevron-left",
-            on_release=self.prev_variant,
-            size_hint=(None, None),
-            size=(dp(36), dp(36))
+        # Кнопка "звук" (заглушка)
+        self.sound_btn = ChordActionButton(
+            icon_name="sound_png",
+            on_press_callback=lambda x: self.on_sound_press()
         )
-        self.prev_variant_btn.theme_icon_color = "Custom"
-        self.prev_variant_btn.icon_color = [1, 1, 1, 0.7]
-        bottom_layout.add_widget(self.prev_variant_btn)
+        action_icons_layout.add_widget(self.sound_btn)
 
-        self.variant_label = MDLabel(
-            text="1/1",
-            halign="center",
-            size_hint_x=0.18,
-            font_size=sp(11),
-            bold=True,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1]
-        )
-        bottom_layout.add_widget(self.variant_label)
+        # Центрируем иконки
+        action_icons_layout.add_widget(MDBoxLayout(size_hint_x=1))
+        griff_block.add_widget(action_icons_layout)
 
-        self.next_variant_btn = MDIconButton(
-            icon="chevron-right",
-            on_release=self.next_variant,
-            size_hint=(None, None),
-            size=(dp(36), dp(36))
-        )
-        self.next_variant_btn.theme_icon_color = "Custom"
-        self.next_variant_btn.icon_color = [1, 1, 1, 0.7]
-        bottom_layout.add_widget(self.next_variant_btn)
-
-        main_layout.add_widget(bottom_layout)
+        main_layout.add_widget(griff_block)
 
         scroll.add_widget(main_layout)
         self.add_widget(scroll)
@@ -740,8 +908,11 @@ class ChordsScreen(MDScreen):
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
+    def on_sound_press(self):
+        """Заглушка для звука - потом добавим логику"""
+        notify.info("🔊 Звук аккорда (будет доступно в следующей версии)")
+
     def on_search_submit(self, instance):
-        """Обработчик поиска"""
         query = self.search_field.text.strip()
         if not query:
             return
@@ -749,7 +920,6 @@ class ChordsScreen(MDScreen):
         self.search_chord(query)
 
     def clear_search(self, instance):
-        """Очищает поиск"""
         self.search_field.text = ""
         self.clear_search_btn.opacity = 0
         if self.current_tonality and self.current_type:
@@ -758,7 +928,6 @@ class ChordsScreen(MDScreen):
                 self.on_chord_selected(self.chords_row.buttons[0].btn_text)
 
     def search_chord(self, query):
-        """Поиск аккорда"""
         search_normalized = query.lower().replace('/', '$')
         found_chord = None
         for chord in self.all_chords:
@@ -870,6 +1039,8 @@ class ChordsScreen(MDScreen):
         variants.sort(key=lambda x: x['variant'])
         self.current_variants = variants
         self.current_variant_index = 0
+
+        self.variants_row.set_variants(len(variants), 0)
         self.load_current_variant()
 
     def load_current_variant(self):
@@ -877,22 +1048,39 @@ class ChordsScreen(MDScreen):
             return
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
-        self.chord_name_label.text = variant['name'].replace('|', ' | ')
-        self.chord_desc_label.text = variant.get('description', '')
-        self.variant_label.text = f"{self.current_variant_index + 1}/{len(self.current_variants)}"
+
+        # Название аккорда - убираем дубликаты
+        chord_name = variant['name'].replace('!', ' | ')
+        chord_name = chord_name.replace('$', '/')
+
+        # Убираем дубликаты в названии
+        name_parts = chord_name.split('|')
+        unique_names = []
+        seen_names = set()
+        for part in name_parts:
+            part_clean = part.strip()
+            if part_clean and part_clean not in seen_names:
+                seen_names.add(part_clean)
+                unique_names.append(part_clean)
+        display_name = ' | '.join(unique_names)
+
+        self.chord_name_label.text = display_name
+
+        # Описание (очищаем от дубликатов)
+        description = variant.get('description', '')
+        description = self.clean_description(description, unique_names)
+        self.chord_desc_label.text = description
+
+        # Выделение варианта
+        self.variants_row.set_current_variant(self.current_variant_index)
+
         if hasattr(self, 'chord_renderer'):
             self.chord_renderer.load_chord(self.current_chord_module)
             self.chord_renderer.set_mode(self.current_mode)
 
-    def prev_variant(self, instance):
-        if self.current_variants and len(self.current_variants) > 1:
-            self.current_variant_index = (self.current_variant_index - 1) % len(self.current_variants)
-            self.load_current_variant()
-
-    def next_variant(self, instance):
-        if self.current_variants and len(self.current_variants) > 1:
-            self.current_variant_index = (self.current_variant_index + 1) % len(self.current_variants)
-            self.load_current_variant()
+    def on_variant_selected(self, index):
+        self.current_variant_index = index
+        self.load_current_variant()
 
     def set_mode(self, mode):
         self.current_mode = mode
@@ -901,12 +1089,10 @@ class ChordsScreen(MDScreen):
 
     def on_tonality_selected(self, tonality):
         self.current_tonality = tonality
-        self.tonality_row.set_selected(tonality)
         self.update_chords_list()
 
     def on_type_selected(self, chord_type):
         self.current_type = chord_type
-        self.type_row.set_selected(chord_type)
         self.update_chords_list()
 
     def on_pre_enter(self):
