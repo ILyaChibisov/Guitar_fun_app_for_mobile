@@ -1,8 +1,7 @@
 # screens/songs_screen.py
 """
-Экран песен с алфавитной навигацией, поиском и отображением текста песен
+Экран песен с алфавитной навигацией и поиском (заглушка)
 """
-from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
@@ -11,19 +10,14 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp, sp
-from kivy.animation import Animation
-from kivy.uix.progressbar import ProgressBar
-from kivy.clock import Clock
-from kivy.utils import rgba
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.image import Image
 from io import BytesIO
-from kivy.uix.gridlayout import GridLayout
+
 from config.theme import theme
 from config.logger_config import screen_logger
-from api.client import api
 from utils.notifications import notify
 
 logger = screen_logger('Songs')
@@ -36,10 +30,8 @@ try:
 except ImportError:
     HAS_ASSETS = False
 
-
     def load_asset_as_bytes(name):
         return None
-
 
     logger.warning("Модуль data не найден")
 
@@ -380,467 +372,13 @@ class AlphabetGrid(MDCard):
             btn.set_active(False)
 
 
-class LoadingSpinner(MDBoxLayout):
-    """Индикатор загрузки"""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.spacing = dp(16)
-
-        self.progress = ProgressBar(
-            size_hint=(0.8, None),
-            height=dp(4),
-            pos_hint={'center_x': 0.5},
-            value=50,
-            max=100
-        )
-        self.anim = None
-        self.label = MDLabel(
-            text="Загрузка...",
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Secondary",
-            size_hint_y=None,
-            height=dp(30)
-        )
-        self.add_widget(self.progress)
-        self.add_widget(self.label)
-
-    def start_animation(self):
-        self.anim = Animation(value=100, duration=1) + Animation(value=0, duration=1)
-        self.anim.repeat = True
-        self.anim.start(self.progress)
-
-    def stop_animation(self):
-        if self.anim:
-            self.anim.cancel(self.progress)
-        self.progress.value = 0
-
-
-class SongTextCard(MDCard):
-    """Карточка с текстом песни"""
-
-    def __init__(self, song_data, on_close=None, **kwargs):
-        super().__init__(**kwargs)
-        self.song_data = song_data
-        self.on_close_callback = on_close
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, None)
-        self.height = dp(400)
-        self.padding = [dp(16), dp(12), dp(16), dp(12)]
-        self.radius = [theme.CORNER_RADIUS_SMALL]
-        self.md_bg_color = theme.SURFACE
-        self.elevation = 4
-
-        # Заголовок с информацией о песне
-        header_box = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(80),
-            spacing=dp(12)
-        )
-
-        # Иконка
-        icon_label = MDLabel(
-            text="🎵",
-            font_size=sp(32),
-            size_hint_x=None,
-            width=dp(50),
-            halign="center"
-        )
-
-        # Информация
-        info_box = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=0.7,
-            spacing=dp(4)
-        )
-
-        self.title_label = MDLabel(
-            text=song_data.get('title', ''),
-            font_size=sp(16),
-            size_hint_y=None,
-            height=dp(28),
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
-            bold=True
-        )
-
-        self.artist_label = MDLabel(
-            text=f"🎸 {song_data.get('artist', '')}",
-            font_size=sp(13),
-            size_hint_y=None,
-            height=dp(22),
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY
-        )
-
-        info_box.add_widget(self.title_label)
-        info_box.add_widget(self.artist_label)
-
-        # Кнопка закрытия
-        close_btn = MDIconButton(
-            icon="close",
-            size_hint_x=None,
-            width=dp(40),
-            theme_icon_color="Custom",
-            icon_color=theme.TEXT_SECONDARY,
-            on_release=self.on_close
-        )
-
-        header_box.add_widget(icon_label)
-        header_box.add_widget(info_box)
-        header_box.add_widget(close_btn)
-
-        self.add_widget(header_box)
-
-        # Разделитель
-        from kivy.uix.widget import Widget
-        divider = Widget(size_hint_y=None, height=dp(1))
-        with divider.canvas:
-            Color(*rgba(theme.TEXT_SECONDARY, alpha=0.2))
-            self.divider_rect = Rectangle(pos=divider.pos, size=divider.size)
-        divider.bind(pos=self._update_divider, size=self._update_divider)
-        self.add_widget(divider)
-
-        # Текст песни (скроллируемый)
-        self.text_scroll = MDScrollView(
-            size_hint=(1, 0.8),
-            do_scroll_x=False
-        )
-
-        self.content_label = MDLabel(
-            text=song_data.get('content', 'Текст не загружен'),
-            font_size=sp(14),
-            size_hint_y=None,
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
-            markup=True
-        )
-        self.content_label.bind(texture_size=self.content_label.setter('size'))
-        self.text_scroll.add_widget(self.content_label)
-        self.add_widget(self.text_scroll)
-
-        # Нижняя панель с кнопками действий
-        action_bar = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(50),
-            spacing=dp(16),
-            padding=[dp(8), dp(8), dp(8), dp(8)]
-        )
-
-        # Кнопка лайка
-        self.like_btn = MDIconButton(
-            icon="heart-outline",
-            theme_icon_color="Custom",
-            icon_color=theme.TEXT_SECONDARY,
-            on_release=self.toggle_like
-        )
-
-        # Кнопка избранного
-        self.favorite_btn = MDIconButton(
-            icon="star-outline",
-            theme_icon_color="Custom",
-            icon_color=theme.TEXT_SECONDARY,
-            on_release=self.toggle_favorite
-        )
-
-        # Кнопка копирования
-        self.copy_btn = MDIconButton(
-            icon="content-copy",
-            theme_icon_color="Custom",
-            icon_color=theme.TEXT_SECONDARY,
-            on_release=self.copy_text
-        )
-
-        action_bar.add_widget(self.like_btn)
-        action_bar.add_widget(self.favorite_btn)
-        action_bar.add_widget(self.copy_btn)
-
-        self.add_widget(action_bar)
-
-    def _update_divider(self, instance, value):
-        self.divider_rect.pos = instance.pos
-        self.divider_rect.size = instance.size
-
-    def on_close(self, instance):
-        if self.on_close_callback:
-            self.on_close_callback()
-
-    def toggle_like(self, instance):
-        if not api.is_authenticated():
-            notify.warning("Войдите, чтобы ставить лайки")
-            return
-        if self.like_btn.icon == "heart-outline":
-            self.like_btn.icon = "heart"
-            self.like_btn.icon_color = [0.8, 0.3, 0.3, 1]
-            notify.info("❤️ Лайк поставлен")
-        else:
-            self.like_btn.icon = "heart-outline"
-            self.like_btn.icon_color = theme.TEXT_SECONDARY
-            notify.info("❤️ Лайк убран")
-
-    def toggle_favorite(self, instance):
-        if not api.is_authenticated():
-            notify.warning("Войдите, чтобы добавлять в избранное")
-            return
-        if self.favorite_btn.icon == "star-outline":
-            self.favorite_btn.icon = "star"
-            self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 1]
-            notify.info("⭐ Добавлено в избранное")
-        else:
-            self.favorite_btn.icon = "star-outline"
-            self.favorite_btn.icon_color = theme.TEXT_SECONDARY
-            notify.info("⭐ Убрано из избранного")
-
-    def copy_text(self, instance):
-        """Копирует текст песни в буфер обмена"""
-        try:
-            from kivy.core.clipboard import Clipboard
-            Clipboard.copy(self.content_label.text)
-            notify.success("📋 Текст скопирован")
-        except Exception as e:
-            logger.error(f"Ошибка копирования: {e}")
-            notify.error("Не удалось скопировать")
-
-
-class ArtistCard(MDCard):
-    """Красивая карточка исполнителя с количеством песен"""
-
-    def __init__(self, artist_data, on_song_click=None, **kwargs):
-        super().__init__(**kwargs)
-        self.artist_name = artist_data.get('artist', '')
-        self.songs_count = artist_data.get('songs_count', 0)
-        self.songs = artist_data.get('songs', [])
-        self.on_song_click_callback = on_song_click
-        self.is_expanded = False
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, None)
-        self.height = dp(70)
-        self.padding = [dp(16), dp(12), dp(12), dp(12)]
-        self.radius = [theme.CORNER_RADIUS_SMALL]
-        self.md_bg_color = theme.SURFACE
-        self.elevation = 2
-
-        # Основной контейнер
-        self.main_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(46),
-            spacing=dp(12)
-        )
-
-        # Иконка исполнителя
-        self.icon_label = MDLabel(
-            text="🎸",
-            font_size=sp(24),
-            size_hint_x=None,
-            width=dp(44),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=theme.PRIMARY
-        )
-
-        # Информация об исполнителе
-        info_box = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=0.7,
-            spacing=dp(2)
-        )
-
-        self.artist_label = MDLabel(
-            text=self.artist_name,
-            font_size=sp(15),
-            size_hint_y=None,
-            height=dp(24),
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
-            bold=True
-        )
-
-        # Склонение слова "песня"
-        if self.songs_count % 10 == 1 and self.songs_count % 100 != 11:
-            songs_word = "песня"
-        elif 2 <= self.songs_count % 10 <= 4 and not (12 <= self.songs_count % 100 <= 14):
-            songs_word = "песни"
-        else:
-            songs_word = "песен"
-
-        self.songs_count_label = MDLabel(
-            text=f"🎵 {self.songs_count} {songs_word}",
-            font_size=sp(11),
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY
-        )
-
-        info_box.add_widget(self.artist_label)
-        info_box.add_widget(self.songs_count_label)
-
-        # Кнопка раскрытия
-        self.expand_btn = MDIconButton(
-            icon="chevron-down",
-            size_hint_x=None,
-            width=dp(40),
-            theme_icon_color="Custom",
-            icon_color=theme.TEXT_SECONDARY,
-            md_bg_color=[0, 0, 0, 0]
-        )
-        self.expand_btn.bind(on_release=self.toggle_expand)
-
-        self.main_row.add_widget(self.icon_label)
-        self.main_row.add_widget(info_box)
-        self.main_row.add_widget(self.expand_btn)
-
-        self.add_widget(self.main_row)
-
-        # Контейнер для песен (изначально скрыт)
-        self.songs_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint_y=None,
-            spacing=dp(6),
-            padding=[dp(56), dp(8), dp(12), dp(8)]
-        )
-        self.songs_container.height = 0
-        self.add_widget(self.songs_container)
-
-        # Заполняем песнями
-        if self.songs:
-            for song in self.songs:
-                song_card = SongItemCard(song=song, on_click=self.on_song_click)
-                self.songs_container.add_widget(song_card)
-            self.songs_container.height = len(self.songs) * dp(54)
-
-    def toggle_expand(self, instance):
-        """Раскрыть/скрыть список песен"""
-        self.is_expanded = not self.is_expanded
-
-        if self.is_expanded:
-            self.expand_btn.icon = "chevron-up"
-            self.songs_container.height = len(self.songs) * dp(54) if self.songs else 0
-            self.height = dp(70) + self.songs_container.height
-        else:
-            self.expand_btn.icon = "chevron-down"
-            self.songs_container.height = 0
-            self.height = dp(70)
-
-    def on_song_click(self, song):
-        """Обработчик клика по песне"""
-        if self.on_song_click_callback:
-            self.on_song_click_callback(song)
-
-
-class SongItemCard(MDCard):
-    """Карточка песни внутри исполнителя"""
-
-    def __init__(self, song, on_click=None, **kwargs):
-        super().__init__(**kwargs)
-        self.song = song
-        self.on_click_callback = on_click
-
-        self.size_hint = (1, None)
-        self.height = dp(48)
-        self.padding = [dp(8), dp(6), dp(8), dp(6)]
-        self.radius = [theme.CORNER_RADIUS_SMALL]
-        self.md_bg_color = "#F8F6F0"
-        self.elevation = 0
-        self.ripple_behavior = True
-
-        layout = MDBoxLayout(
-            orientation='horizontal',
-            spacing=dp(12),
-            size_hint_y=None,
-            height=dp(36)
-        )
-
-        # Иконка песни
-        icon_label = MDLabel(
-            text="🎵",
-            font_size=sp(18),
-            size_hint_x=None,
-            width=dp(32),
-            halign="center"
-        )
-
-        # Информация о песне
-        info_box = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(2),
-            size_hint_x=0.75
-        )
-
-        title_label = MDLabel(
-            text=song.get('title', ''),
-            font_size=sp(13),
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
-            bold=True
-        )
-
-        tabs_count = song.get('tabs_count', 1)
-        # Склонение слова "подбор"
-        if tabs_count % 10 == 1 and tabs_count % 100 != 11:
-            tabs_word = "подбор"
-        elif 2 <= tabs_count % 10 <= 4 and not (12 <= tabs_count % 100 <= 14):
-            tabs_word = "подбора"
-        else:
-            tabs_word = "подборов"
-
-        tabs_label = MDLabel(
-            text=f"🎸 {tabs_count} {tabs_word}",
-            font_size=sp(10),
-            size_hint_y=None,
-            height=dp(18),
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY
-        )
-
-        info_box.add_widget(title_label)
-        info_box.add_widget(tabs_label)
-
-        # Стрелка
-        arrow_label = MDLabel(
-            text="›",
-            font_size=sp(22),
-            size_hint_x=None,
-            width=dp(30),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=theme.PRIMARY
-        )
-
-        layout.add_widget(icon_label)
-        layout.add_widget(info_box)
-        layout.add_widget(arrow_label)
-
-        self.add_widget(layout)
-        self.bind(on_release=self.on_click)
-
-    def on_click(self, instance):
-        if self.on_click_callback:
-            self.on_click_callback(self.song)
-
-
 class SongsScreen(MDScreen):
-    """Объединенный экран песен с исполнителями и текстами"""
+    """Экран песен с алфавитной навигацией и поиском (заглушка)"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'songs'
         self.current_letter = None
-        self.search_mode = False
-        self.is_loading = False
-        self.loading_spinner = None
-        self.artists_data = []
-        self.current_song_card = None
         self.bg_image = None
 
         # Делаем фон экрана прозрачным
@@ -849,7 +387,7 @@ class SongsScreen(MDScreen):
         self.init_ui()
         self.load_background()
 
-        logger.info('Объединенный экран песен создан')
+        logger.info('Экран песен создан')
 
     def load_background(self):
         """Загружает фоновое изображение"""
@@ -969,21 +507,6 @@ class SongsScreen(MDScreen):
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
         main_layout.add_widget(self.alphabet_grid)
 
-        # Контейнер для контента
-        self.content_scroll = MDScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False
-        )
-        self.content_container = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(8),
-            size_hint_y=None,
-            adaptive_height=True,
-            padding=[dp(8), dp(8), dp(8), dp(80)]
-        )
-        self.content_scroll.add_widget(self.content_container)
-        main_layout.add_widget(self.content_scroll)
-
         scroll.add_widget(main_layout)
         self.add_widget(scroll)
 
@@ -992,291 +515,39 @@ class SongsScreen(MDScreen):
         logger.info(f"Язык изменён на: {language}")
         self.alphabet_grid.set_language(language)
         self.alphabet_grid.clear_selection()
-        # Очищаем текущий список исполнителей при смене языка
-        self.content_container.clear_widgets()
         self.current_letter = None
 
-    def show_loading(self):
-        """Показывает индикатор загрузки"""
-        if self.is_loading:
-            return
-
-        self.is_loading = True
-        self.content_container.clear_widgets()
-        self.current_song_card = None
-        self.loading_spinner = LoadingSpinner()
-        self.content_container.add_widget(self.loading_spinner)
-        self.loading_spinner.start_animation()
-
-    def hide_loading(self):
-        """Скрывает индикатор загрузки"""
-        self.is_loading = False
-        if self.loading_spinner:
-            self.loading_spinner.stop_animation()
-        self.content_container.clear_widgets()
-
     def on_letter_press(self, letter):
-        """Обработчик нажатия на букву"""
+        """Обработчик нажатия на букву - переходим на экран исполнителей"""
         logger.info(f"Выбрана буква: {letter}")
         self.current_letter = letter
-        self.search_mode = False
-        self.clear_search_btn.opacity = 0
+        self.alphabet_grid.clear_selection()
+
+        # Очищаем поле поиска при выборе буквы
         self.search_field.text = ""
-        self.close_song_card()
-        self.load_artists_with_songs(letter)
+        self.clear_search_btn.opacity = 0
 
-    def load_artists_with_songs(self, letter):
-        """Загружает исполнителей и их песни по букве"""
-        self.show_loading()
-
-        api.get_artists_by_letter(
-            letter=letter,
-            on_success=self.on_artists_loaded,
-            on_failure=self.on_load_failed
-        )
-
-    def on_artists_loaded(self, artists):
-        """Отображает список исполнителей"""
-        self.hide_loading()
-        self.artists_data = artists
-
-        if not artists:
-            no_data_card = MDCard(
-                orientation='vertical',
-                size_hint=(1, None),
-                height=dp(180),
-                padding=[dp(24), dp(24), dp(24), dp(24)],
-                radius=[theme.CORNER_RADIUS_SMALL],
-                md_bg_color=theme.SURFACE,
-                elevation=2
-            )
-
-            icon_label = MDLabel(
-                text="😢",
-                font_size=sp(48),
-                halign="center",
-                size_hint_y=None,
-                height=dp(60)
-            )
-
-            text_label = MDLabel(
-                text=f"Нет исполнителей на букву «{self.current_letter}»",
-                halign="center",
-                font_size=sp(14),
-                theme_text_color="Custom",
-                text_color=theme.TEXT_PRIMARY,
-                size_hint_y=None,
-                height=dp(40),
-                bold=True
-            )
-
-            hint_label = MDLabel(
-                text="Попробуйте выбрать другую букву",
-                halign="center",
-                font_size=sp(12),
-                theme_text_color="Custom",
-                text_color=theme.TEXT_SECONDARY,
-                size_hint_y=None,
-                height=dp(30)
-            )
-
-            no_data_card.add_widget(icon_label)
-            no_data_card.add_widget(text_label)
-            no_data_card.add_widget(hint_label)
-            self.content_container.add_widget(no_data_card)
-            return
-
-        for artist_data in artists:
-            artist_info = {
-                'artist': artist_data.get('artist'),
-                'songs_count': artist_data.get('songs_count', 0),
-                'songs': artist_data.get('songs', [])
-            }
-
-            card = ArtistCard(
-                artist_data=artist_info,
-                on_song_click=self.on_song_selected
-            )
-            self.content_container.add_widget(card)
-
-        logger.info(f"Загружено {len(artists)} исполнителей на букву {self.current_letter}")
-
-    def on_song_selected(self, song):
-        """Выбор песни"""
-        song_id = song.get('song_id')
-        song_title = song.get('title', '')
-        song_artist = song.get('artist', '')
-
-        logger.info(f"🎵 Выбрана песня: {song_artist} - {song_title}, song_id: {song_id}")
-
-        if not song_id:
-            logger.error(f"Нет song_id для песни: {song}")
-            notify.error("Ошибка: не удалось загрузить песню")
-            return
-
-        self.close_song_card()
-        self.show_loading()
-
-        api.get_tab(
-            song_id=song_id,
-            on_success=lambda data: self.on_song_text_loaded(data, song),
-            on_failure=self.on_song_load_failed
-        )
-
-    def on_song_text_loaded(self, data, original_song):
-        """Отображает текст песни"""
-        self.hide_loading()
-
-        song_data = {
-            'song_id': data.get('id'),
-            'title': data.get('title', original_song.get('title', '')),
-            'artist': data.get('artist', original_song.get('artist', '')),
-            'content': data.get('content', 'Текст не загружен'),
-            'tabs_count': original_song.get('tabs_count', 1),
-            'likes': data.get('likes', 0),
-            'views': data.get('views', 0)
-        }
-
-        self.current_song_card = SongTextCard(
-            song_data=song_data,
-            on_close=self.close_song_card
-        )
-
-        self.content_container.insert(0, self.current_song_card)
-        Clock.schedule_once(lambda dt: self.scroll_to_card(), 0.1)
-
-        logger.info(f"✅ Текст песни загружен: {song_data['artist']} - {song_data['title']}")
-
-    def scroll_to_card(self):
-        """Прокручивает к открытой карточке"""
-        if self.current_song_card:
-            self.content_scroll.scroll_to(self.current_song_card)
-
-    def close_song_card(self):
-        """Закрывает карточку с текстом"""
-        if self.current_song_card and self.current_song_card.parent:
-            self.content_container.remove_widget(self.current_song_card)
-            self.current_song_card = None
-
-    def on_song_load_failed(self, req, error):
-        """Ошибка загрузки текста"""
-        self.hide_loading()
-        notify.error(f"Ошибка загрузки текста: {error}")
-        logger.error(f"Ошибка загрузки текста: {error}")
+        # Переход на экран исполнителей по букве
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('artists_by_letter'):
+                artists_screen = self.manager.get_screen('artists_by_letter')
+                artists_screen.set_letter(letter)
+                self.manager.current = 'artists_by_letter'
+            else:
+                logger.error("Экран artists_by_letter не найден")
+                notify.error("Ошибка навигации")
 
     def do_search(self, instance):
-        """Выполняет поиск"""
+        """Поиск - пока заглушка"""
         query = self.search_field.text.strip()
         if len(query) < 2:
             notify.warning("Введите минимум 2 символа для поиска")
             return
 
-        logger.info(f"🔍 Поиск: {query}")
-        self.search_mode = True
-        self.alphabet_grid.clear_selection()
-        self.current_letter = None
-        self.clear_search_btn.opacity = 1
-        self.close_song_card()
-        self.search_results(query)
+        logger.info(f"🔍 Поиск (заглушка): {query}")
+        notify.info(f"Поиск '{query}' будет доступен в следующей версии")
 
     def clear_search(self, instance):
-        """Очищает поиск"""
+        """Очищает поле поиска"""
         self.search_field.text = ""
         self.clear_search_btn.opacity = 0
-        self.search_mode = False
-
-        if self.current_letter:
-            self.load_artists_with_songs(self.current_letter)
-        else:
-            self.content_container.clear_widgets()
-
-    def search_results(self, query):
-        """Выполняет поиск"""
-        self.show_loading()
-        api.search_songs(
-            query=query,
-            search_type="general",
-            limit=50,
-            on_success=self.on_search_results,
-            on_failure=self.on_load_failed
-        )
-
-    def on_search_results(self, results):
-        """Отображает результаты поиска"""
-        self.hide_loading()
-
-        if not results:
-            no_results_card = MDCard(
-                orientation='vertical',
-                size_hint=(1, None),
-                height=dp(180),
-                padding=[dp(24), dp(24), dp(24), dp(24)],
-                radius=[theme.CORNER_RADIUS_SMALL],
-                md_bg_color=theme.SURFACE,
-                elevation=2
-            )
-
-            icon_label = MDLabel(
-                text="🔍",
-                font_size=sp(48),
-                halign="center",
-                size_hint_y=None,
-                height=dp(60)
-            )
-
-            text_label = MDLabel(
-                text="Ничего не найдено",
-                halign="center",
-                font_size=sp(14),
-                theme_text_color="Custom",
-                text_color=theme.TEXT_PRIMARY,
-                size_hint_y=None,
-                height=dp(40),
-                bold=True
-            )
-
-            hint_label = MDLabel(
-                text="Попробуйте изменить поисковый запрос",
-                halign="center",
-                font_size=sp(12),
-                theme_text_color="Custom",
-                text_color=theme.TEXT_SECONDARY,
-                size_hint_y=None,
-                height=dp(30)
-            )
-
-            no_results_card.add_widget(icon_label)
-            no_results_card.add_widget(text_label)
-            no_results_card.add_widget(hint_label)
-            self.content_container.add_widget(no_results_card)
-            return
-
-        # Группируем результаты по исполнителям
-        artists_dict = {}
-        for song in results:
-            artist = song.get('artist', '')
-            if artist not in artists_dict:
-                artists_dict[artist] = {
-                    'artist': artist,
-                    'songs_count': 0,
-                    'songs': []
-                }
-            artists_dict[artist]['songs'].append(song)
-            artists_dict[artist]['songs_count'] += 1
-
-        # Отображаем сгруппированные результаты
-        for artist_name, artist_data in sorted(artists_dict.items()):
-            card = ArtistCard(
-                artist_data=artist_data,
-                on_song_click=self.on_song_selected
-            )
-            self.content_container.add_widget(card)
-
-        logger.info(f"Найдено {len(results)} песен, сгруппировано в {len(artists_dict)} исполнителей")
-
-    def on_load_failed(self, req, error):
-        """Обработчик ошибки"""
-        self.hide_loading()
-        notify.error(f"Ошибка загрузки: {error}")
-        logger.error(f"Ошибка загрузки: {error}")
-        self.content_container.clear_widgets()
