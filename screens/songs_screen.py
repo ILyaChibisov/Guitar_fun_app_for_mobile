@@ -8,7 +8,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDButton, MDIconButton
+from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp, sp
 from kivy.animation import Animation
@@ -18,8 +18,9 @@ from kivy.utils import rgba
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.behaviors import ButtonBehavior
+from kivy.uix.image import Image
 from io import BytesIO
-
+from kivy.uix.gridlayout import GridLayout
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
@@ -46,7 +47,7 @@ except ImportError:
 # ============ КНОПКА БУКВЫ ============
 
 class LetterButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка буквы для клавиатуры"""
+    """Кнопка буквы для сетки"""
 
     def __init__(self, text, is_active=False, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
@@ -58,12 +59,20 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
         self.main_layout = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(2), dp(2), dp(2), dp(2)]
+            padding=[dp(4), dp(4), dp(4), dp(4)]
         )
 
+        # Все кнопки одинакового размера, текст 09 или 0-9
+        if text == '09':
+            display_text = '0-9'
+            font_size = sp(12)
+        else:
+            display_text = text
+            font_size = sp(15)
+
         self.label = MDLabel(
-            text=text,
-            font_size=sp(13),
+            text=display_text,
+            font_size=font_size,
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -83,7 +92,7 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
         if self.is_active:
             self.label.text_color = [1, 1, 1, 1]
             self.main_layout.md_bg_color = [0.46, 0.70, 0.71, 1]
-            self.main_layout.radius = [dp(6), dp(6), dp(6), dp(6)]
+            self.main_layout.radius = [dp(8), dp(8), dp(8), dp(8)]
         else:
             self.label.text_color = [0, 0, 0, 1]
             self.main_layout.md_bg_color = [0, 0, 0, 0]
@@ -98,167 +107,277 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
             self.on_press_callback(self.btn_text)
 
 
-class AlphabetKeyboard(MDBoxLayout):
-    """Клавиатура с буквами и пагинацией"""
+class LanguageSelector(MDBoxLayout):
+    """Выбор языка с пагинацией, иконкой и текстом из ассетов"""
 
-    def __init__(self, on_letter_press=None, **kwargs):
+    def __init__(self, on_language_change=None, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'vertical'
+        self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = dp(70)
-        self.spacing = dp(4)
+        self.height = dp(44)
+        self.spacing = dp(6)
         self.padding = [dp(12), dp(2), dp(12), dp(2)]
 
-        self.on_letter_press = on_letter_press
+        self.on_language_change = on_language_change
         self.current_language = 'ru'
-        self.current_page = 0
 
-        # Русский алфавит (33 буквы)
-        self.ru_letters = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
-                           'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т',
-                           'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь',
-                           'Э', 'Ю', 'Я']
-        # Английский алфавит (26 букв)
-        self.en_letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-                           'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-                           'U', 'V', 'W', 'X', 'Y', 'Z']
-        # Символы и цифры
-        self.symbols = ['#', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+        # Только два языка
+        self.languages = [
+            {'code': 'ru', 'name': 'Русский', 'icon': 'rus_png'},
+            {'code': 'en', 'name': 'English', 'icon': 'eng_png'}
+        ]
 
-        self.current_items = self.ru_letters
-        self.items_per_page = 5
-        self.total_pages = (len(self.current_items) + self.items_per_page - 1) // self.items_per_page
-        self.buttons = []
-
-        # Заголовок с пагинацией
-        title_layout = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(24),
-            spacing=dp(12),
-            padding=[dp(4), dp(1), dp(4), dp(1)]
-        )
-
+        # Стрелка влево
         self.prev_btn = MDIconButton(
             icon="chevron-left",
             size_hint=(None, None),
             size=(dp(28), dp(28)),
             theme_icon_color="Custom",
             icon_color="#FFFFFF",
-            on_release=self.prev_page,
+            on_release=self.prev_language,
             md_bg_color=[0, 0, 0, 0]
         )
 
-        self.title_label = MDLabel(
+        # Контейнер для иконки и текста
+        self.content_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            width=dp(100),
+            height=dp(32),
+            spacing=dp(6),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        )
+
+        # Иконка языка (сначала)
+        self.language_icon = Image(
+            size_hint=(None, None),
+            size=(dp(20), dp(20)),
+            pos_hint={'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
+        )
+
+        # Текст названия языка (потом)
+        self.language_label = MDLabel(
             text="Русский",
-            font_size=sp(12),
-            halign="center",
+            font_size=sp(13),
+            halign="left",
             valign="middle",
-            size_hint_x=0.6,
+            size_hint_x=0.7,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             bold=True
         )
 
+        self.content_container.add_widget(self.language_icon)
+        self.content_container.add_widget(self.language_label)
+
+        # Стрелка вправо
         self.next_btn = MDIconButton(
             icon="chevron-right",
             size_hint=(None, None),
             size=(dp(28), dp(28)),
             theme_icon_color="Custom",
             icon_color="#FFFFFF",
-            on_release=self.next_page,
+            on_release=self.next_language,
             md_bg_color=[0, 0, 0, 0]
         )
 
-        title_layout.add_widget(MDBoxLayout(size_hint_x=0.05))
-        title_layout.add_widget(self.prev_btn)
-        title_layout.add_widget(self.title_label)
-        title_layout.add_widget(self.next_btn)
-        title_layout.add_widget(MDBoxLayout(size_hint_x=0.05))
+        # Растяжка для центрирования
+        self.add_widget(MDBoxLayout(size_hint_x=1))
+        self.add_widget(self.prev_btn)
+        self.add_widget(self.content_container)
+        self.add_widget(self.next_btn)
+        self.add_widget(MDBoxLayout(size_hint_x=1))
 
-        self.add_widget(title_layout)
+        # Загружаем первую иконку
+        self._update_display()
 
-        # Серая полоска с буквами
-        self.letters_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(40),
-            radius=[theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                    theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL],
-            md_bg_color="#E8E8E8",
-            elevation=0,
-            padding=[dp(4), dp(2), dp(4), dp(2)]
-        )
+    def _load_icon(self, icon_name):
+        """Загружает иконку из ассетов"""
+        if HAS_ASSETS:
+            try:
+                icon_data = load_asset_as_bytes(icon_name)
+                if icon_data:
+                    img = CoreImage(BytesIO(icon_data), ext="png")
+                    self.language_icon.texture = img.texture
+                    return True
+            except Exception as e:
+                logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
 
-        self.buttons_container = MDBoxLayout(
-            orientation='horizontal',
-            spacing=dp(4),
-            size_hint_x=1,
-            height=dp(34)
-        )
+        # Если не загрузилась, показываем эмодзи
+        if icon_name == 'rus_png':
+            self.language_icon.text = "🇷🇺"
+        elif icon_name == 'eng_png':
+            self.language_icon.text = "🇬🇧"
+        return False
 
-        self.letters_card.add_widget(self.buttons_container)
-        self.add_widget(self.letters_card)
+    def _update_display(self):
+        """Обновляет отображение текущего языка"""
+        for lang in self.languages:
+            if lang['code'] == self.current_language:
+                self.language_label.text = lang['name']
+                self._load_icon(lang['icon'])
+                break
+
+    def get_current_language(self):
+        return self.current_language
+
+    def prev_language(self, instance):
+        """Предыдущий язык"""
+        current_index = 0 if self.current_language == 'ru' else 1
+        new_index = (current_index - 1) % len(self.languages)
+        self.current_language = self.languages[new_index]['code']
+        self._update_display()
+
+        if self.on_language_change:
+            self.on_language_change(self.current_language)
+
+    def next_language(self, instance):
+        """Следующий язык"""
+        current_index = 0 if self.current_language == 'ru' else 1
+        new_index = (current_index + 1) % len(self.languages)
+        self.current_language = self.languages[new_index]['code']
+        self._update_display()
+
+        if self.on_language_change:
+            self.on_language_change(self.current_language)
+
+    def set_language(self, language):
+        """Устанавливает язык программно"""
+        for lang in self.languages:
+            if lang['code'] == language:
+                self.current_language = language
+                self._update_display()
+                break
+
+
+class AlphabetGrid(MDCard):
+    """Сетка с буквами - равномерное распределение по 4 рядам"""
+
+    # Русский алфавит (33 буквы) + символы
+    RU_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
+                  'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т',
+                  'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь',
+                  'Э', 'Ю', 'Я', '#', '09']
+
+    # Английский алфавит (26 букв) + символы
+    EN_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                  'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+                  'U', 'V', 'W', 'X', 'Y', 'Z', '#', '09']
+
+    def __init__(self, on_letter_press=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_letter_press = on_letter_press
+        self.current_language = 'ru'
+        self.current_selected = None
+
+        self.orientation = 'vertical'
+        self.size_hint = (1, None)
+        self.height = dp(180)
+        self.padding = [dp(0), dp(0), dp(0), dp(0)]
+        self.radius = [theme.CORNER_RADIUS_SMALL]
+        self.md_bg_color = "#E8E8E8"
+        self.elevation = 2
+
+        self.rows = []
+        self.buttons = []
+
+        # Создаём 4 ряда
+        for i in range(4):
+            row = MDBoxLayout(
+                orientation='horizontal',
+                spacing=dp(6),
+                size_hint_y=None,
+                height=dp(40)
+            )
+            self.rows.append(row)
+            self.add_widget(row)
 
         self.update_display()
 
     def set_language(self, language):
         """Устанавливает язык клавиатуры"""
         self.current_language = language
-        self.current_page = 0
-        if language == 'ru':
-            self.current_items = self.ru_letters
-            self.title_label.text = "Русский"
-        elif language == 'en':
-            self.current_items = self.en_letters
-            self.title_label.text = "English"
-        else:
-            self.current_items = self.symbols
-            self.title_label.text = "Символы"
-        self.total_pages = (len(self.current_items) + self.items_per_page - 1) // self.items_per_page
+        self.current_selected = None
         self.update_display()
 
     def update_display(self):
-        self.buttons_container.clear_widgets()
+        """Обновляет сетку с буквами - равномерное распределение по рядам"""
+        # Выбираем набор букв
+        if self.current_language == 'ru':
+            items = self.RU_LETTERS  # 35 элементов
+            # Для русского делаем 4 ряда по 9, 9, 9, 8
+            # Но 9 кнопок в ряду - это слишком много, сделаем 5 рядов?
+            rows_count = 5
+            self.height = dp(200)  # Увеличиваем высоту для 5 рядов
+        else:
+            items = self.EN_LETTERS  # 28 элементов
+            rows_count = 4
+            self.height = dp(160)
+
+        # Сначала удаляем старые ряды, если их количество изменилось
+        while len(self.rows) > rows_count:
+            old_row = self.rows.pop()
+            self.remove_widget(old_row)
+
+        # Добавляем новые ряды, если нужно
+        while len(self.rows) < rows_count:
+            row = MDBoxLayout(
+                orientation='horizontal',
+                spacing=dp(6),
+                size_hint_y=None,
+                height=dp(40)
+            )
+            self.rows.append(row)
+            self.add_widget(row)
+
+        # Очищаем все ряды
+        for row in self.rows:
+            row.clear_widgets()
+
         self.buttons.clear()
 
-        self.prev_btn.icon_color = [1, 1, 1, 1]
-        self.next_btn.icon_color = [1, 1, 1, 1]
+        # Равномерно распределяем по рядам
+        total_items = len(items)
+        items_per_row = (total_items + rows_count - 1) // rows_count  # Округление вверх
 
-        start_idx = self.current_page * self.items_per_page
-        end_idx = min(start_idx + self.items_per_page, len(self.current_items))
-        current_items = self.current_items[start_idx:end_idx]
+        for row_idx in range(rows_count):
+            start_idx = row_idx * items_per_row
+            end_idx = min(start_idx + items_per_row, total_items)
+            row_items = items[start_idx:end_idx]
 
-        for item in current_items:
-            btn = LetterButton(
-                text=item,
-                is_active=False,
-                on_press_callback=self.on_letter_press_callback
-            )
-            self.buttons.append(btn)
-            self.buttons_container.add_widget(btn)
+            for item in row_items:
+                btn = LetterButton(
+                    text=item,
+                    is_active=(item == self.current_selected),
+                    on_press_callback=self.on_letter_press_callback
+                )
+                self.buttons.append(btn)
+                self.rows[row_idx].add_widget(btn)
 
-        for i in range(self.items_per_page - len(current_items)):
-            spacer = MDBoxLayout(size_hint=(1, 1))
-            self.buttons_container.add_widget(spacer)
+            # Добавляем пустые места для выравнивания
+            max_per_row = items_per_row
+            for _ in range(max_per_row - len(row_items)):
+                spacer = MDBoxLayout(size_hint=(1, 1))
+                self.rows[row_idx].add_widget(spacer)
 
     def on_letter_press_callback(self, letter):
+        self.current_selected = letter
+        for btn in self.buttons:
+            btn.set_active(btn.btn_text == letter)
         if self.on_letter_press:
-            self.on_letter_press(letter)
+            # Если нажали 09, передаём '0-9' для API
+            if letter == '09':
+                self.on_letter_press('0-9')
+            else:
+                self.on_letter_press(letter)
 
-    def prev_page(self, instance):
-        if self.current_page > 0:
-            self.current_page -= 1
-        else:
-            self.current_page = self.total_pages - 1
-        self.update_display()
-
-    def next_page(self, instance):
-        if self.current_page < self.total_pages - 1:
-            self.current_page += 1
-        else:
-            self.current_page = 0
-        self.update_display()
+    def clear_selection(self):
+        """Снимает выделение со всех букв"""
+        self.current_selected = None
+        for btn in self.buttons:
+            btn.set_active(False)
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -717,7 +836,6 @@ class SongsScreen(MDScreen):
         super().__init__(**kwargs)
         self.name = 'songs'
         self.current_letter = None
-        self.current_language = 'ru'
         self.search_mode = False
         self.is_loading = False
         self.loading_spinner = None
@@ -808,9 +926,9 @@ class SongsScreen(MDScreen):
             theme_bg_color="Custom",
             fill_color_normal=[0, 0, 0, 0],
             fill_color_focus=[0, 0, 0, 0],
-            text_color_normal=[0, 0, 0, 0],  # Цвет введённого текста
+            text_color_normal=[0, 0, 0, 0],
             text_color_focus=[0, 0, 0, 0],
-            hint_text_color=[0.5, 0.5, 0.5, 1]  # Серый цвет подсказки (50% серый)
+            hint_text_color=[0.5, 0.5, 0.5, 1]
         )
 
         # Кнопка очистки
@@ -841,9 +959,15 @@ class SongsScreen(MDScreen):
         self.search_card.add_widget(self.search_btn)
         main_layout.add_widget(self.search_card)
 
-        # Клавиатура с буквами
-        self.keyboard = AlphabetKeyboard(on_letter_press=self.on_letter_press)
-        main_layout.add_widget(self.keyboard)
+        # Выбор языка с иконками и пагинацией
+        self.language_selector = LanguageSelector(
+            on_language_change=self.on_language_changed
+        )
+        main_layout.add_widget(self.language_selector)
+
+        # Сетка с буквами
+        self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
+        main_layout.add_widget(self.alphabet_grid)
 
         # Контейнер для контента
         self.content_scroll = MDScrollView(
@@ -863,68 +987,14 @@ class SongsScreen(MDScreen):
         scroll.add_widget(main_layout)
         self.add_widget(scroll)
 
-        # Загружаем приветственный экран
-        self.show_welcome_screen()
-
-    def show_welcome_screen(self):
-        """Показывает приветственный экран с предложением выбрать букву"""
+    def on_language_changed(self, language):
+        """Обработчик смены языка"""
+        logger.info(f"Язык изменён на: {language}")
+        self.alphabet_grid.set_language(language)
+        self.alphabet_grid.clear_selection()
+        # Очищаем текущий список исполнителей при смене языка
         self.content_container.clear_widgets()
-        self.current_song_card = None
-
-        welcome_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(240),
-            padding=[dp(24), dp(24), dp(24), dp(24)],
-            radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=theme.SURFACE,
-            elevation=2
-        )
-
-        icon_label = MDLabel(
-            text="🎸",
-            font_size=sp(56),
-            halign="center",
-            size_hint_y=None,
-            height=dp(70)
-        )
-
-        title_label = MDLabel(
-            text="Добро пожаловать!",
-            font_size=sp(20),
-            halign="center",
-            size_hint_y=None,
-            height=dp(40),
-            theme_text_color="Custom",
-            text_color=theme.TEXT_PRIMARY,
-            bold=True
-        )
-
-        subtitle_label = MDLabel(
-            text="Выберите букву алфавита выше,\nчтобы увидеть список исполнителей",
-            font_size=sp(13),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY,
-            size_hint_y=None,
-            height=dp(60)
-        )
-
-        hint_label = MDLabel(
-            text="👇 Нажмите на любую букву",
-            font_size=sp(11),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=theme.PRIMARY,
-            size_hint_y=None,
-            height=dp(30)
-        )
-
-        welcome_card.add_widget(icon_label)
-        welcome_card.add_widget(title_label)
-        welcome_card.add_widget(subtitle_label)
-        welcome_card.add_widget(hint_label)
-        self.content_container.add_widget(welcome_card)
+        self.current_letter = None
 
     def show_loading(self):
         """Показывает индикатор загрузки"""
@@ -946,7 +1016,7 @@ class SongsScreen(MDScreen):
         self.content_container.clear_widgets()
 
     def on_letter_press(self, letter):
-        """Обработчик нажатия на букву - загружаем исполнителей и их песни"""
+        """Обработчик нажатия на букву"""
         logger.info(f"Выбрана буква: {letter}")
         self.current_letter = letter
         self.search_mode = False
@@ -966,7 +1036,7 @@ class SongsScreen(MDScreen):
         )
 
     def on_artists_loaded(self, artists):
-        """Отображает список исполнителей с их песнями"""
+        """Отображает список исполнителей"""
         self.hide_loading()
         self.artists_data = artists
 
@@ -1032,7 +1102,7 @@ class SongsScreen(MDScreen):
         logger.info(f"Загружено {len(artists)} исполнителей на букву {self.current_letter}")
 
     def on_song_selected(self, song):
-        """Выбор песни - загружаем и показываем текст на этом же экране"""
+        """Выбор песни"""
         song_id = song.get('song_id')
         song_title = song.get('title', '')
         song_artist = song.get('artist', '')
@@ -1054,7 +1124,7 @@ class SongsScreen(MDScreen):
         )
 
     def on_song_text_loaded(self, data, original_song):
-        """Отображает текст песни в карточке поверх списка"""
+        """Отображает текст песни"""
         self.hide_loading()
 
         song_data = {
@@ -1078,19 +1148,18 @@ class SongsScreen(MDScreen):
         logger.info(f"✅ Текст песни загружен: {song_data['artist']} - {song_data['title']}")
 
     def scroll_to_card(self):
-        """Прокручивает к открытой карточке песни"""
+        """Прокручивает к открытой карточке"""
         if self.current_song_card:
             self.content_scroll.scroll_to(self.current_song_card)
 
     def close_song_card(self):
-        """Закрывает карточку с текстом песни"""
+        """Закрывает карточку с текстом"""
         if self.current_song_card and self.current_song_card.parent:
             self.content_container.remove_widget(self.current_song_card)
             self.current_song_card = None
-            logger.info("Карточка песни закрыта")
 
     def on_song_load_failed(self, req, error):
-        """Ошибка загрузки текста песни"""
+        """Ошибка загрузки текста"""
         self.hide_loading()
         notify.error(f"Ошибка загрузки текста: {error}")
         logger.error(f"Ошибка загрузки текста: {error}")
@@ -1104,24 +1173,25 @@ class SongsScreen(MDScreen):
 
         logger.info(f"🔍 Поиск: {query}")
         self.search_mode = True
+        self.alphabet_grid.clear_selection()
+        self.current_letter = None
         self.clear_search_btn.opacity = 1
         self.close_song_card()
         self.search_results(query)
 
     def clear_search(self, instance):
-        """Очищает поиск и возвращается к алфавитному просмотру"""
+        """Очищает поиск"""
         self.search_field.text = ""
         self.clear_search_btn.opacity = 0
         self.search_mode = False
-        self.close_song_card()
 
         if self.current_letter:
             self.load_artists_with_songs(self.current_letter)
         else:
-            self.show_welcome_screen()
+            self.content_container.clear_widgets()
 
     def search_results(self, query):
-        """Выполняет поиск и отображает результаты"""
+        """Выполняет поиск"""
         self.show_loading()
         api.search_songs(
             query=query,
@@ -1132,7 +1202,7 @@ class SongsScreen(MDScreen):
         )
 
     def on_search_results(self, results):
-        """Отображает результаты поиска в виде карточек"""
+        """Отображает результаты поиска"""
         self.hide_loading()
 
         if not results:
@@ -1205,8 +1275,8 @@ class SongsScreen(MDScreen):
         logger.info(f"Найдено {len(results)} песен, сгруппировано в {len(artists_dict)} исполнителей")
 
     def on_load_failed(self, req, error):
-        """Обработчик ошибки загрузки"""
+        """Обработчик ошибки"""
         self.hide_loading()
         notify.error(f"Ошибка загрузки: {error}")
         logger.error(f"Ошибка загрузки: {error}")
-        self.show_welcome_screen()
+        self.content_container.clear_widgets()
