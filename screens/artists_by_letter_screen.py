@@ -13,6 +13,7 @@ from kivy.animation import Animation
 from kivy.uix.progressbar import ProgressBar
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
+from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from io import BytesIO
 
@@ -31,8 +32,10 @@ try:
 except ImportError:
     HAS_ASSETS = False
 
+
     def load_asset_as_bytes(name):
         return None
+
 
     logger.warning("Модуль data не найден")
 
@@ -90,20 +93,24 @@ class ArtistCard(MDCard):
         self.padding = [dp(16), dp(8), dp(16), dp(8)]
         self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL]
-        self.md_bg_color = [1, 1, 1, 0.15]  # Полупрозрачный белый
         self.elevation = 2
         self.ripple_behavior = True
 
-        # Иконка исполнителя
-        self.icon_label = MDLabel(
-            text="🎸",
-            font_size=sp(28),
-            size_hint_x=None,
-            width=dp(48),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9]
+        # Устанавливаем полупрозрачный фон через theme_bg_color
+        self.theme_bg_color = "Custom"
+        self.md_bg_color = [1, 1, 1, 0.15]  # Белый с прозрачностью 15%
+        self.line_color = [1, 1, 1, 0.1]  # Полупрозрачная граница
+        self.line_width = 1
+
+        # Иконка исполнителя из ассетов
+        self.icon_image = Image(
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            pos_hint={'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
         )
+        self._load_icon()
 
         # Название исполнителя
         self.artist_label = MDLabel(
@@ -127,11 +134,26 @@ class ArtistCard(MDCard):
             text_color=[1, 1, 1, 0.6]
         )
 
-        self.add_widget(self.icon_label)
+        self.add_widget(self.icon_image)
         self.add_widget(self.artist_label)
         self.add_widget(self.arrow_label)
 
         self.bind(on_release=self.on_click)
+
+    def _load_icon(self):
+        """Загружает иконку из ассетов"""
+        if HAS_ASSETS:
+            try:
+                icon_data = load_asset_as_bytes('artist_png')
+                if icon_data:
+                    img = CoreImage(BytesIO(icon_data), ext="png")
+                    self.icon_image.texture = img.texture
+                    return
+            except Exception as e:
+                logger.error(f"Ошибка загрузки иконки artist_png: {e}")
+
+        # Если не загрузилась, показываем эмодзи
+        self.icon_image.text = "🎸"
 
     def on_click(self, instance):
         if self.on_click_callback:
