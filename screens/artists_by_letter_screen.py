@@ -218,14 +218,14 @@ class ArtistsByLetterScreen(MDScreen):
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
 
-        # ============ РЯД С БУКВОЙ И СТРЕЛКОЙ НАЗАД ============
+        # ============ РЯД С НАВИГАЦИЕЙ ============
         self.nav_row = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
             height=dp(56),
             padding=[dp(12), dp(8), dp(12), dp(8)],
             spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0.2]  # Полупрозрачный фон
+            md_bg_color=[0, 0, 0, 0]  # Полностью прозрачный фон
         )
 
         # Кнопка назад (стрелка)
@@ -239,24 +239,44 @@ class ArtistsByLetterScreen(MDScreen):
             on_release=self.go_back
         )
 
-        # Выбранная буква (по центру)
+        # Текст "Назад"
+        self.back_label = MDLabel(
+            text="Назад",
+            font_size=sp(14),
+            size_hint_x=None,
+            width=dp(50),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.8],
+            valign="middle"
+        )
+
+        # Выбранная буква
         self.letter_title = MDLabel(
             text="",
-            font_size=sp(28),
+            font_size=sp(24),
             halign="center",
             valign="middle",
-            size_hint_x=1,
+            size_hint_x=0.5,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             bold=True
         )
 
-        # Пустой виджет для баланса (чтобы буква была по центру)
-        self.spacer = Widget(size_hint=(None, None), size=(dp(40), dp(40)))
+        # Счётчик исполнителей
+        self.counter_label = MDLabel(
+            text="",
+            font_size=sp(12),
+            halign="right",
+            valign="middle",
+            size_hint_x=0.3,
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6]
+        )
 
         self.nav_row.add_widget(self.back_btn)
+        self.nav_row.add_widget(self.back_label)
         self.nav_row.add_widget(self.letter_title)
-        self.nav_row.add_widget(self.spacer)
+        self.nav_row.add_widget(self.counter_label)
 
         # ============ КОНТЕЙНЕР ДЛЯ СПИСКА ИСПОЛНИТЕЛЕЙ ============
         self.content_scroll = MDScrollView(
@@ -302,6 +322,18 @@ class ArtistsByLetterScreen(MDScreen):
         self.letter_title.text = letter.upper()
         self.load_artists()
 
+    def update_counter(self, count):
+        """Обновляет счётчик исполнителей"""
+        # Склонение слова "исполнитель"
+        if count % 10 == 1 and count % 100 != 11:
+            word = "исполнитель"
+        elif 2 <= count % 10 <= 4 and not (12 <= count % 100 <= 14):
+            word = "исполнителя"
+        else:
+            word = "исполнителей"
+
+        self.counter_label.text = f"{count} {word}"
+
     def load_artists(self):
         """Загружает исполнителей по букве"""
         self.show_loading()
@@ -317,6 +349,9 @@ class ArtistsByLetterScreen(MDScreen):
         self.hide_loading()
 
         if not artists:
+            # Обновляем счётчик
+            self.update_counter(0)
+
             # Сообщение об отсутствии исполнителей
             empty_card = MDCard(
                 orientation='vertical',
@@ -364,6 +399,9 @@ class ArtistsByLetterScreen(MDScreen):
             empty_card.add_widget(hint_label)
             self.content_container.add_widget(empty_card)
             return
+
+        # Обновляем счётчик
+        self.update_counter(len(artists))
 
         # Отображаем карточки исполнителей
         for artist_data in artists:
