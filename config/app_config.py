@@ -12,8 +12,8 @@ class AppConfig:
     # API endpoints
     API_AUTH_LOGIN = f"{API_BASE_URL}/auth/login"
     API_AUTH_REGISTER = f"{API_BASE_URL}/auth/register"
-    API_AUTH_GOOGLE = f"{API_BASE_URL}/auth/google"
-    API_AUTH_VK = f"{API_BASE_URL}/auth/vk"
+    API_AUTH_GOOGLE = f"{API_BASE_URL}/auth/google/login"
+    API_AUTH_VK = f"{API_BASE_URL}/auth/vk/login"
     API_AUTH_REFRESH = f"{API_BASE_URL}/auth/refresh"
     API_AUTH_LOGOUT = f"{API_BASE_URL}/auth/logout"
     API_USER_ME = f"{API_BASE_URL}/users/me"

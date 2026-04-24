@@ -472,10 +472,10 @@ class APIClient:
 
     def get_alphabet(self, on_success=None, on_failure=None):
         """Получить все буквы, для которых есть песни"""
-
         def _on_success(result):
+            letters = result.get('letters', []) if isinstance(result, dict) else []
             if on_success:
-                on_success(result.get('letters', []))
+                on_success(letters)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/alphabet",
@@ -503,20 +503,37 @@ class APIClient:
             include_auth=False
         )
 
+    # api/client.py - замени существующий метод get_songs_by_artist на этот
+
     def get_songs_by_artist(self, artist: str, on_success=None, on_failure=None):
         """Получить песни исполнителя"""
         import urllib.parse
         encoded_artist = urllib.parse.quote(artist, safe='')
 
+        # ПРАВИЛЬНЫЙ URL - без дублирования /songs
+        url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}"
+        Logger.info(f"🔍 Запрос песен для: {artist}")
+        Logger.info(f"🔍 URL: {url}")
+
         def _on_success(result):
+            Logger.info(f"✅ Получены песни для {artist}")
+            if isinstance(result, dict):
+                songs = result.get('songs', [])
+            else:
+                songs = []
             if on_success:
-                on_success(result.get('songs', []))
+                on_success(songs)
+
+        def _on_failure(req, error):
+            Logger.error(f"❌ Ошибка получения песен для {artist}: {error}")
+            if on_failure:
+                on_failure(req, error)
 
         return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/songs/{encoded_artist}",
+            url=url,
             method='GET',
             on_success=_on_success,
-            on_failure=on_failure,
+            on_failure=_on_failure,
             include_auth=False
         )
 
@@ -527,8 +544,9 @@ class APIClient:
         encoded_title = urllib.parse.quote(title, safe='')
 
         def _on_success(result):
+            tabs = result.get('tabs', []) if isinstance(result, dict) else []
             if on_success:
-                on_success(result.get('tabs', []))
+                on_success(tabs)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tabs/{encoded_artist}/{encoded_title}",
@@ -540,7 +558,6 @@ class APIClient:
 
     def get_tab(self, song_id: int, on_success=None, on_failure=None):
         """Получить конкретный подбор по ID"""
-
         def _on_success(result):
             if on_success:
                 on_success(result)
@@ -553,65 +570,33 @@ class APIClient:
             include_auth=True
         )
 
-    def toggle_like(self, song_id: int, on_success=None, on_failure=None):
-        """Поставить/убрать лайк"""
-
-        def _on_success(result):
-            Logger.info(f'✅ Лайк переключён для {song_id}')
-            if on_success:
-                on_success(result)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/like",
-            method='POST',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Добавить в избранное"""
-
-        def _on_success(result):
-            Logger.info(f'✅ Добавлено в избранное {song_id}')
-            if on_success:
-                on_success(result)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
-            method='POST',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Удалить из избранного"""
-
-        def _on_success(result):
-            Logger.info(f'✅ Удалено из избранного {song_id}')
-            if on_success:
-                on_success(result)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
-            method='DELETE',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
     def search_songs(self, query: str, search_type: str = "general", limit: int = 50, on_success=None, on_failure=None):
         """Поиск песен"""
         import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
 
         def _on_success(result):
+            results = result.get('results', []) if isinstance(result, dict) else []
             if on_success:
-                on_success(result.get('results', []))
+                on_success(results)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&search_type={search_type}&limit={limit}",
+            method='GET',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
+    def get_popular_songs(self, limit: int = 20, on_success=None, on_failure=None):
+        """Получить популярные песни"""
+        def _on_success(result):
+            songs = result.get('songs', []) if isinstance(result, dict) else []
+            if on_success:
+                on_success(songs)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/popular?limit={limit}",
             method='GET',
             on_success=_on_success,
             on_failure=on_failure,
@@ -631,6 +616,51 @@ class APIClient:
         if not self.user_data:
             return 'guest'
         return self.user_data.get('role', 'user')
+
+    def toggle_like(self, song_id: int, on_success=None, on_failure=None):
+        """Поставить/убрать лайк"""
+        def _on_success(result):
+            Logger.info(f'✅ Лайк переключён для {song_id}')
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/like",
+            method='POST',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
+        """Добавить в избранное"""
+        def _on_success(result):
+            Logger.info(f'✅ Добавлено в избранное {song_id}')
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
+            method='POST',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
+        """Удалить из избранного"""
+        def _on_success(result):
+            Logger.info(f'✅ Удалено из избранного {song_id}')
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
+            method='DELETE',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
 
     def get_all_users(self, on_success=None, on_failure=None, limit=100, offset=0):
         """Получить список всех пользователей (только для админов)"""
