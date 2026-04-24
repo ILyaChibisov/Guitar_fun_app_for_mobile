@@ -15,6 +15,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
+from kivy.uix.floatlayout import FloatLayout
 from io import BytesIO
 
 from config.theme import theme
@@ -96,10 +97,10 @@ class ArtistCard(MDCard):
         self.elevation = 2
         self.ripple_behavior = True
 
-        # Устанавливаем полупрозрачный фон через theme_bg_color
+        # Устанавливаем полупрозрачный фон
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [1, 1, 1, 0.15]  # Белый с прозрачностью 15%
-        self.line_color = [1, 1, 1, 0.1]  # Полупрозрачная граница
+        self.md_bg_color = [1, 1, 1, 0.15]
+        self.line_color = [1, 1, 1, 0.1]
         self.line_width = 1
 
         # Иконка исполнителя из ассетов
@@ -152,7 +153,6 @@ class ArtistCard(MDCard):
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки artist_png: {e}")
 
-        # Если не загрузилась, показываем эмодзи
         self.icon_image.text = "🎸"
 
     def on_click(self, instance):
@@ -170,8 +170,8 @@ class ArtistsByLetterScreen(MDScreen):
         self.is_loading = False
         self.loading_spinner = None
         self.bg_image = None
+        self.fade_layer = None
 
-        # Делаем фон экрана прозрачным для фонового изображения
         self.md_bg_color = [0, 0, 0, 0]
 
         self.init_ui()
@@ -207,7 +207,10 @@ class ArtistsByLetterScreen(MDScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        # Основной контейнер
+        # Основной контейнер - используем FloatLayout для слоёв
+        root_layout = FloatLayout()
+
+        # Основной вертикальный контейнер для контента
         main_layout = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -218,86 +221,90 @@ class ArtistsByLetterScreen(MDScreen):
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
 
-        # ============ РЯД С НАВИГАЦИЕЙ ============
+        # ============ СТРОКА: стрелка и счётчик ============
         self.nav_row = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(56),
-            padding=[dp(12), dp(8), dp(12), dp(8)],
+            height=dp(50),
+            padding=[dp(16), dp(8), dp(16), dp(8)],
             spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0]  # Полностью прозрачный фон
+            md_bg_color=[0, 0, 0, 0]
         )
 
         # Кнопка назад (стрелка)
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(36), dp(36)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
             on_release=self.go_back
         )
 
-        # Текст "Назад"
-        self.back_label = MDLabel(
-            text="Назад",
-            font_size=sp(14),
-            size_hint_x=None,
-            width=dp(50),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8],
-            valign="middle"
-        )
-
-        # Выбранная буква
-        self.letter_title = MDLabel(
+        # Счётчик исполнителей (по центру)
+        self.counter_label = MDLabel(
             text="",
-            font_size=sp(24),
+            font_size=sp(16),
             halign="center",
             valign="middle",
-            size_hint_x=0.5,
+            size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
+            text_color=[1, 1, 1, 0.9],
             bold=True
         )
 
-        # Счётчик исполнителей
-        self.counter_label = MDLabel(
-            text="",
-            font_size=sp(12),
-            halign="right",
-            valign="middle",
-            size_hint_x=0.3,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6]
-        )
-
         self.nav_row.add_widget(self.back_btn)
-        self.nav_row.add_widget(self.back_label)
-        self.nav_row.add_widget(self.letter_title)
         self.nav_row.add_widget(self.counter_label)
 
-        # ============ КОНТЕЙНЕР ДЛЯ СПИСКА ИСПОЛНИТЕЛЕЙ ============
+        # ============ СПИСОК ИСПОЛНИТЕЛЕЙ ============
         self.content_scroll = MDScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
             bar_color=[1, 1, 1, 0.3],
             bar_width=dp(4)
         )
+
+        # Контейнер для списка
         self.content_container = MDBoxLayout(
             orientation='vertical',
             spacing=dp(8),
             size_hint_y=None,
             adaptive_height=True,
-            padding=[dp(16), dp(12), dp(16), dp(16)]
+            padding=[dp(16), dp(12), dp(16), dp(20)]
         )
         self.content_scroll.add_widget(self.content_container)
 
         main_layout.add_widget(self.nav_row)
         main_layout.add_widget(self.content_scroll)
 
-        self.add_widget(main_layout)
+        # ============ ПРОЗРАЧНЫЙ СЛОЙ НАД НИЖНЕЙ НАВИГАЦИЕЙ ============
+        self.fade_layer = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(80),
+            pos_hint={'x': 0, 'y': 0},
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        with self.fade_layer.canvas.before:
+            Color(0, 0, 0, 0.6)
+            self.fade_rect = Rectangle(pos=self.fade_layer.pos, size=self.fade_layer.size)
+
+        self.fade_layer.bind(pos=self._update_fade, size=self._update_fade)
+
+        root_layout.add_widget(main_layout)
+        root_layout.add_widget(self.fade_layer)
+
+        self.add_widget(root_layout)
+
+        self.root_layout = root_layout
+
+    def _update_fade(self, *args):
+        """Обновляет позицию градиентного слоя"""
+        if hasattr(self, 'fade_rect'):
+            self.fade_rect.pos = self.fade_layer.pos
+            self.fade_rect.size = self.fade_layer.size
 
     def show_loading(self):
         """Показывает индикатор загрузки"""
@@ -319,12 +326,11 @@ class ArtistsByLetterScreen(MDScreen):
     def set_letter(self, letter):
         """Устанавливает букву и загружает исполнителей"""
         self.current_letter = letter
-        self.letter_title.text = letter.upper()
+        self.update_counter_label(0)
         self.load_artists()
 
-    def update_counter(self, count):
+    def update_counter_label(self, count):
         """Обновляет счётчик исполнителей"""
-        # Склонение слова "исполнитель"
         if count % 10 == 1 and count % 100 != 11:
             word = "исполнитель"
         elif 2 <= count % 10 <= 4 and not (12 <= count % 100 <= 14):
@@ -332,7 +338,7 @@ class ArtistsByLetterScreen(MDScreen):
         else:
             word = "исполнителей"
 
-        self.counter_label.text = f"{count} {word}"
+        self.counter_label.text = f"Найдено {count} {word}"
 
     def load_artists(self):
         """Загружает исполнителей по букве"""
@@ -349,10 +355,8 @@ class ArtistsByLetterScreen(MDScreen):
         self.hide_loading()
 
         if not artists:
-            # Обновляем счётчик
-            self.update_counter(0)
+            self.update_counter_label(0)
 
-            # Сообщение об отсутствии исполнителей
             empty_card = MDCard(
                 orientation='vertical',
                 size_hint=(1, None),
@@ -400,15 +404,17 @@ class ArtistsByLetterScreen(MDScreen):
             self.content_container.add_widget(empty_card)
             return
 
-        # Обновляем счётчик
-        self.update_counter(len(artists))
+        self.update_counter_label(len(artists))
 
-        # Отображаем карточки исполнителей
         for artist_data in artists:
             artist = artist_data.get('artist')
             if artist:
                 card = ArtistCard(artist=artist, on_click=self.on_artist_selected)
                 self.content_container.add_widget(card)
+
+        # Добавляем нижний спейсер
+        bottom_spacer = Widget(size_hint_y=None, height=dp(80))
+        self.content_container.add_widget(bottom_spacer)
 
         logger.info(f"Загружено {len(artists)} исполнителей на букву {self.current_letter}")
 
@@ -416,16 +422,13 @@ class ArtistsByLetterScreen(MDScreen):
         """Выбор исполнителя - переход на экран его песен"""
         logger.info(f"Выбран исполнитель: {artist}")
 
-        # Здесь будет переход на экран песен исполнителя
         if hasattr(self, 'manager') and self.manager:
-            # Проверяем наличие экрана artist_songs
             if self.manager.has_screen('artist_songs'):
                 artist_songs_screen = self.manager.get_screen('artist_songs')
                 if hasattr(artist_songs_screen, 'set_artist'):
                     artist_songs_screen.set_artist(artist)
                     self.manager.current = 'artist_songs'
             else:
-                # Временно показываем уведомление
                 notify.info(f"Выбран исполнитель: {artist}")
 
     def on_load_failed(self, req, error):
@@ -434,7 +437,6 @@ class ArtistsByLetterScreen(MDScreen):
         notify.error(f"Ошибка загрузки: {error}")
         logger.error(f"Ошибка загрузки: {error}")
 
-        # Показываем сообщение об ошибке
         error_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
