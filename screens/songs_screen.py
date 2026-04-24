@@ -30,8 +30,10 @@ try:
 except ImportError:
     HAS_ASSETS = False
 
+
     def load_asset_as_bytes(name):
         return None
+
 
     logger.warning("Модуль data не найден")
 
@@ -86,7 +88,7 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
             self.main_layout.md_bg_color = [0.46, 0.70, 0.71, 1]
             self.main_layout.radius = [dp(8), dp(8), dp(8), dp(8)]
         else:
-            self.label.text_color = [0, 0, 0, 1]
+            self.label.text_color = [1, 1, 1, 1]  # Белый цвет для неактивных кнопок
             self.main_layout.md_bg_color = [0, 0, 0, 0]
             self.main_layout.radius = [0, 0, 0, 0]
 
@@ -245,7 +247,7 @@ class LanguageSelector(MDBoxLayout):
 
 
 class AlphabetGrid(MDCard):
-    """Сетка с буквами - равномерное распределение по 4 рядам"""
+    """Сетка с буквами - равномерное распределение по рядам с прозрачным фоном"""
 
     # Русский алфавит (33 буквы) + символы
     RU_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
@@ -269,7 +271,12 @@ class AlphabetGrid(MDCard):
         self.height = dp(180)
         self.padding = [dp(0), dp(0), dp(0), dp(0)]
         self.radius = [theme.CORNER_RADIUS_SMALL]
-        self.md_bg_color = "#E8E8E8"
+
+        # Делаем фон полупрозрачным, чуть темнее (20% вместо 15%)
+        self.theme_bg_color = "Custom"
+        self.md_bg_color = [0, 0, 0, 0.2]  # Чёрный с прозрачностью 20% (темнее)
+        self.line_color = [1, 1, 1, 0.1]
+        self.line_width = 1
         self.elevation = 2
 
         self.rows = []
@@ -299,10 +306,8 @@ class AlphabetGrid(MDCard):
         # Выбираем набор букв
         if self.current_language == 'ru':
             items = self.RU_LETTERS  # 35 элементов
-            # Для русского делаем 4 ряда по 9, 9, 9, 8
-            # Но 9 кнопок в ряду - это слишком много, сделаем 5 рядов?
             rows_count = 5
-            self.height = dp(200)  # Увеличиваем высоту для 5 рядов
+            self.height = dp(200)
         else:
             items = self.EN_LETTERS  # 28 элементов
             rows_count = 4
@@ -503,7 +508,7 @@ class SongsScreen(MDScreen):
         )
         main_layout.add_widget(self.language_selector)
 
-        # Сетка с буквами
+        # Сетка с буквами (теперь с прозрачным фоном)
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
         main_layout.add_widget(self.alphabet_grid)
 
