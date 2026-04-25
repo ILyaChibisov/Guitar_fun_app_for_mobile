@@ -8,11 +8,20 @@ from kivy.metrics import dp
 class TopNavConfig:
     """Настройки верхней панели"""
 
-    # Отступ от верха экрана
-    TOP_OFFSET = 0.99
+    # Тип панели: small, medium, large
+    BAR_TYPE = "small"
 
-    # Размер иконок
-    ICON_SIZE = (40, 40)
+    # Прозрачность фона (0 - полностью прозрачный, 1 - непрозрачный)
+    BG_COLOR = [0, 0, 0, 0]  # Полностью прозрачный
+
+    # Высота тени (0 - без тени)
+    ELEVATION = 0
+
+    # Выравнивание заголовка: "left", "center"
+    TITLE_ALIGNMENT = "center"
+
+    # Размер шрифта заголовка
+    TITLE_FONT_SIZE = 18  # sp
 
     # Доступные языки
     LANGUAGES = [
@@ -20,23 +29,40 @@ class TopNavConfig:
         {'code': 'en', 'flag': 'eng_png', 'name': 'EN'}
     ]
 
-    # Позиция языкового селектора
-    LANGUAGE_SELECTOR_POS = {'right': 0.96, 'top': TOP_OFFSET}
+    # Размер иконок в верхней панели
+    ICON_SIZE = (dp(40), dp(40))
 
-    # Пресеты для разных экранов
+    # Пресеты для разных размеров экрана
     SCREEN_PRESETS = {
-        'small': {'TOP_OFFSET': 0.92, 'ICON_SIZE': (36, 36)},
-        'normal': {'TOP_OFFSET': 0.94, 'ICON_SIZE': (40, 40)},
-        'large': {'TOP_OFFSET': 0.95, 'ICON_SIZE': (44, 44)},
-        'tablet': {'TOP_OFFSET': 0.96, 'ICON_SIZE': (48, 48)}
+        'small': {
+            'BAR_TYPE': 'small',
+            'TITLE_FONT_SIZE': 14,
+            'ICON_SIZE': (dp(32), dp(32))
+        },
+        'normal': {
+            'BAR_TYPE': 'small',
+            'TITLE_FONT_SIZE': 16,
+            'ICON_SIZE': (dp(36), dp(36))
+        },
+        'large': {
+            'BAR_TYPE': 'medium',
+            'TITLE_FONT_SIZE': 18,
+            'ICON_SIZE': (dp(40), dp(40))
+        },
+        'tablet': {
+            'BAR_TYPE': 'large',
+            'TITLE_FONT_SIZE': 20,
+            'ICON_SIZE': (dp(44), dp(44))
+        }
     }
 
     @classmethod
     def apply_preset(cls, preset_name='normal'):
+        """Применяет предустановленные настройки для размера экрана"""
         preset = cls.SCREEN_PRESETS.get(preset_name, cls.SCREEN_PRESETS['normal'])
-        cls.TOP_OFFSET = preset.get('TOP_OFFSET', cls.TOP_OFFSET)
+        cls.BAR_TYPE = preset.get('BAR_TYPE', cls.BAR_TYPE)
+        cls.TITLE_FONT_SIZE = preset.get('TITLE_FONT_SIZE', cls.TITLE_FONT_SIZE)
         cls.ICON_SIZE = preset.get('ICON_SIZE', cls.ICON_SIZE)
-        cls.LANGUAGE_SELECTOR_POS['top'] = cls.TOP_OFFSET
         return cls
 
 

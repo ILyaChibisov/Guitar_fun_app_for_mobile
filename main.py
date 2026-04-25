@@ -109,6 +109,7 @@ class RootWidget(MDFloatLayout):
         super().__init__(**kwargs)
         self.bg_image = None
         self.load_background()
+        self.size_hint = (1, 1)
 
     def load_background(self):
         """Загружает фоновое изображение на весь экран"""
@@ -126,17 +127,13 @@ class RootWidget(MDFloatLayout):
                     img = CoreImage(BytesIO(bg_data), ext="jpg")
                     with self.canvas.before:
                         Color(1, 1, 1, 1)
-                        self.bg_image = Rectangle(
-                            texture=img.texture,
-                            pos=self.pos,
-                            size=self.size
-                        )
+                        self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
                     self.bind(pos=self._update_bg, size=self._update_bg)
                     return
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
 
-        # Если нет ассета, устанавливаем зелёный цвет
+        # Если нет ассета, устанавливаем цвет как fallback
         with self.canvas.before:
             Color(0.46, 0.70, 0.71, 1)
             self.bg_image = Rectangle(pos=self.pos, size=self.size)
@@ -163,6 +160,8 @@ class GuitarFunsApp(MDApp):
         logger.info(f'🎸 Платформа: {platform}')
         logger.info('🎸 ' + '=' * 50)
 
+        # main.py - метод build (исправленный)
+
     def build(self):
         logger.debug('Создание интерфейса...')
 
@@ -179,28 +178,55 @@ class GuitarFunsApp(MDApp):
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
 
-        # Создаём верхнюю панель (плавающие иконки)
+        # Создаём верхнюю панель (тёмная полупрозрачная)
         self.top_nav = TopNav(self.screen_manager)
+        self.top_nav.set_app(self)
+        self.top_nav.size_hint = (1, None)
+        self.top_nav.height = dp(56)
+        self.top_nav.pos_hint = {'top': 1}
+        self.top_nav.md_bg_color = [0, 0, 0, 0.3]  # Тёмный полупрозрачный
+        self.top_nav.theme_bg_color = "Custom"
 
         # Создаём нижнюю панель
         self.bottom_nav = BottomNav(self.screen_manager)
 
-        # Добавляем всё в root (порядок важен - последний добавленный будет сверху)
-        root.add_widget(self.screen_manager)  # Сначала ScreenManager
-        root.add_widget(self.bottom_nav)  # Затем нижняя панель
-        root.add_widget(self.top_nav)  # Затем верхняя панель (самая верхняя)
+        # Добавляем всё в root
+        # ВАЖНО: порядок добавления!
+        root.add_widget(self.screen_manager)  # 1. Основной контент (самый нижний слой)
+        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
+        root.add_widget(self.top_nav)  # 3. Верхняя панель (самый верхний слой)
+
+        # Убираем raise_to_top - он не нужен, порядок добавления уже правильный
 
         network_manager.start_monitoring()
 
         logger.info('Интерфейс успешно создан')
         return root
 
+    def open_profile(self, instance=None):
+        """Открывает экран профиля"""
+        if self.screen_manager and self.screen_manager.has_screen('profile'):
+            self.screen_manager.current = 'profile'
+
+    def open_support(self, instance=None):
+        """Открывает экран поддержки"""
+        from utils.notifications import notify
+        notify.info("Поддержка будет доступна в следующей версии")
+
+    def change_language(self, lang_code):
+        """Изменяет язык приложения"""
+        logger.info(f"Смена языка на: {lang_code}")
+        # TODO: Реализовать смену языка
+
     def on_start(self):
         logger.info('Приложение GuitarFuns запущено')
         if HAS_ASSETS:
-            from data import Assets
-            assets_list = Assets.list_assets()
-            logger.info(f'📦 Загружено ассетов: {len(assets_list)}')
+            try:
+                from data import Assets
+                assets_list = Assets.list_assets()
+                logger.info(f'📦 Загружено ассетов: {len(assets_list)}')
+            except Exception as e:
+                logger.error(f'Ошибка получения списка ассетов: {e}')
 
     def on_pause(self):
         logger.debug('Приложение свернуто')

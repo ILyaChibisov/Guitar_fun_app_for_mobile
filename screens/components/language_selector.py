@@ -23,7 +23,6 @@ try:
 except ImportError:
     HAS_ASSETS = False
 
-
     def load_asset_as_bytes(name):
         return None
 
@@ -78,42 +77,12 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
                     self.main_flag.texture = img.texture
                     return
             except Exception as e:
-                print(f"Ошибка: {e}")
+                logger.error(f"Ошибка загрузки флага: {e}")
+        # Fallback на эмодзи
         self.main_flag.text = "🇷🇺" if lang_code == 'ru' else "🇬🇧"
-
-    def _load_check_icon(self):
-        """Загружает галочку из ассета"""
-        if HAS_ASSETS:
-            try:
-                icon_data = load_asset_as_bytes('check_png')
-                if icon_data:
-                    img = CoreImage(BytesIO(icon_data), ext="png")
-                    check_img = Image(
-                        texture=img.texture,
-                        size_hint=(None, 1),
-                        width=dp(20),
-                        allow_stretch=True,
-                        keep_ratio=True
-                    )
-                    return check_img
-            except Exception as e:
-                print(f"Ошибка загрузки галочки: {e}")
-
-        # Если галочка не загрузилась, используем текстовую
-        check_label = Label(
-            text="✓",
-            font_size=sp(14),
-            color=theme.PRIMARY,
-            size_hint=(None, 1),
-            width=dp(20),
-            halign='center',
-            valign='middle'
-        )
-        return check_label
 
     def _create_popup(self):
         """Создаёт Popup с выбором языка, флагами и галочкой"""
-
         content = BoxLayout(
             orientation='vertical',
             spacing=dp(2),
@@ -122,9 +91,6 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             width=dp(180),
             height=dp(100)
         )
-
-        # Загружаем галочку один раз
-        self.check_icon = self._load_check_icon()
 
         # Кнопка Русский
         ru_box = BoxLayout(
@@ -151,8 +117,7 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             size_hint_x=1
         )
 
-        # Копия галочки для русского языка
-        ru_check = self._copy_check_icon()
+        ru_check = self._create_check_icon()
         ru_check.opacity = 1 if self.current_lang == 'ru' else 0
 
         ru_box.add_widget(ru_flag)
@@ -197,8 +162,7 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             size_hint_x=1
         )
 
-        # Копия галочки для английского языка
-        en_check = self._copy_check_icon()
+        en_check = self._create_check_icon()
         en_check.opacity = 1 if self.current_lang == 'en' else 0
 
         en_box.add_widget(en_flag)
@@ -235,26 +199,25 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             auto_dismiss=True
         )
 
-    def _copy_check_icon(self):
-        """Создаёт копию галочки для каждого пункта меню"""
+    def _create_check_icon(self):
+        """Создаёт иконку галочки из ассета или текстовую"""
         if HAS_ASSETS:
             try:
                 icon_data = load_asset_as_bytes('check_png')
                 if icon_data:
                     img = CoreImage(BytesIO(icon_data), ext="png")
-                    check_img = Image(
+                    return Image(
                         texture=img.texture,
                         size_hint=(None, 1),
                         width=dp(20),
                         allow_stretch=True,
                         keep_ratio=True
                     )
-                    return check_img
             except Exception as e:
-                print(f"Ошибка загрузки галочки: {e}")
+                logger.error(f"Ошибка загрузки галочки: {e}")
 
-        # Если галочка не загрузилась, используем текстовую
-        check_label = Label(
+        # Fallback на текстовую галочку
+        return Label(
             text="✓",
             font_size=sp(14),
             color=theme.PRIMARY,
@@ -263,12 +226,10 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             halign='center',
             valign='middle'
         )
-        return check_label
 
     def _open_popup(self, instance):
         """Открывает Popup и обновляет галочки"""
         if self.popup:
-            # Обновляем галочки перед открытием
             self.ru_check.opacity = 1 if self.current_lang == 'ru' else 0
             self.en_check.opacity = 1 if self.current_lang == 'en' else 0
             self.popup.open()
@@ -284,7 +245,6 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
         self.main_text.text = "RU" if lang_code == 'ru' else "EN"
         self._load_main_flag(lang_code)
 
-        # Обновляем галочки
         self.ru_check.opacity = 1 if self.current_lang == 'ru' else 0
         self.en_check.opacity = 1 if self.current_lang == 'en' else 0
 
@@ -292,8 +252,15 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             self.popup.dismiss()
 
         if self.on_language_change:
-            print(f"🌐 Язык изменён на: {lang_code}")
+            logger.info(f"🌐 Язык изменён на: {lang_code}")
             self.on_language_change(lang_code)
 
     def get_current_lang(self):
         return self.current_lang
+
+    def set_current_lang(self, lang_code):
+        """Устанавливает текущий язык программно"""
+        if lang_code in ['ru', 'en']:
+            self.current_lang = lang_code
+            self.main_text.text = "RU" if lang_code == 'ru' else "EN"
+            self._load_main_flag(lang_code)
