@@ -225,18 +225,20 @@ class SongDetailScreen(MDScreen):
         )
 
         # ============ ТЕКСТ ПЕСНИ (СКРОЛЛ) ============
+        # bar_width=0 - убираем видимость полосы прокрутки (на мобильных не видна, на ПК тоже)
         self.content_scroll = MDScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
-            bar_color=[0.5, 0.5, 0.5, 0.3],
-            bar_width=dp(4)
+            bar_color=[0.5, 0.5, 0.5, 0],
+            bar_width=0,
+            bar_inactive_color=[0.5, 0.5, 0.5, 0]
         )
 
         # Контейнер для текста и нижней панели
         scroll_content = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            spacing=dp(16),
+            spacing=dp(12),
             adaptive_height=True
         )
 
@@ -253,19 +255,20 @@ class SongDetailScreen(MDScreen):
         self.content_label.bind(texture_size=self._update_content_height)
 
         # ============ НИЖНЯЯ ЧАСТЬ КАРТОЧКИ (ЛАЙКИ И СТАТИСТИКА) ============
+        # Уменьшенная секция - высота 36dp
         self.bottom_stats = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(44),
-            spacing=dp(24),
-            padding=[dp(8), dp(0), dp(8), dp(0)]
+            height=dp(36),
+            spacing=dp(16),
+            padding=[dp(4), dp(0), dp(4), dp(0)]
         )
 
         # Кнопка лайка
         self.like_btn = MDIconButton(
             icon="heart-outline",
             size_hint=(None, None),
-            size=(dp(32), dp(32)),
+            size=(dp(28), dp(28)),
             theme_icon_color="Custom",
             icon_color=[0.8, 0.3, 0.3, 0.8],
             on_release=self.toggle_like
@@ -273,9 +276,9 @@ class SongDetailScreen(MDScreen):
 
         self.like_count = MDLabel(
             text="0",
-            font_size=sp(14),
+            font_size=sp(12),
             size_hint_x=None,
-            width=dp(35),
+            width=dp(30),
             theme_text_color="Custom",
             text_color=[0.8, 0.3, 0.3, 0.9],
             bold=True,
@@ -286,7 +289,7 @@ class SongDetailScreen(MDScreen):
         self.favorite_btn = MDIconButton(
             icon="star-outline",
             size_hint=(None, None),
-            size=(dp(32), dp(32)),
+            size=(dp(28), dp(28)),
             theme_icon_color="Custom",
             icon_color=[0.9, 0.7, 0.2, 0.8],
             on_release=self.toggle_favorite
@@ -294,20 +297,20 @@ class SongDetailScreen(MDScreen):
 
         self.favorite_count = MDLabel(
             text="0",
-            font_size=sp(14),
+            font_size=sp(12),
             size_hint_x=None,
-            width=dp(35),
+            width=dp(30),
             theme_text_color="Custom",
             text_color=[0.9, 0.7, 0.2, 0.9],
             bold=True,
             valign="middle"
         )
 
-        # Просмотры (значок глаза)
+        # Просмотры
         self.views_icon = MDIconButton(
             icon="eye-outline",
             size_hint=(None, None),
-            size=(dp(24), dp(24)),
+            size=(dp(22), dp(22)),
             theme_icon_color="Custom",
             icon_color=[0.5, 0.5, 0.5, 0.7],
             disabled=True
@@ -315,9 +318,9 @@ class SongDetailScreen(MDScreen):
 
         self.views_count = MDLabel(
             text="0",
-            font_size=sp(13),
+            font_size=sp(11),
             size_hint_x=None,
-            width=dp(35),
+            width=dp(30),
             theme_text_color="Custom",
             text_color=[0.5, 0.5, 0.5, 0.7],
             valign="middle"
@@ -327,7 +330,7 @@ class SongDetailScreen(MDScreen):
             orientation='horizontal',
             spacing=dp(4),
             size_hint_x=None,
-            width=dp(65)
+            width=dp(55)
         )
         views_box.add_widget(self.views_icon)
         views_box.add_widget(self.views_count)
@@ -338,7 +341,7 @@ class SongDetailScreen(MDScreen):
         self.bottom_stats.add_widget(self.favorite_count)
         self.bottom_stats.add_widget(views_box)
 
-        # Разделитель перед нижней статистикой
+        # Разделитель перед нижней статистикой (тоньше)
         self.divider = Widget(size_hint_y=None, height=dp(1))
         with self.divider.canvas:
             Color(0.7, 0.7, 0.7, 0.5)
