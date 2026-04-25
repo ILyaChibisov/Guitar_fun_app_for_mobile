@@ -439,7 +439,7 @@ class ArtistSongsScreen(MDScreen):
         logger.info(f"Загружено {len(songs)} песен для {self.artist}")
 
     def on_song_selected(self, song_info):
-        """Выбор песни - переход на экран деталей с song_id"""
+        """Выбор песни - переход на экран деталей с запоминанием предыдущего экрана"""
         song_id = song_info.get('song_id')
         song_title = song_info.get('title', '')
 
@@ -450,10 +450,14 @@ class ArtistSongsScreen(MDScreen):
             return
 
         if hasattr(self, 'manager') and self.manager:
-            # Проверяем наличие экрана song_detail
             if self.manager.has_screen('song_detail'):
                 song_detail_screen = self.manager.get_screen('song_detail')
-                if hasattr(song_detail_screen, 'set_song'):
+                if hasattr(song_detail_screen, 'set_song') and hasattr(song_detail_screen, 'set_previous_screen'):
+                    # Устанавливаем, что вернуться нужно на artist_songs
+                    song_detail_screen.set_previous_screen('artist_songs')
+                    song_detail_screen.set_song(song_id)
+                    self.manager.current = 'song_detail'
+                elif hasattr(song_detail_screen, 'set_song'):
                     song_detail_screen.set_song(song_id)
                     self.manager.current = 'song_detail'
                 else:

@@ -543,14 +543,28 @@ class SongsScreen(MDScreen):
                 notify.error("Ошибка навигации")
 
     def do_search(self, instance):
-        """Поиск - пока заглушка"""
+        """Поиск - переход на экран результатов"""
         query = self.search_field.text.strip()
         if len(query) < 2:
             notify.warning("Введите минимум 2 символа для поиска")
             return
 
-        logger.info(f"🔍 Поиск (заглушка): {query}")
-        notify.info(f"Поиск '{query}' будет доступен в следующей версии")
+        logger.info(f"🔍 Поиск: {query}")
+
+        # Очищаем выделение букв
+        self.alphabet_grid.clear_selection()
+        self.current_letter = None
+        self.clear_search_btn.opacity = 1
+
+        # Переход на экран результатов поиска
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('search_results'):
+                search_results_screen = self.manager.get_screen('search_results')
+                search_results_screen.do_search(query)
+                self.manager.current = 'search_results'
+            else:
+                logger.error("Экран search_results не найден")
+                notify.error("Ошибка навигации")
 
     def clear_search(self, instance):
         """Очищает поле поиска"""

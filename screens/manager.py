@@ -12,6 +12,7 @@ from .favorites_screen import FavoritesScreen
 from .profile_screen import ProfileScreen
 from .song_detail_screen import SongDetailScreen
 from .admin_screen import AdminScreen
+from .search_results_screen import SearchResultsScreen  # ДОБАВИТЬ
 
 logger = get_logger('ScreenManager')
 
@@ -30,5 +31,6 @@ def setup_screen_manager():
     sm.add_widget(ProfileScreen(name='profile'))
     sm.add_widget(SongDetailScreen(name='song_detail'))
     sm.add_widget(AdminScreen(name='admin'))
+    sm.add_widget(SearchResultsScreen(name='search_results'))  # ДОБАВИТЬ
 
     return sm

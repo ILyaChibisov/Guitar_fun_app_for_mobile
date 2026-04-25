@@ -18,7 +18,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.floatlayout import FloatLayout
 from io import BytesIO
 import re
-
+from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
@@ -91,6 +91,7 @@ class SongDetailScreen(MDScreen):
         self.is_loading = False
         self.loading_spinner = None
         self.bg_image = None
+        self.previous_screen = 'artist_songs'  # Добавлено: экран, с которого пришли
 
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -98,6 +99,11 @@ class SongDetailScreen(MDScreen):
         self.load_background()
 
         logger.info('Экран просмотра песни создан')
+
+    def set_previous_screen(self, screen_name):
+        """Устанавливает экран, на который нужно вернуться"""
+        self.previous_screen = screen_name
+        logger.info(f"Установлен предыдущий экран: {screen_name}")
 
     def load_background(self):
         """Загружает фоновое изображение"""
@@ -454,6 +460,9 @@ class SongDetailScreen(MDScreen):
         self.is_favorite = data.get('is_favorite', False)
         self.update_buttons_state()
 
+        # Прокручиваем в начало после загрузки текста
+        Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
+
         self.hide_loading()
 
         logger.info(f"Песня загружена: {self.artist} - {self.title}")
@@ -522,5 +531,7 @@ class SongDetailScreen(MDScreen):
             self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 1]
 
     def go_back(self, instance):
+        """Возврат на предыдущий экран"""
         if hasattr(self, 'manager') and self.manager:
-            self.manager.current = 'artist_songs'
+            logger.info(f"Возврат на экран: {self.previous_screen}")
+            self.manager.current = self.previous_screen
