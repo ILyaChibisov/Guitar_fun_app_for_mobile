@@ -91,7 +91,6 @@ class SongDetailScreen(MDScreen):
         self.is_loading = False
         self.loading_spinner = None
         self.bg_image = None
-        self.fade_layer = None
 
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -205,12 +204,12 @@ class SongDetailScreen(MDScreen):
         self.nav_row.add_widget(self.song_icon)
         self.nav_row.add_widget(self.title_label)
 
-        # ============ КАРТОЧКА С ТЕКСТОМ ПЕСНИ (НА ВЕСЬ ЭКРАН) ============
-        # Контейнер для карточки - занимает всё пространство между панелями
+        # ============ КАРТОЧКА С ТЕКСТОМ ПЕСНИ ============
+        # Нижний отступ 85dp - чтобы карточка не заходила под нижнюю навигацию
         card_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(16), dp(8), dp(16), dp(0)]  # Отступы только по бокам и сверху
+            padding=[dp(16), dp(8), dp(16), dp(85)]
         )
 
         self.song_card = MDCard(
@@ -225,13 +224,41 @@ class SongDetailScreen(MDScreen):
             line_width=1
         )
 
-        # ============ ВЕРХНЯЯ ЧАСТЬ КАРТОЧКИ (СТАТИСТИКА) ============
-        self.stats_row = MDBoxLayout(
+        # ============ ТЕКСТ ПЕСНИ (СКРОЛЛ) ============
+        self.content_scroll = MDScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_color=[0.5, 0.5, 0.5, 0.3],
+            bar_width=dp(4)
+        )
+
+        # Контейнер для текста и нижней панели
+        scroll_content = MDBoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            spacing=dp(16),
+            adaptive_height=True
+        )
+
+        self.content_label = MDLabel(
+            text="",
+            font_size=sp(14),
+            size_hint_y=None,
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 0.85],
+            markup=True,
+            valign="top",
+            line_height=1.4
+        )
+        self.content_label.bind(texture_size=self._update_content_height)
+
+        # ============ НИЖНЯЯ ЧАСТЬ КАРТОЧКИ (ЛАЙКИ И СТАТИСТИКА) ============
+        self.bottom_stats = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(48),
+            height=dp(44),
             spacing=dp(24),
-            padding=[dp(0), dp(0), dp(0), dp(8)]
+            padding=[dp(8), dp(0), dp(8), dp(0)]
         )
 
         # Кнопка лайка
@@ -248,9 +275,9 @@ class SongDetailScreen(MDScreen):
             text="0",
             font_size=sp(14),
             size_hint_x=None,
-            width=dp(30),
+            width=dp(35),
             theme_text_color="Custom",
-            text_color=[0.6, 0.2, 0.2, 0.9],
+            text_color=[0.8, 0.3, 0.3, 0.9],
             bold=True,
             valign="middle"
         )
@@ -269,82 +296,68 @@ class SongDetailScreen(MDScreen):
             text="0",
             font_size=sp(14),
             size_hint_x=None,
-            width=dp(30),
+            width=dp(35),
             theme_text_color="Custom",
-            text_color=[0.7, 0.5, 0.1, 0.9],
+            text_color=[0.9, 0.7, 0.2, 0.9],
             bold=True,
             valign="middle"
         )
 
-        # Просмотры
-        self.views_label = MDLabel(
-            text="👁️ 0",
-            font_size=sp(14),
+        # Просмотры (значок глаза)
+        self.views_icon = MDIconButton(
+            icon="eye-outline",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.5, 0.5, 0.5, 0.7],
+            disabled=True
+        )
+
+        self.views_count = MDLabel(
+            text="0",
+            font_size=sp(13),
             size_hint_x=None,
-            width=dp(70),
+            width=dp(35),
             theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 0.8],
+            text_color=[0.5, 0.5, 0.5, 0.7],
             valign="middle"
         )
 
-        self.stats_row.add_widget(self.like_btn)
-        self.stats_row.add_widget(self.like_count)
-        self.stats_row.add_widget(self.favorite_btn)
-        self.stats_row.add_widget(self.favorite_count)
-        self.stats_row.add_widget(self.views_label)
+        views_box = MDBoxLayout(
+            orientation='horizontal',
+            spacing=dp(4),
+            size_hint_x=None,
+            width=dp(65)
+        )
+        views_box.add_widget(self.views_icon)
+        views_box.add_widget(self.views_count)
 
-        # Разделитель
+        self.bottom_stats.add_widget(self.like_btn)
+        self.bottom_stats.add_widget(self.like_count)
+        self.bottom_stats.add_widget(self.favorite_btn)
+        self.bottom_stats.add_widget(self.favorite_count)
+        self.bottom_stats.add_widget(views_box)
+
+        # Разделитель перед нижней статистикой
         self.divider = Widget(size_hint_y=None, height=dp(1))
         with self.divider.canvas:
             Color(0.7, 0.7, 0.7, 0.5)
             self.divider_rect = Rectangle(pos=self.divider.pos, size=self.divider.size)
         self.divider.bind(pos=self._update_divider, size=self._update_divider)
 
-        # ============ ТЕКСТ ПЕСНИ (СКРОЛЛ) ============
-        self.content_scroll = MDScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_color=[0.5, 0.5, 0.5, 0.3],
-            bar_width=dp(4)
-        )
-        self.content_label = MDLabel(
-            text="",
-            font_size=sp(14),
-            size_hint_y=None,
-            theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.85],
-            markup=True,
-            valign="top",
-            line_height=1.4
-        )
-        self.content_label.bind(texture_size=self._update_content_height)
-        self.content_scroll.add_widget(self.content_label)
+        scroll_content.add_widget(self.content_label)
+        scroll_content.add_widget(self.divider)
+        scroll_content.add_widget(self.bottom_stats)
 
-        self.song_card.add_widget(self.stats_row)
-        self.song_card.add_widget(self.divider)
+        self.content_scroll.add_widget(scroll_content)
+
         self.song_card.add_widget(self.content_scroll)
         card_container.add_widget(self.song_card)
-
-        # ============ ЗАТЕМНЯЮЩИЙ СЛОЙ НАД НИЖНЕЙ НАВИГАЦИЕЙ ============
-        self.fade_layer = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(80),
-            pos_hint={'x': 0, 'y': 0},
-            md_bg_color=[0, 0, 0, 0]
-        )
-
-        with self.fade_layer.canvas.before:
-            Color(0, 0, 0, 0.6)
-            self.fade_rect = Rectangle(pos=self.fade_layer.pos, size=self.fade_layer.size)
-
-        self.fade_layer.bind(pos=self._update_fade, size=self._update_fade)
 
         main_layout.add_widget(self.nav_row)
         main_layout.add_widget(card_container)
 
         root_layout.add_widget(main_layout)
-        root_layout.add_widget(self.fade_layer)
 
         self.add_widget(root_layout)
 
@@ -352,11 +365,6 @@ class SongDetailScreen(MDScreen):
         if hasattr(self, 'divider_rect'):
             self.divider_rect.pos = self.divider.pos
             self.divider_rect.size = self.divider.size
-
-    def _update_fade(self, *args):
-        if hasattr(self, 'fade_rect'):
-            self.fade_rect.pos = self.fade_layer.pos
-            self.fade_rect.size = self.fade_layer.size
 
     def _update_content_height(self, *args):
         """Обновляет высоту контента при изменении текста"""
@@ -373,21 +381,17 @@ class SongDetailScreen(MDScreen):
 
         for i, line in enumerate(lines):
             line_lower = line.lower()
-            # Пропускаем строки с источником
             if 'источник:' in line_lower or 'source:' in line_lower:
                 continue
-            # Пропускаем первые 4 строки
             if i < 4:
                 continue
             cleaned_lines.append(line)
 
-        # Убираем пустые строки в конце
         while cleaned_lines and not cleaned_lines[-1].strip():
             cleaned_lines.pop()
 
         result = '\n'.join(cleaned_lines)
 
-        # Если после очистки ничего не осталось, возвращаем исходный текст
         if not result.strip():
             result = '\n'.join(lines[4:])
 
@@ -441,7 +445,7 @@ class SongDetailScreen(MDScreen):
         self._update_content_height()
 
         self.like_count.text = str(data.get('likes', 0))
-        self.views_label.text = f"👁️ {data.get('views', 0)}"
+        self.views_count.text = str(data.get('views', 0))
 
         self.is_liked = data.get('is_liked', False)
         self.is_favorite = data.get('is_favorite', False)
@@ -466,14 +470,14 @@ class SongDetailScreen(MDScreen):
                 self.like_btn.icon_color = [0.8, 0.3, 0.3, 1]
             else:
                 self.like_btn.icon = "heart-outline"
-                self.like_btn.icon_color = [0.8, 0.3, 0.3, 0.8]
+                self.like_btn.icon_color = [0.8, 0.3, 0.3, 0.6]
 
             if self.is_favorite:
                 self.favorite_btn.icon = "star"
                 self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 1]
             else:
                 self.favorite_btn.icon = "star-outline"
-                self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 0.8]
+                self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 0.6]
         else:
             self.like_btn.disabled = True
             self.favorite_btn.disabled = True
@@ -488,7 +492,7 @@ class SongDetailScreen(MDScreen):
             current = int(self.like_count.text)
             self.like_count.text = str(current - 1)
             self.like_btn.icon = "heart-outline"
-            self.like_btn.icon_color = [0.8, 0.3, 0.3, 0.8]
+            self.like_btn.icon_color = [0.8, 0.3, 0.3, 0.6]
         else:
             self.is_liked = True
             current = int(self.like_count.text)
@@ -506,7 +510,7 @@ class SongDetailScreen(MDScreen):
             current = int(self.favorite_count.text)
             self.favorite_count.text = str(current - 1)
             self.favorite_btn.icon = "star-outline"
-            self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 0.8]
+            self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 0.6]
         else:
             self.is_favorite = True
             current = int(self.favorite_count.text)
