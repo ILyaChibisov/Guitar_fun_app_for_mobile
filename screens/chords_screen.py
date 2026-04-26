@@ -1,11 +1,11 @@
-# screens/chords_screen.py
+# screens/chords_screen.py (исправленный - добавлен метод load_chord_by_name)
+
 """
 Экран гитарных аккордов
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.textfield import MDTextField
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.card import MDCard
@@ -642,7 +642,6 @@ class ChordsRow(MDBoxLayout):
         self.chords_data = {chord['short_name']: chord for chord in chords_list}
         self.current_page = 0
 
-        # Всегда 4 кнопки на страницу (или меньше на последней)
         self.items_per_page = 4
         self.total_pages = max(1, (len(self.current_items) + self.items_per_page - 1) // self.items_per_page)
 
@@ -651,7 +650,6 @@ class ChordsRow(MDBoxLayout):
 
         self.update_display()
 
-        # Автоматически вызываем выбор первого аккорда
         if self.current_items and self.on_item_selected:
             Clock.schedule_once(lambda dt: self.on_item_selected(self.current_items[0]), 0.1)
 
@@ -673,16 +671,13 @@ class ChordsRow(MDBoxLayout):
 
         self.total_pages = max(1, (len(self.current_items) + self.items_per_page - 1) // self.items_per_page)
 
-        # Стрелки всегда белые
         self.prev_btn.icon_color = [1, 1, 1, 1]
         self.next_btn.icon_color = [1, 1, 1, 1]
 
-        # Получаем аккорды для текущей страницы
         start_idx = self.current_page * self.items_per_page
         end_idx = min(start_idx + self.items_per_page, len(self.current_items))
         current_items = self.current_items[start_idx:end_idx]
 
-        # Создаём кнопки
         for item in current_items:
             btn = ChordsButton(
                 text=item,
@@ -692,7 +687,6 @@ class ChordsRow(MDBoxLayout):
             self.buttons.append(btn)
             self.buttons_container.add_widget(btn)
 
-        # Заполняем пустые места для сохранения 4 колонок
         for i in range(self.items_per_page - len(current_items)):
             spacer = MDBoxLayout(size_hint=(1, 1))
             self.buttons_container.add_widget(spacer)
@@ -706,7 +700,6 @@ class ChordsRow(MDBoxLayout):
             self.on_item_selected(chord_name)
 
     def prev_page(self, instance):
-        """Предыдущая страница (с зацикливанием)"""
         if not self.current_items:
             return
         if self.current_page > 0:
@@ -716,7 +709,6 @@ class ChordsRow(MDBoxLayout):
         self.update_display()
 
     def next_page(self, instance):
-        """Следующая страница (с зацикливанием)"""
         if not self.current_items:
             return
         if self.current_page < self.total_pages - 1:
@@ -726,7 +718,6 @@ class ChordsRow(MDBoxLayout):
         self.update_display()
 
     def get_chord_data(self, chord_name):
-        """Возвращает данные аккорда по имени"""
         return self.chords_data.get(chord_name)
 
 
@@ -812,6 +803,36 @@ class ChordsScreen(MDScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
+    def load_chord_by_name(self, chord_name):
+        """Загружает аккорд по имени (для поиска)"""
+        logger.info(f"Загрузка аккорда по имени: {chord_name}")
+
+        found_chord = None
+        for chord in self.all_chords:
+            if chord['short_name'].lower() == chord_name.lower():
+                found_chord = chord
+                break
+            # Проверяем также полное имя
+            if chord['name'].lower().replace('|', ' ').replace('$', '/') == chord_name.lower():
+                found_chord = chord
+                break
+
+        if found_chord:
+            tonality = self.extract_tonality(found_chord['name'])
+            self.current_tonality = tonality
+            self.tonality_row.set_selected(tonality)
+
+            chord_types = found_chord['type'].split('|') if found_chord['type'] else []
+            if chord_types:
+                self.current_type = chord_types[0]
+                self.type_row.set_selected(chord_types[0])
+
+            all_variants = [c for c in self.all_chords if c['short_name'] == found_chord['short_name']]
+            all_variants.sort(key=lambda x: x['variant'])
+            self.load_chord_variants(all_variants)
+            return True
+        return False
+
     def clean_description(self, description, chord_names):
         if not description:
             return ""
@@ -834,10 +855,6 @@ class ChordsScreen(MDScreen):
 
         return ' | '.join(unique_parts)
 
-    def on_text_change(self, instance, value):
-        """Показывает/скрывает кнопку очистки при вводе текста"""
-        self.clear_search_btn.opacity = 1 if value else 0
-
     def init_ui(self):
         from kivy.uix.scrollview import ScrollView
         from kivy.uix.widget import Widget
@@ -852,67 +869,9 @@ class ChordsScreen(MDScreen):
         )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        # Отступ сверху
+        # Отступ сверху (уменьшен, так как убрали поиск)
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
-
-        # Поисковая строка
-        self.search_card = MDCard(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(46),
-            radius=[dp(24), dp(24), dp(24), dp(24)],
-            md_bg_color=[0, 0, 0, 0],
-            elevation=0,
-            padding=[dp(0), dp(0), dp(0), dp(0)]
-        )
-
-        self.search_field = MDTextField(
-            hint_text="Поиск аккорда",
-            mode="filled",
-            size_hint_x=0.99,
-            font_size=dp(46),
-            height=dp(48),
-            radius=[dp(24), dp(24), dp(24), dp(24)],
-            on_text_validate=self.on_search_submit,
-            theme_line_color="Custom",
-            line_color_normal=[0, 0, 0, 0],
-            line_color_focus=[0, 0, 0, 0],
-            theme_bg_color="Custom",
-            fill_color_normal=[0, 0, 0, 0],
-            fill_color_focus=[0, 0, 0, 0],
-            text_color_normal=[0, 0, 0, 0],  # Цвет введённого текста
-            text_color_focus=[0, 0, 0, 0],
-            hint_text_color=[0.5, 0.5, 0.5, 1]  # Серый цвет подсказки (50% серый)
-        )
-
-        # Кнопка очистки
-        self.clear_search_btn = MDIconButton(
-            icon="close-circle",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=theme.TEXT_SECONDARY,
-            on_release=self.clear_search,
-            opacity=0,
-            md_bg_color=[0, 0, 0, 0]
-        )
-
-        # Кнопка поиска
-        self.search_btn = MDIconButton(
-            icon="magnify",
-            size_hint=(None, None),
-            size=(dp(40), dp(40)),
-            theme_icon_color="Custom",
-            icon_color=theme.PRIMARY,
-            on_release=self.on_search_submit,
-            md_bg_color=[0, 0, 0, 0]
-        )
-
-        self.search_card.add_widget(self.search_field)
-        self.search_card.add_widget(self.clear_search_btn)
-        self.search_card.add_widget(self.search_btn)
-        main_layout.add_widget(self.search_card)
 
         # Строка тональностей
         self.tonality_row = TonalityRow(
@@ -1109,7 +1068,6 @@ class ChordsScreen(MDScreen):
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
     def update_variant_display(self):
-        """Обновляет отображение текущего варианта"""
         if self.current_variants:
             total = len(self.current_variants)
             self.variant_number_label.text = f"{self.current_variant_index + 1}/{total}"
@@ -1119,14 +1077,12 @@ class ChordsScreen(MDScreen):
             self.variant_number_label.text = "1/1"
 
     def prev_variant(self, instance):
-        """Предыдущий вариант"""
         if self.current_variants and len(self.current_variants) > 1:
             self.current_variant_index = (self.current_variant_index - 1) % len(self.current_variants)
             self.load_current_variant()
             self.update_variant_display()
 
     def next_variant(self, instance):
-        """Следующий вариант"""
         if self.current_variants and len(self.current_variants) > 1:
             self.current_variant_index = (self.current_variant_index + 1) % len(self.current_variants)
             self.load_current_variant()
@@ -1135,20 +1091,8 @@ class ChordsScreen(MDScreen):
     def on_sound_press(self):
         notify.info("🔊 Звук аккорда (будет доступно в следующей версии)")
 
-    def on_search_submit(self, instance):
-        query = self.search_field.text.strip()
-        if not query:
-            return
-        self.clear_search_btn.opacity = 1
-        self.search_chord(query)
-
-    def clear_search(self, instance):
-        self.search_field.text = ""
-        self.clear_search_btn.opacity = 0
-        if self.current_tonality and self.current_type:
-            self.update_chords_list()
-
     def search_chord(self, query):
+        """Поиск аккорда по названию"""
         search_normalized = query.lower().replace('/', '$')
         found_chord = None
         for chord in self.all_chords:
@@ -1173,8 +1117,8 @@ class ChordsScreen(MDScreen):
             all_variants = [c for c in self.all_chords if c['short_name'] == found_chord['short_name']]
             all_variants.sort(key=lambda x: x['variant'])
             self.load_chord_variants(all_variants)
-        else:
-            notify.warning(f"Аккорд '{query}' не найден")
+            return True
+        return False
 
     def scan_chords(self):
         chords_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'chords')
@@ -1302,10 +1246,12 @@ class ChordsScreen(MDScreen):
 
     def on_tonality_selected(self, tonality):
         self.current_tonality = tonality
+        self.tonality_row.set_selected(tonality)
         self.update_chords_list()
 
     def on_type_selected(self, chord_type):
         self.current_type = chord_type
+        self.type_row.set_selected(chord_type)
         self.update_chords_list()
 
     def on_pre_enter(self):

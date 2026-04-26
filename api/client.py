@@ -472,6 +472,7 @@ class APIClient:
 
     def get_alphabet(self, on_success=None, on_failure=None):
         """Получить все буквы, для которых есть песни"""
+
         def _on_success(result):
             letters = result.get('letters', []) if isinstance(result, dict) else []
             if on_success:
@@ -503,14 +504,11 @@ class APIClient:
             include_auth=False
         )
 
-    # api/client.py - замени существующий метод get_songs_by_artist на этот
-
     def get_songs_by_artist(self, artist: str, on_success=None, on_failure=None):
         """Получить песни исполнителя"""
         import urllib.parse
         encoded_artist = urllib.parse.quote(artist, safe='')
 
-        # ПРАВИЛЬНЫЙ URL - без дублирования /songs
         url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}"
         Logger.info(f"🔍 Запрос песен для: {artist}")
         Logger.info(f"🔍 URL: {url}")
@@ -558,6 +556,7 @@ class APIClient:
 
     def get_tab(self, song_id: int, on_success=None, on_failure=None):
         """Получить конкретный подбор по ID"""
+
         def _on_success(result):
             if on_success:
                 on_success(result)
@@ -571,7 +570,7 @@ class APIClient:
         )
 
     def search_songs(self, query: str, search_type: str = "general", limit: int = 50, on_success=None, on_failure=None):
-        """Поиск песен"""
+        """Поиск песен (асинхронный)"""
         import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
 
@@ -588,8 +587,29 @@ class APIClient:
             include_auth=False
         )
 
+    def search_songs_sync(self, query: str, search_type: str = "general", limit: int = 50):
+        """Синхронный поиск песен (для диалога поиска)"""
+        import urllib.parse
+
+        encoded_query = urllib.parse.quote(query, safe='')
+        url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&search_type={search_type}&limit={limit}"
+
+        try:
+            Logger.info(f"🔍 Синхронный поиск: {query}")
+            response = self.session.get(url, timeout=config.CONNECTION_TIMEOUT)
+            response.raise_for_status()
+            result = response.json()
+            return result.get('results', [])
+        except requests.exceptions.Timeout:
+            Logger.error(f"❌ Таймаут синхронного поиска: {query}")
+            return []
+        except Exception as e:
+            Logger.error(f"❌ Ошибка синхронного поиска: {e}")
+            return []
+
     def get_popular_songs(self, limit: int = 20, on_success=None, on_failure=None):
         """Получить популярные песни"""
+
         def _on_success(result):
             songs = result.get('songs', []) if isinstance(result, dict) else []
             if on_success:
@@ -619,6 +639,7 @@ class APIClient:
 
     def toggle_like(self, song_id: int, on_success=None, on_failure=None):
         """Поставить/убрать лайк"""
+
         def _on_success(result):
             Logger.info(f'✅ Лайк переключён для {song_id}')
             if on_success:
@@ -634,6 +655,7 @@ class APIClient:
 
     def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
         """Добавить в избранное"""
+
         def _on_success(result):
             Logger.info(f'✅ Добавлено в избранное {song_id}')
             if on_success:
@@ -649,6 +671,7 @@ class APIClient:
 
     def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
         """Удалить из избранного"""
+
         def _on_success(result):
             Logger.info(f'✅ Удалено из избранного {song_id}')
             if on_success:

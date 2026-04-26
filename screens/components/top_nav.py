@@ -1,10 +1,10 @@
-# screens/components/top_nav.py (полный код)
+# screens/components/top_nav.py (исправленный)
 
 """
 Верхняя панель навигации с тёмным полупрозрачным фоном
 - Слева: иконка меню 🍔
 - По центру: название текущего экрана
-- Справа: профиль 👤 и выбор языка
+- Справа: поиск 🔍, профиль 👤 и выбор языка
 - Фон: тёмный полупрозрачный
 """
 from kivy.metrics import dp, sp
@@ -15,7 +15,7 @@ from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
-
+from screens.components.search_dialog import SearchDialog
 from config.theme import theme
 from config.logger_config import get_logger
 from screens.components.language_selector import LanguageSelector
@@ -85,15 +85,27 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # ============ ПРАВАЯ ЧАСТЬ: профиль и выбор языка ============
-        # Контейнер для правых элементов
+        # ============ ПРАВАЯ ЧАСТЬ: поиск, профиль и выбор языка ============
+        # Контейнер для правых элементов (увеличил ширину)
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(100),
+            width=dp(140),
             height=dp(40),
             spacing=dp(8),
             md_bg_color=[0, 0, 0, 0],
+            pos_hint={'center_y': 0.5}
+        )
+
+        # Кнопка поиска (лупа)
+        self.search_btn = MDIconButton(
+            icon="magnify",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_search_press,
             pos_hint={'center_y': 0.5}
         )
 
@@ -101,7 +113,7 @@ class TopNav(MDCard):
         self.profile_btn = MDIconButton(
             icon="account-circle",
             size_hint=(None, None),
-            size=(dp(36), dp(36)),
+            size=(dp(32), dp(32)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -114,6 +126,8 @@ class TopNav(MDCard):
             on_language_change=self._on_language_changed
         )
 
+        # Добавляем в правый контейнер (порядок: поиск, профиль, язык)
+        self.right_container.add_widget(self.search_btn)
         self.right_container.add_widget(self.profile_btn)
         self.right_container.add_widget(self.language_selector)
 
@@ -185,6 +199,15 @@ class TopNav(MDCard):
         """Обработчик смены языка"""
         if self.app and hasattr(self.app, 'change_language'):
             self.app.change_language(lang_code)
+
+    def _on_search_press(self, instance):
+        """Обработчик нажатия на поиск - открытие универсального поиска"""
+        # Получаем экран аккордов для поиска аккордов
+        chords_screen = None
+        if self.sm and self.sm.has_screen('chords'):
+            chords_screen = self.sm.get_screen('chords')
+
+        SearchDialog.show(self.sm, chords_screen)
 
     def set_app(self, app):
         """Устанавливает ссылку на главное приложение"""
