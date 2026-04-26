@@ -10,6 +10,7 @@ from kivy.uix.popup import Popup
 from kivy.metrics import dp, sp
 from kivy.core.image import Image as CoreImage
 from io import BytesIO
+from kivy.core.window import Window
 
 from config.theme import theme
 from config.logger_config import get_logger
@@ -23,6 +24,7 @@ try:
 except ImportError:
     HAS_ASSETS = False
 
+
     def load_asset_as_bytes(name):
         return None
 
@@ -34,83 +36,56 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (None, None)
-        self.size = (dp(55), dp(32))
+        self.size = (dp(50), dp(32))
         self.on_language_change = on_language_change
         self.current_lang = 'ru'
         self.popup = None
 
-        # Флаг на главной кнопке
-        self.main_flag = Image(
-            size_hint=(None, 1),
-            width=dp(22),
-            allow_stretch=True,
-            keep_ratio=True
-        )
-
-        # Текст текущего языка
+        # Только текст, без иконки
         self.main_text = Label(
             text="RU",
-            font_size=sp(10),
+            font_size=sp(12),
             color=[1, 1, 1, 1],
             bold=True,
-            size_hint=(None, 1),
-            width=dp(28),
+            size_hint=(1, 1),
             halign='center',
             valign='middle'
         )
 
-        self.add_widget(self.main_flag)
         self.add_widget(self.main_text)
-
-        self._load_main_flag('ru')
         self.bind(on_release=self._open_popup)
         self._create_popup()
-
-    def _load_main_flag(self, lang_code):
-        """Загружает флаг для главной кнопки"""
-        flag_name = 'rus_png' if lang_code == 'ru' else 'eng_png'
-        if HAS_ASSETS:
-            try:
-                icon_data = load_asset_as_bytes(flag_name)
-                if icon_data:
-                    img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.main_flag.texture = img.texture
-                    return
-            except Exception as e:
-                logger.error(f"Ошибка загрузки флага: {e}")
-        # Fallback на эмодзи
-        self.main_flag.text = "🇷🇺" if lang_code == 'ru' else "🇬🇧"
 
     def _create_popup(self):
         """Создаёт Popup с выбором языка, флагами и галочкой"""
         content = BoxLayout(
             orientation='vertical',
-            spacing=dp(2),
-            padding=dp(6),
+            spacing=dp(8),
+            padding=dp(12),
             size_hint=(None, None),
-            width=dp(180),
-            height=dp(100)
+            width=dp(200),
+            height=dp(130)
         )
 
         # Кнопка Русский
         ru_box = BoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(44),
-            spacing=dp(10),
-            padding=[dp(12), dp(8), dp(12), dp(8)]
+            height=dp(52),
+            spacing=dp(15),
+            padding=[dp(20), dp(12), dp(20), dp(12)]
         )
 
         ru_flag = Image(
             size_hint=(None, 1),
-            width=dp(24),
+            width=dp(28),
             allow_stretch=True,
             keep_ratio=True
         )
 
         ru_label = Label(
             text="Русский",
-            font_size=sp(12),
+            font_size=sp(14),
             color=[1, 1, 1, 1],
             halign='left',
             valign='middle',
@@ -141,21 +116,21 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
         en_box = BoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(44),
-            spacing=dp(10),
-            padding=[dp(12), dp(8), dp(12), dp(8)]
+            height=dp(52),
+            spacing=dp(15),
+            padding=[dp(20), dp(12), dp(20), dp(12)]
         )
 
         en_flag = Image(
             size_hint=(None, 1),
-            width=dp(24),
+            width=dp(28),
             allow_stretch=True,
             keep_ratio=True
         )
 
         en_label = Label(
             text="English",
-            font_size=sp(12),
+            font_size=sp(14),
             color=[1, 1, 1, 1],
             halign='left',
             valign='middle',
@@ -182,7 +157,6 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
         en_box.bind(on_touch_down=lambda x, touch, code='en': self._select_language(code) if en_box.collide_point(
             *touch.pos) else None)
 
-        # Сохраняем ссылки на галочки для обновления
         self.ru_check = ru_check
         self.en_check = en_check
 
@@ -193,7 +167,8 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             title="",
             content=content,
             size_hint=(None, None),
-            size=(dp(180), dp(100)),
+            width=dp(200),
+            height=dp(130),
             background_color=[0.08, 0.08, 0.08, 0.95],
             separator_color=[0, 0, 0, 0],
             auto_dismiss=True
@@ -209,33 +184,48 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
                     return Image(
                         texture=img.texture,
                         size_hint=(None, 1),
-                        width=dp(20),
+                        width=dp(24),
                         allow_stretch=True,
                         keep_ratio=True
                     )
             except Exception as e:
                 logger.error(f"Ошибка загрузки галочки: {e}")
 
-        # Fallback на текстовую галочку
         return Label(
             text="✓",
-            font_size=sp(14),
+            font_size=sp(16),
             color=theme.PRIMARY,
             size_hint=(None, 1),
-            width=dp(20),
+            width=dp(24),
             halign='center',
             valign='middle'
         )
 
     def _open_popup(self, instance):
-        """Открывает Popup и обновляет галочки"""
+        """Открывает Popup в правом верхнем углу"""
         if self.popup:
+            # Обновляем галочки
             self.ru_check.opacity = 1 if self.current_lang == 'ru' else 0
             self.en_check.opacity = 1 if self.current_lang == 'en' else 0
+
+            # Получаем координаты кнопки
+            button_pos = self.to_window(0, 0)
+            button_top = button_pos[1] + self.height
+            button_right = button_pos[0] + self.width
+
+            # Устанавливаем размер Popup
+            self.popup.width = dp(200)
+            self.popup.height = dp(160)
+
+            # Позиционируем Popup: привязываем к правому краю кнопки
+            popup_x = button_right - self.popup.width
+            popup_y = button_top + dp(5)
+
+            # Открываем и устанавливаем позицию
             self.popup.open()
+            self.popup.pos = (popup_x, popup_y)
 
     def _select_language(self, lang_code):
-        """Выбирает язык"""
         if lang_code == self.current_lang:
             if self.popup:
                 self.popup.dismiss()
@@ -243,7 +233,6 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
 
         self.current_lang = lang_code
         self.main_text.text = "RU" if lang_code == 'ru' else "EN"
-        self._load_main_flag(lang_code)
 
         self.ru_check.opacity = 1 if self.current_lang == 'ru' else 0
         self.en_check.opacity = 1 if self.current_lang == 'en' else 0
@@ -259,8 +248,6 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
         return self.current_lang
 
     def set_current_lang(self, lang_code):
-        """Устанавливает текущий язык программно"""
         if lang_code in ['ru', 'en']:
             self.current_lang = lang_code
             self.main_text.text = "RU" if lang_code == 'ru' else "EN"
-            self._load_main_flag(lang_code)
