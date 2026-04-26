@@ -15,7 +15,6 @@ from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
-from screens.components.search_dialog import SearchDialog
 from config.theme import theme
 from config.logger_config import get_logger
 from screens.components.language_selector import LanguageSelector
@@ -201,13 +200,14 @@ class TopNav(MDCard):
             self.app.change_language(lang_code)
 
     def _on_search_press(self, instance):
-        """Обработчик нажатия на поиск - открытие универсального поиска"""
-        # Получаем экран аккордов для поиска аккордов
-        chords_screen = None
-        if self.sm and self.sm.has_screen('chords'):
-            chords_screen = self.sm.get_screen('chords')
-
-        SearchDialog.show(self.sm, chords_screen)
+        """Обработчик нажатия на поиск - открытие экрана поиска"""
+        if self.sm:
+            # Передаём ссылку на экран аккордов
+            if self.sm.has_screen('chords') and self.sm.has_screen('search'):
+                chords_screen = self.sm.get_screen('chords')
+                search_screen = self.sm.get_screen('search')
+                search_screen.set_chords_screen(chords_screen)
+                self.sm.current = 'search'
 
     def set_app(self, app):
         """Устанавливает ссылку на главное приложение"""
