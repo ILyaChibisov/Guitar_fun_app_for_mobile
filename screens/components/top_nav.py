@@ -169,7 +169,8 @@ class TopNav(MDCard):
             'song_detail': 'Текст песни',
             'search_results': 'Результаты поиска',
             'dictionary': 'Словарь',
-            'admin': 'Админ панель'
+            'admin': 'Админ панель',
+            'search': 'Поиск'
         }
         return titles.get(screen_name, screen_name.capitalize())
 
