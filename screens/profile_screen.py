@@ -76,7 +76,7 @@ class ProfileScreen(MDScreen):
 
         # fallback цвет
         with self.canvas.before:
-            Color(0.95, 0.93, 0.88, 1)
+            Color(0.46, 0.70, 0.71, 1)
             self.bg_image = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
@@ -128,8 +128,12 @@ class ProfileScreen(MDScreen):
             bold=True
         )
 
+        # Пустой виджет для баланса
+        empty_widget = Widget(size_hint_x=None, width=dp(36))
+
         nav_row.add_widget(self.back_btn)
         nav_row.add_widget(title)
+        nav_row.add_widget(empty_widget)
 
         # ============ ОСНОВНОЙ КОНТЕНТ ============
         scroll = ScrollView(
@@ -141,167 +145,179 @@ class ProfileScreen(MDScreen):
         content = MDBoxLayout(
             orientation='vertical',
             padding=[dp(16), dp(8), dp(16), dp(85)],
-            spacing=dp(16),
+            spacing=dp(12),
             size_hint_y=None,
             adaptive_height=True
         )
 
-        # Карточка с аватаром
-        avatar_card = MDCard(
+        # ============ КАРТОЧКА ПРОФИЛЯ (ИМЯ ПОЛЬЗОВАТЕЛЯ) ============
+        profile_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(130),
+            height=dp(100),
             padding=dp(16),
             spacing=dp(8),
             elevation=2,
             radius=[theme.CORNER_RADIUS] * 4,
-            md_bg_color=[1, 1, 1, 0.95],
-            line_color=[0.8, 0.8, 0.8, 0.3],
+            md_bg_color=[0, 0, 0, 0.15],
+            line_color=[1, 1, 1, 0.1],
             line_width=1
         )
 
-        self.avatar_label = MDLabel(
-            text="👤",
-            font_size=sp(48),
-            halign="center",
-            size_hint_y=None,
-            height=dp(60),
-            theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.8]
-        )
-
+        # Имя пользователя (без @)
         self.username_label = MDLabel(
             text="",
-            font_size=sp(18),
+            font_size=sp(24),
             halign="center",
             size_hint_y=None,
-            height=dp(30),
+            height=dp(40),
             theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.9],
+            text_color=[1, 1, 1, 0.95],
             bold=True
         )
 
-        avatar_card.add_widget(self.avatar_label)
-        avatar_card.add_widget(self.username_label)
+        # Роль пользователя
+        self.role_label = MDLabel(
+            text="",
+            font_size=sp(14),
+            halign="center",
+            size_hint_y=None,
+            height=dp(25),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7]
+        )
 
-        # Карточка с информацией
+        profile_card.add_widget(self.username_label)
+        profile_card.add_widget(self.role_label)
+
+        # ============ КАРТОЧКА ИНФОРМАЦИИ ============
         info_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(220),
+            height=dp(160),
             padding=dp(16),
-            spacing=dp(12),
+            spacing=dp(10),
             elevation=2,
             radius=[theme.CORNER_RADIUS] * 4,
-            md_bg_color=[1, 1, 1, 0.95],
-            line_color=[0.8, 0.8, 0.8, 0.3],
+            md_bg_color=[0, 0, 0, 0.15],
+            line_color=[1, 1, 1, 0.1],
             line_width=1
         )
 
         info_title = MDLabel(
-            text="Информация",
-            font_size=sp(16),
+            text="📋 Информация",
+            font_size=sp(14),
             size_hint_y=None,
             height=dp(30),
             theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.9],
+            text_color=[1, 1, 1, 0.9],
             bold=True
         )
-
-        info_card.add_widget(info_title)
 
         # Email
         self.email_label = MDLabel(
             text="",
-            font_size=sp(14),
+            font_size=sp(13),
             theme_text_color="Custom",
-            text_color=[0.2, 0.2, 0.2, 0.9],
+            text_color=[1, 1, 1, 0.8],
             size_hint_y=None,
-            height=dp(36)
+            height=dp(28)
         )
-        info_card.add_widget(self.email_label)
 
         # Полное имя
         self.fullname_label = MDLabel(
             text="",
-            font_size=sp(14),
+            font_size=sp(13),
             theme_text_color="Custom",
-            text_color=[0.2, 0.2, 0.2, 0.9],
+            text_color=[1, 1, 1, 0.8],
             size_hint_y=None,
-            height=dp(36)
+            height=dp(28)
         )
-        info_card.add_widget(self.fullname_label)
-
-        # Роль
-        self.role_label = MDLabel(
-            text="",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[0.2, 0.2, 0.2, 0.9],
-            size_hint_y=None,
-            height=dp(36)
-        )
-        info_card.add_widget(self.role_label)
 
         # Дата регистрации
         self.date_label = MDLabel(
             text="",
-            font_size=sp(14),
+            font_size=sp(13),
             theme_text_color="Custom",
-            text_color=[0.2, 0.2, 0.2, 0.9],
+            text_color=[1, 1, 1, 0.8],
             size_hint_y=None,
-            height=dp(36)
+            height=dp(28)
         )
+
+        info_card.add_widget(info_title)
+        info_card.add_widget(self.email_label)
+        info_card.add_widget(self.fullname_label)
         info_card.add_widget(self.date_label)
 
-        # Карточка с кнопками действий
+        # ============ КАРТОЧКА С ДЕЙСТВИЯМИ ============
         actions_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(180),
+            height=dp(140),
             padding=dp(16),
             spacing=dp(12),
             elevation=2,
             radius=[theme.CORNER_RADIUS] * 4,
-            md_bg_color=[1, 1, 1, 0.95],
-            line_color=[0.8, 0.8, 0.8, 0.3],
+            md_bg_color=[0, 0, 0, 0.15],
+            line_color=[1, 1, 1, 0.1],
             line_width=1
         )
 
         # Кнопка смены пароля
         change_password_btn = MDButton(
-            style="filled",
+            style="outlined",
             theme_bg_color="Custom",
-            md_bg_color=hex_to_rgb(theme.PRIMARY) + [1],
+            md_bg_color=[1, 1, 1, 0.1],
+            line_color=hex_to_rgb(theme.PRIMARY) + [1],
+            line_width=1.5,
             on_release=self.show_change_password_dialog
         )
-        change_password_btn.add_widget(MDButtonText(text="Сменить пароль"))
+        change_password_btn.add_widget(MDButtonText(
+            text="🔐 Сменить пароль",
+            theme_text_color="Custom",
+            text_color=hex_to_rgb(theme.PRIMARY) + [1],
+            font_style="Label"
+        ))
 
         # Кнопка админ-панели
         self.admin_btn = MDButton(
-            style="filled",
+            style="outlined",
             theme_bg_color="Custom",
-            md_bg_color=hex_to_rgb(theme.PRIMARY_DARK) + [1],
+            md_bg_color=[1, 1, 1, 0.1],
+            line_color=[0.9, 0.7, 0.2, 0.8],
+            line_width=1.5,
             on_release=self.open_admin_panel
         )
-        self.admin_btn.add_widget(MDButtonText(text="👑 Админ-панель"))
+        self.admin_btn.add_widget(MDButtonText(
+            text="👑 Админ-панель",
+            theme_text_color="Custom",
+            text_color=[0.9, 0.7, 0.2, 0.9],
+            font_style="Label"
+        ))
         self.admin_btn.opacity = 0
         self.admin_btn.disabled = True
 
         # Кнопка выхода
         logout_btn = MDButton(
-            style="filled",
+            style="outlined",
             theme_bg_color="Custom",
-            md_bg_color=[0.9, 0.3, 0.3, 1],
+            md_bg_color=[1, 1, 1, 0.1],
+            line_color=[0.9, 0.3, 0.3, 0.7],
+            line_width=1.5,
             on_release=self.logout
         )
-        logout_btn.add_widget(MDButtonText(text="Выйти из аккаунта"))
+        logout_btn.add_widget(MDButtonText(
+            text="🚪 Выйти из аккаунта",
+            theme_text_color="Custom",
+            text_color=[0.9, 0.3, 0.3, 0.9],
+            font_style="Label"
+        ))
 
         actions_card.add_widget(change_password_btn)
         actions_card.add_widget(self.admin_btn)
         actions_card.add_widget(logout_btn)
 
-        content.add_widget(avatar_card)
+        content.add_widget(profile_card)
         content.add_widget(info_card)
         content.add_widget(actions_card)
 
@@ -361,7 +377,7 @@ class ProfileScreen(MDScreen):
         if not self.user:
             return
 
-        username = self.user.get('username', 'user')
+        username = self.user.get('username', 'Пользователь')
         email = self.user.get('email', 'не указан')
         full_name = self.user.get('full_name') or 'не указано'
         role = self.user.get('role', 'user')
@@ -372,10 +388,11 @@ class ProfileScreen(MDScreen):
             'moderator': '🛡️ Модератор'
         }.get(role, f'👤 {role}')
 
-        self.username_label.text = f"@{username}"
+        # Имя пользователя (без @)
+        self.username_label.text = username
+        self.role_label.text = role_display
         self.email_label.text = f"📧 {email}"
         self.fullname_label.text = f"👤 {full_name}"
-        self.role_label.text = f"🎭 {role_display}"
 
         if api.is_admin():
             self.admin_btn.opacity = 1
