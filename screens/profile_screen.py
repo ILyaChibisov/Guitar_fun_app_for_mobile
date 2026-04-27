@@ -7,18 +7,25 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.button import MDButton, MDIconButton
+from kivymd.uix.button import MDIconButton, MDButton, MDButtonText
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
 from kivy.metrics import dp, sp
-from kivy.clock import Clock
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.widget import Widget
+from kivy.graphics import Color, Rectangle
 from config.theme import theme
 from config.logger_config import screen_logger
 from api.client import api
 from utils.notifications import notify
 
 logger = screen_logger('Profile')
+
+
+def hex_to_rgb(hex_color):
+    """Конвертирует hex цвет в RGB список от 0 до 1"""
+    hex_color = hex_color.lstrip('#')
+    return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
 
 
 class ProfileScreen(MDScreen):
@@ -30,76 +37,147 @@ class ProfileScreen(MDScreen):
         self.user = None
         self.change_password_dialog = None
         self._data_loaded = False
+        self.bg_image = None
 
-        from kivy.graphics import Color, Rectangle
-        from kivy.utils import rgba
-        # with self.canvas.before:
-        #     Color(*rgba(theme.BACKGROUND))
-        #     self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-        # self.bind(pos=self._update_bg, size=self._update_bg)
+        # Фон
+        self.md_bg_color = [0, 0, 0, 0]
+
+        # Загружаем фон
+        self.load_background()
+
+        self.init_ui()
+
+        logger.info('Экран профиля создан')
+
+    def load_background(self):
+        """Загружает фоновое изображение"""
+        try:
+            from data import load_asset_as_bytes
+            from kivy.core.image import Image as CoreImage
+            from io import BytesIO
+
+            asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
+            bg_data = None
+            for name in asset_names:
+                bg_data = load_asset_as_bytes(name)
+                if bg_data:
+                    logger.info(f"Фон загружен из ассета: {name}")
+                    break
+
+            if bg_data:
+                img = CoreImage(BytesIO(bg_data), ext="jpg")
+                with self.canvas.before:
+                    Color(1, 1, 1, 1)
+                    self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
+                self.bind(pos=self._update_bg, size=self._update_bg)
+                return
+        except Exception as e:
+            logger.error(f'Ошибка загрузки фона: {e}')
+
+        # fallback цвет
+        with self.canvas.before:
+            Color(0.95, 0.93, 0.88, 1)
+            self.bg_image = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
+    def _update_bg(self, *args):
+        if self.bg_image:
+            self.bg_image.pos = self.pos
+            self.bg_image.size = self.size
+
+    def init_ui(self):
+        # Основной контейнер
+        main_layout = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            spacing=0
+        )
+
+        # Отступ сверху для компенсации верхней панели
+        top_spacer = Widget(size_hint_y=None, height=dp(65))
+        main_layout.add_widget(top_spacer)
+
+        # ============ ВЕРХНЯЯ ПАНЕЛЬ С КНОПКОЙ НАЗАД ============
+        nav_row = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(50),
+            padding=[dp(16), dp(8), dp(16), dp(8)],
+            spacing=dp(12),
+            md_bg_color=[0, 0, 0, 0]
+        )
 
         # Кнопка назад
         self.back_btn = MDIconButton(
-            pos_hint={'x': 0, 'top': 1},
-            size_hint=(None, None),
-            size=(dp(48), dp(48)),
+            icon="arrow-left",
+            style="standard",
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 1],
             on_release=self.go_back
-        )
-        self.back_btn.icon = "arrow-left"
-        self.back_btn.icon_color = theme.TEXT_SECONDARY
-        self.back_btn.theme_icon_color = "Custom"
-        self.add_widget(self.back_btn)
-
-        # Основной контейнер
-        scroll = ScrollView(size_hint=(1, 1))
-
-        layout = MDBoxLayout(
-            orientation='vertical',
-            padding=dp(20),
-            spacing=dp(20),
-            size_hint_y=None,
-            adaptive_height=True
         )
 
         # Заголовок
         title = MDLabel(
-            text="Личный кабинет",
-            font_size=sp(24),
+            text="Профиль",
+            font_size=sp(18),
             halign="center",
-            size_hint_y=None,
-            height=dp(60),
-            theme_text_color="Primary",
+            valign="middle",
+            size_hint_x=1,
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
             bold=True
+        )
+
+        nav_row.add_widget(self.back_btn)
+        nav_row.add_widget(title)
+
+        # ============ ОСНОВНОЙ КОНТЕНТ ============
+        scroll = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_width=0
+        )
+
+        content = MDBoxLayout(
+            orientation='vertical',
+            padding=[dp(16), dp(8), dp(16), dp(85)],
+            spacing=dp(16),
+            size_hint_y=None,
+            adaptive_height=True
         )
 
         # Карточка с аватаром
         avatar_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(150),
+            height=dp(130),
             padding=dp(16),
             spacing=dp(8),
             elevation=2,
             radius=[theme.CORNER_RADIUS] * 4,
-            md_bg_color=theme.SURFACE
+            md_bg_color=[1, 1, 1, 0.95],
+            line_color=[0.8, 0.8, 0.8, 0.3],
+            line_width=1
         )
 
         self.avatar_label = MDLabel(
             text="👤",
-            font_size=sp(40),
+            font_size=sp(48),
             halign="center",
             size_hint_y=None,
-            height=dp(80),
-            theme_text_color="Primary"
+            height=dp(60),
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 0.8]
         )
 
         self.username_label = MDLabel(
             text="",
-            font_size=sp(20),
+            font_size=sp(18),
             halign="center",
             size_hint_y=None,
-            height=dp(40),
-            theme_text_color="Primary",
+            height=dp(30),
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 0.9],
             bold=True
         )
 
@@ -115,7 +193,9 @@ class ProfileScreen(MDScreen):
             spacing=dp(12),
             elevation=2,
             radius=[theme.CORNER_RADIUS] * 4,
-            md_bg_color=theme.SURFACE
+            md_bg_color=[1, 1, 1, 0.95],
+            line_color=[0.8, 0.8, 0.8, 0.3],
+            line_width=1
         )
 
         info_title = MDLabel(
@@ -123,196 +203,134 @@ class ProfileScreen(MDScreen):
             font_size=sp(16),
             size_hint_y=None,
             height=dp(30),
-            theme_text_color="Primary",
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 0.9],
             bold=True
         )
 
-        # Email
-        email_box = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(40),
-            spacing=dp(8)
-        )
-        email_icon = MDIconButton(
-            size_hint=(None, 1),
-            width=dp(40)
-        )
-        email_icon.icon = "email"
-        email_icon.icon_color = theme.TEXT_SECONDARY
-        email_icon.theme_icon_color = "Custom"
+        info_card.add_widget(info_title)
 
-        self.email_label = MDLabel(text="", font_size=sp(14), theme_text_color="Secondary")
-        email_box.add_widget(email_icon)
-        email_box.add_widget(self.email_label)
+        # Email
+        self.email_label = MDLabel(
+            text="",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[0.2, 0.2, 0.2, 0.9],
+            size_hint_y=None,
+            height=dp(36)
+        )
+        info_card.add_widget(self.email_label)
 
         # Полное имя
-        name_box = MDBoxLayout(
-            orientation='horizontal',
+        self.fullname_label = MDLabel(
+            text="",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[0.2, 0.2, 0.2, 0.9],
             size_hint_y=None,
-            height=dp(40),
-            spacing=dp(8)
+            height=dp(36)
         )
-        name_icon = MDIconButton(
-            size_hint=(None, 1),
-            width=dp(40)
-        )
-        name_icon.icon = "account"
-        name_icon.icon_color = theme.TEXT_SECONDARY
-        name_icon.theme_icon_color = "Custom"
-
-        self.fullname_label = MDLabel(text="", font_size=sp(14), theme_text_color="Secondary")
-        name_box.add_widget(name_icon)
-        name_box.add_widget(self.fullname_label)
+        info_card.add_widget(self.fullname_label)
 
         # Роль
-        role_box = MDBoxLayout(
-            orientation='horizontal',
+        self.role_label = MDLabel(
+            text="",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[0.2, 0.2, 0.2, 0.9],
             size_hint_y=None,
-            height=dp(40),
-            spacing=dp(8)
+            height=dp(36)
         )
-        role_icon = MDIconButton(
-            size_hint=(None, 1),
-            width=dp(40)
-        )
-        role_icon.icon = "shield-account"
-        role_icon.icon_color = theme.TEXT_SECONDARY
-        role_icon.theme_icon_color = "Custom"
-
-        self.role_label = MDLabel(text="", font_size=sp(14), theme_text_color="Secondary")
-        role_box.add_widget(role_icon)
-        role_box.add_widget(self.role_label)
+        info_card.add_widget(self.role_label)
 
         # Дата регистрации
-        date_box = MDBoxLayout(
-            orientation='horizontal',
+        self.date_label = MDLabel(
+            text="",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[0.2, 0.2, 0.2, 0.9],
             size_hint_y=None,
-            height=dp(40),
-            spacing=dp(8)
+            height=dp(36)
         )
-        date_icon = MDIconButton(
-            size_hint=(None, 1),
-            width=dp(40)
-        )
-        date_icon.icon = "calendar"
-        date_icon.icon_color = theme.TEXT_SECONDARY
-        date_icon.theme_icon_color = "Custom"
+        info_card.add_widget(self.date_label)
 
-        self.date_label = MDLabel(text="", font_size=sp(14), theme_text_color="Secondary")
-        date_box.add_widget(date_icon)
-        date_box.add_widget(self.date_label)
-
-        info_card.add_widget(info_title)
-        info_card.add_widget(email_box)
-        info_card.add_widget(name_box)
-        info_card.add_widget(role_box)
-        info_card.add_widget(date_box)
-
-        # Кнопки действий
+        # Карточка с кнопками действий
         actions_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(160),
+            height=dp(180),
             padding=dp(16),
             spacing=dp(12),
             elevation=2,
             radius=[theme.CORNER_RADIUS] * 4,
-            md_bg_color=theme.SURFACE
+            md_bg_color=[1, 1, 1, 0.95],
+            line_color=[0.8, 0.8, 0.8, 0.3],
+            line_width=1
         )
 
+        # Кнопка смены пароля
         change_password_btn = MDButton(
-            size_hint=(1, None),
-            height=dp(44),
-            on_release=self.show_change_password_dialog,
-            style="filled"
+            style="filled",
+            theme_bg_color="Custom",
+            md_bg_color=hex_to_rgb(theme.PRIMARY) + [1],
+            on_release=self.show_change_password_dialog
         )
-        change_password_btn.text = "Сменить пароль"
-        change_password_btn.icon = "lock"
-        change_password_btn.md_bg_color = theme.PRIMARY
-        change_password_btn.theme_text_color = "Custom"
-        change_password_btn.text_color = [1, 1, 1, 1]
-        change_password_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        change_password_btn.add_widget(MDButtonText(text="Сменить пароль"))
 
-        # Кнопка админ-панели (видна только администраторам)
+        # Кнопка админ-панели
         self.admin_btn = MDButton(
-            size_hint=(1, None),
-            height=dp(44),
-            on_release=self.open_admin_panel,
-            style="filled"
+            style="filled",
+            theme_bg_color="Custom",
+            md_bg_color=hex_to_rgb(theme.PRIMARY_DARK) + [1],
+            on_release=self.open_admin_panel
         )
-        self.admin_btn.text = "👑 Админ-панель"
-        self.admin_btn.icon = "shield-account"
-        self.admin_btn.md_bg_color = theme.PRIMARY_DARK
-        self.admin_btn.theme_text_color = "Custom"
-        self.admin_btn.text_color = [1, 1, 1, 1]
-        self.admin_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.admin_btn.add_widget(MDButtonText(text="👑 Админ-панель"))
         self.admin_btn.opacity = 0
         self.admin_btn.disabled = True
 
+        # Кнопка выхода
         logout_btn = MDButton(
-            size_hint=(1, None),
-            height=dp(44),
-            on_release=self.logout,
-            style="filled"
+            style="filled",
+            theme_bg_color="Custom",
+            md_bg_color=[0.9, 0.3, 0.3, 1],
+            on_release=self.logout
         )
-        logout_btn.text = "Выйти из аккаунта"
-        logout_btn.icon = "logout"
-        logout_btn.md_bg_color = [0.9, 0.9, 0.9, 1]
-        logout_btn.theme_text_color = "Custom"
-        logout_btn.text_color = theme.TEXT_SECONDARY
-        logout_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        logout_btn.add_widget(MDButtonText(text="Выйти из аккаунта"))
 
         actions_card.add_widget(change_password_btn)
         actions_card.add_widget(self.admin_btn)
         actions_card.add_widget(logout_btn)
 
-        layout.add_widget(title)
-        layout.add_widget(avatar_card)
-        layout.add_widget(info_card)
-        layout.add_widget(actions_card)
+        content.add_widget(avatar_card)
+        content.add_widget(info_card)
+        content.add_widget(actions_card)
 
-        scroll.add_widget(layout)
-        self.add_widget(scroll)
+        scroll.add_widget(content)
 
-        # НЕ загружаем данные автоматически при создании
-        # Данные загрузятся при входе на экран через on_pre_enter
-        # Clock.schedule_once(self.load_user_data, 0.5)  # <-- ЗАКОММЕНТИРОВАНО
+        main_layout.add_widget(nav_row)
+        main_layout.add_widget(scroll)
 
-        logger.info('Экран профиля создан')
-
-    def _update_bg(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
+        self.add_widget(main_layout)
 
     def go_back(self, instance):
-        """Возврат на главный экран через bottom_nav"""
-        app = MDApp.get_running_app()
-        if hasattr(app, 'bottom_nav') and app.bottom_nav:
-            try:
-                app.bottom_nav.switch_tab("home")
-            except Exception as e:
-                logger.error(f'Ошибка переключения на home: {e}')
-                if hasattr(self, 'manager') and self.manager:
-                    self.manager.current = 'home'
-        else:
-            if hasattr(self, 'manager') and self.manager:
-                self.manager.current = 'home'
+        """Возврат на главный экран"""
+        if hasattr(self, 'manager') and self.manager:
+            self.manager.current = 'home'
 
     def on_pre_enter(self):
         """Вызывается перед показом экрана - загружаем данные"""
         if not self._data_loaded:
-            self.load_user_data(0)
+            self.load_user_data()
         return super().on_pre_enter()
 
-    def load_user_data(self, dt):
-        """Загружает данные пользователя (только один раз)"""
+    def load_user_data(self, dt=None):
+        """Загружает данные пользователя"""
         if self._data_loaded:
             return
-        self._data_loaded = True
 
         if api.user_data:
             self.user = api.user_data
+            self._data_loaded = True
             self.update_ui()
         else:
             api.get_current_user(
@@ -322,6 +340,7 @@ class ProfileScreen(MDScreen):
 
     def on_user_loaded(self, user):
         self.user = user
+        self._data_loaded = True
         self.update_ui()
 
     def on_user_load_failed(self, req, error):
@@ -329,19 +348,13 @@ class ProfileScreen(MDScreen):
         error_msg = str(error)
         logger.error(f'Ошибка загрузки профиля: {error_msg}')
 
-        if 'Not authenticated' in error_msg or 'Invalid token' in error_msg or '401' in error_msg or '404' in error_msg:
-            logger.info('Токен недействителен или профиль не найден, очищаем и показываем авторизацию')
+        if 'Not authenticated' in error_msg or 'Invalid token' in error_msg or '401' in error_msg:
+            logger.info('Токен недействителен, очищаем')
             api._clear_tokens()
             notify.warning("Сессия истекла. Пожалуйста, войдите снова.")
-            # Возвращаемся на главный экран
             self.go_back(None)
-            # Показываем модальное окно авторизации
-            app = MDApp.get_running_app()
-            if hasattr(app, 'home_screen') and app.home_screen:
-                app.home_screen.show_auth_modal()
         else:
             notify.error("Не удалось загрузить данные профиля")
-            self.go_back(None)
 
     def update_ui(self):
         """Обновляет интерфейс данными пользователя"""
@@ -360,9 +373,9 @@ class ProfileScreen(MDScreen):
         }.get(role, f'👤 {role}')
 
         self.username_label.text = f"@{username}"
-        self.email_label.text = email
-        self.fullname_label.text = full_name
-        self.role_label.text = role_display
+        self.email_label.text = f"📧 {email}"
+        self.fullname_label.text = f"👤 {full_name}"
+        self.role_label.text = f"🎭 {role_display}"
 
         if api.is_admin():
             self.admin_btn.opacity = 1
@@ -376,11 +389,11 @@ class ProfileScreen(MDScreen):
             try:
                 from datetime import datetime
                 dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                self.date_label.text = dt.strftime('%d.%m.%Y')
+                self.date_label.text = f"📅 {dt.strftime('%d.%m.%Y')}"
             except:
-                self.date_label.text = 'неизвестно'
+                self.date_label.text = '📅 неизвестно'
         else:
-            self.date_label.text = 'неизвестно'
+            self.date_label.text = '📅 неизвестно'
 
     def open_admin_panel(self, instance):
         """Открывает админ-панель"""
@@ -434,21 +447,18 @@ class ProfileScreen(MDScreen):
         content.add_widget(self.new_password)
         content.add_widget(self.confirm_password)
 
+        # Кнопки диалога
         cancel_btn = MDButton(
-            text="Отмена",
-            theme_text_color="Custom",
-            text_color=theme.TEXT_SECONDARY,
-            on_release=lambda x: self.change_password_dialog.dismiss(),
-            style="text"
+            style="text",
+            on_release=lambda x: self.change_password_dialog.dismiss()
         )
+        cancel_btn.add_widget(MDButtonText(text="Отмена"))
 
         change_btn = MDButton(
-            text="Сменить",
-            theme_text_color="Custom",
-            text_color=theme.PRIMARY,
-            on_release=self.do_change_password,
-            style="text"
+            style="text",
+            on_release=self.do_change_password
         )
+        change_btn.add_widget(MDButtonText(text="Сменить"))
 
         self.change_password_dialog = MDDialog(
             title="Смена пароля",
@@ -488,13 +498,7 @@ class ProfileScreen(MDScreen):
 
         def on_logout_success(result):
             notify.success("Вы вышли из аккаунта")
-
-            app = MDApp.get_running_app()
-            if hasattr(app, 'bottom_nav') and app.bottom_nav:
-                app.bottom_nav.switch_tab("home")
-
-            if hasattr(app, 'home_screen') and app.home_screen:
-                app.home_screen.check_auth(0)
+            self.go_back(None)
 
         def on_logout_failure(req, error):
             notify.error("Ошибка выхода")
@@ -504,6 +508,3 @@ class ProfileScreen(MDScreen):
             on_success=on_logout_success,
             on_failure=on_logout_failure
         )
-
-    def on_enter(self):
-        return super().on_enter()
