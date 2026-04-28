@@ -14,6 +14,7 @@ from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
+from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import get_logger
 from screens.components.language_selector import LanguageSelector
@@ -176,13 +177,24 @@ class TopNav(MDCard):
         logger.debug(f"Экран изменён: {screen_name}, заголовок: {self.screen_title.text}")
 
     def _on_menu_press(self, instance):
+        """Обработчик нажатия на меню"""
+        app = MDApp.get_running_app()
+        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
+            logger.debug("Навигация заблокирована")
+            return
+
         if self.app and hasattr(self.app, 'open_drawer'):
             self.app.open_drawer(instance)
         else:
             logger.info("Меню нажато")
 
     def _on_profile_press(self, instance):
-        """Обработчик нажатия на профиль - вызывает open_profile в main.py"""
+        """Обработчик нажатия на профиль"""
+        app = MDApp.get_running_app()
+        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
+            logger.debug("Навигация заблокирована")
+            return
+
         if self.app and hasattr(self.app, 'open_profile'):
             self.app.open_profile(instance)
         else:
@@ -194,6 +206,12 @@ class TopNav(MDCard):
             self.app.change_language(lang_code)
 
     def _on_search_press(self, instance):
+        """Обработчик нажатия на поиск"""
+        app = MDApp.get_running_app()
+        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
+            logger.debug("Навигация заблокирована")
+            return
+
         if self.sm:
             if self.sm.has_screen('chords') and self.sm.has_screen('search'):
                 chords_screen = self.sm.get_screen('chords')

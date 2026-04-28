@@ -12,6 +12,7 @@ from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
 from io import BytesIO
+from kivymd.app import MDApp
 
 from config.theme import theme
 from config.logger_config import get_logger
@@ -174,6 +175,13 @@ class BottomNav(BoxLayout):
             item.active = (screen == screen_name)
 
     def switch_to(self, screen_name):
+        """Переключает на экран с проверкой блокировки"""
+        # Проверяем блокировку навигации
+        app = MDApp.get_running_app()
+        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
+            logger.debug("Навигация заблокирована (окно авторизации открыто)")
+            return
+
         if not self.sm or self.sm.current == screen_name:
             return
 

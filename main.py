@@ -88,6 +88,7 @@ from api.client import api
 from api.network_handler import network_manager
 from screens.components.bottom_nav import BottomNav
 from screens.components.top_nav import TopNav
+from screens.components.blocking_layer import BlockingLayer
 
 # Импортируем ассеты
 try:
@@ -154,11 +155,92 @@ class GuitarFunsApp(MDApp):
         self.screen_manager = None
         self.bottom_nav = None
         self.top_nav = None
+        self.blocking_layer = None  # Блокирующий слой
+        self.current_auth_modal = None
+        self.is_auth_blocking = False  # Флаг блокировки навигации
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
         logger.info('🎸 ' + '=' * 50)
+
+    def set_blocking(self, blocked):
+        """Блокирует или разблокирует навигацию"""
+        logger.info(f"set_blocking вызван: blocked={blocked}")
+        self.is_auth_blocking = blocked
+
+        if self.blocking_layer:
+            self.blocking_layer.set_active(blocked)
+
+    def open_profile(self, instance=None):
+        """Открывает экран профиля с проверкой авторизации"""
+        if self.screen_manager:
+            current_screen = self.screen_manager.current_screen
+
+            if api.is_authenticated():
+                if 'profile' in self.screen_manager.screen_names:
+                    self.screen_manager.current = 'profile'
+            else:
+                # Показываем модальное окно с блокировкой
+                self._show_auth_modal_on_screen(current_screen)
+
+    def _show_auth_modal_on_screen(self, screen):
+        """Показывает модальное окно авторизации на указанном экране с блокировкой"""
+        from screens.home_screen import AuthModal
+
+        # Блокируем навигацию
+        self.set_blocking(True)
+
+        # Создаём модальное окно
+        self.current_auth_modal = AuthModal(
+            parent_screen=screen,
+            on_close=self._on_auth_modal_close,
+            on_login_success=self._on_auth_success
+        )
+
+        # Устанавливаем ссылку на модальное окно в блокирующий слой
+        if self.blocking_layer:
+            self.blocking_layer.set_modal_widget(self.current_auth_modal)
+
+        screen.add_widget(self.current_auth_modal)
+
+    def _on_auth_modal_close(self):
+        """Обработчик закрытия модального окна"""
+        logger.info("Модальное окно закрыто")
+
+        # Очищаем ссылку в блокирующем слое
+        if self.blocking_layer:
+            self.blocking_layer.clear_modal_widget()
+
+        self.current_auth_modal = None
+
+        # Разблокируем навигацию
+        self.set_blocking(False)
+
+    def _on_auth_success(self, provider=None):
+        """Обработчик успешной авторизации"""
+        logger.info(f"Авторизация успешна: {provider}")
+
+        # Очищаем ссылку в блокирующем слое
+        if self.blocking_layer:
+            self.blocking_layer.clear_modal_widget()
+
+        self.current_auth_modal = None
+
+        # Разблокируем навигацию
+        self.set_blocking(False)
+
+        if api.access_token:
+            api.get_current_user(
+                on_success=lambda user: setattr(api, 'user_data', user),
+                on_failure=lambda req, err: None
+            )
+
+        # Обновляем данные на текущем экране если есть метод
+        if self.screen_manager:
+            current_screen = self.screen_manager.current_screen
+            if hasattr(current_screen, 'on_login_success'):
+                current_screen.on_login_success()
 
     def build(self):
         logger.debug('Создание интерфейса...')
@@ -176,7 +258,7 @@ class GuitarFunsApp(MDApp):
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
 
-        # Создаём верхнюю панель (тёмная полупрозрачная)
+        # Создаём верхнюю панель
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
@@ -188,23 +270,21 @@ class GuitarFunsApp(MDApp):
         # Создаём нижнюю панель
         self.bottom_nav = BottomNav(self.screen_manager)
 
-        # Добавляем всё в root
-        root.add_widget(self.screen_manager)
-        root.add_widget(self.bottom_nav)
-        root.add_widget(self.top_nav)
+        # Создаём блокирующий слой (прозрачный, перехватывает касания)
+        self.blocking_layer = BlockingLayer()
+        self.blocking_layer.opacity = 0
+        self.blocking_layer.disabled = True
+
+        # Добавляем всё в root (порядок важен!)
+        root.add_widget(self.screen_manager)  # 1. Основной контент
+        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
+        root.add_widget(self.top_nav)  # 3. Верхняя панель
+        root.add_widget(self.blocking_layer)  # 4. Блокирующий слой (САМЫЙ ВЕРХНИЙ)
 
         network_manager.start_monitoring()
 
         logger.info('Интерфейс успешно создан')
         return root
-
-    def open_profile(self, instance=None):
-        """Открывает экран профиля с проверкой авторизации"""
-        if self.screen_manager and self.screen_manager.has_screen('home'):
-            home_screen = self.screen_manager.get_screen('home')
-            home_screen.open_profile()
-        elif self.screen_manager and self.screen_manager.has_screen('profile'):
-            self.screen_manager.current = 'profile'
 
     def open_support(self, instance=None):
         """Открывает экран поддержки"""

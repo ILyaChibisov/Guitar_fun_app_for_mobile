@@ -81,25 +81,24 @@ class LoadingSpinner(MDBoxLayout):
 class FavoriteSongCard(MDCard):
     """Карточка избранной песни"""
 
-    def __init__(self, song, on_click=None, on_remove=None, **kwargs):
+    def __init__(self, song, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.song_id = song.get('id') or song.get('song_id')
         self.song_title = song.get('title', '')
         self.artist = song.get('artist', '')
         self.tabs_count = song.get('tabs_count', 1)
         self.on_click_callback = on_click
-        self.on_remove_callback = on_remove
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(70)
-        self.padding = [dp(16), dp(8), dp(12), dp(8)]
+        self.padding = [dp(16), dp(8), dp(16), dp(8)]
         self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL]
         self.elevation = 2
         self.ripple_behavior = True
 
-        # Полупрозрачный фон
+        # Полупрозрачный фон как в artist_songs_screen
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.15]
         self.line_color = [1, 1, 1, 0.1]
@@ -155,20 +154,20 @@ class FavoriteSongCard(MDCard):
         self.text_container.add_widget(self.title_label)
         self.text_container.add_widget(self.subtitle_label)
 
-        # Кнопка удаления из избранного (крестик)
-        self.remove_btn = MDIconButton(
-            icon="close",
-            size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 0.5],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.on_remove
+        # Стрелка вправо
+        self.arrow_label = MDLabel(
+            text="›",
+            font_size=sp(28),
+            size_hint_x=None,
+            width=dp(32),
+            halign="center",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6]
         )
 
         self.add_widget(self.icon_image)
         self.add_widget(self.text_container)
-        self.add_widget(self.remove_btn)
+        self.add_widget(self.arrow_label)
 
         self.bind(on_release=self.on_click)
 
@@ -189,10 +188,6 @@ class FavoriteSongCard(MDCard):
         if self.on_click_callback and self.song_id:
             self.on_click_callback(self.song_id, self.song_title)
 
-    def on_remove(self, instance):
-        if self.on_remove_callback:
-            self.on_remove_callback(self)
-
 
 class FavoritesScreen(MDScreen):
     """Экран избранного"""
@@ -205,6 +200,7 @@ class FavoritesScreen(MDScreen):
         self.loading_spinner = None
         self.bg_image = None
         self.fade_layer = None
+        self.empty_card = None
 
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -241,17 +237,14 @@ class FavoritesScreen(MDScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        # Основной контейнер - используем FloatLayout для слоёв
         root_layout = FloatLayout()
 
-        # Основной вертикальный контейнер для контента
         main_layout = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             spacing=0
         )
 
-        # Отступ сверху для компенсации верхней панели
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
 
@@ -265,7 +258,6 @@ class FavoritesScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Заголовок
         title = MDLabel(
             text="Избранное",
             font_size=sp(18),
@@ -299,7 +291,7 @@ class FavoritesScreen(MDScreen):
         main_layout.add_widget(self.nav_row)
         main_layout.add_widget(self.content_scroll)
 
-        # ============ ПРОЗРАЧНЫЙ СЛОЙ НАД НИЖНЕЙ НАВИГАЦИЕЙ ============
+        # ============ ПРОЗРАЧНЫЙ СЛОЙ ============
         self.fade_layer = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -329,7 +321,7 @@ class FavoritesScreen(MDScreen):
         if self.is_loading:
             return
         self.is_loading = True
-        self.content_container.clear_widgets()
+        self.clear_container()
         self.loading_spinner = LoadingSpinner()
         self.content_container.add_widget(self.loading_spinner)
         self.loading_spinner.start_animation()
@@ -338,27 +330,26 @@ class FavoritesScreen(MDScreen):
         self.is_loading = False
         if self.loading_spinner:
             self.loading_spinner.stop_animation()
+        self.clear_container()
+
+    def clear_container(self):
         self.content_container.clear_widgets()
+        self.empty_card = None
 
     def on_pre_enter(self):
-        """Загружаем избранное при входе на экран"""
         if not api.is_authenticated():
-            notify.warning("Войдите в аккаунт, чтобы видеть избранное")
             self.show_empty_state(is_authenticated=False)
             return
         self.load_favorites()
 
     def load_favorites(self):
-        """Загружает список избранных песен"""
         self.show_loading()
-
         api.get_favorites(
             on_success=self.on_favorites_loaded,
             on_failure=self.on_load_failed
         )
 
     def on_favorites_loaded(self, favorites):
-        """Отображает список избранных песен"""
         self.hide_loading()
         self.favorites = favorites
 
@@ -366,31 +357,33 @@ class FavoritesScreen(MDScreen):
             self.show_empty_state()
             return
 
-        # Отображаем карточки песен
         for song_data in favorites:
             card = FavoriteSongCard(
                 song=song_data,
-                on_click=self.on_song_selected,
-                on_remove=self.on_remove_favorite
+                on_click=self.on_song_selected
             )
             self.content_container.add_widget(card)
 
-        # Добавляем нижний спейсер
         bottom_spacer = Widget(size_hint_y=None, height=dp(80))
         self.content_container.add_widget(bottom_spacer)
 
         logger.info(f"Загружено {len(favorites)} избранных песен")
 
     def show_empty_state(self, is_authenticated=True):
-        """Показывает состояние когда избранное пусто"""
+        """Показывает состояние когда избранное пусто - с той же прозрачностью что и карточки песен"""
+        self.clear_container()
+
+        # Создаём карточку с такой же прозрачностью как в artist_songs_screen
         empty_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(180),
+            height=dp(160),
             padding=[dp(24), dp(24), dp(24), dp(24)],
             radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[0, 0, 0, 0.15],
-            elevation=2
+            md_bg_color=[0, 0, 0, 0.15],  # Такая же прозрачность как у карточек песен
+            elevation=2,
+            line_color=[1, 1, 1, 0.1],
+            line_width=1
         )
 
         icon_label = MDLabel(
@@ -449,10 +442,10 @@ class FavoritesScreen(MDScreen):
         empty_card.add_widget(icon_label)
         empty_card.add_widget(text_label)
         empty_card.add_widget(hint_label)
+
         self.content_container.add_widget(empty_card)
 
     def on_song_selected(self, song_id, song_title):
-        """Выбор песни - переход на экран деталей"""
         if not song_id:
             notify.error("Ошибка: не удалось загрузить песню")
             return
@@ -463,30 +456,8 @@ class FavoritesScreen(MDScreen):
                 song_detail_screen.set_previous_screen('favorites')
                 song_detail_screen.set_song(song_id)
                 self.manager.current = 'song_detail'
-            else:
-                notify.info(f"Выбрана песня: {song_title}")
-
-    def on_remove_favorite(self, card):
-        """Удаляет песню из избранного"""
-
-        def on_remove_success(result):
-            notify.success(f"«{card.song_title}» удалено из избранного")
-            self.content_container.remove_widget(card)
-            # Если больше нет песен, показываем пустое состояние
-            if len([w for w in self.content_container.children if isinstance(w, FavoriteSongCard)]) == 0:
-                self.show_empty_state()
-
-        def on_remove_failure(req, error):
-            notify.error("Ошибка при удалении из избранного")
-
-        api.remove_from_favorites(
-            song_id=card.song_id,
-            on_success=on_remove_success,
-            on_failure=on_remove_failure
-        )
 
     def on_load_failed(self, req, error):
-        """Ошибка загрузки"""
         self.hide_loading()
 
         if "401" in str(error) or "Unauthorized" in str(error):
@@ -494,51 +465,5 @@ class FavoritesScreen(MDScreen):
             if hasattr(self, 'manager') and self.manager:
                 self.manager.current = 'home'
         else:
-            notify.error(f"Ошибка загрузки избранного")
             logger.error(f"Ошибка загрузки избранного: {error}")
-
-            error_card = MDCard(
-                orientation='vertical',
-                size_hint=(1, None),
-                height=dp(160),
-                padding=[dp(24), dp(24), dp(24), dp(24)],
-                radius=[theme.CORNER_RADIUS_SMALL],
-                md_bg_color=[0, 0, 0, 0.15],
-                elevation=2
-            )
-
-            icon_label = MDLabel(
-                text="⚠️",
-                font_size=sp(48),
-                halign="center",
-                size_hint_y=None,
-                height=dp(60),
-                theme_text_color="Custom",
-                text_color=[1, 0.5, 0.3, 0.9]
-            )
-
-            text_label = MDLabel(
-                text="Ошибка загрузки",
-                halign="center",
-                font_size=sp(14),
-                theme_text_color="Custom",
-                text_color=[1, 1, 1, 0.8],
-                size_hint_y=None,
-                height=dp(40),
-                bold=True
-            )
-
-            hint_label = MDLabel(
-                text="Проверьте подключение к интернету",
-                halign="center",
-                font_size=sp(12),
-                theme_text_color="Custom",
-                text_color=[1, 1, 1, 0.5],
-                size_hint_y=None,
-                height=dp(30)
-            )
-
-            error_card.add_widget(icon_label)
-            error_card.add_widget(text_label)
-            error_card.add_widget(hint_label)
-            self.content_container.add_widget(error_card)
+            self.show_empty_state()
