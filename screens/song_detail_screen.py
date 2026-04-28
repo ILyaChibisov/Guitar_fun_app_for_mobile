@@ -263,7 +263,7 @@ class SongDetailScreen(MDScreen):
         )
 
         # Spacer между "Тональность:" и кнопкой минус
-        spacer2 = Widget(size_hint_x=None, width=dp(10))  # <- МЕНЯЙТЕ ЗНАЧЕНИЕ ДЛЯ ОТСТУПА
+        spacer2 = Widget(size_hint_x=None, width=dp(10))
 
         # Кнопка минус
         self.minus_ton_btn = MDIconButton(
@@ -309,7 +309,7 @@ class SongDetailScreen(MDScreen):
         self.tools_row.add_widget(self.like_btn)
         self.tools_row.add_widget(spacer1)
         self.tools_row.add_widget(tonality_label)
-        self.tools_row.add_widget(spacer2)  # <- ДОБАВЛЕННЫЙ SPACER
+        self.tools_row.add_widget(spacer2)
         self.tools_row.add_widget(self.minus_ton_btn)
         self.tools_row.add_widget(self.tonality_value)
         self.tools_row.add_widget(self.plus_ton_btn)
@@ -538,7 +538,7 @@ class SongDetailScreen(MDScreen):
         self._update_content_height()
 
         self.like_count.text = str(data.get('likes', 0))
-        self.favorite_count.text = str(data.get('favorites', 0))
+        self.favorite_count.text = str(data.get('favorites_count', 0))
         self.views_count.text = str(data.get('views', 0))
 
         self.is_liked = data.get('is_liked', False)
@@ -578,18 +578,23 @@ class SongDetailScreen(MDScreen):
             notify.warning("Войдите, чтобы ставить лайки")
             return
 
-        if self.is_liked:
-            self.is_liked = False
-            current = int(self.like_count.text)
-            self.like_count.text = str(current - 1)
-            self.like_btn.icon = "heart-outline"
-            self.like_btn.icon_color = [0.8, 0.3, 0.3, 0.6]
-        else:
-            self.is_liked = True
-            current = int(self.like_count.text)
-            self.like_count.text = str(current + 1)
-            self.like_btn.icon = "heart"
-            self.like_btn.icon_color = [0.8, 0.3, 0.3, 1]
+        def on_success(result):
+            self.is_liked = result.get('liked', not self.is_liked)
+            self.like_count.text = str(result.get('total_likes', int(self.like_count.text)))
+            self.update_buttons_state()
+            if self.is_liked:
+                notify.success("Лайк поставлен!")
+            else:
+                notify.info("Лайк убран")
+
+        def on_failure(req, error):
+            notify.error("Ошибка при изменении лайка")
+
+        api.toggle_like(
+            song_id=self.song_id,
+            on_success=on_success,
+            on_failure=on_failure
+        )
 
     def toggle_favorite(self, instance):
         if not api.is_authenticated():
@@ -597,17 +602,50 @@ class SongDetailScreen(MDScreen):
             return
 
         if self.is_favorite:
-            self.is_favorite = False
-            current = int(self.favorite_count.text)
-            self.favorite_count.text = str(current - 1)
-            self.favorite_btn.icon = "star-outline"
-            self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 0.6]
+            def on_success(result):
+                self.is_favorite = False
+                self.favorite_btn.icon = "star-outline"
+                self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 0.6]
+                current = int(self.favorite_count.text)
+                self.favorite_count.text = str(max(0, current - 1))
+                notify.success("Удалено из избранного")
+                # Обновляем список избранного на экране избранного (если он открыт)
+                self._refresh_favorites_screen()
+
+            def on_failure(req, error):
+                notify.error("Ошибка при удалении из избранного")
+
+            api.remove_from_favorites(
+                song_id=self.song_id,
+                on_success=on_success,
+                on_failure=on_failure
+            )
         else:
-            self.is_favorite = True
-            current = int(self.favorite_count.text)
-            self.favorite_count.text = str(current + 1)
-            self.favorite_btn.icon = "star"
-            self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 1]
+            def on_success(result):
+                self.is_favorite = True
+                self.favorite_btn.icon = "star"
+                self.favorite_btn.icon_color = [0.9, 0.7, 0.2, 1]
+                current = int(self.favorite_count.text)
+                self.favorite_count.text = str(current + 1)
+                notify.success("Добавлено в избранное")
+                self._refresh_favorites_screen()
+
+            def on_failure(req, error):
+                notify.error("Ошибка при добавлении в избранное")
+
+            api.add_to_favorites(
+                song_id=self.song_id,
+                on_success=on_success,
+                on_failure=on_failure
+            )
+
+    def _refresh_favorites_screen(self):
+        """Обновляет экран избранного, если он открыт"""
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('favorites'):
+                favorites_screen = self.manager.get_screen('favorites')
+                if hasattr(favorites_screen, 'load_favorites'):
+                    Clock.schedule_once(lambda dt: favorites_screen.load_favorites(), 0.5)
 
     def increase_tonality(self, instance):
         self.current_tonality += 1

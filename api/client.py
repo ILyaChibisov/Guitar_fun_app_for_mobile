@@ -324,6 +324,27 @@ class APIClient:
         thread.start()
         return thread
 
+    def change_password(self, old_password, new_password, on_success=None, on_failure=None):
+        """Смена пароля"""
+        data = {
+            'old_password': old_password,
+            'new_password': new_password
+        }
+
+        def _on_success(result):
+            Logger.info(f'✅ Пароль изменён')
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/auth/change-password",
+            method='POST',
+            data=data,
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
     def google_login(self, on_success=None, on_failure=None):
         """Начинает вход через Google с callback на локальный сервер"""
         self.waiting_for_callback = True
@@ -360,7 +381,7 @@ class APIClient:
         return True
 
     def logout(self, on_success=None, on_failure=None):
-        """Выход из системы (refresh_token как query параметр)"""
+        """Выход из системы"""
 
         def _on_success(result):
             self._clear_tokens()
@@ -379,7 +400,7 @@ class APIClient:
                 on_success({})
             return
 
-        url = f"{config.API_AUTH_LOGOUT}?refresh_token={self.refresh_token}"
+        url = f"{self.config.API_AUTH_LOGOUT}?refresh_token={self.refresh_token}"
 
         return self._request(
             url=url,
@@ -511,7 +532,6 @@ class APIClient:
 
         url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}"
         Logger.info(f"🔍 Запрос песен для: {artist}")
-        Logger.info(f"🔍 URL: {url}")
 
         def _on_success(result):
             Logger.info(f"✅ Получены песни для {artist}")
@@ -554,19 +574,25 @@ class APIClient:
             include_auth=False
         )
 
+
     def get_tab(self, song_id: int, on_success=None, on_failure=None):
-        """Получить конкретный подбор по ID"""
+        """Получить конкретный подбор по ID (доступно без авторизации)"""
 
         def _on_success(result):
             if on_success:
                 on_success(result)
 
+        def _on_failure(req, error):
+            if on_failure:
+                on_failure(req, error)
+
+        # include_auth=False - не требуем авторизацию для получения текста песни
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}",
             method='GET',
             on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=True
+            on_failure=_on_failure,
+            include_auth=False
         )
 
     def search_songs(self, query: str, search_type: str = "general", limit: int = 50, on_success=None, on_failure=None):
@@ -623,19 +649,67 @@ class APIClient:
             include_auth=False
         )
 
-    # ============ АДМИН МЕТОДЫ ============
+    # ============ ИЗБРАННОЕ ============
 
-    def is_admin(self) -> bool:
-        """Проверяет, является ли текущий пользователь администратором"""
-        if not self.user_data:
-            return False
-        return self.user_data.get('role') == 'admin'
+    def get_favorites(self, on_success=None, on_failure=None):
+        """Получить список избранных песен пользователя"""
 
-    def get_user_role(self) -> str:
-        """Возвращает роль текущего пользователя"""
-        if not self.user_data:
-            return 'guest'
-        return self.user_data.get('role', 'user')
+        def _on_success(result):
+            if isinstance(result, dict):
+                favorites = result.get('favorites', result.get('songs', []))
+            else:
+                favorites = result if isinstance(result, list) else []
+
+            Logger.info(f'✅ Получено избранных: {len(favorites)}')
+            if on_success:
+                on_success(favorites)
+
+        def _on_failure(req, error):
+            Logger.error(f'❌ Ошибка получения избранного: {error}')
+            if on_failure:
+                on_failure(req, error)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/favorites",
+            method='GET',
+            on_success=_on_success,
+            on_failure=_on_failure,
+            include_auth=True
+        )
+
+    def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
+        """Добавить песню в избранное"""
+
+        def _on_success(result):
+            Logger.info(f'✅ Добавлено в избранное {song_id}')
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
+            method='POST',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
+        """Удалить песню из избранного"""
+
+        def _on_success(result):
+            Logger.info(f'✅ Удалено из избранного {song_id}')
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
+            method='DELETE',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    # ============ ЛАЙКИ ============
 
     def toggle_like(self, song_id: int, on_success=None, on_failure=None):
         """Поставить/убрать лайк"""
@@ -653,37 +727,19 @@ class APIClient:
             include_auth=True
         )
 
-    def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Добавить в избранное"""
+    # ============ АДМИН МЕТОДЫ ============
 
-        def _on_success(result):
-            Logger.info(f'✅ Добавлено в избранное {song_id}')
-            if on_success:
-                on_success(result)
+    def is_admin(self) -> bool:
+        """Проверяет, является ли текущий пользователь администратором"""
+        if not self.user_data:
+            return False
+        return self.user_data.get('role') == 'admin'
 
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
-            method='POST',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Удалить из избранного"""
-
-        def _on_success(result):
-            Logger.info(f'✅ Удалено из избранного {song_id}')
-            if on_success:
-                on_success(result)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
-            method='DELETE',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+    def get_user_role(self) -> str:
+        """Возвращает роль текущего пользователя"""
+        if not self.user_data:
+            return 'guest'
+        return self.user_data.get('role', 'user')
 
     def get_all_users(self, on_success=None, on_failure=None, limit=100, offset=0):
         """Получить список всех пользователей (только для админов)"""
