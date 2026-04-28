@@ -594,8 +594,15 @@ class ProfileScreen(MDScreen):
 
         def on_logout_success(result):
             notify.success("Вы вышли из аккаунта")
+            # Очищаем данные пользователя
+            api._clear_tokens()
+            api.user_data = None
+            # Возвращаемся на home
             if hasattr(self, 'manager') and self.manager:
                 self.manager.current = 'home'
+                # Получаем home_screen и сбрасываем состояние авторизации
+                home_screen = self.manager.get_screen('home')
+                home_screen.reset_auth_state()
 
         def on_logout_failure(req, error):
             notify.error("Ошибка выхода")

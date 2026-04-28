@@ -141,11 +141,9 @@ class LoginModal(MDCard):
 
         cancel_btn = MDRaisedButton(text="Отмена", size_hint=(0.5, 1),
                                     on_release=self.close)
-        cancel_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         login_btn = MDRaisedButton(text="Войти", size_hint=(0.5, 1),
                                    on_release=self.do_login)
-        login_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         buttons_box.add_widget(cancel_btn)
         buttons_box.add_widget(login_btn)
@@ -232,11 +230,9 @@ class RegisterModal(MDCard):
 
         cancel_btn = MDRaisedButton(text="Отмена", size_hint=(0.5, 1),
                                     on_release=self.close)
-        cancel_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         register_btn = MDRaisedButton(text="Зарегистрироваться", size_hint=(0.5, 1),
                                       on_release=self.do_register)
-        register_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
 
         buttons_box.add_widget(cancel_btn)
         buttons_box.add_widget(register_btn)
@@ -311,7 +307,6 @@ class AuthModal(MDCard):
             on_release=self.on_google_click
         )
         google_btn.pos_hint = {'center_x': 0.5}
-        google_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(google_btn)
 
         login_btn = MDRaisedButton(
@@ -321,7 +316,6 @@ class AuthModal(MDCard):
             on_release=self.show_login_form
         )
         login_btn.pos_hint = {'center_x': 0.5}
-        login_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(login_btn)
 
         register_btn = MDRaisedButton(
@@ -331,7 +325,6 @@ class AuthModal(MDCard):
             on_release=self.show_register
         )
         register_btn.pos_hint = {'center_x': 0.5}
-        register_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(register_btn)
 
         skip_btn = MDRaisedButton(
@@ -341,7 +334,6 @@ class AuthModal(MDCard):
             on_release=self.close
         )
         skip_btn.pos_hint = {'center_x': 0.5}
-        skip_btn.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.add_widget(skip_btn)
 
         self.login_modal = None
@@ -468,7 +460,7 @@ class HomeScreen(MDScreen):
         self.root_layout.add_widget(self.welcome_popup)
 
     def check_auth(self, dt):
-        """Проверяет авторизацию при запуске - только показывает модальное окно"""
+        """Проверяет авторизацию при запуске"""
         if self.auth_check_done:
             return
         self.auth_check_done = True
@@ -516,7 +508,7 @@ class HomeScreen(MDScreen):
         self.auth_modal = None
 
     def on_login_success(self, provider=None):
-        """Обработчик успешного входа - обновляем данные и показываем приветствие"""
+        """Обработчик успешного входа"""
         self.auth_modal = None
         if api.access_token:
             api.get_current_user(
@@ -532,7 +524,7 @@ class HomeScreen(MDScreen):
         self.show_welcome(username)
 
     def open_profile(self):
-        """Открывает экран профиля - только здесь проверяем и переходим"""
+        """Открывает экран профиля"""
         if api.is_authenticated():
             if hasattr(self, 'manager') and self.manager:
                 if 'profile' in self.manager.screen_names:
@@ -541,6 +533,14 @@ class HomeScreen(MDScreen):
         else:
             logger.info("Не авторизован, показываем AuthModal")
             self.show_auth_modal()
+
+    def reset_auth_state(self):
+        """Сбрасывает состояние авторизации (при выходе)"""
+        self.user = None
+        self.auth_check_done = False
+        self.auth_modal = None
+        # Показываем окно авторизации
+        Clock.schedule_once(lambda x: self.show_auth_modal(), 0.5)
 
     def _on_carousel_item_selected(self, screen_name):
         """Обработчик выбора элемента из карусели"""
