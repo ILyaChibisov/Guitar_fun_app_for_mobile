@@ -44,8 +44,8 @@ class LoginModal(MDCard):
         back_btn.pos_hint = {'x': 0, 'top': 1}
         back_btn.size_hint = (None, None)
         back_btn.size = (dp(32), dp(32))
-        back_btn.theme_text_color = "Custom"
-        back_btn.text_color = theme.TEXT_SECONDARY
+        back_btn.theme_icon_color = "Custom"
+        back_btn.icon_color = theme.TEXT_SECONDARY
         back_btn.on_release = self.close
         self.add_widget(back_btn)
 
@@ -125,8 +125,8 @@ class RegisterModal(MDCard):
         back_btn.pos_hint = {'x': 0, 'top': 1}
         back_btn.size_hint = (None, None)
         back_btn.size = (dp(32), dp(32))
-        back_btn.theme_text_color = "Custom"
-        back_btn.text_color = theme.TEXT_SECONDARY
+        back_btn.theme_icon_color = "Custom"
+        back_btn.icon_color = theme.TEXT_SECONDARY
         back_btn.on_release = self.close
         self.add_widget(back_btn)
 
@@ -304,8 +304,7 @@ class AuthModal(MDCard):
 
     def on_login_form_success(self):
         self.login_modal = None
-        if self.on_login_success_callback:
-            self.on_login_success_callback('login_form')
+        Clock.schedule_once(lambda dt: self.on_login_success_callback('login_form') if self.on_login_success_callback else None, 0.1)
 
     def show_register(self, instance):
         self.close()
@@ -372,7 +371,6 @@ class HomeScreen(MDScreen):
         # Нижний спейсер для центрирования
         self.bottom_spacer = BoxLayout(size_hint_y=0.2)
 
-        # Добавляем всё в layout
         self.layout.add_widget(self.top_spacer)
         self.layout.add_widget(self.title)
         self.layout.add_widget(self.carousel)
@@ -380,16 +378,11 @@ class HomeScreen(MDScreen):
 
         self.add_widget(self.layout)
 
-        Clock.schedule_once(self.check_auth, 1)
+        Clock.schedule_once(self.check_auth, 0.5)
         logger.info('Главный экран создан')
 
-    def _on_carousel_item_selected(self, screen_name):
-        """Обработчик выбора элемента из карусели"""
-        if hasattr(self, 'manager') and self.manager:
-            self.manager.transition.direction = 'left'
-            self.manager.current = screen_name
-
     def check_auth(self, dt):
+        """Проверяет авторизацию при запуске - только показывает модальное окно"""
         if self.auth_check_done:
             return
         self.auth_check_done = True
@@ -397,11 +390,15 @@ class HomeScreen(MDScreen):
         if api.access_token:
             api.get_current_user(on_success=self.on_auth_success, on_failure=self.on_auth_failure)
         else:
-            self.show_auth_modal()
+            logger.info("Нет токена, показываем AuthModal")
+            Clock.schedule_once(lambda x: self.show_auth_modal(), 0.1)
 
     def on_auth_success(self, user):
         self.user = user
+        api.user_data = user
         logger.info(f'Пользователь авторизован: {user.get("username")}')
+        if self.auth_modal and self.auth_modal.parent:
+            self.auth_modal.close()
 
     def on_auth_failure(self, req, error):
         error_msg = str(error)
@@ -409,11 +406,12 @@ class HomeScreen(MDScreen):
 
         if 'Not authenticated' in error_msg or 'Invalid token' in error_msg:
             api._clear_tokens()
-            self.show_auth_modal()
+            Clock.schedule_once(lambda x: self.show_auth_modal(), 0.1)
         else:
-            self.show_auth_modal()
+            Clock.schedule_once(lambda x: self.show_auth_modal(), 0.1)
 
     def show_auth_modal(self):
+        """Показывает модальное окно авторизации"""
         if self.auth_modal and self.auth_modal.parent:
             return
         self.auth_modal = AuthModal(
@@ -427,42 +425,33 @@ class HomeScreen(MDScreen):
         self.auth_modal = None
 
     def on_login_success(self, provider=None):
+        """Обработчик успешного входа - только обновляем данные"""
         self.auth_modal = None
-        if provider == 'google':
-            self.login_google()
-        elif provider == 'login_form':
-            self.check_auth(0)
-        else:
-            self.check_auth(0)
-
-    def login_google(self):
-        api.google_login(
-            on_success=self.on_oauth_success,
-            on_failure=self.on_oauth_failure
-        )
-
-    def on_oauth_success(self, user):
-        self.user = user
-        notify.success(f"Добро пожаловать, {user.get('username')}! 🎸")
-        logger.info(f'Пользователь авторизован: {user.get("username")}')
-        api.user_data = user
-
-    def on_oauth_failure(self, req, error):
-        notify.error("Ошибка авторизации через Google")
-        logger.error(f'OAuth ошибка: {error}')
+        if api.access_token:
+            api.get_current_user(
+                on_success=lambda user: setattr(self, 'user', user),
+                on_failure=lambda req, err: None
+            )
+        logger.info(f'Пользователь успешно авторизован через {provider}')
 
     def open_profile(self):
+        """Открывает экран профиля - только здесь проверяем и переходим"""
         if api.is_authenticated():
             if hasattr(self, 'manager') and self.manager:
                 if 'profile' in self.manager.screen_names:
+                    logger.info("Переход на профиль")
                     self.manager.current = 'profile'
-                else:
-                    notify.info(f"Вы вошли как {api.user_data.get('username')} 🎸")
-            else:
-                notify.info(f"Вы вошли как {api.user_data.get('username')} 🎸")
         else:
-            logger.info('Не авторизован, показываем окно авторизации')
+            logger.info("Не авторизован, показываем AuthModal")
             self.show_auth_modal()
+
+    def _on_carousel_item_selected(self, screen_name):
+        """Обработчик выбора элемента из карусели"""
+        if screen_name == 'profile':
+            self.open_profile()
+        elif hasattr(self, 'manager') and self.manager:
+            self.manager.transition.direction = 'left'
+            self.manager.current = screen_name
 
     def on_pre_enter(self):
         if hasattr(self, 'carousel'):

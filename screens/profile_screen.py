@@ -9,7 +9,6 @@ from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
-from kivy.clock import Clock
 from io import BytesIO
 
 from config.theme import theme
@@ -86,7 +85,7 @@ class ProfileScreen(MDScreen):
 
         # fallback цвет
         with self.canvas.before:
-            Color(0.46, 0.70, 0.71, 1)
+            Color(0.95, 0.93, 0.88, 1)
             self.bg_image = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
@@ -108,7 +107,6 @@ class ProfileScreen(MDScreen):
                 logger.error(f"Ошибка загрузки аватара: {e}")
 
         # Если не загрузилась, показываем эмодзи
-        self.avatar_image.source = ""
         self.avatar_image.text = "👤"
         return False
 
@@ -340,11 +338,7 @@ class ProfileScreen(MDScreen):
         info_card.add_widget(sub_box)
         info_card.add_widget(last_box)
 
-        # ============ КНОПКИ (MDRaisedButton) ============
-        primary_color = hex_to_rgb(theme.PRIMARY)
-        primary_rgb = [primary_color[0], primary_color[1], primary_color[2], 1]
-
-        # Контейнер для кнопок с отступами
+        # ============ КНОПКИ ============
         buttons_container = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
@@ -352,15 +346,7 @@ class ProfileScreen(MDScreen):
             padding=[dp(16), dp(0), dp(16), dp(0)]
         )
 
-        # Кнопка смены пароля
-        change_password_btn = MDRaisedButton(
-            text="Сменить пароль",
-            size_hint=(1, None),
-            height=dp(48),
-            on_release=self.show_change_password_dialog
-        )
-
-        # Кнопка админ-панели
+        # Кнопка админ-панели (первая)
         self.admin_btn = MDRaisedButton(
             text="Админ-панель",
             size_hint=(1, None),
@@ -370,6 +356,14 @@ class ProfileScreen(MDScreen):
         self.admin_btn.opacity = 0
         self.admin_btn.disabled = True
 
+        # Кнопка смены пароля
+        change_password_btn = MDRaisedButton(
+            text="Сменить пароль",
+            size_hint=(1, None),
+            height=dp(48),
+            on_release=self.show_change_password_dialog
+        )
+
         # Кнопка выхода
         logout_btn = MDRaisedButton(
             text="Выйти из аккаунта",
@@ -378,11 +372,10 @@ class ProfileScreen(MDScreen):
             on_release=self.logout
         )
 
-        buttons_container.add_widget(change_password_btn)
         buttons_container.add_widget(self.admin_btn)
+        buttons_container.add_widget(change_password_btn)
         buttons_container.add_widget(logout_btn)
 
-        # Вычисляем высоту контейнера
         buttons_container.height = dp(48) * 3 + dp(24)
 
         content.add_widget(avatar_box)
@@ -402,6 +395,13 @@ class ProfileScreen(MDScreen):
 
     def on_pre_enter(self):
         """Вызывается перед показом экрана - загружаем данные"""
+        # Проверяем авторизацию перед загрузкой
+        if not api.is_authenticated():
+            logger.info("Не авторизован, возвращаемся на home")
+            if hasattr(self, 'manager') and self.manager:
+                self.manager.current = 'home'
+            return
+
         if not self._data_loaded:
             self.load_user_data()
         return super().on_pre_enter()
@@ -435,9 +435,12 @@ class ProfileScreen(MDScreen):
             logger.info('Токен недействителен, очищаем')
             api._clear_tokens()
             notify.warning("Сессия истекла. Пожалуйста, войдите снова.")
-            self.go_back(None)
+            if hasattr(self, 'manager') and self.manager:
+                self.manager.current = 'home'
         else:
             notify.error("Не удалось загрузить данные профиля")
+            if hasattr(self, 'manager') and self.manager:
+                self.manager.current = 'home'
 
     def update_ui(self):
         """Обновляет интерфейс данными пользователя"""
@@ -591,7 +594,8 @@ class ProfileScreen(MDScreen):
 
         def on_logout_success(result):
             notify.success("Вы вышли из аккаунта")
-            self.go_back(None)
+            if hasattr(self, 'manager') and self.manager:
+                self.manager.current = 'home'
 
         def on_logout_failure(req, error):
             notify.error("Ошибка выхода")

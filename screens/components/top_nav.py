@@ -1,5 +1,4 @@
-# screens/components/top_nav.py (исправленный)
-
+# screens/components/top_nav.py
 """
 Верхняя панель навигации с тёмным полупрозрачным фоном
 - Слева: иконка меню 🍔
@@ -36,8 +35,8 @@ class TopNav(MDCard):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
         self.height = dp(56)
-        self.radius = [0, 0, 0, 0]  # Прямые углы
-        self.md_bg_color = [0, 0, 0, 0]  # Прозрачный, фон добавим через canvas
+        self.radius = [0, 0, 0, 0]
+        self.md_bg_color = [0, 0, 0, 0]
         self.theme_bg_color = "Custom"
         self.elevation = 0
         self.padding = 0
@@ -46,7 +45,7 @@ class TopNav(MDCard):
         # Тёмный полупрозрачный фон через canvas
         from kivy.graphics import Color, Rectangle
         with self.canvas.before:
-            Color(0, 0, 0, 0.3)  # Чёрный с прозрачностью 30%
+            Color(0, 0, 0, 0.3)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
@@ -85,7 +84,6 @@ class TopNav(MDCard):
         )
 
         # ============ ПРАВАЯ ЧАСТЬ: поиск, профиль и выбор языка ============
-        # Контейнер для правых элементов (увеличил ширину)
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -125,7 +123,7 @@ class TopNav(MDCard):
             on_language_change=self._on_language_changed
         )
 
-        # Добавляем в правый контейнер (порядок: поиск, профиль, язык)
+        # Добавляем в правый контейнер
         self.right_container.add_widget(self.search_btn)
         self.right_container.add_widget(self.profile_btn)
         self.right_container.add_widget(self.language_selector)
@@ -147,16 +145,14 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info('TopNav с тёмным полупрозрачным фоном создана')
+        logger.info('TopNav создана')
 
     def _update_bg(self, *args):
-        """Обновляет позицию и размер фонового прямоугольника"""
         if hasattr(self, 'bg_rect'):
             self.bg_rect.pos = self.pos
             self.bg_rect.size = self.size
 
     def _get_screen_title(self, screen_name: str) -> str:
-        """Возвращает название для экрана"""
         titles = {
             'home': 'Главная',
             'songs': 'Песни',
@@ -175,20 +171,18 @@ class TopNav(MDCard):
         return titles.get(screen_name, screen_name.capitalize())
 
     def _on_screen_changed(self, instance, screen_name):
-        """Обновляет заголовок при смене экрана"""
         self.current_screen_name = screen_name
         self.screen_title.text = self._get_screen_title(screen_name)
         logger.debug(f"Экран изменён: {screen_name}, заголовок: {self.screen_title.text}")
 
     def _on_menu_press(self, instance):
-        """Обработчик нажатия на меню - открытие боковой панели"""
         if self.app and hasattr(self.app, 'open_drawer'):
             self.app.open_drawer(instance)
         else:
-            logger.info("Меню нажато - боковая панель будет добавлена позже")
+            logger.info("Меню нажато")
 
     def _on_profile_press(self, instance):
-        """Обработчик нажатия на профиль"""
+        """Обработчик нажатия на профиль - вызывает open_profile в main.py"""
         if self.app and hasattr(self.app, 'open_profile'):
             self.app.open_profile(instance)
         else:
@@ -196,14 +190,11 @@ class TopNav(MDCard):
                 self.sm.current = 'profile'
 
     def _on_language_changed(self, lang_code):
-        """Обработчик смены языка"""
         if self.app and hasattr(self.app, 'change_language'):
             self.app.change_language(lang_code)
 
     def _on_search_press(self, instance):
-        """Обработчик нажатия на поиск - открытие экрана поиска"""
         if self.sm:
-            # Передаём ссылку на экран аккордов
             if self.sm.has_screen('chords') and self.sm.has_screen('search'):
                 chords_screen = self.sm.get_screen('chords')
                 search_screen = self.sm.get_screen('search')
@@ -211,20 +202,16 @@ class TopNav(MDCard):
                 self.sm.current = 'search'
 
     def set_app(self, app):
-        """Устанавливает ссылку на главное приложение"""
         self.app = app
 
     def get_current_language(self):
-        """Возвращает текущий язык"""
         if self.language_selector:
             return self.language_selector.get_current_lang()
         return 'ru'
 
     def set_current_language(self, lang_code):
-        """Устанавливает текущий язык программно"""
         if self.language_selector:
             self.language_selector.set_current_lang(lang_code)
 
     def update_title(self, screen_name: str):
-        """Обновляет заголовок вручную"""
         self.screen_title.text = self._get_screen_title(screen_name)

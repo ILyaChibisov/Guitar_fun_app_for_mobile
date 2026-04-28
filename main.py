@@ -160,8 +160,6 @@ class GuitarFunsApp(MDApp):
         logger.info(f'🎸 Платформа: {platform}')
         logger.info('🎸 ' + '=' * 50)
 
-        # main.py - метод build (исправленный)
-
     def build(self):
         logger.debug('Создание интерфейса...')
 
@@ -184,19 +182,16 @@ class GuitarFunsApp(MDApp):
         self.top_nav.size_hint = (1, None)
         self.top_nav.height = dp(56)
         self.top_nav.pos_hint = {'top': 1}
-        self.top_nav.md_bg_color = [0, 0, 0, 0.3]  # Тёмный полупрозрачный
+        self.top_nav.md_bg_color = [0, 0, 0, 0.3]
         self.top_nav.theme_bg_color = "Custom"
 
         # Создаём нижнюю панель
         self.bottom_nav = BottomNav(self.screen_manager)
 
         # Добавляем всё в root
-        # ВАЖНО: порядок добавления!
-        root.add_widget(self.screen_manager)  # 1. Основной контент (самый нижний слой)
-        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
-        root.add_widget(self.top_nav)  # 3. Верхняя панель (самый верхний слой)
-
-        # Убираем raise_to_top - он не нужен, порядок добавления уже правильный
+        root.add_widget(self.screen_manager)
+        root.add_widget(self.bottom_nav)
+        root.add_widget(self.top_nav)
 
         network_manager.start_monitoring()
 
@@ -204,8 +199,11 @@ class GuitarFunsApp(MDApp):
         return root
 
     def open_profile(self, instance=None):
-        """Открывает экран профиля"""
-        if self.screen_manager and self.screen_manager.has_screen('profile'):
+        """Открывает экран профиля с проверкой авторизации"""
+        if self.screen_manager and self.screen_manager.has_screen('home'):
+            home_screen = self.screen_manager.get_screen('home')
+            home_screen.open_profile()
+        elif self.screen_manager and self.screen_manager.has_screen('profile'):
             self.screen_manager.current = 'profile'
 
     def open_support(self, instance=None):
@@ -216,7 +214,6 @@ class GuitarFunsApp(MDApp):
     def change_language(self, lang_code):
         """Изменяет язык приложения"""
         logger.info(f"Смена языка на: {lang_code}")
-        # TODO: Реализовать смену языка
 
     def on_start(self):
         logger.info('Приложение GuitarFuns запущено')
