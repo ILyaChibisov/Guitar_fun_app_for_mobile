@@ -10,6 +10,7 @@ from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.animation import Animation
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
 
 from config.theme import theme
 from config.carousel_config import CarouselConfig
@@ -20,6 +21,78 @@ from utils.notifications import notify
 from utils.kivy_imports import MDRaisedButton, MDIconButton, MDBoxLayout
 
 logger = screen_logger('Home')
+
+
+class WelcomePopup(MDCard):
+    """Красивое всплывающее приветствие"""
+
+    def __init__(self, username, **kwargs):
+        super().__init__(**kwargs)
+        self.username = username
+
+        self.orientation = 'vertical'
+        self.size_hint = (0.85, None)
+        self.height = dp(180)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.elevation = 6
+        self.radius = [theme.CORNER_RADIUS] * 4
+        self.md_bg_color = [1, 1, 1, 0.95]
+        self.padding = [dp(20), dp(20), dp(20), dp(20)]
+        self.spacing = dp(10)
+
+        # Иконка гитары
+        guitar_icon = MDLabel(
+            text="🎸",
+            font_size=sp(48),
+            halign="center",
+            size_hint_y=None,
+            height=dp(60),
+            theme_text_color="Custom",
+            text_color=hex_to_rgb(theme.PRIMARY) + [1]
+        )
+
+        # Текст "Добро пожаловать"
+        welcome_label = MDLabel(
+            text="Добро пожаловать!",
+            font_size=sp(18),
+            halign="center",
+            size_hint_y=None,
+            height=dp(30),
+            theme_text_color="Custom",
+            text_color=[0.2, 0.2, 0.2, 0.9],
+            bold=True
+        )
+
+        # Имя пользователя
+        name_label = MDLabel(
+            text=username,
+            font_size=sp(16),
+            halign="center",
+            size_hint_y=None,
+            height=dp(28),
+            theme_text_color="Custom",
+            text_color=hex_to_rgb(theme.PRIMARY) + [1],
+            bold=True
+        )
+
+        self.add_widget(guitar_icon)
+        self.add_widget(welcome_label)
+        self.add_widget(name_label)
+
+        # Анимация появления
+        self.opacity = 0
+        self.scale = 0.8
+        anim = Animation(opacity=1, scale=1, duration=0.3, t='out_back')
+        anim.start(self)
+
+        # Автоматическое исчезновение через 3 секунды
+        Clock.schedule_once(self.fade_out, 3)
+
+    def fade_out(self, dt):
+        """Плавное исчезновение"""
+        anim = Animation(opacity=0, scale=0.8, duration=0.3, t='in_back')
+        anim.bind(on_complete=lambda *args: self.parent.remove_widget(self) if self.parent else None)
+        anim.start(self)
 
 
 class LoginModal(MDCard):
@@ -304,7 +377,8 @@ class AuthModal(MDCard):
 
     def on_login_form_success(self):
         self.login_modal = None
-        Clock.schedule_once(lambda dt: self.on_login_success_callback('login_form') if self.on_login_success_callback else None, 0.1)
+        Clock.schedule_once(
+            lambda dt: self.on_login_success_callback('login_form') if self.on_login_success_callback else None, 0.1)
 
     def show_register(self, instance):
         self.close()
@@ -336,9 +410,13 @@ class HomeScreen(MDScreen):
         self.user = None
         self.auth_modal = None
         self.auth_check_done = False
+        self.welcome_popup = None
 
         # Делаем экран прозрачным
         self.md_bg_color = [0, 0, 0, 0]
+
+        # Используем FloatLayout для возможности наложения виджетов
+        self.root_layout = FloatLayout()
 
         # Основной контейнер
         self.layout = MDBoxLayout(
@@ -376,10 +454,18 @@ class HomeScreen(MDScreen):
         self.layout.add_widget(self.carousel)
         self.layout.add_widget(self.bottom_spacer)
 
-        self.add_widget(self.layout)
+        self.root_layout.add_widget(self.layout)
+        self.add_widget(self.root_layout)
 
         Clock.schedule_once(self.check_auth, 0.5)
         logger.info('Главный экран создан')
+
+    def show_welcome(self, username):
+        """Показывает красивое всплывающее приветствие"""
+        if self.welcome_popup and self.welcome_popup.parent:
+            return
+        self.welcome_popup = WelcomePopup(username)
+        self.root_layout.add_widget(self.welcome_popup)
 
     def check_auth(self, dt):
         """Проверяет авторизацию при запуске - только показывает модальное окно"""
@@ -396,7 +482,12 @@ class HomeScreen(MDScreen):
     def on_auth_success(self, user):
         self.user = user
         api.user_data = user
-        logger.info(f'Пользователь авторизован: {user.get("username")}')
+        username = user.get('username', 'Гость')
+        logger.info(f'Пользователь авторизован: {username}')
+
+        # Показываем приветствие
+        self.show_welcome(username)
+
         if self.auth_modal and self.auth_modal.parent:
             self.auth_modal.close()
 
@@ -419,20 +510,26 @@ class HomeScreen(MDScreen):
             on_close=self.on_modal_close,
             on_login_success=self.on_login_success
         )
-        self.add_widget(self.auth_modal)
+        self.root_layout.add_widget(self.auth_modal)
 
     def on_modal_close(self):
         self.auth_modal = None
 
     def on_login_success(self, provider=None):
-        """Обработчик успешного входа - только обновляем данные"""
+        """Обработчик успешного входа - обновляем данные и показываем приветствие"""
         self.auth_modal = None
         if api.access_token:
             api.get_current_user(
-                on_success=lambda user: setattr(self, 'user', user),
+                on_success=self.on_user_data_loaded,
                 on_failure=lambda req, err: None
             )
         logger.info(f'Пользователь успешно авторизован через {provider}')
+
+    def on_user_data_loaded(self, user):
+        self.user = user
+        api.user_data = user
+        username = user.get('username', 'Гость')
+        self.show_welcome(username)
 
     def open_profile(self):
         """Открывает экран профиля - только здесь проверяем и переходим"""
@@ -462,3 +559,9 @@ class HomeScreen(MDScreen):
         if hasattr(self, 'carousel'):
             self.carousel.stop_auto_scroll()
         return super().on_leave()
+
+
+def hex_to_rgb(hex_color):
+    """Конвертирует hex цвет в RGB список от 0 до 1"""
+    hex_color = hex_color.lstrip('#')
+    return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
