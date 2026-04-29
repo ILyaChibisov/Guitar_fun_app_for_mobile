@@ -29,12 +29,9 @@ logger = screen_logger('SearchScreen')
 # Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -213,7 +210,7 @@ class SearchScreen(MDScreen):
             spacing=0
         )
 
-        # Отступ сверху для компенсации верхней панели (как в artist_songs_screen)
+        # Отступ сверху для компенсации верхней панели
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
 
@@ -239,8 +236,8 @@ class SearchScreen(MDScreen):
         )
 
         title = MDLabel(
-            text="Поиск песен и аккордов",  #
-            font_size=sp(16),  # Уменьшил размер шрифта, чтобы текст поместился
+            text="Поиск песен и аккордов",
+            font_size=sp(16),
             halign="center",
             valign="middle",
             size_hint_x=1,
@@ -287,7 +284,7 @@ class SearchScreen(MDScreen):
             text_color_normal=[0, 0, 0, 0.87],
             text_color_focus=[0, 0, 0, 0.87],
             font_size=sp(16),
-            hint_text="Найти песню, исполнителя или аккорд",  # Изменено
+            hint_text="Найти песню, исполнителя или аккорд",
             hint_text_color=[0.6, 0.6, 0.6, 1],
             padding=[dp(12), dp(12), dp(0), dp(12)]
         )
@@ -455,7 +452,7 @@ class SearchScreen(MDScreen):
                 self.results_container.add_widget(card)
 
         # Песни
-        if song_results:
+        if song_results and len(song_results) > 0:
             songs_header = MDLabel(
                 text="Песни",
                 font_size=sp(16),
@@ -467,7 +464,10 @@ class SearchScreen(MDScreen):
             )
             self.results_container.add_widget(songs_header)
 
-            for song in song_results[:10]:
+            # Ограничиваем до 10 результатов
+            limit = min(10, len(song_results))
+            for i in range(limit):
+                song = song_results[i]
                 card = ResultCard(
                     title=song.get('title', ''),
                     result_type="song",
@@ -520,7 +520,23 @@ class SearchScreen(MDScreen):
     def search_songs(self, query):
         """Ищет песни через API"""
         try:
-            return api.search_songs_sync(query, "general", 20)
+            result = api.search_songs_sync(query, limit=20)  # Убираем "general"
+            # API возвращает словарь с ключом 'results'
+            if isinstance(result, dict):
+                results = result.get('results', [])
+                # Если results - список строк, преобразуем
+                if results and isinstance(results[0], str):
+                    formatted = []
+                    for item in results:
+                        formatted.append({
+                            'song_id': 0,
+                            'artist': '',
+                            'title': item,
+                            'tabs_count': 1
+                        })
+                    return formatted
+                return results
+            return result if isinstance(result, list) else []
         except Exception as e:
             logger.error(f"Ошибка поиска песен: {e}")
             return []

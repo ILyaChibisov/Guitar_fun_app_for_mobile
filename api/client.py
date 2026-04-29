@@ -141,8 +141,8 @@ class APIClient:
         # Кэш для страниц
         self.cache = {
             'alphabet': None,
-            'artists': {},  # {letter: {page: artists_data, total: total, page_size: 50}}
-            'songs': {},  # {artist: {page: songs_data, total: total, page_size: 50}}
+            'artists': {},      # {letter: {page: artists_data, total: total, page_size: 50}}
+            'songs': {},        # {artist: {page: songs_data, total: total, page_size: 50}}
             'popular': None,
             'favorites': None
         }
@@ -405,6 +405,8 @@ class APIClient:
         import urllib.parse
         encoded_artist = urllib.parse.quote(artist, safe='')
         url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}?limit={limit}&offset={offset}"
+        Logger.info(f"🔍 Запрос песен для: {artist}")
+        Logger.info(f"🔍 URL: {url}")
 
         def _on_success(result):
             self._cache_songs_page(artist, page, result, result.get('total', 0))
@@ -501,6 +503,8 @@ class APIClient:
             include_auth=True
         )
 
+    # ============ ПОИСК ============
+
     def search_songs(self, query: str, limit: int = 30, offset: int = 0,
                      on_success=None, on_failure=None):
         """Поиск песен с пагинацией"""
@@ -508,26 +512,40 @@ class APIClient:
         encoded_query = urllib.parse.quote(query, safe='')
         url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
 
+        def _on_success(result):
+            Logger.info(f"📦 Результат поиска: {result}")
+            Logger.info(f"📦 Тип результата: {type(result)}")
+            if on_success:
+                on_success(result)
+
         return self._request(
             url=url,
             method='GET',
-            on_success=on_success,
+            on_success=_on_success,
             on_failure=on_failure,
             include_auth=False
         )
 
-    def search_songs_sync(self, query: str, limit: int = 30, offset: int = 0):
-        """Синхронный поиск"""
+    def search_songs_sync(self, query: str, limit: int = 20, offset: int = 0):
+        """Синхронный поиск песен (для экрана поиска)"""
         import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
+        # Убираем параметр search_type, оставляем только limit и offset
         url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
 
         try:
+            Logger.info(f"🔍 Синхронный поиск: {query}")
+            Logger.info(f"🔍 URL: {url}")
             response = self.session.get(url, timeout=config.CONNECTION_TIMEOUT)
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            Logger.info(f"✅ Результаты поиска: {result}")
+            return result
+        except requests.exceptions.Timeout:
+            Logger.error(f"❌ Таймаут синхронного поиска: {query}")
+            return {"results": [], "total": 0}
         except Exception as e:
-            Logger.error(f"Ошибка поиска: {e}")
+            Logger.error(f"❌ Ошибка синхронного поиска: {e}")
             return {"results": [], "total": 0}
 
     # ============ AUTH METHODS ============

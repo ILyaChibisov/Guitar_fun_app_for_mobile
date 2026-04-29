@@ -419,11 +419,62 @@ class SearchResultsScreen(MDScreen):
             return
 
         for song in self.results:
-            card = SearchResultCard(song=song, on_click=self.on_song_selected)
-            self.content_container.add_widget(card)
+            # Проверяем, что song - это словарь
+            if isinstance(song, dict):
+                card = SearchResultCard(song=song, on_click=self.on_song_selected)
+                self.content_container.add_widget(card)
+            elif isinstance(song, str):
+                # Если строка, создаём простую карточку
+                card = MDCard(
+                    orientation='horizontal',
+                    size_hint=(1, None),
+                    height=dp(60),
+                    padding=[dp(16), dp(8), dp(16), dp(8)],
+                    spacing=dp(12),
+                    radius=[theme.CORNER_RADIUS_SMALL],
+                    elevation=2,
+                    ripple_behavior=True,
+                    md_bg_color=[0, 0, 0, 0.15]
+                )
+
+                title_label = MDLabel(
+                    text=song,
+                    font_size=sp(16),
+                    size_hint_x=1,
+                    theme_text_color="Custom",
+                    text_color=[1, 1, 1, 0.95],
+                    bold=True,
+                    valign="middle"
+                )
+
+                arrow_label = MDLabel(
+                    text="›",
+                    font_size=sp(28),
+                    size_hint_x=None,
+                    width=dp(32),
+                    halign="center",
+                    theme_text_color="Custom",
+                    text_color=[1, 1, 1, 0.6]
+                )
+
+                card.add_widget(title_label)
+                card.add_widget(arrow_label)
+
+                # Сохраняем название песни в атрибут
+                card.song_title = song
+                card.song_id = 0
+                card.on_click_callback = self.on_song_selected_simple
+                card.bind(on_release=lambda x, s=song: self.on_song_selected_simple(0, s))
+
+                self.content_container.add_widget(card)
 
         bottom_spacer = Widget(size_hint_y=None, height=dp(20))
         self.content_container.add_widget(bottom_spacer)
+
+    def on_song_selected_simple(self, song_id, title):
+        """Выбор песни (упрощённый вариант)"""
+        logger.info(f"Выбрана песня: {title}")
+        notify.info(f"Выбрана песня: {title}")
 
     def do_search(self, query):
         """Выполняет поиск (новый запрос)"""
@@ -434,7 +485,6 @@ class SearchResultsScreen(MDScreen):
 
         api.search_songs(
             query=query,
-            search_type="general",
             limit=50,
             on_success=self.on_search_success,
             on_failure=self.on_search_failed
@@ -442,12 +492,46 @@ class SearchResultsScreen(MDScreen):
 
     def on_search_success(self, results):
         """Сохраняет и отображает результаты поиска"""
-        self.results = results
+        logger.info(f"🔍 Результат поиска: {results}")
+        logger.info(f"🔍 Тип: {type(results)}")
+
+        # Проверяем структуру ответа
+        if isinstance(results, dict):
+            # Если ответ - словарь с ключом 'results'
+            if 'results' in results:
+                raw_results = results.get('results', [])
+                logger.info(f"🔍 Извлечено {len(raw_results)} результатов из словаря")
+            else:
+                raw_results = []
+        elif isinstance(results, list):
+            raw_results = results
+        else:
+            raw_results = []
+
+        # Преобразуем в нужный формат
+        formatted_results = []
+        for item in raw_results:
+            if isinstance(item, dict):
+                formatted_results.append({
+                    'song_id': item.get('song_id', 0),
+                    'artist': item.get('artist', ''),
+                    'title': item.get('title', ''),
+                    'tabs_count': item.get('tabs_count', 1)
+                })
+            elif isinstance(item, str):
+                formatted_results.append({
+                    'song_id': 0,
+                    'artist': '',
+                    'title': item,
+                    'tabs_count': 1
+                })
+
+        self.results = formatted_results
         self.has_results = True
         self.hide_loading()
-        self.update_info_label(len(results))
+        self.update_info_label(len(self.results))
         self.display_results()
-        logger.info(f"Найдено {len(results)} результатов для '{self.query}'")
+        logger.info(f"Найдено {len(self.results)} результатов для '{self.query}'")
 
     def on_search_failed(self, req, error):
         """Ошибка поиска"""
@@ -476,9 +560,9 @@ class SearchResultsScreen(MDScreen):
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'songs'
 
-    def on_enter(self, *args):
+    def on_pre_enter(self, *args):
         """Когда экран становится активным - показываем сохранённые результаты"""
-        logger.info(f"SearchResults.on_enter: has_results={self.has_results}, results_count={len(self.results)}")
+        logger.info(f"SearchResults.on_pre_enter: has_results={self.has_results}, results_count={len(self.results)}")
         if self.has_results and self.results:
             self.update_info_label(len(self.results))
             self.display_results()
@@ -486,3 +570,4 @@ class SearchResultsScreen(MDScreen):
             # Если результатов нет, но был запрос - показываем пустое состояние
             self.update_info_label(0)
             self.display_results()
+        return super().on_pre_enter()

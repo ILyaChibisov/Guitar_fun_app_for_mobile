@@ -521,11 +521,15 @@ class SongDetailScreen(MDScreen):
             on_failure=self.on_load_failed
         )
 
-    def on_song_loaded(self, data):
-        logger.info(f"on_song_loaded called")
+    # screens/song_detail_screen.py - исправленный метод on_song_loaded
 
-        self.artist = data.get('artist')
-        self.title = data.get('title')
+    def on_song_loaded(self, data):
+        """Отображает загруженные данные"""
+        logger.info(f"on_song_loaded called")
+        logger.info(f"📦 Полученные данные: {data.keys() if data else 'None'}")
+
+        self.artist = data.get('artist') or data.get('artist_name') or 'Неизвестный исполнитель'
+        self.title = data.get('title') or data.get('song_title') or 'Без названия'
         self.current_tab_id = data.get('id')
 
         self.title_label.text = f"{self.artist} — {self.title}"
