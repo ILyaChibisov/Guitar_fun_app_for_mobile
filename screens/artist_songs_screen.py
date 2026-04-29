@@ -124,18 +124,17 @@ class LoadingFooter(MDBoxLayout):
 
 
 class SongCard(MDCard):
-    """Карточка песни с количеством подборов на второй строке"""
+    """Карточка песни (только название, без количества подборов)"""
 
     def __init__(self, song, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.song_id = song.get('song_id')
         self.song_title = song.get('title', '')
-        self.tabs_count = song.get('tabs_count', 1)
         self.on_click_callback = on_click
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(60)
+        self.height = dp(55)
         self.padding = [dp(12), dp(6), dp(12), dp(6)]
         self.spacing = dp(10)
         self.radius = [theme.CORNER_RADIUS_SMALL]
@@ -157,19 +156,11 @@ class SongCard(MDCard):
         )
         self._load_icon()
 
-        # Контейнер для текста (две строки)
-        self.text_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=1,
-            spacing=dp(2)
-        )
-
-        # Название песни (первая строка)
+        # Название песни (одна строка)
         self.title_label = MDLabel(
             text=self.song_title,
             font_size=sp(15),
-            size_hint_y=None,
-            height=dp(24),
+            size_hint_x=1,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
@@ -177,27 +168,6 @@ class SongCard(MDCard):
             shorten=True,
             shorten_from="right"
         )
-
-        # Количество подборов (вторая строка)
-        if self.tabs_count == 1:
-            tabs_word = "подбор"
-        elif 2 <= self.tabs_count <= 4:
-            tabs_word = "подбора"
-        else:
-            tabs_word = "подборов"
-
-        self.tabs_label = MDLabel(
-            text=f"{self.tabs_count} {tabs_word}",
-            font_size=sp(12),
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            valign="middle"
-        )
-
-        self.text_container.add_widget(self.title_label)
-        self.text_container.add_widget(self.tabs_label)
 
         # Стрелка вправо
         self.arrow_label = MDLabel(
@@ -211,7 +181,7 @@ class SongCard(MDCard):
         )
 
         self.add_widget(self.icon_image)
-        self.add_widget(self.text_container)
+        self.add_widget(self.title_label)
         self.add_widget(self.arrow_label)
 
         self.bind(on_release=self.on_click)
@@ -298,7 +268,6 @@ class ArtistSongsScreen(MDScreen):
         main_layout.add_widget(top_spacer)
 
         # ============ ВЕРХНЯЯ ПАНЕЛЬ ============
-        # Используем относительное позиционирование для центрирования названия
         self.nav_row = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
@@ -342,7 +311,7 @@ class ArtistSongsScreen(MDScreen):
         top_container.add_widget(self.back_btn)
         top_container.add_widget(self.artist_label)
 
-        # Вторая строка: "Найдено песен: X"
+        # Вторая строка: количество песен
         self.count_label = MDLabel(
             text="",
             font_size=sp(12),
@@ -421,15 +390,14 @@ class ArtistSongsScreen(MDScreen):
         """Обновляет заголовок: название исполнителя и количество песен"""
         self.artist_label.text = self.current_artist if self.current_artist else ""
 
-        # Склоняем слово "песня"
         if total == 0:
             count_text = "Найдено песен: 0"
-        elif total % 10 == 1 and total % 100 != 11:
-            count_text = f"Найдено песен: {total}"
-        elif 2 <= total % 10 <= 4 and not (12 <= total % 100 <= 14):
-            count_text = f"Найдено песни: {total}"
+        elif total == 1:
+            count_text = "Найдена 1 песня"
+        elif 2 <= total <= 4:
+            count_text = f"Найдено {total} песни"
         else:
-            count_text = f"Найдено песен: {total}"
+            count_text = f"Найдено {total} песен"
 
         self.count_label.text = count_text
 
@@ -465,30 +433,25 @@ class ArtistSongsScreen(MDScreen):
         self.current_page = page
         self.total_count = total
 
-        # Обновляем заголовок с общим количеством
         self.update_title(total)
 
         if page == 0:
             self.hide_loading()
             self.content_container.clear_widgets()
         else:
-            # Удаляем старый триггер
             if self.scroll_trigger and self.scroll_trigger.parent:
                 self.content_container.remove_widget(self.scroll_trigger)
 
-        # Добавляем карточки
         for song_data in songs:
             card = SongCard(song=song_data, on_click=self.on_song_selected)
             self.content_container.add_widget(card)
 
-        # Добавляем невидимый триггер для следующей страницы
         if self.has_more:
             self.scroll_trigger = ScrollTrigger(
                 on_load_more=lambda: self.load_songs(self.current_page + 1)
             )
             self.content_container.add_widget(self.scroll_trigger)
         else:
-            # Добавляем нижний спейсер
             bottom_spacer = Widget(size_hint_y=None, height=dp(80))
             self.content_container.add_widget(bottom_spacer)
 

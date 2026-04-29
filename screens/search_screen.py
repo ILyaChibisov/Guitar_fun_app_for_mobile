@@ -54,7 +54,7 @@ class ResultCard(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(70)
+        self.height = dp(60)
         self.padding = [dp(16), dp(8), dp(16), dp(8)]
         self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL]
@@ -81,10 +81,10 @@ class ResultCard(MDCard):
         self.text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
-            spacing=dp(4)
+            spacing=dp(2)
         )
 
-        # Заголовок
+        # Заголовок (первая строка) - исполнитель для песен, название для аккордов
         self.title_label = MDLabel(
             text=self.title,
             font_size=sp(16),
@@ -96,7 +96,7 @@ class ResultCard(MDCard):
             valign="middle"
         )
 
-        # Подзаголовок
+        # Подзаголовок (вторая строка)
         self.subtitle_label = MDLabel(
             text=self.subtitle,
             font_size=sp(12),
@@ -468,10 +468,11 @@ class SearchScreen(MDScreen):
             limit = min(10, len(song_results))
             for i in range(limit):
                 song = song_results[i]
+                # Для песен: title = исполнитель, subtitle = название песни
                 card = ResultCard(
-                    title=song.get('title', ''),
+                    title=song.get('artist', ''),
                     result_type="song",
-                    subtitle=f"{song.get('artist', '')} • {song.get('tabs_count', 1)} подборов",
+                    subtitle=song.get('title', ''),
                     on_click=self.on_result_selected
                 )
                 card.song_id = song.get('song_id')
@@ -520,21 +521,10 @@ class SearchScreen(MDScreen):
     def search_songs(self, query):
         """Ищет песни через API"""
         try:
-            result = api.search_songs_sync(query, limit=20)  # Убираем "general"
+            result = api.search_songs_sync(query, limit=20)
             # API возвращает словарь с ключом 'results'
             if isinstance(result, dict):
                 results = result.get('results', [])
-                # Если results - список строк, преобразуем
-                if results and isinstance(results[0], str):
-                    formatted = []
-                    for item in results:
-                        formatted.append({
-                            'song_id': 0,
-                            'artist': '',
-                            'title': item,
-                            'tabs_count': 1
-                        })
-                    return formatted
                 return results
             return result if isinstance(result, list) else []
         except Exception as e:

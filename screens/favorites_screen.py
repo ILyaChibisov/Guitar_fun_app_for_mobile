@@ -79,9 +79,9 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class FavoriteSongCard(MDCard):
-    """Карточка избранной песни (с поддержкой разных форматов данных)"""
+    """Карточка избранной песни (без количества подборов)"""
 
-    def __init__(self, song, on_click=None, on_remove=None, **kwargs):
+    def __init__(self, song, on_click=None, **kwargs):
         super().__init__(**kwargs)
 
         # Поддержка разных форматов данных
@@ -89,7 +89,6 @@ class FavoriteSongCard(MDCard):
             self.song_id = song.get('id') or song.get('song_id')
             self.song_title = song.get('title', '')
             self.artist = song.get('artist', '')
-            self.tabs_count = song.get('tabs_count', 1)
         elif isinstance(song, str):
             # Если строка, пытаемся разобрать "artist - title"
             parts = song.split(' - ', 1)
@@ -98,19 +97,16 @@ class FavoriteSongCard(MDCard):
             else:
                 self.artist, self.song_title = '', song
             self.song_id = 0
-            self.tabs_count = 1
         else:
             self.song_id = 0
             self.song_title = ''
             self.artist = ''
-            self.tabs_count = 1
 
         self.on_click_callback = on_click
-        self.on_remove_callback = on_remove
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(70)
+        self.height = dp(60)
         self.padding = [dp(16), dp(8), dp(16), dp(8)]
         self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL]
@@ -133,45 +129,42 @@ class FavoriteSongCard(MDCard):
         )
         self._load_icon()
 
-        # Контейнер для текстовой информации
+        # Контейнер для текстовой информации (две строки)
         self.text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
-            spacing=dp(4)
+            spacing=dp(2)
         )
 
-        # Название песни (первая строка - название, вторая - исполнитель)
-        self.title_label = MDLabel(
-            text=self.song_title,
+        # Исполнитель (первая строка) - крупный шрифт
+        self.artist_label = MDLabel(
+            text=self.artist,
             font_size=sp(16),
             size_hint_y=None,
             height=dp(24),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
-            valign="middle"
+            valign="middle",
+            shorten=True,
+            shorten_from="right"
         )
 
-        # Исполнитель и количество подборов
-        if self.tabs_count == 1:
-            tabs_word = "подбор"
-        elif 2 <= self.tabs_count <= 4:
-            tabs_word = "подбора"
-        else:
-            tabs_word = "подборов"
-
-        self.subtitle_label = MDLabel(
-            text=f"{self.artist} • {self.tabs_count} {tabs_word}",
-            font_size=sp(12),
+        # Название песни (вторая строка) - обычный шрифт
+        self.title_label = MDLabel(
+            text=self.song_title,
+            font_size=sp(14),
             size_hint_y=None,
             height=dp(20),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            valign="middle"
+            text_color=[1, 1, 1, 0.8],
+            valign="middle",
+            shorten=True,
+            shorten_from="right"
         )
 
+        self.text_container.add_widget(self.artist_label)
         self.text_container.add_widget(self.title_label)
-        self.text_container.add_widget(self.subtitle_label)
 
         # Стрелка вправо
         self.arrow_label = MDLabel(
@@ -384,14 +377,12 @@ class FavoritesScreen(MDScreen):
                     formatted_favorites.append({
                         'artist': parts[0],
                         'title': parts[1],
-                        'tabs_count': 1,
                         'id': 0
                     })
                 else:
                     formatted_favorites.append({
                         'artist': '',
                         'title': item,
-                        'tabs_count': 1,
                         'id': 0
                     })
 
