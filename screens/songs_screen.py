@@ -1,6 +1,6 @@
 # screens/songs_screen.py
 """
-Экран песен с алфавитной навигацией и поиском (заглушка)
+Экран песен с алфавитной навигацией и поиском
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
@@ -15,9 +15,11 @@ from kivy.core.image import Image as CoreImage
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.image import Image
 from io import BytesIO
+from kivy.clock import Clock
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from api.client import api
 from utils.notifications import notify
 
 logger = screen_logger('Songs')
@@ -88,7 +90,7 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
             self.main_layout.md_bg_color = [0.46, 0.70, 0.71, 1]
             self.main_layout.radius = [dp(8), dp(8), dp(8), dp(8)]
         else:
-            self.label.text_color = [1, 1, 1, 1]  # Белый цвет для неактивных кнопок
+            self.label.text_color = [1, 1, 1, 1]
             self.main_layout.md_bg_color = [0, 0, 0, 0]
             self.main_layout.radius = [0, 0, 0, 0]
 
@@ -274,7 +276,7 @@ class AlphabetGrid(MDCard):
 
         # Делаем фон полупрозрачным, чуть темнее (20% вместо 15%)
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [0, 0, 0, 0.2]  # Чёрный с прозрачностью 20% (темнее)
+        self.md_bg_color = [0, 0, 0, 0.2]
         self.line_color = [1, 1, 1, 0.1]
         self.line_width = 1
         self.elevation = 2
@@ -303,13 +305,12 @@ class AlphabetGrid(MDCard):
 
     def update_display(self):
         """Обновляет сетку с буквами - равномерное распределение по рядам"""
-        # Выбираем набор букв
         if self.current_language == 'ru':
-            items = self.RU_LETTERS  # 35 элементов
+            items = self.RU_LETTERS[:]  # 35 элементов
             rows_count = 5
             self.height = dp(200)
         else:
-            items = self.EN_LETTERS  # 28 элементов
+            items = self.EN_LETTERS[:]  # 28 элементов
             rows_count = 4
             self.height = dp(160)
 
@@ -337,7 +338,7 @@ class AlphabetGrid(MDCard):
 
         # Равномерно распределяем по рядам
         total_items = len(items)
-        items_per_row = (total_items + rows_count - 1) // rows_count  # Округление вверх
+        items_per_row = (total_items + rows_count - 1) // rows_count
 
         for row_idx in range(rows_count):
             start_idx = row_idx * items_per_row
@@ -364,7 +365,6 @@ class AlphabetGrid(MDCard):
         for btn in self.buttons:
             btn.set_active(btn.btn_text == letter)
         if self.on_letter_press:
-            # Если нажали 09, передаём '0-9' для API
             if letter == '09':
                 self.on_letter_press('0-9')
             else:
@@ -378,15 +378,15 @@ class AlphabetGrid(MDCard):
 
 
 class SongsScreen(MDScreen):
-    """Экран песен с алфавитной навигацией и поиском (заглушка)"""
+    """Экран песен с алфавитной навигацией и поиском"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'songs'
         self.current_letter = None
         self.bg_image = None
+        self._using_cache = False
 
-        # Делаем фон экрана прозрачным
         self.md_bg_color = [0, 0, 0, 0]
 
         self.init_ui()
@@ -431,7 +431,6 @@ class SongsScreen(MDScreen):
 
         scroll = ScrollView(size_hint=(1, 1))
 
-        # Основной контейнер
         main_layout = MDBoxLayout(
             orientation='vertical',
             padding=[dp(12), dp(2), dp(12), dp(8)],
@@ -440,7 +439,6 @@ class SongsScreen(MDScreen):
         )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        # Отступ сверху (чтобы не перекрывать верхние иконки)
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
 
@@ -471,10 +469,10 @@ class SongsScreen(MDScreen):
             fill_color_focus=[0, 0, 0, 0],
             text_color_normal=[0, 0, 0, 0],
             text_color_focus=[0, 0, 0, 0],
-            hint_text_color=[0.5, 0.5, 0.5, 1]
+            hint_text_color=[0.5, 0.5, 0.5, 1],
+            on_text=self.on_text_change
         )
 
-        # Кнопка очистки
         self.clear_search_btn = MDIconButton(
             icon="close-circle",
             size_hint=(None, None),
@@ -486,7 +484,6 @@ class SongsScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Кнопка поиска
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
@@ -502,13 +499,13 @@ class SongsScreen(MDScreen):
         self.search_card.add_widget(self.search_btn)
         main_layout.add_widget(self.search_card)
 
-        # Выбор языка с иконками и пагинацией
+        # Выбор языка
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
         main_layout.add_widget(self.language_selector)
 
-        # Сетка с буквами (теперь с прозрачным фоном)
+        # Сетка с буквами
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
         main_layout.add_widget(self.alphabet_grid)
 
@@ -524,18 +521,17 @@ class SongsScreen(MDScreen):
 
     def on_letter_press(self, letter):
         """Обработчик нажатия на букву - переходим на экран исполнителей"""
-        logger.info(f"Выбрана буква: {letter}")
+        logger.info(f"Выбрана буква/группа: {letter}")
         self.current_letter = letter
         self.alphabet_grid.clear_selection()
 
-        # Очищаем поле поиска при выборе буквы
         self.search_field.text = ""
         self.clear_search_btn.opacity = 0
 
-        # Переход на экран исполнителей по букве
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('artists_by_letter'):
                 artists_screen = self.manager.get_screen('artists_by_letter')
+                # Передаём букву для загрузки (0-9 будет обработана на экране исполнителей)
                 artists_screen.set_letter(letter)
                 self.manager.current = 'artists_by_letter'
             else:
@@ -551,12 +547,10 @@ class SongsScreen(MDScreen):
 
         logger.info(f"🔍 Поиск: {query}")
 
-        # Очищаем выделение букв
         self.alphabet_grid.clear_selection()
         self.current_letter = None
         self.clear_search_btn.opacity = 1
 
-        # Переход на экран результатов поиска
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('search_results'):
                 search_results_screen = self.manager.get_screen('search_results')

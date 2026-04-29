@@ -1,6 +1,6 @@
 # api/client.py
 """
-HTTP клиент для работы с сервером с продвинутым кэшированием
+HTTP клиент для работы с сервером с поддержкой пагинации
 """
 import json
 import threading
@@ -138,22 +138,14 @@ class APIClient:
         self.is_loading_complete = False
         self.loading_progress = 0
 
-        # ============ ПРОДВИНУТЫЙ КЭШ ============
+        # Кэш для страниц
         self.cache = {
-            'all_data': None,
             'alphabet': None,
-            'artists': {},
-            'songs': {},
+            'artists': {},  # {letter: {page: artists_data, total: total, page_size: 50}}
+            'songs': {},  # {artist: {page: songs_data, total: total, page_size: 50}}
             'popular': None,
             'favorites': None
         }
-        self.cache_timestamps = {
-            'all_data': 0,
-            'alphabet': 0,
-            'popular': 0,
-            'favorites': 0
-        }
-        self.cache_duration = 86400  # 24 часа
 
         # Создаем сессию
         self.session = get_requests_session()
@@ -164,149 +156,50 @@ class APIClient:
 
         self._load_tokens()
 
-        # Запускаем фоновую загрузку всех данных
-        Clock.schedule_once(self._background_load_all_data, 1)
+    # ============ МЕТОДЫ КЭШИРОВАНИЯ ============
 
-    # ============ МЕТОДЫ ДЛЯ КЭШИРОВАНИЯ ============
+    def _cache_artists_page(self, letter, page, data, total):
+        """Кэширует страницу исполнителей"""
+        if letter not in self.cache['artists']:
+            self.cache['artists'][letter] = {}
+        self.cache['artists'][letter][page] = {
+            'data': data,
+            'total': total,
+            'timestamp': time.time()
+        }
 
-    def is_cache_valid(self, cache_key):
-        """Проверяет, актуален ли кэш"""
-        if cache_key not in self.cache_timestamps:
-            return False
-        if self.cache_timestamps[cache_key] == 0:
-            return False
-        return (time.time() - self.cache_timestamps[cache_key]) < self.cache_duration
-
-    def _cache_data(self, key, data):
-        """Сохраняет данные в кэш"""
-        self.cache[key] = data
-        if key in self.cache_timestamps:
-            self.cache_timestamps[key] = time.time()
-
-    def _get_cached_artists(self, letter):
-        """Получает исполнителей из кэша"""
-        if letter in self.cache['artists']:
-            return self.cache['artists'][letter]
+    def _get_cached_artists_page(self, letter, page):
+        """Получает страницу исполнителей из кэша"""
+        if letter in self.cache['artists'] and page in self.cache['artists'][letter]:
+            return self.cache['artists'][letter][page]
         return None
 
-    def _cache_artists(self, letter, data):
-        """Сохраняет исполнителей в кэш"""
-        self.cache['artists'][letter] = data
+    def _cache_songs_page(self, artist, page, data, total):
+        """Кэширует страницу песен"""
+        if artist not in self.cache['songs']:
+            self.cache['songs'][artist] = {}
+        self.cache['songs'][artist][page] = {
+            'data': data,
+            'total': total,
+            'timestamp': time.time()
+        }
 
-    def _get_cached_songs(self, artist):
-        """Получает песни из кэша"""
-        if artist in self.cache['songs']:
-            return self.cache['songs'][artist]
+    def _get_cached_songs_page(self, artist, page):
+        """Получает страницу песен из кэша"""
+        if artist in self.cache['songs'] and page in self.cache['songs'][artist]:
+            return self.cache['songs'][artist][page]
         return None
 
-    def _cache_songs(self, artist, data):
-        """Сохраняет песни в кэш"""
-        self.cache['songs'][artist] = data
-
-    def get_cached_artists_by_letter(self, letter):
-        """Быстрый синхронный доступ к кэшу исполнителей"""
-        return self._get_cached_artists(letter)
-
-    def get_cached_songs_by_artist(self, artist):
-        """Быстрый синхронный доступ к кэшу песен"""
-        return self._get_cached_songs(artist)
-
-    def _background_load_all_data(self, dt):
-        """Фоновая загрузка всех данных одним запросом"""
-        Logger.info("🚀 Начинаем фоновую загрузку всех данных...")
-
-        def on_success(data):
-            Logger.info("✅ Все данные успешно загружены!")
-            stats = data.get('stats', {})
-            Logger.info(f"📊 Статистика: {stats}")
-
-        def on_failure(req, error):
-            Logger.warning(f"⚠️ Не удалось загрузить все данные: {error}")
-
-        self.get_all_data(on_success=on_success, on_failure=on_failure)
-
-    # api/client.py - исправленный метод get_all_data и _on_success
-
-    def get_all_data(self, on_success=None, on_failure=None, force_refresh=False):
-        """
-        Получить все данные одним запросом (алфавит, исполнители, песни)
-        """
-
-        # Проверяем кэш
-        if not force_refresh and self.is_cache_valid('all_data') and self.cache['all_data'] is not None:
-            Logger.info("📦 Используем кэш для всех данных")
-            if on_success:
-                Clock.schedule_once(lambda dt: on_success(self.cache['all_data']), 0)
-            return
-
-        def _on_success(result):
-            # Сохраняем в кэш
-            self._cache_data('all_data', result)
-
-            # Распаковываем данные для удобства
-            if result:
-                # Сохраняем алфавит
-                if 'letters' in result:
-                    self._cache_data('alphabet', result['letters'])
-
-                # Сохраняем исполнителей по буквам
-                if 'artists' in result:
-                    artists_data = result['artists']
-                    # Если artists - словарь {letter: [artists]}
-                    if isinstance(artists_data, dict):
-                        for letter, artists in artists_data.items():
-                            self._cache_artists(letter, artists)
-                    # Если artists - список (старый формат)
-                    elif isinstance(artists_data, list):
-                        for artist_data in artists_data:
-                            letter = artist_data.get('letter', '#')
-                            self._cache_artists(letter, [artist_data])
-
-                # Сохраняем песни по исполнителям
-                if 'songs' in result:
-                    songs_data = result['songs']
-                    # Если songs - словарь {artist: [songs]}
-                    if isinstance(songs_data, dict):
-                        for artist, songs in songs_data.items():
-                            self._cache_songs(artist, songs)
-                    # Если songs - список (старый формат)
-                    elif isinstance(songs_data, list):
-                        for song_data in songs_data:
-                            artist = song_data.get('artist')
-                            if artist:
-                                existing = self._get_cached_songs(artist) or []
-                                existing.append(song_data)
-                                self._cache_songs(artist, existing)
-
-                # Сохраняем популярные
-                if 'popular' in result:
-                    self._cache_data('popular', result['popular'])
-
-                # Сохраняем избранное
-                if 'favorites' in result:
-                    self._cache_data('favorites', result['favorites'])
-
-            self.is_loading_complete = True
-            Logger.info("✅ Все данные успешно загружены и сохранены в кэш")
-            if on_success:
-                on_success(result)
-
-        def _on_failure(req, error):
-            cached = self.cache['all_data']
-            if cached is not None:
-                Logger.warning(f"Ошибка загрузки, используем кэш: {error}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-            elif on_failure:
-                on_failure(req, error)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/all-data",
-            method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
-            include_auth=self.is_authenticated()
-        )
+    def clear_cache(self):
+        """Очищает кэш"""
+        self.cache = {
+            'alphabet': None,
+            'artists': {},
+            'songs': {},
+            'popular': None,
+            'favorites': None
+        }
+        Logger.info("🗑️ Кэш очищен")
 
     # ============ AUTH METHODS ============
 
@@ -396,12 +289,12 @@ class APIClient:
                 result = self._request_sync(url, method, data, include_auth)
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(result), 0)
-            except Exception as err:
+            except Exception as e:
+                error_msg = str(e)
                 if on_failure:
-                    error_msg = str(err)
                     Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
                 else:
-                    Logger.error(f'API: Ошибка - {err}')
+                    Logger.error(f'API: Ошибка - {error_msg}')
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
@@ -410,41 +303,263 @@ class APIClient:
     def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
         return self._request_async(url, method, data, on_success, on_failure, include_auth)
 
-    def check_health(self, on_success=None, on_failure=None):
+    # ============ API МЕТОДЫ ============
+
+    def get_alphabet(self, on_success=None, on_failure=None, force_refresh=False):
+        """Получить алфавит"""
+
+        if not force_refresh and self.cache['alphabet'] is not None:
+            if on_success:
+                Clock.schedule_once(lambda dt: on_success(self.cache['alphabet']), 0)
+            return
+
         def _on_success(result):
-            Logger.info('✅ Сервер доступен')
+            self.cache['alphabet'] = result
             if on_success:
                 on_success(result)
 
         return self._request(
-            url=config.API_HEALTH,
+            url=f"{self.config.API_BASE_URL}/songs/alphabet",
             method='GET',
             on_success=_on_success,
             on_failure=on_failure,
             include_auth=False
         )
 
-    def register(self, username, email, password, full_name=None, on_success=None, on_failure=None):
-        data = {'username': username, 'email': email, 'password': password}
-        if full_name:
-            data['full_name'] = full_name
+    def get_artists_by_letter(self, letter: str, limit: int = 50, offset: int = 0,
+                              on_success=None, on_failure=None, force_refresh=False):
+        """Получить исполнителей по букве с пагинацией"""
+
+        page = offset // limit if limit > 0 else 0
+
+        # Проверяем кэш
+        if not force_refresh:
+            cached = self._get_cached_artists_page(letter, page)
+            if cached:
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
+                return
+
+        import urllib.parse
+        encoded_letter = urllib.parse.quote(letter, safe='')
+        url = f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}?limit={limit}&offset={offset}"
 
         def _on_success(result):
-            Logger.info(f'✅ Регистрация успешна: {username}')
+            # Сохраняем в кэш
+            artists = result.get('artists', [])
+            total = result.get('total', 0)
+            self._cache_artists_page(letter, page, result, total)
             if on_success:
                 on_success(result)
 
         return self._request(
-            url=config.API_AUTH_REGISTER,
-            method='POST',
-            data=data,
+            url=url,
+            method='GET',
             on_success=_on_success,
             on_failure=on_failure,
             include_auth=False
         )
 
+    def get_artists_by_digits(self, limit: int = 50, offset: int = 0,
+                              on_success=None, on_failure=None, force_refresh=False):
+        """Получить исполнителей для цифр (0-9) с пагинацией"""
+
+        page = offset // limit if limit > 0 else 0
+        cache_key = "digits"
+
+        if not force_refresh:
+            cached = self._get_cached_artists_page(cache_key, page)
+            if cached:
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
+                return
+
+        url = f"{self.config.API_BASE_URL}/songs/artists/digits?limit={limit}&offset={offset}"
+
+        def _on_success(result):
+            self._cache_artists_page(cache_key, page, result, result.get('total', 0))
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
+    def get_songs_by_artist(self, artist: str, limit: int = 50, offset: int = 0,
+                            on_success=None, on_failure=None, force_refresh=False):
+        """Получить песни исполнителя с пагинацией"""
+
+        page = offset // limit if limit > 0 else 0
+
+        if not force_refresh:
+            cached = self._get_cached_songs_page(artist, page)
+            if cached:
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
+                return
+
+        import urllib.parse
+        encoded_artist = urllib.parse.quote(artist, safe='')
+        url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}?limit={limit}&offset={offset}"
+
+        def _on_success(result):
+            self._cache_songs_page(artist, page, result, result.get('total', 0))
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
+    def get_tab(self, song_id: int, on_success=None, on_failure=None):
+        """Получить текст песни"""
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}",
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
+    def get_popular_songs(self, limit: int = 20, on_success=None, on_failure=None, force_refresh=False):
+        """Получить популярные песни"""
+
+        if not force_refresh and self.cache['popular'] is not None:
+            if on_success:
+                Clock.schedule_once(lambda dt: on_success(self.cache['popular']), 0)
+            return
+
+        def _on_success(result):
+            self.cache['popular'] = result
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/popular?limit={limit}",
+            method='GET',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
+    def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
+        """Получить избранное"""
+
+        if not force_refresh and self.cache['favorites'] is not None:
+            if on_success:
+                Clock.schedule_once(lambda dt: on_success(self.cache['favorites']), 0)
+            return
+
+        def _on_success(result):
+            self.cache['favorites'] = result
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/favorites",
+            method='GET',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
+        """Добавить в избранное"""
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
+        """Удалить из избранного"""
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
+            method='DELETE',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def toggle_like(self, song_id: int, on_success=None, on_failure=None):
+        """Переключить лайк"""
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/like",
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def search_songs(self, query: str, limit: int = 30, offset: int = 0,
+                     on_success=None, on_failure=None):
+        """Поиск песен с пагинацией"""
+        import urllib.parse
+        encoded_query = urllib.parse.quote(query, safe='')
+        url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
+
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
+    def search_songs_sync(self, query: str, limit: int = 30, offset: int = 0):
+        """Синхронный поиск"""
+        import urllib.parse
+        encoded_query = urllib.parse.quote(query, safe='')
+        url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
+
+        try:
+            response = self.session.get(url, timeout=config.CONNECTION_TIMEOUT)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка поиска: {e}")
+            return {"results": [], "total": 0}
+
+    # ============ AUTH METHODS ============
+
+    def register(self, username, email, password, full_name=None, on_success=None, on_failure=None):
+        """Регистрация нового пользователя"""
+        data = {'username': username, 'email': email, 'password': password}
+        if full_name:
+            data['full_name'] = full_name
+
+        def worker():
+            try:
+                response = self.session.post(
+                    config.API_AUTH_REGISTER,
+                    json=data,
+                    headers=self._get_headers(include_auth=False),
+                    timeout=config.CONNECTION_TIMEOUT
+                )
+                response.raise_for_status()
+                result = response.json() if response.content else None
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(result), 0)
+            except Exception as e:
+                error_msg = str(e)
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+
     def login(self, username, password, on_success=None, on_failure=None):
-        """Вход по username/password (form-data)"""
+        """Вход по username/password"""
         data = urllib.parse.urlencode({
             'username': username,
             'password': password
@@ -454,14 +569,8 @@ class APIClient:
             self.access_token = result.get('access_token')
             self.refresh_token = result.get('refresh_token')
             self._save_tokens()
-            Logger.info(f'✅ Вход выполнен: {username}')
             if on_success:
                 on_success(result)
-
-        def _on_failure(error):
-            Logger.error(f'❌ Ошибка входа: {error}')
-            if on_failure:
-                on_failure(None, error)
 
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
@@ -476,34 +585,13 @@ class APIClient:
                 response.raise_for_status()
                 result = response.json()
                 Clock.schedule_once(lambda dt: _on_success(result), 0)
-            except Exception as err:
-                error_msg = str(err)
-                Clock.schedule_once(lambda dt: _on_failure(error_msg), 0)
+            except Exception as e:
+                error_msg = str(e)
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
-        return thread
-
-    def change_password(self, old_password, new_password, on_success=None, on_failure=None):
-        """Смена пароля"""
-        data = {
-            'old_password': old_password,
-            'new_password': new_password
-        }
-
-        def _on_success(result):
-            Logger.info(f'✅ Пароль изменён')
-            if on_success:
-                on_success(result)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/auth/change-password",
-            method='POST',
-            data=data,
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
 
     def google_login(self, on_success=None, on_failure=None):
         """Начинает вход через Google с callback на локальный сервер"""
@@ -541,19 +629,13 @@ class APIClient:
         return True
 
     def logout(self, on_success=None, on_failure=None):
-        """Выход из системы"""
+        """Выход из аккаунта"""
 
         def _on_success(result):
             self._clear_tokens()
             self.clear_cache()
-            Logger.info('✅ Выход выполнен')
             if on_success:
                 on_success(result)
-
-        def _on_failure(req, error):
-            Logger.error(f'❌ Ошибка выхода: {error}')
-            if on_failure:
-                on_failure(req, error)
 
         if not self.refresh_token:
             self._clear_tokens()
@@ -562,40 +644,16 @@ class APIClient:
             return
 
         url = f"{self.config.API_AUTH_LOGOUT}?refresh_token={self.refresh_token}"
-
         return self._request(
             url=url,
             method='POST',
             on_success=_on_success,
-            on_failure=_on_failure,
+            on_failure=on_failure,
             include_auth=False
         )
 
     def get_current_user(self, on_success=None, on_failure=None):
         """Получение текущего пользователя"""
-
-        def _on_success(result):
-            self.user_data = result
-            Logger.info(f'✅ Получен пользователь: {result.get("username")}')
-            if on_success:
-                on_success(result)
-
-        def _on_failure(error):
-            if "401" in str(error) or "Unauthorized" in str(error):
-                if self.refresh_token:
-                    def on_refresh_success(x):
-                        self.get_current_user(on_success, on_failure)
-
-                    self.refresh_access_token(
-                        on_success=on_refresh_success,
-                        on_failure=on_failure
-                    )
-                else:
-                    if on_failure:
-                        on_failure(None, error)
-            else:
-                if on_failure:
-                    on_failure(None, error)
 
         def worker():
             try:
@@ -606,398 +664,24 @@ class APIClient:
                 )
                 response.raise_for_status()
                 result = response.json()
-                Clock.schedule_once(lambda dt: _on_success(result), 0)
-            except Exception as err:
-                error_msg = str(err)
-                Clock.schedule_once(lambda dt: _on_failure(error_msg), 0)
+                self.user_data = result
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(result), 0)
+            except Exception as e:
+                error_msg = str(e)
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
-        return thread
-
-    def refresh_access_token(self, on_success=None, on_failure=None):
-
-        def _on_success(result):
-            self.access_token = result.get('access_token')
-            self._save_tokens()
-            Logger.info('✅ Токен обновлён')
-            if on_success:
-                on_success(result)
-
-        def _on_failure(error):
-            if on_failure:
-                on_failure(None, error)
-
-        def worker():
-            try:
-                response = self.session.post(
-                    config.API_AUTH_REFRESH,
-                    json={'refresh_token': self.refresh_token},
-                    headers=self._get_headers(include_auth=False),
-                    timeout=config.CONNECTION_TIMEOUT
-                )
-                response.raise_for_status()
-                result = response.json()
-                Clock.schedule_once(lambda dt: _on_success(result), 0)
-            except Exception as err:
-                error_msg = str(err)
-                Clock.schedule_once(lambda dt: _on_failure(error_msg), 0)
-
-        thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
-        return thread
 
     def is_authenticated(self):
         return self.access_token is not None and self.user_data is not None
 
-    # ============ МЕТОДЫ ДЛЯ РАБОТЫ С ПЕСНЯМИ (С КЭШЕМ) ============
-
-    def get_alphabet(self, on_success=None, on_failure=None, force_refresh=False):
-        """Получить все буквы (с кэшем)"""
-
-        if not force_refresh and self.is_cache_valid('alphabet') and self.cache['alphabet'] is not None:
-            Logger.debug("📦 Используем кэш для алфавита")
-            if on_success:
-                Clock.schedule_once(lambda dt: on_success(self.cache['alphabet']), 0)
-            return
-
-        def _on_success(result):
-            letters = result.get('letters', []) if isinstance(result, dict) else []
-            self._cache_data('alphabet', letters)
-            if on_success:
-                on_success(letters)
-
-        def _on_failure(req, error):
-            if self.cache['alphabet'] is not None:
-                Logger.warning(f"Ошибка загрузки алфавита, используем кэш: {error}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(self.cache['alphabet']), 0)
-            elif on_failure:
-                on_failure(req, error)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/alphabet",
-            method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
-            include_auth=False
-        )
-
-    def get_artists_by_letter(self, letter: str, on_success=None, on_failure=None, force_refresh=False):
-        """Получить исполнителей по букве (с кэшем)"""
-
-        if not force_refresh:
-            cached = self._get_cached_artists(letter)
-            if cached is not None:
-                Logger.debug(f"📦 Используем кэш для исполнителей буквы {letter}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-                return
-
-        import urllib.parse
-        encoded_letter = urllib.parse.quote(letter, safe='')
-
-        def _on_success(result):
-            artists = result.get('artists', []) if isinstance(result, dict) else []
-            self._cache_artists(letter, artists)
-            if on_success:
-                on_success(artists)
-
-        def _on_failure(req, error):
-            cached = self._get_cached_artists(letter)
-            if cached is not None:
-                Logger.warning(f"Ошибка загрузки исполнителей {letter}, используем кэш: {error}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-            elif on_failure:
-                on_failure(req, error)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}",
-            method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
-            include_auth=False
-        )
-
-    def get_songs_by_artist(self, artist: str, on_success=None, on_failure=None, force_refresh=False):
-        """Получить песни исполнителя (с кэшем)"""
-
-        if not force_refresh:
-            cached = self._get_cached_songs(artist)
-            if cached is not None:
-                Logger.debug(f"📦 Используем кэш для песен исполнителя {artist}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-                return
-
-        import urllib.parse
-        encoded_artist = urllib.parse.quote(artist, safe='')
-        url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}"
-        Logger.info(f"🔍 Запрос песен для: {artist}")
-
-        def _on_success(result):
-            if isinstance(result, dict):
-                songs = result.get('songs', [])
-            else:
-                songs = []
-            self._cache_songs(artist, songs)
-            Logger.info(f"✅ Получены песни для {artist}")
-            if on_success:
-                on_success(songs)
-
-        def _on_failure(req, error):
-            cached = self._get_cached_songs(artist)
-            if cached is not None:
-                Logger.warning(f"Ошибка загрузки песен {artist}, используем кэш: {error}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-            elif on_failure:
-                on_failure(req, error)
-
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
-            include_auth=False
-        )
-
-    def get_popular_songs(self, limit: int = 20, on_success=None, on_failure=None, force_refresh=False):
-        """Получить популярные песни (с кэшем)"""
-
-        if not force_refresh and self.is_cache_valid('popular') and self.cache['popular'] is not None:
-            Logger.debug("📦 Используем кэш для популярных песен")
-            if on_success:
-                Clock.schedule_once(lambda dt: on_success(self.cache['popular']), 0)
-            return
-
-        def _on_success(result):
-            songs = result.get('songs', []) if isinstance(result, dict) else []
-            self._cache_data('popular', songs)
-            if on_success:
-                on_success(songs)
-
-        def _on_failure(req, error):
-            cached = self.cache['popular']
-            if cached is not None:
-                Logger.warning(f"Ошибка загрузки популярных песен, используем кэш: {error}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-            elif on_failure:
-                on_failure(req, error)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/popular?limit={limit}",
-            method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
-            include_auth=False
-        )
-
-    def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
-        """Получить список избранных песен пользователя (с кэшем)"""
-
-        if not force_refresh and self.is_authenticated() and self.is_cache_valid('favorites') and self.cache[
-            'favorites'] is not None:
-            Logger.debug("📦 Используем кэш для избранного")
-            if on_success:
-                Clock.schedule_once(lambda dt: on_success(self.cache['favorites']), 0)
-            return
-
-        def _on_success(result):
-            if isinstance(result, dict):
-                favorites = result.get('favorites', result.get('songs', []))
-            else:
-                favorites = result if isinstance(result, list) else []
-            self._cache_data('favorites', favorites)
-            Logger.info(f'✅ Получено избранных: {len(favorites)}')
-            if on_success:
-                on_success(favorites)
-
-        def _on_failure(req, error):
-            cached = self.cache['favorites']
-            if cached is not None:
-                Logger.warning(f"Ошибка загрузки избранного, используем кэш: {error}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-            elif on_failure:
-                on_failure(req, error)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/favorites",
-            method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
-            include_auth=True
-        )
-
-    def get_tab(self, song_id: int, on_success=None, on_failure=None):
-        """Получить конкретный подбор по ID (без кэша - всегда свежий)"""
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}",
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=False
-        )
-
-    def search_songs(self, query: str, search_type: str = "general", limit: int = 50, on_success=None, on_failure=None):
-        """Поиск песен (асинхронный)"""
-        import urllib.parse
-        encoded_query = urllib.parse.quote(query, safe='')
-
-        def _on_success(result):
-            results = result.get('results', []) if isinstance(result, dict) else []
-            if on_success:
-                on_success(results)
-
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&search_type={search_type}&limit={limit}",
-            method='GET',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
-        )
-
-    def search_songs_sync(self, query: str, search_type: str = "general", limit: int = 50):
-        """Синхронный поиск песен (для диалога поиска)"""
-        import urllib.parse
-
-        encoded_query = urllib.parse.quote(query, safe='')
-        url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&search_type={search_type}&limit={limit}"
-
-        try:
-            Logger.info(f"🔍 Синхронный поиск: {query}")
-            response = self.session.get(url, timeout=config.CONNECTION_TIMEOUT)
-            response.raise_for_status()
-            result = response.json()
-            return result.get('results', [])
-        except requests.exceptions.Timeout:
-            Logger.error(f"❌ Таймаут синхронного поиска: {query}")
-            return []
-        except Exception as e:
-            Logger.error(f"❌ Ошибка синхронного поиска: {e}")
-            return []
-
-    # ============ ЛАЙКИ ============
-
-    def toggle_like(self, song_id: int, on_success=None, on_failure=None):
-        """Поставить/убрать лайк"""
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/like",
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Добавить песню в избранное"""
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Удалить песню из избранного"""
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
-            method='DELETE',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    # ============ АДМИН МЕТОДЫ ============
-
-    def is_admin(self) -> bool:
+    def is_admin(self):
         if not self.user_data:
             return False
         return self.user_data.get('role') == 'admin'
-
-    def get_user_role(self) -> str:
-        if not self.user_data:
-            return 'guest'
-        return self.user_data.get('role', 'user')
-
-    def get_all_users(self, on_success=None, on_failure=None, limit=100, offset=0):
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/admin/users?limit={limit}&offset={offset}",
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def update_user_role(self, user_id: int, role: str, on_success=None, on_failure=None):
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/role",
-            method='PUT',
-            data={'role': role},
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def ban_user(self, user_id: int, on_success=None, on_failure=None):
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/ban",
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def unban_user(self, user_id: int, on_success=None, on_failure=None):
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/admin/users/{user_id}/unban",
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def get_admin_stats(self, on_success=None, on_failure=None):
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/admin/stats",
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def scan_songs(self, on_success=None, on_failure=None):
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/admin/scan",
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def clear_cache(self):
-        """Очищает весь кэш"""
-        self.cache = {
-            'all_data': None,
-            'alphabet': None,
-            'artists': {},
-            'songs': {},
-            'popular': None,
-            'favorites': None
-        }
-        self.cache_timestamps = {
-            'all_data': 0,
-            'alphabet': 0,
-            'popular': 0,
-            'favorites': 0
-        }
-        self.is_loading_complete = False
-        self.loading_progress = 0
-        Logger.info("🗑️ Кэш очищен")
 
 
 api = APIClient()

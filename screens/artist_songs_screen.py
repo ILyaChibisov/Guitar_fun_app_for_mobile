@@ -1,6 +1,6 @@
 # screens/artist_songs_screen.py
 """
-Экран списка песен выбранного исполнителя
+Экран списка песен выбранного исполнителя с бесконечной прокруткой
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
@@ -16,6 +16,7 @@ from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.floatlayout import FloatLayout
+from kivy.clock import Clock
 from io import BytesIO
 
 from config.theme import theme
@@ -36,9 +37,6 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
-
-
-    logger.warning("Модуль data не найден")
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -80,8 +78,74 @@ class LoadingSpinner(MDBoxLayout):
         self.progress.value = 0
 
 
+class ScrollTrigger(Widget):
+    """Триггер для бесконечной прокрутки"""
+
+    def __init__(self, on_load_more, **kwargs):
+        super().__init__(**kwargs)
+        self.on_load_more = on_load_more
+        self.size_hint_y = None
+        self.height = dp(50)
+        self.loading = False
+        self.scroll_view = None
+
+    def on_parent(self, instance, parent):
+        if parent and hasattr(parent, 'parent'):
+            self.scroll_view = parent.parent
+            if self.scroll_view:
+                self.scroll_view.bind(scroll_y=self._check_scroll)
+
+    def _check_scroll(self, instance, value):
+        if value < 0.05 and not self.loading:
+            self.loading = True
+            Clock.schedule_once(lambda dt: self.on_load_more(), 0.1)
+
+    def reset_loading(self):
+        self.loading = False
+
+
+class LoadingFooter(MDBoxLayout):
+    """Футер загрузки"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint_y = None
+        self.height = dp(50)
+        self.padding = [dp(16), dp(8), dp(16), dp(8)]
+        self.spacing = dp(12)
+        self.md_bg_color = [0, 0, 0, 0.15]
+
+        from kivymd.uix.spinner import MDSpinner
+        self.spinner = MDSpinner(
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            active=True,
+            color=theme.PRIMARY
+        )
+        self.label = MDLabel(
+            text="Загрузка...",
+            font_size=sp(12),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7]
+        )
+
+        self.add_widget(self.spinner)
+        self.add_widget(self.label)
+
+    def show(self):
+        self.opacity = 1
+        self.disabled = False
+        self.spinner.active = True
+
+    def hide(self):
+        self.opacity = 0
+        self.disabled = True
+        self.spinner.active = False
+
+
 class SongCard(MDCard):
-    """Красивая полупрозрачная карточка песни"""
+    """Карточка песни"""
 
     def __init__(self, song, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -92,88 +156,63 @@ class SongCard(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(70)
-        self.padding = [dp(16), dp(8), dp(16), dp(8)]
-        self.spacing = dp(12)
+        self.height = dp(65)
+        self.padding = [dp(12), dp(6), dp(12), dp(6)]
+        self.spacing = dp(10)
         self.radius = [theme.CORNER_RADIUS_SMALL]
         self.elevation = 2
         self.ripple_behavior = True
 
-        # Устанавливаем полупрозрачный фон
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.15]
         self.line_color = [1, 1, 1, 0.1]
         self.line_width = 1
 
-        # Иконка песни из ассетов
+        # Иконка
         self.icon_image = Image(
             size_hint=(None, None),
-            size=(dp(32), dp(32)),
+            size=(dp(28), dp(28)),
             pos_hint={'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
         )
         self._load_icon()
 
-        # Контейнер для текстовой информации
-        self.text_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=1,
-            spacing=dp(4)
-        )
-
         # Название песни
         self.title_label = MDLabel(
             text=self.song_title,
-            font_size=sp(16),
-            size_hint_y=None,
-            height=dp(24),
+            font_size=sp(15),
+            size_hint_x=1,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
             valign="middle"
         )
 
-        # Количество подборов (с правильным склонением)
-        if self.tabs_count % 10 == 1 and self.tabs_count % 100 != 11:
+        # Количество подборов
+        if self.tabs_count == 1:
             tabs_word = "подбор"
-        elif 2 <= self.tabs_count % 10 <= 4 and not (12 <= self.tabs_count % 100 <= 14):
+        elif 2 <= self.tabs_count <= 4:
             tabs_word = "подбора"
         else:
             tabs_word = "подборов"
 
         self.tabs_label = MDLabel(
             text=f"{self.tabs_count} {tabs_word}",
-            font_size=sp(12),
-            size_hint_y=None,
-            height=dp(20),
+            font_size=sp(11),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.6],
-            valign="middle"
-        )
-
-        self.text_container.add_widget(self.title_label)
-        self.text_container.add_widget(self.tabs_label)
-
-        # Стрелка вправо
-        self.arrow_label = MDLabel(
-            text="›",
-            font_size=sp(28),
             size_hint_x=None,
-            width=dp(32),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6]
+            width=dp(60)
         )
 
         self.add_widget(self.icon_image)
-        self.add_widget(self.text_container)
-        self.add_widget(self.arrow_label)
+        self.add_widget(self.title_label)
+        self.add_widget(self.tabs_label)
 
         self.bind(on_release=self.on_click)
 
     def _load_icon(self):
-        """Загружает иконку из ассетов"""
         if HAS_ASSETS:
             try:
                 icon_data = load_asset_as_bytes('song_png')
@@ -182,28 +221,32 @@ class SongCard(MDCard):
                     self.icon_image.texture = img.texture
                     return
             except Exception as e:
-                logger.error(f"Ошибка загрузки иконки song_png: {e}")
-
+                logger.error(f"Ошибка загрузки иконки: {e}")
         self.icon_image.text = "🎵"
 
     def on_click(self, instance):
         if self.on_click_callback:
-            self.on_click_callback({'song_id': self.song_id, 'title': self.song_title})
+            self.on_click_callback(self.song_id, self.song_title)
 
 
 class ArtistSongsScreen(MDScreen):
-    """Экран списка песен исполнителя"""
+    """Экран списка песен исполнителя с пагинацией"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'artist_songs'
-        self.artist = None
-        self.songs = []
+        self.current_artist = None
         self.is_loading = False
+        self.current_page = 0
+        self.has_more = True
+        self.total_count = 0
+        self.songs_per_page = 50
+
         self.loading_spinner = None
         self.bg_image = None
         self.fade_layer = None
-        self._showing_from_cache = False
+        self.footer = None
+        self.scroll_trigger = None
 
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -213,7 +256,6 @@ class ArtistSongsScreen(MDScreen):
         logger.info('Экран песен исполнителя создан')
 
     def load_background(self):
-        """Загружает фоновое изображение"""
         try:
             if HAS_ASSETS:
                 asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
@@ -251,13 +293,13 @@ class ArtistSongsScreen(MDScreen):
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
 
-        # ============ СТРОКА: стрелка и название исполнителя ============
+        # Верхняя панель
         self.nav_row = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
             height=dp(50),
             padding=[dp(16), dp(8), dp(16), dp(8)],
-            spacing=dp(8),
+            spacing=dp(12),
             md_bg_color=[0, 0, 0, 0]
         )
 
@@ -271,22 +313,22 @@ class ArtistSongsScreen(MDScreen):
             on_release=self.go_back
         )
 
-        self.artist_title = MDLabel(
+        self.title_label = MDLabel(
             text="",
             font_size=sp(18),
             halign="center",
             valign="middle",
             size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
+            text_color=[1, 1, 1, 1],
             bold=True
         )
 
         self.nav_row.add_widget(self.back_btn)
-        self.nav_row.add_widget(self.artist_title)
+        self.nav_row.add_widget(self.title_label)
 
-        # ============ СПИСОК ПЕСЕН ============
-        self.content_scroll = MDScrollView(
+        # Список
+        self.scroll_view = MDScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
             bar_color=[1, 1, 1, 0.3],
@@ -300,12 +342,12 @@ class ArtistSongsScreen(MDScreen):
             adaptive_height=True,
             padding=[dp(16), dp(12), dp(16), dp(20)]
         )
-        self.content_scroll.add_widget(self.content_container)
+        self.scroll_view.add_widget(self.content_container)
 
         main_layout.add_widget(self.nav_row)
-        main_layout.add_widget(self.content_scroll)
+        main_layout.add_widget(self.scroll_view)
 
-        # ============ ПРОЗРАЧНЫЙ СЛОЙ НАД НИЖНЕЙ НАВИГАЦИЕЙ ============
+        # Затемнение
         self.fade_layer = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -345,113 +387,88 @@ class ArtistSongsScreen(MDScreen):
         if self.loading_spinner:
             self.loading_spinner.stop_animation()
             self.loading_spinner = None
-        self.content_container.clear_widgets()
+
+    def show_footer(self):
+        if self.footer and self.footer.parent:
+            return
+        self.footer = LoadingFooter()
+        self.content_container.add_widget(self.footer)
+        self.footer.show()
+
+    def hide_footer(self):
+        if self.footer and self.footer.parent:
+            self.content_container.remove_widget(self.footer)
+        self.footer = None
 
     def set_artist(self, artist):
-        """Устанавливает исполнителя и загружает его песни"""
-        self.artist = artist
-        self.artist_title.text = artist
+        """Устанавливает исполнителя и загружает первую страницу"""
+        self.current_artist = artist
+        self.title_label.text = artist
+        self.current_page = 0
+        self.has_more = True
+        self.content_container.clear_widgets()
+        self.load_songs()
 
-        # Сначала пробуем показать из кэша
-        cached_songs = api.get_cached_songs_by_artist(artist)
-        if cached_songs:
-            logger.info(f"📦 Показываем песни исполнителя {artist} из кэша")
-            self._showing_from_cache = True
-            self.on_songs_loaded(cached_songs)
-            # В фоне обновляем данные
-            self.load_songs(force_refresh=True)
+    def load_songs(self, page=0):
+        """Загружает страницу песен"""
+        offset = page * self.songs_per_page
+
+        if page == 0:
+            self.show_loading()
         else:
-            self._showing_from_cache = False
-            self.load_songs()
-
-    def load_songs(self, force_refresh=False):
-        """Загружает песни исполнителя"""
-        self.show_loading()
+            self.show_footer()
 
         api.get_songs_by_artist(
-            artist=self.artist,
-            on_success=self.on_songs_loaded,
-            on_failure=self.on_load_failed,
-            force_refresh=force_refresh
+            artist=self.current_artist,
+            limit=self.songs_per_page,
+            offset=offset,
+            on_success=lambda data: self._on_songs_loaded(data, page),
+            on_failure=lambda req, err: self._on_load_failed(err, page)
         )
 
-    def on_songs_loaded(self, songs):
-        """Отображает список песен"""
+    def _on_songs_loaded(self, data, page):
+        """Обработчик загрузки песен"""
         self.hide_loading()
-        self._showing_from_cache = False
-        self.songs = songs
+        self.hide_footer()
 
-        if not songs or len(songs) == 0:
-            self._show_empty_state()
-            return
+        songs = data.get('songs', [])
+        self.total_count = data.get('total', 0)
+        self.has_more = data.get('has_more', len(songs) == self.songs_per_page)
+        self.current_page = page
 
-        # Отображаем карточки песен
+        # Удаляем старый триггер
+        if self.scroll_trigger and self.scroll_trigger.parent:
+            self.content_container.remove_widget(self.scroll_trigger)
+
+        # Добавляем карточки
         for song_data in songs:
             card = SongCard(song=song_data, on_click=self.on_song_selected)
             self.content_container.add_widget(card)
 
-        # Добавляем нижний спейсер
-        bottom_spacer = Widget(size_hint_y=None, height=dp(80))
-        self.content_container.add_widget(bottom_spacer)
+        # Добавляем триггер для следующей страницы
+        if self.has_more:
+            self.scroll_trigger = ScrollTrigger(
+                on_load_more=lambda: self.load_songs(self.current_page + 1)
+            )
+            self.content_container.add_widget(self.scroll_trigger)
+        else:
+            bottom_spacer = Widget(size_hint_y=None, height=dp(80))
+            self.content_container.add_widget(bottom_spacer)
 
-        logger.info(f"Загружено {len(songs)} песен для {self.artist}")
+        logger.info(f"Загружено {len(songs)}/{self.total_count} песен для {self.current_artist}")
 
-    def _show_empty_state(self):
-        """Показывает пустое состояние"""
-        empty_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(160),
-            padding=[dp(24), dp(24), dp(24), dp(24)],
-            radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[0, 0, 0, 0.15],
-            elevation=2,
-            line_color=[1, 1, 1, 0.1],
-            line_width=1
-        )
+    def _on_load_failed(self, error, page):
+        """Ошибка загрузки"""
+        self.hide_loading()
+        self.hide_footer()
 
-        icon_label = MDLabel(
-            text="🎵",
-            font_size=sp(48),
-            halign="center",
-            size_hint_y=None,
-            height=dp(60),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7]
-        )
+        if page == 0:
+            notify.error("Ошибка загрузки песен")
+            logger.error(f"Ошибка загрузки: {error}")
 
-        text_label = MDLabel(
-            text="Нет песен у этого исполнителя",
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8],
-            size_hint_y=None,
-            height=dp(40),
-            bold=True
-        )
-
-        hint_label = MDLabel(
-            text="Попробуйте выбрать другого исполнителя",
-            halign="center",
-            font_size=sp(12),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5],
-            size_hint_y=None,
-            height=dp(30)
-        )
-
-        empty_card.add_widget(icon_label)
-        empty_card.add_widget(text_label)
-        empty_card.add_widget(hint_label)
-        self.content_container.add_widget(empty_card)
-
-    def on_song_selected(self, song_info):
-        """Выбор песни - переход на экран деталей"""
-        song_id = song_info.get('song_id')
-        song_title = song_info.get('title', '')
-
-        logger.info(f"Выбрана песня: {song_title}, song_id: {song_id}")
+    def on_song_selected(self, song_id, song_title):
+        """Выбор песни"""
+        logger.info(f"Выбрана песня: {song_title}, id: {song_id}")
 
         if not song_id:
             notify.error("Ошибка: не удалось загрузить песню")
@@ -460,81 +477,11 @@ class ArtistSongsScreen(MDScreen):
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('song_detail'):
                 song_detail_screen = self.manager.get_screen('song_detail')
-                if hasattr(song_detail_screen, 'set_song') and hasattr(song_detail_screen, 'set_previous_screen'):
-                    song_detail_screen.set_previous_screen('artist_songs')
-                    song_detail_screen.set_song(song_id)
-                    self.manager.current = 'song_detail'
-                elif hasattr(song_detail_screen, 'set_song'):
-                    song_detail_screen.set_song(song_id)
-                    self.manager.current = 'song_detail'
-                else:
-                    notify.info(f"Выбрана песня: {song_title}")
-            else:
-                notify.info(f"Выбрана песня: {song_title}")
-
-    def on_load_failed(self, req, error):
-        """Ошибка загрузки"""
-        self.hide_loading()
-
-        # Если показывали из кэша, просто показываем ошибку в лог
-        if self._showing_from_cache:
-            logger.warning(f"Ошибка обновления песен для {self.artist}: {error}")
-        else:
-            notify.error(f"Ошибка загрузки: {error}")
-            logger.error(f"Ошибка загрузки: {error}")
-            self._show_error_state()
-
-    def _show_error_state(self):
-        """Показывает состояние ошибки"""
-        error_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(160),
-            padding=[dp(24), dp(24), dp(24), dp(24)],
-            radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[0, 0, 0, 0.15],
-            elevation=2,
-            line_color=[1, 1, 1, 0.1],
-            line_width=1
-        )
-
-        icon_label = MDLabel(
-            text="⚠️",
-            font_size=sp(48),
-            halign="center",
-            size_hint_y=None,
-            height=dp(60),
-            theme_text_color="Custom",
-            text_color=[1, 0.5, 0.3, 0.9]
-        )
-
-        text_label = MDLabel(
-            text="Ошибка загрузки",
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8],
-            size_hint_y=None,
-            height=dp(40),
-            bold=True
-        )
-
-        hint_label = MDLabel(
-            text="Проверьте подключение к интернету",
-            halign="center",
-            font_size=sp(12),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5],
-            size_hint_y=None,
-            height=dp(30)
-        )
-
-        error_card.add_widget(icon_label)
-        error_card.add_widget(text_label)
-        error_card.add_widget(hint_label)
-        self.content_container.add_widget(error_card)
+                song_detail_screen.set_previous_screen('artist_songs')
+                song_detail_screen.set_song(song_id)
+                self.manager.current = 'song_detail'
 
     def go_back(self, instance):
-        """Возврат на экран исполнителей по букве"""
+        """Возврат на экран исполнителей"""
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'artists_by_letter'
