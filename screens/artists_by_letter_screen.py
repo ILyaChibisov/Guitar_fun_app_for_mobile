@@ -297,6 +297,7 @@ class ArtistsByLetterScreen(MDScreen):
         main_layout.add_widget(top_spacer)
 
         # ============ ВЕРХНЯЯ ПАНЕЛЬ ============
+        # Используем относительное позиционирование для центрирования буквы
         self.nav_row = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
@@ -306,14 +307,10 @@ class ArtistsByLetterScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Первая строка: стрелка + пустое место для центрирования буквы
-        top_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(36),
-            spacing=dp(12)
-        )
+        # Контейнер для верхней строки с абсолютным позиционированием
+        top_container = FloatLayout(size_hint_y=None, height=dp(36))
 
+        # Кнопка назад (фиксированная позиция слева)
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -321,23 +318,26 @@ class ArtistsByLetterScreen(MDScreen):
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self.go_back
+            on_release=self.go_back,
+            pos_hint={'x': 0, 'center_y': 0.5}
         )
 
-        # Центрированная буква
+        # Центрированная буква (по центру экрана)
         self.letter_label = MDLabel(
             text="",
             font_size=sp(20),
             halign="center",
             valign="middle",
-            size_hint_x=1,
+            size_hint_x=None,
+            width=dp(100),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
-            bold=True
+            bold=True,
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
 
-        top_row.add_widget(self.back_btn)
-        top_row.add_widget(self.letter_label)
+        top_container.add_widget(self.back_btn)
+        top_container.add_widget(self.letter_label)
 
         # Вторая строка: "Найдено исполнителей: X"
         self.count_label = MDLabel(
@@ -350,7 +350,7 @@ class ArtistsByLetterScreen(MDScreen):
             text_color=[1, 1, 1, 0.7]
         )
 
-        self.nav_row.add_widget(top_row)
+        self.nav_row.add_widget(top_container)
         self.nav_row.add_widget(self.count_label)
 
         # ============ СПИСОК ИСПОЛНИТЕЛЕЙ ============
