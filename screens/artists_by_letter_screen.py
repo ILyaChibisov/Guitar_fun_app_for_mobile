@@ -300,13 +300,13 @@ class ArtistsByLetterScreen(MDScreen):
         self.nav_row = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(70),  # увеличим немного для цифр
+            height=dp(70),
             padding=[dp(16), dp(8), dp(16), dp(8)],
             spacing=dp(4),
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Первая строка: стрелка и название
+        # Первая строка: стрелка + пустое место для центрирования буквы
         top_row = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
@@ -324,24 +324,23 @@ class ArtistsByLetterScreen(MDScreen):
             on_release=self.go_back
         )
 
+        # Центрированная буква
         self.letter_label = MDLabel(
             text="",
-            font_size=sp(16),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_x=1,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
-            bold=True,
-            shorten=True,
-            shorten_from="right"
+            bold=True
         )
 
         top_row.add_widget(self.back_btn)
         top_row.add_widget(self.letter_label)
 
-        # Вторая строка: количество исполнителей
-        self.artists_count_label = MDLabel(
+        # Вторая строка: "Найдено исполнителей: X"
+        self.count_label = MDLabel(
             text="",
             font_size=sp(12),
             halign="center",
@@ -352,7 +351,7 @@ class ArtistsByLetterScreen(MDScreen):
         )
 
         self.nav_row.add_widget(top_row)
-        self.nav_row.add_widget(self.artists_count_label)
+        self.nav_row.add_widget(self.count_label)
 
         # ============ СПИСОК ИСПОЛНИТЕЛЕЙ ============
         self.scroll_view = MDScrollView(
@@ -415,32 +414,35 @@ class ArtistsByLetterScreen(MDScreen):
             self.loading_spinner.stop_animation()
             self.loading_spinner = None
 
-    def update_artists_count(self, loaded, total):
-        """Обновляет отображение количества исполнителей"""
-        if total > 0:
-            if loaded >= total:
-                self.artists_count_label.text = f"Всего исполнителей: {total}"
-            else:
-                self.artists_count_label.text = f"Загружено {loaded} из {total}"
+    def update_title(self, total):
+        """Обновляет заголовок: буква и количество исполнителей"""
+        # Определяем отображаемую букву
+        if self.current_letter == "digits" or self.current_letter == "0-9":
+            display_letter = "0-9"
         else:
-            self.artists_count_label.text = ""
+            display_letter = self.current_letter
+
+        self.letter_label.text = display_letter
+
+        # Склоняем слово "исполнитель"
+        if total == 0:
+            count_text = "Найдено исполнителей: 0"
+        elif total % 10 == 1 and total % 100 != 11:
+            count_text = f"Найдено исполнителей: {total}"
+        elif 2 <= total % 10 <= 4 and not (12 <= total % 100 <= 14):
+            count_text = f"Найдено исполнителя: {total}"
+        else:
+            count_text = f"Найдено исполнителей: {total}"
+
+        self.count_label.text = count_text
 
     def set_letter(self, letter):
         """Устанавливает букву и загружает первую страницу"""
         self.current_letter = letter
-
-        # Определяем отображаемое название
-        if letter == "digits" or letter == "0-9":
-            display_name = "Цифры (0-9)"
-            self.letter_label.text = "Цифры 0-9"
-        else:
-            display_name = f"Буква {letter}"
-            self.letter_label.text = display_name
-
         self.current_page = 0
         self.has_more = True
         self.content_container.clear_widgets()
-        self.update_artists_count(0, 0)
+        self.update_title(0)
 
         if letter == "digits" or letter == "0-9":
             self.load_digits_artists()
@@ -482,10 +484,10 @@ class ArtistsByLetterScreen(MDScreen):
         total = data.get('total', 0)
         self.has_more = data.get('has_more', len(artists) == self.artists_per_page)
         self.current_page = page
+        self.total_count = total
 
-        # Обновляем счётчик
-        loaded_count = (page * self.artists_per_page) + len(artists)
-        self.update_artists_count(loaded_count, total)
+        # Обновляем заголовок с общим количеством
+        self.update_title(total)
 
         if page == 0:
             self.hide_loading()
@@ -518,7 +520,7 @@ class ArtistsByLetterScreen(MDScreen):
             bottom_spacer = Widget(size_hint_y=None, height=dp(80))
             self.content_container.add_widget(bottom_spacer)
 
-        logger.info(f"Загружено {loaded_count}/{total} исполнителей для {self.current_letter}")
+        logger.info(f"Загружено {len(artists)}/{total} исполнителей для {self.current_letter}")
 
     def load_next_page(self):
         """Загружает следующую страницу"""
