@@ -531,7 +531,7 @@ class SongsScreen(MDScreen):
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('artists_by_letter'):
                 artists_screen = self.manager.get_screen('artists_by_letter')
-                # Передаём букву для загрузки (0-9 будет обработана на экране исполнителей)
+                # Передаём букву (0-9 остаётся как есть)
                 artists_screen.set_letter(letter)
                 self.manager.current = 'artists_by_letter'
             else:
