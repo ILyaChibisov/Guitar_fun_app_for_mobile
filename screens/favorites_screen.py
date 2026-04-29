@@ -79,15 +79,34 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class FavoriteSongCard(MDCard):
-    """Карточка избранной песни"""
+    """Карточка избранной песни (с поддержкой разных форматов данных)"""
 
-    def __init__(self, song, on_click=None, **kwargs):
+    def __init__(self, song, on_click=None, on_remove=None, **kwargs):
         super().__init__(**kwargs)
-        self.song_id = song.get('id') or song.get('song_id')
-        self.song_title = song.get('title', '')
-        self.artist = song.get('artist', '')
-        self.tabs_count = song.get('tabs_count', 1)
+
+        # Поддержка разных форматов данных
+        if isinstance(song, dict):
+            self.song_id = song.get('id') or song.get('song_id')
+            self.song_title = song.get('title', '')
+            self.artist = song.get('artist', '')
+            self.tabs_count = song.get('tabs_count', 1)
+        elif isinstance(song, str):
+            # Если строка, пытаемся разобрать "artist - title"
+            parts = song.split(' - ', 1)
+            if len(parts) == 2:
+                self.artist, self.song_title = parts[0], parts[1]
+            else:
+                self.artist, self.song_title = '', song
+            self.song_id = 0
+            self.tabs_count = 1
+        else:
+            self.song_id = 0
+            self.song_title = ''
+            self.artist = ''
+            self.tabs_count = 1
+
         self.on_click_callback = on_click
+        self.on_remove_callback = on_remove
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
@@ -121,7 +140,7 @@ class FavoriteSongCard(MDCard):
             spacing=dp(4)
         )
 
-        # Название песни
+        # Название песни (первая строка - название, вторая - исполнитель)
         self.title_label = MDLabel(
             text=self.song_title,
             font_size=sp(16),
@@ -350,24 +369,51 @@ class FavoritesScreen(MDScreen):
         )
 
     def on_favorites_loaded(self, favorites):
+        """Отображает список избранных песен"""
         self.hide_loading()
-        self.favorites = favorites
 
-        if not favorites or len(favorites) == 0:
+        # Обрабатываем разные форматы данных
+        formatted_favorites = []
+        for item in favorites:
+            if isinstance(item, dict):
+                formatted_favorites.append(item)
+            elif isinstance(item, str):
+                # Если строка, пытаемся разобрать "artist - title"
+                parts = item.split(' - ', 1)
+                if len(parts) == 2:
+                    formatted_favorites.append({
+                        'artist': parts[0],
+                        'title': parts[1],
+                        'tabs_count': 1,
+                        'id': 0
+                    })
+                else:
+                    formatted_favorites.append({
+                        'artist': '',
+                        'title': item,
+                        'tabs_count': 1,
+                        'id': 0
+                    })
+
+        self.favorites = formatted_favorites
+
+        if not self.favorites or len(self.favorites) == 0:
             self.show_empty_state()
             return
 
-        for song_data in favorites:
+        # Отображаем карточки песен
+        for song_data in self.favorites:
             card = FavoriteSongCard(
                 song=song_data,
                 on_click=self.on_song_selected
             )
             self.content_container.add_widget(card)
 
+        # Добавляем нижний спейсер
         bottom_spacer = Widget(size_hint_y=None, height=dp(80))
         self.content_container.add_widget(bottom_spacer)
 
-        logger.info(f"Загружено {len(favorites)} избранных песен")
+        logger.info(f"Загружено {len(self.favorites)} избранных песен")
 
     def show_empty_state(self, is_authenticated=True):
         """Показывает состояние когда избранное пусто - с той же прозрачностью что и карточки песен"""

@@ -117,45 +117,61 @@ class SearchResultCard(MDCard):
         )
         self._load_icon()
 
-        # Контейнер для текстовой информации
+        # Контейнер для текстовой информации (три строки)
         self.text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
-            spacing=dp(4)
+            spacing=dp(2)
         )
 
-        # Название песни
-        self.title_label = MDLabel(
-            text=self.title,
+        # Исполнитель (первая строка) - крупным шрифтом
+        self.artist_label = MDLabel(
+            text=self.artist,
             font_size=sp(16),
             size_hint_y=None,
             height=dp(24),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
-            valign="middle"
+            valign="middle",
+            shorten=True,
+            shorten_from="right"
         )
 
-        # Исполнитель и количество подборов
-        if self.tabs_count % 10 == 1 and self.tabs_count % 100 != 11:
+        # Название песни (вторая строка) - обычным шрифтом
+        self.title_label = MDLabel(
+            text=self.title,
+            font_size=sp(14),
+            size_hint_y=None,
+            height=dp(20),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.8],
+            valign="middle",
+            shorten=True,
+            shorten_from="right"
+        )
+
+        # Количество подборов (третья строка)
+        if self.tabs_count == 1:
             tabs_word = "подбор"
-        elif 2 <= self.tabs_count % 10 <= 4 and not (12 <= self.tabs_count % 100 <= 14):
+        elif 2 <= self.tabs_count <= 4:
             tabs_word = "подбора"
         else:
             tabs_word = "подборов"
 
-        self.artist_label = MDLabel(
-            text=f"{self.artist} • {self.tabs_count} {tabs_word}",
+        self.tabs_label = MDLabel(
+            text=f"{self.tabs_count} {tabs_word}",
             font_size=sp(12),
             size_hint_y=None,
-            height=dp(20),
+            height=dp(18),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.6],
             valign="middle"
         )
 
-        self.text_container.add_widget(self.title_label)
         self.text_container.add_widget(self.artist_label)
+        self.text_container.add_widget(self.title_label)
+        self.text_container.add_widget(self.tabs_label)
 
         # Стрелка вправо
         self.arrow_label = MDLabel(
@@ -204,7 +220,7 @@ class SearchResultsScreen(MDScreen):
         self.is_loading = False
         self.loading_spinner = None
         self.bg_image = None
-        self.has_results = False  # Флаг, есть ли загруженные результаты
+        self.has_results = False
 
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -357,17 +373,17 @@ class SearchResultsScreen(MDScreen):
 
     def update_info_label(self, count):
         """Обновляет информационную метку: запрос + количество результатов"""
-        if count % 10 == 1 and count % 100 != 11:
-            word = "результат"
-        elif 2 <= count % 10 <= 4 and not (12 <= count % 100 <= 14):
-            word = "результата"
+        if count == 0:
+            self.info_label.text = f"«{self.query}» — ничего не найдено"
+        elif count == 1:
+            self.info_label.text = f"«{self.query}» — 1 результат"
+        elif 2 <= count <= 4:
+            self.info_label.text = f"«{self.query}» — {count} результата"
         else:
-            word = "результатов"
-
-        self.info_label.text = f"«{self.query}» — {count} {word}"
+            self.info_label.text = f"«{self.query}» — {count} результатов"
 
     def display_results(self):
-        """Отображает сохранённые результаты (без повторного запроса)"""
+        """Отображает сохранённые результаты"""
         self.content_container.clear_widgets()
 
         if not self.results or len(self.results) == 0:
@@ -419,66 +435,14 @@ class SearchResultsScreen(MDScreen):
             return
 
         for song in self.results:
-            # Проверяем, что song - это словарь
-            if isinstance(song, dict):
-                card = SearchResultCard(song=song, on_click=self.on_song_selected)
-                self.content_container.add_widget(card)
-            elif isinstance(song, str):
-                # Если строка, создаём простую карточку
-                card = MDCard(
-                    orientation='horizontal',
-                    size_hint=(1, None),
-                    height=dp(60),
-                    padding=[dp(16), dp(8), dp(16), dp(8)],
-                    spacing=dp(12),
-                    radius=[theme.CORNER_RADIUS_SMALL],
-                    elevation=2,
-                    ripple_behavior=True,
-                    md_bg_color=[0, 0, 0, 0.15]
-                )
-
-                title_label = MDLabel(
-                    text=song,
-                    font_size=sp(16),
-                    size_hint_x=1,
-                    theme_text_color="Custom",
-                    text_color=[1, 1, 1, 0.95],
-                    bold=True,
-                    valign="middle"
-                )
-
-                arrow_label = MDLabel(
-                    text="›",
-                    font_size=sp(28),
-                    size_hint_x=None,
-                    width=dp(32),
-                    halign="center",
-                    theme_text_color="Custom",
-                    text_color=[1, 1, 1, 0.6]
-                )
-
-                card.add_widget(title_label)
-                card.add_widget(arrow_label)
-
-                # Сохраняем название песни в атрибут
-                card.song_title = song
-                card.song_id = 0
-                card.on_click_callback = self.on_song_selected_simple
-                card.bind(on_release=lambda x, s=song: self.on_song_selected_simple(0, s))
-
-                self.content_container.add_widget(card)
+            card = SearchResultCard(song=song, on_click=self.on_song_selected)
+            self.content_container.add_widget(card)
 
         bottom_spacer = Widget(size_hint_y=None, height=dp(20))
         self.content_container.add_widget(bottom_spacer)
 
-    def on_song_selected_simple(self, song_id, title):
-        """Выбор песни (упрощённый вариант)"""
-        logger.info(f"Выбрана песня: {title}")
-        notify.info(f"Выбрана песня: {title}")
-
     def do_search(self, query):
         """Выполняет поиск (новый запрос)"""
-        # Сохраняем запрос
         self.query = query
         self.update_info_label(0)
         self.show_loading()
@@ -500,7 +464,6 @@ class SearchResultsScreen(MDScreen):
             # Если ответ - словарь с ключом 'results'
             if 'results' in results:
                 raw_results = results.get('results', [])
-                logger.info(f"🔍 Извлечено {len(raw_results)} результатов из словаря")
             else:
                 raw_results = []
         elif isinstance(results, list):
@@ -519,10 +482,16 @@ class SearchResultsScreen(MDScreen):
                     'tabs_count': item.get('tabs_count', 1)
                 })
             elif isinstance(item, str):
+                # Если строка, разбиваем на части (если есть разделитель)
+                parts = item.split(' - ', 1)
+                if len(parts) == 2:
+                    artist, title = parts[0], parts[1]
+                else:
+                    artist, title = '', item
                 formatted_results.append({
                     'song_id': 0,
-                    'artist': '',
-                    'title': item,
+                    'artist': artist,
+                    'title': title,
                     'tabs_count': 1
                 })
 
@@ -544,13 +513,12 @@ class SearchResultsScreen(MDScreen):
         logger.error(f"Ошибка поиска: {error}")
 
     def on_song_selected(self, song_id, title):
-        """Выбор песни - переход на экран деталей с запоминанием предыдущего экрана"""
+        """Выбор песни - переход на экран деталей"""
         logger.info(f"Выбрана песня: {title}, song_id: {song_id}")
 
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('song_detail'):
                 song_detail = self.manager.get_screen('song_detail')
-                # Устанавливаем, что вернуться нужно на search_results
                 song_detail.set_previous_screen('search_results')
                 song_detail.set_song(song_id)
                 self.manager.current = 'song_detail'
@@ -567,7 +535,6 @@ class SearchResultsScreen(MDScreen):
             self.update_info_label(len(self.results))
             self.display_results()
         elif self.query:
-            # Если результатов нет, но был запрос - показываем пустое состояние
             self.update_info_label(0)
             self.display_results()
         return super().on_pre_enter()

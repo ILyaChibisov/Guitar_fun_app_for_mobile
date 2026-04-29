@@ -452,24 +452,56 @@ class APIClient:
             include_auth=False
         )
 
-    def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
-        """Получить избранное"""
+    # api/client.py - упрощённый метод get_favorites
 
-        if not force_refresh and self.cache['favorites'] is not None:
-            if on_success:
-                Clock.schedule_once(lambda dt: on_success(self.cache['favorites']), 0)
-            return
+    def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
+        """Получить список избранных песен пользователя"""
 
         def _on_success(result):
-            self.cache['favorites'] = result
+            # Обрабатываем ответ
+            if isinstance(result, dict):
+                favorites = result.get('favorites', result.get('songs', []))
+            elif isinstance(result, list):
+                favorites = result
+            else:
+                favorites = []
+
+            # Преобразуем строки в словари если нужно
+            formatted_favorites = []
+            for item in favorites:
+                if isinstance(item, str):
+                    parts = item.split(' - ', 1)
+                    if len(parts) == 2:
+                        formatted_favorites.append({
+                            'artist': parts[0],
+                            'title': parts[1],
+                            'tabs_count': 1,
+                            'id': 0
+                        })
+                    else:
+                        formatted_favorites.append({
+                            'artist': '',
+                            'title': item,
+                            'tabs_count': 1,
+                            'id': 0
+                        })
+                else:
+                    formatted_favorites.append(item)
+
+            self.cache['favorites'] = formatted_favorites
+            Logger.info(f'✅ Получено избранных: {len(formatted_favorites)}')
             if on_success:
-                on_success(result)
+                on_success(formatted_favorites)
+
+        def _on_failure(req, error):
+            if on_failure:
+                on_failure(req, error)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/favorites",
             method='GET',
             on_success=_on_success,
-            on_failure=on_failure,
+            on_failure=_on_failure,
             include_auth=True
         )
 
