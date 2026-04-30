@@ -4,14 +4,12 @@
 """
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
-from kivy.uix.progressbar import ProgressBar
 
 from utils.kivy_imports import (
     MDBoxLayout, MDLabel, MDCard, MDScreen,
     MDScrollView, MDRaisedButton, MDFlatButton
 )
 from kivymd.uix.textfield import MDTextField, MDTextFieldHintText
-from kivymd.uix.list import MDList, MDListItem, MDListItemHeadlineText, MDListItemSupportingText
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -21,6 +19,98 @@ from api.client import api
 logger = screen_logger('AMDMParserScreen')
 
 
+class RecentSongCard(MDCard):
+    """Карточка для отображения последней песни"""
+
+    def __init__(self, song_data=None, **kwargs):
+        super().__init__(**kwargs)
+        self.song_data = song_data or {}
+        self.orientation = 'vertical'
+        self.size_hint = (1, None)
+        self.height = dp(80)
+        self.padding = [dp(16), dp(12), dp(16), dp(12)]
+        self.spacing = dp(4)
+        self.radius = [theme.CORNER_RADIUS_SMALL]
+        self.elevation = 2
+        self.line_width = 1
+
+        self.update_content()
+
+    def update_content(self, song_data=None):
+        """Обновить содержимое карточки"""
+        if song_data:
+            self.song_data = song_data
+
+        self.clear_widgets()
+
+        filename = self.song_data.get('filename', 'Нет данных')
+        status = self.song_data.get('status', 'unknown')
+        error = self.song_data.get('error', '')
+        url = self.song_data.get('url', '')
+        tab_number = self.song_data.get('tab_number', 0)
+
+        # Определяем цвет и иконку в зависимости от статуса
+        if status == 'new':
+            bg_color = [0.2, 0.6, 0.2, 0.3]
+            line_color = [0.3, 0.8, 0.3, 0.8]
+            icon = "✅"
+            status_text = "НОВАЯ"
+        elif status == 'duplicate':
+            bg_color = [0.8, 0.6, 0.1, 0.3]
+            line_color = [0.9, 0.7, 0.2, 0.8]
+            icon = "⚠️"
+            status_text = "ДУБЛИКАТ"
+        elif status == 'error':
+            bg_color = [0.8, 0.2, 0.2, 0.3]
+            line_color = [0.9, 0.3, 0.3, 0.8]
+            icon = "❌"
+            status_text = "ОШИБКА"
+        elif status == 'db_error':
+            bg_color = [0.6, 0.3, 0.6, 0.3]
+            line_color = [0.7, 0.4, 0.7, 0.8]
+            icon = "💾"
+            status_text = "ОШИБКА БД"
+        else:
+            bg_color = [0.3, 0.3, 0.3, 0.3]
+            line_color = [0.5, 0.5, 0.5, 0.8]
+            icon = "⏸"
+            status_text = "ОЖИДАНИЕ"
+
+        self.md_bg_color = bg_color
+        self.line_color = line_color
+
+        header_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30), spacing=dp(8))
+
+        icon_label = MDLabel(text=icon, font_size=sp(20), size_hint_x=None, width=dp(32), halign="center")
+        name_label = MDLabel(text=filename[:40] + "..." if len(filename) > 40 else filename, font_size=sp(13),
+                             bold=True, size_hint_x=0.7)
+        status_label = MDLabel(text=status_text, font_size=sp(11), size_hint_x=None, width=dp(85), halign="center",
+                               bold=True)
+
+        header_layout.add_widget(icon_label)
+        header_layout.add_widget(name_label)
+        header_layout.add_widget(status_label)
+
+        footer_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(25), spacing=dp(8))
+
+        if error:
+            error_label = MDLabel(text=f"⚠️ {error[:50]}", font_size=sp(10), theme_text_color="Custom",
+                                  text_color=[0.9, 0.7, 0.3, 1])
+            footer_layout.add_widget(error_label)
+        elif url:
+            url_label = MDLabel(text=f"🔗 {url[:50]}..." if len(url) > 50 else f"🔗 {url}", font_size=sp(9),
+                                theme_text_color="Custom", text_color=[0.7, 0.7, 0.7, 0.8])
+            footer_layout.add_widget(url_label)
+
+        if tab_number:
+            tab_label = MDLabel(text=f"подбор {tab_number}", font_size=sp(10), size_hint_x=None, width=dp(60),
+                                halign="right", theme_text_color="Custom", text_color=[0.7, 0.7, 0.7, 0.6])
+            footer_layout.add_widget(tab_label)
+
+        self.add_widget(header_layout)
+        self.add_widget(footer_layout)
+
+
 class AMDMParserScreen(MDScreen):
     """Экран управления парсером AMDM"""
 
@@ -28,7 +118,9 @@ class AMDMParserScreen(MDScreen):
         super().__init__(**kwargs)
         self.name = 'amdm_parser'
         self.update_event = None
+        self.is_parser_running = False
         self.md_bg_color = [0, 0, 0, 0]
+        self.last_song = None
         self.init_ui()
         logger.info('Экран AMDM парсера создан')
 
@@ -43,22 +135,15 @@ class AMDMParserScreen(MDScreen):
         )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        # ============ Заголовок ============
-        title_label = MDLabel(
-            text="🎵 Парсер AMDM.RU",
-            font_size=sp(22),
-            halign="center",
-            size_hint_y=None,
-            height=dp(50),
-            bold=True
-        )
+        title_label = MDLabel(text="🎵 Парсер AMDM.RU", font_size=sp(22), halign="center", size_hint_y=None,
+                              height=dp(50), bold=True)
         main_layout.add_widget(title_label)
 
-        # ============ Карточка настроек ============
+        # Карточка настроек
         settings_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(320),
+            height=dp(280),
             padding=[dp(16), dp(12), dp(16), dp(12)],
             spacing=dp(10),
             radius=[theme.CORNER_RADIUS_SMALL],
@@ -68,296 +153,155 @@ class AMDMParserScreen(MDScreen):
             line_width=1
         )
 
-        # Поддомен
-        self.subdomain_field = MDTextField(
-            mode="filled",
-            size_hint_y=None,
-            height=dp(65)
-        )
+        self.subdomain_field = MDTextField(mode="filled", size_hint_y=None, height=dp(55))
         self.subdomain_field.add_widget(MDTextFieldHintText(text="Поддомен (amdm или 1-999)"))
         self.subdomain_field.text = "amdm"
         settings_card.add_widget(self.subdomain_field)
 
-        # Страницы
-        pages_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(65))
+        pages_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(55))
 
-        self.start_page_field = MDTextField(
-            mode="filled",
-            size_hint_x=0.5,
-            size_hint_y=None,
-            height=dp(65)
-        )
+        self.start_page_field = MDTextField(mode="filled", size_hint_x=0.5, size_hint_y=None, height=dp(55))
         self.start_page_field.add_widget(MDTextFieldHintText(text="Страница от"))
         self.start_page_field.text = "0"
         pages_layout.add_widget(self.start_page_field)
 
-        self.end_page_field = MDTextField(
-            mode="filled",
-            size_hint_x=0.5,
-            size_hint_y=None,
-            height=dp(65)
-        )
+        self.end_page_field = MDTextField(mode="filled", size_hint_x=0.5, size_hint_y=None, height=dp(55))
         self.end_page_field.add_widget(MDTextFieldHintText(text="Страница до"))
         self.end_page_field.text = "54"
         pages_layout.add_widget(self.end_page_field)
 
         settings_card.add_widget(pages_layout)
 
-        # Кнопки управления
         buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(48))
 
-        self.start_btn = MDRaisedButton(
-            text="▶ ЗАПУСК",
-            size_hint_x=0.25,
-            on_release=self.start_parser
-        )
-
-        self.pause_btn = MDFlatButton(
-            text="⏸ ПАУЗА",
-            size_hint_x=0.25,
-            disabled=True
-        )
+        self.start_btn = MDRaisedButton(text="▶ ЗАПУСК", size_hint_x=0.33, on_release=self.start_parser)
+        self.pause_btn = MDFlatButton(text="⏸ ПАУЗА", size_hint_x=0.33, disabled=True)
         self.pause_btn.bind(on_release=self.pause_parser)
-
-        self.resume_btn = MDFlatButton(
-            text="▶ ВОЗОБН.",
-            size_hint_x=0.25,
-            disabled=True
-        )
-        self.resume_btn.bind(on_release=self.resume_parser)
-
-        self.stop_btn = MDFlatButton(
-            text="⏹ СТОП",
-            size_hint_x=0.25,
-            disabled=True
-        )
+        self.stop_btn = MDFlatButton(text="⏹ СТОП", size_hint_x=0.34, disabled=True)
         self.stop_btn.bind(on_release=self.stop_parser)
 
         buttons_layout.add_widget(self.start_btn)
         buttons_layout.add_widget(self.pause_btn)
-        buttons_layout.add_widget(self.resume_btn)
         buttons_layout.add_widget(self.stop_btn)
 
         settings_card.add_widget(buttons_layout)
         main_layout.add_widget(settings_card)
 
-        # ============ Карточка прогресса ============
-        progress_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(110),
-            padding=[dp(16), dp(12), dp(16), dp(12)],
-            spacing=dp(8),
-            radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[0, 0, 0, 0.15]
-        )
-
-        self.progress_label = MDLabel(
-            text="Прогресс: 0%",
-            halign="center",
-            size_hint_y=None,
-            height=dp(30),
-            font_size=sp(14)
-        )
-        progress_card.add_widget(self.progress_label)
-
-        # Используем обычный ProgressBar из Kivy вместо MDProgressBar
-        self.progress_bar = ProgressBar(
-            value=0,
-            height=dp(8),
-            size_hint_y=None
-        )
-        progress_card.add_widget(self.progress_bar)
-
-        self.current_page_label = MDLabel(
-            text="Текущая страница: -",
-            halign="center",
-            size_hint_y=None,
-            height=dp(25),
-            font_size=sp(12)
-        )
-        progress_card.add_widget(self.current_page_label)
-
-        main_layout.add_widget(progress_card)
-
-        # ============ Карточка статистики ============
+        # Карточка статистики
         stats_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(90),
+            height=dp(100),
             padding=[dp(16), dp(12), dp(16), dp(12)],
             spacing=dp(8),
             radius=[theme.CORNER_RADIUS_SMALL],
             md_bg_color=[0, 0, 0, 0.15]
         )
 
-        self.stats_label = MDLabel(
-            text="📊 Всего: 0 | 🆕 Новых: 0 | ❌ Ошибок: 0",
-            halign="center",
-            size_hint_y=None,
-            height=dp(35),
-            font_size=sp(12)
-        )
+        self.stats_label = MDLabel(text="📊 Всего: 0 | 🆕 Новых: 0 | ❌ Ошибок: 0", halign="center", size_hint_y=None,
+                                   height=dp(35), font_size=sp(13), bold=True)
         stats_card.add_widget(self.stats_label)
 
-        self.status_label = MDLabel(
-            text="⏸ Парсер не запущен",
-            halign="center",
-            size_hint_y=None,
-            height=dp(30),
-            font_size=sp(12)
-        )
+        self.status_label = MDLabel(text="⏸ Парсер не запущен", halign="center", size_hint_y=None, height=dp(30),
+                                    font_size=sp(12))
         stats_card.add_widget(self.status_label)
 
         main_layout.add_widget(stats_card)
 
-        # ============ Список последних песен ============
-        recent_card = MDCard(
+        # Карточка последней песни
+        last_song_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(350),
+            height=dp(100),
             padding=[dp(8), dp(8), dp(8), dp(8)],
             spacing=dp(4),
             radius=[theme.CORNER_RADIUS_SMALL],
             md_bg_color=[0, 0, 0, 0.15]
         )
 
-        recent_header = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(40),
-            padding=[dp(8), dp(0), dp(8), dp(0)]
-        )
-        recent_header.add_widget(MDLabel(
-            text="📜 Последние песни",
-            font_size=sp(14),
-            bold=True
-        ))
+        last_song_header = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30),
+                                       padding=[dp(8), dp(0), dp(8), dp(0)])
+        last_song_header.add_widget(MDLabel(text="🎵 ПОСЛЕДНЯЯ ПЕСНЯ", font_size=sp(12), bold=True))
+        last_song_card.add_widget(last_song_header)
 
-        recent_card.add_widget(recent_header)
+        self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(70))
+        last_song_card.add_widget(self.last_song_container)
 
-        self.recent_list = MDList()
-        recent_scroll = MDScrollView(size_hint=(1, 1))
-        recent_scroll.add_widget(self.recent_list)
-        recent_card.add_widget(recent_scroll)
+        main_layout.add_widget(last_song_card)
 
-        main_layout.add_widget(recent_card)
-
-        # Кнопка обновить внизу
-        refresh_layout = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(48),
-            padding=[dp(0), dp(8), dp(0), dp(0)]
-        )
-
-        self.refresh_btn = MDRaisedButton(
-            text="🔄 ОБНОВИТЬ СТАТУС",
-            size_hint_x=1,
-            on_release=self.manual_refresh
-        )
-        refresh_layout.add_widget(self.refresh_btn)
-
-        main_layout.add_widget(refresh_layout)
+        bottom_spacer = MDBoxLayout(size_hint_y=None, height=dp(20))
+        main_layout.add_widget(bottom_spacer)
 
         scroll.add_widget(main_layout)
         self.add_widget(scroll)
 
-        # Начинаем автоматическое обновление
-        self.start_auto_update()
-
     def start_auto_update(self):
-        """Начать автоматическое обновление статуса"""
         if self.update_event:
             self.update_event.cancel()
-        self.update_event = Clock.schedule_interval(self.update_status, 2)
+        self.update_event = Clock.schedule_interval(self._check_status_loop, 2)
 
     def stop_auto_update(self):
-        """Остановить автоматическое обновление"""
         if self.update_event:
             self.update_event.cancel()
             self.update_event = None
 
-    def manual_refresh(self, *args):
-        """Ручное обновление"""
-        self.update_status()
-        notify.info("Статус обновлен")
+    def _check_status_loop(self, dt):
+        """Периодическая проверка статуса"""
+        self._fetch_status()
 
-    def update_status(self, *args):
-        """Обновить статус парсера"""
+    def _fetch_status(self):
+        """Выполнить запрос статуса"""
         try:
             result = api.get_amdm_parser_status_sync()
+            print(f"DEBUG: Status result = {result}")
+
             if result and result.get('success'):
                 data = result.get('data', {})
 
-                # Обновляем прогресс
-                progress = data.get('progress', 0)
-                self.progress_bar.value = progress
-                self.progress_label.text = f"Прогресс: {progress}%"
+                is_running = data.get('is_running', False)
+                is_paused = data.get('is_paused', False)
 
-                # Текущая страница
-                current_page = data.get('current_page', 0)
-                self.current_page_label.text = f"Страница: {current_page}"
+                # Обновляем кнопки
+                if is_running and not is_paused:
+                    self.start_btn.disabled = True
+                    self.pause_btn.disabled = False
+                    self.stop_btn.disabled = False
+                    self.status_label.text = "🟢 Парсер запущен и работает"
+                elif is_running and is_paused:
+                    self.start_btn.disabled = True
+                    self.pause_btn.disabled = True
+                    self.stop_btn.disabled = False
+                    self.status_label.text = "⏸ Парсер на паузе"
+                else:
+                    self.start_btn.disabled = False
+                    self.pause_btn.disabled = True
+                    self.stop_btn.disabled = True
+                    self.status_label.text = "⏹ Парсер остановлен"
 
-                # Статистика
+                # Обновляем статистику
                 stats = data.get('stats', {})
                 total = stats.get('total_songs', 0)
                 new_songs = stats.get('new_songs', 0)
                 errors = stats.get('errors', 0)
-                self.stats_label.text = f"📊 Всего: {total} | 🆕 Новых: {new_songs} | ❌ Ошибок: {errors}"
+                duplicates = stats.get('duplicates', 0)
 
-                # Статус парсера
-                is_running = data.get('is_running', False)
-                is_paused = data.get('is_paused', False)
+                self.stats_label.text = f"📊 Всего: {total} | 🆕 Новых: {new_songs} | ⚠️ Повторов: {duplicates} | ❌ Ошибок: {errors}"
 
-                if is_running and not is_paused:
-                    self.status_label.text = "🟢 Парсер запущен и работает"
-                    self.start_btn.disabled = True
-                    self.pause_btn.disabled = False
-                    self.stop_btn.disabled = False
-                    self.resume_btn.disabled = True
-                elif is_running and is_paused:
-                    self.status_label.text = "⏸ Парсер на паузе"
-                    self.start_btn.disabled = True
-                    self.pause_btn.disabled = True
-                    self.stop_btn.disabled = False
-                    self.resume_btn.disabled = False
-                else:
-                    self.status_label.text = "⏹ Парсер остановлен"
-                    self.start_btn.disabled = False
-                    self.pause_btn.disabled = True
-                    self.stop_btn.disabled = True
-                    self.resume_btn.disabled = True
-
-                # Обновляем список последних песен
+                # Обновляем последнюю песню
                 recent_songs = stats.get('recent_songs', [])
-                self.recent_list.clear_widgets()
-
                 if recent_songs:
-                    for song in recent_songs[:10]:
-                        filename = song.get('filename', 'Unknown')
-                        status = song.get('status', 'unknown')
-
-                        status_icon = "✅" if status == "new" else "⚠️" if status == "duplicate" else "❌"
-
-                        item = MDListItem()
-                        item.add_widget(MDListItemHeadlineText(text=f"{status_icon} {filename}"))
-                        item.add_widget(MDListItemSupportingText(text=f"Статус: {status}"))
-                        self.recent_list.add_widget(item)
-                else:
-                    empty_label = MDLabel(
-                        text="Нет обработанных песен",
-                        halign="center",
-                        size_hint_y=None,
-                        height=dp(40)
-                    )
-                    self.recent_list.add_widget(empty_label)
+                    last_song = recent_songs[0]
+                    if self.last_song != last_song:
+                        self.last_song = last_song
+                        self.last_song_container.clear_widgets()
+                        song_card = RecentSongCard(song_data=last_song)
+                        self.last_song_container.add_widget(song_card)
+                        print(f"DEBUG: Updated last song: {last_song.get('filename')}")
 
         except Exception as e:
-            logger.error(f"Ошибка обновления статуса: {e}")
+            print(f"DEBUG: Error in _fetch_status - {e}")
 
     def start_parser(self, *args):
-        """Запустить парсер"""
         try:
             start_page = int(self.start_page_field.text)
             end_page = int(self.end_page_field.text)
@@ -374,7 +318,9 @@ class AMDMParserScreen(MDScreen):
             result = api.start_amdm_parser_sync(start_page, end_page, subdomain)
             if result and result.get('success'):
                 notify.success(f"Парсер AMDM запущен (страницы {start_page}-{end_page})")
-                self.update_status()
+                self.last_song = None
+                self.last_song_container.clear_widgets()
+                self.start_auto_update()
             else:
                 msg = result.get('message', 'Неизвестная ошибка') if result else 'Ошибка соединения'
                 notify.error(f"Ошибка запуска: {msg}")
@@ -386,30 +332,18 @@ class AMDMParserScreen(MDScreen):
             notify.error(f"Ошибка: {e}")
 
     def pause_parser(self, *args):
-        """Поставить на паузу"""
         try:
             api.pause_amdm_parser(
-                on_success=lambda x: (notify.info("Парсер на паузе"), self.update_status()),
+                on_success=lambda x: notify.info("Парсер на паузе"),
                 on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
             )
         except Exception as e:
             logger.error(f"Ошибка паузы: {e}")
 
-    def resume_parser(self, *args):
-        """Возобновить работу"""
-        try:
-            api.resume_amdm_parser(
-                on_success=lambda x: (notify.success("Парсер возобновлен"), self.update_status()),
-                on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
-            )
-        except Exception as e:
-            logger.error(f"Ошибка возобновления: {e}")
-
     def stop_parser(self, *args):
-        """Остановить парсер"""
         try:
             api.stop_amdm_parser(
-                on_success=lambda x: (notify.info("Парсер остановлен"), self.update_status()),
+                on_success=lambda x: (notify.info("Парсер остановлен"), self.stop_auto_update()),
                 on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
             )
         except Exception as e:
@@ -418,7 +352,6 @@ class AMDMParserScreen(MDScreen):
     def on_enter(self):
         """При входе на экран"""
         self.start_auto_update()
-        self.update_status()
 
     def on_leave(self):
         """При выходе с экрана"""

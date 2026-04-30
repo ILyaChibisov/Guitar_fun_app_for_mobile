@@ -845,9 +845,11 @@ class APIClient:
         try:
             response = self.session.get(url, headers=self._get_headers(True), timeout=10)
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            print(f"DEBUG API: get_amdm_parser_status_sync result = {result}")
+            return result
         except Exception as e:
-            Logger.error(f"Ошибка получения статуса: {e}")
+            print(f"DEBUG API: Error getting status - {e}")
             return None
 
     def get_amdm_recent_songs(self, limit: int = 10, on_success=None, on_failure=None):
