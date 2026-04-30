@@ -30,16 +30,11 @@ jobs:
         pip install git+https://github.com/kivy/buildozer.git
         buildozer --version
       
-    - name: Clean previous builds
-      run: |
-        # Удаляем кэш сборки, который вызывает конфликт
-        rm -rf .buildozer
-        rm -rf bin
-
     - name: Build APK
       run: |
+        export P4A_ALLOW_PYPI_DEPENDENCIES=1
         buildozer android debug
-
+      
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
