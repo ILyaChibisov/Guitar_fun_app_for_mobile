@@ -3,28 +3,37 @@ name: Build GuitarFuns APK
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Build APK
-      uses: ArtemSBulgakov/buildozer-action@v1
-      id: buildozer
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        workdir: .
-        buildozer_version: master
-        command: buildozer android debug
-
+        python-version: '3.12'
+      
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+      
+    - name: Install Buildozer
+      run: |
+        pip install git+https://github.com/kivy/buildozer.git
+        buildozer --version
+      
+    - name: Build APK
+      run: |
+        buildozer android debug
+      
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: GuitarFuns-APK
-        path: ${{ steps.buildozer.outputs.filename }}
+        path: bin/*.apk
