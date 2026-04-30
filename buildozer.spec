@@ -15,9 +15,8 @@ source.dir = .
 # Расширения файлов для включения
 source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 
-# Требования (обновлено для вашей dev-версии)
-# Для dev-версии используется прямая ссылка на GitHub, а не номер версии[citation:2][citation:6]
-requirements = python3,kivy==2.3.1,https://github.com/kivymd/KivyMD/archive/master.zip,requests,pillow,plyer,openssl,pyopenssl
+# Требования - убираем прямую ссылку, используем kivymd из GitHub через pip
+requirements = python3,kivy==2.3.1,kivymd==2.0.1.dev0,requests,pillow,plyer,openssl,pyopenssl
 
 # Версия приложения
 version = 1.0.0
@@ -55,3 +54,6 @@ fullscreen = 0
 
 # Использовать свежую версию python-for-android
 p4a.branch = master
+
+# Добавляем pypi для поиска kivymd 2.0.1.dev0
+p4a.allow_pypi_dependencies = True
