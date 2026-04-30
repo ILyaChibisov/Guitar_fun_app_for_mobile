@@ -15,9 +15,9 @@ source.dir = .
 # Расширения файлов для включения
 source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 
-# 🔧 ИСПРАВЛЕНО: убрал лишние требования (urllib3, certifi и др. подтянутся сами)
-# Порядок важен: сначала kivy, потом kivymd
-requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl
+# Требования (обновлено для вашей dev-версии)
+# Для dev-версии используется прямая ссылка на GitHub, а не номер версии[citation:2][citation:6]
+requirements = python3,kivy==2.3.1,https://github.com/kivymd/KivyMD/archive/master.zip,requests,pillow,plyer,openssl,pyopenssl
 
 # Версия приложения
 version = 1.0.0
@@ -35,7 +35,7 @@ android.minapi = 21
 # Включаем AndroidX
 android.enable_androidx = True
 
-# Разрешаем сетевые запросы (для API)
+# Разрешаем сетевые запросы
 android.add_network_security_config = True
 
 # NDK версия
@@ -53,5 +53,5 @@ log_level = 2
 # Полноэкранный режим
 fullscreen = 0
 
-# 🆕 ДОБАВЛЕНО: используем свежую версию python-for-android
+# Использовать свежую версию python-for-android
 p4a.branch = master
