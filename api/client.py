@@ -141,8 +141,8 @@ class APIClient:
         # Кэш для страниц
         self.cache = {
             'alphabet': None,
-            'artists': {},      # {letter: {page: artists_data, total: total, page_size: 50}}
-            'songs': {},        # {artist: {page: songs_data, total: total, page_size: 50}}
+            'artists': {},  # {letter: {page: artists_data, total: total, page_size: 50}}
+            'songs': {},  # {artist: {page: songs_data, total: total, page_size: 50}}
             'popular': None,
             'favorites': None
         }
@@ -452,8 +452,6 @@ class APIClient:
             include_auth=False
         )
 
-    # api/client.py - упрощённый метод get_favorites
-
     def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
         """Получить список избранных песен пользователя"""
 
@@ -562,7 +560,6 @@ class APIClient:
         """Синхронный поиск песен (для экрана поиска)"""
         import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
-        # Убираем параметр search_type, оставляем только limit и offset
         url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
 
         try:
@@ -732,6 +729,137 @@ class APIClient:
         if not self.user_data:
             return False
         return self.user_data.get('role') == 'admin'
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРОВ ============
+
+    def start_amdm_parser(self, start_page: int, end_page: int, subdomain: str,
+                          on_success=None, on_failure=None):
+        """Запустить парсер AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
+        data = {
+            "start_page": start_page,
+            "end_page": end_page,
+            "subdomain": subdomain
+        }
+        return self._request(
+            url=url,
+            method='POST',
+            data=data,
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def start_amdm_parser_sync(self, start_page: int, end_page: int, subdomain: str):
+        """Синхронный запуск парсера AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
+        data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера: {e}")
+            return None
+
+    def pause_amdm_parser(self, on_success=None, on_failure=None):
+        """Поставить парсер AMDM на паузу"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/pause"
+        return self._request(
+            url=url,
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def pause_amdm_parser_sync(self):
+        """Синхронная пауза парсера AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/pause"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка паузы: {e}")
+            return None
+
+    def resume_amdm_parser(self, on_success=None, on_failure=None):
+        """Возобновить парсер AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/resume"
+        return self._request(
+            url=url,
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def resume_amdm_parser_sync(self):
+        """Синхронное возобновление парсера AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/resume"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка возобновления: {e}")
+            return None
+
+    def stop_amdm_parser(self, on_success=None, on_failure=None):
+        """Остановить парсер AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/stop"
+        return self._request(
+            url=url,
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def stop_amdm_parser_sync(self):
+        """Синхронная остановка парсера AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки: {e}")
+            return None
+
+    def get_amdm_parser_status(self, on_success=None, on_failure=None):
+        """Получить статус парсера AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/status"
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def get_amdm_parser_status_sync(self):
+        """Синхронное получение статуса парсера"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса: {e}")
+            return None
+
+    def get_amdm_recent_songs(self, limit: int = 10, on_success=None, on_failure=None):
+        """Получить последние песни от парсера AMDM"""
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/recent?limit={limit}"
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
 
 
 api = APIClient()
