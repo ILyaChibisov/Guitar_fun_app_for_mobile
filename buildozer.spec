@@ -7,7 +7,7 @@ source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 version = 1.0.0
 orientation = portrait
 
-requirements = python3,kivy==2.3.1,https://github.com/kivymd/KivyMD/archive/master.zip,requests,pillow,plyer,openssl,pyopenssl,cython==3.0.11
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,cython==3.0.11
 
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
 android.api = 33
