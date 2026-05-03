@@ -56,12 +56,14 @@ class LoginModal(MDCard):
                         bold=True, font_size=dp(20))
         self.add_widget(title)
 
-        self.username_field = MDTextField(hint_text="Имя пользователя или Email", mode="filled",
+        # Исправлено: mode="fill" вместо "filled"
+        self.username_field = MDTextField(hint_text="Имя пользователя или Email", mode="fill",
                                           size_hint_y=None, height=dp(56),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.username_field)
 
-        self.password_field = MDTextField(hint_text="Пароль", mode="filled", password=True,
+        # Исправлено: mode="fill" вместо "filled"
+        self.password_field = MDTextField(hint_text="Пароль", mode="fill", password=True,
                                           size_hint_y=None, height=dp(56),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.password_field)
@@ -135,22 +137,26 @@ class RegisterModal(MDCard):
                         bold=True, font_size=dp(20))
         self.add_widget(title)
 
-        self.username_field = MDTextField(hint_text="Имя пользователя", mode="filled",
+        # Исправлено: mode="fill" вместо "filled"
+        self.username_field = MDTextField(hint_text="Имя пользователя", mode="fill",
                                           size_hint_y=None, height=dp(52),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.username_field)
 
-        self.email_field = MDTextField(hint_text="Email", mode="filled",
+        # Исправлено: mode="fill" вместо "filled"
+        self.email_field = MDTextField(hint_text="Email", mode="fill",
                                        size_hint_y=None, height=dp(52),
                                        padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.email_field)
 
-        self.password_field = MDTextField(hint_text="Пароль", mode="filled", password=True,
+        # Исправлено: mode="fill" вместо "filled"
+        self.password_field = MDTextField(hint_text="Пароль", mode="fill", password=True,
                                           size_hint_y=None, height=dp(52),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.password_field)
 
-        self.confirm_field = MDTextField(hint_text="Подтвердите пароль", mode="filled", password=True,
+        # Исправлено: mode="fill" вместо "filled"
+        self.confirm_field = MDTextField(hint_text="Подтвердите пароль", mode="fill", password=True,
                                          size_hint_y=None, height=dp(52),
                                          padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.confirm_field)

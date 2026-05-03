@@ -1,6 +1,6 @@
 # screens/parsers_screens/amdm_parser_screen.py
 """
-Экран управления парсером AMDM
+Экран управления парсером AMDM для KivyMD 1.2
 """
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
@@ -94,7 +94,8 @@ class RecentSongCard(MDCard):
         footer_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(25), spacing=dp(8))
 
         if error:
-            error_label = MDLabel(text=f"⚠️ {error[:50]}", font_size=sp(10), theme_text_color="Custom",
+            error_label = MDLabel(text=f"⚠️ {error[:50]}", font_size=sp(10),
+                                  theme_text_color="Custom",
                                   text_color=[0.9, 0.7, 0.3, 1])
             footer_layout.add_widget(error_label)
         elif url:
@@ -153,7 +154,7 @@ class AMDMParserScreen(MDScreen):
             line_width=1
         )
 
-        # Поле поддомена (исправлено: mode="fill")
+        # Поле поддомена (KivyMD 1.2: mode="fill")
         self.subdomain_field = MDTextField(
             hint_text="Поддомен (amdm или 1-999)",
             mode="fill",
@@ -166,7 +167,7 @@ class AMDMParserScreen(MDScreen):
         # Контейнер для полей страниц
         pages_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(55))
 
-        # Поле "Страница от" (исправлено: mode="fill")
+        # Поле "Страница от"
         self.start_page_field = MDTextField(
             hint_text="Страница от",
             mode="fill",
@@ -176,7 +177,7 @@ class AMDMParserScreen(MDScreen):
             text="0"
         )
 
-        # Поле "Страница до" (исправлено: mode="fill")
+        # Поле "Страница до"
         self.end_page_field = MDTextField(
             hint_text="Страница до",
             mode="fill",
@@ -218,12 +219,12 @@ class AMDMParserScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0.15]
         )
 
-        self.stats_label = MDLabel(text="📊 Всего: 0 | 🆕 Новых: 0 | ❌ Ошибок: 0", halign="center", size_hint_y=None,
-                                   height=dp(35), font_size=sp(13), bold=True)
+        self.stats_label = MDLabel(text="📊 Всего: 0 | 🆕 Новых: 0 | ❌ Ошибок: 0", halign="center",
+                                   size_hint_y=None, height=dp(35), font_size=sp(13), bold=True)
         stats_card.add_widget(self.stats_label)
 
-        self.status_label = MDLabel(text="⏸ Парсер не запущен", halign="center", size_hint_y=None, height=dp(30),
-                                    font_size=sp(12))
+        self.status_label = MDLabel(text="⏸ Парсер не запущен", halign="center", size_hint_y=None,
+                                    height=dp(30), font_size=sp(12))
         stats_card.add_widget(self.status_label)
 
         main_layout.add_widget(stats_card)
@@ -276,7 +277,16 @@ class AMDMParserScreen(MDScreen):
             print(f"DEBUG: Status result = {result}")
 
             if result and result.get('success'):
-                data = result.get('data', {})
+                # Для KivyMD 1.2 данные приходят напрямую, без вложенного 'data'
+                data = result.get('data', result)
+
+                # Проверяем структуру - если есть поле 'stats' значит это data
+                if 'stats' in data:
+                    # Уже в правильном формате
+                    pass
+                elif 'total_songs' in data:
+                    # Данные пришли как есть
+                    data = {'stats': data, 'is_running': data.get('is_running', False)}
 
                 is_running = data.get('is_running', False)
                 is_paused = data.get('is_paused', False)
@@ -307,16 +317,25 @@ class AMDMParserScreen(MDScreen):
 
                 self.stats_label.text = f"📊 Всего: {total} | 🆕 Новых: {new_songs} | ⚠️ Повторов: {duplicates} | ❌ Ошибок: {errors}"
 
-                # Обновляем последнюю песню
+                # Обновляем последнюю песню (проверяем оба возможных формата)
                 recent_songs = stats.get('recent_songs', [])
-                if recent_songs:
-                    last_song = recent_songs[0]
-                    if self.last_song != last_song:
-                        self.last_song = last_song
+                last_song = data.get('last_song', {})
+
+                # Если есть массив recent_songs, берем первый элемент
+                if recent_songs and len(recent_songs) > 0:
+                    song_data = recent_songs[0]
+                elif last_song and last_song.get('filename'):
+                    song_data = last_song
+                else:
+                    song_data = None
+
+                if song_data and song_data.get('filename'):
+                    if self.last_song != song_data.get('filename'):
+                        self.last_song = song_data.get('filename')
                         self.last_song_container.clear_widgets()
-                        song_card = RecentSongCard(song_data=last_song)
+                        song_card = RecentSongCard(song_data=song_data)
                         self.last_song_container.add_widget(song_card)
-                        print(f"DEBUG: Updated last song: {last_song.get('filename')}")
+                        print(f"DEBUG: Updated last song: {song_data.get('filename')}")
 
         except Exception as e:
             print(f"DEBUG: Error in _fetch_status - {e}")
