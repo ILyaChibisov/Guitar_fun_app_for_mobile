@@ -9,7 +9,7 @@ from utils.kivy_imports import (
     MDBoxLayout, MDLabel, MDCard, MDScreen,
     MDScrollView, MDRaisedButton, MDFlatButton
 )
-from kivymd.uix.textfield import MDTextField, MDTextFieldHintText
+from kivymd.uix.textfield import MDTextField
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -153,25 +153,45 @@ class AMDMParserScreen(MDScreen):
             line_width=1
         )
 
-        self.subdomain_field = MDTextField(mode="filled", size_hint_y=None, height=dp(55))
-        self.subdomain_field.add_widget(MDTextFieldHintText(text="Поддомен (amdm или 1-999)"))
-        self.subdomain_field.text = "amdm"
+        # Поле поддомена (исправлено: mode="fill")
+        self.subdomain_field = MDTextField(
+            hint_text="Поддомен (amdm или 1-999)",
+            mode="fill",
+            size_hint_y=None,
+            height=dp(55),
+            text="amdm"
+        )
         settings_card.add_widget(self.subdomain_field)
 
+        # Контейнер для полей страниц
         pages_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(55))
 
-        self.start_page_field = MDTextField(mode="filled", size_hint_x=0.5, size_hint_y=None, height=dp(55))
-        self.start_page_field.add_widget(MDTextFieldHintText(text="Страница от"))
-        self.start_page_field.text = "0"
-        pages_layout.add_widget(self.start_page_field)
+        # Поле "Страница от" (исправлено: mode="fill")
+        self.start_page_field = MDTextField(
+            hint_text="Страница от",
+            mode="fill",
+            size_hint_x=0.5,
+            size_hint_y=None,
+            height=dp(55),
+            text="0"
+        )
 
-        self.end_page_field = MDTextField(mode="filled", size_hint_x=0.5, size_hint_y=None, height=dp(55))
-        self.end_page_field.add_widget(MDTextFieldHintText(text="Страница до"))
-        self.end_page_field.text = "54"
+        # Поле "Страница до" (исправлено: mode="fill")
+        self.end_page_field = MDTextField(
+            hint_text="Страница до",
+            mode="fill",
+            size_hint_x=0.5,
+            size_hint_y=None,
+            height=dp(55),
+            text="54"
+        )
+
+        pages_layout.add_widget(self.start_page_field)
         pages_layout.add_widget(self.end_page_field)
 
         settings_card.add_widget(pages_layout)
 
+        # Кнопки управления
         buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(48))
 
         self.start_btn = MDRaisedButton(text="▶ ЗАПУСК", size_hint_x=0.33, on_release=self.start_parser)

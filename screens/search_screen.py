@@ -268,24 +268,15 @@ class SearchScreen(MDScreen):
             spacing=dp(8)
         )
 
-        # Поле ввода
+        # Исправленный MDTextField для KivyMD 1.2.0
         self.search_input = MDTextField(
-            mode="filled",
+            hint_text="Найти песню, исполнителя или аккорд",
+            mode="fill",
             size_hint_x=1,
             height=dp(48),
             radius=[dp(24), dp(24), dp(24), dp(24)],
             on_text_validate=self.perform_search,
-            theme_line_color="Custom",
-            line_color_normal=[0, 0, 0, 0],
-            line_color_focus=[0, 0, 0, 0],
-            theme_bg_color="Custom",
-            fill_color_normal=[1, 1, 1, 1],
-            fill_color_focus=[1, 1, 1, 1],
-            text_color_normal=[0, 0, 0, 0.87],
-            text_color_focus=[0, 0, 0, 0.87],
             font_size=sp(16),
-            hint_text="Найти песню, исполнителя или аккорд",
-            hint_text_color=[0.6, 0.6, 0.6, 1],
             padding=[dp(12), dp(12), dp(0), dp(12)]
         )
 

@@ -265,7 +265,7 @@ class SongDetailScreen(MDScreen):
         # Spacer между "Тональность:" и кнопкой минус
         spacer2 = Widget(size_hint_x=None, width=dp(10))
 
-        # Кнопка минус
+        # Кнопка минус (исправлено: убран radius)
         self.minus_ton_btn = MDIconButton(
             icon="minus",
             size_hint=(None, None),
@@ -273,7 +273,6 @@ class SongDetailScreen(MDScreen):
             theme_icon_color="Custom",
             icon_color=[0.5, 0.5, 0.5, 0.8],
             md_bg_color=[0.9, 0.9, 0.9, 0.5],
-            radius=[dp(13), dp(13), dp(13), dp(13)],
             on_release=self.decrease_tonality
         )
         self._load_icon('minus_ton', self.minus_ton_btn)
@@ -291,7 +290,7 @@ class SongDetailScreen(MDScreen):
             halign="center"
         )
 
-        # Кнопка плюс
+        # Кнопка плюс (исправлено: убран radius)
         self.plus_ton_btn = MDIconButton(
             icon="plus",
             size_hint=(None, None),
@@ -299,7 +298,6 @@ class SongDetailScreen(MDScreen):
             theme_icon_color="Custom",
             icon_color=[0.5, 0.5, 0.5, 0.8],
             md_bg_color=[0.9, 0.9, 0.9, 0.5],
-            radius=[dp(13), dp(13), dp(13), dp(13)],
             on_release=self.increase_tonality
         )
         self._load_icon('plus_ton', self.plus_ton_btn)
@@ -521,8 +519,6 @@ class SongDetailScreen(MDScreen):
             on_failure=self.on_load_failed
         )
 
-    # screens/song_detail_screen.py - исправленный метод on_song_loaded
-
     def on_song_loaded(self, data):
         """Отображает загруженные данные"""
         logger.info(f"on_song_loaded called")
@@ -613,7 +609,6 @@ class SongDetailScreen(MDScreen):
                 current = int(self.favorite_count.text)
                 self.favorite_count.text = str(max(0, current - 1))
                 notify.success("Удалено из избранного")
-                # Обновляем список избранного на экране избранного (если он открыт)
                 self._refresh_favorites_screen()
 
             def on_failure(req, error):

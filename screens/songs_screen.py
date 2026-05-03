@@ -453,23 +453,15 @@ class SongsScreen(MDScreen):
             padding=[dp(0), dp(0), dp(0), dp(0)]
         )
 
+        # Исправленный MDTextField для KivyMD 1.2.0 (mode = 'fill')
         self.search_field = MDTextField(
             hint_text="Поиск исполнителей и песен",
-            mode="filled",
+            mode="fill",
             size_hint_x=0.99,
-            font_size=dp(46),
+            font_size=sp(14),
             height=dp(48),
             radius=[dp(24), dp(24), dp(24), dp(24)],
             on_text_validate=self.do_search,
-            theme_line_color="Custom",
-            line_color_normal=[0, 0, 0, 0],
-            line_color_focus=[0, 0, 0, 0],
-            theme_bg_color="Custom",
-            fill_color_normal=[0, 0, 0, 0],
-            fill_color_focus=[0, 0, 0, 0],
-            text_color_normal=[0, 0, 0, 0],
-            text_color_focus=[0, 0, 0, 0],
-            hint_text_color=[0.5, 0.5, 0.5, 1],
             on_text=self.on_text_change
         )
 
