@@ -20,4 +20,5 @@ android.accept_sdk_license = True
 fullscreen = 0
 log_level = 2
 
-p4a.branch = master
+# ★ КЛЮЧЕВОЙ ПАРАМЕТР ★
+p4a.branch = develop
