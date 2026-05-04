@@ -5,8 +5,8 @@ package.domain = com.guitarfuns
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 
-# ✅ Добавлено: явно включаем все файлы в папке chords
-source.include_patterns = chords/**
+# ✅ ВАЖНО: добавляем ВСЕ подпапки с аккордами
+source.include_patterns = chords/**/*.py, chords/**, **/*.py
 
 version = 1.0.0
 orientation = portrait
