@@ -141,10 +141,10 @@ class ArtistCard(MDCard):
         self.elevation = 2
         self.ripple_behavior = True
 
-        self.theme_bg_color = "Custom"
-        self.md_bg_color = [0, 0, 0, 0.0001]
+        self.theme_bg_color = "Surface"
+        self.md_bg_color = [0.1, 0.25, 0.15, 0.85]
         self.line_color = [1, 1, 1, 0.1]
-        self.line_width = 1
+        self.line_width = 1.5
 
         # Иконка
         self.icon_image = Image(

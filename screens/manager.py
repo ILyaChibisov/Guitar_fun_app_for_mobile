@@ -28,7 +28,7 @@ def setup_screen_manager():
     sm.add_widget(ArtistSongsScreen(name='artist_songs'))
     sm.add_widget(ChordsScreen(name='chords'))
     sm.add_widget(DictionaryScreen(name='dictionary'))
-    sm.add_widget(TunerScreen(name='tuner'))
+    # sm.add_widget(TunerScreen(name='tuner'))
     sm.add_widget(FavoritesScreen(name='favorites'))
     sm.add_widget(ProfileScreen(name='profile'))
     sm.add_widget(SongDetailScreen(name='song_detail'))

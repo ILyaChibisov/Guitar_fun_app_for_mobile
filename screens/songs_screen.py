@@ -43,28 +43,27 @@ except ImportError:
 # ============ КНОПКА БУКВЫ ============
 
 class LetterButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка буквы для сетки"""
+    """Кнопка буквы для сетки - элегантный дизайн"""
 
     def __init__(self, text, is_active=False, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.btn_text = text
         self.on_press_callback = on_press_callback
         self.size_hint = (1, 1)
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.padding = [dp(1), dp(1), dp(1), dp(1)]
 
         self.main_layout = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(4), dp(4), dp(4), dp(4)]
+            padding=[dp(4), dp(2), dp(4), dp(2)]  # Уменьшил внутренние отступы
         )
 
-        # Все кнопки одинакового размера, текст 09 или 0-9
         if text == '09':
             display_text = '0-9'
-            font_size = sp(12)
+            font_size = sp(10)
         else:
             display_text = text
-            font_size = sp(15)
+            font_size = sp(13)
 
         self.label = MDLabel(
             text=display_text,
@@ -90,9 +89,9 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
             self.main_layout.md_bg_color = [0.46, 0.70, 0.71, 1]
             self.main_layout.radius = [dp(8), dp(8), dp(8), dp(8)]
         else:
-            self.label.text_color = [1, 1, 1, 1]
-            self.main_layout.md_bg_color = [0, 0, 0, 0]
-            self.main_layout.radius = [0, 0, 0, 0]
+            self.label.text_color = [0.9, 0.95, 0.85, 0.9]
+            self.main_layout.md_bg_color = [0.08, 0.22, 0.14, 0.6]
+            self.main_layout.radius = [dp(6), dp(6), dp(6), dp(6)]
 
     def set_active(self, active):
         self.is_active = active
@@ -249,7 +248,7 @@ class LanguageSelector(MDBoxLayout):
 
 
 class AlphabetGrid(MDCard):
-    """Сетка с буквами - равномерное распределение по рядам с прозрачным фоном"""
+    """Сетка с буквами - элегантный дизайн для зелёного фона"""
 
     # Русский алфавит (33 буквы) + символы
     RU_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
@@ -270,25 +269,30 @@ class AlphabetGrid(MDCard):
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
-        self.height = dp(180)
-        self.padding = [dp(0), dp(0), dp(0), dp(0)]
-        self.radius = [theme.CORNER_RADIUS_SMALL]
+        self.height = dp(190)  # Увеличил высоту для комфортного размещения
+        self.padding = [dp(8), dp(8), dp(8), dp(8)]  # Уменьшил отступы
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
 
-        # Используем Surface для полупрозрачного фона
-        self.theme_bg_color = "Surface"
-        self.md_bg_color = [0.7, 1, 1, 0.01]  # 15% прозрачности
-        self.elevation = 2
+        # Благородный тёмно-зелёный фон с лёгкой прозрачностью
+        self.md_bg_color = [0.06, 0.18, 0.12, 0.92]
+
+        # Лёгкая обводка для изящества
+        self.line_color = [0.9, 0.9, 0.8, 0.15]
+        self.line_width = 1
+
+        # Нежная тень
+        self.elevation = 3
 
         self.rows = []
         self.buttons = []
 
-        # Создаём 4 ряда
+        # Создаём 4 ряда с уменьшенной высотой
         for i in range(4):
             row = MDBoxLayout(
                 orientation='horizontal',
-                spacing=dp(6),
+                spacing=dp(6),  # Уменьшил отступы между кнопками
                 size_hint_y=None,
-                height=dp(40)
+                height=dp(36)  # Уменьшил высоту ряда
             )
             self.rows.append(row)
             self.add_widget(row)
@@ -306,13 +310,13 @@ class AlphabetGrid(MDCard):
         if self.current_language == 'ru':
             items = self.RU_LETTERS[:]  # 35 элементов
             rows_count = 5
-            self.height = dp(200)
+            self.height = dp(210)  # Высота для 5 рядов
         else:
             items = self.EN_LETTERS[:]  # 28 элементов
             rows_count = 4
-            self.height = dp(160)
+            self.height = dp(190)  # Высота для 4 рядов
 
-        # Сначала удаляем старые ряды, если их количество изменилось
+        # Удаляем старые ряды, если их количество изменилось
         while len(self.rows) > rows_count:
             old_row = self.rows.pop()
             self.remove_widget(old_row)
@@ -323,7 +327,7 @@ class AlphabetGrid(MDCard):
                 orientation='horizontal',
                 spacing=dp(6),
                 size_hint_y=None,
-                height=dp(40)
+                height=dp(36)
             )
             self.rows.append(row)
             self.add_widget(row)
