@@ -7,11 +7,17 @@ from kivy.metrics import dp, sp
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
+from kivy.uix.behaviors import ButtonBehavior
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.popup import Popup
+from kivy.uix.label import Label
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.scrollview import ScrollView
 from io import BytesIO
 
 from utils.kivy_imports import (
     MDBoxLayout, MDLabel, MDCard, MDScreen,
-    MDScrollView, MDRaisedButton
+    MDScrollView, MDRaisedButton, MDFlatButton
 )
 from kivymd.uix.textfield import MDTextField
 
@@ -33,6 +39,213 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
+
+# Расшифровка страниц AMDM
+PAGE_TO_LETTER = {
+    0: "0..9", 1: "А", 2: "Б", 3: "В", 4: "Г", 5: "Д", 6: "Е", 7: "Ё",
+    8: "Ж", 9: "З", 10: "И", 11: "Й", 12: "К", 13: "Л", 14: "М", 15: "Н",
+    16: "О", 17: "П", 18: "Р", 19: "С", 20: "Т", 21: "У", 22: "Ф", 23: "Х",
+    24: "Ц", 25: "Ч", 26: "Ш", 27: "Щ", 28: "Ъ", 29: "Ы", 30: "Ь", 31: "Э",
+    32: "Ю", 33: "Я", 34: "A", 35: "B", 36: "C", 37: "D", 38: "E", 39: "F",
+    40: "G", 41: "H", 42: "I", 43: "J", 44: "K", 45: "L", 46: "M", 47: "N",
+    48: "O", 49: "P", 50: "Q", 51: "R", 52: "S", 53: "T", 54: "U", 55: "V",
+    56: "W", 57: "X", 58: "Y", 59: "Z"
+}
+
+LETTER_TO_PAGE = {v: k for k, v in PAGE_TO_LETTER.items()}
+
+# Список букв для выбора (начинается с 0..9)
+RUSSIAN_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М',
+                   'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ',
+                   'Ы', 'Ь', 'Э', 'Ю', 'Я']
+ENGLISH_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                   'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+ALL_LETTERS = ['0..9'] + RUSSIAN_LETTERS + ENGLISH_LETTERS
+
+
+class LetterButton(ButtonBehavior, BoxLayout):
+    """Кнопка выбора буквы"""
+
+    def __init__(self, letter, on_select, **kwargs):
+        super().__init__(**kwargs)
+        self.letter = letter
+        self.on_select = on_select
+        self.orientation = 'vertical'
+        self.size_hint = (1, None)
+        self.height = dp(48)
+
+        letter_label = Label(
+            text=letter,
+            font_size=sp(16),
+            color=[1, 1, 1, 1],
+            bold=True,
+            halign='center',
+            valign='middle'
+        )
+        self.add_widget(letter_label)
+        self.bind(on_release=self._on_release)
+
+    def _on_release(self, instance):
+        self.on_select(self.letter)
+
+
+class CloseButton(ButtonBehavior, BoxLayout):
+    """Кнопка закрытия Popup"""
+
+    def __init__(self, on_close, **kwargs):
+        super().__init__(**kwargs)
+        self.on_close = on_close
+        self.orientation = 'vertical'
+        self.size_hint = (None, None)
+        self.size = (dp(40), dp(40))
+
+        close_label = Label(
+            text="✕",
+            font_size=sp(20),
+            color=[0.9, 0.3, 0.3, 1],
+            bold=True,
+            halign='center',
+            valign='middle'
+        )
+        self.add_widget(close_label)
+        self.bind(on_release=lambda x: self.on_close())
+
+
+class LetterSelector(ButtonBehavior, BoxLayout):
+    """Компонент выбора буквы - Popup с клавиатурой на весь экран"""
+
+    def __init__(self, title="Буква", on_select=None, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint = (0.48, None)
+        self.height = dp(42)
+        self.on_select_callback = on_select
+        self.current_letter = 'А'
+        self.popup = None
+
+        # Заголовок
+        self.title_label = Label(
+            text=title,
+            font_size=sp(11),
+            color=[0.7, 0.7, 0.7, 1],
+            size_hint=(0.4, 1),
+            halign='center',
+            valign='middle'
+        )
+
+        # Значение
+        self.value_label = Label(
+            text=self.current_letter,
+            font_size=sp(16),
+            color=[1, 1, 1, 1],
+            bold=True,
+            size_hint=(0.4, 1),
+            halign='center',
+            valign='middle'
+        )
+
+        # Стрелка
+        self.arrow_label = Label(
+            text="▼",
+            font_size=sp(12),
+            color=[0.7, 0.7, 0.7, 1],
+            size_hint=(0.2, 1),
+            halign='center',
+            valign='middle'
+        )
+
+        self.add_widget(self.title_label)
+        self.add_widget(self.value_label)
+        self.add_widget(self.arrow_label)
+
+        self.bind(on_release=self._open_popup)
+        self._create_popup()
+
+    def _create_popup(self):
+        """Создаёт Popup с клавиатурой букв на весь экран"""
+        content = BoxLayout(
+            orientation='vertical',
+            spacing=dp(8),
+            padding=[dp(16), dp(16), dp(16), dp(16)],
+            size_hint=(1, 1)
+        )
+
+        # Заголовок Popup
+        header = BoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(50),
+            spacing=dp(10)
+        )
+
+        header_title = Label(
+            text="ВЫБЕРИТЕ БУКВУ",
+            font_size=sp(16),
+            color=[1, 1, 1, 1],
+            bold=True,
+            size_hint_x=1
+        )
+
+        close_btn = CloseButton(on_close=self._close_popup)
+
+        header.add_widget(header_title)
+        header.add_widget(close_btn)
+
+        content.add_widget(header)
+
+        # Сетка для букв (8 колонок)
+        grid = GridLayout(
+            cols=8,
+            spacing=dp(6),
+            size_hint_y=None
+        )
+        grid.bind(minimum_height=grid.setter('height'))
+
+        for letter in ALL_LETTERS:
+            letter_btn = LetterButton(letter=letter, on_select=self._select_letter)
+            grid.add_widget(letter_btn)
+
+        scroll = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            do_scroll_y=True
+        )
+        scroll.add_widget(grid)
+
+        content.add_widget(scroll)
+
+        self.popup = Popup(
+            title="",
+            content=content,
+            size_hint=(1, 1),
+            background_color=[0.08, 0.08, 0.08, 0.98],
+            separator_color=[0, 0, 0, 0],
+            auto_dismiss=True,
+            overlay_color=[0, 0, 0, 0.8]
+        )
+
+    def _close_popup(self):
+        if self.popup:
+            self.popup.dismiss()
+
+    def _open_popup(self, instance):
+        if self.popup:
+            self.popup.open()
+
+    def _select_letter(self, letter):
+        self.current_letter = letter
+        self.value_label.text = letter
+        self._close_popup()
+        if self.on_select_callback:
+            self.on_select_callback(letter)
+
+    def get_letter(self):
+        return self.current_letter
+
+    def set_letter(self, letter):
+        if letter in ALL_LETTERS:
+            self.current_letter = letter
+            self.value_label.text = letter
 
 
 class StatCard(MDCard):
@@ -118,7 +331,6 @@ class RecentSongCard(MDCard):
             self.add_widget(empty_label)
             return
 
-        # Цвет фона в зависимости от статуса
         if status == 'new':
             bg_color = [0.2, 0.7, 0.2, 0.2]
             line_color = [0.2, 0.8, 0.2, 0.8]
@@ -155,7 +367,6 @@ class RecentSongCard(MDCard):
             except:
                 pass
 
-        # Название песни (будет растягиваться)
         name = filename.replace('.txt', '')
         if len(name) > 35:
             name = name[:32] + "..."
@@ -164,13 +375,12 @@ class RecentSongCard(MDCard):
             text=name,
             font_size=sp(13),
             bold=True,
-            size_hint_x=1,  # Растягивается на все доступное место
+            size_hint_x=1,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             valign="middle"
         )
 
-        # Статус
         status_label = MDLabel(
             text=status_text,
             font_size=sp(10),
@@ -256,7 +466,7 @@ class AMDMParserScreen(MDScreen):
         settings_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(170),
+            height=dp(180),
             padding=[dp(16), dp(12), dp(16), dp(12)],
             spacing=dp(12),
             radius=[16],
@@ -276,46 +486,23 @@ class AMDMParserScreen(MDScreen):
         )
         settings_card.add_widget(self.subdomain_field)
 
-        # Диапазон страниц
-        range_layout = MDBoxLayout(orientation='vertical', spacing=dp(6), size_hint_y=None, height=dp(70))
+        # Выбор букв (от и до)
+        letters_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(50))
 
-        range_label = MDLabel(
-            text="ДИАПАЗОН СТРАНИЦ",
-            font_size=sp(10),
-            size_hint_y=None,
-            height=dp(18),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6]
-        )
-        range_layout.add_widget(range_label)
-
-        pages_row = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(42))
-
-        self.start_page_field = MDTextField(
-            hint_text="Страница от",
-            mode="fill",
-            size_hint_x=0.5,
-            size_hint_y=None,
-            height=dp(42),
-            text="0",
-            input_filter="int"
+        self.start_letter_selector = LetterSelector(
+            title="ОТ",
+            on_select=self.on_start_letter_selected
         )
 
-        self.end_page_field = MDTextField(
-            hint_text="Страница до",
-            mode="fill",
-            size_hint_x=0.5,
-            size_hint_y=None,
-            height=dp(42),
-            text="54",
-            input_filter="int"
+        self.end_letter_selector = LetterSelector(
+            title="ДО",
+            on_select=self.on_end_letter_selected
         )
 
-        pages_row.add_widget(self.start_page_field)
-        pages_row.add_widget(self.end_page_field)
-        range_layout.add_widget(pages_row)
+        letters_layout.add_widget(self.start_letter_selector)
+        letters_layout.add_widget(self.end_letter_selector)
 
-        settings_card.add_widget(range_layout)
+        settings_card.add_widget(letters_layout)
         main_layout.add_widget(settings_card)
 
         # Кнопки управления
@@ -353,7 +540,7 @@ class AMDMParserScreen(MDScreen):
         buttons_card.add_widget(buttons_layout)
         main_layout.add_widget(buttons_card)
 
-        # 4 карточки статистики (без иконок)
+        # 4 карточки статистики
         stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
 
         self.total_card = StatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
@@ -367,7 +554,7 @@ class AMDMParserScreen(MDScreen):
         stats_grid.add_widget(self.err_card)
         main_layout.add_widget(stats_grid)
 
-        # Карточка последней песни (с иконкой из ассета)
+        # Карточка последней песни
         self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
         main_layout.add_widget(self.last_song_container)
 
@@ -385,6 +572,15 @@ class AMDMParserScreen(MDScreen):
 
         scroll.add_widget(main_layout)
         self.add_widget(scroll)
+
+    def on_start_letter_selected(self, letter):
+        pass
+
+    def on_end_letter_selected(self, letter):
+        pass
+
+    def _get_page_from_letter(self, letter):
+        return LETTER_TO_PAGE.get(letter, 0)
 
     def start_auto_update(self):
         if not self.is_on_screen:
@@ -412,6 +608,7 @@ class AMDMParserScreen(MDScreen):
                 data = result.get('data', result)
 
                 is_running = data.get('is_running', False)
+                is_paused = data.get('is_paused', False)
 
                 if is_running:
                     self.start_btn.disabled = True
@@ -453,20 +650,14 @@ class AMDMParserScreen(MDScreen):
 
     def start_parser(self, *args):
         try:
-            start_page = int(self.start_page_field.text)
-            end_page = int(self.end_page_field.text)
+            start_letter = self.start_letter_selector.get_letter()
+            end_letter = self.end_letter_selector.get_letter()
+            start_page = self._get_page_from_letter(start_letter)
+            end_page = self._get_page_from_letter(end_letter)
             subdomain = self.subdomain_field.text.strip()
 
-            if start_page < 0 or start_page > 54:
-                notify.error("Начальная страница должна быть от 0 до 54")
-                return
-
-            if end_page < 0 or end_page > 54:
-                notify.error("Конечная страница должна быть от 0 до 54")
-                return
-
             if start_page > end_page:
-                notify.error("Начальная страница не может быть больше конечной")
+                notify.error("Начальная буква не может быть позже конечной")
                 return
 
             if not subdomain:
@@ -475,7 +666,7 @@ class AMDMParserScreen(MDScreen):
 
             result = api.start_amdm_parser_sync(start_page, end_page, subdomain)
             if result and result.get('success'):
-                notify.success(f"Парсер запущен (страницы {start_page}-{end_page})")
+                notify.success(f"Парсер запущен (буквы {start_letter}-{end_letter})")
                 self.last_song = None
                 self.last_song_container.height = dp(0)
                 self.last_song_container.clear_widgets()
@@ -484,8 +675,6 @@ class AMDMParserScreen(MDScreen):
                 msg = result.get('message', 'Ошибка') if result else 'Ошибка соединения'
                 notify.error(f"Ошибка: {msg}")
 
-        except ValueError:
-            notify.error("Введите корректные номера страниц")
         except Exception as e:
             logger.error(f"Ошибка: {e}")
             notify.error(f"Ошибка: {e}")
