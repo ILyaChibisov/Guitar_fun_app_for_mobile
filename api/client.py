@@ -863,5 +863,15 @@ class APIClient:
             include_auth=True
         )
 
+    def get_letters_sync(self):
+        """Получить список букв с сервера"""
+        url = f"{self.config.API_BASE_URL}/songs/alphabet"
+        try:
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Ошибка получения букв: {e}")
+            return None
 
 api = APIClient()

@@ -1,13 +1,17 @@
 # screens/parsers_screens/amdm_parser_screen.py
 """
-Экран управления парсером AMDM для KivyMD 1.2
+Экран управления парсером AMDM - современный дизайн
 """
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
+from kivy.core.image import Image as CoreImage
+from kivy.uix.image import Image
+from kivy.uix.widget import Widget
+from io import BytesIO
 
 from utils.kivy_imports import (
     MDBoxLayout, MDLabel, MDCard, MDScreen,
-    MDScrollView, MDRaisedButton, MDFlatButton
+    MDScrollView, MDRaisedButton
 )
 from kivymd.uix.textfield import MDTextField
 
@@ -18,98 +22,170 @@ from api.client import api
 
 logger = screen_logger('AMDMParserScreen')
 
+# Попытка импорта ассетов
+try:
+    from data import load_asset_as_bytes
 
-class RecentSongCard(MDCard):
-    """Карточка для отображения последней песни"""
+    HAS_ASSETS = True
+except ImportError:
+    HAS_ASSETS = False
 
-    def __init__(self, song_data=None, **kwargs):
+
+    def load_asset_as_bytes(name):
+        return None
+
+
+class StatCard(MDCard):
+    """Карточка статистики (без иконок)"""
+
+    def __init__(self, title, value, color, **kwargs):
         super().__init__(**kwargs)
-        self.song_data = song_data or {}
         self.orientation = 'vertical'
-        self.size_hint = (1, None)
-        self.height = dp(80)
-        self.padding = [dp(16), dp(12), dp(16), dp(12)]
-        self.spacing = dp(4)
-        self.radius = [theme.CORNER_RADIUS_SMALL]
+        self.size_hint = (0.23, None)
+        self.height = dp(70)
+        self.padding = dp(8)
+        self.spacing = dp(2)
+        self.radius = [12]
         self.elevation = 2
+        self.md_bg_color = [color[0], color[1], color[2], 0.12]
+        self.line_color = [color[0], color[1], color[2], 0.4]
         self.line_width = 1
 
+        self.value_label = MDLabel(
+            text=str(value),
+            font_size=sp(28),
+            bold=True,
+            halign="center",
+            size_hint_y=None,
+            height=dp(36),
+            theme_text_color="Custom",
+            text_color=[color[0], color[1], color[2], 1]
+        )
+
+        self.title_label = MDLabel(
+            text=title,
+            font_size=sp(9),
+            halign="center",
+            size_hint_y=None,
+            height=dp(20),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6]
+        )
+
+        self.add_widget(self.value_label)
+        self.add_widget(self.title_label)
+
+    def update_value(self, value):
+        self.value_label.text = str(value)
+
+
+class RecentSongCard(MDCard):
+    """Карточка последней песни с иконкой из ассета"""
+
+    def __init__(self, song_data=None, icon_data=None, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(75)
+        self.padding = [dp(12), dp(8), dp(12), dp(8)]
+        self.spacing = dp(10)
+        self.radius = [12]
+        self.elevation = 2
+        self.line_width = 1
+        self.song_data = song_data or {}
+        self.icon_data = icon_data
         self.update_content()
 
     def update_content(self, song_data=None):
-        """Обновить содержимое карточки"""
         if song_data:
             self.song_data = song_data
 
         self.clear_widgets()
 
-        filename = self.song_data.get('filename', 'Нет данных')
+        filename = self.song_data.get('filename', '')
         status = self.song_data.get('status', 'unknown')
         error = self.song_data.get('error', '')
-        url = self.song_data.get('url', '')
         tab_number = self.song_data.get('tab_number', 0)
 
-        # Определяем цвет и иконку в зависимости от статуса
+        if not filename:
+            empty_label = MDLabel(
+                text="Нет загруженных песен",
+                halign="center",
+                font_size=sp(12),
+                theme_text_color="Custom",
+                text_color=[0.5, 0.5, 0.5, 0.7]
+            )
+            self.add_widget(empty_label)
+            return
+
+        # Цвет фона в зависимости от статуса
         if status == 'new':
-            bg_color = [0.2, 0.6, 0.2, 0.3]
-            line_color = [0.3, 0.8, 0.3, 0.8]
-            icon = "✅"
+            bg_color = [0.2, 0.7, 0.2, 0.2]
+            line_color = [0.2, 0.8, 0.2, 0.8]
             status_text = "НОВАЯ"
         elif status == 'duplicate':
-            bg_color = [0.8, 0.6, 0.1, 0.3]
+            bg_color = [0.8, 0.6, 0.1, 0.2]
             line_color = [0.9, 0.7, 0.2, 0.8]
-            icon = "⚠️"
             status_text = "ДУБЛИКАТ"
         elif status == 'error':
-            bg_color = [0.8, 0.2, 0.2, 0.3]
+            bg_color = [0.8, 0.2, 0.2, 0.2]
             line_color = [0.9, 0.3, 0.3, 0.8]
-            icon = "❌"
             status_text = "ОШИБКА"
-        elif status == 'db_error':
-            bg_color = [0.6, 0.3, 0.6, 0.3]
-            line_color = [0.7, 0.4, 0.7, 0.8]
-            icon = "💾"
-            status_text = "ОШИБКА БД"
         else:
-            bg_color = [0.3, 0.3, 0.3, 0.3]
+            bg_color = [0.3, 0.3, 0.3, 0.2]
             line_color = [0.5, 0.5, 0.5, 0.8]
-            icon = "⏸"
             status_text = "ОЖИДАНИЕ"
 
         self.md_bg_color = bg_color
         self.line_color = line_color
 
-        header_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30), spacing=dp(8))
+        # Иконка из ассета
+        icon_image = Image(
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            pos_hint={'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
+        )
 
-        icon_label = MDLabel(text=icon, font_size=sp(20), size_hint_x=None, width=dp(32), halign="center")
-        name_label = MDLabel(text=filename[:40] + "..." if len(filename) > 40 else filename, font_size=sp(13),
-                             bold=True, size_hint_x=0.7)
-        status_label = MDLabel(text=status_text, font_size=sp(11), size_hint_x=None, width=dp(85), halign="center",
-                               bold=True)
+        if self.icon_data:
+            try:
+                img = CoreImage(BytesIO(self.icon_data), ext="png")
+                icon_image.texture = img.texture
+            except:
+                pass
 
-        header_layout.add_widget(icon_label)
-        header_layout.add_widget(name_label)
-        header_layout.add_widget(status_label)
+        # Название песни (будет растягиваться)
+        name = filename.replace('.txt', '')
+        if len(name) > 35:
+            name = name[:32] + "..."
 
-        footer_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(25), spacing=dp(8))
+        name_label = MDLabel(
+            text=name,
+            font_size=sp(13),
+            bold=True,
+            size_hint_x=1,  # Растягивается на все доступное место
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95],
+            valign="middle"
+        )
 
-        if error:
-            error_label = MDLabel(text=f"⚠️ {error[:50]}", font_size=sp(10),
-                                  theme_text_color="Custom",
-                                  text_color=[0.9, 0.7, 0.3, 1])
-            footer_layout.add_widget(error_label)
-        elif url:
-            url_label = MDLabel(text=f"🔗 {url[:50]}..." if len(url) > 50 else f"🔗 {url}", font_size=sp(9),
-                                theme_text_color="Custom", text_color=[0.7, 0.7, 0.7, 0.8])
-            footer_layout.add_widget(url_label)
+        # Статус
+        status_label = MDLabel(
+            text=status_text,
+            font_size=sp(10),
+            size_hint_x=None,
+            width=dp(70),
+            halign="center",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=line_color,
+            valign="middle"
+        )
 
-        if tab_number:
-            tab_label = MDLabel(text=f"подбор {tab_number}", font_size=sp(10), size_hint_x=None, width=dp(60),
-                                halign="right", theme_text_color="Custom", text_color=[0.7, 0.7, 0.7, 0.6])
-            footer_layout.add_widget(tab_label)
-
-        self.add_widget(header_layout)
-        self.add_widget(footer_layout)
+        self.add_widget(icon_image)
+        self.add_widget(name_label)
+        self.add_widget(status_label)
 
 
 class AMDMParserScreen(MDScreen):
@@ -119,11 +195,21 @@ class AMDMParserScreen(MDScreen):
         super().__init__(**kwargs)
         self.name = 'amdm_parser'
         self.update_event = None
-        self.is_parser_running = False
-        self.md_bg_color = [0, 0, 0, 0]
+        self.is_on_screen = False
         self.last_song = None
+        self.song_icon_data = None
+        self.md_bg_color = [0, 0, 0, 0]
+        self.load_icon()
         self.init_ui()
         logger.info('Экран AMDM парсера создан')
+
+    def load_icon(self):
+        """Загрузить иконку песни из ассетов"""
+        if HAS_ASSETS:
+            try:
+                self.song_icon_data = load_asset_as_bytes('song_png')
+            except Exception as e:
+                logger.error(f"Ошибка загрузки иконки: {e}")
 
     def init_ui(self):
         scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False)
@@ -136,127 +222,173 @@ class AMDMParserScreen(MDScreen):
         )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        title_label = MDLabel(text="🎵 Парсер AMDM.RU", font_size=sp(22), halign="center", size_hint_y=None,
-                              height=dp(50), bold=True)
-        main_layout.add_widget(title_label)
+        # Заголовок
+        title_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(65),
+            padding=[dp(16), dp(8), dp(16), dp(8)],
+            radius=[16, 16, 16, 16],
+            md_bg_color=[0.15, 0.25, 0.35, 0.5],
+            elevation=0
+        )
 
-        # Карточка настроек
+        title_label = MDLabel(
+            text="AMDM ПАРСЕР",
+            font_size=sp(22),
+            halign="center",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=[0.4, 0.7, 0.9, 1]
+        )
+        subtitle_label = MDLabel(
+            text="загрузка аккордов с amdm.ru",
+            font_size=sp(11),
+            halign="center",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.5]
+        )
+        title_card.add_widget(title_label)
+        title_card.add_widget(subtitle_label)
+        main_layout.add_widget(title_card)
+
+        # Настройки
         settings_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(280),
+            height=dp(170),
             padding=[dp(16), dp(12), dp(16), dp(12)],
-            spacing=dp(10),
-            radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[0, 0, 0, 0.15],
-            elevation=2,
-            line_color=[1, 1, 1, 0.1],
+            spacing=dp(12),
+            radius=[16],
+            md_bg_color=[0, 0, 0, 0.2],
+            elevation=0,
+            line_color=[1, 1, 1, 0.05],
             line_width=1
         )
 
-        # Поле поддомена (KivyMD 1.2: mode="fill")
+        # Поддомен
         self.subdomain_field = MDTextField(
             hint_text="Поддомен (amdm или 1-999)",
             mode="fill",
             size_hint_y=None,
-            height=dp(55),
+            height=dp(50),
             text="amdm"
         )
         settings_card.add_widget(self.subdomain_field)
 
-        # Контейнер для полей страниц
-        pages_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(55))
+        # Диапазон страниц
+        range_layout = MDBoxLayout(orientation='vertical', spacing=dp(6), size_hint_y=None, height=dp(70))
 
-        # Поле "Страница от"
+        range_label = MDLabel(
+            text="ДИАПАЗОН СТРАНИЦ",
+            font_size=sp(10),
+            size_hint_y=None,
+            height=dp(18),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6]
+        )
+        range_layout.add_widget(range_label)
+
+        pages_row = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(42))
+
         self.start_page_field = MDTextField(
             hint_text="Страница от",
             mode="fill",
             size_hint_x=0.5,
             size_hint_y=None,
-            height=dp(55),
-            text="0"
+            height=dp(42),
+            text="0",
+            input_filter="int"
         )
 
-        # Поле "Страница до"
         self.end_page_field = MDTextField(
             hint_text="Страница до",
             mode="fill",
             size_hint_x=0.5,
             size_hint_y=None,
-            height=dp(55),
-            text="54"
+            height=dp(42),
+            text="54",
+            input_filter="int"
         )
 
-        pages_layout.add_widget(self.start_page_field)
-        pages_layout.add_widget(self.end_page_field)
+        pages_row.add_widget(self.start_page_field)
+        pages_row.add_widget(self.end_page_field)
+        range_layout.add_widget(pages_row)
 
-        settings_card.add_widget(pages_layout)
+        settings_card.add_widget(range_layout)
+        main_layout.add_widget(settings_card)
 
         # Кнопки управления
-        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(48))
+        buttons_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(65),
+            padding=[dp(12), dp(8), dp(12), dp(8)],
+            radius=[12],
+            md_bg_color=[0, 0, 0, 0.2],
+            elevation=0
+        )
 
-        self.start_btn = MDRaisedButton(text="▶ ЗАПУСК", size_hint_x=0.33, on_release=self.start_parser)
-        self.pause_btn = MDFlatButton(text="⏸ ПАУЗА", size_hint_x=0.33, disabled=True)
-        self.pause_btn.bind(on_release=self.pause_parser)
-        self.stop_btn = MDFlatButton(text="⏹ СТОП", size_hint_x=0.34, disabled=True)
+        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(48))
+
+        self.start_btn = MDRaisedButton(
+            text="ЗАПУСТИТЬ",
+            size_hint_x=0.7,
+            md_bg_color=[0.2, 0.6, 0.2, 1],
+            font_size=sp(14)
+        )
+        self.start_btn.bind(on_release=self.start_parser)
+
+        self.stop_btn = MDRaisedButton(
+            text="ОСТАНОВИТЬ",
+            size_hint_x=0.3,
+            disabled=True,
+            md_bg_color=[0.6, 0.2, 0.2, 1],
+            font_size=sp(14)
+        )
         self.stop_btn.bind(on_release=self.stop_parser)
 
         buttons_layout.add_widget(self.start_btn)
-        buttons_layout.add_widget(self.pause_btn)
         buttons_layout.add_widget(self.stop_btn)
+        buttons_card.add_widget(buttons_layout)
+        main_layout.add_widget(buttons_card)
 
-        settings_card.add_widget(buttons_layout)
-        main_layout.add_widget(settings_card)
+        # 4 карточки статистики (без иконок)
+        stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
 
-        # Карточка статистики
-        stats_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(100),
-            padding=[dp(16), dp(12), dp(16), dp(12)],
-            spacing=dp(8),
-            radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[0, 0, 0, 0.15]
+        self.total_card = StatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
+        self.new_card = StatCard("НОВЫХ", 0, [0.3, 0.8, 0.3])
+        self.dup_card = StatCard("ПОВТОРОВ", 0, [0.9, 0.7, 0.2])
+        self.err_card = StatCard("ОШИБОК", 0, [0.9, 0.4, 0.4])
+
+        stats_grid.add_widget(self.total_card)
+        stats_grid.add_widget(self.new_card)
+        stats_grid.add_widget(self.dup_card)
+        stats_grid.add_widget(self.err_card)
+        main_layout.add_widget(stats_grid)
+
+        # Карточка последней песни (с иконкой из ассета)
+        self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
+        main_layout.add_widget(self.last_song_container)
+
+        # Статус
+        self.status_label = MDLabel(
+            text="Готов к работе",
+            halign="center",
+            size_hint_y=None,
+            height=dp(35),
+            font_size=sp(11),
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 1]
         )
-
-        self.stats_label = MDLabel(text="📊 Всего: 0 | 🆕 Новых: 0 | ❌ Ошибок: 0", halign="center",
-                                   size_hint_y=None, height=dp(35), font_size=sp(13), bold=True)
-        stats_card.add_widget(self.stats_label)
-
-        self.status_label = MDLabel(text="⏸ Парсер не запущен", halign="center", size_hint_y=None,
-                                    height=dp(30), font_size=sp(12))
-        stats_card.add_widget(self.status_label)
-
-        main_layout.add_widget(stats_card)
-
-        # Карточка последней песни
-        last_song_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(100),
-            padding=[dp(8), dp(8), dp(8), dp(8)],
-            spacing=dp(4),
-            radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[0, 0, 0, 0.15]
-        )
-
-        last_song_header = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30),
-                                       padding=[dp(8), dp(0), dp(8), dp(0)])
-        last_song_header.add_widget(MDLabel(text="🎵 ПОСЛЕДНЯЯ ПЕСНЯ", font_size=sp(12), bold=True))
-        last_song_card.add_widget(last_song_header)
-
-        self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(70))
-        last_song_card.add_widget(self.last_song_container)
-
-        main_layout.add_widget(last_song_card)
-
-        bottom_spacer = MDBoxLayout(size_hint_y=None, height=dp(20))
-        main_layout.add_widget(bottom_spacer)
+        main_layout.add_widget(self.status_label)
 
         scroll.add_widget(main_layout)
         self.add_widget(scroll)
 
     def start_auto_update(self):
+        if not self.is_on_screen:
+            return
         if self.update_event:
             self.update_event.cancel()
         self.update_event = Clock.schedule_interval(self._check_status_loop, 2)
@@ -267,84 +399,71 @@ class AMDMParserScreen(MDScreen):
             self.update_event = None
 
     def _check_status_loop(self, dt):
-        """Периодическая проверка статуса"""
+        if not self.is_on_screen:
+            self.stop_auto_update()
+            return
         self._fetch_status()
 
     def _fetch_status(self):
-        """Выполнить запрос статуса"""
         try:
             result = api.get_amdm_parser_status_sync()
-            print(f"DEBUG: Status result = {result}")
 
             if result and result.get('success'):
-                # Для KivyMD 1.2 данные приходят напрямую, без вложенного 'data'
                 data = result.get('data', result)
 
-                # Проверяем структуру - если есть поле 'stats' значит это data
-                if 'stats' in data:
-                    # Уже в правильном формате
-                    pass
-                elif 'total_songs' in data:
-                    # Данные пришли как есть
-                    data = {'stats': data, 'is_running': data.get('is_running', False)}
-
                 is_running = data.get('is_running', False)
-                is_paused = data.get('is_paused', False)
 
-                # Обновляем кнопки
-                if is_running and not is_paused:
+                if is_running:
                     self.start_btn.disabled = True
-                    self.pause_btn.disabled = False
+                    self.start_btn.md_bg_color = [0.3, 0.3, 0.3, 1]
                     self.stop_btn.disabled = False
-                    self.status_label.text = "🟢 Парсер запущен и работает"
-                elif is_running and is_paused:
-                    self.start_btn.disabled = True
-                    self.pause_btn.disabled = True
-                    self.stop_btn.disabled = False
-                    self.status_label.text = "⏸ Парсер на паузе"
+                    self.status_label.text = "ПАРСЕР АКТИВЕН"
+                    self.status_label.text_color = [0.3, 0.8, 0.3, 1]
                 else:
                     self.start_btn.disabled = False
-                    self.pause_btn.disabled = True
+                    self.start_btn.md_bg_color = [0.2, 0.6, 0.2, 1]
                     self.stop_btn.disabled = True
-                    self.status_label.text = "⏹ Парсер остановлен"
+                    self.status_label.text = "ПАРСЕР ОСТАНОВЛЕН"
+                    self.status_label.text_color = [0.6, 0.6, 0.6, 1]
+                    if self.update_event:
+                        self.stop_auto_update()
+                    return
 
-                # Обновляем статистику
                 stats = data.get('stats', {})
-                total = stats.get('total_songs', 0)
-                new_songs = stats.get('new_songs', 0)
-                errors = stats.get('errors', 0)
-                duplicates = stats.get('duplicates', 0)
+                self.total_card.update_value(stats.get('total_songs', 0))
+                self.new_card.update_value(stats.get('new_songs', 0))
+                self.dup_card.update_value(stats.get('duplicates', 0))
+                self.err_card.update_value(stats.get('errors', 0))
 
-                self.stats_label.text = f"📊 Всего: {total} | 🆕 Новых: {new_songs} | ⚠️ Повторов: {duplicates} | ❌ Ошибок: {errors}"
-
-                # Обновляем последнюю песню (проверяем оба возможных формата)
-                recent_songs = stats.get('recent_songs', [])
                 last_song = data.get('last_song', {})
 
-                # Если есть массив recent_songs, берем первый элемент
-                if recent_songs and len(recent_songs) > 0:
-                    song_data = recent_songs[0]
-                elif last_song and last_song.get('filename'):
-                    song_data = last_song
-                else:
-                    song_data = None
-
-                if song_data and song_data.get('filename'):
-                    if self.last_song != song_data.get('filename'):
-                        self.last_song = song_data.get('filename')
+                if last_song and last_song.get('filename'):
+                    if self.last_song != last_song.get('filename'):
+                        self.last_song = last_song.get('filename')
                         self.last_song_container.clear_widgets()
-                        song_card = RecentSongCard(song_data=song_data)
+                        self.last_song_container.height = dp(85)
+                        song_card = RecentSongCard(song_data=last_song, icon_data=self.song_icon_data)
                         self.last_song_container.add_widget(song_card)
-                        print(f"DEBUG: Updated last song: {song_data.get('filename')}")
+                elif self.last_song_container.height != 0:
+                    self.last_song_container.height = dp(0)
+                    self.last_song_container.clear_widgets()
 
         except Exception as e:
-            print(f"DEBUG: Error in _fetch_status - {e}")
+            print(f"DEBUG: Error - {e}")
 
     def start_parser(self, *args):
         try:
             start_page = int(self.start_page_field.text)
             end_page = int(self.end_page_field.text)
             subdomain = self.subdomain_field.text.strip()
+
+            if start_page < 0 or start_page > 54:
+                notify.error("Начальная страница должна быть от 0 до 54")
+                return
+
+            if end_page < 0 or end_page > 54:
+                notify.error("Конечная страница должна быть от 0 до 54")
+                return
 
             if start_page > end_page:
                 notify.error("Начальная страница не может быть больше конечной")
@@ -356,42 +475,44 @@ class AMDMParserScreen(MDScreen):
 
             result = api.start_amdm_parser_sync(start_page, end_page, subdomain)
             if result and result.get('success'):
-                notify.success(f"Парсер AMDM запущен (страницы {start_page}-{end_page})")
+                notify.success(f"Парсер запущен (страницы {start_page}-{end_page})")
                 self.last_song = None
+                self.last_song_container.height = dp(0)
                 self.last_song_container.clear_widgets()
                 self.start_auto_update()
             else:
-                msg = result.get('message', 'Неизвестная ошибка') if result else 'Ошибка соединения'
-                notify.error(f"Ошибка запуска: {msg}")
+                msg = result.get('message', 'Ошибка') if result else 'Ошибка соединения'
+                notify.error(f"Ошибка: {msg}")
 
         except ValueError:
             notify.error("Введите корректные номера страниц")
         except Exception as e:
-            logger.error(f"Ошибка запуска: {e}")
+            logger.error(f"Ошибка: {e}")
             notify.error(f"Ошибка: {e}")
-
-    def pause_parser(self, *args):
-        try:
-            api.pause_amdm_parser(
-                on_success=lambda x: notify.info("Парсер на паузе"),
-                on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
-            )
-        except Exception as e:
-            logger.error(f"Ошибка паузы: {e}")
 
     def stop_parser(self, *args):
         try:
-            api.stop_amdm_parser(
-                on_success=lambda x: (notify.info("Парсер остановлен"), self.stop_auto_update()),
-                on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
-            )
+            result = api.stop_amdm_parser_sync()
+            if result and result.get('success'):
+                notify.info("Парсер остановлен")
+                self.stop_auto_update()
+                self.status_label.text = "ПАРСЕР ОСТАНОВЛЕН"
+                self.start_btn.disabled = False
+                self.start_btn.md_bg_color = [0.2, 0.6, 0.2, 1]
+                self.stop_btn.disabled = True
+            else:
+                api.stop_amdm_parser(
+                    on_success=lambda x: (notify.info("Парсер остановлен"), self.stop_auto_update()),
+                    on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
+                )
         except Exception as e:
-            logger.error(f"Ошибка остановки: {e}")
+            logger.error(f"Ошибка: {e}")
+            notify.error(f"Ошибка: {e}")
 
     def on_enter(self):
-        """При входе на экран"""
-        self.start_auto_update()
+        self.is_on_screen = True
+        self._fetch_status()
 
     def on_leave(self):
-        """При выходе с экрана"""
+        self.is_on_screen = False
         self.stop_auto_update()

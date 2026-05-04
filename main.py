@@ -17,6 +17,13 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from io import BytesIO
 
+import kivy
+kivy.require('2.3.0')
+
+# Настройка шрифта для поддержки эмодзи
+from kivy.core.text import LabelBase
+
+
 
 # ============ ОБРАБОТКА НЕПЕРЕХВАЧЕННЫХ ОШИБОК ============
 def handle_exception(exc_type, exc_value, exc_traceback):
