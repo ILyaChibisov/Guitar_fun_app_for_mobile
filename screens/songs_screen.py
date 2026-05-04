@@ -269,8 +269,8 @@ class AlphabetGrid(MDCard):
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
-        self.height = dp(190)  # Увеличил высоту для комфортного размещения
-        self.padding = [dp(8), dp(8), dp(8), dp(8)]  # Уменьшил отступы
+        self.height = dp(170)  # Уменьшил общую высоту
+        self.padding = [dp(6), dp(6), dp(6), dp(6)]  # Равномерные отступы со всех сторон
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
 
         # Благородный тёмно-зелёный фон с лёгкой прозрачностью
@@ -286,13 +286,13 @@ class AlphabetGrid(MDCard):
         self.rows = []
         self.buttons = []
 
-        # Создаём 4 ряда с уменьшенной высотой
+        # Создаём 4 ряда
         for i in range(4):
             row = MDBoxLayout(
                 orientation='horizontal',
-                spacing=dp(6),  # Уменьшил отступы между кнопками
+                spacing=dp(6),
                 size_hint_y=None,
-                height=dp(36)  # Уменьшил высоту ряда
+                height=dp(34)  # Уменьшил высоту ряда
             )
             self.rows.append(row)
             self.add_widget(row)
@@ -310,11 +310,13 @@ class AlphabetGrid(MDCard):
         if self.current_language == 'ru':
             items = self.RU_LETTERS[:]  # 35 элементов
             rows_count = 5
-            self.height = dp(210)  # Высота для 5 рядов
+            # 5 рядов * 34 = 170 + отступы 12 = 182
+            self.height = dp(182)
         else:
             items = self.EN_LETTERS[:]  # 28 элементов
             rows_count = 4
-            self.height = dp(190)  # Высота для 4 рядов
+            # 4 ряда * 34 = 136 + отступы 12 = 148
+            self.height = dp(148)
 
         # Удаляем старые ряды, если их количество изменилось
         while len(self.rows) > rows_count:
@@ -327,7 +329,7 @@ class AlphabetGrid(MDCard):
                 orientation='horizontal',
                 spacing=dp(6),
                 size_hint_y=None,
-                height=dp(36)
+                height=dp(34)
             )
             self.rows.append(row)
             self.add_widget(row)
