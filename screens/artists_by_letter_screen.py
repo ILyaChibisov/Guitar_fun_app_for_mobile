@@ -124,7 +124,7 @@ class LoadingFooter(MDBoxLayout):
 
 
 class ArtistCard(MDCard):
-    """Карточка исполнителя с улучшенным дизайном: больше скруглений, светлый прозрачный фон, хорошая обводка"""
+    """Карточка исполнителя - современный светлый дизайн с эффектом стекла"""
 
     def __init__(self, artist, songs_count=0, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -134,42 +134,46 @@ class ArtistCard(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(68)  # Немного увеличил для лучшего вида
-        self.padding = [dp(16), dp(10), dp(12), dp(10)]
-        self.spacing = dp(12)
-        self.radius = [dp(16), dp(16), dp(16), dp(16)]  # Увеличенные скругления
-        self.elevation = 2
+        self.height = dp(72)
+        self.padding = [dp(16), dp(12), dp(12), dp(12)]
+        self.spacing = dp(14)
+        self.radius = [dp(20), dp(20), dp(20), dp(20)]
+
+        # Стеклянный эффект (glassmorphism)
+        self.elevation = 0
         self.ripple_behavior = True
 
-        # Светлый прозрачный фон
+        # Очень светлый полупрозрачный фон с эффектом стекла
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [1, 1, 1, 0.12]  # Светлый полупрозрачный
-        self.line_color = [0.46, 0.70, 0.71, 0.35]  # Аккуратная обводка в цвет темы
-        self.line_width = 1.2  # Тонкая, но заметная обводка
+        self.md_bg_color = [1, 1, 1, 0.12]
+
+        # Тонкая градиентная обводка
+        self.line_color = [0.46, 0.70, 0.71, 0.25]
+        self.line_width = 1.0
 
         # Иконка
         self.icon_image = Image(
             size_hint=(None, None),
-            size=(dp(32), dp(32)),
+            size=(dp(36), dp(36)),
             pos_hint={'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
         )
         self._load_icon()
 
-        # Контейнер для текста (две строки)
+        # Контейнер для текста
         self.text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
             spacing=dp(4)
         )
 
-        # Название исполнителя (первая строка)
+        # Название исполнителя
         self.artist_label = MDLabel(
             text=artist,
-            font_size=sp(16),
+            font_size=sp(17),
             size_hint_y=None,
-            height=dp(26),
+            height=dp(28),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
@@ -178,7 +182,7 @@ class ArtistCard(MDCard):
             shorten_from="right"
         )
 
-        # Количество песен (вторая строка)
+        # Количество песен (без эмодзи, с точкой)
         if songs_count == 1:
             songs_word = "песня"
         elif 2 <= songs_count <= 4:
@@ -186,35 +190,44 @@ class ArtistCard(MDCard):
         else:
             songs_word = "песен"
 
+        # Используем обычную точку вместо эмодзи
         self.songs_label = MDLabel(
-            text=f"{songs_count} {songs_word}",
+            text=f"• {songs_count} {songs_word}",
             font_size=sp(12),
             size_hint_y=None,
-            height=dp(22),
+            height=dp(24),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.55],
+            text_color=[1, 1, 1, 0.5],
             valign="middle"
         )
 
         self.text_container.add_widget(self.artist_label)
         self.text_container.add_widget(self.songs_label)
 
-        # Стрелка вправо
+        # Стрелка вправо с эффектом
+        self.arrow_container = MDBoxLayout(
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            pos_hint={'center_y': 0.5}
+        )
+
         self.arrow_label = MDLabel(
             text="›",
-            font_size=sp(28),
-            size_hint_x=None,
-            width=dp(28),
+            font_size=sp(32),
             halign="center",
+            valign="center",
             theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 0.7]  # Цвет стрелки в тон обводки
+            text_color=[0.46, 0.70, 0.71, 0.5]
         )
+
+        self.arrow_container.add_widget(self.arrow_label)
 
         self.add_widget(self.icon_image)
         self.add_widget(self.text_container)
-        self.add_widget(self.arrow_label)
+        self.add_widget(self.arrow_container)
 
-        self.bind(on_release=self.on_click)
+        # Эффект при наведении/нажатии
+        self.bind(on_press=self._on_press, on_release=self._on_release)
 
     def _load_icon(self):
         if HAS_ASSETS:
@@ -226,7 +239,25 @@ class ArtistCard(MDCard):
                     return
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки: {e}")
-        self.icon_image.text = "🎸"
+        # Используем символ гитары
+        self.icon_image.text = "♪"
+
+    def _on_press(self, instance):
+        """Эффект нажатия - слегка затемняем"""
+        Animation(
+            md_bg_color=[1, 1, 1, 0.18],
+            line_color=[0.46, 0.70, 0.71, 0.4],
+            duration=0.1
+        ).start(self)
+
+    def _on_release(self, instance):
+        """Возвращаем цвет"""
+        Animation(
+            md_bg_color=[1, 1, 1, 0.12],
+            line_color=[0.46, 0.70, 0.71, 0.25],
+            duration=0.2
+        ).start(self)
+        self.on_click(instance)
 
     def on_click(self, instance):
         if self.on_click_callback:
