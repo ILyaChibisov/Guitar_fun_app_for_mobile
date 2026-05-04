@@ -274,11 +274,9 @@ class AlphabetGrid(MDCard):
         self.padding = [dp(0), dp(0), dp(0), dp(0)]
         self.radius = [theme.CORNER_RADIUS_SMALL]
 
-        # Делаем фон полупрозрачным, чуть темнее (20% вместо 15%)
-        self.theme_bg_color = "Custom"
-        self.md_bg_color = [0, 0, 0, 0.2]
-        self.line_color = [1, 1, 1, 0.1]
-        self.line_width = 1
+        # Используем Surface для полупрозрачного фона
+        self.theme_bg_color = "Surface"
+        self.md_bg_color = [0.7, 1, 1, 0.01]  # 15% прозрачности
         self.elevation = 2
 
         self.rows = []

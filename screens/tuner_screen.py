@@ -4,14 +4,14 @@
 плавной анимацией и выбором строя
 """
 import math
-import numpy as np
+import struct
 import pyaudio
 from kivy.clock import Clock
 from kivy.animation import Animation
 from kivy.graphics import Color, Line, Ellipse
 from kivy.metrics import dp, sp
 from kivy.uix.widget import Widget
-from kivy.uix.button import Button  # Используем обычную кнопку Kivy
+from kivy.uix.button import Button
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -76,7 +76,7 @@ class WaveformWidget(Widget):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.audio_data = np.zeros(CHUNK)
+        self.audio_data = [0.0] * CHUNK
 
     def update_data(self, data):
         self.audio_data = data
@@ -104,7 +104,8 @@ class WaveformWidget(Widget):
 
                 if start_idx < end_idx:
                     segment = self.audio_data[start_idx:end_idx]
-                    val = np.mean(np.abs(segment)) * height * 2
+                    # Вычисляем среднее абсолютное значение без numpy
+                    val = sum(abs(v) for v in segment) / len(segment) * height * 2 if segment else 0
                     val = min(val, height / 2)
 
                     y1 = center_y - val
@@ -430,8 +431,11 @@ class TunerScreen(MDScreen):
         if not self.is_listening:
             return (None, pyaudio.paContinue)
         try:
-            data = np.frombuffer(in_data, dtype=np.float32).copy()
-            level = np.sqrt(np.mean(data ** 2))
+            # Преобразуем байты в список float без numpy
+            data = list(struct.unpack('f' * (len(in_data) // 4), in_data))
+
+            # Вычисляем уровень громкости
+            level = math.sqrt(sum(x * x for x in data) / len(data)) if data else 0
             Clock.schedule_once(lambda dt: self.update_waveform(data), 0)
             if level < 0.005:
                 Clock.schedule_once(lambda dt: self.show_silence())
@@ -446,36 +450,57 @@ class TunerScreen(MDScreen):
 
     def update_waveform(self, data):
         if hasattr(self, 'waveform') and len(data) > 0:
-            normalized = data / (np.max(np.abs(data)) + 0.001)
+            max_val = max(abs(x) for x in data) if data else 1
+            normalized = [x / (max_val + 0.001) for x in data]
             self.waveform.update_data(normalized[:min(CHUNK, len(normalized))])
-            level = np.sqrt(np.mean(data ** 2))
-            level_db = -40 if level < 0.01 else min(0, int(20 * np.log10(level) + 0.5))
+
+            # Вычисляем уровень в dB
+            rms = math.sqrt(sum(x * x for x in data) / len(data)) if data else 0
+            level_db = -40 if rms < 0.01 else min(0, int(20 * math.log10(rms) + 0.5))
             self.volume_label.text = f"🎤 Уровень: {level_db} dB"
 
     def detect_pitch(self, data, sample_rate):
+        """Определяет частоту звука (без numpy)"""
         if len(data) == 0:
             return 0
-        window = np.hanning(len(data))
-        data = data * window
-        corr = np.correlate(data, data, mode='full')
-        corr = corr[len(corr) // 2:]
+
+        # Простая оконная функция Ханна (на чистом Python)
+        window = [0.5 * (1 - math.cos(2 * math.pi * i / (len(data) - 1))) for i in range(len(data))]
+        data = [data[i] * window[i] for i in range(len(data))]
+
+        # Автокорреляция на чистом Python
+        corr = []
+        for i in range(len(data)):
+            corr_val = 0
+            for j in range(len(data) - i):
+                corr_val += data[j] * data[j + i]
+            corr.append(corr_val)
 
         min_freq, max_freq = 40, 400
-        min_lag, max_lag = int(sample_rate / max_freq), int(sample_rate / min_freq)
+        min_lag = int(sample_rate / max_freq)
+        max_lag = int(sample_rate / min_freq)
+
         if max_lag >= len(corr):
             max_lag = len(corr) - 1
         if min_lag >= max_lag or min_lag < 0:
             return 0
 
-        search = corr[min_lag:max_lag + 1]
-        if len(search) == 0:
+        # Ищем максимум автокорреляции
+        try:
+            search = corr[min_lag:max_lag + 1]
+            peak_idx = search.index(max(search)) + min_lag
+        except (ValueError, IndexError):
             return 0
-        peak_idx = np.argmax(search) + min_lag
+
         if 0 < peak_idx < len(corr) - 1:
-            y0, y1, y2 = corr[peak_idx - 1], corr[peak_idx], corr[peak_idx + 1]
-            if y1 > 0:
-                peak_idx += (y2 - y0) / (2 * (2 * y1 - y2 - y0))
-        frequency = sample_rate / peak_idx
+            try:
+                y0, y1, y2 = corr[peak_idx - 1], corr[peak_idx], corr[peak_idx + 1]
+                if y1 > 0:
+                    peak_idx += (y2 - y0) / (2 * (2 * y1 - y2 - y0))
+            except (ValueError, IndexError):
+                pass
+
+        frequency = sample_rate / peak_idx if peak_idx > 0 else 0
         return frequency if min_freq <= frequency <= max_freq else 0
 
     def show_silence(self):
@@ -486,7 +511,10 @@ class TunerScreen(MDScreen):
     def update_tuner_display(self, frequency):
         closest_note, target_freq = self.find_closest_note(frequency)
         if closest_note:
-            cents = max(-50, min(50, 1200 * math.log2(frequency / target_freq)))
+            try:
+                cents = max(-50, min(50, 1200 * math.log2(frequency / target_freq)))
+            except (ValueError, ZeroDivisionError):
+                cents = 0
             self.current_cents = cents
             note_name, octave = closest_note[:-1], closest_note[-1]
             ru_name = NOTE_NAMES_RU.get(note_name, note_name)

@@ -142,7 +142,7 @@ class ArtistCard(MDCard):
         self.ripple_behavior = True
 
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [0, 0, 0, 0.15]
+        self.md_bg_color = [0, 0, 0, 0.0001]
         self.line_color = [1, 1, 1, 0.1]
         self.line_width = 1
 
