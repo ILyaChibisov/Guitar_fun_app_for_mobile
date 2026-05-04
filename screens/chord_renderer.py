@@ -8,14 +8,66 @@ from kivy.core.image import Image as CoreImage
 from kivy.graphics import Color, Rectangle
 from io import BytesIO
 import base64
+import os
+import sys
 
+# ============ РАСШИРЕННЫЙ ПОИСК SPRITE_IMAGES ============
+SPRITE_IMAGES = None
+HAS_SPRITES = False
+
+# Способ 1: прямой импорт из корня
 try:
     from sprite_images import SPRITE_IMAGES
 
     HAS_SPRITES = True
+    print("✅ Спрайты загружены (прямой импорт)")
 except ImportError:
-    HAS_SPRITES = False
-    print("⚠️ sprite_images.py не найден")
+    pass
+
+# Способ 2: через sys.path (добавляем корень проекта)
+if not HAS_SPRITES:
+    try:
+        # Добавляем родительскую директорию в путь
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+        from sprite_images import SPRITE_IMAGES
+
+        HAS_SPRITES = True
+        print(f"✅ Спрайты загружены (через sys.path: {parent_dir})")
+    except ImportError as e:
+        print(f"⚠️ sprite_images.py не найден в {parent_dir}: {e}")
+
+# Способ 3: ищем файл вручную
+if not HAS_SPRITES:
+    try:
+        possible_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'sprite_images.py'),
+            os.path.join(os.getcwd(), 'sprite_images.py'),
+            '/data/data/com.guitarfuns.guitarfuns/files/app/sprite_images.py',
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                print(f"✅ Найден файл спрайтов: {path}")
+                import importlib.util
+
+                spec = importlib.util.spec_from_file_location("sprite_images", path)
+                sprite_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(sprite_module)
+                SPRITE_IMAGES = getattr(sprite_module, 'SPRITE_IMAGES', None)
+                if SPRITE_IMAGES:
+                    HAS_SPRITES = True
+                    print(f"✅ Спрайты загружены из файла: {path}")
+                    break
+    except Exception as e:
+        print(f"⚠️ Ошибка при ручном поиске спрайтов: {e}")
+
+if not HAS_SPRITES:
+    print("⚠️ СПРАЙТЫ НЕ ЗАГРУЖЕНЫ! Аккорды не будут отображаться.")
+
+
+# ===========================================================
 
 
 class ChordRenderer(RelativeLayout):
@@ -23,17 +75,12 @@ class ChordRenderer(RelativeLayout):
     IMAGE_WIDTH = 1376
     IMAGE_HEIGHT = 830
 
-    # ============ КАЛИБРОВКА ДЛЯ ЛАДОВ (цифры над грифом) ============
-    # Если лады внизу - УВЕЛИЧЬ FRET_Y_OFFSET (положительное значение)
-    # Если лады вверху - УМЕНЬШИ (отрицательное)
+    # ============ КАЛИБРОВКА ДЛЯ ЛАДОВ ============
     FRET_X_OFFSET = 0
-    FRET_Y_OFFSET = 790  # ← ПРОБУЙ: 50, 100, 150, 200
+    FRET_Y_OFFSET = 790
 
     # ============ АВТОМАТИЧЕСКАЯ КАЛИБРОВКА ДЛЯ БАРЕ ============
-    # Включить/выключить автоматическое смещение
     BARRE_AUTO_OFFSET = True
-
-    # Дополнительное ручное смещение (если нужно)
     BARRE_EXTRA_OFFSET = 0
 
     # ============ КАЛИБРОВКА ДЛЯ НОТ И ПАЛЬЦЕВ ============
@@ -65,6 +112,7 @@ class ChordRenderer(RelativeLayout):
 
     def load_chord(self, chord_module):
         self.current_module = chord_module
+        print(f"🎵 load_chord: {chord_module}")
         self._create_sprites()
 
     def set_mode(self, mode):
@@ -94,7 +142,12 @@ class ChordRenderer(RelativeLayout):
         return new_x, new_y, scale
 
     def _create_sprites(self):
-        if not self.current_module or not HAS_SPRITES:
+        if not self.current_module:
+            print("⚠️ _create_sprites: current_module is None")
+            return
+
+        if not HAS_SPRITES:
+            print("⚠️ _create_sprites: HAS_SPRITES is False")
             return
 
         self.sprite_layer.clear_widgets()
@@ -109,16 +162,21 @@ class ChordRenderer(RelativeLayout):
         else:
             selected = getattr(self.current_module, 'SELECTED_NOTE', [])
 
-        # Лады - БЕЗ инверсии, со своим смещением
+        # Отладочный вывод
+        print(f"🎸 Рендеринг аккорда: {getattr(self.current_module, 'METADATA', {}).get('name', 'Unknown')}")
+        print(f"   Ладов: {len(frets)}, Нот: {len(notes)}, Баре: {len(barres)}, Выбрано: {len(selected)}")
+        print(f"   Режим: {self.current_mode}, HAS_SPRITES: {HAS_SPRITES}")
+
+        # Лады
         for fret_id, fret_data in frets.items():
             self._add_fret_sprite(fret_data)
 
-        # Баре - С инверсией, со своим смещением
+        # Баре
         for key in selected:
             if 'BAR' in key and key in barres:
                 self._add_barre_sprite(barres[key])
 
-        # Ноты/пальцы - С инверсией
+        # Ноты/пальцы
         for key in selected:
             if 'BAR' in key:
                 continue
@@ -126,6 +184,18 @@ class ChordRenderer(RelativeLayout):
                 self._add_note_sprite(notes[key])
             elif key in open_notes:
                 self._add_x_sprite(open_notes[key])
+
+    def _get_sprite_texture(self, sprite_name):
+        """Безопасное получение текстуры спрайта"""
+        if not HAS_SPRITES or sprite_name not in SPRITE_IMAGES:
+            return None
+        try:
+            img_data = base64.b64decode(SPRITE_IMAGES[sprite_name])
+            texture = CoreImage(BytesIO(img_data), ext="png").texture
+            return texture
+        except Exception as e:
+            print(f"Ошибка загрузки спрайта {sprite_name}: {e}")
+            return None
 
     def _add_fret_sprite(self, fret_data):
         x = fret_data.get('x', 0)
@@ -136,7 +206,6 @@ class ChordRenderer(RelativeLayout):
         if not symbol:
             return
 
-        # Лады: БЕЗ инверсии, со своим смещением
         new_x, new_y, scale = self._transform_coords(
             x, y,
             offset_x=self.FRET_X_OFFSET,
@@ -146,11 +215,9 @@ class ChordRenderer(RelativeLayout):
         new_size = size * scale
 
         sprite_name = f"fret_{symbol}_{size}"
+        texture = self._get_sprite_texture(sprite_name)
 
-        if sprite_name in SPRITE_IMAGES:
-            img_data = base64.b64decode(SPRITE_IMAGES[sprite_name])
-            texture = CoreImage(BytesIO(img_data), ext="png").texture
-
+        if texture:
             sprite = Image(
                 texture=texture,
                 size_hint=(None, None),
@@ -165,7 +232,6 @@ class ChordRenderer(RelativeLayout):
         y = note_data.get('y', 0)
         radius = note_data.get('radius', 50)
 
-        # Ноты: С инверсией
         new_x, new_y, scale = self._transform_coords(
             x, y,
             offset_x=self.NOTE_X_OFFSET,
@@ -179,25 +245,24 @@ class ChordRenderer(RelativeLayout):
 
         note_name = note_data.get('note_name', '')
         finger = note_data.get('finger', '')
+        radius_val = note_data.get('radius', 50)
 
         if self.current_mode == "finger":
             if finger:
-                sprite_name = f"finger_{finger}_{radius}"
+                sprite_name = f"finger_{finger}_{radius_val}"
             elif note_name:
                 clean_note = note_name.replace('#', 'sharp')
-                sprite_name = f"note_{clean_note}_{radius}"
+                sprite_name = f"note_{clean_note}_{radius_val}"
             else:
                 return
         else:
             if not note_name:
                 return
             clean_note = note_name.replace('#', 'sharp')
-            sprite_name = f"note_{clean_note}_{radius}"
+            sprite_name = f"note_{clean_note}_{radius_val}"
 
-        if sprite_name in SPRITE_IMAGES:
-            img_data = base64.b64decode(SPRITE_IMAGES[sprite_name])
-            texture = CoreImage(BytesIO(img_data), ext="png").texture
-
+        texture = self._get_sprite_texture(sprite_name)
+        if texture:
             sprite = Image(
                 texture=texture,
                 size_hint=(None, None),
@@ -224,11 +289,9 @@ class ChordRenderer(RelativeLayout):
             new_radius = 6
 
         sprite_name = f"x_{radius}"
+        texture = self._get_sprite_texture(sprite_name)
 
-        if sprite_name in SPRITE_IMAGES:
-            img_data = base64.b64decode(SPRITE_IMAGES[sprite_name])
-            texture = CoreImage(BytesIO(img_data), ext="png").texture
-
+        if texture:
             sprite = Image(
                 texture=texture,
                 size_hint=(None, None),
@@ -245,15 +308,13 @@ class ChordRenderer(RelativeLayout):
         height = barre_data.get('height', 20)
         style = barre_data.get('style', 'wood')
 
-        # АВТОМАТИЧЕСКОЕ СМЕЩЕНИЕ: смещаем на высоту баре
         if self.BARRE_AUTO_OFFSET:
-            auto_offset = -height  # отрицательное = вверх
+            auto_offset = -height
         else:
             auto_offset = 0
 
         total_offset = auto_offset + self.BARRE_EXTRA_OFFSET
 
-        # Баре: С инверсией, с автоматическим смещением
         new_x, new_y, scale = self._transform_coords(
             x, y,
             offset_x=0,
@@ -264,11 +325,9 @@ class ChordRenderer(RelativeLayout):
         new_height = height * scale
 
         sprite_name = f"barre_{style}_{width}x{height}"
+        texture = self._get_sprite_texture(sprite_name)
 
-        if sprite_name in SPRITE_IMAGES:
-            img_data = base64.b64decode(SPRITE_IMAGES[sprite_name])
-            texture = CoreImage(BytesIO(img_data), ext="png").texture
-
+        if texture:
             sprite = Image(
                 texture=texture,
                 size_hint=(None, None),

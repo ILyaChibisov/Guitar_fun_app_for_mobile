@@ -29,9 +29,12 @@ logger = screen_logger('SearchScreen')
 # Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -40,6 +43,117 @@ def hex_to_rgb(hex_color):
     """Конвертирует hex цвет в RGB список от 0 до 1"""
     hex_color = hex_color.lstrip('#')
     return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
+
+
+# ============ ПОИСКОВАЯ СТРОКА (КАК В SONGS_SCREEN) ============
+
+class SearchBar(MDCard):
+    """Поисковая строка для экрана поиска - единый дизайн с songs_screen"""
+
+    def __init__(self, on_search=None, on_clear=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_search = on_search
+        self.on_clear = on_clear
+
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(48)
+        self.radius = [dp(24), dp(24), dp(24), dp(24)]
+        self.md_bg_color = [0.96, 0.96, 0.96, 1]
+        self.elevation = 1
+        self.padding = [dp(16), dp(6), dp(12), dp(6)]
+        self.spacing = dp(8)
+
+        # Тонкая аккуратная обводка
+        self.line_color = [0.46, 0.70, 0.71, 0.4]
+        self.line_width = 1.0
+
+        # Поле ввода (без подсказки)
+        self.search_field = MDTextField(
+            hint_text="",
+            size_hint_x=1,
+            font_size=sp(15),
+            height=dp(36),
+            on_text_validate=self._on_search,
+            mode="fill"
+        )
+
+        # Убираем все линии и фон у поля ввода
+        self.search_field.line_color_normal = [0, 0, 0, 0]
+        self.search_field.line_color_focus = [0, 0, 0, 0]
+        self.search_field.fill_color_normal = [1, 1, 1, 0]
+        self.search_field.fill_color_focus = [1, 1, 1, 0]
+        self.search_field.hint_text_color = [0.7, 0.7, 0.7, 1]
+
+        # Устанавливаем цвет текста через style
+        self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
+
+        self.search_field.bind(text=self._on_text_change)
+
+        # Кнопка очистки (крестик)
+        self.clear_btn = MDIconButton(
+            icon="close-circle",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.6, 0.6, 0.6, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_clear,
+            opacity=0
+        )
+
+        # Кнопка лупы справа
+        self.search_icon = MDIconButton(
+            icon="magnify",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_search,
+            pos_hint={'center_y': 0.5}
+        )
+
+        self.add_widget(self.search_field)
+        self.add_widget(self.clear_btn)
+        self.add_widget(self.search_icon)
+
+    def _on_text_change(self, instance, text):
+        """Показываем/скрываем кнопку очистки при вводе текста"""
+        self.clear_btn.opacity = 1 if text else 0
+
+    def _on_search(self, instance):
+        """Выполнение поиска"""
+        if self.on_search:
+            text = self.search_field.text.strip()
+            if text:
+                self.on_search(text)
+
+    def _on_clear(self, instance):
+        """Очистка поля поиска"""
+        self.search_field.text = ""
+        self.search_field.focus = True
+        self.clear_btn.opacity = 0
+        if self.on_clear:
+            self.on_clear()
+
+    def get_text(self):
+        """Получить текст из поля поиска"""
+        return self.search_field.text.strip()
+
+    def set_text(self, text):
+        """Установить текст в поле поиска"""
+        self.search_field.text = text
+        self.clear_btn.opacity = 1 if text else 0
+
+    def clear(self):
+        """Очистить поле поиска"""
+        self.search_field.text = ""
+        self.clear_btn.opacity = 0
+
+    def focus(self):
+        """Установить фокус на поле поиска"""
+        self.search_field.focus = True
 
 
 class ResultCard(MDCard):
@@ -142,7 +256,12 @@ class ResultCard(MDCard):
                 logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
 
         # Если не загрузилась, показываем эмодзи
-        self.icon_image.text = "🎸" if self.result_type == 'chord' else "🎵"
+        if self.result_type == 'chord':
+            self.icon_image.source = ''  # Убираем source если был
+            self.icon_image.text = "🎸"
+        else:
+            self.icon_image.source = ''
+            self.icon_image.text = "🎵"
 
     def on_click(self, instance):
         if self.on_click_callback:
@@ -257,60 +376,12 @@ class SearchScreen(MDScreen):
             padding=[dp(16), dp(8), dp(16), dp(8)]
         )
 
-        # Контейнер с белым фоном и скруглением
-        search_wrapper = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(48),
-            md_bg_color=[1, 1, 1, 1],
-            radius=[dp(24), dp(24), dp(24), dp(24)],
-            padding=[dp(16), dp(0), dp(12), dp(0)],
-            spacing=dp(8)
+        # Используем единый дизайн поиска как в songs_screen
+        self.search_bar = SearchBar(
+            on_search=self.perform_search,
+            on_clear=self.clear_results
         )
-
-        # Исправленный MDTextField для KivyMD 1.2.0
-        self.search_input = MDTextField(
-            hint_text="Найти песню, исполнителя или аккорд",
-            mode="fill",
-            size_hint_x=1,
-            height=dp(48),
-            radius=[dp(24), dp(24), dp(24), dp(24)],
-            on_text_validate=self.perform_search,
-            font_size=sp(16),
-            padding=[dp(12), dp(12), dp(0), dp(12)]
-        )
-
-        # Кнопка очистки
-        self.clear_btn = MDIconButton(
-            icon="close-circle",
-            size_hint=(None, None),
-            size=(dp(20), dp(20)),
-            theme_icon_color="Custom",
-            icon_color=[0.6, 0.6, 0.6, 0.8],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.clear_text
-        )
-        self.clear_btn.opacity = 0
-
-        # Кнопка поиска
-        primary_rgb = hex_to_rgb(theme.PRIMARY)
-        self.search_btn = MDIconButton(
-            icon="magnify",
-            size_hint=(None, None),
-            size=(dp(24), dp(24)),
-            theme_icon_color="Custom",
-            icon_color=primary_rgb + [1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.perform_search
-        )
-
-        search_wrapper.add_widget(self.search_input)
-        search_wrapper.add_widget(self.clear_btn)
-        search_wrapper.add_widget(self.search_btn)
-
-        search_container.add_widget(search_wrapper)
-
-        self.search_input.bind(text=self.on_text_change)
+        search_container.add_widget(self.search_bar)
 
         # ============ РЕЗУЛЬТАТЫ ПОИСКА ============
         self.results_scroll = MDScrollView(
@@ -360,24 +431,13 @@ class SearchScreen(MDScreen):
             self.fade_rect.pos = self.fade_layer.pos
             self.fade_rect.size = self.fade_layer.size
 
-    def on_text_change(self, instance, text):
-        """Показывает/скрывает кнопку очистки"""
-        self.clear_btn.opacity = 1 if text else 0
-
-    def clear_text(self, instance):
-        """Очищает поле ввода и результаты"""
-        self.search_input.text = ""
-        self.search_input.focus = True
-        self.clear_results()
-
     def clear_results(self):
         """Очищает результаты поиска"""
         self.results_container.clear_widgets()
         self.search_results = []
 
-    def perform_search(self, instance=None):
+    def perform_search(self, query):
         """Выполняет поиск"""
-        query = self.search_input.text.strip()
         if len(query) < 2:
             notify.warning("Введите минимум 2 символа для поиска")
             return
@@ -546,6 +606,6 @@ class SearchScreen(MDScreen):
             self.manager.current = 'song_detail'
 
     def go_back(self, instance):
-        """Возврат на главный экран"""
+        """Возврат на экран песен"""
         if self.manager:
             self.manager.current = 'songs'
