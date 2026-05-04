@@ -1121,30 +1121,53 @@ class ChordsScreen(MDScreen):
         return False
 
     def scan_chords(self):
+        """
+        Сканирует директорию chords и загружает все модули аккордов
+        """
         chords_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'chords')
+        print(f"🔍 Поиск аккордов в: {chords_dir}")
+
         if not os.path.exists(chords_dir):
+            print(f"❌ Папка chords не найдена: {chords_dir}")
             os.makedirs(chords_dir, exist_ok=True)
             return
 
         self.all_chords = []
+        file_count = 0
+
         for root, dirs, files in os.walk(chords_dir):
+            print(f"📁 Сканируем папку: {root}")
             for f in files:
                 if f.endswith('.py') and not f.startswith('__'):
+                    file_count += 1
                     full_path = os.path.join(root, f)
+                    print(f"   📄 Найден файл #{file_count}: {f}")
+
                     try:
-                        module_name = os.path.splitext(f)[0]
+                        # Создаём имя модуля на основе относительного пути
+                        rel_path = os.path.relpath(full_path, chords_dir)
+                        module_name = os.path.splitext(rel_path)[0].replace(os.sep, '.')
+
+                        # Загружаем модуль
                         spec = importlib.util.spec_from_file_location(module_name, full_path)
                         if spec is None:
+                            print(f"      ⚠️ Не удалось создать spec для {f}")
                             continue
+
                         module = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(module)
+
+                        # Извлекаем метаданные
                         metadata = getattr(module, 'METADATA', {})
-                        chord_name = metadata.get('name', module_name)
+                        chord_name = metadata.get('name', os.path.splitext(f)[0])
                         chord_name = chord_name.replace('!', '|')
                         chord_name = chord_name.replace('$', '/')
+
+                        # Номер варианта
                         variant_match = re.search(r'_(\d+)\.py$', f)
                         variant_num = int(variant_match.group(1)) if variant_match else metadata.get('variant', 1)
-                        self.all_chords.append({
+
+                        chord_data = {
                             'id': f"{chord_name}_v{variant_num}",
                             'name': chord_name,
                             'short_name': chord_name.split('|')[0].replace('$', '/'),
@@ -1153,9 +1176,25 @@ class ChordsScreen(MDScreen):
                             'description': metadata.get('description', ''),
                             'path': full_path,
                             'module': module
-                        })
+                        }
+                        self.all_chords.append(chord_data)
+                        print(
+                            f"      ✅ Загружен аккорд: {chord_name} (тип: {chord_data['type']}, вариант: {variant_num})")
+
                     except Exception as e:
-                        logger.error(f"Ошибка загрузки {f}: {e}")
+                        print(f"      ❌ Ошибка загрузки {f}: {e}")
+                        logger.error(f"Ошибка загрузки {full_path}: {e}")
+
+        print(f"📊 Статистика: найдено файлов {file_count}, загружено аккордов {len(self.all_chords)}")
+
+        # Выводим первые 10 аккордов для проверки
+        if self.all_chords:
+            print("📋 Первые 10 загруженных аккордов:")
+            for i, chord in enumerate(self.all_chords[:10]):
+                print(f"   {i + 1}. {chord['short_name']} (тип: {chord['type']}, вариант: {chord['variant']})")
+        else:
+            print("❌ НЕ ЗАГРУЖЕНО НИ ОДНОГО АККОРДА!")
+
         self.update_chords_list()
 
     def update_chords_list(self):

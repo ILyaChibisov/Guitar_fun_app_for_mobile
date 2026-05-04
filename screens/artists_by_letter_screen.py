@@ -124,7 +124,7 @@ class LoadingFooter(MDBoxLayout):
 
 
 class ArtistCard(MDCard):
-    """Карточка исполнителя с количеством песен на второй строке"""
+    """Карточка исполнителя с улучшенным дизайном: больше скруглений, светлый прозрачный фон, хорошая обводка"""
 
     def __init__(self, artist, songs_count=0, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -134,22 +134,23 @@ class ArtistCard(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(60)
-        self.padding = [dp(12), dp(6), dp(12), dp(6)]
-        self.spacing = dp(10)
-        self.radius = [theme.CORNER_RADIUS_SMALL]
+        self.height = dp(68)  # Немного увеличил для лучшего вида
+        self.padding = [dp(16), dp(10), dp(12), dp(10)]
+        self.spacing = dp(12)
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]  # Увеличенные скругления
         self.elevation = 2
         self.ripple_behavior = True
 
-        self.theme_bg_color = "Surface"
-        self.md_bg_color = [0.1, 0.25, 0.15, 0.85]
-        self.line_color = [1, 1, 1, 0.1]
-        self.line_width = 1.5
+        # Светлый прозрачный фон
+        self.theme_bg_color = "Custom"
+        self.md_bg_color = [1, 1, 1, 0.12]  # Светлый полупрозрачный
+        self.line_color = [0.46, 0.70, 0.71, 0.35]  # Аккуратная обводка в цвет темы
+        self.line_width = 1.2  # Тонкая, но заметная обводка
 
         # Иконка
         self.icon_image = Image(
             size_hint=(None, None),
-            size=(dp(28), dp(28)),
+            size=(dp(32), dp(32)),
             pos_hint={'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
@@ -160,15 +161,15 @@ class ArtistCard(MDCard):
         self.text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
-            spacing=dp(2)
+            spacing=dp(4)
         )
 
         # Название исполнителя (первая строка)
         self.artist_label = MDLabel(
             text=artist,
-            font_size=sp(15),
+            font_size=sp(16),
             size_hint_y=None,
-            height=dp(24),
+            height=dp(26),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
@@ -189,9 +190,9 @@ class ArtistCard(MDCard):
             text=f"{songs_count} {songs_word}",
             font_size=sp(12),
             size_hint_y=None,
-            height=dp(20),
+            height=dp(22),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
+            text_color=[1, 1, 1, 0.55],
             valign="middle"
         )
 
@@ -201,12 +202,12 @@ class ArtistCard(MDCard):
         # Стрелка вправо
         self.arrow_label = MDLabel(
             text="›",
-            font_size=sp(24),
+            font_size=sp(28),
             size_hint_x=None,
             width=dp(28),
             halign="center",
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6]
+            text_color=[0.46, 0.70, 0.71, 0.7]  # Цвет стрелки в тон обводки
         )
 
         self.add_widget(self.icon_image)
@@ -308,13 +309,13 @@ class ArtistsByLetterScreen(MDScreen):
         )
 
         # Контейнер для верхней строки с абсолютным позиционированием
-        top_container = FloatLayout(size_hint_y=None, height=dp(36))
+        top_container = FloatLayout(size_hint_y=None, height=dp(40))
 
         # Кнопка назад (фиксированная позиция слева)
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
-            size=(dp(36), dp(36)),
+            size=(dp(40), dp(40)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -325,7 +326,7 @@ class ArtistsByLetterScreen(MDScreen):
         # Центрированная буква (по центру экрана)
         self.letter_label = MDLabel(
             text="",
-            font_size=sp(20),
+            font_size=sp(22),
             halign="center",
             valign="middle",
             size_hint_x=None,
@@ -363,7 +364,7 @@ class ArtistsByLetterScreen(MDScreen):
 
         self.content_container = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(8),
+            spacing=dp(10),  # Увеличен отступ между карточками
             size_hint_y=None,
             adaptive_height=True,
             padding=[dp(16), dp(12), dp(16), dp(20)]
@@ -426,13 +427,13 @@ class ArtistsByLetterScreen(MDScreen):
 
         # Склоняем слово "исполнитель"
         if total == 0:
-            count_text = "Найдено исполнителей: 0"
+            count_text = "Найдено 0 исполнителей"
         elif total % 10 == 1 and total % 100 != 11:
-            count_text = f"Найдено исполнителей: {total}"
+            count_text = f"Найден {total} исполнитель"
         elif 2 <= total % 10 <= 4 and not (12 <= total % 100 <= 14):
-            count_text = f"Найдено исполнителя: {total}"
+            count_text = f"Найдено {total} исполнителя"
         else:
-            count_text = f"Найдено исполнителей: {total}"
+            count_text = f"Найдено {total} исполнителей"
 
         self.count_label.text = count_text
 
