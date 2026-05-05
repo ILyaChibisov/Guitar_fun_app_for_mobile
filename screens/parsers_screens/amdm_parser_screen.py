@@ -31,33 +31,30 @@ logger = screen_logger('AMDMParserScreen')
 # Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
+
 # Расшифровка страниц AMDM
 PAGE_TO_LETTER = {
-    0: "0..9", 1: "А", 2: "Б", 3: "В", 4: "Г", 5: "Д", 6: "Е", 7: "Ё",
-    8: "Ж", 9: "З", 10: "И", 11: "Й", 12: "К", 13: "Л", 14: "М", 15: "Н",
-    16: "О", 17: "П", 18: "Р", 19: "С", 20: "Т", 21: "У", 22: "Ф", 23: "Х",
-    24: "Ц", 25: "Ч", 26: "Ш", 27: "Щ", 28: "Ъ", 29: "Ы", 30: "Ь", 31: "Э",
-    32: "Ю", 33: "Я", 34: "A", 35: "B", 36: "C", 37: "D", 38: "E", 39: "F",
-    40: "G", 41: "H", 42: "I", 43: "J", 44: "K", 45: "L", 46: "M", 47: "N",
-    48: "O", 49: "P", 50: "Q", 51: "R", 52: "S", 53: "T", 54: "U", 55: "V",
-    56: "W", 57: "X", 58: "Y", 59: "Z"
+    0: "0..9", 1: "А", 2: "Б", 3: "В", 4: "Г", 5: "Д", 6: "Е",
+    7: "Ж", 8: "З", 9: "И", 10: "К", 11: "Л", 12: "М", 13: "Н",
+    14: "О", 15: "П", 16: "Р", 17: "С", 18: "Т", 19: "У", 20: "Ф", 21: "Х",
+    22: "Ц", 23: "Ч", 24: "Ш", 25: "Щ", 26: "Э",
+    27: "Ю", 28: "Я", 29: "A", 30: "B", 31: "C", 32: "D", 33: "E", 34: "F",
+    35: "G", 36: "H", 37: "I", 38: "J", 39: "K", 40: "L", 41: "M", 42: "N",
+    43: "O", 44: "P", 45: "Q", 46: "R", 47: "S", 48: "T", 49: "U", 50: "V",
+    51: "W", 52: "X", 53: "Y", 54: "Z"
 }
 
 LETTER_TO_PAGE = {v: k for k, v in PAGE_TO_LETTER.items()}
 
 # Список букв для выбора (начинается с 0..9)
-RUSSIAN_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М',
-                   'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ',
-                   'Ы', 'Ь', 'Э', 'Ю', 'Я']
+RUSSIAN_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'К', 'Л', 'М',
+                   'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Э', 'Ю', 'Я']
 ENGLISH_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
                    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 ALL_LETTERS = ['0..9'] + RUSSIAN_LETTERS + ENGLISH_LETTERS
@@ -65,7 +62,6 @@ ALL_LETTERS = ['0..9'] + RUSSIAN_LETTERS + ENGLISH_LETTERS
 
 class LetterButton(ButtonBehavior, BoxLayout):
     """Кнопка выбора буквы"""
-
     def __init__(self, letter, on_select, **kwargs):
         super().__init__(**kwargs)
         self.letter = letter
@@ -91,7 +87,6 @@ class LetterButton(ButtonBehavior, BoxLayout):
 
 class CloseButton(ButtonBehavior, BoxLayout):
     """Кнопка закрытия Popup"""
-
     def __init__(self, on_close, **kwargs):
         super().__init__(**kwargs)
         self.on_close = on_close
@@ -113,7 +108,6 @@ class CloseButton(ButtonBehavior, BoxLayout):
 
 class LetterSelector(ButtonBehavior, BoxLayout):
     """Компонент выбора буквы - Popup с клавиатурой на весь экран"""
-
     def __init__(self, title="Буква", on_select=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
@@ -123,7 +117,6 @@ class LetterSelector(ButtonBehavior, BoxLayout):
         self.current_letter = 'А'
         self.popup = None
 
-        # Заголовок
         self.title_label = Label(
             text=title,
             font_size=sp(11),
@@ -133,7 +126,6 @@ class LetterSelector(ButtonBehavior, BoxLayout):
             valign='middle'
         )
 
-        # Значение
         self.value_label = Label(
             text=self.current_letter,
             font_size=sp(16),
@@ -144,7 +136,6 @@ class LetterSelector(ButtonBehavior, BoxLayout):
             valign='middle'
         )
 
-        # Стрелка
         self.arrow_label = Label(
             text="▼",
             font_size=sp(12),
@@ -157,7 +148,6 @@ class LetterSelector(ButtonBehavior, BoxLayout):
         self.add_widget(self.title_label)
         self.add_widget(self.value_label)
         self.add_widget(self.arrow_label)
-
         self.bind(on_release=self._open_popup)
         self._create_popup()
 
@@ -170,7 +160,6 @@ class LetterSelector(ButtonBehavior, BoxLayout):
             size_hint=(1, 1)
         )
 
-        # Заголовок Popup
         header = BoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -187,31 +176,19 @@ class LetterSelector(ButtonBehavior, BoxLayout):
         )
 
         close_btn = CloseButton(on_close=self._close_popup)
-
         header.add_widget(header_title)
         header.add_widget(close_btn)
-
         content.add_widget(header)
 
-        # Сетка для букв (8 колонок)
-        grid = GridLayout(
-            cols=8,
-            spacing=dp(6),
-            size_hint_y=None
-        )
+        grid = GridLayout(cols=8, spacing=dp(6), size_hint_y=None)
         grid.bind(minimum_height=grid.setter('height'))
 
         for letter in ALL_LETTERS:
             letter_btn = LetterButton(letter=letter, on_select=self._select_letter)
             grid.add_widget(letter_btn)
 
-        scroll = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            do_scroll_y=True
-        )
+        scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False, do_scroll_y=True)
         scroll.add_widget(grid)
-
         content.add_widget(scroll)
 
         self.popup = Popup(
@@ -250,7 +227,6 @@ class LetterSelector(ButtonBehavior, BoxLayout):
 
 class StatCard(MDCard):
     """Карточка статистики (без иконок)"""
-
     def __init__(self, title, value, color, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
@@ -294,7 +270,6 @@ class StatCard(MDCard):
 
 class RecentSongCard(MDCard):
     """Карточка последней песни с иконкой из ассета"""
-
     def __init__(self, song_data=None, icon_data=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
@@ -351,7 +326,6 @@ class RecentSongCard(MDCard):
         self.md_bg_color = bg_color
         self.line_color = line_color
 
-        # Иконка из ассета
         icon_image = Image(
             size_hint=(None, None),
             size=(dp(32), dp(32)),
@@ -476,7 +450,6 @@ class AMDMParserScreen(MDScreen):
             line_width=1
         )
 
-        # Поддомен
         self.subdomain_field = MDTextField(
             hint_text="Поддомен (amdm или 1-999)",
             mode="fill",
@@ -486,7 +459,6 @@ class AMDMParserScreen(MDScreen):
         )
         settings_card.add_widget(self.subdomain_field)
 
-        # Выбор букв (от и до)
         letters_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(50))
 
         self.start_letter_selector = LetterSelector(
@@ -501,7 +473,6 @@ class AMDMParserScreen(MDScreen):
 
         letters_layout.add_widget(self.start_letter_selector)
         letters_layout.add_widget(self.end_letter_selector)
-
         settings_card.add_widget(letters_layout)
         main_layout.add_widget(settings_card)
 
@@ -544,9 +515,9 @@ class AMDMParserScreen(MDScreen):
         stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
 
         self.total_card = StatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
-        self.new_card = StatCard("НОВЫХ", 0, [0.3, 0.8, 0.3])
-        self.dup_card = StatCard("ПОВТОРОВ", 0, [0.9, 0.7, 0.2])
-        self.err_card = StatCard("ОШИБОК", 0, [0.9, 0.4, 0.4])
+        self.new_card = StatCard("НОВЫЕ", 0, [0.3, 0.8, 0.3])
+        self.dup_card = StatCard("ПОВТОР", 0, [0.9, 0.7, 0.2])
+        self.err_card = StatCard("ОШИБКИ", 0, [0.9, 0.4, 0.4])
 
         stats_grid.add_widget(self.total_card)
         stats_grid.add_widget(self.new_card)
@@ -558,7 +529,6 @@ class AMDMParserScreen(MDScreen):
         self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
         main_layout.add_widget(self.last_song_container)
 
-        # Статус
         self.status_label = MDLabel(
             text="Готов к работе",
             halign="center",
@@ -583,24 +553,29 @@ class AMDMParserScreen(MDScreen):
         return LETTER_TO_PAGE.get(letter, 0)
 
     def start_auto_update(self):
+        """Начать автоматическое обновление статуса"""
         if not self.is_on_screen:
             return
         if self.update_event:
             self.update_event.cancel()
+        # Обновляем каждые 2 секунды
         self.update_event = Clock.schedule_interval(self._check_status_loop, 2)
 
     def stop_auto_update(self):
+        """Остановить автоматическое обновление"""
         if self.update_event:
             self.update_event.cancel()
             self.update_event = None
 
     def _check_status_loop(self, dt):
+        """Периодическая проверка статуса"""
+        # Всегда проверяем статус, если мы на экране
         if not self.is_on_screen:
-            self.stop_auto_update()
             return
         self._fetch_status()
 
     def _fetch_status(self):
+        """Выполнить запрос статуса"""
         try:
             result = api.get_amdm_parser_status_sync()
 
@@ -610,22 +585,27 @@ class AMDMParserScreen(MDScreen):
                 is_running = data.get('is_running', False)
                 is_paused = data.get('is_paused', False)
 
-                if is_running:
+                if is_running and not is_paused:
                     self.start_btn.disabled = True
                     self.start_btn.md_bg_color = [0.3, 0.3, 0.3, 1]
                     self.stop_btn.disabled = False
                     self.status_label.text = "ПАРСЕР АКТИВЕН"
                     self.status_label.text_color = [0.3, 0.8, 0.3, 1]
+                elif is_running and is_paused:
+                    self.start_btn.disabled = True
+                    self.pause_btn.disabled = True
+                    self.stop_btn.disabled = False
+                    self.status_label.text = "ПАРСЕР НА ПАУЗЕ"
+                    self.status_label.text_color = [0.9, 0.6, 0.1, 1]
                 else:
                     self.start_btn.disabled = False
                     self.start_btn.md_bg_color = [0.2, 0.6, 0.2, 1]
                     self.stop_btn.disabled = True
                     self.status_label.text = "ПАРСЕР ОСТАНОВЛЕН"
                     self.status_label.text_color = [0.6, 0.6, 0.6, 1]
-                    if self.update_event:
-                        self.stop_auto_update()
-                    return
+                    # Не останавливаем автообновление, чтобы отследить запуск позже
 
+                # Обновляем статистику
                 stats = data.get('stats', {})
                 self.total_card.update_value(stats.get('total_songs', 0))
                 self.new_card.update_value(stats.get('new_songs', 0))
@@ -646,7 +626,7 @@ class AMDMParserScreen(MDScreen):
                     self.last_song_container.clear_widgets()
 
         except Exception as e:
-            print(f"DEBUG: Error - {e}")
+            print(f"DEBUG: Error in _fetch_status - {e}")
 
     def start_parser(self, *args):
         try:
@@ -670,7 +650,8 @@ class AMDMParserScreen(MDScreen):
                 self.last_song = None
                 self.last_song_container.height = dp(0)
                 self.last_song_container.clear_widgets()
-                self.start_auto_update()
+                # Автообновление уже запущено, просто обновим статус
+                self._fetch_status()
             else:
                 msg = result.get('message', 'Ошибка') if result else 'Ошибка соединения'
                 notify.error(f"Ошибка: {msg}")
@@ -684,14 +665,10 @@ class AMDMParserScreen(MDScreen):
             result = api.stop_amdm_parser_sync()
             if result and result.get('success'):
                 notify.info("Парсер остановлен")
-                self.stop_auto_update()
-                self.status_label.text = "ПАРСЕР ОСТАНОВЛЕН"
-                self.start_btn.disabled = False
-                self.start_btn.md_bg_color = [0.2, 0.6, 0.2, 1]
-                self.stop_btn.disabled = True
+                self._fetch_status()
             else:
                 api.stop_amdm_parser(
-                    on_success=lambda x: (notify.info("Парсер остановлен"), self.stop_auto_update()),
+                    on_success=lambda x: (notify.info("Парсер остановлен"), self._fetch_status()),
                     on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
                 )
         except Exception as e:
@@ -699,9 +676,12 @@ class AMDMParserScreen(MDScreen):
             notify.error(f"Ошибка: {e}")
 
     def on_enter(self):
+        """При входе на экран"""
         self.is_on_screen = True
-        self._fetch_status()
+        # Запускаем автообновление (оно будет проверять статус)
+        self.start_auto_update()
 
     def on_leave(self):
+        """При выходе с экрана"""
         self.is_on_screen = False
         self.stop_auto_update()
