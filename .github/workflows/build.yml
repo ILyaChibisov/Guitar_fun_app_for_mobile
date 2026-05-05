@@ -70,7 +70,8 @@ jobs:
       - name: Install pip dependencies
         run: |
           pip install --upgrade pip
-          pip install buildozer cython==3.0.11
+          # ВАЖНО: используем старую версию cython для совместимости
+          pip install buildozer cython==0.29.37
 
       - name: Build with Buildozer
         run: |
@@ -79,5 +80,5 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GuitarFuns-APK
+          name: GuitarFuns-APK-${{ github.run_number }}
           path: bin/*.apk
