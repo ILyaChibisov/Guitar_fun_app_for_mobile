@@ -1,7 +1,6 @@
 # screens/parsers_screens/mytabs_parser_screen.py
 """
 Экран управления парсером MyTabs - современный дизайн
-Полностью аналогичен экрану AMDM
 """
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
@@ -29,7 +28,6 @@ from api.client import api
 
 logger = screen_logger('MyTabsParserScreen')
 
-# Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
     HAS_ASSETS = True
@@ -39,24 +37,18 @@ except ImportError:
         return None
 
 
-# ============ КОНСТАНТЫ ДЛЯ MYTABS ============
-# Буквы для MyTabs (порядок соответствует индексам страниц)
-# 0: 0-9, 1: A, 2: B, 3: C, ... 27: Z, 28: А, 29: Б, ... 70: Я
 MYTABS_LETTERS = [
-    '0-9',  # 0 - цифры
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',  # 1-27
+    '0-9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
     'А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М',
     'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ',
-    'Ы', 'Ь', 'Э', 'Ю', 'Я'  # 28-70
+    'Ы', 'Ь', 'Э', 'Ю', 'Я'
 ]
 
-# Создаём маппинг буква -> индекс
 LETTER_TO_PAGE_MYTABS = {letter: idx for idx, letter in enumerate(MYTABS_LETTERS)}
 
 
 class MyTabsLetterButton(ButtonBehavior, BoxLayout):
-    """Кнопка выбора буквы для MyTabs"""
     def __init__(self, letter, on_select, **kwargs):
         super().__init__(**kwargs)
         self.letter = letter
@@ -64,15 +56,8 @@ class MyTabsLetterButton(ButtonBehavior, BoxLayout):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
         self.height = dp(48)
-
-        letter_label = Label(
-            text=letter,
-            font_size=sp(16),
-            color=[1, 1, 1, 1],
-            bold=True,
-            halign='center',
-            valign='middle'
-        )
+        letter_label = Label(text=letter, font_size=sp(16), color=[1, 1, 1, 1], bold=True,
+                             halign='center', valign='middle')
         self.add_widget(letter_label)
         self.bind(on_release=self._on_release)
 
@@ -81,28 +66,19 @@ class MyTabsLetterButton(ButtonBehavior, BoxLayout):
 
 
 class MyTabsCloseButton(ButtonBehavior, BoxLayout):
-    """Кнопка закрытия Popup"""
     def __init__(self, on_close, **kwargs):
         super().__init__(**kwargs)
         self.on_close = on_close
         self.orientation = 'vertical'
         self.size_hint = (None, None)
         self.size = (dp(40), dp(40))
-
-        close_label = Label(
-            text="✕",
-            font_size=sp(20),
-            color=[0.9, 0.3, 0.3, 1],
-            bold=True,
-            halign='center',
-            valign='middle'
-        )
+        close_label = Label(text="✕", font_size=sp(20), color=[0.9, 0.3, 0.3, 1],
+                            bold=True, halign='center', valign='middle')
         self.add_widget(close_label)
         self.bind(on_release=lambda x: self.on_close())
 
 
 class MyTabsLetterSelector(ButtonBehavior, BoxLayout):
-    """Компонент выбора буквы для MyTabs - Popup с клавиатурой"""
     def __init__(self, title="Буква", on_select=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
@@ -112,34 +88,12 @@ class MyTabsLetterSelector(ButtonBehavior, BoxLayout):
         self.current_letter = 'А'
         self.popup = None
 
-        self.title_label = Label(
-            text=title,
-            font_size=sp(11),
-            color=[0.7, 0.7, 0.7, 1],
-            size_hint=(0.4, 1),
-            halign='center',
-            valign='middle'
-        )
-
-        self.value_label = Label(
-            text=self.current_letter,
-            font_size=sp(16),
-            color=[1, 1, 1, 1],
-            bold=True,
-            size_hint=(0.4, 1),
-            halign='center',
-            valign='middle'
-        )
-
-        self.arrow_label = Label(
-            text="▼",
-            font_size=sp(12),
-            color=[0.7, 0.7, 0.7, 1],
-            size_hint=(0.2, 1),
-            halign='center',
-            valign='middle'
-        )
-
+        self.title_label = Label(text=title, font_size=sp(11), color=[0.7, 0.7, 0.7, 1],
+                                 size_hint=(0.4, 1), halign='center', valign='middle')
+        self.value_label = Label(text=self.current_letter, font_size=sp(16), color=[1, 1, 1, 1],
+                                 bold=True, size_hint=(0.4, 1), halign='center', valign='middle')
+        self.arrow_label = Label(text="▼", font_size=sp(12), color=[0.7, 0.7, 0.7, 1],
+                                 size_hint=(0.2, 1), halign='center', valign='middle')
         self.add_widget(self.title_label)
         self.add_widget(self.value_label)
         self.add_widget(self.arrow_label)
@@ -147,54 +101,24 @@ class MyTabsLetterSelector(ButtonBehavior, BoxLayout):
         self._create_popup()
 
     def _create_popup(self):
-        """Создаёт Popup с клавиатурой букв на весь экран"""
-        content = BoxLayout(
-            orientation='vertical',
-            spacing=dp(8),
-            padding=[dp(16), dp(16), dp(16), dp(16)],
-            size_hint=(1, 1)
-        )
-
-        header = BoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(50),
-            spacing=dp(10)
-        )
-
-        header_title = Label(
-            text="ВЫБЕРИТЕ БУКВУ (MYTABS)",
-            font_size=sp(16),
-            color=[1, 1, 1, 1],
-            bold=True,
-            size_hint_x=1
-        )
-
+        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=[dp(16), dp(16), dp(16), dp(16)], size_hint=(1, 1))
+        header = BoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(50), spacing=dp(10))
+        header_title = Label(text="ВЫБЕРИТЕ БУКВУ (MYTABS)", font_size=sp(16), color=[1, 1, 1, 1],
+                             bold=True, size_hint_x=1)
         close_btn = MyTabsCloseButton(on_close=self._close_popup)
         header.add_widget(header_title)
         header.add_widget(close_btn)
         content.add_widget(header)
-
         grid = GridLayout(cols=8, spacing=dp(6), size_hint_y=None)
         grid.bind(minimum_height=grid.setter('height'))
-
         for letter in MYTABS_LETTERS:
             letter_btn = MyTabsLetterButton(letter=letter, on_select=self._select_letter)
             grid.add_widget(letter_btn)
-
         scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False, do_scroll_y=True)
         scroll.add_widget(grid)
         content.add_widget(scroll)
-
-        self.popup = Popup(
-            title="",
-            content=content,
-            size_hint=(1, 1),
-            background_color=[0.08, 0.08, 0.08, 0.98],
-            separator_color=[0, 0, 0, 0],
-            auto_dismiss=True,
-            overlay_color=[0, 0, 0, 0.8]
-        )
+        self.popup = Popup(title="", content=content, size_hint=(1, 1), background_color=[0.08, 0.08, 0.08, 0.98],
+                           separator_color=[0, 0, 0, 0], auto_dismiss=True, overlay_color=[0, 0, 0, 0.8])
 
     def _close_popup(self):
         if self.popup:
@@ -214,14 +138,8 @@ class MyTabsLetterSelector(ButtonBehavior, BoxLayout):
     def get_letter(self):
         return self.current_letter
 
-    def set_letter(self, letter):
-        if letter in MYTABS_LETTERS:
-            self.current_letter = letter
-            self.value_label.text = letter
-
 
 class MyTabsStatCard(MDCard):
-    """Карточка статистики (без иконок)"""
     def __init__(self, title, value, color, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
@@ -234,28 +152,11 @@ class MyTabsStatCard(MDCard):
         self.md_bg_color = [color[0], color[1], color[2], 0.12]
         self.line_color = [color[0], color[1], color[2], 0.4]
         self.line_width = 1
-
-        self.value_label = MDLabel(
-            text=str(value),
-            font_size=sp(28),
-            bold=True,
-            halign="center",
-            size_hint_y=None,
-            height=dp(36),
-            theme_text_color="Custom",
-            text_color=[color[0], color[1], color[2], 1]
-        )
-
-        self.title_label = MDLabel(
-            text=title,
-            font_size=sp(9),
-            halign="center",
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6]
-        )
-
+        self.value_label = MDLabel(text=str(value), font_size=sp(28), bold=True, halign="center",
+                                   size_hint_y=None, height=dp(36), theme_text_color="Custom",
+                                   text_color=[color[0], color[1], color[2], 1])
+        self.title_label = MDLabel(text=title, font_size=sp(9), halign="center", size_hint_y=None, height=dp(20),
+                                   theme_text_color="Custom", text_color=[1, 1, 1, 0.6])
         self.add_widget(self.value_label)
         self.add_widget(self.title_label)
 
@@ -264,7 +165,6 @@ class MyTabsStatCard(MDCard):
 
 
 class MyTabsRecentSongCard(MDCard):
-    """Карточка последней песни с иконкой из ассета"""
     def __init__(self, song_data=None, icon_data=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
@@ -282,25 +182,14 @@ class MyTabsRecentSongCard(MDCard):
     def update_content(self, song_data=None):
         if song_data:
             self.song_data = song_data
-
         self.clear_widgets()
-
         filename = self.song_data.get('filename', '')
         status = self.song_data.get('status', 'unknown')
-        error = self.song_data.get('error', '')
-        tab_number = self.song_data.get('tab_number', 0)
-
         if not filename:
-            empty_label = MDLabel(
-                text="Нет загруженных песен",
-                halign="center",
-                font_size=sp(12),
-                theme_text_color="Custom",
-                text_color=[0.5, 0.5, 0.5, 0.7]
-            )
+            empty_label = MDLabel(text="Нет загруженных песен", halign="center", font_size=sp(12),
+                                  theme_text_color="Custom", text_color=[0.5, 0.5, 0.5, 0.7])
             self.add_widget(empty_label)
             return
-
         if status == 'new':
             bg_color = [0.2, 0.7, 0.2, 0.2]
             line_color = [0.2, 0.8, 0.2, 0.8]
@@ -317,59 +206,30 @@ class MyTabsRecentSongCard(MDCard):
             bg_color = [0.3, 0.3, 0.3, 0.2]
             line_color = [0.5, 0.5, 0.5, 0.8]
             status_text = "ОЖИДАНИЕ"
-
         self.md_bg_color = bg_color
         self.line_color = line_color
-
-        icon_image = Image(
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            pos_hint={'center_y': 0.5},
-            allow_stretch=True,
-            keep_ratio=True
-        )
-
+        icon_image = Image(size_hint=(None, None), size=(dp(32), dp(32)), pos_hint={'center_y': 0.5},
+                           allow_stretch=True, keep_ratio=True)
         if self.icon_data:
             try:
                 img = CoreImage(BytesIO(self.icon_data), ext="png")
                 icon_image.texture = img.texture
             except:
                 pass
-
         name = filename.replace('.txt', '')
         if len(name) > 35:
             name = name[:32] + "..."
-
-        name_label = MDLabel(
-            text=name,
-            font_size=sp(13),
-            bold=True,
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95],
-            valign="middle"
-        )
-
-        status_label = MDLabel(
-            text=status_text,
-            font_size=sp(10),
-            size_hint_x=None,
-            width=dp(70),
-            halign="center",
-            bold=True,
-            theme_text_color="Custom",
-            text_color=line_color,
-            valign="middle"
-        )
-
+        name_label = MDLabel(text=name, font_size=sp(13), bold=True, size_hint_x=1,
+                             theme_text_color="Custom", text_color=[1, 1, 1, 0.95], valign="middle")
+        status_label = MDLabel(text=status_text, font_size=sp(10), size_hint_x=None, width=dp(70),
+                               halign="center", bold=True, theme_text_color="Custom",
+                               text_color=line_color, valign="middle")
         self.add_widget(icon_image)
         self.add_widget(name_label)
         self.add_widget(status_label)
 
 
 class MyTabsParserScreen(MDScreen):
-    """Экран управления парсером MyTabs"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'mytabs_parser'
@@ -383,12 +243,19 @@ class MyTabsParserScreen(MDScreen):
         logger.info('Экран MyTabs парсера создан')
 
     def load_icon(self):
-        """Загрузить иконку песни из ассетов"""
         if HAS_ASSETS:
             try:
                 self.song_icon_data = load_asset_as_bytes('song_png')
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки: {e}")
+
+    def exit_to_admin(self, *args):
+        try:
+            self.manager.current = 'admin'
+            logger.info("Возврат в админ панель")
+        except Exception as e:
+            logger.error(f"Ошибка возврата: {e}")
+            notify.error("Ошибка возврата")
 
     def init_ui(self):
         scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False)
@@ -401,7 +268,6 @@ class MyTabsParserScreen(MDScreen):
         )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        # Заголовок
         title_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -431,7 +297,6 @@ class MyTabsParserScreen(MDScreen):
         title_card.add_widget(subtitle_label)
         main_layout.add_widget(title_card)
 
-        # Настройки
         settings_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -471,42 +336,49 @@ class MyTabsParserScreen(MDScreen):
         settings_card.add_widget(letters_layout)
         main_layout.add_widget(settings_card)
 
-        # Кнопки управления
         buttons_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(65),
+            height=dp(85),
             padding=[dp(12), dp(8), dp(12), dp(8)],
             radius=[12],
             md_bg_color=[0, 0, 0, 0.2],
             elevation=0
         )
 
-        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(48))
+        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
 
         self.start_btn = MDRaisedButton(
             text="ЗАПУСТИТЬ",
-            size_hint_x=0.7,
+            size_hint_x=0.45,
             md_bg_color=[0.2, 0.6, 0.2, 1],
-            font_size=sp(14)
+            font_size=sp(13)
         )
         self.start_btn.bind(on_release=self.start_parser)
 
         self.stop_btn = MDRaisedButton(
             text="ОСТАНОВИТЬ",
-            size_hint_x=0.3,
+            size_hint_x=0.45,
             disabled=True,
             md_bg_color=[0.6, 0.2, 0.2, 1],
-            font_size=sp(14)
+            font_size=sp(13)
         )
         self.stop_btn.bind(on_release=self.stop_parser)
 
+        self.exit_btn = MDRaisedButton(
+            text="ВЫХОД",
+            size_hint_x=0.45,
+            md_bg_color=[0.4, 0.4, 0.8, 1],
+            font_size=sp(13)
+        )
+        self.exit_btn.bind(on_release=self.exit_to_admin)
+
         buttons_layout.add_widget(self.start_btn)
         buttons_layout.add_widget(self.stop_btn)
+        buttons_layout.add_widget(self.exit_btn)
         buttons_card.add_widget(buttons_layout)
         main_layout.add_widget(buttons_card)
 
-        # 4 карточки статистики
         stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
 
         self.total_card = MyTabsStatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
@@ -520,7 +392,6 @@ class MyTabsParserScreen(MDScreen):
         stats_grid.add_widget(self.err_card)
         main_layout.add_widget(stats_grid)
 
-        # Карточка последней песни
         self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
         main_layout.add_widget(self.last_song_container)
 
@@ -545,68 +416,49 @@ class MyTabsParserScreen(MDScreen):
         pass
 
     def _get_page_from_letter(self, letter):
-        """Получить индекс страницы (0-70) по букве"""
         return LETTER_TO_PAGE_MYTABS.get(letter, 0)
 
     def start_auto_update(self):
-        """Начать автоматическое обновление статуса"""
         if not self.is_on_screen:
             return
         if self.update_event:
             self.update_event.cancel()
-        # Обновляем каждые 2 секунды
         self.update_event = Clock.schedule_interval(self._check_status_loop, 2)
 
     def stop_auto_update(self):
-        """Остановить автоматическое обновление"""
         if self.update_event:
             self.update_event.cancel()
             self.update_event = None
 
     def _check_status_loop(self, dt):
-        """Периодическая проверка статуса"""
         if not self.is_on_screen:
             return
         self._fetch_status()
 
     def _fetch_status(self):
-        """Выполнить запрос статуса парсера MyTabs"""
         try:
             result = api.get_mytabs_parser_status_sync()
-
             if result and result.get('success'):
                 data = result.get('data', result)
-
                 is_running = data.get('is_running', False)
-                is_paused = data.get('is_paused', False)
-
-                if is_running and not is_paused:
+                if is_running:
                     self.start_btn.disabled = True
                     self.start_btn.md_bg_color = [0.3, 0.3, 0.3, 1]
                     self.stop_btn.disabled = False
                     self.status_label.text = "ПАРСЕР АКТИВЕН"
                     self.status_label.text_color = [0.3, 0.8, 0.3, 1]
-                elif is_running and is_paused:
-                    self.start_btn.disabled = True
-                    self.stop_btn.disabled = False
-                    self.status_label.text = "ПАРСЕР НА ПАУЗЕ"
-                    self.status_label.text_color = [0.9, 0.6, 0.1, 1]
                 else:
                     self.start_btn.disabled = False
                     self.start_btn.md_bg_color = [0.2, 0.6, 0.2, 1]
                     self.stop_btn.disabled = True
                     self.status_label.text = "ПАРСЕР ОСТАНОВЛЕН"
                     self.status_label.text_color = [0.6, 0.6, 0.6, 1]
-
-                # Обновляем статистику
                 stats = data.get('stats', {})
                 self.total_card.update_value(stats.get('total_songs', 0))
                 self.new_card.update_value(stats.get('new_songs', 0))
                 self.dup_card.update_value(stats.get('duplicates', 0))
                 self.err_card.update_value(stats.get('errors', 0))
-
                 last_song = data.get('last_song', {})
-
                 if last_song and last_song.get('filename'):
                     if self.last_song != last_song.get('filename'):
                         self.last_song = last_song.get('filename')
@@ -617,7 +469,6 @@ class MyTabsParserScreen(MDScreen):
                 elif self.last_song_container.height != 0:
                     self.last_song_container.height = dp(0)
                     self.last_song_container.clear_widgets()
-
         except Exception as e:
             print(f"DEBUG: Error in _fetch_status - {e}")
 
@@ -628,15 +479,12 @@ class MyTabsParserScreen(MDScreen):
             start_page = self._get_page_from_letter(start_letter)
             end_page = self._get_page_from_letter(end_letter)
             subdomain = self.subdomain_field.text.strip()
-
             if start_page > end_page:
                 notify.error("Начальная буква не может быть позже конечной")
                 return
-
             if not subdomain:
                 notify.error("Введите поддомен (mytabs)")
                 return
-
             result = api.start_mytabs_parser_sync(start_page, end_page, subdomain)
             if result and result.get('success'):
                 notify.success(f"Парсер MyTabs запущен (буквы {start_letter}-{end_letter})")
@@ -647,7 +495,6 @@ class MyTabsParserScreen(MDScreen):
             else:
                 msg = result.get('message', 'Ошибка') if result else 'Ошибка соединения'
                 notify.error(f"Ошибка: {msg}")
-
         except Exception as e:
             logger.error(f"Ошибка: {e}")
             notify.error(f"Ошибка: {e}")
@@ -658,21 +505,14 @@ class MyTabsParserScreen(MDScreen):
             if result and result.get('success'):
                 notify.info("Парсер MyTabs остановлен")
                 self._fetch_status()
-            else:
-                api.stop_mytabs_parser(
-                    on_success=lambda x: (notify.info("Парсер остановлен"), self._fetch_status()),
-                    on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
-                )
         except Exception as e:
             logger.error(f"Ошибка: {e}")
             notify.error(f"Ошибка: {e}")
 
     def on_enter(self):
-        """При входе на экран"""
         self.is_on_screen = True
         self.start_auto_update()
 
     def on_leave(self):
-        """При выходе с экрана"""
         self.is_on_screen = False
         self.stop_auto_update()

@@ -38,7 +38,6 @@ except ImportError:
         return None
 
 
-# Расшифровка страниц AMDM
 PAGE_TO_LETTER = {
     0: "0..9", 1: "А", 2: "Б", 3: "В", 4: "Г", 5: "Д", 6: "Е",
     7: "Ж", 8: "З", 9: "И", 10: "К", 11: "Л", 12: "М", 13: "Н",
@@ -51,13 +50,7 @@ PAGE_TO_LETTER = {
 }
 
 LETTER_TO_PAGE = {v: k for k, v in PAGE_TO_LETTER.items()}
-
-# Список букв для выбора (начинается с 0..9)
-RUSSIAN_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'К', 'Л', 'М',
-                   'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Э', 'Ю', 'Я']
-ENGLISH_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-                   'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-ALL_LETTERS = ['0..9'] + RUSSIAN_LETTERS + ENGLISH_LETTERS
+ALL_LETTERS = ['0..9'] + list(PAGE_TO_LETTER.values())[1:]
 
 
 class LetterButton(ButtonBehavior, BoxLayout):
@@ -395,6 +388,15 @@ class AMDMParserScreen(MDScreen):
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки: {e}")
 
+    def exit_to_admin(self, *args):
+        """Выход в админ панель"""
+        try:
+            self.manager.current = 'admin'
+            logger.info("Возврат в админ панель")
+        except Exception as e:
+            logger.error(f"Ошибка возврата: {e}")
+            notify.error("Ошибка возврата")
+
     def init_ui(self):
         scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False)
 
@@ -476,38 +478,47 @@ class AMDMParserScreen(MDScreen):
         settings_card.add_widget(letters_layout)
         main_layout.add_widget(settings_card)
 
-        # Кнопки управления
+        # Кнопки управления (3 кнопки в ряд)
         buttons_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(65),
+            height=dp(85),
             padding=[dp(12), dp(8), dp(12), dp(8)],
             radius=[12],
             md_bg_color=[0, 0, 0, 0.2],
             elevation=0
         )
 
-        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(48))
+        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
 
         self.start_btn = MDRaisedButton(
             text="ЗАПУСТИТЬ",
-            size_hint_x=0.7,
+            size_hint_x=0.45,
             md_bg_color=[0.2, 0.6, 0.2, 1],
-            font_size=sp(14)
+            font_size=sp(13)
         )
         self.start_btn.bind(on_release=self.start_parser)
 
         self.stop_btn = MDRaisedButton(
             text="ОСТАНОВИТЬ",
-            size_hint_x=0.3,
+            size_hint_x=0.45,
             disabled=True,
             md_bg_color=[0.6, 0.2, 0.2, 1],
-            font_size=sp(14)
+            font_size=sp(13)
         )
         self.stop_btn.bind(on_release=self.stop_parser)
 
+        self.exit_btn = MDRaisedButton(
+            text="ВЫХОД",
+            size_hint_x=0.45,
+            md_bg_color=[0.4, 0.4, 0.8, 1],
+            font_size=sp(13)
+        )
+        self.exit_btn.bind(on_release=self.exit_to_admin)
+
         buttons_layout.add_widget(self.start_btn)
         buttons_layout.add_widget(self.stop_btn)
+        buttons_layout.add_widget(self.exit_btn)
         buttons_card.add_widget(buttons_layout)
         main_layout.add_widget(buttons_card)
 
@@ -558,7 +569,6 @@ class AMDMParserScreen(MDScreen):
             return
         if self.update_event:
             self.update_event.cancel()
-        # Обновляем каждые 2 секунды
         self.update_event = Clock.schedule_interval(self._check_status_loop, 2)
 
     def stop_auto_update(self):
@@ -568,14 +578,11 @@ class AMDMParserScreen(MDScreen):
             self.update_event = None
 
     def _check_status_loop(self, dt):
-        """Периодическая проверка статуса"""
-        # Всегда проверяем статус, если мы на экране
         if not self.is_on_screen:
             return
         self._fetch_status()
 
     def _fetch_status(self):
-        """Выполнить запрос статуса"""
         try:
             result = api.get_amdm_parser_status_sync()
 
@@ -593,7 +600,6 @@ class AMDMParserScreen(MDScreen):
                     self.status_label.text_color = [0.3, 0.8, 0.3, 1]
                 elif is_running and is_paused:
                     self.start_btn.disabled = True
-                    self.pause_btn.disabled = True
                     self.stop_btn.disabled = False
                     self.status_label.text = "ПАРСЕР НА ПАУЗЕ"
                     self.status_label.text_color = [0.9, 0.6, 0.1, 1]
@@ -603,9 +609,7 @@ class AMDMParserScreen(MDScreen):
                     self.stop_btn.disabled = True
                     self.status_label.text = "ПАРСЕР ОСТАНОВЛЕН"
                     self.status_label.text_color = [0.6, 0.6, 0.6, 1]
-                    # Не останавливаем автообновление, чтобы отследить запуск позже
 
-                # Обновляем статистику
                 stats = data.get('stats', {})
                 self.total_card.update_value(stats.get('total_songs', 0))
                 self.new_card.update_value(stats.get('new_songs', 0))
@@ -650,7 +654,6 @@ class AMDMParserScreen(MDScreen):
                 self.last_song = None
                 self.last_song_container.height = dp(0)
                 self.last_song_container.clear_widgets()
-                # Автообновление уже запущено, просто обновим статус
                 self._fetch_status()
             else:
                 msg = result.get('message', 'Ошибка') if result else 'Ошибка соединения'
@@ -676,12 +679,9 @@ class AMDMParserScreen(MDScreen):
             notify.error(f"Ошибка: {e}")
 
     def on_enter(self):
-        """При входе на экран"""
         self.is_on_screen = True
-        # Запускаем автообновление (оно будет проверять статус)
         self.start_auto_update()
 
     def on_leave(self):
-        """При выходе с экрана"""
         self.is_on_screen = False
         self.stop_auto_update()
