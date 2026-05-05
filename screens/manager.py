@@ -17,6 +17,9 @@ from .search_screen import SearchScreen
 from .parsers_screens.amdm_parser_screen import AMDMParserScreen
 from .parsers_screens.mytabs_parser_screen import MyTabsParserScreen
 from .parsers_screens.accord_pro_parser_screen import AccordProParserScreen
+from .parsers_screens.akkordus_parser_screen import AkkordusParserScreen
+from .parsers_screens.muzland_parser_screen import MuzlandParserScreen
+from .parsers_screens.chordie_parser_screen import ChordieParserScreen
 
 logger = get_logger('ScreenManager')
 
@@ -40,6 +43,9 @@ def setup_screen_manager():
     sm.add_widget(AMDMParserScreen(name='amdm_parser'))
     sm.add_widget(MyTabsParserScreen(name='mytabs_parser'))
     sm.add_widget(AccordProParserScreen(name='accord_pro_parser'))
+    sm.add_widget(AkkordusParserScreen(name='akkordus_parser'))
+    sm.add_widget(MuzlandParserScreen(name='muzland_parser'))
+    sm.add_widget(ChordieParserScreen(name='chordie_parser'))
 
-    logger.info('ScreenManager настроен, добавлено 17 экранов')
+    logger.info('ScreenManager настроен, добавлено 18 экранов')
     return sm

@@ -21,7 +21,6 @@ import time
 warnings.filterwarnings("ignore", category=Warning)
 
 import urllib3
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -141,8 +140,8 @@ class APIClient:
         # Кэш для страниц
         self.cache = {
             'alphabet': None,
-            'artists': {},  # {letter: {page: artists_data, total: total, page_size: 50}}
-            'songs': {},  # {artist: {page: songs_data, total: total, page_size: 50}}
+            'artists': {},
+            'songs': {},
             'popular': None,
             'favorites': None
         }
@@ -159,7 +158,6 @@ class APIClient:
     # ============ МЕТОДЫ КЭШИРОВАНИЯ ============
 
     def _cache_artists_page(self, letter, page, data, total):
-        """Кэширует страницу исполнителей"""
         if letter not in self.cache['artists']:
             self.cache['artists'][letter] = {}
         self.cache['artists'][letter][page] = {
@@ -169,13 +167,11 @@ class APIClient:
         }
 
     def _get_cached_artists_page(self, letter, page):
-        """Получает страницу исполнителей из кэша"""
         if letter in self.cache['artists'] and page in self.cache['artists'][letter]:
             return self.cache['artists'][letter][page]
         return None
 
     def _cache_songs_page(self, artist, page, data, total):
-        """Кэширует страницу песен"""
         if artist not in self.cache['songs']:
             self.cache['songs'][artist] = {}
         self.cache['songs'][artist][page] = {
@@ -185,13 +181,11 @@ class APIClient:
         }
 
     def _get_cached_songs_page(self, artist, page):
-        """Получает страницу песен из кэша"""
         if artist in self.cache['songs'] and page in self.cache['songs'][artist]:
             return self.cache['songs'][artist][page]
         return None
 
     def clear_cache(self):
-        """Очищает кэш"""
         self.cache = {
             'alphabet': None,
             'artists': {},
@@ -243,9 +237,7 @@ class APIClient:
         return headers
 
     def _request_sync(self, url, method='GET', data=None, include_auth=True):
-        """Синхронный запрос"""
         headers = self._get_headers(include_auth)
-
         try:
             if method == 'GET':
                 response = self.session.get(url, headers=headers, timeout=config.CONNECTION_TIMEOUT)
@@ -261,29 +253,13 @@ class APIClient:
             else:
                 response = self.session.request(method, url, json=data, headers=headers,
                                                 timeout=config.CONNECTION_TIMEOUT)
-
             response.raise_for_status()
             return response.json() if response.content else None
-
-        except requests.exceptions.SSLError as e:
-            Logger.error(f'API: SSL ошибка - {e}')
-            raise Exception(f"SSL error: {e}")
-        except requests.exceptions.ConnectionError as e:
-            Logger.error(f'API: Ошибка соединения - {e}')
-            raise Exception(f"Connection error: {e}")
-        except requests.exceptions.Timeout as e:
-            Logger.error(f'API: Таймаут - {e}')
-            raise Exception(f"Timeout: {e}")
-        except requests.exceptions.HTTPError as e:
-            Logger.error(f'API: HTTP ошибка {e.response.status_code}')
-            raise Exception(f"HTTP {e.response.status_code}")
         except Exception as e:
             Logger.error(f'API: Ошибка запроса - {e}')
             raise
 
     def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
-        """Асинхронный запрос"""
-
         def worker():
             try:
                 result = self._request_sync(url, method, data, include_auth)
@@ -295,7 +271,6 @@ class APIClient:
                     Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
                 else:
                     Logger.error(f'API: Ошибка - {error_msg}')
-
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
         return thread
@@ -306,18 +281,14 @@ class APIClient:
     # ============ API МЕТОДЫ ============
 
     def get_alphabet(self, on_success=None, on_failure=None, force_refresh=False):
-        """Получить алфавит"""
-
         if not force_refresh and self.cache['alphabet'] is not None:
             if on_success:
                 Clock.schedule_once(lambda dt: on_success(self.cache['alphabet']), 0)
             return
-
         def _on_success(result):
             self.cache['alphabet'] = result
             if on_success:
                 on_success(result)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/alphabet",
             method='GET',
@@ -328,251 +299,139 @@ class APIClient:
 
     def get_artists_by_letter(self, letter: str, limit: int = 50, offset: int = 0,
                               on_success=None, on_failure=None, force_refresh=False):
-        """Получить исполнителей по букве с пагинацией"""
-
         page = offset // limit if limit > 0 else 0
-
-        # Проверяем кэш
         if not force_refresh:
             cached = self._get_cached_artists_page(letter, page)
             if cached:
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
                 return
-
         import urllib.parse
         encoded_letter = urllib.parse.quote(letter, safe='')
         url = f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}?limit={limit}&offset={offset}"
-
         def _on_success(result):
-            # Сохраняем в кэш
             artists = result.get('artists', [])
             total = result.get('total', 0)
             self._cache_artists_page(letter, page, result, total)
             if on_success:
                 on_success(result)
-
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
-        )
+        return self._request(url=url, method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
     def get_artists_by_digits(self, limit: int = 50, offset: int = 0,
                               on_success=None, on_failure=None, force_refresh=False):
-        """Получить исполнителей для цифр (0-9) с пагинацией"""
-
         page = offset // limit if limit > 0 else 0
         cache_key = "digits"
-
         if not force_refresh:
             cached = self._get_cached_artists_page(cache_key, page)
             if cached:
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
                 return
-
         url = f"{self.config.API_BASE_URL}/songs/artists/digits?limit={limit}&offset={offset}"
-
         def _on_success(result):
             self._cache_artists_page(cache_key, page, result, result.get('total', 0))
             if on_success:
                 on_success(result)
-
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
-        )
+        return self._request(url=url, method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
     def get_songs_by_artist(self, artist: str, limit: int = 50, offset: int = 0,
                             on_success=None, on_failure=None, force_refresh=False):
-        """Получить песни исполнителя с пагинацией"""
-
         page = offset // limit if limit > 0 else 0
-
         if not force_refresh:
             cached = self._get_cached_songs_page(artist, page)
             if cached:
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
                 return
-
         import urllib.parse
         encoded_artist = urllib.parse.quote(artist, safe='')
         url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}?limit={limit}&offset={offset}"
-        Logger.info(f"🔍 Запрос песен для: {artist}")
-        Logger.info(f"🔍 URL: {url}")
-
         def _on_success(result):
             self._cache_songs_page(artist, page, result, result.get('total', 0))
             if on_success:
                 on_success(result)
-
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
-        )
+        return self._request(url=url, method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
     def get_tab(self, song_id: int, on_success=None, on_failure=None):
-        """Получить текст песни"""
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}",
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=False
+            method='GET', on_success=on_success, on_failure=on_failure, include_auth=False
         )
 
     def get_popular_songs(self, limit: int = 20, on_success=None, on_failure=None, force_refresh=False):
-        """Получить популярные песни"""
-
         if not force_refresh and self.cache['popular'] is not None:
             if on_success:
                 Clock.schedule_once(lambda dt: on_success(self.cache['popular']), 0)
             return
-
         def _on_success(result):
             self.cache['popular'] = result
             if on_success:
                 on_success(result)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/popular?limit={limit}",
-            method='GET',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
+            method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False
         )
 
     def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
-        """Получить список избранных песен пользователя"""
-
         def _on_success(result):
-            # Обрабатываем ответ
             if isinstance(result, dict):
                 favorites = result.get('favorites', result.get('songs', []))
             elif isinstance(result, list):
                 favorites = result
             else:
                 favorites = []
-
-            # Преобразуем строки в словари если нужно
             formatted_favorites = []
             for item in favorites:
                 if isinstance(item, str):
                     parts = item.split(' - ', 1)
                     if len(parts) == 2:
-                        formatted_favorites.append({
-                            'artist': parts[0],
-                            'title': parts[1],
-                            'tabs_count': 1,
-                            'id': 0
-                        })
+                        formatted_favorites.append({'artist': parts[0], 'title': parts[1], 'tabs_count': 1, 'id': 0})
                     else:
-                        formatted_favorites.append({
-                            'artist': '',
-                            'title': item,
-                            'tabs_count': 1,
-                            'id': 0
-                        })
+                        formatted_favorites.append({'artist': '', 'title': item, 'tabs_count': 1, 'id': 0})
                 else:
                     formatted_favorites.append(item)
-
             self.cache['favorites'] = formatted_favorites
             Logger.info(f'✅ Получено избранных: {len(formatted_favorites)}')
             if on_success:
                 on_success(formatted_favorites)
-
-        def _on_failure(req, error):
-            if on_failure:
-                on_failure(req, error)
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/favorites",
-            method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
-            include_auth=True
+            method='GET', on_success=_on_success, on_failure=on_failure, include_auth=True
         )
 
     def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Добавить в избранное"""
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
+            method='POST', on_success=on_success, on_failure=on_failure, include_auth=True
         )
 
     def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Удалить из избранного"""
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
-            method='DELETE',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
+            method='DELETE', on_success=on_success, on_failure=on_failure, include_auth=True
         )
 
     def toggle_like(self, song_id: int, on_success=None, on_failure=None):
-        """Переключить лайк"""
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/like",
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
+            method='POST', on_success=on_success, on_failure=on_failure, include_auth=True
         )
 
-    # ============ ПОИСК ============
-
-    def search_songs(self, query: str, limit: int = 30, offset: int = 0,
-                     on_success=None, on_failure=None):
-        """Поиск песен с пагинацией"""
+    def search_songs(self, query: str, limit: int = 30, offset: int = 0, on_success=None, on_failure=None):
         import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
         url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
-
-        def _on_success(result):
-            Logger.info(f"📦 Результат поиска: {result}")
-            Logger.info(f"📦 Тип результата: {type(result)}")
-            if on_success:
-                on_success(result)
-
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
-        )
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=False)
 
     def search_songs_sync(self, query: str, limit: int = 20, offset: int = 0):
-        """Синхронный поиск песен (для экрана поиска)"""
         import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
         url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
-
         try:
             Logger.info(f"🔍 Синхронный поиск: {query}")
-            Logger.info(f"🔍 URL: {url}")
             response = self.session.get(url, timeout=config.CONNECTION_TIMEOUT)
             response.raise_for_status()
-            result = response.json()
-            Logger.info(f"✅ Результаты поиска: {result}")
-            return result
-        except requests.exceptions.Timeout:
-            Logger.error(f"❌ Таймаут синхронного поиска: {query}")
-            return {"results": [], "total": 0}
+            return response.json()
         except Exception as e:
             Logger.error(f"❌ Ошибка синхронного поиска: {e}")
             return {"results": [], "total": 0}
@@ -580,147 +439,93 @@ class APIClient:
     # ============ AUTH METHODS ============
 
     def register(self, username, email, password, full_name=None, on_success=None, on_failure=None):
-        """Регистрация нового пользователя"""
         data = {'username': username, 'email': email, 'password': password}
         if full_name:
             data['full_name'] = full_name
-
         def worker():
             try:
                 response = self.session.post(
-                    config.API_AUTH_REGISTER,
-                    json=data,
-                    headers=self._get_headers(include_auth=False),
-                    timeout=config.CONNECTION_TIMEOUT
+                    config.API_AUTH_REGISTER, json=data,
+                    headers=self._get_headers(include_auth=False), timeout=config.CONNECTION_TIMEOUT
                 )
                 response.raise_for_status()
                 result = response.json() if response.content else None
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(result), 0)
             except Exception as e:
-                error_msg = str(e)
                 if on_failure:
-                    Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
-
-        thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
+                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+        threading.Thread(target=worker, daemon=True).start()
 
     def login(self, username, password, on_success=None, on_failure=None):
-        """Вход по username/password"""
-        data = urllib.parse.urlencode({
-            'username': username,
-            'password': password
-        })
-
+        data = urllib.parse.urlencode({'username': username, 'password': password})
         def _on_success(result):
             self.access_token = result.get('access_token')
             self.refresh_token = result.get('refresh_token')
             self._save_tokens()
             if on_success:
                 on_success(result)
-
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
         def worker():
             try:
-                response = self.session.post(
-                    config.API_AUTH_LOGIN,
-                    data=data,
-                    headers=headers,
-                    timeout=config.CONNECTION_TIMEOUT
-                )
+                response = self.session.post(config.API_AUTH_LOGIN, data=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
                 response.raise_for_status()
                 result = response.json()
                 Clock.schedule_once(lambda dt: _on_success(result), 0)
             except Exception as e:
-                error_msg = str(e)
                 if on_failure:
-                    Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
-
-        thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
+                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+        threading.Thread(target=worker, daemon=True).start()
 
     def google_login(self, on_success=None, on_failure=None):
-        """Начинает вход через Google с callback на локальный сервер"""
         self.waiting_for_callback = True
-
         oauth_server.start()
-
         redirect_uri = f"http://127.0.0.1:{oauth_server.port}/callback"
         auth_url = f"{self.config.API_BASE_URL}/auth/google/login?redirect_uri={urllib.parse.quote(redirect_uri)}"
-
         webbrowser.open(auth_url)
-
-        self._check_callback_interval = Clock.schedule_interval(
-            lambda dt: self._check_callback(on_success, on_failure), 1
-        )
+        self._check_callback_interval = Clock.schedule_interval(lambda dt: self._check_callback(on_success, on_failure), 1)
 
     def _check_callback(self, on_success, on_failure):
         if not self.waiting_for_callback:
             return False
-
         tokens = oauth_server.get_tokens()
         if tokens and tokens.get('access_token'):
             self.waiting_for_callback = False
             Clock.unschedule(self._check_callback_interval)
-
             self.access_token = tokens['access_token']
             self.refresh_token = tokens.get('refresh_token')
             self._save_tokens()
-
-            self.get_current_user(
-                on_success=on_success,
-                on_failure=on_failure
-            )
+            self.get_current_user(on_success=on_success, on_failure=on_failure)
             return False
         return True
 
     def logout(self, on_success=None, on_failure=None):
-        """Выход из аккаунта"""
-
         def _on_success(result):
             self._clear_tokens()
             self.clear_cache()
             if on_success:
                 on_success(result)
-
         if not self.refresh_token:
             self._clear_tokens()
             if on_success:
                 on_success({})
             return
-
         url = f"{self.config.API_AUTH_LOGOUT}?refresh_token={self.refresh_token}"
-        return self._request(
-            url=url,
-            method='POST',
-            on_success=_on_success,
-            on_failure=on_failure,
-            include_auth=False
-        )
+        return self._request(url=url, method='POST', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
     def get_current_user(self, on_success=None, on_failure=None):
-        """Получение текущего пользователя"""
-
         def worker():
             try:
-                response = self.session.get(
-                    config.API_USER_ME,
-                    headers=self._get_headers(include_auth=True),
-                    timeout=config.CONNECTION_TIMEOUT
-                )
+                response = self.session.get(config.API_USER_ME, headers=self._get_headers(include_auth=True), timeout=config.CONNECTION_TIMEOUT)
                 response.raise_for_status()
                 result = response.json()
                 self.user_data = result
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(result), 0)
             except Exception as e:
-                error_msg = str(e)
                 if on_failure:
-                    Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
-
-        thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
+                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+        threading.Thread(target=worker, daemon=True).start()
 
     def is_authenticated(self):
         return self.access_token is not None and self.user_data is not None
@@ -730,28 +535,14 @@ class APIClient:
             return False
         return self.user_data.get('role') == 'admin'
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРОВ ============
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AMDM ============
 
-    def start_amdm_parser(self, start_page: int, end_page: int, subdomain: str,
-                          on_success=None, on_failure=None):
-        """Запустить парсер AMDM"""
+    def start_amdm_parser(self, start_page, end_page, subdomain, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
-        data = {
-            "start_page": start_page,
-            "end_page": end_page,
-            "subdomain": subdomain
-        }
-        return self._request(
-            url=url,
-            method='POST',
-            data=data,
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    def start_amdm_parser_sync(self, start_page: int, end_page: int, subdomain: str):
-        """Синхронный запуск парсера AMDM"""
+    def start_amdm_parser_sync(self, start_page, end_page, subdomain):
         url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
         data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
         try:
@@ -763,18 +554,10 @@ class APIClient:
             return None
 
     def pause_amdm_parser(self, on_success=None, on_failure=None):
-        """Поставить парсер AMDM на паузу"""
         url = f"{self.config.API_BASE_URL}/parsers/amdm/pause"
-        return self._request(
-            url=url,
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def pause_amdm_parser_sync(self):
-        """Синхронная пауза парсера AMDM"""
         url = f"{self.config.API_BASE_URL}/parsers/amdm/pause"
         try:
             response = self.session.post(url, headers=self._get_headers(True), timeout=10)
@@ -785,18 +568,10 @@ class APIClient:
             return None
 
     def resume_amdm_parser(self, on_success=None, on_failure=None):
-        """Возобновить парсер AMDM"""
         url = f"{self.config.API_BASE_URL}/parsers/amdm/resume"
-        return self._request(
-            url=url,
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def resume_amdm_parser_sync(self):
-        """Синхронное возобновление парсера AMDM"""
         url = f"{self.config.API_BASE_URL}/parsers/amdm/resume"
         try:
             response = self.session.post(url, headers=self._get_headers(True), timeout=10)
@@ -807,18 +582,10 @@ class APIClient:
             return None
 
     def stop_amdm_parser(self, on_success=None, on_failure=None):
-        """Остановить парсер AMDM"""
         url = f"{self.config.API_BASE_URL}/parsers/amdm/stop"
-        return self._request(
-            url=url,
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def stop_amdm_parser_sync(self):
-        """Синхронная остановка парсера AMDM"""
         url = f"{self.config.API_BASE_URL}/parsers/amdm/stop"
         try:
             response = self.session.post(url, headers=self._get_headers(True), timeout=10)
@@ -829,73 +596,31 @@ class APIClient:
             return None
 
     def get_amdm_parser_status(self, on_success=None, on_failure=None):
-        """Получить статус парсера AMDM"""
         url = f"{self.config.API_BASE_URL}/parsers/amdm/status"
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def get_amdm_parser_status_sync(self):
-        """Синхронное получение статуса парсера"""
         url = f"{self.config.API_BASE_URL}/parsers/amdm/status"
         try:
             response = self.session.get(url, headers=self._get_headers(True), timeout=10)
             response.raise_for_status()
             result = response.json()
-            print(f"DEBUG API: get_amdm_parser_status_sync result = {result}")
             return result
         except Exception as e:
-            print(f"DEBUG API: Error getting status - {e}")
             return None
 
-    def get_amdm_recent_songs(self, limit: int = 10, on_success=None, on_failure=None):
-        """Получить последние песни от парсера AMDM"""
+    def get_amdm_recent_songs(self, limit=10, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/amdm/recent?limit={limit}"
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def get_letters_sync(self):
-        """Получить список букв с сервера"""
-        url = f"{self.config.API_BASE_URL}/songs/alphabet"
-        try:
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            print(f"Ошибка получения букв: {e}")
-            return None
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MYTABS ============
 
-    def start_mytabs_parser(self, start_page: int, end_page: int, subdomain: str,
-                            on_success=None, on_failure=None):
-        """Запустить парсер MyTabs"""
+    def start_mytabs_parser(self, start_page, end_page, subdomain, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
-        data = {
-            "start_page": start_page,
-            "end_page": end_page,
-            "subdomain": subdomain
-        }
-        return self._request(
-            url=url,
-            method='POST',
-            data=data,
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    def start_mytabs_parser_sync(self, start_page: int, end_page: int, subdomain: str):
-        """Синхронный запуск парсера MyTabs"""
+    def start_mytabs_parser_sync(self, start_page, end_page, subdomain):
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
         data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
         try:
@@ -907,18 +632,10 @@ class APIClient:
             return None
 
     def pause_mytabs_parser(self, on_success=None, on_failure=None):
-        """Поставить парсер MyTabs на паузу"""
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/pause"
-        return self._request(
-            url=url,
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def pause_mytabs_parser_sync(self):
-        """Синхронная пауза парсера MyTabs"""
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/pause"
         try:
             response = self.session.post(url, headers=self._get_headers(True), timeout=10)
@@ -929,18 +646,10 @@ class APIClient:
             return None
 
     def resume_mytabs_parser(self, on_success=None, on_failure=None):
-        """Возобновить парсер MyTabs"""
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/resume"
-        return self._request(
-            url=url,
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def resume_mytabs_parser_sync(self):
-        """Синхронное возобновление парсера MyTabs"""
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/resume"
         try:
             response = self.session.post(url, headers=self._get_headers(True), timeout=10)
@@ -951,18 +660,10 @@ class APIClient:
             return None
 
     def stop_mytabs_parser(self, on_success=None, on_failure=None):
-        """Остановить парсер MyTabs"""
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/stop"
-        return self._request(
-            url=url,
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def stop_mytabs_parser_sync(self):
-        """Синхронная остановка парсера MyTabs"""
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/stop"
         try:
             response = self.session.post(url, headers=self._get_headers(True), timeout=10)
@@ -973,86 +674,30 @@ class APIClient:
             return None
 
     def get_mytabs_parser_status(self, on_success=None, on_failure=None):
-        """Получить статус парсера MyTabs"""
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/status"
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def get_mytabs_parser_status_sync(self):
-        """Синхронное получение статуса парсера MyTabs"""
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/status"
         try:
             response = self.session.get(url, headers=self._get_headers(True), timeout=10)
             response.raise_for_status()
-            result = response.json()
-            print(f"DEBUG API: get_mytabs_parser_status_sync result = {result}")
-            return result
+            return response.json()
         except Exception as e:
-            print(f"DEBUG API: Error getting MyTabs status - {e}")
             return None
 
-    def get_mytabs_recent_songs(self, limit: int = 10, on_success=None, on_failure=None):
-        """Получить последние песни от парсера MyTabs"""
+    def get_mytabs_recent_songs(self, limit=10, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/recent?limit={limit}"
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    def get_active_parser_status_sync(self):
-        """Синхронное получение информации об активном парсере"""
-        url = f"{self.config.API_BASE_URL}/parsers/active"
-        try:
-            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
-            response.raise_for_status()
-            result = response.json()
-            return result
-        except Exception as e:
-            Logger.error(f"Ошибка получения активного парсера: {e}")
-            return {"success": True, "data": {"has_active_parser": False}}
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА ACCORDPRO ============
 
-    def can_start_parser(self, parser_name: str) -> bool:
-        """Проверяет, можно ли запустить парсер"""
-        status = self.get_active_parser_status_sync()
-        if not status.get('success'):
-            return True  # Если ошибка, разрешаем запуск
-
-        data = status.get('data', {})
-        if not data.get('has_active_parser'):
-            return True
-
-        active_parser = data.get('active_parser', {})
-        return active_parser.get('name') == parser_name
-
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDS.PRO ============
-
-    def start_accord_pro_parser(self, start_group: int, end_group: int,
-                                on_success=None, on_failure=None):
-        """Запустить парсер Akkords.Pro"""
+    def start_accord_pro_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
-        data = {
-            "start_group": start_group,
-            "end_group": end_group
-        }
-        return self._request(
-            url=url,
-            method='POST',
-            data=data,
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        data = {"start_group": start_group, "end_group": end_group}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    def start_accord_pro_parser_sync(self, start_group: int, end_group: int):
-        """Синхронный запуск парсера Akkords.Pro"""
+    def start_accord_pro_parser_sync(self, start_group, end_group):
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
         data = {"start_group": start_group, "end_group": end_group}
         try:
@@ -1060,63 +705,211 @@ class APIClient:
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            Logger.error(f"Ошибка запуска парсера Akkords.Pro: {e}")
+            Logger.error(f"Ошибка запуска парсера AccordPro: {e}")
             return None
 
     def stop_accord_pro_parser(self, on_success=None, on_failure=None):
-        """Остановить парсер Akkords.Pro"""
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/stop"
-        return self._request(
-            url=url,
-            method='POST',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def stop_accord_pro_parser_sync(self):
-        """Синхронная остановка парсера Akkords.Pro"""
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/stop"
         try:
             response = self.session.post(url, headers=self._get_headers(True), timeout=10)
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            Logger.error(f"Ошибка остановки Akkords.Pro: {e}")
+            Logger.error(f"Ошибка остановки AccordPro: {e}")
             return None
 
     def get_accord_pro_parser_status(self, on_success=None, on_failure=None):
-        """Получить статус парсера Akkords.Pro"""
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/status"
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
     def get_accord_pro_parser_status_sync(self):
-        """Синхронное получение статуса парсера Akkords.Pro"""
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/status"
         try:
             response = self.session.get(url, headers=self._get_headers(True), timeout=10)
             response.raise_for_status()
-            result = response.json()
-            return result
+            return response.json()
         except Exception as e:
-            print(f"DEBUG API: Error getting AccordPro status - {e}")
             return None
 
-    def get_accord_pro_recent_songs(self, limit: int = 10, on_success=None, on_failure=None):
-        """Получить последние песни от парсера Akkords.Pro"""
+    def get_accord_pro_recent_songs(self, limit=10, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/recent?limit={limit}"
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDUS ============
+
+    def start_akkordus_parser(self, start_group, end_group, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def start_akkordus_parser_sync(self, start_group, end_group):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Akkordus: {e}")
+            return None
+
+    def stop_akkordus_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_akkordus_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки Akkordus: {e}")
+            return None
+
+    def get_akkordus_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_akkordus_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+
+    def get_akkordus_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MUZLAND ============
+
+    def start_muzland_parser(self, start_group, end_group, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def start_muzland_parser_sync(self, start_group, end_group):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Muzland: {e}")
+            return None
+
+    def stop_muzland_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_muzland_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки Muzland: {e}")
+            return None
+
+    def get_muzland_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_muzland_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+
+    def get_muzland_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА CHORDIE ============
+
+    def start_chordie_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def start_chordie_parser_sync(self, start_letter, end_letter):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Chordie: {e}")
+            return None
+
+    def stop_chordie_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_chordie_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки Chordie: {e}")
+            return None
+
+    def get_chordie_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_chordie_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+
+    def get_chordie_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ ОБЩИЕ МЕТОДЫ ============
+
+    def get_active_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/active"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_active_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/active"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return {"success": True, "data": {"has_active_parser": False}}
+
+    def get_letters_sync(self):
+        url = f"{self.config.API_BASE_URL}/songs/alphabet"
+        try:
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Ошибка получения букв: {e}")
+            return None
+
 
 api = APIClient()
