@@ -1,5 +1,4 @@
-# screens/chords_screen.py (исправленный - добавлен метод load_chord_by_name)
-
+# screens/chords_screen.py
 """
 Экран гитарных аккордов
 """
@@ -18,22 +17,22 @@ from kivy.uix.image import Image
 from kivy.core.image import Image as CoreImage
 from io import BytesIO
 import os
+import pkgutil
+import importlib
+import re
+import traceback
 
 from config.theme import theme
 from config.logger_config import screen_logger
 from utils.notifications import notify
 from screens.chord_renderer import ChordRenderer
 
-import importlib.util
-import re
-
-logger = screen_logger('Chords')
-
 # Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
 
     HAS_ASSETS = True
+    print("✅ Модуль ассетов загружен")
 except ImportError:
     HAS_ASSETS = False
 
@@ -42,7 +41,9 @@ except ImportError:
         return None
 
 
-    logger.warning("Модуль data не найден")
+    print("⚠️ Модуль data не найден")
+
+logger = screen_logger('Chords')
 
 TONALITIES = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
 
@@ -638,6 +639,7 @@ class ChordsRow(MDBoxLayout):
 
     def set_chords(self, chords_list):
         """Устанавливает список аккордов"""
+        print(f"ChordsRow.set_chords: получено {len(chords_list)} аккордов")
         self.current_items = [chord['short_name'] for chord in chords_list]
         self.chords_data = {chord['short_name']: chord for chord in chords_list}
         self.current_page = 0
@@ -693,6 +695,7 @@ class ChordsRow(MDBoxLayout):
 
     def on_chord_press(self, chord_name):
         """Обработчик нажатия на аккорд"""
+        print(f"ChordsRow.on_chord_press: {chord_name}")
         self.current_selected = chord_name
         for btn in self.buttons:
             btn.set_active(btn.btn_text == chord_name)
@@ -812,7 +815,6 @@ class ChordsScreen(MDScreen):
             if chord['short_name'].lower() == chord_name.lower():
                 found_chord = chord
                 break
-            # Проверяем также полное имя
             if chord['name'].lower().replace('|', ' ').replace('$', '/') == chord_name.lower():
                 found_chord = chord
                 break
@@ -869,7 +871,6 @@ class ChordsScreen(MDScreen):
         )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        # Отступ сверху (уменьшен, так как убрали поиск)
         top_spacer = Widget(size_hint_y=None, height=dp(65))
         main_layout.add_widget(top_spacer)
 
@@ -934,7 +935,7 @@ class ChordsScreen(MDScreen):
         griff_container.add_widget(self.chord_renderer)
         griff_block.add_widget(griff_container)
 
-        # Нижняя панель - без фона
+        # Нижняя панель
         bottom_panel = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -943,7 +944,6 @@ class ChordsScreen(MDScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
-        # Иконки действий - фиксированная ширина
         action_icons_layout = MDBoxLayout(
             orientation='horizontal',
             size_hint_x=None,
@@ -971,8 +971,6 @@ class ChordsScreen(MDScreen):
         action_icons_layout.add_widget(self.sound_btn)
 
         bottom_panel.add_widget(action_icons_layout)
-
-        # Растяжка
         bottom_panel.add_widget(MDBoxLayout(size_hint_x=1))
 
         # Панель вариантов
@@ -984,7 +982,6 @@ class ChordsScreen(MDScreen):
             padding=[dp(4), dp(2), dp(4), dp(2)]
         )
 
-        # Заголовок "Позиция"
         self.position_title = MDLabel(
             text="Позиция",
             font_size=sp(12),
@@ -995,10 +992,8 @@ class ChordsScreen(MDScreen):
             bold=True,
             valign="middle"
         )
-
         variants_panel.add_widget(self.position_title)
 
-        # Карточка пагинации
         pagination_card = MDBoxLayout(
             orientation='horizontal',
             size_hint_x=None,
@@ -1008,7 +1003,6 @@ class ChordsScreen(MDScreen):
             padding=[dp(2), dp(2), dp(2), dp(2)]
         )
 
-        # Стрелка влево
         self.variants_prev_btn = MDIconButton(
             icon="chevron-left",
             size_hint=(None, None),
@@ -1019,7 +1013,6 @@ class ChordsScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Номер варианта
         self.variant_number_label = MDLabel(
             text="1/1",
             font_size=sp(12),
@@ -1032,7 +1025,6 @@ class ChordsScreen(MDScreen):
             bold=True
         )
 
-        # Стрелка вправо
         self.variants_next_btn = MDIconButton(
             icon="chevron-right",
             size_hint=(None, None),
@@ -1048,11 +1040,9 @@ class ChordsScreen(MDScreen):
         pagination_card.add_widget(self.variants_next_btn)
 
         variants_panel.add_widget(pagination_card)
-
         bottom_panel.add_widget(variants_panel)
 
         griff_block.add_widget(bottom_panel)
-
         main_layout.add_widget(griff_block)
 
         scroll.add_widget(main_layout)
@@ -1063,9 +1053,15 @@ class ChordsScreen(MDScreen):
             bg_data = load_asset_as_bytes("griff_png")
             if bg_data:
                 img = CoreImage(BytesIO(bg_data), ext="png")
-                self.chord_renderer.set_background(img.texture)
+                if img and img.texture:
+                    self.chord_renderer.set_background(img.texture)
+                    print("✅ Фон грифа загружен успешно")
+                else:
+                    print("❌ Фон грифа - пустая текстура")
+            else:
+                print("❌ Фон грифа - нет данных из ассета")
         except Exception as e:
-            logger.error(f"Ошибка загрузки фона грифа: {e}")
+            print(f"❌ Ошибка загрузки фона грифа: {e}")
 
     def update_variant_display(self):
         if self.current_variants:
@@ -1120,93 +1116,141 @@ class ChordsScreen(MDScreen):
             return True
         return False
 
+    # ============ СКАНИРОВАНИЕ АККОРДОВ ============
+
     def scan_chords(self):
         """
-        Сканирует директорию chords и загружает все модули аккордов
+        Рекурсивно сканирует все подпапки в пакете chords и загружает модули аккордов.
         """
-        chords_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'chords')
-        print(f"🔍 Поиск аккордов в: {chords_dir}")
-
-        if not os.path.exists(chords_dir):
-            print(f"❌ Папка chords не найдена: {chords_dir}")
-            os.makedirs(chords_dir, exist_ok=True)
-            return
+        print("\n" + "=" * 60)
+        print("SCAN_CHORDS: Начинаю сканирование аккордов")
+        print("=" * 60)
 
         self.all_chords = []
-        file_count = 0
 
-        for root, dirs, files in os.walk(chords_dir):
-            print(f"📁 Сканируем папку: {root}")
-            for f in files:
-                if f.endswith('.py') and not f.startswith('__'):
-                    file_count += 1
-                    full_path = os.path.join(root, f)
-                    print(f"   📄 Найден файл #{file_count}: {f}")
+        try:
+            import chords
+            print(f"✅ Пакет chords найден: {chords.__path__}")
 
-                    try:
-                        # Создаём имя модуля на основе относительного пути
-                        rel_path = os.path.relpath(full_path, chords_dir)
-                        module_name = os.path.splitext(rel_path)[0].replace(os.sep, '.')
+            self._scan_module_recursive(chords, 'chords')
 
-                        # Загружаем модуль
-                        spec = importlib.util.spec_from_file_location(module_name, full_path)
-                        if spec is None:
-                            print(f"      ⚠️ Не удалось создать spec для {f}")
-                            continue
+        except ImportError as e:
+            print(f"❌ Пакет chords не найден: {e}")
+            traceback.print_exc()
+        except Exception as e:
+            print(f"❌ Непредвиденная ошибка: {e}")
+            traceback.print_exc()
 
-                        module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(module)
+        print("\n" + "=" * 60)
+        print(f"РЕЗУЛЬТАТ: Загружено {len(self.all_chords)} аккордов")
+        print("=" * 60)
 
-                        # Извлекаем метаданные
-                        metadata = getattr(module, 'METADATA', {})
-                        chord_name = metadata.get('name', os.path.splitext(f)[0])
-                        chord_name = chord_name.replace('!', '|')
-                        chord_name = chord_name.replace('$', '/')
-
-                        # Номер варианта
-                        variant_match = re.search(r'_(\d+)\.py$', f)
-                        variant_num = int(variant_match.group(1)) if variant_match else metadata.get('variant', 1)
-
-                        chord_data = {
-                            'id': f"{chord_name}_v{variant_num}",
-                            'name': chord_name,
-                            'short_name': chord_name.split('|')[0].replace('$', '/'),
-                            'variant': variant_num,
-                            'type': metadata.get('type', ''),
-                            'description': metadata.get('description', ''),
-                            'path': full_path,
-                            'module': module
-                        }
-                        self.all_chords.append(chord_data)
-                        print(
-                            f"      ✅ Загружен аккорд: {chord_name} (тип: {chord_data['type']}, вариант: {variant_num})")
-
-                    except Exception as e:
-                        print(f"      ❌ Ошибка загрузки {f}: {e}")
-                        logger.error(f"Ошибка загрузки {full_path}: {e}")
-
-        print(f"📊 Статистика: найдено файлов {file_count}, загружено аккордов {len(self.all_chords)}")
-
-        # Выводим первые 10 аккордов для проверки
+        # Выводим первые 20 аккордов для проверки
         if self.all_chords:
-            print("📋 Первые 10 загруженных аккордов:")
-            for i, chord in enumerate(self.all_chords[:10]):
-                print(f"   {i + 1}. {chord['short_name']} (тип: {chord['type']}, вариант: {chord['variant']})")
+            print("\nПервые 20 загруженных аккордов:")
+            for i, chord in enumerate(self.all_chords[:20]):
+                print(f"  {i + 1}. {chord['short_name']} - тип: {chord['type']} - вариант: {chord['variant']}")
         else:
-            print("❌ НЕ ЗАГРУЖЕНО НИ ОДНОГО АККОРДА!")
+            print("\n❌ НЕ ЗАГРУЖЕНО НИ ОДНОГО АККОРДА!")
 
         self.update_chords_list()
 
+    def _scan_module_recursive(self, module, module_path):
+        """Рекурсивно сканирует модуль и все его подмодули"""
+        try:
+            if hasattr(module, '__path__'):
+                print(f"  Сканируем пакет: {module_path}")
+
+                for module_info in pkgutil.iter_modules(module.__path__, f"{module_path}."):
+                    try:
+                        sub_module = importlib.import_module(module_info.name)
+
+                        if hasattr(sub_module, '__path__'):
+                            self._scan_module_recursive(sub_module, module_info.name)
+                        else:
+                            self._load_chord_module(sub_module, module_info.name)
+
+                    except Exception as e:
+                        print(f"    ❌ Ошибка импорта {module_info.name}: {e}")
+
+        except Exception as e:
+            print(f"  ❌ Ошибка сканирования {module_path}: {e}")
+
+    def _load_chord_module(self, module, module_name):
+        """Загружает отдельный модуль аккорда"""
+        try:
+            metadata = getattr(module, 'METADATA', {})
+
+            chord_name = metadata.get('name', module_name.split('.')[-1])
+            chord_name = chord_name.replace('!', '|')
+            chord_name = chord_name.replace('$', '/')
+
+            path_parts = module_name.split('.')
+            chord_type = metadata.get('type', '')
+
+            if not chord_type and len(path_parts) >= 2:
+                chord_type = path_parts[-2]
+                # Преобразование имён папок
+                type_mapping = {
+                    'Major': 'Major', 'Minor': 'Minor', '7': '7', 'm7': 'm7',
+                    'maj7': 'maj7', 'Dim': 'Dim', 'Dim7': 'Dim7', 'Aug': 'Aug',
+                    'sus2': 'sus2', 'sus4': 'sus4', '7sus4': '7sus4', '9': '9',
+                    'm9': 'm9', '11': '11', 'm11': 'm11', '13': '13', 'm13': 'm13',
+                    'add9': 'add9', 'madd9': 'madd9', '6': '6', 'm6': 'm6',
+                    '6add9': '6add9', 'm6add9': 'm6add9', '7b5': '7b5', '7#5': '7#5',
+                    '7b9': '7b9', '7#9': '7#9', '9b5': '9b5', '9#5': '9#5',
+                    '7(b5,b9)': '7(b5,b9)', '7(b5,#9)': '7(b5,#9)', '7(#5,b9)': '7(#5,b9)',
+                    '7(#5,#9)': '7(#5,#9)', 'maj7b5': 'maj7b5', 'maj7#5': 'maj7#5',
+                    'mmaj7': 'mmaj7', 'mmaj9': 'mmaj9', 'm7b5': 'm7b5', 'm7#5': 'm7#5',
+                    'sus2sus4': 'sus2sus4', '-5': '-5', '5': '5', '11b9': '11b9',
+                    '13b9': '13b9', '13#11': '13#11', '13sharp11': '13#11',
+                    'maj11': 'maj11', 'maj13': 'maj13', 'maj9#11': 'maj9#11',
+                    'maj13#11': 'maj13#11', 'maj9sharp11': 'maj9#11', 'maj13sharp11': 'maj13#11'
+                }
+                chord_type = type_mapping.get(chord_type, chord_type)
+
+            variant_match = re.search(r'_(\d+)$', path_parts[-1])
+            variant_num = int(variant_match.group(1)) if variant_match else metadata.get('variant', 1)
+
+            short_name = chord_name.split('|')[0].replace('$', '/')
+
+            chord_data = {
+                'id': f"{short_name}_{chord_type}_v{variant_num}",
+                'name': chord_name,
+                'short_name': short_name,
+                'variant': variant_num,
+                'type': chord_type,
+                'description': metadata.get('description', ''),
+                'module': module,
+                'path': module_name
+            }
+
+            self.all_chords.append(chord_data)
+            print(f"    ✅ Загружен: {short_name} ({chord_type}, вариант {variant_num}) - {module_name}")
+
+        except Exception as e:
+            print(f"    ❌ Ошибка загрузки модуля {module_name}: {e}")
+            traceback.print_exc()
+
+    # ============ ОБНОВЛЕНИЕ СПИСКОВ ============
+
     def update_chords_list(self):
+        """Обновляет список аккордов для отображения"""
+        print(f"\nupdate_chords_list: tonality={self.current_tonality}, type={self.current_type}")
+
         filtered = []
         for chord in self.all_chords:
             tonality = self.extract_tonality(chord['name'])
             if tonality != self.current_tonality:
                 continue
+
             chord_types = chord['type'].split('|') if chord['type'] else []
-            if self.current_type not in chord_types:
+            if self.current_type not in chord_types and self.current_type != chord.get('type', ''):
                 continue
+
             filtered.append(chord)
+
+        print(f"  Отфильтровано: {len(filtered)} аккордов")
 
         chords_by_name = {}
         for chord in filtered:
@@ -1219,8 +1263,10 @@ class ChordsScreen(MDScreen):
         for name, variants in chords_by_name.items():
             variants.sort(key=lambda x: x['variant'])
             chords_list.append({'short_name': name, 'variants': variants})
+
         chords_list.sort(key=lambda x: x['short_name'])
 
+        print(f"  Сгруппировано: {len(chords_list)} уникальных аккордов")
         self.chords_row.set_chords(chords_list)
 
     def extract_tonality(self, chord_name):
@@ -1233,12 +1279,16 @@ class ChordsScreen(MDScreen):
         match = re.match(r'^([A-H][#b]?)', main_name)
         return match.group(1) if match else (main_name[0] if main_name else "")
 
+    # ============ ЗАГРУЗКА АККОРДА ============
+
     def on_chord_selected(self, chord_name):
+        print(f"\non_chord_selected: {chord_name}")
         chord_data = self.chords_row.get_chord_data(chord_name)
         if chord_data:
             self.load_chord_variants(chord_data['variants'])
 
     def load_chord_variants(self, variants):
+        print(f"load_chord_variants: {len(variants)} вариантов")
         if not variants:
             return
         variants.sort(key=lambda x: x['variant'])
@@ -1249,9 +1299,28 @@ class ChordsScreen(MDScreen):
 
     def load_current_variant(self):
         if not self.current_variants:
+            print("ERROR: current_variants is empty!")
             return
+
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
+
+        print("\n" + "=" * 50)
+        print(f"ЗАГРУЗКА АККОРДА: {variant['short_name']} v{variant['variant']}")
+        print(f"Тип: {variant['type']}")
+        print(f"Модуль: {self.current_chord_module.__name__}")
+        print("-" * 50)
+
+        # Проверяем наличие атрибутов
+        required = ['NOTES', 'FRETS', 'SELECTED_FINGER', 'SELECTED_NOTE']
+        for attr in required:
+            if hasattr(self.current_chord_module, attr):
+                size = len(getattr(self.current_chord_module, attr))
+                print(f"  {attr}: {size} элементов")
+                if attr == 'SELECTED_FINGER' and size > 0:
+                    print(f"    Пример: {getattr(self.current_chord_module, attr)[:3]}")
+            else:
+                print(f"  {attr}: ОТСУТСТВУЕТ!")
 
         chord_name = variant['name'].replace('!', ' | ')
         chord_name = chord_name.replace('$', '/')
@@ -1275,8 +1344,14 @@ class ChordsScreen(MDScreen):
         self.update_variant_display()
 
         if hasattr(self, 'chord_renderer'):
+            print("Вызов chord_renderer.load_chord()")
             self.chord_renderer.load_chord(self.current_chord_module)
             self.chord_renderer.set_mode(self.current_mode)
+            print("✅ chord_renderer.load_chord() выполнен")
+        else:
+            print("❌ chord_renderer не найден!")
+
+        print("=" * 50 + "\n")
 
     def set_mode(self, mode):
         self.current_mode = mode

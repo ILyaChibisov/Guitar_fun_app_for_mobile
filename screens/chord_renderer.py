@@ -1,73 +1,11 @@
 # screens/chord_renderer.py
 """
-Рендерер аккордов с раздельной калибровкой для каждого типа элементов
+Рендерер аккордов - исправленная версия
 """
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.image import Image
-from kivy.core.image import Image as CoreImage
-from kivy.graphics import Color, Rectangle
-from io import BytesIO
-import base64
-import os
-import sys
-
-# ============ РАСШИРЕННЫЙ ПОИСК SPRITE_IMAGES ============
-SPRITE_IMAGES = None
-HAS_SPRITES = False
-
-# Способ 1: прямой импорт из корня
-try:
-    from sprite_images import SPRITE_IMAGES
-
-    HAS_SPRITES = True
-    print("✅ Спрайты загружены (прямой импорт)")
-except ImportError:
-    pass
-
-# Способ 2: через sys.path (добавляем корень проекта)
-if not HAS_SPRITES:
-    try:
-        # Добавляем родительскую директорию в путь
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)
-        if parent_dir not in sys.path:
-            sys.path.insert(0, parent_dir)
-        from sprite_images import SPRITE_IMAGES
-
-        HAS_SPRITES = True
-        print(f"✅ Спрайты загружены (через sys.path: {parent_dir})")
-    except ImportError as e:
-        print(f"⚠️ sprite_images.py не найден в {parent_dir}: {e}")
-
-# Способ 3: ищем файл вручную
-if not HAS_SPRITES:
-    try:
-        possible_paths = [
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'sprite_images.py'),
-            os.path.join(os.getcwd(), 'sprite_images.py'),
-            '/data/data/com.guitarfuns.guitarfuns/files/app/sprite_images.py',
-        ]
-        for path in possible_paths:
-            if os.path.exists(path):
-                print(f"✅ Найден файл спрайтов: {path}")
-                import importlib.util
-
-                spec = importlib.util.spec_from_file_location("sprite_images", path)
-                sprite_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(sprite_module)
-                SPRITE_IMAGES = getattr(sprite_module, 'SPRITE_IMAGES', None)
-                if SPRITE_IMAGES:
-                    HAS_SPRITES = True
-                    print(f"✅ Спрайты загружены из файла: {path}")
-                    break
-    except Exception as e:
-        print(f"⚠️ Ошибка при ручном поиске спрайтов: {e}")
-
-if not HAS_SPRITES:
-    print("⚠️ СПРАЙТЫ НЕ ЗАГРУЖЕНЫ! Аккорды не будут отображаться.")
-
-
-# ===========================================================
+from kivy.logger import Logger
+from chord_sprites import sprite_loader
 
 
 class ChordRenderer(RelativeLayout):
@@ -75,24 +13,13 @@ class ChordRenderer(RelativeLayout):
     IMAGE_WIDTH = 1376
     IMAGE_HEIGHT = 830
 
-    # ============ КАЛИБРОВКА ДЛЯ ЛАДОВ ============
-    FRET_X_OFFSET = 0
-    FRET_Y_OFFSET = 790
-
-    # ============ АВТОМАТИЧЕСКАЯ КАЛИБРОВКА ДЛЯ БАРЕ ============
-    BARRE_AUTO_OFFSET = True
-    BARRE_EXTRA_OFFSET = 0
-
-    # ============ КАЛИБРОВКА ДЛЯ НОТ И ПАЛЬЦЕВ ============
-    NOTE_X_OFFSET = 0
-    NOTE_Y_OFFSET = 0
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_module = None
         self.current_mode = "finger"
         self.background_texture = None
 
+        # Изображение грифа
         self.griff_image = Image(
             allow_stretch=True,
             keep_ratio=True,
@@ -101,6 +28,7 @@ class ChordRenderer(RelativeLayout):
         )
         self.add_widget(self.griff_image)
 
+        # Слой для спрайтов
         self.sprite_layer = RelativeLayout(size_hint=(1, 1))
         self.add_widget(self.sprite_layer)
 
@@ -108,21 +36,34 @@ class ChordRenderer(RelativeLayout):
         self.bind(pos=self._update_positions)
 
     def set_background(self, texture):
-        self.griff_image.texture = texture
+        """Устанавливает фон грифа"""
+        if texture:
+            self.griff_image.texture = texture
+            Logger.info("ChordRenderer: Фон грифа установлен")
+        else:
+            Logger.error("ChordRenderer: Получен пустой texture для фона")
 
     def load_chord(self, chord_module):
+        """Загружает модуль аккорда для отображения"""
+        if not chord_module:
+            Logger.error("ChordRenderer: load_chord получил None")
+            return
+
         self.current_module = chord_module
-        print(f"🎵 load_chord: {chord_module}")
+        Logger.info(f"ChordRenderer: Загрузка аккорда из модуля {chord_module.__name__}")
         self._create_sprites()
 
     def set_mode(self, mode):
+        """Устанавливает режим отображения: finger или note"""
         self.current_mode = mode
-        self._create_sprites()
+        Logger.info(f"ChordRenderer: Режим изменён на {mode}")
+        if self.current_module:
+            self._create_sprites()
 
     def _transform_coords(self, x, y, offset_x=0, offset_y=0, invert_y=False):
-        """Базовое преобразование координат"""
+        """Преобразует координаты из исходного размера в текущий"""
         if self.width <= 0 or self.height <= 0:
-            return x, y
+            return x, y, 1.0
 
         scale_x = self.width / self.IMAGE_WIDTH
         scale_y = self.height / self.IMAGE_HEIGHT
@@ -142,41 +83,39 @@ class ChordRenderer(RelativeLayout):
         return new_x, new_y, scale
 
     def _create_sprites(self):
+        """Создает все спрайты для текущего аккорда"""
         if not self.current_module:
-            print("⚠️ _create_sprites: current_module is None")
-            return
-
-        if not HAS_SPRITES:
-            print("⚠️ _create_sprites: HAS_SPRITES is False")
+            Logger.warning("ChordRenderer: current_module is None")
             return
 
         self.sprite_layer.clear_widgets()
 
+        # Получаем данные из модуля
         notes = getattr(self.current_module, 'NOTES', {})
         open_notes = getattr(self.current_module, 'OPEN_NOTES', {})
         barres = getattr(self.current_module, 'BARRES', {})
         frets = getattr(self.current_module, 'FRETS', {})
 
+        Logger.info(f"ChordRenderer: Данные модуля - NOTES={len(notes)}, FRETS={len(frets)}, BARRES={len(barres)}")
+
+        # Определяем, что рисовать
         if self.current_mode == "finger":
             selected = getattr(self.current_module, 'SELECTED_FINGER', [])
+            Logger.info(f"ChordRenderer: Режим finger, выбрано {len(selected)} элементов")
         else:
             selected = getattr(self.current_module, 'SELECTED_NOTE', [])
+            Logger.info(f"ChordRenderer: Режим note, выбрано {len(selected)} элементов")
 
-        # Отладочный вывод
-        print(f"🎸 Рендеринг аккорда: {getattr(self.current_module, 'METADATA', {}).get('name', 'Unknown')}")
-        print(f"   Ладов: {len(frets)}, Нот: {len(notes)}, Баре: {len(barres)}, Выбрано: {len(selected)}")
-        print(f"   Режим: {self.current_mode}, HAS_SPRITES: {HAS_SPRITES}")
-
-        # Лады
+        # Рисуем лады
         for fret_id, fret_data in frets.items():
             self._add_fret_sprite(fret_data)
 
-        # Баре
+        # Рисуем баре
         for key in selected:
             if 'BAR' in key and key in barres:
                 self._add_barre_sprite(barres[key])
 
-        # Ноты/пальцы
+        # Рисуем ноты/пальцы
         for key in selected:
             if 'BAR' in key:
                 continue
@@ -185,19 +124,8 @@ class ChordRenderer(RelativeLayout):
             elif key in open_notes:
                 self._add_x_sprite(open_notes[key])
 
-    def _get_sprite_texture(self, sprite_name):
-        """Безопасное получение текстуры спрайта"""
-        if not HAS_SPRITES or sprite_name not in SPRITE_IMAGES:
-            return None
-        try:
-            img_data = base64.b64decode(SPRITE_IMAGES[sprite_name])
-            texture = CoreImage(BytesIO(img_data), ext="png").texture
-            return texture
-        except Exception as e:
-            print(f"Ошибка загрузки спрайта {sprite_name}: {e}")
-            return None
-
     def _add_fret_sprite(self, fret_data):
+        """Добавляет спрайт лада"""
         x = fret_data.get('x', 0)
         y = fret_data.get('y', 0)
         symbol = str(fret_data.get('symbol', ''))
@@ -206,17 +134,10 @@ class ChordRenderer(RelativeLayout):
         if not symbol:
             return
 
-        new_x, new_y, scale = self._transform_coords(
-            x, y,
-            offset_x=self.FRET_X_OFFSET,
-            offset_y=self.FRET_Y_OFFSET,
-            invert_y=False
-        )
+        new_x, new_y, scale = self._transform_coords(x, y, offset_x=0, offset_y=790, invert_y=False)
         new_size = size * scale
 
-        sprite_name = f"fret_{symbol}_{size}"
-        texture = self._get_sprite_texture(sprite_name)
-
+        texture = sprite_loader.get_fret_sprite(symbol, size)
         if texture:
             sprite = Image(
                 texture=texture,
@@ -228,40 +149,22 @@ class ChordRenderer(RelativeLayout):
             self.sprite_layer.add_widget(sprite)
 
     def _add_note_sprite(self, note_data):
+        """Добавляет спрайт ноты или пальца"""
         x = note_data.get('x', 0)
         y = note_data.get('y', 0)
         radius = note_data.get('radius', 50)
-
-        new_x, new_y, scale = self._transform_coords(
-            x, y,
-            offset_x=self.NOTE_X_OFFSET,
-            offset_y=self.NOTE_Y_OFFSET,
-            invert_y=True
-        )
-        new_radius = radius * scale
-
-        if new_radius < 6:
-            new_radius = 6
-
         note_name = note_data.get('note_name', '')
         finger = note_data.get('finger', '')
-        radius_val = note_data.get('radius', 50)
 
-        if self.current_mode == "finger":
-            if finger:
-                sprite_name = f"finger_{finger}_{radius_val}"
-            elif note_name:
-                clean_note = note_name.replace('#', 'sharp')
-                sprite_name = f"note_{clean_note}_{radius_val}"
-            else:
-                return
-        else:
-            if not note_name:
-                return
-            clean_note = note_name.replace('#', 'sharp')
-            sprite_name = f"note_{clean_note}_{radius_val}"
+        new_x, new_y, scale = self._transform_coords(x, y, offset_x=0, offset_y=0, invert_y=True)
+        new_radius = max(radius * scale, 6)
 
-        texture = self._get_sprite_texture(sprite_name)
+        texture = None
+        if self.current_mode == "finger" and finger:
+            texture = sprite_loader.get_finger_sprite(finger, radius)
+        elif note_name:
+            texture = sprite_loader.get_note_sprite(note_name, radius)
+
         if texture:
             sprite = Image(
                 texture=texture,
@@ -273,24 +176,15 @@ class ChordRenderer(RelativeLayout):
             self.sprite_layer.add_widget(sprite)
 
     def _add_x_sprite(self, note_data):
+        """Добавляет спрайт X (глушимые струны)"""
         x = note_data.get('x', 0)
         y = note_data.get('y', 0)
         radius = note_data.get('radius', 50)
 
-        new_x, new_y, scale = self._transform_coords(
-            x, y,
-            offset_x=self.NOTE_X_OFFSET,
-            offset_y=self.NOTE_Y_OFFSET,
-            invert_y=True
-        )
-        new_radius = radius * scale
+        new_x, new_y, scale = self._transform_coords(x, y, offset_x=0, offset_y=0, invert_y=True)
+        new_radius = max(radius * scale, 6)
 
-        if new_radius < 6:
-            new_radius = 6
-
-        sprite_name = f"x_{radius}"
-        texture = self._get_sprite_texture(sprite_name)
-
+        texture = sprite_loader.get_x_sprite(radius)
         if texture:
             sprite = Image(
                 texture=texture,
@@ -302,31 +196,21 @@ class ChordRenderer(RelativeLayout):
             self.sprite_layer.add_widget(sprite)
 
     def _add_barre_sprite(self, barre_data):
+        """Добавляет спрайт баре"""
         x = barre_data.get('x', 0)
         y = barre_data.get('y', 0)
         width = barre_data.get('width', 100)
         height = barre_data.get('height', 20)
         style = barre_data.get('style', 'wood')
 
-        if self.BARRE_AUTO_OFFSET:
-            auto_offset = -height
-        else:
-            auto_offset = 0
+        # Корректировка для баре
+        total_offset = -height
 
-        total_offset = auto_offset + self.BARRE_EXTRA_OFFSET
-
-        new_x, new_y, scale = self._transform_coords(
-            x, y,
-            offset_x=0,
-            offset_y=total_offset,
-            invert_y=True
-        )
+        new_x, new_y, scale = self._transform_coords(x, y, offset_x=0, offset_y=total_offset, invert_y=True)
         new_width = width * scale
         new_height = height * scale
 
-        sprite_name = f"barre_{style}_{width}x{height}"
-        texture = self._get_sprite_texture(sprite_name)
-
+        texture = sprite_loader.get_barre_sprite(style, width, height)
         if texture:
             sprite = Image(
                 texture=texture,
@@ -338,4 +222,6 @@ class ChordRenderer(RelativeLayout):
             self.sprite_layer.add_widget(sprite)
 
     def _update_positions(self, *args):
-        self._create_sprites()
+        """Обновляет позиции при изменении размера"""
+        if self.current_module:
+            self._create_sprites()
