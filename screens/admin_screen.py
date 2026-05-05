@@ -22,12 +22,9 @@ logger = screen_logger('AdminScreen')
 # Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -261,6 +258,7 @@ class AdminScreen(MDScreen):
         main_layout.add_widget(stats_card)
 
         # ============ КАРТОЧКИ ПАРСЕРОВ (точно как в artist_songs_screen) ============
+        # Карточка AmDm парсера
         amdm_card = AdminCard(
             icon_text="🎵",
             title="AmDm парсер",
@@ -268,12 +266,21 @@ class AdminScreen(MDScreen):
         )
         main_layout.add_widget(amdm_card)
 
+        # Карточка MyTabs парсера
         mytabs_card = AdminCard(
             icon_text="🎸",
             title="MyTabs парсер",
             on_click=self.open_mytabs_parser
         )
         main_layout.add_widget(mytabs_card)
+
+        # ============ КАРТОЧКА ОЧИСТКИ КЭША ============
+        clear_cache_card = AdminCard(
+            icon_text="🗑️",
+            title="Очистить кэш",
+            on_click=self.clear_cache
+        )
+        main_layout.add_widget(clear_cache_card)
 
         # Нижний отступ
         bottom_spacer = Widget(size_hint_y=None, height=dp(80))
@@ -292,8 +299,85 @@ class AdminScreen(MDScreen):
 
     def open_amdm_parser(self):
         """Открывает экран парсера AmDm"""
-        self.manager.current = 'amdm_parser'
+        try:
+            self.manager.current = 'amdm_parser'
+            logger.info("Переход на экран AmDm парсера")
+        except Exception as e:
+            logger.error(f"Ошибка перехода на AmDm парсер: {e}")
+            notify.error("Ошибка перехода")
 
     def open_mytabs_parser(self):
         """Открывает экран парсера MyTabs"""
-        notify.info("Парсер MyTabs будет доступен в следующей версии")
+        try:
+            self.manager.current = 'mytabs_parser'
+            logger.info("Переход на экран MyTabs парсера")
+            notify.success("MyTabs парсер")
+        except Exception as e:
+            logger.error(f"Ошибка перехода на MyTabs парсер: {e}")
+            notify.error("Ошибка перехода")
+
+    def clear_cache(self):
+        """Очищает кэш API"""
+        try:
+            from api.client import api
+            api.clear_cache()
+            logger.info("Кэш очищен")
+            notify.success("Кэш очищен")
+        except Exception as e:
+            logger.error(f"Ошибка очистки кэша: {e}")
+            notify.error("Ошибка очистки кэша")
+
+    def on_enter(self):
+        """При входе на экран"""
+        logger.info("Вход в админ панель")
+        # Можно добавить обновление статистики при входе
+        self._load_stats()
+
+    def _load_stats(self):
+        """Загружает статистику пользователей"""
+        try:
+            from api.client import api
+            api.get_current_user(
+                on_success=self._on_user_data,
+                on_failure=self._on_stats_error
+            )
+        except Exception as e:
+            logger.error(f"Ошибка загрузки статистики: {e}")
+
+    def _on_user_data(self, data):
+        """Обновляет отображение статистики"""
+        if data and isinstance(data, dict):
+            # Если нужно показать количество пользователей
+            # Запрашиваем список пользователей (только для админов)
+            try:
+                from api.client import api
+                api.get_all_users(
+                    limit=1,
+                    on_success=self._on_users_count,
+                    on_failure=self._on_stats_error
+                )
+            except:
+                # Если нет такого метода, показываем просто "админ"
+                self.stats_count_label.text = "admin"
+        else:
+            self.stats_count_label.text = "—"
+
+    def _on_users_count(self, data):
+        """Обновляет счетчик пользователей"""
+        try:
+            if data and isinstance(data, dict):
+                total = data.get('total', data.get('count', len(data.get('users', []))))
+                if total > 0:
+                    self.stats_count_label.text = str(total)
+                else:
+                    self.stats_count_label.text = "—"
+            else:
+                self.stats_count_label.text = "—"
+        except Exception as e:
+            logger.error(f"Ошибка обновления статистики: {e}")
+            self.stats_count_label.text = "—"
+
+    def _on_stats_error(self, req, error):
+        """Обработка ошибки загрузки статистики"""
+        logger.error(f"Ошибка загрузки статистики: {error}")
+        self.stats_count_label.text = "—"

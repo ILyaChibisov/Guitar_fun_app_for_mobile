@@ -874,4 +874,162 @@ class APIClient:
             print(f"Ошибка получения букв: {e}")
             return None
 
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MYTABS ============
+
+    def start_mytabs_parser(self, start_page: int, end_page: int, subdomain: str,
+                            on_success=None, on_failure=None):
+        """Запустить парсер MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
+        data = {
+            "start_page": start_page,
+            "end_page": end_page,
+            "subdomain": subdomain
+        }
+        return self._request(
+            url=url,
+            method='POST',
+            data=data,
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def start_mytabs_parser_sync(self, start_page: int, end_page: int, subdomain: str):
+        """Синхронный запуск парсера MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
+        data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера MyTabs: {e}")
+            return None
+
+    def pause_mytabs_parser(self, on_success=None, on_failure=None):
+        """Поставить парсер MyTabs на паузу"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/pause"
+        return self._request(
+            url=url,
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def pause_mytabs_parser_sync(self):
+        """Синхронная пауза парсера MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/pause"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка паузы MyTabs: {e}")
+            return None
+
+    def resume_mytabs_parser(self, on_success=None, on_failure=None):
+        """Возобновить парсер MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/resume"
+        return self._request(
+            url=url,
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def resume_mytabs_parser_sync(self):
+        """Синхронное возобновление парсера MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/resume"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка возобновления MyTabs: {e}")
+            return None
+
+    def stop_mytabs_parser(self, on_success=None, on_failure=None):
+        """Остановить парсер MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/stop"
+        return self._request(
+            url=url,
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def stop_mytabs_parser_sync(self):
+        """Синхронная остановка парсера MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки MyTabs: {e}")
+            return None
+
+    def get_mytabs_parser_status(self, on_success=None, on_failure=None):
+        """Получить статус парсера MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/status"
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def get_mytabs_parser_status_sync(self):
+        """Синхронное получение статуса парсера MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            print(f"DEBUG API: get_mytabs_parser_status_sync result = {result}")
+            return result
+        except Exception as e:
+            print(f"DEBUG API: Error getting MyTabs status - {e}")
+            return None
+
+    def get_mytabs_recent_songs(self, limit: int = 10, on_success=None, on_failure=None):
+        """Получить последние песни от парсера MyTabs"""
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/recent?limit={limit}"
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def get_active_parser_status_sync(self):
+        """Синхронное получение информации об активном парсере"""
+        url = f"{self.config.API_BASE_URL}/parsers/active"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            return result
+        except Exception as e:
+            Logger.error(f"Ошибка получения активного парсера: {e}")
+            return {"success": True, "data": {"has_active_parser": False}}
+
+    def can_start_parser(self, parser_name: str) -> bool:
+        """Проверяет, можно ли запустить парсер"""
+        status = self.get_active_parser_status_sync()
+        if not status.get('success'):
+            return True  # Если ошибка, разрешаем запуск
+
+        data = status.get('data', {})
+        if not data.get('has_active_parser'):
+            return True
+
+        active_parser = data.get('active_parser', {})
+        return active_parser.get('name') == parser_name
+
 api = APIClient()

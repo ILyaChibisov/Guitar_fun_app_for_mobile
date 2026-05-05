@@ -15,6 +15,7 @@ from .admin_screen import AdminScreen
 from .search_results_screen import SearchResultsScreen
 from .search_screen import SearchScreen
 from .parsers_screens.amdm_parser_screen import AMDMParserScreen
+from .parsers_screens.mytabs_parser_screen import MyTabsParserScreen
 
 logger = get_logger('ScreenManager')
 
@@ -36,6 +37,7 @@ def setup_screen_manager():
     sm.add_widget(SearchResultsScreen(name='search_results'))
     sm.add_widget(SearchScreen(name='search'))
     sm.add_widget(AMDMParserScreen(name='amdm_parser'))
+    sm.add_widget(MyTabsParserScreen(name='mytabs_parser'))
 
-    logger.info('ScreenManager настроен, добавлено 15 экранов')
+    logger.info('ScreenManager настроен, добавлено 16 экранов')
     return sm
