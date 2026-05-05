@@ -274,6 +274,13 @@ class AdminScreen(MDScreen):
         )
         main_layout.add_widget(mytabs_card)
 
+        accordpro_card = AdminCard(
+            icon_text="🎹",
+            title="Akkords.Pro парсер",
+            on_click=self.open_accord_pro_parser
+        )
+        main_layout.add_widget(accordpro_card)
+
         # ============ КАРТОЧКА ОЧИСТКИ КЭША ============
         clear_cache_card = AdminCard(
             icon_text="🗑️",
@@ -314,6 +321,16 @@ class AdminScreen(MDScreen):
             notify.success("MyTabs парсер")
         except Exception as e:
             logger.error(f"Ошибка перехода на MyTabs парсер: {e}")
+            notify.error("Ошибка перехода")
+
+    def open_accord_pro_parser(self):
+        """Открывает экран парсера Akkords.Pro"""
+        try:
+            self.manager.current = 'accord_pro_parser'
+            logger.info("Переход на экран Akkords.Pro парсера")
+            notify.success("Akkords.Pro парсер")
+        except Exception as e:
+            logger.error(f"Ошибка перехода на Akkords.Pro парсер: {e}")
             notify.error("Ошибка перехода")
 
     def clear_cache(self):

@@ -1032,4 +1032,91 @@ class APIClient:
         active_parser = data.get('active_parser', {})
         return active_parser.get('name') == parser_name
 
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDS.PRO ============
+
+    def start_accord_pro_parser(self, start_group: int, end_group: int,
+                                on_success=None, on_failure=None):
+        """Запустить парсер Akkords.Pro"""
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
+        data = {
+            "start_group": start_group,
+            "end_group": end_group
+        }
+        return self._request(
+            url=url,
+            method='POST',
+            data=data,
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def start_accord_pro_parser_sync(self, start_group: int, end_group: int):
+        """Синхронный запуск парсера Akkords.Pro"""
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Akkords.Pro: {e}")
+            return None
+
+    def stop_accord_pro_parser(self, on_success=None, on_failure=None):
+        """Остановить парсер Akkords.Pro"""
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/stop"
+        return self._request(
+            url=url,
+            method='POST',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def stop_accord_pro_parser_sync(self):
+        """Синхронная остановка парсера Akkords.Pro"""
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки Akkords.Pro: {e}")
+            return None
+
+    def get_accord_pro_parser_status(self, on_success=None, on_failure=None):
+        """Получить статус парсера Akkords.Pro"""
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/status"
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def get_accord_pro_parser_status_sync(self):
+        """Синхронное получение статуса парсера Akkords.Pro"""
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            return result
+        except Exception as e:
+            print(f"DEBUG API: Error getting AccordPro status - {e}")
+            return None
+
+    def get_accord_pro_recent_songs(self, limit: int = 10, on_success=None, on_failure=None):
+        """Получить последние песни от парсера Akkords.Pro"""
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/recent?limit={limit}"
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
 api = APIClient()
