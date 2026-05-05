@@ -886,6 +886,207 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/chordie/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА 5LAD ============
+
+    def start_fivelad_parser(self, start_group, end_group, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_fivelad_parser_sync(self, start_group, end_group):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера 5Lad: {e}")
+            return None
+
+    def stop_fivelad_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_fivelad_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки 5Lad: {e}")
+            return None
+
+    def get_fivelad_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_fivelad_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+
+    def get_fivelad_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDBARD ============
+
+    def start_akkordbard_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_akkordbard_parser_sync(self, start_letter, end_letter):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера AkkordBard: {e}")
+            return None
+
+    def stop_akkordbard_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_akkordbard_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки AkkordBard: {e}")
+            return None
+
+    def get_akkordbard_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_akkordbard_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+
+    def get_akkordbard_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА DOMHVE ============
+
+    def start_domhve_parser(self, start_song, end_song, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/start"
+        data = {"start_song": start_song, "end_song": end_song}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_domhve_parser_sync(self, start_song, end_song):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/start"
+        data = {"start_song": start_song, "end_song": end_song}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Domhve: {e}")
+            return None
+
+    def stop_domhve_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_domhve_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки Domhve: {e}")
+            return None
+
+    def get_domhve_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_domhve_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+
+    def get_domhve_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА RUSHSOUND ============
+
+    def start_rushsound_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_rushsound_parser_sync(self, start_letter, end_letter):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера RushSound: {e}")
+            return None
+
+    def stop_rushsound_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_rushsound_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки RushSound: {e}")
+            return None
+
+    def get_rushsound_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_rushsound_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+
+    def get_rushsound_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+
     # ============ ОБЩИЕ МЕТОДЫ ============
 
     def get_active_parser_status(self, on_success=None, on_failure=None):

@@ -20,6 +20,10 @@ from .parsers_screens.accord_pro_parser_screen import AccordProParserScreen
 from .parsers_screens.akkordus_parser_screen import AkkordusParserScreen
 from .parsers_screens.muzland_parser_screen import MuzlandParserScreen
 from .parsers_screens.chordie_parser_screen import ChordieParserScreen
+from .parsers_screens.fivelad_parser_screen import FiveLadParserScreen
+from .parsers_screens.akkordbard_parser_screen import AkkordBardParserScreen
+from .parsers_screens.domhve_parser_screen import DomhveParserScreen
+from .parsers_screens.rushsound_parser_screen import RushSoundParserScreen
 
 logger = get_logger('ScreenManager')
 
@@ -40,12 +44,18 @@ def setup_screen_manager():
     sm.add_widget(AdminScreen(name='admin'))
     sm.add_widget(SearchResultsScreen(name='search_results'))
     sm.add_widget(SearchScreen(name='search'))
+
+    # Парсеры
     sm.add_widget(AMDMParserScreen(name='amdm_parser'))
     sm.add_widget(MyTabsParserScreen(name='mytabs_parser'))
     sm.add_widget(AccordProParserScreen(name='accord_pro_parser'))
     sm.add_widget(AkkordusParserScreen(name='akkordus_parser'))
     sm.add_widget(MuzlandParserScreen(name='muzland_parser'))
     sm.add_widget(ChordieParserScreen(name='chordie_parser'))
+    sm.add_widget(FiveLadParserScreen(name='fivelad_parser'))
+    sm.add_widget(AkkordBardParserScreen(name='akkordbard_parser'))
+    sm.add_widget(DomhveParserScreen(name='domhve_parser'))
+    sm.add_widget(RushSoundParserScreen(name='rushsound_parser'))
 
-    logger.info('ScreenManager настроен, добавлено 18 экранов')
+    logger.info('ScreenManager настроен, добавлено 22 экрана')
     return sm
