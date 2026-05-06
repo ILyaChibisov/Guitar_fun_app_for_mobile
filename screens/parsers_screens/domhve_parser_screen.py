@@ -23,9 +23,12 @@ logger = screen_logger('DomhveParserScreen')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -43,11 +46,17 @@ class DomhveStatCard(MDCard):
         self.md_bg_color = [color[0], color[1], color[2], 0.12]
         self.line_color = [color[0], color[1], color[2], 0.4]
         self.line_width = 1
-        self.value_label = MDLabel(text=str(value), font_size=sp(28), bold=True, halign="center",
-                                   size_hint_y=None, height=dp(36), theme_text_color="Custom",
-                                   text_color=[color[0], color[1], color[2], 1])
-        self.title_label = MDLabel(text=title, font_size=sp(9), halign="center", size_hint_y=None, height=dp(20),
-                                   theme_text_color="Custom", text_color=[1, 1, 1, 0.6])
+
+        self.value_label = MDLabel(
+            text=str(value), font_size=sp(28), bold=True, halign="center",
+            size_hint_y=None, height=dp(36), theme_text_color="Custom",
+            text_color=[color[0], color[1], color[2], 1]
+        )
+        self.title_label = MDLabel(
+            text=title, font_size=sp(9), halign="center",
+            size_hint_y=None, height=dp(20), theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6]
+        )
         self.add_widget(self.value_label)
         self.add_widget(self.title_label)
 
@@ -282,6 +291,62 @@ class DomhveParserScreen(MDScreen):
         scroll.add_widget(main_layout)
         self.add_widget(scroll)
 
+    # ============ НОВЫЕ МЕТОДЫ ДЛЯ ФИЛЬТРАЦИИ ============
+
+    def _is_real_song(self, filename, status):
+        """
+        Проверяет, является ли запись реальной песней.
+        Возвращает True только для настоящих песен.
+        """
+        if status not in ['new', 'duplicate', 'error']:
+            return False
+
+        if not filename:
+            return False
+
+        # Проверяем, что это не служебное сообщение
+        service_patterns = [
+            'Обработка', 'Найдено', 'Запуск', 'Завершение',
+            'Получение', 'Поиск файлов', 'Удаление файлов', 'Песня:'
+        ]
+
+        filename_lower = filename.lower()
+        for pattern in service_patterns:
+            if pattern.lower() in filename_lower:
+                return False
+
+        # Реальная песня должна содержать дефис (Артист - Песня) или заканчиваться на .txt
+        if ' - ' in filename or filename.endswith('.txt'):
+            if len(filename) > 5:
+                return True
+
+        return False
+
+    def _update_last_song_display(self, last_song):
+        """Обновляет отображение последней песни, показывая только реальные песни"""
+        if not last_song:
+            if self.last_song_container.height != 0:
+                self.last_song_container.height = dp(0)
+                self.last_song_container.clear_widgets()
+                self.last_song = None
+            return
+
+        filename = last_song.get('filename', '')
+        status = last_song.get('status', 'unknown')
+
+        if self._is_real_song(filename, status):
+            if self.last_song != filename:
+                self.last_song = filename
+                self.last_song_container.clear_widgets()
+                self.last_song_container.height = dp(85)
+                song_card = DomhveRecentSongCard(song_data=last_song, icon_data=self.song_icon_data)
+                self.last_song_container.add_widget(song_card)
+        else:
+            if self.last_song_container.height != 0:
+                self.last_song_container.height = dp(0)
+                self.last_song_container.clear_widgets()
+                self.last_song = None
+
     def start_auto_update(self):
         if not self.is_on_screen:
             return
@@ -317,22 +382,16 @@ class DomhveParserScreen(MDScreen):
                     self.stop_btn.disabled = True
                     self.status_label.text = "ПАРСЕР ОСТАНОВЛЕН"
                     self.status_label.text_color = [0.6, 0.6, 0.6, 1]
+
                 stats = data.get('stats', {})
                 self.total_card.update_value(stats.get('total_songs', 0))
                 self.new_card.update_value(stats.get('new_songs', 0))
                 self.dup_card.update_value(stats.get('duplicates', 0))
                 self.err_card.update_value(stats.get('errors', 0))
+
                 last_song = data.get('last_song', {})
-                if last_song and last_song.get('filename'):
-                    if self.last_song != last_song.get('filename'):
-                        self.last_song = last_song.get('filename')
-                        self.last_song_container.clear_widgets()
-                        self.last_song_container.height = dp(85)
-                        song_card = DomhveRecentSongCard(song_data=last_song, icon_data=self.song_icon_data)
-                        self.last_song_container.add_widget(song_card)
-                elif self.last_song_container.height != 0:
-                    self.last_song_container.height = dp(0)
-                    self.last_song_container.clear_widgets()
+                self._update_last_song_display(last_song)
+
         except Exception as e:
             print(f"DEBUG: Error in _fetch_status - {e}")
 
