@@ -30,19 +30,21 @@ logger = screen_logger('MyTabsParserScreen')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
-
 
 MYTABS_LETTERS = [
     '0-9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
     'А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М',
-    'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ',
-    'Ы', 'Ь', 'Э', 'Ю', 'Я'
+    'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ',
+    'Ы', 'Э', 'Ю', 'Я'
 ]
 
 LETTER_TO_PAGE_MYTABS = {letter: idx for idx, letter in enumerate(MYTABS_LETTERS)}
@@ -101,7 +103,8 @@ class MyTabsLetterSelector(ButtonBehavior, BoxLayout):
         self._create_popup()
 
     def _create_popup(self):
-        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=[dp(16), dp(16), dp(16), dp(16)], size_hint=(1, 1))
+        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=[dp(16), dp(16), dp(16), dp(16)],
+                            size_hint=(1, 1))
         header = BoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(50), spacing=dp(10))
         header_title = Label(text="ВЫБЕРИТЕ БУКВУ (MYTABS)", font_size=sp(16), color=[1, 1, 1, 1],
                              bold=True, size_hint_x=1)
@@ -430,6 +433,68 @@ class MyTabsParserScreen(MDScreen):
             self.update_event.cancel()
             self.update_event = None
 
+    # ============ НОВЫЕ МЕТОДЫ ДЛЯ ФИЛЬТРАЦИИ ============
+
+    def _is_real_song(self, filename, status):
+        """
+        Проверяет, является ли запись реальной песней.
+        Возвращает True только для настоящих песен.
+        """
+        if status not in ['new', 'duplicate', 'error']:
+            return False
+
+        if not filename:
+            return False
+
+        # Проверяем, что это не служебное сообщение
+        service_patterns = [
+            'Буква:', 'Группа:', 'Цифра:', 'Обработка',
+            'Найдено', 'Запуск', 'Завершение', 'Получение',
+            'Поиск файлов', 'Удаление файлов', 'Список скачанных'
+        ]
+
+        filename_lower = filename.lower()
+        for pattern in service_patterns:
+            if pattern.lower() in filename_lower:
+                return False
+
+        # Реальная песня должна содержать дефис (Артист - Песня) или заканчиваться на .txt
+        if ' - ' in filename or filename.endswith('.txt'):
+            # Дополнительная проверка: не слишком короткое имя
+            if len(filename) > 5:
+                return True
+
+        return False
+
+    def _update_last_song_display(self, last_song):
+        """Обновляет отображение последней песни, показывая только реальные песни"""
+        if not last_song:
+            if self.last_song_container.height != 0:
+                self.last_song_container.height = dp(0)
+                self.last_song_container.clear_widgets()
+                self.last_song = None
+            return
+
+        filename = last_song.get('filename', '')
+        status = last_song.get('status', 'unknown')
+
+        # Показываем только реальные песни
+        if self._is_real_song(filename, status):
+            if self.last_song != filename:
+                self.last_song = filename
+                self.last_song_container.clear_widgets()
+                self.last_song_container.height = dp(85)
+                song_card = MyTabsRecentSongCard(song_data=last_song, icon_data=self.song_icon_data)
+                self.last_song_container.add_widget(song_card)
+        else:
+            # Для служебных сообщений очищаем карточку
+            if self.last_song_container.height != 0:
+                self.last_song_container.height = dp(0)
+                self.last_song_container.clear_widgets()
+                self.last_song = None
+
+    # ============ ОСНОВНЫЕ МЕТОДЫ ============
+
     def _check_status_loop(self, dt):
         if not self.is_on_screen:
             return
@@ -440,35 +505,39 @@ class MyTabsParserScreen(MDScreen):
             result = api.get_mytabs_parser_status_sync()
             if result and result.get('success'):
                 data = result.get('data', result)
+
                 is_running = data.get('is_running', False)
-                if is_running:
+                is_paused = data.get('is_paused', False)
+
+                if is_running and not is_paused:
                     self.start_btn.disabled = True
                     self.start_btn.md_bg_color = [0.3, 0.3, 0.3, 1]
                     self.stop_btn.disabled = False
                     self.status_label.text = "ПАРСЕР АКТИВЕН"
                     self.status_label.text_color = [0.3, 0.8, 0.3, 1]
+                elif is_running and is_paused:
+                    self.start_btn.disabled = True
+                    self.stop_btn.disabled = False
+                    self.status_label.text = "ПАРСЕР НА ПАУЗЕ"
+                    self.status_label.text_color = [0.9, 0.6, 0.1, 1]
                 else:
                     self.start_btn.disabled = False
                     self.start_btn.md_bg_color = [0.2, 0.6, 0.2, 1]
                     self.stop_btn.disabled = True
                     self.status_label.text = "ПАРСЕР ОСТАНОВЛЕН"
                     self.status_label.text_color = [0.6, 0.6, 0.6, 1]
+
                 stats = data.get('stats', {})
                 self.total_card.update_value(stats.get('total_songs', 0))
                 self.new_card.update_value(stats.get('new_songs', 0))
                 self.dup_card.update_value(stats.get('duplicates', 0))
                 self.err_card.update_value(stats.get('errors', 0))
+
                 last_song = data.get('last_song', {})
-                if last_song and last_song.get('filename'):
-                    if self.last_song != last_song.get('filename'):
-                        self.last_song = last_song.get('filename')
-                        self.last_song_container.clear_widgets()
-                        self.last_song_container.height = dp(85)
-                        song_card = MyTabsRecentSongCard(song_data=last_song, icon_data=self.song_icon_data)
-                        self.last_song_container.add_widget(song_card)
-                elif self.last_song_container.height != 0:
-                    self.last_song_container.height = dp(0)
-                    self.last_song_container.clear_widgets()
+
+                # Используем фильтрацию для последней песни
+                self._update_last_song_display(last_song)
+
         except Exception as e:
             print(f"DEBUG: Error in _fetch_status - {e}")
 
@@ -479,12 +548,15 @@ class MyTabsParserScreen(MDScreen):
             start_page = self._get_page_from_letter(start_letter)
             end_page = self._get_page_from_letter(end_letter)
             subdomain = self.subdomain_field.text.strip()
+
             if start_page > end_page:
                 notify.error("Начальная буква не может быть позже конечной")
                 return
+
             if not subdomain:
                 notify.error("Введите поддомен (mytabs)")
                 return
+
             result = api.start_mytabs_parser_sync(start_page, end_page, subdomain)
             if result and result.get('success'):
                 notify.success(f"Парсер MyTabs запущен (буквы {start_letter}-{end_letter})")
@@ -495,6 +567,7 @@ class MyTabsParserScreen(MDScreen):
             else:
                 msg = result.get('message', 'Ошибка') if result else 'Ошибка соединения'
                 notify.error(f"Ошибка: {msg}")
+
         except Exception as e:
             logger.error(f"Ошибка: {e}")
             notify.error(f"Ошибка: {e}")
@@ -505,6 +578,11 @@ class MyTabsParserScreen(MDScreen):
             if result and result.get('success'):
                 notify.info("Парсер MyTabs остановлен")
                 self._fetch_status()
+            else:
+                api.stop_mytabs_parser(
+                    on_success=lambda x: (notify.info("Парсер остановлен"), self._fetch_status()),
+                    on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
+                )
         except Exception as e:
             logger.error(f"Ошибка: {e}")
             notify.error(f"Ошибка: {e}")

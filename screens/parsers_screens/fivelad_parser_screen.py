@@ -7,17 +7,12 @@ from kivy.metrics import dp, sp
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
-from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.popup import Popup
-from kivy.uix.label import Label
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
 from io import BytesIO
 
 from utils.kivy_imports import (
     MDBoxLayout, MDLabel, MDCard, MDScreen,
-    MDScrollView, MDRaisedButton, MDFlatButton
+    MDScrollView, MDRaisedButton
 )
 
 from config.theme import theme
@@ -152,45 +147,125 @@ class FiveLadParserScreen(MDScreen):
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки: {e}")
 
+    def exit_to_admin(self, *args):
+        try:
+            self.manager.current = 'admin'
+            logger.info("Возврат в админ панель")
+        except Exception as e:
+            logger.error(f"Ошибка возврата: {e}")
+            notify.error("Ошибка возврата")
+
     def init_ui(self):
         scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False)
-        main_layout = MDBoxLayout(orientation='vertical', padding=[dp(16), dp(65), dp(16), dp(16)], spacing=dp(12), size_hint_y=None)
+
+        main_layout = MDBoxLayout(
+            orientation='vertical',
+            padding=[dp(16), dp(65), dp(16), dp(16)],
+            spacing=dp(12),
+            size_hint_y=None
+        )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        title_card = MDCard(orientation='vertical', size_hint=(1, None), height=dp(65), padding=[dp(16), dp(8), dp(16), dp(8)],
-                            radius=[16, 16, 16, 16], md_bg_color=[0.15, 0.25, 0.35, 0.5], elevation=0)
-        title_label = MDLabel(text="5LAD ПАРСЕР", font_size=sp(22), halign="center", bold=True,
-                              theme_text_color="Custom", text_color=[0.8, 0.6, 0.2, 1])
-        subtitle_label = MDLabel(text="загрузка аккордов с 5lad.net", font_size=sp(11), halign="center",
-                                 theme_text_color="Custom", text_color=[1, 1, 1, 0.5])
+        title_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(65),
+            padding=[dp(16), dp(8), dp(16), dp(8)],
+            radius=[16, 16, 16, 16],
+            md_bg_color=[0.15, 0.25, 0.35, 0.5],
+            elevation=0
+        )
+
+        title_label = MDLabel(
+            text="5LAD ПАРСЕР",
+            font_size=sp(22),
+            halign="center",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=[0.8, 0.6, 0.2, 1]
+        )
+        subtitle_label = MDLabel(
+            text="загрузка аккордов с 5lad.net",
+            font_size=sp(11),
+            halign="center",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.5]
+        )
         title_card.add_widget(title_label)
         title_card.add_widget(subtitle_label)
         main_layout.add_widget(title_card)
 
-        info_card = MDCard(orientation='vertical', size_hint=(1, None), height=dp(100), padding=[dp(16), dp(12), dp(16), dp(12)],
-                           spacing=dp(8), radius=[16], md_bg_color=[0, 0, 0, 0.2], elevation=0)
-        info_text = MDLabel(text="Парсер загружает все группы подряд\nот начала до конца. Для остановки используйте кнопку ОСТАНОВИТЬ",
-                            font_size=sp(12), halign="center", theme_text_color="Custom", text_color=[1, 1, 1, 0.7])
+        info_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(100),
+            padding=[dp(16), dp(12), dp(16), dp(12)],
+            spacing=dp(8),
+            radius=[16],
+            md_bg_color=[0, 0, 0, 0.2],
+            elevation=0
+        )
+
+        info_text = MDLabel(
+            text="Парсер загружает все группы подряд\nот начала до конца. Для остановки\nиспользуйте кнопку ОСТАНОВИТЬ",
+            font_size=sp(12),
+            halign="center",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7]
+        )
         info_card.add_widget(info_text)
         main_layout.add_widget(info_card)
 
-        buttons_card = MDCard(orientation='vertical', size_hint=(1, None), height=dp(120), padding=[dp(12), dp(12), dp(12), dp(12)],
-                              spacing=dp(12), radius=[12], md_bg_color=[0, 0, 0, 0.2], elevation=0)
-        self.start_btn = MDRaisedButton(text="ЗАПУСТИТЬ ПАРСЕР", size_hint=(1, None), height=dp(48),
-                                        md_bg_color=[0.2, 0.6, 0.2, 1], font_size=sp(14))
+        buttons_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(85),
+            padding=[dp(12), dp(8), dp(12), dp(8)],
+            radius=[12],
+            md_bg_color=[0, 0, 0, 0.2],
+            elevation=0
+        )
+
+        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
+
+        self.start_btn = MDRaisedButton(
+            text="ЗАПУСТИТЬ",
+            size_hint_x=0.45,
+            md_bg_color=[0.2, 0.6, 0.2, 1],
+            font_size=sp(13)
+        )
         self.start_btn.bind(on_release=self.start_parser)
-        self.stop_btn = MDRaisedButton(text="ОСТАНОВИТЬ ПАРСЕР", size_hint=(1, None), height=dp(48), disabled=True,
-                                       md_bg_color=[0.6, 0.2, 0.2, 1], font_size=sp(14))
+
+        self.stop_btn = MDRaisedButton(
+            text="ОСТАНОВИТЬ",
+            size_hint_x=0.45,
+            disabled=True,
+            md_bg_color=[0.6, 0.2, 0.2, 1],
+            font_size=sp(13)
+        )
         self.stop_btn.bind(on_release=self.stop_parser)
-        buttons_card.add_widget(self.start_btn)
-        buttons_card.add_widget(self.stop_btn)
+
+        self.exit_btn = MDRaisedButton(
+            text="ВЫХОД",
+            size_hint_x=0.45,
+            md_bg_color=[0.4, 0.4, 0.8, 1],
+            font_size=sp(13)
+        )
+        self.exit_btn.bind(on_release=self.exit_to_admin)
+
+        buttons_layout.add_widget(self.start_btn)
+        buttons_layout.add_widget(self.stop_btn)
+        buttons_layout.add_widget(self.exit_btn)
+        buttons_card.add_widget(buttons_layout)
         main_layout.add_widget(buttons_card)
 
         stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
+
         self.total_card = FiveLadStatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
         self.new_card = FiveLadStatCard("НОВЫЕ", 0, [0.3, 0.8, 0.3])
         self.dup_card = FiveLadStatCard("ПОВТОР", 0, [0.9, 0.7, 0.2])
         self.err_card = FiveLadStatCard("ОШИБКИ", 0, [0.9, 0.4, 0.4])
+
         stats_grid.add_widget(self.total_card)
         stats_grid.add_widget(self.new_card)
         stats_grid.add_widget(self.dup_card)
@@ -200,8 +275,15 @@ class FiveLadParserScreen(MDScreen):
         self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
         main_layout.add_widget(self.last_song_container)
 
-        self.status_label = MDLabel(text="Готов к работе", halign="center", size_hint_y=None, height=dp(35),
-                                    font_size=sp(11), theme_text_color="Custom", text_color=[0.5, 0.5, 0.5, 1])
+        self.status_label = MDLabel(
+            text="Готов к работе",
+            halign="center",
+            size_hint_y=None,
+            height=dp(35),
+            font_size=sp(11),
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 1]
+        )
         main_layout.add_widget(self.status_label)
 
         scroll.add_widget(main_layout)

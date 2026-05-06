@@ -17,7 +17,7 @@ from io import BytesIO
 
 from utils.kivy_imports import (
     MDBoxLayout, MDLabel, MDCard, MDScreen,
-    MDScrollView, MDRaisedButton, MDFlatButton
+    MDScrollView, MDRaisedButton
 )
 
 from config.theme import theme
@@ -38,7 +38,6 @@ except ImportError:
     def load_asset_as_bytes(name):
         return None
 
-# Цифры для RushSound (0-55)
 RUSH_SOUND_LETTERS = [str(i) for i in range(56)]
 LETTER_TO_INDEX = {letter: idx for idx, letter in enumerate(RUSH_SOUND_LETTERS)}
 
@@ -245,73 +244,172 @@ class RushSoundParserScreen(MDScreen):
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки: {e}")
 
+    def exit_to_admin(self, *args):
+        try:
+            self.manager.current = 'admin'
+            logger.info("Возврат в админ панель")
+        except Exception as e:
+            logger.error(f"Ошибка возврата: {e}")
+            notify.error("Ошибка возврата")
+
     def init_ui(self):
         scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False)
-        main_layout = MDBoxLayout(orientation='vertical', padding=[dp(16), dp(65), dp(16), dp(16)], spacing=dp(12),
-                                  size_hint_y=None)
+
+        main_layout = MDBoxLayout(
+            orientation='vertical',
+            padding=[dp(16), dp(65), dp(16), dp(16)],
+            spacing=dp(12),
+            size_hint_y=None
+        )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        title_card = MDCard(orientation='vertical', size_hint=(1, None), height=dp(65),
-                            padding=[dp(16), dp(8), dp(16), dp(8)],
-                            radius=[16, 16, 16, 16], md_bg_color=[0.15, 0.25, 0.35, 0.5], elevation=0)
-        title_label = MDLabel(text="RUSH-SOUND ПАРСЕР", font_size=sp(22), halign="center", bold=True,
-                              theme_text_color="Custom", text_color=[0.9, 0.5, 0.3, 1])
-        subtitle_label = MDLabel(text="загрузка аккордов с rush-sound.ru", font_size=sp(11), halign="center",
-                                 theme_text_color="Custom", text_color=[1, 1, 1, 0.5])
+        title_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(65),
+            padding=[dp(16), dp(8), dp(16), dp(8)],
+            radius=[16, 16, 16, 16],
+            md_bg_color=[0.15, 0.25, 0.35, 0.5],
+            elevation=0
+        )
+
+        title_label = MDLabel(
+            text="RUSH-SOUND ПАРСЕР",
+            font_size=sp(22),
+            halign="center",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=[0.9, 0.5, 0.3, 1]
+        )
+        subtitle_label = MDLabel(
+            text="загрузка аккордов с rush-sound.ru",
+            font_size=sp(11),
+            halign="center",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.5]
+        )
         title_card.add_widget(title_label)
         title_card.add_widget(subtitle_label)
         main_layout.add_widget(title_card)
 
-        settings_card = MDCard(orientation='vertical', size_hint=(1, None), height=dp(130),
-                               padding=[dp(16), dp(12), dp(16), dp(12)],
-                               spacing=dp(12), radius=[16], md_bg_color=[0, 0, 0, 0.2], elevation=0)
+        settings_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(130),
+            padding=[dp(16), dp(12), dp(16), dp(12)],
+            spacing=dp(12),
+            radius=[16],
+            md_bg_color=[0, 0, 0, 0.2],
+            elevation=0,
+            line_color=[1, 1, 1, 0.05],
+            line_width=1
+        )
+
         letters_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(50))
-        self.start_letter_selector = RushSoundLetterSelector(title="ОТ", on_select=self.on_start_letter_selected)
-        self.end_letter_selector = RushSoundLetterSelector(title="ДО", on_select=self.on_end_letter_selected)
+
+        self.start_letter_selector = RushSoundLetterSelector(
+            title="ОТ",
+            on_select=self.on_start_letter_selected
+        )
+
+        self.end_letter_selector = RushSoundLetterSelector(
+            title="ДО",
+            on_select=self.on_end_letter_selected
+        )
+
         letters_layout.add_widget(self.start_letter_selector)
         letters_layout.add_widget(self.end_letter_selector)
         settings_card.add_widget(letters_layout)
         main_layout.add_widget(settings_card)
 
-        buttons_card = MDCard(orientation='vertical', size_hint=(1, None), height=dp(65),
-                              padding=[dp(12), dp(8), dp(12), dp(8)],
-                              radius=[12], md_bg_color=[0, 0, 0, 0.2], elevation=0)
-        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(48))
-        self.start_btn = MDRaisedButton(text="ЗАПУСТИТЬ", size_hint_x=0.7, md_bg_color=[0.2, 0.6, 0.2, 1],
-                                        font_size=sp(14))
+        buttons_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(85),
+            padding=[dp(12), dp(8), dp(12), dp(8)],
+            radius=[12],
+            md_bg_color=[0, 0, 0, 0.2],
+            elevation=0
+        )
+
+        buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
+
+        self.start_btn = MDRaisedButton(
+            text="ЗАПУСТИТЬ",
+            size_hint_x=0.45,
+            md_bg_color=[0.2, 0.6, 0.2, 1],
+            font_size=sp(13)
+        )
         self.start_btn.bind(on_release=self.start_parser)
-        self.stop_btn = MDRaisedButton(text="ОСТАНОВИТЬ", size_hint_x=0.3, disabled=True,
-                                       md_bg_color=[0.6, 0.2, 0.2, 1], font_size=sp(14))
+
+        self.stop_btn = MDRaisedButton(
+            text="ОСТАНОВИТЬ",
+            size_hint_x=0.45,
+            disabled=True,
+            md_bg_color=[0.6, 0.2, 0.2, 1],
+            font_size=sp(13)
+        )
         self.stop_btn.bind(on_release=self.stop_parser)
+
+        self.exit_btn = MDRaisedButton(
+            text="ВЫХОД",
+            size_hint_x=0.45,
+            md_bg_color=[0.4, 0.4, 0.8, 1],
+            font_size=sp(13)
+        )
+        self.exit_btn.bind(on_release=self.exit_to_admin)
+
         buttons_layout.add_widget(self.start_btn)
         buttons_layout.add_widget(self.stop_btn)
+        buttons_layout.add_widget(self.exit_btn)
         buttons_card.add_widget(buttons_layout)
         main_layout.add_widget(buttons_card)
 
         stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
+
         self.total_card = RushSoundStatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
         self.new_card = RushSoundStatCard("НОВЫЕ", 0, [0.3, 0.8, 0.3])
         self.dup_card = RushSoundStatCard("ПОВТОР", 0, [0.9, 0.7, 0.2])
         self.err_card = RushSoundStatCard("ОШИБКИ", 0, [0.9, 0.4, 0.4])
+
         stats_grid.add_widget(self.total_card)
         stats_grid.add_widget(self.new_card)
         stats_grid.add_widget(self.dup_card)
         stats_grid.add_widget(self.err_card)
         main_layout.add_widget(stats_grid)
 
-        self.letter_card = MDCard(orientation='horizontal', size_hint=(1, None), height=dp(50),
-                                  padding=[dp(16), dp(8), dp(16), dp(8)],
-                                  radius=[12], md_bg_color=[0.2, 0.3, 0.4, 0.3], elevation=0)
-        self.letter_label = MDLabel(text="Текущая цифра: --", font_size=sp(13), halign="center",
-                                    theme_text_color="Custom", text_color=[1, 1, 1, 0.8])
+        self.letter_card = MDCard(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(50),
+            padding=[dp(16), dp(8), dp(16), dp(8)],
+            radius=[12],
+            md_bg_color=[0.2, 0.3, 0.4, 0.3],
+            elevation=0
+        )
+
+        self.letter_label = MDLabel(
+            text="Текущая цифра: --",
+            font_size=sp(13),
+            halign="center",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.8]
+        )
         self.letter_card.add_widget(self.letter_label)
         main_layout.add_widget(self.letter_card)
 
         self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
         main_layout.add_widget(self.last_song_container)
 
-        self.status_label = MDLabel(text="Готов к работе", halign="center", size_hint_y=None, height=dp(35),
-                                    font_size=sp(11), theme_text_color="Custom", text_color=[0.5, 0.5, 0.5, 1])
+        self.status_label = MDLabel(
+            text="Готов к работе",
+            halign="center",
+            size_hint_y=None,
+            height=dp(35),
+            font_size=sp(11),
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 1]
+        )
         main_layout.add_widget(self.status_label)
 
         scroll.add_widget(main_layout)
@@ -350,11 +448,9 @@ class RushSoundParserScreen(MDScreen):
                 data = result.get('data', result)
                 is_running = data.get('is_running', False)
                 current_letter = data.get('current_letter', 0)
-
                 current_letter_name = RUSH_SOUND_LETTERS[current_letter] if current_letter < len(
                     RUSH_SOUND_LETTERS) else '?'
                 self.letter_label.text = f"Текущая цифра: {current_letter_name}"
-
                 if is_running:
                     self.start_btn.disabled = True
                     self.start_btn.md_bg_color = [0.3, 0.3, 0.3, 1]
