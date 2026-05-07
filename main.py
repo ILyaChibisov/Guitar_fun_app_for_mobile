@@ -1,6 +1,6 @@
 # main.py
 """
-Главный файл приложения GuitarFuns - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
+Главный файл приложения GuitarFuns - ПОЛНОСТЬЮ ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
 """
 import os
 import sys
@@ -18,6 +18,7 @@ from kivy.core.image import Image as CoreImage
 from io import BytesIO
 
 import kivy
+
 kivy.require('2.3.0')
 
 # Настройка шрифта для поддержки эмодзи
@@ -42,6 +43,7 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -62,7 +64,6 @@ if platform == 'win':
     Window.clearcolor = (0, 0, 0, 0)
 else:
     Window.clearcolor = (0, 0, 0, 0)
-    # НЕ СКРЫВАЕМ системные панели на Android
     try:
         from android import mActivity
         from jnius import autoclass
@@ -100,6 +101,7 @@ from screens.components.blocking_layer import BlockingLayer
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
     print("✅ Модуль ассетов загружен")
 except ImportError as e:
@@ -110,7 +112,7 @@ logger = app_logger()
 
 
 class RootWidget(MDFloatLayout):
-    """Корневой виджет с фоновым изображением - БЕЗ ОТСТУПОВ"""
+    """Корневой виджет с фоновым изображением"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -244,15 +246,19 @@ class GuitarFunsApp(MDApp):
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
 
         # ============ ПРЕДЗАГРУЗКА ИКОНОК В ФОНЕ ============
-        from utils.icon_cache import preload_icons
-        preload_icons()
+        try:
+            from utils.icon_cache import preload_icons
+            preload_icons()
+            logger.info("🚀 Запущена предзагрузка иконок")
+        except ImportError:
+            logger.warning("⚠️ Модуль icon_cache не найден")
 
         # ============ ПРЕДЗАГРУЗКА ДАННЫХ ============
         def on_prefetch_complete(total_artists, total_songs):
             logger.info(f"🎉 Предзагрузка завершена! Артистов: {total_artists}, Песен: {total_songs}")
 
         # Запускаем предзагрузку (не блокирует UI)
-        api.prefetch_all_artists(on_complete=on_prefetch_complete)
+        api.prefetch_all_artists(on_complete=on_prefetch_complete, force_refresh=False)
         # ===================================================
 
         # Создаём верхнюю панель - ПОЛНОСТЬЮ ПРОЗРАЧНУЮ
