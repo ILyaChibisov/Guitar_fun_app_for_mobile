@@ -264,7 +264,11 @@ class ArtistSongsScreen(MDScreen):
             spacing=0
         )
 
-        top_spacer = Widget(size_hint_y=None, height=dp(65))
+        from config.system_bars import get_status_bar_height
+        from config.theme import theme
+        status_h = get_status_bar_height()
+        total_top_padding = status_h + theme.TOP_NAV_HEIGHT
+        top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
         main_layout.add_widget(top_spacer)
 
         # ============ ВЕРХНЯЯ ПАНЕЛЬ ============

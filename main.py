@@ -270,10 +270,8 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
-        # Корневой виджет с фоном
         root = RootWidget()
 
-        # Создаём ScreenManager
         self.screen_manager = setup_screen_manager()
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
@@ -282,6 +280,7 @@ class GuitarFunsApp(MDApp):
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
+        self.top_nav.height = dp(56)  # <--- ВАЖНО: явно указываем высоту
         self.top_nav.pos_hint = {'top': 1}
         self.top_nav.md_bg_color = [0, 0, 0, 0.3]
         self.top_nav.theme_bg_color = "Custom"
@@ -289,16 +288,16 @@ class GuitarFunsApp(MDApp):
         # Создаём нижнюю панель
         self.bottom_nav = BottomNav(self.screen_manager)
 
-        # Создаём блокирующий слой (прозрачный, перехватывает касания)
+        # Создаём блокирующий слой
         self.blocking_layer = BlockingLayer()
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
-        # Добавляем всё в root (порядок важен!)
-        root.add_widget(self.screen_manager)  # 1. Основной контент
-        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
-        root.add_widget(self.top_nav)  # 3. Верхняя панель
-        root.add_widget(self.blocking_layer)  # 4. Блокирующий слой (САМЫЙ ВЕРХНИЙ)
+        # Добавляем всё в root
+        root.add_widget(self.screen_manager)
+        root.add_widget(self.bottom_nav)
+        root.add_widget(self.top_nav)
+        root.add_widget(self.blocking_layer)
 
         network_manager.start_monitoring()
 

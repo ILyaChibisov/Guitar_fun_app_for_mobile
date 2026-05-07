@@ -13,7 +13,7 @@ class BottomNavConfig:
     PANEL_HEIGHT = 76  # Высота панели
     PANEL_PADDING = [4, 2, 4, 2]  # Отступы [лево, верх, право, низ]
     PANEL_SPACING = 0  # Расстояние между кнопками
-    PANEL_BG_COLOR = [1, 1, 1, 1]  # Цвет фона (белый)
+    PANEL_BG_COLOR = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
 
     # ========== НАСТРОЙКИ ПО УМОЛЧАНИЮ ==========
     DEFAULT_ICON_SIZE = 0.85
@@ -67,7 +67,6 @@ class BottomNavConfig:
     }
 
     # ========== ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ ДЛЯ КАЖДОЙ КНОПКИ ==========
-    # Убрали 'dictionary' (Словарь), добавили 'home' (Главная)
     BUTTONS_CONFIG = {
         'home': {
             'icon_size': 0.90,

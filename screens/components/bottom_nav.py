@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Современная нижняя навигация
+Современная нижняя навигация - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -32,7 +32,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации"""
+    """Элемент нижней навигации - ПРОЗРАЧНЫЙ"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -135,7 +135,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации"""
+    """Нижняя панель навигации - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -145,12 +145,14 @@ class BottomNav(BoxLayout):
         # Применяем настройки из конфига
         nav_bar_height = get_navigation_bar_height()
 
-        # Добавляем отступ снизу под нав-бар (на всех платформах для тестирования)
+        # Добавляем отступ снизу под нав-бар
         self.height = dp(BottomNavConfig.PANEL_HEIGHT) + nav_bar_height
         self.padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
-        self.padding = [self.padding[0], self.padding[1], self.padding[2], nav_bar_height]  # низ
+        self.padding = [self.padding[0], self.padding[1], self.padding[2], nav_bar_height]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
-        self.md_bg_color = BottomNavConfig.PANEL_BG_COLOR
+
+        # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ ФОН
+        self.md_bg_color = [0, 0, 0, 0]
 
         # Меню
         self.nav_items = [
@@ -173,7 +175,7 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info(f'Нижняя навигация создана (высота: {self.height}px, отступ снизу: {nav_bar_height}px)')
+        logger.info(f'Нижняя навигация создана (прозрачная, высота: {self.height}px, отступ снизу: {nav_bar_height}px)')
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
@@ -181,7 +183,6 @@ class BottomNav(BoxLayout):
 
     def switch_to(self, screen_name):
         """Переключает на экран с проверкой блокировки"""
-        # Проверяем блокировку навигации
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована (окно авторизации открыто)")

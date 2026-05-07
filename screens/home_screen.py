@@ -11,11 +11,13 @@ from kivy.clock import Clock
 from kivy.animation import Animation
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.widget import Widget
 from kivymd.app import MDApp
 
 from config.theme import theme
 from config.carousel_config import CarouselConfig
 from config.logger_config import screen_logger
+from config.system_bars import get_status_bar_height
 from screens.components.carousel import MainCarousel
 from api.client import api
 from utils.notifications import notify
@@ -56,13 +58,11 @@ class LoginModal(MDCard):
                         bold=True, font_size=dp(20))
         self.add_widget(title)
 
-        # Исправлено: mode="fill" вместо "filled"
         self.username_field = MDTextField(hint_text="Имя пользователя или Email", mode="fill",
                                           size_hint_y=None, height=dp(56),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.username_field)
 
-        # Исправлено: mode="fill" вместо "filled"
         self.password_field = MDTextField(hint_text="Пароль", mode="fill", password=True,
                                           size_hint_y=None, height=dp(56),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
@@ -137,25 +137,21 @@ class RegisterModal(MDCard):
                         bold=True, font_size=dp(20))
         self.add_widget(title)
 
-        # Исправлено: mode="fill" вместо "filled"
         self.username_field = MDTextField(hint_text="Имя пользователя", mode="fill",
                                           size_hint_y=None, height=dp(52),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.username_field)
 
-        # Исправлено: mode="fill" вместо "filled"
         self.email_field = MDTextField(hint_text="Email", mode="fill",
                                        size_hint_y=None, height=dp(52),
                                        padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.email_field)
 
-        # Исправлено: mode="fill" вместо "filled"
         self.password_field = MDTextField(hint_text="Пароль", mode="fill", password=True,
                                           size_hint_y=None, height=dp(52),
                                           padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
         self.add_widget(self.password_field)
 
-        # Исправлено: mode="fill" вместо "filled"
         self.confirm_field = MDTextField(hint_text="Подтвердите пароль", mode="fill", password=True,
                                          size_hint_y=None, height=dp(52),
                                          padding=[dp(12), dp(6), dp(12), dp(6)], font_size=dp(13))
@@ -338,21 +334,21 @@ class HomeScreen(MDScreen):
         self.auth_check_done = False
         self.welcome_popup = None
 
-        # Делаем экран прозрачным
         self.md_bg_color = [0, 0, 0, 0]
 
-        # Используем FloatLayout для возможности наложения виджетов
         self.root_layout = FloatLayout()
 
-        # Основной контейнер
         self.layout = MDBoxLayout(
             orientation='vertical',
             padding=[dp(16), dp(16), dp(16), dp(16)],
             spacing=dp(10)
         )
 
-        # Верхний спейсер для центрирования
-        self.top_spacer = BoxLayout(size_hint_y=0.2)
+        # ============ ВЕРХНИЙ ОТСТУП ПОД СИСТЕМНЫЕ ПАНЕЛИ ============
+        status_h = get_status_bar_height()
+        total_top_padding = status_h + theme.TOP_NAV_HEIGHT
+        self.top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
+        self.layout.add_widget(self.top_spacer)
 
         # Заголовок
         self.title = MDLabel(
@@ -372,10 +368,9 @@ class HomeScreen(MDScreen):
             on_item_selected=self._on_carousel_item_selected
         )
 
-        # Нижний спейсер для центрирования
+        # Нижний спейсер
         self.bottom_spacer = BoxLayout(size_hint_y=0.2)
 
-        self.layout.add_widget(self.top_spacer)
         self.layout.add_widget(self.title)
         self.layout.add_widget(self.carousel)
         self.layout.add_widget(self.bottom_spacer)
@@ -387,7 +382,6 @@ class HomeScreen(MDScreen):
         logger.info('Главный экран создан')
 
     def show_welcome(self, username):
-        """Показывает красивое всплывающее приветствие"""
         from screens.home_screen import WelcomePopup
         if self.welcome_popup and self.welcome_popup.parent:
             return
@@ -395,7 +389,6 @@ class HomeScreen(MDScreen):
         self.root_layout.add_widget(self.welcome_popup)
 
     def check_auth(self, dt):
-        """Проверяет авторизацию при запуске"""
         if self.auth_check_done:
             return
         self.auth_check_done = True
@@ -423,7 +416,6 @@ class HomeScreen(MDScreen):
             Clock.schedule_once(lambda x: app.open_profile(), 0.1)
 
     def open_profile(self):
-        """Открывает экран профиля"""
         if api.is_authenticated():
             if hasattr(self, 'manager') and self.manager:
                 if 'profile' in self.manager.screen_names:
@@ -436,7 +428,6 @@ class HomeScreen(MDScreen):
                 app.open_profile()
 
     def on_login_success(self):
-        """Обработчик успешного входа (вызывается из main.py)"""
         if api.access_token:
             api.get_current_user(
                 on_success=self.on_user_data_loaded,
@@ -450,7 +441,6 @@ class HomeScreen(MDScreen):
         self.show_welcome(username)
 
     def _on_carousel_item_selected(self, screen_name):
-        """Обработчик выбора элемента из карусели"""
         if screen_name == 'profile':
             self.open_profile()
         elif hasattr(self, 'manager') and self.manager:
@@ -469,8 +459,6 @@ class HomeScreen(MDScreen):
 
 
 class WelcomePopup(MDCard):
-    """Красивое всплывающее приветствие"""
-
     def __init__(self, username, **kwargs):
         super().__init__(**kwargs)
         self.username = username
@@ -485,7 +473,6 @@ class WelcomePopup(MDCard):
         self.padding = [dp(20), dp(20), dp(20), dp(20)]
         self.spacing = dp(10)
 
-        # Иконка гитары
         guitar_icon = MDLabel(
             text="🎸",
             font_size=sp(48),
@@ -496,7 +483,6 @@ class WelcomePopup(MDCard):
             text_color=hex_to_rgb(theme.PRIMARY) + [1]
         )
 
-        # Текст "Добро пожаловать"
         welcome_label = MDLabel(
             text="Добро пожаловать!",
             font_size=sp(18),
@@ -508,7 +494,6 @@ class WelcomePopup(MDCard):
             bold=True
         )
 
-        # Имя пользователя
         name_label = MDLabel(
             text=username,
             font_size=sp(16),
@@ -524,17 +509,14 @@ class WelcomePopup(MDCard):
         self.add_widget(welcome_label)
         self.add_widget(name_label)
 
-        # Анимация появления
         self.opacity = 0
         self.scale = 0.8
         anim = Animation(opacity=1, scale=1, duration=0.3, t='out_back')
         anim.start(self)
 
-        # Автоматическое исчезновение через 3 секунды
         Clock.schedule_once(self.fade_out, 3)
 
     def fade_out(self, dt):
-        """Плавное исчезновение"""
         anim = Animation(opacity=0, scale=0.8, duration=0.3, t='in_back')
         anim.bind(on_complete=lambda *args: self.parent.remove_widget(self) if self.parent else None)
         anim.start(self)

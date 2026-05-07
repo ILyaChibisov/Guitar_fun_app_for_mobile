@@ -1,10 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации с тёмным полупрозрачным фоном
-- Слева: иконка меню 🍔
-- По центру: название текущего экрана
-- Справа: поиск 🔍, профиль 👤 и выбор языка
-- Фон: тёмный полупрозрачный
+Верхняя панель навигации - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
 """
 from kivy.metrics import dp, sp
 from kivy.uix.boxlayout import BoxLayout
@@ -24,7 +20,7 @@ logger = get_logger('UI')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации с тёмным полупрозрачным фоном"""
+    """Верхняя панель навигации - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -37,23 +33,19 @@ class TopNav(MDCard):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
 
-        # Добавляем отступ сверху под статус-бар (на всех платформах для тестирования)
+        # Добавляем отступ сверху под статус-бар
         status_bar_height = get_status_bar_height()
-        self.height = dp(56) + status_bar_height  # увеличиваем высоту
-        self.padding = [0, status_bar_height, 0, 0]  # отступ сверху
+        self.height = dp(56) + status_bar_height
+        self.padding = [0, status_bar_height, 0, 0]
 
         self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]
+        self.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
         self.theme_bg_color = "Custom"
         self.elevation = 0
         self.spacing = 0
 
-        # Тёмный полупрозрачный фон через canvas
-        from kivy.graphics import Color, Rectangle
-        with self.canvas.before:
-            Color(0, 0, 0, 0.3)
-            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-        self.bind(pos=self._update_bg, size=self._update_bg)
+        # Убираем canvas.before - он не нужен для прозрачной панели
+        # (удаляем блок с Color и Rectangle)
 
         # Основной горизонтальный контейнер для элементов
         self.container = MDBoxLayout(
@@ -61,7 +53,7 @@ class TopNav(MDCard):
             size_hint=(1, 1),
             padding=[dp(12), 0, dp(12), 0],
             spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0]
+            md_bg_color=[0, 0, 0, 0]  # ПРОЗРАЧНЫЙ
         )
 
         # ============ ЛЕВАЯ ЧАСТЬ: иконка меню ============
@@ -71,7 +63,7 @@ class TopNav(MDCard):
             size=(dp(40), dp(40)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],  # ПРОЗРАЧНЫЙ
             on_release=self._on_menu_press,
             pos_hint={'center_y': 0.5}
         )
@@ -89,25 +81,25 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # ============ ПРАВАЯ ЧАСТЬ: поиск, профиль и выбор языка ============
+        # ============ ПРАВАЯ ЧАСТЬ ============
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
             width=dp(140),
             height=dp(40),
             spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],  # ПРОЗРАЧНЫЙ
             pos_hint={'center_y': 0.5}
         )
 
-        # Кнопка поиска (лупа)
+        # Кнопка поиска
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
             size=(dp(32), dp(32)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],  # ПРОЗРАЧНЫЙ
             on_release=self._on_search_press,
             pos_hint={'center_y': 0.5}
         )
@@ -119,7 +111,7 @@ class TopNav(MDCard):
             size=(dp(32), dp(32)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],  # ПРОЗРАЧНЫЙ
             on_release=self._on_profile_press,
             pos_hint={'center_y': 0.5}
         )
@@ -129,12 +121,10 @@ class TopNav(MDCard):
             on_language_change=self._on_language_changed
         )
 
-        # Добавляем в правый контейнер
         self.right_container.add_widget(self.search_btn)
         self.right_container.add_widget(self.profile_btn)
         self.right_container.add_widget(self.language_selector)
 
-        # Добавляем всё в контейнер
         self.container.add_widget(self.menu_btn)
         self.container.add_widget(self.screen_title)
         self.container.add_widget(self.right_container)
@@ -147,17 +137,12 @@ class TopNav(MDCard):
         elif hasattr(self.sm, 'bind'):
             self.sm.bind(current=self._on_screen_changed)
 
-        # Обновляем заголовок при старте
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info(f'TopNav создана (высота: {self.height}px, отступ: {status_bar_height}px)')
+        logger.info(f'TopNav создана (прозрачная, высота: {self.height}px)')
 
-    def _update_bg(self, *args):
-        if hasattr(self, 'bg_rect'):
-            self.bg_rect.pos = self.pos
-            self.bg_rect.size = self.size
-
+    # Остальные методы остаются без изменений
     def _get_screen_title(self, screen_name: str) -> str:
         titles = {
             'home': 'Главная',
@@ -179,27 +164,22 @@ class TopNav(MDCard):
     def _on_screen_changed(self, instance, screen_name):
         self.current_screen_name = screen_name
         self.screen_title.text = self._get_screen_title(screen_name)
-        logger.debug(f"Экран изменён: {screen_name}, заголовок: {self.screen_title.text}")
 
     def _on_menu_press(self, instance):
-        """Обработчик нажатия на меню"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
             return
-
         if self.app and hasattr(self.app, 'open_drawer'):
             self.app.open_drawer(instance)
         else:
             logger.info("Меню нажато")
 
     def _on_profile_press(self, instance):
-        """Обработчик нажатия на профиль"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
             return
-
         if self.app and hasattr(self.app, 'open_profile'):
             self.app.open_profile(instance)
         else:
@@ -211,12 +191,10 @@ class TopNav(MDCard):
             self.app.change_language(lang_code)
 
     def _on_search_press(self, instance):
-        """Обработчик нажатия на поиск"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
             return
-
         if self.sm:
             if self.sm.has_screen('chords') and self.sm.has_screen('search'):
                 chords_screen = self.sm.get_screen('chords')
