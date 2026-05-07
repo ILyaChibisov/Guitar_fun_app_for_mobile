@@ -14,36 +14,29 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.image import Image
-from io import BytesIO
+from kivy.uix.widget import Widget
 from kivy.clock import Clock
+from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.system_bars import get_status_bar_height
 from api.client import api
 from utils.notifications import notify
 
 logger = screen_logger('Songs')
 
-# Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
 
-    logger.warning("Модуль data не найден")
-
-
-# ============ КНОПКА БУКВЫ ============
-
 class LetterButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка буквы для сетки - элегантный дизайн"""
+    """Кнопка буквы для сетки"""
 
     def __init__(self, text, is_active=False, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
@@ -102,12 +95,8 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
             self.on_press_callback(self.btn_text)
 
 
-# ============ СОВРЕМЕННАЯ ПОИСКОВАЯ СТРОКА (ДЛЯ KIVYMD 1.2.0) ============
-
-# ============ СОВРЕМЕННАЯ ПОИСКОВАЯ СТРОКА (ДЛЯ KIVYMD 1.2.0) ============
-
 class GoogleSearchBar(MDCard):
-    """Современная поисковая строка без голосового поиска, с лупой справа и аккуратной обводкой"""
+    """Современная поисковая строка"""
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
@@ -123,11 +112,9 @@ class GoogleSearchBar(MDCard):
         self.padding = [dp(16), dp(6), dp(12), dp(6)]
         self.spacing = dp(8)
 
-        # Тонкая аккуратная обводка
         self.line_color = [0.46, 0.70, 0.71, 0.4]
         self.line_width = 1.0
 
-        # Поле ввода (без подсказки) - используем минимальные параметры
         self.search_field = MDTextField(
             hint_text="",
             size_hint_x=1,
@@ -137,19 +124,15 @@ class GoogleSearchBar(MDCard):
             mode="fill"
         )
 
-        # Убираем все линии и фон у поля ввода
         self.search_field.line_color_normal = [0, 0, 0, 0]
         self.search_field.line_color_focus = [0, 0, 0, 0]
         self.search_field.fill_color_normal = [1, 1, 1, 0]
         self.search_field.fill_color_focus = [1, 1, 1, 0]
         self.search_field.hint_text_color = [0.7, 0.7, 0.7, 1]
-
-        # Устанавливаем цвет текста через style
-        self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]  # Тёмный текст
+        self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
 
         self.search_field.bind(text=self._on_text_change)
 
-        # Кнопка очистки (крестик)
         self.clear_btn = MDIconButton(
             icon="close-circle",
             size_hint=(None, None),
@@ -161,7 +144,6 @@ class GoogleSearchBar(MDCard):
             opacity=0
         )
 
-        # Кнопка лупы справа
         self.search_icon = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
@@ -178,18 +160,15 @@ class GoogleSearchBar(MDCard):
         self.add_widget(self.search_icon)
 
     def _on_text_change(self, instance, text):
-        """Показываем/скрываем кнопку очистки при вводе текста"""
         self.clear_btn.opacity = 1 if text else 0
 
     def _on_search(self, instance):
-        """Выполнение поиска"""
         if self.on_search:
             text = self.search_field.text.strip()
             if text:
                 self.on_search(text)
 
     def _on_clear(self, instance):
-        """Очистка поля поиска"""
         self.search_field.text = ""
         self.search_field.focus = True
         self.clear_btn.opacity = 0
@@ -197,28 +176,22 @@ class GoogleSearchBar(MDCard):
             self.on_clear()
 
     def get_text(self):
-        """Получить текст из поля поиска"""
         return self.search_field.text.strip()
 
     def set_text(self, text):
-        """Установить текст в поле поиска"""
         self.search_field.text = text
         self.clear_btn.opacity = 1 if text else 0
 
     def clear(self):
-        """Очистить поле поиска"""
         self.search_field.text = ""
         self.clear_btn.opacity = 0
 
     def focus(self):
-        """Установить фокус на поле поиска"""
         self.search_field.focus = True
 
 
-# ============ ВЫБОР ЯЗЫКА ============
-
 class LanguageSelector(MDBoxLayout):
-    """Выбор языка с пагинацией, иконкой и текстом из ассетов"""
+    """Выбор языка с пагинацией"""
 
     def __init__(self, on_language_change=None, **kwargs):
         super().__init__(**kwargs)
@@ -231,13 +204,11 @@ class LanguageSelector(MDBoxLayout):
         self.on_language_change = on_language_change
         self.current_language = 'ru'
 
-        # Только два языка
         self.languages = [
             {'code': 'ru', 'name': 'Русский', 'icon': 'rus_png'},
             {'code': 'en', 'name': 'English', 'icon': 'eng_png'}
         ]
 
-        # Стрелка влево
         self.prev_btn = MDIconButton(
             icon="chevron-left",
             size_hint=(None, None),
@@ -248,7 +219,6 @@ class LanguageSelector(MDBoxLayout):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Контейнер для иконки и текста
         self.content_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -258,7 +228,6 @@ class LanguageSelector(MDBoxLayout):
             pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
 
-        # Иконка языка (сначала)
         self.language_icon = Image(
             size_hint=(None, None),
             size=(dp(20), dp(20)),
@@ -267,7 +236,6 @@ class LanguageSelector(MDBoxLayout):
             keep_ratio=True
         )
 
-        # Текст названия языка (потом)
         self.language_label = MDLabel(
             text="Русский",
             font_size=sp(13),
@@ -282,7 +250,6 @@ class LanguageSelector(MDBoxLayout):
         self.content_container.add_widget(self.language_icon)
         self.content_container.add_widget(self.language_label)
 
-        # Стрелка вправо
         self.next_btn = MDIconButton(
             icon="chevron-right",
             size_hint=(None, None),
@@ -293,18 +260,15 @@ class LanguageSelector(MDBoxLayout):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Растяжка для центрирования
         self.add_widget(MDBoxLayout(size_hint_x=1))
         self.add_widget(self.prev_btn)
         self.add_widget(self.content_container)
         self.add_widget(self.next_btn)
         self.add_widget(MDBoxLayout(size_hint_x=1))
 
-        # Загружаем первую иконку
         self._update_display()
 
     def _load_icon(self, icon_name):
-        """Загружает иконку из ассетов"""
         if HAS_ASSETS:
             try:
                 icon_data = load_asset_as_bytes(icon_name)
@@ -314,8 +278,6 @@ class LanguageSelector(MDBoxLayout):
                     return True
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
-
-        # Если не загрузилась, показываем эмодзи
         if icon_name == 'rus_png':
             self.language_icon.text = "🇷🇺"
         elif icon_name == 'eng_png':
@@ -323,7 +285,6 @@ class LanguageSelector(MDBoxLayout):
         return False
 
     def _update_display(self):
-        """Обновляет отображение текущего языка"""
         for lang in self.languages:
             if lang['code'] == self.current_language:
                 self.language_label.text = lang['name']
@@ -334,27 +295,22 @@ class LanguageSelector(MDBoxLayout):
         return self.current_language
 
     def prev_language(self, instance):
-        """Предыдущий язык"""
         current_index = 0 if self.current_language == 'ru' else 1
         new_index = (current_index - 1) % len(self.languages)
         self.current_language = self.languages[new_index]['code']
         self._update_display()
-
         if self.on_language_change:
             self.on_language_change(self.current_language)
 
     def next_language(self, instance):
-        """Следующий язык"""
         current_index = 0 if self.current_language == 'ru' else 1
         new_index = (current_index + 1) % len(self.languages)
         self.current_language = self.languages[new_index]['code']
         self._update_display()
-
         if self.on_language_change:
             self.on_language_change(self.current_language)
 
     def set_language(self, language):
-        """Устанавливает язык программно"""
         for lang in self.languages:
             if lang['code'] == language:
                 self.current_language = language
@@ -362,18 +318,14 @@ class LanguageSelector(MDBoxLayout):
                 break
 
 
-# ============ СЕТКА АЛФАВИТА ============
-
 class AlphabetGrid(MDCard):
-    """Сетка с буквами - элегантный дизайн для зелёного фона"""
+    """Сетка с буквами"""
 
-    # Русский алфавит (33 буквы) + символы
     RU_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
                   'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т',
                   'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь',
                   'Э', 'Ю', 'Я', '#', '09']
 
-    # Английский алфавит (26 букв) + символы
     EN_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
                   'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                   'U', 'V', 'W', 'X', 'Y', 'Z', '#', '09']
@@ -389,7 +341,6 @@ class AlphabetGrid(MDCard):
         self.height = dp(170)
         self.padding = [dp(6), dp(6), dp(6), dp(6)]
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
-
         self.md_bg_color = [0.06, 0.18, 0.12, 0.92]
         self.line_color = [0.9, 0.9, 0.8, 0.15]
         self.line_width = 1
@@ -482,10 +433,8 @@ class AlphabetGrid(MDCard):
             btn.set_active(False)
 
 
-# ============ ГЛАВНЫЙ ЭКРАН ============
-
 class SongsScreen(MDScreen):
-    """Экран песен с алфавитной навигацией и современным поиском"""
+    """Экран песен с алфавитной навигацией"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -501,7 +450,6 @@ class SongsScreen(MDScreen):
         logger.info('Экран песен создан')
 
     def load_background(self):
-        """Загружает фоновое изображение"""
         try:
             if HAS_ASSETS:
                 asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
@@ -541,27 +489,23 @@ class SongsScreen(MDScreen):
         )
         main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        from config.system_bars import get_status_bar_height
-        from config.theme import theme
+        # Отступ под системные панели
         status_h = get_status_bar_height()
         total_top_padding = status_h + theme.TOP_NAV_HEIGHT
         top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
         main_layout.add_widget(top_spacer)
 
-        # Современная поисковая строка
         self.search_bar = GoogleSearchBar(
             on_search=self.do_search,
             on_clear=self.clear_search
         )
         main_layout.add_widget(self.search_bar)
 
-        # Выбор языка
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
         main_layout.add_widget(self.language_selector)
 
-        # Сетка с буквами
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
         main_layout.add_widget(self.alphabet_grid)
 
@@ -569,19 +513,15 @@ class SongsScreen(MDScreen):
         self.add_widget(scroll)
 
     def on_language_changed(self, language):
-        """Обработчик смены языка"""
         logger.info(f"Язык изменён на: {language}")
         self.alphabet_grid.set_language(language)
         self.alphabet_grid.clear_selection()
         self.current_letter = None
 
     def on_letter_press(self, letter):
-        """Обработчик нажатия на букву - переходим на экран исполнителей"""
         logger.info(f"Выбрана буква/группа: {letter}")
         self.current_letter = letter
         self.alphabet_grid.clear_selection()
-
-        # Очищаем поисковую строку
         self.search_bar.clear()
 
         if hasattr(self, 'manager') and self.manager:
@@ -594,7 +534,6 @@ class SongsScreen(MDScreen):
                 notify.error("Ошибка навигации")
 
     def do_search(self, query):
-        """Поиск - переход на экран результатов"""
         if len(query) < 2:
             notify.warning("Введите минимум 2 символа для поиска")
             return
@@ -614,6 +553,5 @@ class SongsScreen(MDScreen):
                 notify.error("Ошибка навигации")
 
     def clear_search(self):
-        """Очищает поиск"""
         self.alphabet_grid.clear_selection()
         self.current_letter = None

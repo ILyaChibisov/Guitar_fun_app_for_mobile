@@ -7,9 +7,8 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.animation import Animation
-from kivy.properties import StringProperty, BooleanProperty, NumericProperty
+from kivy.properties import StringProperty, BooleanProperty
 from kivy.metrics import dp, sp
-from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
 from io import BytesIO
 from kivymd.app import MDApp
@@ -24,7 +23,6 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -83,11 +81,9 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.bind(icon_asset=self._reload_icon)
 
     def _reload_icon(self, *args):
-        """Перезагружает иконку"""
         self._load_icon()
 
     def _load_icon(self):
-        """Загружает иконку с текущим размером"""
         self.icon_container.clear_widgets()
 
         if HAS_ASSETS and self.icon_asset:
@@ -95,7 +91,6 @@ class NavItem(ButtonBehavior, BoxLayout):
                 icon_data = load_asset_as_bytes(self.icon_asset)
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
-
                     self.custom_image = Image(
                         texture=core_img.texture,
                         size_hint=(self.config['icon_size'], self.config['icon_size']),
@@ -108,7 +103,6 @@ class NavItem(ButtonBehavior, BoxLayout):
             except Exception as e:
                 logger.error(f'Ошибка загрузки иконки: {e}')
 
-        # Заглушка
         self.custom_image = Label(
             text="?",
             font_size=sp(18),
@@ -120,7 +114,6 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.icon_container.add_widget(self.custom_image)
 
     def update_state(self, instance, value):
-        """Обновляет внешний вид"""
         if value:
             self.text_label.color = theme.PRIMARY
             self.text_label.bold = True
@@ -145,14 +138,11 @@ class BottomNav(BoxLayout):
         # Применяем настройки из конфига
         nav_bar_height = get_navigation_bar_height()
 
-        # Добавляем отступ снизу под нав-бар
         self.height = dp(BottomNavConfig.PANEL_HEIGHT) + nav_bar_height
         self.padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [self.padding[0], self.padding[1], self.padding[2], nav_bar_height]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
-
-        # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ ФОН
-        self.md_bg_color = [0, 0, 0, 0]
+        self.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
 
         # Меню
         self.nav_items = [
@@ -175,17 +165,16 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info(f'Нижняя навигация создана (прозрачная, высота: {self.height}px, отступ снизу: {nav_bar_height}px)')
+        logger.info(f'Нижняя навигация создана (прозрачная, высота: {self.height}px)')
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
             item.active = (screen == screen_name)
 
     def switch_to(self, screen_name):
-        """Переключает на экран с проверкой блокировки"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
-            logger.debug("Навигация заблокирована (окно авторизации открыто)")
+            logger.debug("Навигация заблокирована")
             return
 
         if not self.sm or self.sm.current == screen_name:
@@ -208,14 +197,12 @@ class BottomNav(BoxLayout):
         self.switch_to(screen_name)
 
     def reload_config(self):
-        """Перезагружает конфигурацию и обновляет панель"""
         nav_bar_height = get_navigation_bar_height()
         self.height = dp(BottomNavConfig.PANEL_HEIGHT) + nav_bar_height
         self.padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [self.padding[0], self.padding[1], self.padding[2], nav_bar_height]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
 
-        # Обновляем каждую кнопку
         for item, (_, _, screen) in zip(self.items, self.nav_items):
             new_config = BottomNavConfig.get_button_config(screen)
             item.config = new_config

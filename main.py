@@ -1,6 +1,6 @@
 # main.py
 """
-Главный файл приложения GuitarFuns
+Главный файл приложения GuitarFuns - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
 """
 import os
 import sys
@@ -18,7 +18,6 @@ from kivy.core.image import Image as CoreImage
 from io import BytesIO
 
 import kivy
-
 kivy.require('2.3.0')
 
 # Настройка шрифта для поддержки эмодзи
@@ -43,7 +42,6 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
-
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -71,14 +69,12 @@ else:
 
         View = autoclass('android.view.View')
         decorView = mActivity.getWindow().getDecorView()
-        # Оставляем только LAYOUT флаги - панели остаются видимыми
         decorView.setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
             View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         )
 
-        # Делаем панели полупрозрачными (красиво)
         window = mActivity.getWindow()
         window.addFlags(0x80000000)  # FLAG_TRANSLUCENT_STATUS
         window.addFlags(0x40000000)  # FLAG_TRANSLUCENT_NAVIGATION
@@ -104,7 +100,6 @@ from screens.components.blocking_layer import BlockingLayer
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
     print("✅ Модуль ассетов загружен")
 except ImportError as e:
@@ -115,17 +110,14 @@ logger = app_logger()
 
 
 class RootWidget(MDFloatLayout):
-    """Корневой виджет с фоновым изображением - БЕЗ ОТСТУПОВ, чтобы фон был единым"""
+    """Корневой виджет с фоновым изображением - БЕЗ ОТСТУПОВ"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.bg_image = None
         self.load_background()
         self.size_hint = (1, 1)
-
-        # Убираем отступы - пусть фон заполняет всё окно
         self.padding = [0, 0, 0, 0]
-
         logger.info("RootWidget: фон без отступов")
 
     def load_background(self):
@@ -150,7 +142,6 @@ class RootWidget(MDFloatLayout):
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
 
-        # Если нет ассета, устанавливаем цвет как fallback
         with self.canvas.before:
             Color(0.46, 0.70, 0.71, 1)
             self.bg_image = Rectangle(pos=self.pos, size=self.size)
@@ -184,7 +175,6 @@ class GuitarFunsApp(MDApp):
         """Блокирует или разблокирует навигацию"""
         logger.info(f"set_blocking вызван: blocked={blocked}")
         self.is_auth_blocking = blocked
-
         if self.blocking_layer:
             self.blocking_layer.set_active(blocked)
 
@@ -192,7 +182,6 @@ class GuitarFunsApp(MDApp):
         """Открывает экран профиля с проверкой авторизации"""
         if self.screen_manager:
             current_screen = self.screen_manager.current_screen
-
             if api.is_authenticated():
                 if 'profile' in self.screen_manager.screen_names:
                     self.screen_manager.current = 'profile'
@@ -200,39 +189,32 @@ class GuitarFunsApp(MDApp):
                 self._show_auth_modal_on_screen(current_screen)
 
     def _show_auth_modal_on_screen(self, screen):
-        """Показывает модальное окно авторизации на указанном экране с блокировкой"""
+        """Показывает модальное окно авторизации"""
         from screens.home_screen import AuthModal
 
         self.set_blocking(True)
-
         self.current_auth_modal = AuthModal(
             parent_screen=screen,
             on_close=self._on_auth_modal_close,
             on_login_success=self._on_auth_success
         )
-
         if self.blocking_layer:
             self.blocking_layer.set_modal_widget(self.current_auth_modal)
-
         screen.add_widget(self.current_auth_modal)
 
     def _on_auth_modal_close(self):
         """Обработчик закрытия модального окна"""
         logger.info("Модальное окно закрыто")
-
         if self.blocking_layer:
             self.blocking_layer.clear_modal_widget()
-
         self.current_auth_modal = None
         self.set_blocking(False)
 
     def _on_auth_success(self, provider=None):
         """Обработчик успешной авторизации"""
         logger.info(f"Авторизация успешна: {provider}")
-
         if self.blocking_layer:
             self.blocking_layer.clear_modal_widget()
-
         self.current_auth_modal = None
         self.set_blocking(False)
 
@@ -261,13 +243,20 @@ class GuitarFunsApp(MDApp):
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
 
+        # ============ ЗАПУСК ПРЕДЗАГРУЗКИ В ФОНЕ ============
+        def on_prefetch_complete(total_artists, total_songs):
+            logger.info(f"🎉 Предзагрузка завершена! Артистов: {total_artists}, Песен: {total_songs}")
+
+        api.prefetch_all_artists(on_complete=on_prefetch_complete)
+        # ===================================================
+
         # Создаём верхнюю панель - ПОЛНОСТЬЮ ПРОЗРАЧНУЮ
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
         self.top_nav.height = dp(56)
         self.top_nav.pos_hint = {'top': 1}
-        self.top_nav.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
+        self.top_nav.md_bg_color = [0, 0, 0, 0]
         self.top_nav.theme_bg_color = "Custom"
 
         # Создаём нижнюю панель - ПОЛНОСТЬЮ ПРОЗРАЧНУЮ
@@ -278,11 +267,11 @@ class GuitarFunsApp(MDApp):
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
-        # Добавляем всё в root (порядок важен!)
-        root.add_widget(self.screen_manager)  # 1. Основной контент
-        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
-        root.add_widget(self.top_nav)  # 3. Верхняя панель
-        root.add_widget(self.blocking_layer)  # 4. Блокирующий слой
+        # Добавляем всё в root
+        root.add_widget(self.screen_manager)
+        root.add_widget(self.bottom_nav)
+        root.add_widget(self.top_nav)
+        root.add_widget(self.blocking_layer)
 
         network_manager.start_monitoring()
 
@@ -290,12 +279,10 @@ class GuitarFunsApp(MDApp):
         return root
 
     def open_support(self, instance=None):
-        """Открывает экран поддержки"""
         from utils.notifications import notify
         notify.info("Поддержка будет доступна в следующей версии")
 
     def change_language(self, lang_code):
-        """Изменяет язык приложения"""
         logger.info(f"Смена языка на: {lang_code}")
 
     def on_start(self):

@@ -1,8 +1,10 @@
 # api/client.py
 """
-HTTP клиент для работы с сервером с поддержкой пагинации
+HTTP клиент для работы с сервером - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
+С поддержкой кэширования, предзагрузки и сохранением кэша в файл
 """
 import json
+import os
 import threading
 import http.server
 import socketserver
@@ -10,24 +12,26 @@ import urllib.parse
 import webbrowser
 import requests
 import warnings
+import time
 from kivy.logger import Logger
 from kivy.storage.jsonstore import JsonStore
 from kivy.clock import Clock
 from config.app_config import config
 from api.ssl_config import get_requests_session
-import time
+
+# Файл для сохранения кэша
+CACHE_FILE = "cache.json"
 
 # Отключаем предупреждения SSL
 warnings.filterwarnings("ignore", category=Warning)
-
 import urllib3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 # ============ Локальный сервер для OAuth callback ============
 
 class OAuthCallbackHandler(http.server.SimpleHTTPRequestHandler):
-    """Обработчик callback от Google OAuth"""
     tokens = None
 
     def do_GET(self):
@@ -74,7 +78,6 @@ class OAuthCallbackHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class OAuthServer:
-    """Локальный сервер для приёма Google OAuth callback"""
     _instance = None
     port = 8080
 
@@ -146,14 +149,70 @@ class APIClient:
             'favorites': None
         }
 
-        # Создаем сессию
+        # Кэш для предзагрузки
+        self._prefetched_artists = {}
+        self._prefetched_songs = {}
+        self._prefetch_complete = False
+        self._prefetch_timestamp = 0
+        self._prefetch_ttl = 3600  # время жизни кэша в секундах (1 час)
+
+        # Загружаем кэш из файла
+        self._load_cache_from_file()
+
+        # Создаем сессию с оптимизациями
         self.session = get_requests_session()
         self.session.headers.update({
             'User-Agent': 'GuitarFuns/1.0',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive'
         })
 
         self._load_tokens()
+
+    # ============ РАБОТА С ФАЙЛОВЫМ КЭШЕМ ============
+
+    def _load_cache_from_file(self):
+        """Загружает кэш из файла"""
+        if os.path.exists(CACHE_FILE):
+            try:
+                with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self._prefetched_artists = data.get('artists', {})
+                    self._prefetched_songs = data.get('songs', {})
+                    self._prefetch_timestamp = data.get('timestamp', 0)
+                    self._prefetch_complete = bool(self._prefetched_artists)
+
+                    if self.is_cache_fresh():
+                        total_artists = sum(len(v['artists']) for v in self._prefetched_artists.values())
+                        total_songs = len(self._prefetched_songs)
+                        Logger.info(
+                            f"✅ Кэш загружен из файла: {len(self._prefetched_artists)} букв, {total_artists} артистов, {total_songs} песен")
+                    else:
+                        Logger.info("⚠️ Кэш в файле устарел, очищаем")
+                        self._prefetched_artists = {}
+                        self._prefetched_songs = {}
+                        self._prefetch_complete = False
+                        self._prefetch_timestamp = 0
+            except Exception as e:
+                Logger.error(f"Ошибка загрузки кэша: {e}")
+
+    def _save_cache_to_file(self):
+        """Сохраняет кэш в файл"""
+        try:
+            data = {
+                'artists': self._prefetched_artists,
+                'songs': self._prefetched_songs,
+                'timestamp': self._prefetch_timestamp
+            }
+            with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            total_artists = sum(len(v['artists']) for v in self._prefetched_artists.values())
+            total_songs = len(self._prefetched_songs)
+            Logger.info(
+                f"💾 Кэш сохранён в файл: {len(self._prefetched_artists)} букв, {total_artists} артистов, {total_songs} песен")
+        except Exception as e:
+            Logger.error(f"Ошибка сохранения кэша: {e}")
 
     # ============ МЕТОДЫ КЭШИРОВАНИЯ ============
 
@@ -193,7 +252,142 @@ class APIClient:
             'popular': None,
             'favorites': None
         }
+        self._prefetched_artists = {}
+        self._prefetched_songs = {}
+        self._prefetch_complete = False
+        self._prefetch_timestamp = 0
+        # Удаляем файл кэша
+        if os.path.exists(CACHE_FILE):
+            try:
+                os.remove(CACHE_FILE)
+                Logger.info("🗑️ Файл кэша удалён")
+            except:
+                pass
         Logger.info("🗑️ Кэш очищен")
+
+    # ============ ПРЕДЗАГРУЗКА ДАННЫХ ============
+
+    def is_cache_fresh(self):
+        """Проверяет, не устарел ли кэш"""
+        if not self._prefetch_complete:
+            return False
+        return (time.time() - self._prefetch_timestamp) < self._prefetch_ttl
+
+    def prefetch_all_artists(self, on_progress=None, on_complete=None, force_refresh=False):
+        """Предзагружает всех артистов и их песни в фоновом потоке"""
+        if not force_refresh and self.is_cache_fresh():
+            total_artists = sum(len(v['artists']) for v in self._prefetched_artists.values())
+            total_songs = len(self._prefetched_songs)
+            Logger.info(
+                f"📦 Кэш ещё свежий, предзагрузка не требуется (артистов: {total_artists}, песен: {total_songs})")
+            if on_complete:
+                Clock.schedule_once(lambda dt: on_complete(total_artists, total_songs), 0)
+            return
+
+        Logger.info("🚀 Начинаем предзагрузку всех данных...")
+
+        def worker():
+            try:
+                start_time = time.time()
+
+                alphabet_response = self.session.get(
+                    f"{self.config.API_BASE_URL}/songs/alphabet",
+                    timeout=30
+                )
+                alphabet = alphabet_response.json().get('letters', [])
+                total_letters = len(alphabet)
+
+                if on_progress:
+                    Clock.schedule_once(lambda dt: on_progress(0, total_letters, "Загрузка списка букв..."), 0)
+
+                all_artists = {}
+                all_songs_by_artist = {}
+                processed = 0
+
+                for letter in alphabet:
+                    if letter == '#':
+                        continue
+
+                    # Увеличиваем лимит до 1000, чтобы получить всех артистов за 1 запрос
+                    url = f"{self.config.API_BASE_URL}/songs/artists/{letter}?limit=1000&offset=0"
+                    response = self.session.get(url, timeout=30)
+                    data = response.json()
+
+                    artists = data.get('artists', [])
+                    total_artists = data.get('total', 0)
+
+                    all_artists[letter] = {
+                        'artists': artists,
+                        'total': total_artists
+                    }
+
+                    # Загружаем песни для каждого артиста (увеличиваем лимит до 500)
+                    for artist_data in artists:
+                        artist_name = artist_data.get('artist')
+                        if artist_name:
+                            songs_url = f"{self.config.API_BASE_URL}/songs/{artist_name}?limit=500&offset=0"
+                            try:
+                                songs_response = self.session.get(songs_url, timeout=30)
+                                songs_data = songs_response.json()
+                                all_songs_by_artist[artist_name] = {
+                                    'songs': songs_data.get('songs', []),
+                                    'total': songs_data.get('total', 0)
+                                }
+                            except Exception as e:
+                                Logger.error(f"   Ошибка загрузки песен {artist_name}: {e}")
+
+                    processed += 1
+                    if on_progress:
+                        Clock.schedule_once(
+                            lambda dt, p=processed, t=total_letters: on_progress(p, t, f"Загружено {p}/{t} букв"),
+                            0
+                        )
+                    Logger.info(f"📁 Буква {letter}: {len(artists)} артистов")
+
+                self._prefetched_artists = all_artists
+                self._prefetched_songs = all_songs_by_artist
+                self._prefetch_complete = True
+                self._prefetch_timestamp = time.time()
+
+                # Сохраняем кэш в файл
+                self._save_cache_to_file()
+
+                elapsed = time.time() - start_time
+                total_artists_count = sum(len(v['artists']) for v in all_artists.values())
+                total_songs_count = len(all_songs_by_artist)
+
+                Logger.info(f"✅ Предзагрузка завершена за {elapsed:.1f} сек!")
+                Logger.info(f"   📊 Артистов: {total_artists_count}, Песен: {total_songs_count}")
+
+                if on_complete:
+                    Clock.schedule_once(lambda dt: on_complete(total_artists_count, total_songs_count), 0)
+
+            except Exception as e:
+                Logger.error(f"❌ Ошибка предзагрузки: {e}")
+                import traceback
+                traceback.print_exc()
+                self._prefetch_complete = False
+                if on_complete:
+                    Clock.schedule_once(lambda dt: on_complete(0, 0), 0)
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        return thread
+
+    def get_artists_by_letter_from_cache(self, letter):
+        """Быстрый доступ к артистам из кэша"""
+        if letter in self._prefetched_artists:
+            return self._prefetched_artists[letter]
+        return None
+
+    def get_songs_by_artist_from_cache(self, artist):
+        """Быстрый доступ к песням артиста из кэша"""
+        if artist in self._prefetched_songs:
+            return self._prefetched_songs[artist]
+        return None
+
+    def is_prefetch_ready(self):
+        return getattr(self, '_prefetch_complete', False)
 
     # ============ AUTH METHODS ============
 
@@ -237,6 +431,7 @@ class APIClient:
         return headers
 
     def _request_sync(self, url, method='GET', data=None, include_auth=True):
+        """Синхронный запрос (для использования в потоках)"""
         headers = self._get_headers(include_auth)
         try:
             if method == 'GET':
@@ -260,6 +455,8 @@ class APIClient:
             raise
 
     def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
+        """Асинхронный запрос (не блокирует UI)"""
+
         def worker():
             try:
                 result = self._request_sync(url, method, data, include_auth)
@@ -271,6 +468,7 @@ class APIClient:
                     Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
                 else:
                     Logger.error(f'API: Ошибка - {error_msg}')
+
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
         return thread
@@ -285,10 +483,12 @@ class APIClient:
             if on_success:
                 Clock.schedule_once(lambda dt: on_success(self.cache['alphabet']), 0)
             return
+
         def _on_success(result):
             self.cache['alphabet'] = result
             if on_success:
                 on_success(result)
+
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/alphabet",
             method='GET',
@@ -309,12 +509,14 @@ class APIClient:
         import urllib.parse
         encoded_letter = urllib.parse.quote(letter, safe='')
         url = f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}?limit={limit}&offset={offset}"
+
         def _on_success(result):
             artists = result.get('artists', [])
             total = result.get('total', 0)
             self._cache_artists_page(letter, page, result, total)
             if on_success:
                 on_success(result)
+
         return self._request(url=url, method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
     def get_artists_by_digits(self, limit: int = 50, offset: int = 0,
@@ -328,10 +530,12 @@ class APIClient:
                     Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
                 return
         url = f"{self.config.API_BASE_URL}/songs/artists/digits?limit={limit}&offset={offset}"
+
         def _on_success(result):
             self._cache_artists_page(cache_key, page, result, result.get('total', 0))
             if on_success:
                 on_success(result)
+
         return self._request(url=url, method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
     def get_songs_by_artist(self, artist: str, limit: int = 50, offset: int = 0,
@@ -346,10 +550,12 @@ class APIClient:
         import urllib.parse
         encoded_artist = urllib.parse.quote(artist, safe='')
         url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}?limit={limit}&offset={offset}"
+
         def _on_success(result):
             self._cache_songs_page(artist, page, result, result.get('total', 0))
             if on_success:
                 on_success(result)
+
         return self._request(url=url, method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
     def get_tab(self, song_id: int, on_success=None, on_failure=None):
@@ -363,10 +569,12 @@ class APIClient:
             if on_success:
                 Clock.schedule_once(lambda dt: on_success(self.cache['popular']), 0)
             return
+
         def _on_success(result):
             self.cache['popular'] = result
             if on_success:
                 on_success(result)
+
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/popular?limit={limit}",
             method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False
@@ -394,6 +602,7 @@ class APIClient:
             Logger.info(f'✅ Получено избранных: {len(formatted_favorites)}')
             if on_success:
                 on_success(formatted_favorites)
+
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/favorites",
             method='GET', on_success=_on_success, on_failure=on_failure, include_auth=True
@@ -424,6 +633,7 @@ class APIClient:
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=False)
 
     def search_songs_sync(self, query: str, limit: int = 20, offset: int = 0):
+        """Синхронный поиск (для использования в потоках)"""
         import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
         url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
@@ -442,6 +652,7 @@ class APIClient:
         data = {'username': username, 'email': email, 'password': password}
         if full_name:
             data['full_name'] = full_name
+
         def worker():
             try:
                 response = self.session.post(
@@ -455,26 +666,32 @@ class APIClient:
             except Exception as e:
                 if on_failure:
                     Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
         threading.Thread(target=worker, daemon=True).start()
 
     def login(self, username, password, on_success=None, on_failure=None):
         data = urllib.parse.urlencode({'username': username, 'password': password})
+
         def _on_success(result):
             self.access_token = result.get('access_token')
             self.refresh_token = result.get('refresh_token')
             self._save_tokens()
             if on_success:
                 on_success(result)
+
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
         def worker():
             try:
-                response = self.session.post(config.API_AUTH_LOGIN, data=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
+                response = self.session.post(config.API_AUTH_LOGIN, data=data, headers=headers,
+                                             timeout=config.CONNECTION_TIMEOUT)
                 response.raise_for_status()
                 result = response.json()
                 Clock.schedule_once(lambda dt: _on_success(result), 0)
             except Exception as e:
                 if on_failure:
                     Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
         threading.Thread(target=worker, daemon=True).start()
 
     def google_login(self, on_success=None, on_failure=None):
@@ -483,7 +700,8 @@ class APIClient:
         redirect_uri = f"http://127.0.0.1:{oauth_server.port}/callback"
         auth_url = f"{self.config.API_BASE_URL}/auth/google/login?redirect_uri={urllib.parse.quote(redirect_uri)}"
         webbrowser.open(auth_url)
-        self._check_callback_interval = Clock.schedule_interval(lambda dt: self._check_callback(on_success, on_failure), 1)
+        self._check_callback_interval = Clock.schedule_interval(lambda dt: self._check_callback(on_success, on_failure),
+                                                                1)
 
     def _check_callback(self, on_success, on_failure):
         if not self.waiting_for_callback:
@@ -505,6 +723,7 @@ class APIClient:
             self.clear_cache()
             if on_success:
                 on_success(result)
+
         if not self.refresh_token:
             self._clear_tokens()
             if on_success:
@@ -516,7 +735,8 @@ class APIClient:
     def get_current_user(self, on_success=None, on_failure=None):
         def worker():
             try:
-                response = self.session.get(config.API_USER_ME, headers=self._get_headers(include_auth=True), timeout=config.CONNECTION_TIMEOUT)
+                response = self.session.get(config.API_USER_ME, headers=self._get_headers(include_auth=True),
+                                            timeout=config.CONNECTION_TIMEOUT)
                 response.raise_for_status()
                 result = response.json()
                 self.user_data = result
@@ -525,6 +745,7 @@ class APIClient:
             except Exception as e:
                 if on_failure:
                     Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
         threading.Thread(target=worker, daemon=True).start()
 
     def is_authenticated(self):
@@ -535,12 +756,14 @@ class APIClient:
             return False
         return self.user_data.get('role') == 'admin'
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AMDM ============
+    # ============ МЕТОДЫ ПАРСЕРОВ (ВСЕ СИНХРОННЫЕ ДЛЯ СОВМЕСТИМОСТИ) ============
 
+    # AMDM
     def start_amdm_parser(self, start_page, end_page, subdomain, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
         data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
-        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
 
     def start_amdm_parser_sync(self, start_page, end_page, subdomain):
         url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
@@ -604,8 +827,7 @@ class APIClient:
         try:
             response = self.session.get(url, headers=self._get_headers(True), timeout=10)
             response.raise_for_status()
-            result = response.json()
-            return result
+            return response.json()
         except Exception as e:
             return None
 
@@ -613,12 +835,12 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/amdm/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MYTABS ============
-
+    # MyTabs
     def start_mytabs_parser(self, start_page, end_page, subdomain, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
         data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
-        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
 
     def start_mytabs_parser_sync(self, start_page, end_page, subdomain):
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
@@ -690,12 +912,12 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА ACCORDPRO ============
-
+    # AccordPro
     def start_accord_pro_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
         data = {"start_group": start_group, "end_group": end_group}
-        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
 
     def start_accord_pro_parser_sync(self, start_group, end_group):
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
@@ -739,12 +961,12 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDUS ============
-
+    # Akkordus
     def start_akkordus_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/akkordus/start"
         data = {"start_group": start_group, "end_group": end_group}
-        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
 
     def start_akkordus_parser_sync(self, start_group, end_group):
         url = f"{self.config.API_BASE_URL}/parsers/akkordus/start"
@@ -788,12 +1010,12 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/akkordus/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MUZLAND ============
-
+    # Muzland
     def start_muzland_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/muzland/start"
         data = {"start_group": start_group, "end_group": end_group}
-        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
 
     def start_muzland_parser_sync(self, start_group, end_group):
         url = f"{self.config.API_BASE_URL}/parsers/muzland/start"
@@ -837,12 +1059,12 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/muzland/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА CHORDIE ============
-
+    # Chordie
     def start_chordie_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/chordie/start"
         data = {"start_letter": start_letter, "end_letter": end_letter}
-        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure, include_auth=True)
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
 
     def start_chordie_parser_sync(self, start_letter, end_letter):
         url = f"{self.config.API_BASE_URL}/parsers/chordie/start"
@@ -886,8 +1108,7 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/chordie/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА 5LAD ============
-
+    # FiveLad
     def start_fivelad_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/fivelad/start"
         data = {"start_group": start_group, "end_group": end_group}
@@ -936,8 +1157,7 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/fivelad/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDBARD ============
-
+    # AkkordBard
     def start_akkordbard_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/akkordbard/start"
         data = {"start_letter": start_letter, "end_letter": end_letter}
@@ -986,8 +1206,7 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/akkordbard/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА DOMHVE ============
-
+    # Domhve
     def start_domhve_parser(self, start_song, end_song, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/domhve/start"
         data = {"start_song": start_song, "end_song": end_song}
@@ -1036,8 +1255,7 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/domhve/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА RUSHSOUND ============
-
+    # RushSound
     def start_rushsound_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/rushsound/start"
         data = {"start_letter": start_letter, "end_letter": end_letter}
@@ -1085,7 +1303,6 @@ class APIClient:
     def get_rushsound_recent_songs(self, limit=10, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/rushsound/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
-
 
     # ============ ОБЩИЕ МЕТОДЫ ============
 

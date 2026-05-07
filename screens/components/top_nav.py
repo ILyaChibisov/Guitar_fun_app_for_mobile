@@ -1,6 +1,9 @@
 # screens/components/top_nav.py
 """
 Верхняя панель навигации - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
+- Слева: иконка меню 🍔
+- По центру: название текущего экрана
+- Справа: поиск 🔍, профиль 👤 и выбор языка
 """
 from kivy.metrics import dp, sp
 from kivy.uix.boxlayout import BoxLayout
@@ -33,11 +36,8 @@ class TopNav(MDCard):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
 
-        # Получаем высоту статус-бара
+        # Добавляем отступ сверху под статус-бар
         status_bar_height = get_status_bar_height()
-
-        # Увеличиваем отступ: делаем общую высоту панели со статус-баром
-        # Добавляем дополнительный отступ, чтобы элементы не были впритык к статус-бару
         extra_top_padding = dp(8)  # дополнительный отступ для красоты
 
         self.height = dp(56) + status_bar_height + extra_top_padding
@@ -55,7 +55,7 @@ class TopNav(MDCard):
             size_hint=(1, 1),
             padding=[dp(12), 0, dp(12), 0],
             spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0]  # ПРОЗРАЧНЫЙ
+            md_bg_color=[0, 0, 0, 0]
         )
 
         # ============ ЛЕВАЯ ЧАСТЬ: иконка меню ============
@@ -83,7 +83,7 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # ============ ПРАВАЯ ЧАСТЬ ============
+        # ============ ПРАВАЯ ЧАСТЬ: поиск, профиль и выбор языка ============
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -94,7 +94,7 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Кнопка поиска
+        # Кнопка поиска (лупа)
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
@@ -165,12 +165,14 @@ class TopNav(MDCard):
     def _on_screen_changed(self, instance, screen_name):
         self.current_screen_name = screen_name
         self.screen_title.text = self._get_screen_title(screen_name)
+        logger.debug(f"Экран изменён: {screen_name}, заголовок: {self.screen_title.text}")
 
     def _on_menu_press(self, instance):
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
             return
+
         if self.app and hasattr(self.app, 'open_drawer'):
             self.app.open_drawer(instance)
         else:
@@ -181,6 +183,7 @@ class TopNav(MDCard):
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
             return
+
         if self.app and hasattr(self.app, 'open_profile'):
             self.app.open_profile(instance)
         else:
@@ -196,6 +199,7 @@ class TopNav(MDCard):
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
             return
+
         if self.sm:
             if self.sm.has_screen('chords') and self.sm.has_screen('search'):
                 chords_screen = self.sm.get_screen('chords')
