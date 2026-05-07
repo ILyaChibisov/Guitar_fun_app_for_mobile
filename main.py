@@ -18,11 +18,11 @@ from kivy.core.image import Image as CoreImage
 from io import BytesIO
 
 import kivy
+
 kivy.require('2.3.0')
 
 # Настройка шрифта для поддержки эмодзи
 from kivy.core.text import LabelBase
-
 
 
 # ============ ОБРАБОТКА НЕПЕРЕХВАЧЕННЫХ ОШИБОК ============
@@ -64,20 +64,25 @@ if platform == 'win':
     Window.clearcolor = (0, 0, 0, 0)
 else:
     Window.clearcolor = (0, 0, 0, 0)
+    # НЕ СКРЫВАЕМ системные панели на Android
+    # Убираем флаги HIDE_NAVIGATION и FULLSCREEN
     try:
         from android import mActivity
         from jnius import autoclass
 
         View = autoclass('android.view.View')
         decorView = mActivity.getWindow().getDecorView()
+        # Оставляем только LAYOUT флаги - панели остаются видимыми
         decorView.setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
             View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-            View.SYSTEM_UI_FLAG_FULLSCREEN |
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         )
+
+        # Делаем панели полупрозрачными (красиво)
+        window = mActivity.getWindow()
+        window.addFlags(0x80000000)  # FLAG_TRANSLUCENT_STATUS
+        window.addFlags(0x40000000)  # FLAG_TRANSLUCENT_NAVIGATION
     except:
         pass
 
@@ -118,6 +123,14 @@ class RootWidget(MDFloatLayout):
         self.bg_image = None
         self.load_background()
         self.size_hint = (1, 1)
+
+        # Устанавливаем отступы для контента (на всех платформах для тестирования)
+        from config.system_bars import get_status_bar_height, get_navigation_bar_height
+        status_h = get_status_bar_height()
+        nav_h = get_navigation_bar_height()
+        self.padding = [0, status_h, 0, nav_h]
+
+        logger.info(f"RootWidget отступы: сверху={status_h}px, снизу={nav_h}px")
 
     def load_background(self):
         """Загружает фоновое изображение на весь экран"""
@@ -269,7 +282,6 @@ class GuitarFunsApp(MDApp):
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
-        self.top_nav.height = dp(56)
         self.top_nav.pos_hint = {'top': 1}
         self.top_nav.md_bg_color = [0, 0, 0, 0.3]
         self.top_nav.theme_bg_color = "Custom"

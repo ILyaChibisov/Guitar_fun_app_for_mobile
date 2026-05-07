@@ -18,6 +18,7 @@ from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import get_logger
 from screens.components.language_selector import LanguageSelector
+from config.system_bars import get_status_bar_height
 
 logger = get_logger('UI')
 
@@ -35,12 +36,16 @@ class TopNav(MDCard):
         # Настройки карточки (панели)
         self.orientation = 'vertical'
         self.size_hint = (1, None)
-        self.height = dp(56)
+
+        # Добавляем отступ сверху под статус-бар (на всех платформах для тестирования)
+        status_bar_height = get_status_bar_height()
+        self.height = dp(56) + status_bar_height  # увеличиваем высоту
+        self.padding = [0, status_bar_height, 0, 0]  # отступ сверху
+
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]
         self.theme_bg_color = "Custom"
         self.elevation = 0
-        self.padding = 0
         self.spacing = 0
 
         # Тёмный полупрозрачный фон через canvas
@@ -146,7 +151,7 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info('TopNav создана')
+        logger.info(f'TopNav создана (высота: {self.height}px, отступ: {status_bar_height}px)')
 
     def _update_bg(self, *args):
         if hasattr(self, 'bg_rect'):
