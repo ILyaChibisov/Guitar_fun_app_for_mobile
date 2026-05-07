@@ -21,6 +21,7 @@ from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.system_bars import get_status_bar_height
 from api.client import api
 from utils.notifications import notify
 
@@ -40,8 +41,6 @@ except ImportError:
 
 
 class LoadingSpinner(MDBoxLayout):
-    """Индикатор загрузки"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
@@ -79,8 +78,6 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class ScrollTrigger(Widget):
-    """Триггер для бесконечной прокрутки (невидимый)"""
-
     def __init__(self, on_load_more, **kwargs):
         super().__init__(**kwargs)
         self.on_load_more = on_load_more
@@ -105,27 +102,7 @@ class ScrollTrigger(Widget):
         self.loading = False
 
 
-class LoadingFooter(MDBoxLayout):
-    """Футер загрузки (невидимый)"""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'horizontal'
-        self.size_hint_y = None
-        self.height = dp(20)
-        self.opacity = 0
-        self.md_bg_color = [0, 0, 0, 0]
-
-    def show(self):
-        pass
-
-    def hide(self):
-        pass
-
-
 class ArtistCard(MDCard):
-    """Карточка исполнителя - современный светлый дизайн с эффектом стекла"""
-
     def __init__(self, artist, songs_count=0, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.artist = artist
@@ -138,20 +115,17 @@ class ArtistCard(MDCard):
         self.padding = [dp(16), dp(12), dp(12), dp(12)]
         self.spacing = dp(14)
         self.radius = [dp(20), dp(20), dp(20), dp(20)]
-
-        # Стеклянный эффект (glassmorphism)
         self.elevation = 0
         self.ripple_behavior = True
-
-        # Очень светлый полупрозрачный фон с эффектом стекла
         self.theme_bg_color = "Custom"
         self.md_bg_color = [1, 1, 1, 0.12]
-
-        # Тонкая градиентная обводка
         self.line_color = [0.46, 0.70, 0.71, 0.25]
         self.line_width = 1.0
 
-        # Иконка
+        # КЭШ ИКОНОК (статическая переменная класса)
+        if not hasattr(ArtistCard, '_icon_cache'):
+            ArtistCard._icon_cache = {}
+
         self.icon_image = Image(
             size_hint=(None, None),
             size=(dp(36), dp(36)),
@@ -161,14 +135,12 @@ class ArtistCard(MDCard):
         )
         self._load_icon()
 
-        # Контейнер для текста
         self.text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
             spacing=dp(4)
         )
 
-        # Название исполнителя
         self.artist_label = MDLabel(
             text=artist,
             font_size=sp(17),
@@ -182,7 +154,6 @@ class ArtistCard(MDCard):
             shorten_from="right"
         )
 
-        # Количество песен (без эмодзи, с точкой)
         if songs_count == 1:
             songs_word = "песня"
         elif 2 <= songs_count <= 4:
@@ -190,7 +161,6 @@ class ArtistCard(MDCard):
         else:
             songs_word = "песен"
 
-        # Используем обычную точку вместо эмодзи
         self.songs_label = MDLabel(
             text=f"• {songs_count} {songs_word}",
             font_size=sp(12),
@@ -204,7 +174,6 @@ class ArtistCard(MDCard):
         self.text_container.add_widget(self.artist_label)
         self.text_container.add_widget(self.songs_label)
 
-        # Стрелка вправо с эффектом
         self.arrow_container = MDBoxLayout(
             size_hint=(None, None),
             size=(dp(32), dp(32)),
@@ -226,38 +195,29 @@ class ArtistCard(MDCard):
         self.add_widget(self.text_container)
         self.add_widget(self.arrow_container)
 
-        # Эффект при наведении/нажатии
-        self.bind(on_press=self._on_press, on_release=self._on_release)
+        self.bind(on_release=self.on_click)
 
     def _load_icon(self):
+        """Загружает иконку с кэшированием"""
+        icon_name = 'artist_png'
+
+        # Проверяем кэш
+        if icon_name in ArtistCard._icon_cache:
+            self.icon_image.texture = ArtistCard._icon_cache[icon_name]
+            return
+
         if HAS_ASSETS:
             try:
-                icon_data = load_asset_as_bytes('artist_png')
+                icon_data = load_asset_as_bytes(icon_name)
                 if icon_data:
                     img = CoreImage(BytesIO(icon_data), ext="png")
+                    # Сохраняем в кэш
+                    ArtistCard._icon_cache[icon_name] = img.texture
                     self.icon_image.texture = img.texture
                     return
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки: {e}")
-        # Используем символ гитары
         self.icon_image.text = "♪"
-
-    def _on_press(self, instance):
-        """Эффект нажатия - слегка затемняем"""
-        Animation(
-            md_bg_color=[1, 1, 1, 0.18],
-            line_color=[0.46, 0.70, 0.71, 0.4],
-            duration=0.1
-        ).start(self)
-
-    def _on_release(self, instance):
-        """Возвращаем цвет"""
-        Animation(
-            md_bg_color=[1, 1, 1, 0.12],
-            line_color=[0.46, 0.70, 0.71, 0.25],
-            duration=0.2
-        ).start(self)
-        self.on_click(instance)
 
     def on_click(self, instance):
         if self.on_click_callback:
@@ -265,7 +225,7 @@ class ArtistCard(MDCard):
 
 
 class ArtistsByLetterScreen(MDScreen):
-    """Экран списка исполнителей по букве с пагинацией"""
+    """Экран списка исполнителей по букве с кэшированием результатов"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -280,8 +240,13 @@ class ArtistsByLetterScreen(MDScreen):
         self.loading_spinner = None
         self.bg_image = None
         self.fade_layer = None
-        self.footer = None
         self.scroll_trigger = None
+        self._loading_more = False
+
+        # КЭШ ЗАГРУЖЕННЫХ ДАННЫХ ПО БУКВАМ
+        self._cached_artists = {}  # {letter: {'data': artists_list, 'total': total, 'pages': {page: data}}}
+        self._cached_total = {}  # {letter: total_count}
+        self._cached_pages = {}  # {letter: {page_number: artists_data}}
 
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -325,15 +290,11 @@ class ArtistsByLetterScreen(MDScreen):
             spacing=0
         )
 
-        from config.system_bars import get_status_bar_height
-        from config.theme import theme
         status_h = get_status_bar_height()
         total_top_padding = status_h + theme.TOP_NAV_HEIGHT
         top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
         main_layout.add_widget(top_spacer)
 
-        # ============ ВЕРХНЯЯ ПАНЕЛЬ ============
-        # Используем относительное позиционирование для центрирования буквы
         self.nav_row = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
@@ -343,10 +304,8 @@ class ArtistsByLetterScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Контейнер для верхней строки с абсолютным позиционированием
         top_container = FloatLayout(size_hint_y=None, height=dp(40))
 
-        # Кнопка назад (фиксированная позиция слева)
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -358,7 +317,6 @@ class ArtistsByLetterScreen(MDScreen):
             pos_hint={'x': 0, 'center_y': 0.5}
         )
 
-        # Центрированная буква (по центру экрана)
         self.letter_label = MDLabel(
             text="",
             font_size=sp(22),
@@ -375,7 +333,6 @@ class ArtistsByLetterScreen(MDScreen):
         top_container.add_widget(self.back_btn)
         top_container.add_widget(self.letter_label)
 
-        # Вторая строка: "Найдено исполнителей: X"
         self.count_label = MDLabel(
             text="",
             font_size=sp(12),
@@ -389,7 +346,6 @@ class ArtistsByLetterScreen(MDScreen):
         self.nav_row.add_widget(top_container)
         self.nav_row.add_widget(self.count_label)
 
-        # ============ СПИСОК ИСПОЛНИТЕЛЕЙ ============
         self.scroll_view = MDScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
@@ -399,7 +355,7 @@ class ArtistsByLetterScreen(MDScreen):
 
         self.content_container = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(10),  # Увеличен отступ между карточками
+            spacing=dp(10),
             size_hint_y=None,
             adaptive_height=True,
             padding=[dp(16), dp(12), dp(16), dp(20)]
@@ -409,7 +365,6 @@ class ArtistsByLetterScreen(MDScreen):
         main_layout.add_widget(self.nav_row)
         main_layout.add_widget(self.scroll_view)
 
-        # Затемнение
         self.fade_layer = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -451,8 +406,6 @@ class ArtistsByLetterScreen(MDScreen):
             self.loading_spinner = None
 
     def update_title(self, total):
-        """Обновляет заголовок: буква и количество исполнителей"""
-        # Определяем отображаемую букву
         if self.current_letter == "digits" or self.current_letter == "0-9":
             display_letter = "0-9"
         else:
@@ -460,7 +413,6 @@ class ArtistsByLetterScreen(MDScreen):
 
         self.letter_label.text = display_letter
 
-        # Склоняем слово "исполнитель"
         if total == 0:
             count_text = "Найдено 0 исполнителей"
         elif total % 10 == 1 and total % 100 != 11:
@@ -473,67 +425,37 @@ class ArtistsByLetterScreen(MDScreen):
         self.count_label.text = count_text
 
     def set_letter(self, letter):
-        """Устанавливает букву и загружает первую страницу"""
+        """Устанавливает букву - проверяет кэш, грузит только если нужно"""
+        if self.current_letter == letter and self.content_container.children:
+            # Та же буква - ничего не делаем
+            logger.info(f"Буква {letter} уже загружена, пропускаем")
+            return
+
         self.current_letter = letter
         self.current_page = 0
         self.has_more = True
-        self.content_container.clear_widgets()
-        self.update_title(0)
 
-        if letter == "digits" or letter == "0-9":
-            self.load_digits_artists()
+        # Проверяем, есть ли закэшированные данные для этой буквы
+        if letter in self._cached_pages and 0 in self._cached_pages[letter]:
+            # Используем кэш
+            logger.info(f"Используем кэш для буквы {letter}")
+            cached_data = self._cached_pages[letter][0]
+            total = self._cached_total.get(letter, len(cached_data))
+            self.total_count = total
+            self.update_title(total)
+            self.display_artists(cached_data, clear=True)
+            self.has_more = self._cached_pages[letter].get('has_more', False)
         else:
-            self.load_artists()
-
-    def load_artists(self, page=0):
-        """Загружает страницу исполнителей"""
-        offset = page * self.artists_per_page
-
-        if page == 0:
-            self.show_loading()
-
-        api.get_artists_by_letter(
-            letter=self.current_letter,
-            limit=self.artists_per_page,
-            offset=offset,
-            on_success=lambda data: self._on_artists_loaded(data, page),
-            on_failure=lambda req, err: self._on_load_failed(err, page)
-        )
-
-    def load_digits_artists(self, page=0):
-        """Загружает исполнителей для цифр"""
-        offset = page * self.artists_per_page
-
-        if page == 0:
-            self.show_loading()
-
-        api.get_artists_by_digits(
-            limit=self.artists_per_page,
-            offset=offset,
-            on_success=lambda data: self._on_artists_loaded(data, page),
-            on_failure=lambda req, err: self._on_load_failed(err, page)
-        )
-
-    def _on_artists_loaded(self, data, page):
-        """Обработчик загрузки исполнителей"""
-        artists = data.get('artists', [])
-        total = data.get('total', 0)
-        self.has_more = data.get('has_more', len(artists) == self.artists_per_page)
-        self.current_page = page
-        self.total_count = total
-
-        # Обновляем заголовок с общим количеством
-        self.update_title(total)
-
-        if page == 0:
-            self.hide_loading()
+            # Нет кэша - загружаем
             self.content_container.clear_widgets()
-        else:
-            # Удаляем старый триггер
-            if self.scroll_trigger and self.scroll_trigger.parent:
-                self.content_container.remove_widget(self.scroll_trigger)
+            self.update_title(0)
+            self.load_artists_async()
 
-        # Добавляем карточки
+    def display_artists(self, artists, clear=False):
+        """Отображает список исполнителей (быстро, без пересоздания всего)"""
+        if clear:
+            self.content_container.clear_widgets()
+
         for artist_data in artists:
             artist_name = artist_data.get('artist')
             songs_count = artist_data.get('songs_count', 0)
@@ -545,35 +467,104 @@ class ArtistsByLetterScreen(MDScreen):
                 )
                 self.content_container.add_widget(card)
 
-        # Добавляем невидимый триггер для следующей страницы
+    def load_artists_async(self, page=0):
+        """Асинхронно загружает страницу исполнителей"""
+        if self._loading_more:
+            return
+        self._loading_more = True
+
+        offset = page * self.artists_per_page
+
+        if page == 0:
+            self.show_loading()
+
+        def on_success(data):
+            self._on_artists_loaded(data, page)
+            self._loading_more = False
+
+        def on_failure(req, error):
+            self._on_load_failed(error, page)
+            self._loading_more = False
+
+        if self.current_letter == "digits" or self.current_letter == "0-9":
+            api.get_artists_by_digits(
+                limit=self.artists_per_page,
+                offset=offset,
+                on_success=on_success,
+                on_failure=on_failure
+            )
+        else:
+            api.get_artists_by_letter(
+                letter=self.current_letter,
+                limit=self.artists_per_page,
+                offset=offset,
+                on_success=on_success,
+                on_failure=on_failure
+            )
+
+    def _on_artists_loaded(self, data, page):
+        """Обработчик загрузки исполнителей - сохраняет в кэш"""
+        artists = data.get('artists', [])
+        total = data.get('total', 0)
+        self.has_more = data.get('has_more', len(artists) == self.artists_per_page)
+        self.current_page = page
+        self.total_count = total
+
+        # СОХРАНЯЕМ В КЭШ
+        if self.current_letter not in self._cached_pages:
+            self._cached_pages[self.current_letter] = {}
+        self._cached_pages[self.current_letter][page] = artists
+        self._cached_pages[self.current_letter]['has_more'] = self.has_more
+        self._cached_total[self.current_letter] = total
+
+        self.update_title(total)
+
+        if page == 0:
+            self.hide_loading()
+            self.content_container.clear_widgets()
+        else:
+            if self.scroll_trigger and self.scroll_trigger.parent:
+                self.content_container.remove_widget(self.scroll_trigger)
+
+        # Отображаем загруженных исполнителей
+        for artist_data in artists:
+            artist_name = artist_data.get('artist')
+            songs_count = artist_data.get('songs_count', 0)
+            if artist_name:
+                card = ArtistCard(
+                    artist=artist_name,
+                    songs_count=songs_count,
+                    on_click=self.on_artist_selected
+                )
+                self.content_container.add_widget(card)
+
         if self.has_more:
             self.scroll_trigger = ScrollTrigger(
-                on_load_more=lambda: self.load_next_page()
+                on_load_more=lambda: self.load_artists_async(self.current_page + 1)
             )
             self.content_container.add_widget(self.scroll_trigger)
         else:
-            # Добавляем нижний спейсер
             bottom_spacer = Widget(size_hint_y=None, height=dp(80))
             self.content_container.add_widget(bottom_spacer)
 
         logger.info(f"Загружено {len(artists)}/{total} исполнителей для {self.current_letter}")
 
-    def load_next_page(self):
-        """Загружает следующую страницу"""
-        if self.current_letter == "digits" or self.current_letter == "0-9":
-            self.load_digits_artists(self.current_page + 1)
-        else:
-            self.load_artists(self.current_page + 1)
-
     def _on_load_failed(self, error, page):
-        """Ошибка загрузки"""
         if page == 0:
             self.hide_loading()
-            notify.error("Ошибка загрузки исполнителей")
+            error_label = MDLabel(
+                text="Ошибка загрузки исполнителей. Проверьте интернет.",
+                halign="center",
+                font_size=sp(14),
+                theme_text_color="Custom",
+                text_color=[1, 0.3, 0.3, 1],
+                size_hint_y=None,
+                height=dp(60)
+            )
+            self.content_container.add_widget(error_label)
             logger.error(f"Ошибка загрузки: {error}")
 
     def on_artist_selected(self, artist, songs_count):
-        """Выбор исполнителя"""
         logger.info(f"Выбран исполнитель: {artist}")
 
         if hasattr(self, 'manager') and self.manager:
@@ -585,6 +576,12 @@ class ArtistsByLetterScreen(MDScreen):
                 notify.info(f"Выбран исполнитель: {artist}")
 
     def go_back(self, instance):
-        """Возврат на экран выбора буквы"""
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'songs'
+
+    def clear_cache(self):
+        """Очищает кэш (можно вызвать при необходимости)"""
+        self._cached_artists.clear()
+        self._cached_pages.clear()
+        self._cached_total.clear()
+        logger.info("Кэш исполнителей очищен")
