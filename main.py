@@ -243,10 +243,15 @@ class GuitarFunsApp(MDApp):
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
 
-        # ============ ЗАПУСК ПРЕДЗАГРУЗКИ В ФОНЕ ============
+        # ============ ПРЕДЗАГРУЗКА ИКОНОК В ФОНЕ ============
+        from utils.icon_cache import preload_icons
+        preload_icons()
+
+        # ============ ПРЕДЗАГРУЗКА ДАННЫХ ============
         def on_prefetch_complete(total_artists, total_songs):
             logger.info(f"🎉 Предзагрузка завершена! Артистов: {total_artists}, Песен: {total_songs}")
 
+        # Запускаем предзагрузку (не блокирует UI)
         api.prefetch_all_artists(on_complete=on_prefetch_complete)
         # ===================================================
 
@@ -267,11 +272,11 @@ class GuitarFunsApp(MDApp):
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
-        # Добавляем всё в root
-        root.add_widget(self.screen_manager)
-        root.add_widget(self.bottom_nav)
-        root.add_widget(self.top_nav)
-        root.add_widget(self.blocking_layer)
+        # Добавляем всё в root (порядок важен!)
+        root.add_widget(self.screen_manager)  # 1. Основной контент
+        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
+        root.add_widget(self.top_nav)  # 3. Верхняя панель
+        root.add_widget(self.blocking_layer)  # 4. Блокирующий слой (САМЫЙ ВЕРХНИЙ)
 
         network_manager.start_monitoring()
 

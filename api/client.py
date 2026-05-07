@@ -256,7 +256,6 @@ class APIClient:
         self._prefetched_songs = {}
         self._prefetch_complete = False
         self._prefetch_timestamp = 0
-        # Удаляем файл кэша
         if os.path.exists(CACHE_FILE):
             try:
                 os.remove(CACHE_FILE)
@@ -308,8 +307,7 @@ class APIClient:
                     if letter == '#':
                         continue
 
-                    # Увеличиваем лимит до 1000, чтобы получить всех артистов за 1 запрос
-                    url = f"{self.config.API_BASE_URL}/songs/artists/{letter}?limit=1000&offset=0"
+                    url = f"{self.config.API_BASE_URL}/songs/artists/{letter}?limit=200&offset=0"
                     response = self.session.get(url, timeout=30)
                     data = response.json()
 
@@ -321,11 +319,10 @@ class APIClient:
                         'total': total_artists
                     }
 
-                    # Загружаем песни для каждого артиста (увеличиваем лимит до 500)
                     for artist_data in artists:
                         artist_name = artist_data.get('artist')
                         if artist_name:
-                            songs_url = f"{self.config.API_BASE_URL}/songs/{artist_name}?limit=500&offset=0"
+                            songs_url = f"{self.config.API_BASE_URL}/songs/{artist_name}?limit=200&offset=0"
                             try:
                                 songs_response = self.session.get(songs_url, timeout=30)
                                 songs_data = songs_response.json()
@@ -349,7 +346,6 @@ class APIClient:
                 self._prefetch_complete = True
                 self._prefetch_timestamp = time.time()
 
-                # Сохраняем кэш в файл
                 self._save_cache_to_file()
 
                 elapsed = time.time() - start_time
@@ -497,7 +493,7 @@ class APIClient:
             include_auth=False
         )
 
-    def get_artists_by_letter(self, letter: str, limit: int = 50, offset: int = 0,
+    def get_artists_by_letter(self, letter: str, limit: int = 200, offset: int = 0,
                               on_success=None, on_failure=None, force_refresh=False):
         page = offset // limit if limit > 0 else 0
         if not force_refresh:
@@ -519,7 +515,7 @@ class APIClient:
 
         return self._request(url=url, method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
-    def get_artists_by_digits(self, limit: int = 50, offset: int = 0,
+    def get_artists_by_digits(self, limit: int = 200, offset: int = 0,
                               on_success=None, on_failure=None, force_refresh=False):
         page = offset // limit if limit > 0 else 0
         cache_key = "digits"
@@ -538,7 +534,7 @@ class APIClient:
 
         return self._request(url=url, method='GET', on_success=_on_success, on_failure=on_failure, include_auth=False)
 
-    def get_songs_by_artist(self, artist: str, limit: int = 50, offset: int = 0,
+    def get_songs_by_artist(self, artist: str, limit: int = 200, offset: int = 0,
                             on_success=None, on_failure=None, force_refresh=False):
         page = offset // limit if limit > 0 else 0
         if not force_refresh:
@@ -756,9 +752,8 @@ class APIClient:
             return False
         return self.user_data.get('role') == 'admin'
 
-    # ============ МЕТОДЫ ПАРСЕРОВ (ВСЕ СИНХРОННЫЕ ДЛЯ СОВМЕСТИМОСТИ) ============
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AMDM ============
 
-    # AMDM
     def start_amdm_parser(self, start_page, end_page, subdomain, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
         data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
@@ -835,7 +830,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/amdm/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # MyTabs
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MYTABS ============
+
     def start_mytabs_parser(self, start_page, end_page, subdomain, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
         data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
@@ -912,7 +908,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/mytabs/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # AccordPro
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА ACCORDPRO ============
+
     def start_accord_pro_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
         data = {"start_group": start_group, "end_group": end_group}
@@ -961,7 +958,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/accordpro/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # Akkordus
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDUS ============
+
     def start_akkordus_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/akkordus/start"
         data = {"start_group": start_group, "end_group": end_group}
@@ -1010,7 +1008,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/akkordus/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # Muzland
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MUZLAND ============
+
     def start_muzland_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/muzland/start"
         data = {"start_group": start_group, "end_group": end_group}
@@ -1059,7 +1058,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/muzland/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # Chordie
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА CHORDIE ============
+
     def start_chordie_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/chordie/start"
         data = {"start_letter": start_letter, "end_letter": end_letter}
@@ -1108,7 +1108,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/chordie/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # FiveLad
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА 5LAD ============
+
     def start_fivelad_parser(self, start_group, end_group, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/fivelad/start"
         data = {"start_group": start_group, "end_group": end_group}
@@ -1157,7 +1158,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/fivelad/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # AkkordBard
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDBARD ============
+
     def start_akkordbard_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/akkordbard/start"
         data = {"start_letter": start_letter, "end_letter": end_letter}
@@ -1206,7 +1208,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/akkordbard/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # Domhve
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА DOMHVE ============
+
     def start_domhve_parser(self, start_song, end_song, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/domhve/start"
         data = {"start_song": start_song, "end_song": end_song}
@@ -1255,7 +1258,8 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/parsers/domhve/recent?limit={limit}"
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
 
-    # RushSound
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА RUSHSOUND ============
+
     def start_rushsound_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/rushsound/start"
         data = {"start_letter": start_letter, "end_letter": end_letter}

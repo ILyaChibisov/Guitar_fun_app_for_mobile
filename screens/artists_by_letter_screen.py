@@ -1,6 +1,6 @@
 # screens/artists_by_letter_screen.py
 """
-Экран списка исполнителей по выбранной букве - ФИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ
+Экран списка исполнителей по выбранной букве
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
@@ -24,6 +24,7 @@ from config.logger_config import screen_logger
 from config.system_bars import get_status_bar_height
 from api.client import api
 from utils.notifications import notify
+from utils.icon_cache import get_icon
 
 logger = screen_logger('ArtistsByLetter')
 
@@ -37,26 +38,6 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
-
-# Кэш иконок
-_icon_cache = {}
-
-
-def get_cached_icon(icon_name):
-    """Возвращает закэшированную иконку"""
-    if icon_name in _icon_cache:
-        return _icon_cache[icon_name]
-
-    if HAS_ASSETS:
-        try:
-            icon_data = load_asset_as_bytes(icon_name)
-            if icon_data:
-                img = CoreImage(BytesIO(icon_data), ext="png")
-                _icon_cache[icon_name] = img.texture
-                return img.texture
-        except Exception as e:
-            logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
-    return None
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -97,7 +78,16 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class ArtistCard(MDCard):
-    """Карточка исполнителя с кэшированием иконок"""
+    """Карточка исполнителя с быстрой иконкой из кэша"""
+
+    # СТАТИЧЕСКИЙ КЭШ ДЛЯ ВСЕХ КАРТОЧЕК
+    _shared_icon_texture = None
+
+    @classmethod
+    def init_shared_icon(cls):
+        """Один раз загружает общую иконку для всех карточек"""
+        if cls._shared_icon_texture is None:
+            cls._shared_icon_texture = get_icon('artist_png')
 
     def __init__(self, artist, songs_count, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -105,12 +95,15 @@ class ArtistCard(MDCard):
         self.songs_count = songs_count
         self.on_click_callback = on_click
 
+        # Инициализируем общую иконку
+        ArtistCard.init_shared_icon()
+
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(72)
-        self.padding = [dp(16), dp(12), dp(12), dp(12)]
-        self.spacing = dp(14)
-        self.radius = [dp(20), dp(20), dp(20), dp(20)]
+        self.height = dp(65)
+        self.padding = [dp(16), dp(10), dp(12), dp(10)]
+        self.spacing = dp(12)
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.elevation = 0
         self.ripple_behavior = True
         self.theme_bg_color = "Custom"
@@ -118,30 +111,34 @@ class ArtistCard(MDCard):
         self.line_color = [0.46, 0.70, 0.71, 0.25]
         self.line_width = 1.0
 
-        # Иконка из ассета (с кэшированием)
+        # Иконка - используем общую текстуру для всех карточек
         self.icon_image = Image(
+            texture=ArtistCard._shared_icon_texture,
             size_hint=(None, None),
-            size=(dp(36), dp(36)),
+            size=(dp(32), dp(32)),
             pos_hint={'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
         )
-        self._load_icon()
+
+        # Если текстура ещё не загружена, показываем заглушку
+        if ArtistCard._shared_icon_texture is None:
+            self.icon_image.text = "♪"
 
         # Контейнер для текста
         self.text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
-            spacing=dp(4),
+            spacing=dp(2),
             pos_hint={'center_y': 0.5}
         )
 
         # Название исполнителя
         self.artist_label = MDLabel(
             text=artist,
-            font_size=sp(17),
+            font_size=sp(16),
             size_hint_y=None,
-            height=dp(28),
+            height=dp(26),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
@@ -160,9 +157,9 @@ class ArtistCard(MDCard):
 
         self.songs_label = MDLabel(
             text=f"• {songs_count} {songs_word}",
-            font_size=sp(12),
+            font_size=sp(11),
             size_hint_y=None,
-            height=dp(24),
+            height=dp(20),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
             valign="middle"
@@ -174,9 +171,9 @@ class ArtistCard(MDCard):
         # Стрелка
         self.arrow_label = MDLabel(
             text="›",
-            font_size=sp(32),
+            font_size=sp(28),
             size_hint_x=None,
-            width=dp(32),
+            width=dp(28),
             halign="center",
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 0.5]
@@ -187,15 +184,6 @@ class ArtistCard(MDCard):
         self.add_widget(self.arrow_label)
 
         self.bind(on_release=self.on_click)
-
-    def _load_icon(self):
-        """Загружает иконку из кэша"""
-        texture = get_cached_icon('artist_png')
-        if texture:
-            self.icon_image.texture = texture
-        else:
-            # Заглушка
-            self.icon_image.text = "♪"
 
     def on_click(self, instance):
         if self.on_click_callback:
@@ -210,7 +198,7 @@ class ArtistsByLetterScreen(MDScreen):
         self.name = 'artists_by_letter'
         self.current_letter = None
         self.is_loading = False
-        self._artists_cache = {}  # Кэш для букв
+        self._artists_cache = {}
 
         self.loading_spinner = None
         self.bg_image = None
@@ -258,7 +246,6 @@ class ArtistsByLetterScreen(MDScreen):
             spacing=0
         )
 
-        # Отступ под системные панели
         status_h = get_status_bar_height()
         total_top_padding = status_h + theme.TOP_NAV_HEIGHT
         top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
@@ -326,17 +313,16 @@ class ArtistsByLetterScreen(MDScreen):
 
         self.content_container = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(10),
+            spacing=dp(8),
             size_hint_y=None,
             adaptive_height=True,
-            padding=[dp(16), dp(12), dp(16), dp(100)]
+            padding=[dp(16), dp(8), dp(16), dp(80)]
         )
         self.scroll_view.add_widget(self.content_container)
 
         main_layout.add_widget(self.nav_row)
         main_layout.add_widget(self.scroll_view)
 
-        # Затемнение снизу
         self.fade_layer = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -402,7 +388,6 @@ class ArtistsByLetterScreen(MDScreen):
         logger.info(f"set_letter: {letter}")
 
         if self.current_letter == letter and self._artists_cache.get(letter):
-            # Быстрый показ из кэша
             self._display_artists(self._artists_cache[letter]['artists'],
                                   self._artists_cache[letter]['total'])
             return
@@ -412,23 +397,20 @@ class ArtistsByLetterScreen(MDScreen):
 
     def load_artists(self):
         """Загружает исполнителей (сначала из кэша API, потом из API)"""
-        # Проверяем кэш API
         cached_data = api.get_artists_by_letter_from_cache(self.current_letter)
 
         if cached_data:
-            # МГНОВЕННО - данные уже в кэше
             artists = cached_data.get('artists', [])
             total = cached_data.get('total', 0)
             self._artists_cache[self.current_letter] = {'artists': artists, 'total': total}
             self._display_artists(artists, total)
             return
 
-        # Нет в кэше - загружаем из API
         self.show_loading()
 
         if self.current_letter == "digits" or self.current_letter == "0-9":
             api.get_artists_by_digits(
-                limit=200,
+                limit=200,  # Максимальный лимит сервера
                 offset=0,
                 on_success=self._on_artists_loaded,
                 on_failure=self._on_load_failed
@@ -436,7 +418,7 @@ class ArtistsByLetterScreen(MDScreen):
         else:
             api.get_artists_by_letter(
                 letter=self.current_letter,
-                limit=200,
+                limit=200,  # Максимальный лимит сервера
                 offset=0,
                 on_success=self._on_artists_loaded,
                 on_failure=self._on_load_failed
@@ -462,7 +444,7 @@ class ArtistsByLetterScreen(MDScreen):
             self.content_container.add_widget(empty_label)
             return
 
-        # Используем Clock.schedule_once для пакетного добавления (быстрее)
+        # Пакетное добавление карточек
         def add_cards(dt):
             for artist_data in artists:
                 artist_name = artist_data.get('artist')
