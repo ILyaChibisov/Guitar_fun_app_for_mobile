@@ -1,6 +1,6 @@
 # screens/artists_by_letter_screen.py
 """
-Экран списка исполнителей по выбранной букве - УПРОЩЁННАЯ РАБОЧАЯ ВЕРСИЯ
+Экран списка исполнителей по выбранной букве - ФИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
@@ -37,6 +37,26 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
+
+# Кэш иконок
+_icon_cache = {}
+
+
+def get_cached_icon(icon_name):
+    """Возвращает закэшированную иконку"""
+    if icon_name in _icon_cache:
+        return _icon_cache[icon_name]
+
+    if HAS_ASSETS:
+        try:
+            icon_data = load_asset_as_bytes(icon_name)
+            if icon_data:
+                img = CoreImage(BytesIO(icon_data), ext="png")
+                _icon_cache[icon_name] = img.texture
+                return img.texture
+        except Exception as e:
+            logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
+    return None
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -77,7 +97,7 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class ArtistCard(MDCard):
-    """Карточка исполнителя"""
+    """Карточка исполнителя с кэшированием иконок"""
 
     def __init__(self, artist, songs_count, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -98,22 +118,22 @@ class ArtistCard(MDCard):
         self.line_color = [0.46, 0.70, 0.71, 0.25]
         self.line_width = 1.0
 
-        # Иконка
-        self.icon_label = MDLabel(
-            text="🎸",
-            font_size=sp(24),
-            size_hint_x=None,
-            width=dp(40),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9]
+        # Иконка из ассета (с кэшированием)
+        self.icon_image = Image(
+            size_hint=(None, None),
+            size=(dp(36), dp(36)),
+            pos_hint={'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
         )
+        self._load_icon()
 
         # Контейнер для текста
         self.text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
-            spacing=dp(4)
+            spacing=dp(4),
+            pos_hint={'center_y': 0.5}
         )
 
         # Название исполнителя
@@ -142,7 +162,7 @@ class ArtistCard(MDCard):
             text=f"• {songs_count} {songs_word}",
             font_size=sp(12),
             size_hint_y=None,
-            height=dp(20),
+            height=dp(24),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
             valign="middle"
@@ -156,17 +176,26 @@ class ArtistCard(MDCard):
             text="›",
             font_size=sp(32),
             size_hint_x=None,
-            width=dp(40),
+            width=dp(32),
             halign="center",
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 0.5]
         )
 
-        self.add_widget(self.icon_label)
+        self.add_widget(self.icon_image)
         self.add_widget(self.text_container)
         self.add_widget(self.arrow_label)
 
         self.bind(on_release=self.on_click)
+
+    def _load_icon(self):
+        """Загружает иконку из кэша"""
+        texture = get_cached_icon('artist_png')
+        if texture:
+            self.icon_image.texture = texture
+        else:
+            # Заглушка
+            self.icon_image.text = "♪"
 
     def on_click(self, instance):
         if self.on_click_callback:
@@ -181,6 +210,7 @@ class ArtistsByLetterScreen(MDScreen):
         self.name = 'artists_by_letter'
         self.current_letter = None
         self.is_loading = False
+        self._artists_cache = {}  # Кэш для букв
 
         self.loading_spinner = None
         self.bg_image = None
@@ -296,10 +326,10 @@ class ArtistsByLetterScreen(MDScreen):
 
         self.content_container = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(8),
+            spacing=dp(10),
             size_hint_y=None,
             adaptive_height=True,
-            padding=[dp(16), dp(8), dp(16), dp(80)]
+            padding=[dp(16), dp(12), dp(16), dp(100)]
         )
         self.scroll_view.add_widget(self.content_container)
 
@@ -370,11 +400,18 @@ class ArtistsByLetterScreen(MDScreen):
     def set_letter(self, letter):
         """Устанавливает букву и загружает исполнителей"""
         logger.info(f"set_letter: {letter}")
+
+        if self.current_letter == letter and self._artists_cache.get(letter):
+            # Быстрый показ из кэша
+            self._display_artists(self._artists_cache[letter]['artists'],
+                                  self._artists_cache[letter]['total'])
+            return
+
         self.current_letter = letter
         self.load_artists()
 
     def load_artists(self):
-        """Загружает исполнителей (сначала из кэша, потом из API)"""
+        """Загружает исполнителей (сначала из кэша API, потом из API)"""
         # Проверяем кэш API
         cached_data = api.get_artists_by_letter_from_cache(self.current_letter)
 
@@ -382,6 +419,7 @@ class ArtistsByLetterScreen(MDScreen):
             # МГНОВЕННО - данные уже в кэше
             artists = cached_data.get('artists', [])
             total = cached_data.get('total', 0)
+            self._artists_cache[self.current_letter] = {'artists': artists, 'total': total}
             self._display_artists(artists, total)
             return
 
@@ -405,7 +443,7 @@ class ArtistsByLetterScreen(MDScreen):
             )
 
     def _display_artists(self, artists, total):
-        """Отображает список исполнителей"""
+        """Быстро отображает список исполнителей"""
         logger.info(f"_display_artists: {len(artists)} артистов, total={total}")
 
         self.update_title(total)
@@ -424,25 +462,27 @@ class ArtistsByLetterScreen(MDScreen):
             self.content_container.add_widget(empty_label)
             return
 
-        # Создаём карточки
-        for artist_data in artists:
-            artist_name = artist_data.get('artist')
-            songs_count = artist_data.get('songs_count', 0)
-            if artist_name:
-                card = ArtistCard(
-                    artist=artist_name,
-                    songs_count=songs_count,
-                    on_click=self.on_artist_selected
-                )
-                self.content_container.add_widget(card)
+        # Используем Clock.schedule_once для пакетного добавления (быстрее)
+        def add_cards(dt):
+            for artist_data in artists:
+                artist_name = artist_data.get('artist')
+                songs_count = artist_data.get('songs_count', 0)
+                if artist_name:
+                    card = ArtistCard(
+                        artist=artist_name,
+                        songs_count=songs_count,
+                        on_click=self.on_artist_selected
+                    )
+                    self.content_container.add_widget(card)
+            logger.info(f"Отображено {len(artists)} исполнителей для буквы {self.current_letter}")
 
-        logger.info(f"Отображено {len(artists)} исполнителей для буквы {self.current_letter}")
+        Clock.schedule_once(add_cards, 0)
 
     def _on_artists_loaded(self, data):
         """Обработчик загрузки из API"""
-        logger.info(f"_on_artists_loaded: {data.get('total', 0)} артистов")
         artists = data.get('artists', [])
         total = data.get('total', 0)
+        self._artists_cache[self.current_letter] = {'artists': artists, 'total': total}
         self._display_artists(artists, total)
 
     def _on_load_failed(self, req, error):
