@@ -33,19 +33,21 @@ class TopNav(MDCard):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
 
-        # Добавляем отступ сверху под статус-бар
+        # Получаем высоту статус-бара
         status_bar_height = get_status_bar_height()
-        self.height = dp(56) + status_bar_height
-        self.padding = [0, status_bar_height, 0, 0]
+
+        # Увеличиваем отступ: делаем общую высоту панели со статус-баром
+        # Добавляем дополнительный отступ, чтобы элементы не были впритык к статус-бару
+        extra_top_padding = dp(8)  # дополнительный отступ для красоты
+
+        self.height = dp(56) + status_bar_height + extra_top_padding
+        self.padding = [0, status_bar_height + extra_top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
         self.theme_bg_color = "Custom"
         self.elevation = 0
         self.spacing = 0
-
-        # Убираем canvas.before - он не нужен для прозрачной панели
-        # (удаляем блок с Color и Rectangle)
 
         # Основной горизонтальный контейнер для элементов
         self.container = MDBoxLayout(
@@ -63,7 +65,7 @@ class TopNav(MDCard):
             size=(dp(40), dp(40)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],  # ПРОЗРАЧНЫЙ
+            md_bg_color=[0, 0, 0, 0],
             on_release=self._on_menu_press,
             pos_hint={'center_y': 0.5}
         )
@@ -88,7 +90,7 @@ class TopNav(MDCard):
             width=dp(140),
             height=dp(40),
             spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0],  # ПРОЗРАЧНЫЙ
+            md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
 
@@ -99,7 +101,7 @@ class TopNav(MDCard):
             size=(dp(32), dp(32)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],  # ПРОЗРАЧНЫЙ
+            md_bg_color=[0, 0, 0, 0],
             on_release=self._on_search_press,
             pos_hint={'center_y': 0.5}
         )
@@ -111,7 +113,7 @@ class TopNav(MDCard):
             size=(dp(32), dp(32)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],  # ПРОЗРАЧНЫЙ
+            md_bg_color=[0, 0, 0, 0],
             on_release=self._on_profile_press,
             pos_hint={'center_y': 0.5}
         )
@@ -140,9 +142,8 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info(f'TopNav создана (прозрачная, высота: {self.height}px)')
+        logger.info(f'TopNav создана (прозрачная, отступ сверху: {self.padding[1]}px)')
 
-    # Остальные методы остаются без изменений
     def _get_screen_title(self, screen_name: str) -> str:
         titles = {
             'home': 'Главная',

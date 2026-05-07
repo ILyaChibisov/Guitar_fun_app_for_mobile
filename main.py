@@ -65,7 +65,6 @@ if platform == 'win':
 else:
     Window.clearcolor = (0, 0, 0, 0)
     # НЕ СКРЫВАЕМ системные панели на Android
-    # Убираем флаги HIDE_NAVIGATION и FULLSCREEN
     try:
         from android import mActivity
         from jnius import autoclass
@@ -116,7 +115,7 @@ logger = app_logger()
 
 
 class RootWidget(MDFloatLayout):
-    """Корневой виджет с фоновым изображением"""
+    """Корневой виджет с фоновым изображением - БЕЗ ОТСТУПОВ, чтобы фон был единым"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -124,13 +123,10 @@ class RootWidget(MDFloatLayout):
         self.load_background()
         self.size_hint = (1, 1)
 
-        # Устанавливаем отступы для контента (на всех платформах для тестирования)
-        from config.system_bars import get_status_bar_height, get_navigation_bar_height
-        status_h = get_status_bar_height()
-        nav_h = get_navigation_bar_height()
-        self.padding = [0, status_h, 0, nav_h]
+        # Убираем отступы - пусть фон заполняет всё окно
+        self.padding = [0, 0, 0, 0]
 
-        logger.info(f"RootWidget отступы: сверху={status_h}px, снизу={nav_h}px")
+        logger.info("RootWidget: фон без отступов")
 
     def load_background(self):
         """Загружает фоновое изображение на весь экран"""
@@ -175,9 +171,9 @@ class GuitarFunsApp(MDApp):
         self.screen_manager = None
         self.bottom_nav = None
         self.top_nav = None
-        self.blocking_layer = None  # Блокирующий слой
+        self.blocking_layer = None
         self.current_auth_modal = None
-        self.is_auth_blocking = False  # Флаг блокировки навигации
+        self.is_auth_blocking = False
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
@@ -201,24 +197,20 @@ class GuitarFunsApp(MDApp):
                 if 'profile' in self.screen_manager.screen_names:
                     self.screen_manager.current = 'profile'
             else:
-                # Показываем модальное окно с блокировкой
                 self._show_auth_modal_on_screen(current_screen)
 
     def _show_auth_modal_on_screen(self, screen):
         """Показывает модальное окно авторизации на указанном экране с блокировкой"""
         from screens.home_screen import AuthModal
 
-        # Блокируем навигацию
         self.set_blocking(True)
 
-        # Создаём модальное окно
         self.current_auth_modal = AuthModal(
             parent_screen=screen,
             on_close=self._on_auth_modal_close,
             on_login_success=self._on_auth_success
         )
 
-        # Устанавливаем ссылку на модальное окно в блокирующий слой
         if self.blocking_layer:
             self.blocking_layer.set_modal_widget(self.current_auth_modal)
 
@@ -228,26 +220,20 @@ class GuitarFunsApp(MDApp):
         """Обработчик закрытия модального окна"""
         logger.info("Модальное окно закрыто")
 
-        # Очищаем ссылку в блокирующем слое
         if self.blocking_layer:
             self.blocking_layer.clear_modal_widget()
 
         self.current_auth_modal = None
-
-        # Разблокируем навигацию
         self.set_blocking(False)
 
     def _on_auth_success(self, provider=None):
         """Обработчик успешной авторизации"""
         logger.info(f"Авторизация успешна: {provider}")
 
-        # Очищаем ссылку в блокирующем слое
         if self.blocking_layer:
             self.blocking_layer.clear_modal_widget()
 
         self.current_auth_modal = None
-
-        # Разблокируем навигацию
         self.set_blocking(False)
 
         if api.access_token:
@@ -256,7 +242,6 @@ class GuitarFunsApp(MDApp):
                 on_failure=lambda req, err: None
             )
 
-        # Обновляем данные на текущем экране если есть метод
         if self.screen_manager:
             current_screen = self.screen_manager.current_screen
             if hasattr(current_screen, 'on_login_success'):
@@ -276,16 +261,16 @@ class GuitarFunsApp(MDApp):
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
 
-        # Создаём верхнюю панель
+        # Создаём верхнюю панель - ПОЛНОСТЬЮ ПРОЗРАЧНУЮ
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
-        self.top_nav.height = dp(56)  # <--- ВАЖНО: явно указываем высоту
+        self.top_nav.height = dp(56)
         self.top_nav.pos_hint = {'top': 1}
-        self.top_nav.md_bg_color = [0, 0, 0, 0.3]
+        self.top_nav.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
         self.top_nav.theme_bg_color = "Custom"
 
-        # Создаём нижнюю панель
+        # Создаём нижнюю панель - ПОЛНОСТЬЮ ПРОЗРАЧНУЮ
         self.bottom_nav = BottomNav(self.screen_manager)
 
         # Создаём блокирующий слой
@@ -293,11 +278,11 @@ class GuitarFunsApp(MDApp):
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
-        # Добавляем всё в root
-        root.add_widget(self.screen_manager)
-        root.add_widget(self.bottom_nav)
-        root.add_widget(self.top_nav)
-        root.add_widget(self.blocking_layer)
+        # Добавляем всё в root (порядок важен!)
+        root.add_widget(self.screen_manager)  # 1. Основной контент
+        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
+        root.add_widget(self.top_nav)  # 3. Верхняя панель
+        root.add_widget(self.blocking_layer)  # 4. Блокирующий слой
 
         network_manager.start_monitoring()
 
