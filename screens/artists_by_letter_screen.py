@@ -1,6 +1,6 @@
-# screens/artists_by_letter_screen.py (исправленная версия)
+# screens/artists_by_letter_screen.py
 """
-Экран списка исполнителей по выбранной букве - МАКСИМАЛЬНО ОПТИМИЗИРОВАНАЯ ВЕРСИЯ
+Экран списка исполнителей по выбранной букве - МАКСИМАЛЬНО ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
@@ -57,20 +57,6 @@ def init_shared_icon():
     return None
 
 
-class SimpleLoadingLabel(MDLabel):
-    """Максимально лёгкий спиннер (без анимации прогресса)"""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.text = "Загрузка исполнителей..."
-        self.halign = "center"
-        self.font_size = sp(14)
-        self.theme_text_color = "Custom"
-        self.text_color = [1, 1, 1, 0.6]
-        self.size_hint_y = None
-        self.height = dp(60)
-
-
 class ArtistsByLetterScreen(MDScreen):
     """Экран списка исполнителей по букве - максимально быстрый"""
 
@@ -78,7 +64,7 @@ class ArtistsByLetterScreen(MDScreen):
         super().__init__(**kwargs)
         self.name = 'artists_by_letter'
         self.current_letter = None
-        self._cache = {}  # Кэш уже загруженных списков
+        self._cache = {}
         self.recycle_view = None
         self.empty_label = None
         self.loading_label = None
@@ -86,12 +72,12 @@ class ArtistsByLetterScreen(MDScreen):
         self.letter_label = None
         self.top_bar = None
         self.back_btn = None
-        self._pending_letter = None  # Буква, которую нужно загрузить после инициализации
+        self._pending_letter = None
+        self._main_layout = None  # Для управления лейблами
 
         self.md_bg_color = [0, 0, 0, 0]
         self.init_ui()
 
-        # Предзагружаем иконку в фоне
         Clock.schedule_once(lambda dt: init_shared_icon(), 0.1)
 
         logger.info('Экран исполнителей создан (RecycleView)')
@@ -100,11 +86,11 @@ class ArtistsByLetterScreen(MDScreen):
         root = MDFloatLayout()
 
         # Основной вертикальный контейнер
-        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+        self._main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
         # Отступ под системные панели
         status_h = get_status_bar_height()
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(status_h + theme.TOP_NAV_HEIGHT)))
+        self._main_layout.add_widget(Widget(size_hint_y=None, height=dp(status_h + theme.TOP_NAV_HEIGHT)))
 
         # Верхняя панель
         self.top_bar = MDBoxLayout(
@@ -146,67 +132,59 @@ class ArtistsByLetterScreen(MDScreen):
 
         self.top_bar.add_widget(self.back_btn)
         self.top_bar.add_widget(self.letter_label)
-        self.top_bar.add_widget(Widget(size_hint_x=0.2))  # Баланс
+        self.top_bar.add_widget(Widget(size_hint_x=0.2))
 
-        # Виртуализированный список (RecycleView)
+        # RecycleView
         self.recycle_view = ArtistRecycleView(on_artist_click=self.on_artist_selected)
 
-        main_layout.add_widget(self.top_bar)
-        main_layout.add_widget(self.count_label)
-        main_layout.add_widget(self.recycle_view)
+        self._main_layout.add_widget(self.top_bar)
+        self._main_layout.add_widget(self.count_label)
+        self._main_layout.add_widget(self.recycle_view)
 
-        root.add_widget(main_layout)
+        root.add_widget(self._main_layout)
         self.add_widget(root)
 
     def on_enter(self):
-        """Вызывается когда экран становится видимым"""
         logger.info(f"on_enter: current_letter={self.current_letter}, pending={self._pending_letter}")
 
-        # Если есть ожидающая буква, загружаем её
         if self._pending_letter:
             letter = self._pending_letter
             self._pending_letter = None
             self._do_load_letter(letter)
 
     def set_letter(self, letter):
-        """Устанавливает букву для загрузки"""
         logger.info(f"set_letter: {letter}")
 
-        # Обновляем заголовок сразу
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
         self.letter_label.text = display
 
-        # Если экран ещё не активен, сохраняем букву для on_enter
         if not self.manager or self.manager.current != self.name:
             logger.info(f"Экран не активен, сохраняем букву {letter} для on_enter")
             self._pending_letter = letter
             return
 
-        # Иначе загружаем сразу
         self._do_load_letter(letter)
 
     def _do_load_letter(self, letter):
-        """Реальная загрузка данных для буквы"""
         logger.info(f"_do_load_letter: {letter}")
 
         self.current_letter = letter
 
-        # ОЧИЩАЕМ старые данные
+        # Очищаем старые данные
         if self.recycle_view:
             self.recycle_view.data = []
 
-        # Убираем пустой лейбл если был
-        if self.empty_label and self.empty_label.parent:
-            self.empty_label.parent.remove_widget(self.empty_label)
+        # Убираем лейблы
+        self._hide_loading()
+        self._hide_empty()
 
-        # Проверяем кэш экрана
+        # Проверяем кэш
         if letter in self._cache:
-            artists = self._cache[letter]['artists']
-            total = self._cache[letter]['total']
+            artists = self._cache[letter].get('artists', [])
+            total = self._cache[letter].get('total', 0)
             self._display_artists(artists, total)
             return
 
-        # Проверяем кэш API (предзагрузка)
         cached = api.get_artists_by_letter_from_cache(letter)
         if cached:
             artists = cached.get('artists', [])
@@ -215,7 +193,6 @@ class ArtistsByLetterScreen(MDScreen):
             self._display_artists(artists, total)
             return
 
-        # Нет в кэше - загружаем
         self._show_loading()
 
         if letter in ("digits", "0-9"):
@@ -228,7 +205,7 @@ class ArtistsByLetterScreen(MDScreen):
                                       on_failure=self._on_load_failed)
 
     def _show_loading(self):
-        """Показывает индикатор загрузки"""
+        """Показывает индикатор загрузки - добавляем в main_layout"""
         if self.loading_label:
             return
 
@@ -236,61 +213,86 @@ class ArtistsByLetterScreen(MDScreen):
         if self.recycle_view:
             self.recycle_view.data = []
 
-        self.loading_label = SimpleLoadingLabel()
-        self.recycle_view.add_widget(self.loading_label)
+        # Создаём лейбл загрузки
+        self.loading_label = MDLabel(
+            text="Загрузка исполнителей...",
+            halign="center",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6],
+            size_hint_y=None,
+            height=dp(60)
+        )
+
+        # Добавляем в main_layout ПЕРЕД recycle_view
+        index = self._main_layout.children.index(self.recycle_view)
+        self._main_layout.add_widget(self.loading_label, index)
 
     def _hide_loading(self):
         if self.loading_label and self.loading_label.parent:
             self.loading_label.parent.remove_widget(self.loading_label)
         self.loading_label = None
 
+    def _show_empty(self, text="Нет исполнителей на эту букву"):
+        """Показывает сообщение о пустом списке"""
+        if self.empty_label:
+            return
+
+        self.empty_label = MDLabel(
+            text=text,
+            halign="center",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4],
+            size_hint_y=None,
+            height=dp(60)
+        )
+
+        # Добавляем в main_layout ПЕРЕД recycle_view
+        index = self._main_layout.children.index(self.recycle_view)
+        self._main_layout.add_widget(self.empty_label, index)
+
+    def _hide_empty(self):
+        if self.empty_label and self.empty_label.parent:
+            self.empty_label.parent.remove_widget(self.empty_label)
+        self.empty_label = None
+
     def _display_artists(self, artists, total):
         """Мгновенное отображение через RecycleView"""
+        if artists is None:
+            artists = []
+        if total is None:
+            total = 0
+
         logger.info(f"_display_artists: {len(artists)} артистов, total={total}")
 
         self._hide_loading()
+        self._hide_empty()
 
         # Обновляем счётчик
         self._update_count_label(total)
 
-        # Убираем пустой лейбл если был
-        if self.empty_label and self.empty_label.parent:
-            self.empty_label.parent.remove_widget(self.empty_label)
-
         if not artists:
-            # Пустое состояние
+            self._show_empty()
             if self.recycle_view:
                 self.recycle_view.data = []
-            if not self.empty_label:
-                self.empty_label = MDLabel(
-                    text="Нет исполнителей на эту букву",
-                    halign="center",
-                    font_size=sp(14),
-                    theme_text_color="Custom",
-                    text_color=[1, 1, 1, 0.4],
-                    size_hint_y=None,
-                    height=dp(60)
-                )
-            self.recycle_view.add_widget(self.empty_label)
             return
 
-        # Массовое обновление - самая быстрая операция
+        # Массовое обновление
         data = []
         for a in artists:
-            name = a.get('artist')
-            count = a.get('songs_count', 0)
+            name = a.get('artist') if isinstance(a, dict) else None
+            count = a.get('songs_count', 0) if isinstance(a, dict) else 0
             if name:
                 data.append({'artist': name, 'songs_count': count, 'on_click': self.on_artist_selected})
 
-        # Применяем за один кадр
         if self.recycle_view:
             self.recycle_view.data = data
-            # Принудительно обновляем view
             self.recycle_view.refresh_from_data()
+
         logger.info(f"Отображено {len(data)} исполнителей для {self.current_letter}")
 
     def _update_count_label(self, total):
-        """Обновляет счётчик исполнителей"""
         if total == 0:
             text = "0 исполнителей"
         elif total == 1:
@@ -303,33 +305,37 @@ class ArtistsByLetterScreen(MDScreen):
             self.count_label.text = text
 
     def _on_artists_loaded(self, data):
-        """Callback после загрузки из API"""
+        logger.info(f"_on_artists_loaded для буквы {self.current_letter}")
+
+        if data is None:
+            data = {"artists": [], "total": 0}
+
+        if not isinstance(data, dict):
+            data = {"artists": [], "total": 0}
+
         artists = data.get('artists', [])
         total = data.get('total', 0)
+
+        if not isinstance(artists, list):
+            artists = []
+            total = 0
+
         self._cache[self.current_letter] = {'artists': artists, 'total': total}
         self._display_artists(artists, total)
 
     def _on_load_failed(self, req, error):
-        """Обработчик ошибки"""
         self._hide_loading()
-        logger.error(f"Ошибка загрузки: {error}")
+        logger.error(f"Ошибка загрузки для буквы {self.current_letter}: {error}")
+
+        self._cache[self.current_letter] = {'artists': [], 'total': 0}
 
         if self.recycle_view:
             self.recycle_view.data = []
 
-        error_label = MDLabel(
-            text="Ошибка загрузки\nПроверьте интернет",
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 0.3, 0.3, 0.8],
-            size_hint_y=None,
-            height=dp(60)
-        )
-        self.recycle_view.add_widget(error_label)
+        self._update_count_label(0)
+        self._show_empty("Ошибка загрузки\nПроверьте интернет")
 
     def on_artist_selected(self, artist, songs_count):
-        """Обработчик выбора исполнителя"""
         logger.info(f"Выбран: {artist}")
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('artist_songs'):
@@ -338,6 +344,5 @@ class ArtistsByLetterScreen(MDScreen):
                 self.manager.current = 'artist_songs'
 
     def go_back(self, instance):
-        """Возврат на экран выбора буквы"""
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'songs'
