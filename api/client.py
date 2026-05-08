@@ -275,8 +275,10 @@ class APIClient:
             return False
         return (time.time() - self._prefetch_timestamp) < self._prefetch_ttl
 
-    def _encode_letter(self, letter):
+    def _encode_letter(self, letter: str) -> str:
         """Правильно кодирует букву для URL"""
+        import urllib.parse
+
         # Специальная обработка для проблемных букв
         special_chars = {
             'Ё': '%D0%81',
@@ -336,7 +338,6 @@ class APIClient:
             Logger.info(
                 f"📦 Кэш ещё свежий, предзагрузка не требуется (артистов: {total_artists}, песен: {total_songs})")
 
-            # Всё равно предзагружаем иконку в фоне
             self._preload_icon_async()
 
             if on_complete:
@@ -349,10 +350,8 @@ class APIClient:
             try:
                 start_time = time.time()
 
-                # Предзагрузка иконки
                 self._preload_icon_sync()
 
-                # Получаем алфавит
                 alphabet_response = self.session.get(
                     f"{self.config.API_BASE_URL}/songs/alphabet",
                     timeout=30
@@ -368,11 +367,9 @@ class APIClient:
                 processed = 0
 
                 for letter in alphabet:
-                    # Пропускаем проблемные символы
                     if letter in ['#', '?', '&', '%']:
                         continue
 
-                    # Кодируем букву
                     encoded_letter = self._encode_letter(letter)
 
                     url = f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}?limit=200&offset=0"
@@ -519,7 +516,6 @@ class APIClient:
                                                 timeout=config.CONNECTION_TIMEOUT)
             response.raise_for_status()
 
-            # Защита от пустого ответа
             if not response.content or response.content.strip() == b'':
                 Logger.warning(f"API: Пустой ответ от {url}")
                 return {"artists": [], "total": 0}
@@ -527,7 +523,6 @@ class APIClient:
             return response.json() if response.content else {"artists": [], "total": 0}
         except Exception as e:
             Logger.error(f'API: Ошибка запроса - {e}')
-            # Возвращаем пустой результат вместо ошибки
             return {"artists": [], "total": 0}
 
     def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
@@ -575,7 +570,6 @@ class APIClient:
 
     def get_artists_by_letter(self, letter: str, limit: int = 200, offset: int = 0,
                               on_success=None, on_failure=None, force_refresh=False):
-        """Получает исполнителей по букве с правильной кодировкой"""
         page = offset // limit if limit > 0 else 0
         if not force_refresh:
             cached = self._get_cached_artists_page(letter, page)
@@ -584,12 +578,13 @@ class APIClient:
                     Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
                 return
 
-        # Кодируем букву
         encoded_letter = self._encode_letter(letter)
         url = f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}?limit={limit}&offset={offset}"
         Logger.info(f"Запрос артистов для буквы: {letter} -> {encoded_letter}")
 
         def _on_success(result):
+            if result is None:
+                result = {"artists": [], "total": 0}
             artists = result.get('artists', [])
             total = result.get('total', 0)
             self._cache_artists_page(letter, page, result, total)
@@ -600,7 +595,6 @@ class APIClient:
 
     def get_artists_by_digits(self, limit: int = 200, offset: int = 0,
                               on_success=None, on_failure=None, force_refresh=False):
-        """Получает исполнителей, начинающихся с цифр"""
         page = offset // limit if limit > 0 else 0
         cache_key = "digits"
         if not force_refresh:
@@ -622,7 +616,6 @@ class APIClient:
 
     def get_songs_by_artist(self, artist: str, limit: int = 200, offset: int = 0,
                             on_success=None, on_failure=None, force_refresh=False):
-        """Получает песни исполнителя"""
         page = offset // limit if limit > 0 else 0
         if not force_refresh:
             cached = self._get_cached_songs_page(artist, page)
@@ -631,7 +624,6 @@ class APIClient:
                     Clock.schedule_once(lambda dt: on_success(cached['data']), 0)
                 return
 
-        # Кодируем имя исполнителя
         encoded_artist = urllib.parse.quote(artist, safe='')
         url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}?limit={limit}&offset={offset}"
 
@@ -716,7 +708,6 @@ class APIClient:
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=False)
 
     def search_songs_sync(self, query: str, limit: int = 20, offset: int = 0):
-        """Синхронный поиск (для использования в потоках)"""
         encoded_query = urllib.parse.quote(query, safe='')
         url = f"{self.config.API_BASE_URL}/songs/search?q={encoded_query}&limit={limit}&offset={offset}"
         try:
@@ -838,8 +829,573 @@ class APIClient:
             return False
         return self.user_data.get('role') == 'admin'
 
-    # ============ МЕТОДЫ ДЛЯ ПАРСЕРОВ ============
-    # (оставлены без изменений для краткости, но в полной версии они есть)
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AMDM ============
+
+    def start_amdm_parser(self, start_page, end_page, subdomain, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
+        data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_amdm_parser_sync(self, start_page, end_page, subdomain):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/start"
+        data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера AMDM: {e}")
+            return None
+
+    def pause_amdm_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/pause"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def pause_amdm_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/pause"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка паузы парсера AMDM: {e}")
+            return None
+
+    def resume_amdm_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/resume"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def resume_amdm_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/resume"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка возобновления парсера AMDM: {e}")
+            return None
+
+    def stop_amdm_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_amdm_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера AMDM: {e}")
+            return None
+
+    def get_amdm_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_amdm_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера AMDM: {e}")
+            return None
+
+    def get_amdm_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/amdm/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MYTABS ============
+
+    def start_mytabs_parser(self, start_page, end_page, subdomain, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
+        data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_mytabs_parser_sync(self, start_page, end_page, subdomain):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/start"
+        data = {"start_page": start_page, "end_page": end_page, "subdomain": subdomain}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера MyTabs: {e}")
+            return None
+
+    def pause_mytabs_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/pause"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def pause_mytabs_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/pause"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка паузы парсера MyTabs: {e}")
+            return None
+
+    def resume_mytabs_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/resume"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def resume_mytabs_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/resume"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка возобновления парсера MyTabs: {e}")
+            return None
+
+    def stop_mytabs_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_mytabs_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера MyTabs: {e}")
+            return None
+
+    def get_mytabs_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_mytabs_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера MyTabs: {e}")
+            return None
+
+    def get_mytabs_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/mytabs/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА ACCORDPRO ============
+
+    def start_accord_pro_parser(self, start_group, end_group, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_accord_pro_parser_sync(self, start_group, end_group):
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера AccordPro: {e}")
+            return None
+
+    def stop_accord_pro_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_accord_pro_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера AccordPro: {e}")
+            return None
+
+    def get_accord_pro_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_accord_pro_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера AccordPro: {e}")
+            return None
+
+    def get_accord_pro_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/accordpro/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDUS ============
+
+    def start_akkordus_parser(self, start_group, end_group, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_akkordus_parser_sync(self, start_group, end_group):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Akkordus: {e}")
+            return None
+
+    def stop_akkordus_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_akkordus_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера Akkordus: {e}")
+            return None
+
+    def get_akkordus_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_akkordus_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера Akkordus: {e}")
+            return None
+
+    def get_akkordus_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordus/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА MUZLAND ============
+
+    def start_muzland_parser(self, start_group, end_group, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_muzland_parser_sync(self, start_group, end_group):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Muzland: {e}")
+            return None
+
+    def stop_muzland_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_muzland_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера Muzland: {e}")
+            return None
+
+    def get_muzland_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_muzland_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера Muzland: {e}")
+            return None
+
+    def get_muzland_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/muzland/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА CHORDIE ============
+
+    def start_chordie_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_chordie_parser_sync(self, start_letter, end_letter):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Chordie: {e}")
+            return None
+
+    def stop_chordie_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_chordie_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера Chordie: {e}")
+            return None
+
+    def get_chordie_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_chordie_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера Chordie: {e}")
+            return None
+
+    def get_chordie_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/chordie/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА 5LAD ============
+
+    def start_fivelad_parser(self, start_group, end_group, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_fivelad_parser_sync(self, start_group, end_group):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/start"
+        data = {"start_group": start_group, "end_group": end_group}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера 5Lad: {e}")
+            return None
+
+    def stop_fivelad_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_fivelad_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера 5Lad: {e}")
+            return None
+
+    def get_fivelad_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_fivelad_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера 5Lad: {e}")
+            return None
+
+    def get_fivelad_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/fivelad/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА AKKORDBARD ============
+
+    def start_akkordbard_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_akkordbard_parser_sync(self, start_letter, end_letter):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера AkkordBard: {e}")
+            return None
+
+    def stop_akkordbard_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_akkordbard_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера AkkordBard: {e}")
+            return None
+
+    def get_akkordbard_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_akkordbard_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера AkkordBard: {e}")
+            return None
+
+    def get_akkordbard_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/akkordbard/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА DOMHVE ============
+
+    def start_domhve_parser(self, start_song, end_song, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/start"
+        data = {"start_song": start_song, "end_song": end_song}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_domhve_parser_sync(self, start_song, end_song):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/start"
+        data = {"start_song": start_song, "end_song": end_song}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера Domhve: {e}")
+            return None
+
+    def stop_domhve_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_domhve_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера Domhve: {e}")
+            return None
+
+    def get_domhve_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_domhve_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера Domhve: {e}")
+            return None
+
+    def get_domhve_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/domhve/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ МЕТОДЫ ДЛЯ ПАРСЕРА RUSHSOUND ============
+
+    def start_rushsound_parser(self, start_letter, end_letter, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        return self._request(url=url, method='POST', data=data, on_success=on_success, on_failure=on_failure,
+                             include_auth=True)
+
+    def start_rushsound_parser_sync(self, start_letter, end_letter):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/start"
+        data = {"start_letter": start_letter, "end_letter": end_letter}
+        try:
+            response = self.session.post(url, json=data, headers=self._get_headers(True), timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка запуска парсера RushSound: {e}")
+            return None
+
+    def stop_rushsound_parser(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/stop"
+        return self._request(url=url, method='POST', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def stop_rushsound_parser_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/stop"
+        try:
+            response = self.session.post(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка остановки парсера RushSound: {e}")
+            return None
+
+    def get_rushsound_parser_status(self, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/status"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    def get_rushsound_parser_status_sync(self):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/status"
+        try:
+            response = self.session.get(url, headers=self._get_headers(True), timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"Ошибка получения статуса парсера RushSound: {e}")
+            return None
+
+    def get_rushsound_recent_songs(self, limit=10, on_success=None, on_failure=None):
+        url = f"{self.config.API_BASE_URL}/parsers/rushsound/recent?limit={limit}"
+        return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=True)
+
+    # ============ ОБЩИЕ МЕТОДЫ ============
 
     def get_active_parser_status(self, on_success=None, on_failure=None):
         url = f"{self.config.API_BASE_URL}/parsers/active"
