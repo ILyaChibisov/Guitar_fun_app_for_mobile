@@ -69,35 +69,35 @@ class BottomNavConfig:
     # ========== ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ ДЛЯ КАЖДОЙ КНОПКИ ==========
     BUTTONS_CONFIG = {
         'home': {
-            'icon_size': 0.90,
+            'icon_size': 0.6,
             'icon_height': 0.75,
             'font_size': 12,
             'spacing': 1,
             'top_padding': 2
         },
         'songs': {
-            'icon_size': 0.90,
+            'icon_size': 0.6,
             'icon_height': 0.75,
             'font_size': 12,
             'spacing': 1,
             'top_padding': 2
         },
         'chords': {
-            'icon_size': 0.85,
+            'icon_size': 0.6,
             'icon_height': 0.72,
             'font_size': 12,
             'spacing': 1,
             'top_padding': 2
         },
         'tuner': {
-            'icon_size': 0.85,
+            'icon_size': 0.6,
             'icon_height': 0.72,
             'font_size': 12,
             'spacing': 1,
             'top_padding': 2
         },
         'favorites': {
-            'icon_size': 0.85,
+            'icon_size': 0.6,
             'icon_height': 0.72,
             'font_size': 11,
             'spacing': 1,
