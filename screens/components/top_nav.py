@@ -1,12 +1,8 @@
 # screens/components/top_nav.py
 """
 Верхняя панель навигации - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
-- Слева: иконка меню 🍔
-- По центру: название текущего экрана
-- Справа: поиск 🔍, профиль 👤 и выбор языка
 """
 from kivy.metrics import dp, sp
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 
 from kivymd.uix.button import MDIconButton
@@ -31,6 +27,7 @@ class TopNav(MDCard):
         self.app = None
         self.language_selector = None
         self.current_screen_name = 'home'
+        self._is_back_mode = False
 
         # Настройки карточки (панели)
         self.orientation = 'vertical'
@@ -38,13 +35,13 @@ class TopNav(MDCard):
 
         # Добавляем отступ сверху под статус-бар
         status_bar_height = get_status_bar_height()
-        extra_top_padding = dp(8)  # дополнительный отступ для красоты
 
-        self.height = dp(56) + status_bar_height + extra_top_padding
-        self.padding = [0, status_bar_height + extra_top_padding, 0, 0]
+        # Высота панели
+        self.height = dp(76) + status_bar_height
+        self.padding = [0, status_bar_height + dp(8), 0, 0]
 
         self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
+        self.md_bg_color = [0, 0, 0, 0]
         self.theme_bg_color = "Custom"
         self.elevation = 0
         self.spacing = 0
@@ -53,27 +50,28 @@ class TopNav(MDCard):
         self.container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
-            padding=[dp(12), 0, dp(12), 0],
-            spacing=dp(8),
+            padding=[dp(16), 0, dp(16), 0],
+            spacing=dp(12),
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # ============ ЛЕВАЯ ЧАСТЬ: иконка меню ============
+        # ============ ЛЕВАЯ ЧАСТЬ: иконка меню / назад ============
         self.menu_btn = MDIconButton(
             icon="menu",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(48), dp(48)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_menu_press,
             pos_hint={'center_y': 0.5}
         )
+        # Привязываем обработчики позже, чтобы можно было менять
+        self.menu_btn.on_release = lambda: self._on_menu_press(self.menu_btn)
 
         # ============ ЦЕНТР: название текущего экрана ============
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
-            font_size=sp(18),
+            font_size=sp(22),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -87,8 +85,8 @@ class TopNav(MDCard):
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(140),
-            height=dp(40),
+            width=dp(160),
+            height=dp(48),
             spacing=dp(8),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
@@ -98,7 +96,7 @@ class TopNav(MDCard):
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
-            size=(dp(32), dp(32)),
+            size=(dp(40), dp(40)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -110,7 +108,7 @@ class TopNav(MDCard):
         self.profile_btn = MDIconButton(
             icon="account-circle",
             size_hint=(None, None),
-            size=(dp(32), dp(32)),
+            size=(dp(40), dp(40)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -142,9 +140,10 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info(f'TopNav создана (прозрачная, отступ сверху: {self.padding[1]}px)')
+        logger.info(f'TopNav создана (прозрачная, высота: {self.height}px)')
 
     def _get_screen_title(self, screen_name: str) -> str:
+        """Возвращает заголовок для экрана"""
         titles = {
             'home': 'Главная',
             'songs': 'Песни',
@@ -163,38 +162,53 @@ class TopNav(MDCard):
         return titles.get(screen_name, screen_name.capitalize())
 
     def _on_screen_changed(self, instance, screen_name):
+        """Обработчик смены экрана"""
         self.current_screen_name = screen_name
-        self.screen_title.text = self._get_screen_title(screen_name)
-        logger.debug(f"Экран изменён: {screen_name}, заголовок: {self.screen_title.text}")
 
-    def _on_menu_press(self, instance):
+        if screen_name != 'artists_by_letter':
+            self._reset_to_default()
+            self.screen_title.text = self._get_screen_title(screen_name)
+
+        logger.debug(f"Экран изменён: {screen_name}")
+
+    def _on_menu_press(self, btn):
+        """Обработчик кнопки меню"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
             return
 
         if self.app and hasattr(self.app, 'open_drawer'):
-            self.app.open_drawer(instance)
+            self.app.open_drawer(btn)
         else:
             logger.info("Меню нажато")
 
-    def _on_profile_press(self, instance):
+    def _on_back_press(self, btn):
+        """Обработчик кнопки назад (для экрана исполнителей)"""
+        logger.info("Кнопка назад нажата")
+        if self.sm:
+            self.sm.current = 'songs'
+
+    def _on_profile_press(self, btn):
+        """Обработчик кнопки профиля"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
             return
 
         if self.app and hasattr(self.app, 'open_profile'):
-            self.app.open_profile(instance)
+            self.app.open_profile(btn)
         else:
             if hasattr(self, 'sm') and self.sm and self.sm.has_screen('profile'):
                 self.sm.current = 'profile'
 
     def _on_language_changed(self, lang_code):
+        """Обработчик смены языка"""
         if self.app and hasattr(self.app, 'change_language'):
             self.app.change_language(lang_code)
 
-    def _on_search_press(self, instance):
+    def _on_search_press(self, btn):
+        """Обработчик кнопки поиска"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
@@ -208,16 +222,65 @@ class TopNav(MDCard):
                 self.sm.current = 'search'
 
     def set_app(self, app):
+        """Устанавливает ссылку на приложение"""
         self.app = app
 
     def get_current_language(self):
+        """Возвращает текущий язык"""
         if self.language_selector:
             return self.language_selector.get_current_lang()
         return 'ru'
 
     def set_current_language(self, lang_code):
+        """Устанавливает текущий язык"""
         if self.language_selector:
             self.language_selector.set_current_lang(lang_code)
 
     def update_title(self, screen_name: str):
+        """Обновляет заголовок панели"""
         self.screen_title.text = self._get_screen_title(screen_name)
+        self.screen_title.font_size = sp(22)
+
+    def update_for_artists_screen(self, letter: str, show_back_button: bool = True):
+        """Обновляет верхнюю панель для экрана исполнителей"""
+        if show_back_button:
+            self._is_back_mode = True
+            self.menu_btn.icon = "arrow-left"
+            self.menu_btn.on_release = lambda: self._on_back_press(self.menu_btn)
+        else:
+            self._is_back_mode = False
+            self.menu_btn.icon = "menu"
+            self.menu_btn.on_release = lambda: self._on_menu_press(self.menu_btn)
+
+        display = "0-9" if letter in ("digits", "0-9") else letter.upper()
+        self.screen_title.text = display
+        self.screen_title.font_size = sp(22)
+        self.screen_title.bold = True
+
+        logger.info(f"TopNav обновлён для экрана исполнителей: буква={display}")
+
+    def _reset_to_default(self):
+        """Сбрасывает панель к стандартному виду"""
+        if not self._is_back_mode:
+            return
+
+        self._is_back_mode = False
+        self.menu_btn.icon = "menu"
+        self.menu_btn.on_release = lambda: self._on_menu_press(self.menu_btn)
+        self.screen_title.font_size = sp(22)
+        self.screen_title.bold = True
+
+        if self.sm:
+            self.screen_title.text = self._get_screen_title(self.sm.current)
+
+        logger.info("TopNav сброшен к стандартному виду")
+
+    def hide_search_button(self, hide: bool = True):
+        """Скрывает/показывает кнопку поиска"""
+        self.search_btn.opacity = 0 if hide else 1
+        self.search_btn.disabled = hide
+
+    def hide_profile_button(self, hide: bool = True):
+        """Скрывает/показывает кнопку профиля"""
+        self.profile_btn.opacity = 0 if hide else 1
+        self.profile_btn.disabled = hide
