@@ -1,29 +1,24 @@
-# screens/artists_by_letter_screen.py
+# screens/artists_by_letter_screen.py (исправленная версия)
 """
-Экран списка исполнителей по выбранной букве - ФИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ
+Экран списка исполнителей по выбранной букве - МАКСИМАЛЬНО ОПТИМИЗИРОВАНАЯ ВЕРСИЯ
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.scrollview import MDScrollView
-from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.floatlayout import MDFloatLayout
 from kivy.metrics import dp, sp
-from kivy.animation import Animation
-from kivy.uix.progressbar import ProgressBar
-from kivy.graphics import Color, Rectangle
-from kivy.core.image import Image as CoreImage
-from kivy.uix.image import Image
-from kivy.uix.widget import Widget
-from kivy.uix.floatlayout import FloatLayout
 from kivy.clock import Clock
+from kivy.core.image import Image as CoreImage
+from kivy.uix.widget import Widget
+from kivy.graphics import Color, Rectangle
 from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.system_bars import get_status_bar_height
 from api.client import api
-from utils.notifications import notify
+from screens.recycle_artist_card import ArtistRecycleView, set_shared_icon
 
 logger = screen_logger('ArtistsByLetter')
 
@@ -38,477 +33,308 @@ except ImportError:
     def load_asset_as_bytes(name):
         return None
 
-# Кэш иконок
-_icon_cache = {}
+# Глобальный кэш для текстур
+_shared_texture = None
 
 
-def get_cached_icon(icon_name):
-    """Возвращает закэшированную иконку"""
-    if icon_name in _icon_cache:
-        return _icon_cache[icon_name]
+def init_shared_icon():
+    """ОДНОКРАТНО загружает иконку в память для всех карточек"""
+    global _shared_texture
+    if _shared_texture is not None:
+        return _shared_texture
 
     if HAS_ASSETS:
         try:
-            icon_data = load_asset_as_bytes(icon_name)
+            icon_data = load_asset_as_bytes('artist_png')
             if icon_data:
                 img = CoreImage(BytesIO(icon_data), ext="png")
-                _icon_cache[icon_name] = img.texture
-                return img.texture
+                _shared_texture = img.texture
+                set_shared_icon(_shared_texture)
+                logger.info("✅ Общая иконка загружена")
+                return _shared_texture
         except Exception as e:
-            logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
+            logger.error(f"Ошибка загрузки иконки: {e}")
     return None
 
 
-class LoadingSpinner(MDBoxLayout):
+class SimpleLoadingLabel(MDLabel):
+    """Максимально лёгкий спиннер (без анимации прогресса)"""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.spacing = dp(16)
-
-        self.progress = ProgressBar(
-            size_hint=(0.8, None),
-            height=dp(4),
-            pos_hint={'center_x': 0.5},
-            value=50,
-            max=100
-        )
-        self.anim = None
-        self.label = MDLabel(
-            text="Загрузка исполнителей...",
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Secondary",
-            size_hint_y=None,
-            height=dp(30)
-        )
-        self.add_widget(self.progress)
-        self.add_widget(self.label)
-
-    def start_animation(self):
-        self.anim = Animation(value=100, duration=1) + Animation(value=0, duration=1)
-        self.anim.repeat = True
-        self.anim.start(self.progress)
-
-    def stop_animation(self):
-        if self.anim:
-            self.anim.cancel(self.progress)
-        self.progress.value = 0
-
-
-class ArtistCard(MDCard):
-    """Карточка исполнителя с кэшированием иконок"""
-
-    def __init__(self, artist, songs_count, on_click=None, **kwargs):
-        super().__init__(**kwargs)
-        self.artist = artist
-        self.songs_count = songs_count
-        self.on_click_callback = on_click
-
-        self.orientation = 'horizontal'
-        self.size_hint = (1, None)
-        self.height = dp(72)
-        self.padding = [dp(16), dp(12), dp(12), dp(12)]
-        self.spacing = dp(14)
-        self.radius = [dp(20), dp(20), dp(20), dp(20)]
-        self.elevation = 0
-        self.ripple_behavior = True
-        self.theme_bg_color = "Custom"
-        self.md_bg_color = [1, 1, 1, 0.12]
-        self.line_color = [0.46, 0.70, 0.71, 0.25]
-        self.line_width = 1.0
-
-        # Иконка из ассета (с кэшированием)
-        self.icon_image = Image(
-            size_hint=(None, None),
-            size=(dp(36), dp(36)),
-            pos_hint={'center_y': 0.5},
-            allow_stretch=True,
-            keep_ratio=True
-        )
-        self._load_icon()
-
-        # Контейнер для текста
-        self.text_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=1,
-            spacing=dp(4),
-            pos_hint={'center_y': 0.5}
-        )
-
-        # Название исполнителя
-        self.artist_label = MDLabel(
-            text=artist,
-            font_size=sp(17),
-            size_hint_y=None,
-            height=dp(28),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95],
-            bold=True,
-            valign="middle",
-            shorten=True,
-            shorten_from="right"
-        )
-
-        # Количество песен
-        if songs_count == 1:
-            songs_word = "песня"
-        elif 2 <= songs_count <= 4:
-            songs_word = "песни"
-        else:
-            songs_word = "песен"
-
-        self.songs_label = MDLabel(
-            text=f"• {songs_count} {songs_word}",
-            font_size=sp(12),
-            size_hint_y=None,
-            height=dp(24),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5],
-            valign="middle"
-        )
-
-        self.text_container.add_widget(self.artist_label)
-        self.text_container.add_widget(self.songs_label)
-
-        # Стрелка
-        self.arrow_label = MDLabel(
-            text="›",
-            font_size=sp(32),
-            size_hint_x=None,
-            width=dp(32),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 0.5]
-        )
-
-        self.add_widget(self.icon_image)
-        self.add_widget(self.text_container)
-        self.add_widget(self.arrow_label)
-
-        self.bind(on_release=self.on_click)
-
-    def _load_icon(self):
-        """Загружает иконку из кэша"""
-        texture = get_cached_icon('artist_png')
-        if texture:
-            self.icon_image.texture = texture
-        else:
-            # Заглушка
-            self.icon_image.text = "♪"
-
-    def on_click(self, instance):
-        if self.on_click_callback:
-            self.on_click_callback(self.artist, self.songs_count)
+        self.text = "Загрузка исполнителей..."
+        self.halign = "center"
+        self.font_size = sp(14)
+        self.theme_text_color = "Custom"
+        self.text_color = [1, 1, 1, 0.6]
+        self.size_hint_y = None
+        self.height = dp(60)
 
 
 class ArtistsByLetterScreen(MDScreen):
-    """Экран списка исполнителей по букве"""
+    """Экран списка исполнителей по букве - максимально быстрый"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'artists_by_letter'
         self.current_letter = None
-        self.is_loading = False
-        self._artists_cache = {}  # Кэш для букв
-
-        self.loading_spinner = None
-        self.bg_image = None
-        self.fade_layer = None
+        self._cache = {}  # Кэш уже загруженных списков
+        self.recycle_view = None
+        self.empty_label = None
+        self.loading_label = None
+        self.count_label = None
+        self.letter_label = None
+        self.top_bar = None
+        self.back_btn = None
+        self._pending_letter = None  # Буква, которую нужно загрузить после инициализации
 
         self.md_bg_color = [0, 0, 0, 0]
-
         self.init_ui()
-        self.load_background()
 
-        logger.info('Экран исполнителей по букве создан')
+        # Предзагружаем иконку в фоне
+        Clock.schedule_once(lambda dt: init_shared_icon(), 0.1)
 
-    def load_background(self):
-        try:
-            if HAS_ASSETS:
-                asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
-                bg_data = None
-                for name in asset_names:
-                    bg_data = load_asset_as_bytes(name)
-                    if bg_data:
-                        logger.info(f"Фон загружен из ассета: {name}")
-                        break
-
-                if bg_data:
-                    img = CoreImage(BytesIO(bg_data), ext="jpg")
-                    with self.canvas.before:
-                        Color(1, 1, 1, 1)
-                        self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
-                    self.bind(pos=self._update_bg, size=self._update_bg)
-                    return
-        except Exception as e:
-            logger.error(f'Ошибка загрузки фона: {e}')
-
-    def _update_bg(self, *args):
-        if self.bg_image:
-            self.bg_image.pos = self.pos
-            self.bg_image.size = self.size
+        logger.info('Экран исполнителей создан (RecycleView)')
 
     def init_ui(self):
-        root_layout = FloatLayout()
+        root = MDFloatLayout()
 
-        main_layout = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            spacing=0
-        )
+        # Основной вертикальный контейнер
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
         # Отступ под системные панели
         status_h = get_status_bar_height()
-        total_top_padding = status_h + theme.TOP_NAV_HEIGHT
-        top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
-        main_layout.add_widget(top_spacer)
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(status_h + theme.TOP_NAV_HEIGHT)))
 
-        # ============ ВЕРХНЯЯ ПАНЕЛЬ ============
-        self.nav_row = MDBoxLayout(
-            orientation='vertical',
+        # Верхняя панель
+        self.top_bar = MDBoxLayout(
             size_hint_y=None,
-            height=dp(70),
+            height=dp(64),
             padding=[dp(16), dp(8), dp(16), dp(8)],
-            spacing=dp(4),
             md_bg_color=[0, 0, 0, 0]
         )
-
-        top_container = FloatLayout(size_hint_y=None, height=dp(40))
 
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(44), dp(44)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.go_back,
-            pos_hint={'x': 0, 'center_y': 0.5}
+            on_release=self.go_back
         )
 
         self.letter_label = MDLabel(
             text="",
-            font_size=sp(22),
+            font_size=sp(24),
             halign="center",
             valign="middle",
-            size_hint_x=None,
-            width=dp(100),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
-            bold=True,
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            bold=True
         )
-
-        top_container.add_widget(self.back_btn)
-        top_container.add_widget(self.letter_label)
 
         self.count_label = MDLabel(
             text="",
             font_size=sp(12),
             halign="center",
             valign="middle",
-            size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7]
-        )
-
-        self.nav_row.add_widget(top_container)
-        self.nav_row.add_widget(self.count_label)
-
-        # ============ СПИСОК ИСПОЛНИТЕЛЕЙ ============
-        self.scroll_view = MDScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_color=[1, 1, 1, 0.3],
-            bar_width=dp(4)
-        )
-
-        self.content_container = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(10),
+            text_color=[1, 1, 1, 0.6],
             size_hint_y=None,
-            adaptive_height=True,
-            padding=[dp(16), dp(12), dp(16), dp(100)]
-        )
-        self.scroll_view.add_widget(self.content_container)
-
-        main_layout.add_widget(self.nav_row)
-        main_layout.add_widget(self.scroll_view)
-
-        # Затемнение снизу
-        self.fade_layer = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(80),
-            pos_hint={'x': 0, 'y': 0},
-            md_bg_color=[0, 0, 0, 0]
+            height=dp(24)
         )
 
-        with self.fade_layer.canvas.before:
-            Color(0, 0, 0, 0.6)
-            self.fade_rect = Rectangle(pos=self.fade_layer.pos, size=self.fade_layer.size)
+        self.top_bar.add_widget(self.back_btn)
+        self.top_bar.add_widget(self.letter_label)
+        self.top_bar.add_widget(Widget(size_hint_x=0.2))  # Баланс
 
-        self.fade_layer.bind(pos=self._update_fade, size=self._update_fade)
+        # Виртуализированный список (RecycleView)
+        self.recycle_view = ArtistRecycleView(on_artist_click=self.on_artist_selected)
 
-        root_layout.add_widget(main_layout)
-        root_layout.add_widget(self.fade_layer)
+        main_layout.add_widget(self.top_bar)
+        main_layout.add_widget(self.count_label)
+        main_layout.add_widget(self.recycle_view)
 
-        self.add_widget(root_layout)
-        self.root_layout = root_layout
+        root.add_widget(main_layout)
+        self.add_widget(root)
 
-    def _update_fade(self, *args):
-        if hasattr(self, 'fade_rect'):
-            self.fade_rect.pos = self.fade_layer.pos
-            self.fade_rect.size = self.fade_layer.size
+    def on_enter(self):
+        """Вызывается когда экран становится видимым"""
+        logger.info(f"on_enter: current_letter={self.current_letter}, pending={self._pending_letter}")
 
-    def show_loading(self):
-        if self.is_loading:
-            return
-        self.is_loading = True
-        self.content_container.clear_widgets()
-        self.loading_spinner = LoadingSpinner()
-        self.content_container.add_widget(self.loading_spinner)
-        self.loading_spinner.start_animation()
-
-    def hide_loading(self):
-        self.is_loading = False
-        if self.loading_spinner:
-            self.loading_spinner.stop_animation()
-            self.loading_spinner = None
-        self.content_container.clear_widgets()
-
-    def update_title(self, total):
-        if self.current_letter == "digits" or self.current_letter == "0-9":
-            display_letter = "0-9"
-        else:
-            display_letter = self.current_letter
-
-        self.letter_label.text = display_letter
-
-        if total == 0:
-            count_text = "Найдено 0 исполнителей"
-        elif total % 10 == 1 and total % 100 != 11:
-            count_text = f"Найден {total} исполнитель"
-        elif 2 <= total % 10 <= 4 and not (12 <= total % 100 <= 14):
-            count_text = f"Найдено {total} исполнителя"
-        else:
-            count_text = f"Найдено {total} исполнителей"
-
-        self.count_label.text = count_text
+        # Если есть ожидающая буква, загружаем её
+        if self._pending_letter:
+            letter = self._pending_letter
+            self._pending_letter = None
+            self._do_load_letter(letter)
 
     def set_letter(self, letter):
-        """Устанавливает букву и загружает исполнителей"""
+        """Устанавливает букву для загрузки"""
         logger.info(f"set_letter: {letter}")
 
-        if self.current_letter == letter and self._artists_cache.get(letter):
-            # Быстрый показ из кэша
-            self._display_artists(self._artists_cache[letter]['artists'],
-                                  self._artists_cache[letter]['total'])
+        # Обновляем заголовок сразу
+        display = "0-9" if letter in ("digits", "0-9") else letter.upper()
+        self.letter_label.text = display
+
+        # Если экран ещё не активен, сохраняем букву для on_enter
+        if not self.manager or self.manager.current != self.name:
+            logger.info(f"Экран не активен, сохраняем букву {letter} для on_enter")
+            self._pending_letter = letter
             return
 
+        # Иначе загружаем сразу
+        self._do_load_letter(letter)
+
+    def _do_load_letter(self, letter):
+        """Реальная загрузка данных для буквы"""
+        logger.info(f"_do_load_letter: {letter}")
+
         self.current_letter = letter
-        self.load_artists()
 
-    def load_artists(self):
-        """Загружает исполнителей (сначала из кэша API, потом из API)"""
-        # Проверяем кэш API
-        cached_data = api.get_artists_by_letter_from_cache(self.current_letter)
+        # ОЧИЩАЕМ старые данные
+        if self.recycle_view:
+            self.recycle_view.data = []
 
-        if cached_data:
-            # МГНОВЕННО - данные уже в кэше
-            artists = cached_data.get('artists', [])
-            total = cached_data.get('total', 0)
-            self._artists_cache[self.current_letter] = {'artists': artists, 'total': total}
+        # Убираем пустой лейбл если был
+        if self.empty_label and self.empty_label.parent:
+            self.empty_label.parent.remove_widget(self.empty_label)
+
+        # Проверяем кэш экрана
+        if letter in self._cache:
+            artists = self._cache[letter]['artists']
+            total = self._cache[letter]['total']
             self._display_artists(artists, total)
             return
 
-        # Нет в кэше - загружаем из API
-        self.show_loading()
-
-        if self.current_letter == "digits" or self.current_letter == "0-9":
-            api.get_artists_by_digits(
-                limit=200,
-                offset=0,
-                on_success=self._on_artists_loaded,
-                on_failure=self._on_load_failed
-            )
-        else:
-            api.get_artists_by_letter(
-                letter=self.current_letter,
-                limit=200,
-                offset=0,
-                on_success=self._on_artists_loaded,
-                on_failure=self._on_load_failed
-            )
-
-    def _display_artists(self, artists, total):
-        """Быстро отображает список исполнителей"""
-        logger.info(f"_display_artists: {len(artists)} артистов, total={total}")
-
-        self.update_title(total)
-        self.hide_loading()
-
-        if not artists:
-            empty_label = MDLabel(
-                text="Нет исполнителей на эту букву",
-                halign="center",
-                font_size=sp(14),
-                theme_text_color="Custom",
-                text_color=[1, 1, 1, 0.5],
-                size_hint_y=None,
-                height=dp(60)
-            )
-            self.content_container.add_widget(empty_label)
+        # Проверяем кэш API (предзагрузка)
+        cached = api.get_artists_by_letter_from_cache(letter)
+        if cached:
+            artists = cached.get('artists', [])
+            total = cached.get('total', 0)
+            self._cache[letter] = {'artists': artists, 'total': total}
+            self._display_artists(artists, total)
             return
 
-        # Используем Clock.schedule_once для пакетного добавления (быстрее)
-        def add_cards(dt):
-            for artist_data in artists:
-                artist_name = artist_data.get('artist')
-                songs_count = artist_data.get('songs_count', 0)
-                if artist_name:
-                    card = ArtistCard(
-                        artist=artist_name,
-                        songs_count=songs_count,
-                        on_click=self.on_artist_selected
-                    )
-                    self.content_container.add_widget(card)
-            logger.info(f"Отображено {len(artists)} исполнителей для буквы {self.current_letter}")
+        # Нет в кэше - загружаем
+        self._show_loading()
 
-        Clock.schedule_once(add_cards, 0)
+        if letter in ("digits", "0-9"):
+            api.get_artists_by_digits(limit=200, offset=0,
+                                      on_success=self._on_artists_loaded,
+                                      on_failure=self._on_load_failed)
+        else:
+            api.get_artists_by_letter(letter=letter, limit=200, offset=0,
+                                      on_success=self._on_artists_loaded,
+                                      on_failure=self._on_load_failed)
+
+    def _show_loading(self):
+        """Показывает индикатор загрузки"""
+        if self.loading_label:
+            return
+
+        # Очищаем RecycleView
+        if self.recycle_view:
+            self.recycle_view.data = []
+
+        self.loading_label = SimpleLoadingLabel()
+        self.recycle_view.add_widget(self.loading_label)
+
+    def _hide_loading(self):
+        if self.loading_label and self.loading_label.parent:
+            self.loading_label.parent.remove_widget(self.loading_label)
+        self.loading_label = None
+
+    def _display_artists(self, artists, total):
+        """Мгновенное отображение через RecycleView"""
+        logger.info(f"_display_artists: {len(artists)} артистов, total={total}")
+
+        self._hide_loading()
+
+        # Обновляем счётчик
+        self._update_count_label(total)
+
+        # Убираем пустой лейбл если был
+        if self.empty_label and self.empty_label.parent:
+            self.empty_label.parent.remove_widget(self.empty_label)
+
+        if not artists:
+            # Пустое состояние
+            if self.recycle_view:
+                self.recycle_view.data = []
+            if not self.empty_label:
+                self.empty_label = MDLabel(
+                    text="Нет исполнителей на эту букву",
+                    halign="center",
+                    font_size=sp(14),
+                    theme_text_color="Custom",
+                    text_color=[1, 1, 1, 0.4],
+                    size_hint_y=None,
+                    height=dp(60)
+                )
+            self.recycle_view.add_widget(self.empty_label)
+            return
+
+        # Массовое обновление - самая быстрая операция
+        data = []
+        for a in artists:
+            name = a.get('artist')
+            count = a.get('songs_count', 0)
+            if name:
+                data.append({'artist': name, 'songs_count': count, 'on_click': self.on_artist_selected})
+
+        # Применяем за один кадр
+        if self.recycle_view:
+            self.recycle_view.data = data
+            # Принудительно обновляем view
+            self.recycle_view.refresh_from_data()
+        logger.info(f"Отображено {len(data)} исполнителей для {self.current_letter}")
+
+    def _update_count_label(self, total):
+        """Обновляет счётчик исполнителей"""
+        if total == 0:
+            text = "0 исполнителей"
+        elif total == 1:
+            text = "1 исполнитель"
+        elif 2 <= total <= 4:
+            text = f"{total} исполнителя"
+        else:
+            text = f"{total} исполнителей"
+        if self.count_label:
+            self.count_label.text = text
 
     def _on_artists_loaded(self, data):
-        """Обработчик загрузки из API"""
+        """Callback после загрузки из API"""
         artists = data.get('artists', [])
         total = data.get('total', 0)
-        self._artists_cache[self.current_letter] = {'artists': artists, 'total': total}
+        self._cache[self.current_letter] = {'artists': artists, 'total': total}
         self._display_artists(artists, total)
 
     def _on_load_failed(self, req, error):
-        """Обработчик ошибки загрузки"""
-        self.hide_loading()
+        """Обработчик ошибки"""
+        self._hide_loading()
         logger.error(f"Ошибка загрузки: {error}")
 
+        if self.recycle_view:
+            self.recycle_view.data = []
+
         error_label = MDLabel(
-            text="Ошибка загрузки исполнителей. Проверьте интернет.",
+            text="Ошибка загрузки\nПроверьте интернет",
             halign="center",
             font_size=sp(14),
             theme_text_color="Custom",
-            text_color=[1, 0.3, 0.3, 1],
+            text_color=[1, 0.3, 0.3, 0.8],
             size_hint_y=None,
             height=dp(60)
         )
-        self.content_container.add_widget(error_label)
+        self.recycle_view.add_widget(error_label)
 
     def on_artist_selected(self, artist, songs_count):
-        """Выбор исполнителя"""
-        logger.info(f"Выбран исполнитель: {artist}")
-
+        """Обработчик выбора исполнителя"""
+        logger.info(f"Выбран: {artist}")
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('artist_songs'):
-                artist_songs_screen = self.manager.get_screen('artist_songs')
-                artist_songs_screen.set_artist(artist)
+                screen = self.manager.get_screen('artist_songs')
+                screen.set_artist(artist)
                 self.manager.current = 'artist_songs'
 
     def go_back(self, instance):

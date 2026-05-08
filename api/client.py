@@ -279,6 +279,10 @@ class APIClient:
             total_songs = len(self._prefetched_songs)
             Logger.info(
                 f"📦 Кэш ещё свежий, предзагрузка не требуется (артистов: {total_artists}, песен: {total_songs})")
+
+            # Всё равно предзагружаем иконку в фоне (лёгкая операция)
+            self._preload_icon_async()
+
             if on_complete:
                 Clock.schedule_once(lambda dt: on_complete(total_artists, total_songs), 0)
             return
@@ -289,6 +293,10 @@ class APIClient:
             try:
                 start_time = time.time()
 
+                # ============ ПРЕДЗАГРУЗКА ИКОНКИ (параллельно) ============
+                self._preload_icon_sync()
+
+                # Получаем алфавит
                 alphabet_response = self.session.get(
                     f"{self.config.API_BASE_URL}/songs/alphabet",
                     timeout=30
@@ -369,6 +377,38 @@ class APIClient:
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
         return thread
+
+    def _preload_icon_sync(self):
+        """Синхронная предзагрузка иконки (для использования в потоке)"""
+        try:
+            from data import load_asset_as_bytes
+            from kivy.core.image import Image as CoreImage
+            from io import BytesIO
+
+            icon_data = load_asset_as_bytes('artist_png')
+            if icon_data:
+                img = CoreImage(BytesIO(icon_data), ext="png")
+                # Сохраняем текстуру в отдельный кэш для быстрого доступа
+                if not hasattr(self, '_icon_texture'):
+                    self._icon_texture = img.texture
+                Logger.info("🎨 Иконка исполнителя предзагружена в кэш")
+        except Exception as e:
+            Logger.warning(f"⚠️ Не удалось предзагрузить иконку: {e}")
+
+    def _preload_icon_async(self):
+        """Асинхронная предзагрузка иконки"""
+
+        def load():
+            self._preload_icon_sync()
+
+        thread = threading.Thread(target=load, daemon=True)
+        thread.start()
+
+    def get_shared_icon_texture(self):
+        """Возвращает предзагруженную текстуру иконки"""
+        if hasattr(self, '_icon_texture'):
+            return self._icon_texture
+        return None
 
     def get_artists_by_letter_from_cache(self, letter):
         """Быстрый доступ к артистам из кэша"""
