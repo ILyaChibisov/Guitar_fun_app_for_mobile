@@ -130,15 +130,15 @@ class ArtistsByLetterScreen(MDScreen):
         # Основной вертикальный контейнер
         self._main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Отступ под системные панели
+        # Получаем высоты системных панелей в dp
         status_h = get_status_bar_height()
         nav_bar_height = get_navigation_bar_height()
 
-        # Отступ сверху под статус-бар и верхнюю навигацию
-        top_padding = status_h + dp(42)  # 72 - высота TopNav с отступами
+        # Отступ сверху: статус-бар + высота TopNav (64dp) + небольшой отступ
+        top_padding = status_h + dp(64) + dp(4)
         self._main_layout.add_widget(Widget(size_hint_y=None, height=dp(top_padding)))
 
-        # Счётчик исполнителей - МАКСИМАЛЬНО БЛИЗКО к топ-нав (минимальный отступ сверху)
+        # Счётчик исполнителей - под верхней навигацией
         self.count_label = MDLabel(
             text="",
             font_size=sp(13),
@@ -147,15 +147,15 @@ class ArtistsByLetterScreen(MDScreen):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.7],
             size_hint_y=None,
-            height=dp(18),  # Минимальная высота
-            padding=[0, 0, 0, dp(8)]  # Небольшой отступ снизу
+            height=dp(28),
+            padding=[0, dp(4), 0, dp(4)]
         )
 
         # Контейнер для карточек с отступами по бокам
         cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(2), dp(12), nav_bar_height + dp(60)]
+            padding=[dp(12), dp(4), dp(12), nav_bar_height + dp(50)]
         )
 
         # RecycleView для карточек
@@ -218,6 +218,8 @@ class ArtistsByLetterScreen(MDScreen):
 
         self._hide_loading()
         self._hide_empty()
+
+        self._update_count_label(0)  # Сначала показываем 0
 
         if letter in self._cache:
             artists = self._cache[letter].get('artists', [])
@@ -318,7 +320,7 @@ class ArtistsByLetterScreen(MDScreen):
         logger.info(f"Отображено {len(data)} исполнителей для {self.current_letter}")
 
     def _update_count_label(self, total):
-        """Обновляет счётчик исполнителей - максимально близко к топ-нав"""
+        """Обновляет счётчик исполнителей"""
         if total == 0:
             text = "Найдено 0 исполнителей"
         elif total == 1:

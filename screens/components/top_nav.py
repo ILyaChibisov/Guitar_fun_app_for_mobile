@@ -33,12 +33,12 @@ class TopNav(MDCard):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
 
-        # Добавляем отступ сверху под статус-бар
+        # Получаем высоту статус-бара в dp
         status_bar_height = get_status_bar_height()
 
-        # Высота панели
-        self.height = dp(76) + status_bar_height
-        self.padding = [0, status_bar_height + dp(8), 0, 0]
+        # Высота панели - только высота контента, статус-бар добавляется как отступ
+        self.height = dp(56)
+        self.padding = [0, status_bar_height, 0, 0]
 
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]
@@ -50,8 +50,8 @@ class TopNav(MDCard):
         self.container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
-            padding=[dp(16), 0, dp(16), 0],
-            spacing=dp(12),
+            padding=[dp(12), 0, dp(12), 0],
+            spacing=dp(8),
             md_bg_color=[0, 0, 0, 0]
         )
 
@@ -59,19 +59,18 @@ class TopNav(MDCard):
         self.menu_btn = MDIconButton(
             icon="menu",
             size_hint=(None, None),
-            size=(dp(48), dp(48)),
+            size=(dp(44), dp(44)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
-        # Привязываем обработчики позже, чтобы можно было менять
         self.menu_btn.on_release = lambda: self._on_menu_press(self.menu_btn)
 
         # ============ ЦЕНТР: название текущего экрана ============
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
-            font_size=sp(22),
+            font_size=sp(18),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -85,9 +84,9 @@ class TopNav(MDCard):
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(160),
-            height=dp(48),
-            spacing=dp(8),
+            width=dp(140),
+            height=dp(44),
+            spacing=dp(6),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
@@ -96,7 +95,7 @@ class TopNav(MDCard):
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(36), dp(36)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -108,7 +107,7 @@ class TopNav(MDCard):
         self.profile_btn = MDIconButton(
             icon="account-circle",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(36), dp(36)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -140,7 +139,7 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info(f'TopNav создана (прозрачная, высота: {self.height}px)')
+        logger.info(f'TopNav создана (прозрачная, высота: {self.height}dp, отступ: {self.padding[1]}dp)')
 
     def _get_screen_title(self, screen_name: str) -> str:
         """Возвращает заголовок для экрана"""
@@ -239,7 +238,7 @@ class TopNav(MDCard):
     def update_title(self, screen_name: str):
         """Обновляет заголовок панели"""
         self.screen_title.text = self._get_screen_title(screen_name)
-        self.screen_title.font_size = sp(22)
+        self.screen_title.font_size = sp(18)
 
     def update_for_artists_screen(self, letter: str, show_back_button: bool = True):
         """Обновляет верхнюю панель для экрана исполнителей"""
@@ -254,10 +253,14 @@ class TopNav(MDCard):
 
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
         self.screen_title.text = display
-        self.screen_title.font_size = sp(22)
+        self.screen_title.font_size = sp(22)  # Чуть крупнее для буквы
         self.screen_title.bold = True
 
         logger.info(f"TopNav обновлён для экрана исполнителей: буква={display}")
+
+    def reset_to_default(self):
+        """Публичный метод для сброса панели"""
+        self._reset_to_default()
 
     def _reset_to_default(self):
         """Сбрасывает панель к стандартному виду"""
@@ -267,7 +270,7 @@ class TopNav(MDCard):
         self._is_back_mode = False
         self.menu_btn.icon = "menu"
         self.menu_btn.on_release = lambda: self._on_menu_press(self.menu_btn)
-        self.screen_title.font_size = sp(22)
+        self.screen_title.font_size = sp(18)
         self.screen_title.bold = True
 
         if self.sm:

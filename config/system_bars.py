@@ -9,20 +9,20 @@ from config.logger_config import get_logger
 
 logger = get_logger('SystemBars')
 
-_status_bar_height = None
-_nav_bar_height = None
+_status_bar_height_dp = None
+_nav_bar_height_dp = None
 
-# Константы для симуляции на Windows (в пикселях)
-WINDOWS_STATUS_BAR_HEIGHT = 30  # 30px симуляция статус-бара
-WINDOWS_NAV_BAR_HEIGHT = 50  # 50px симуляция нав-бара
+# Константы для симуляции на Windows (в dp)
+WINDOWS_STATUS_BAR_HEIGHT_DP = 24  # 24dp симуляция статус-бара
+WINDOWS_NAV_BAR_HEIGHT_DP = 48  # 48dp симуляция нав-бара
 
 
-def get_status_bar_height():
-    """Возвращает высоту статус-бара в пикселях"""
-    global _status_bar_height
+def get_status_bar_height_dp():
+    """Возвращает высоту статус-бара в dp"""
+    global _status_bar_height_dp
 
-    if _status_bar_height is not None:
-        return _status_bar_height
+    if _status_bar_height_dp is not None:
+        return _status_bar_height_dp
 
     if platform == 'android':
         try:
@@ -33,24 +33,26 @@ def get_status_bar_height():
                 'status_bar_height', 'dimen', 'android'
             )
             if resource_id > 0:
-                _status_bar_height = Resources.getSystem().getDimensionPixelSize(resource_id)
-                logger.info(f"Высота статус-бара (Android): {_status_bar_height}px ({dp(_status_bar_height)}dp)")
-                return _status_bar_height
+                pixels = Resources.getSystem().getDimensionPixelSize(resource_id)
+                # Конвертируем пиксели в dp
+                _status_bar_height_dp = pixels // (Resources.getSystem().getDisplayMetrics().density)
+                logger.info(f"Высота статус-бара (Android): {pixels}px = {_status_bar_height_dp}dp")
+                return _status_bar_height_dp
         except Exception as e:
             logger.error(f"Ошибка получения высоты статус-бара: {e}")
 
     # На Windows используем симуляцию для тестирования
-    _status_bar_height = WINDOWS_STATUS_BAR_HEIGHT
-    logger.info(f"Высота статус-бара (симуляция Windows): {_status_bar_height}px ({dp(_status_bar_height)}dp)")
-    return _status_bar_height
+    _status_bar_height_dp = WINDOWS_STATUS_BAR_HEIGHT_DP
+    logger.info(f"Высота статус-бара (симуляция Windows): {_status_bar_height_dp}dp")
+    return _status_bar_height_dp
 
 
-def get_navigation_bar_height():
-    """Возвращает высоту навигационной панели в пикселях"""
-    global _nav_bar_height
+def get_navigation_bar_height_dp():
+    """Возвращает высоту навигационной панели в dp"""
+    global _nav_bar_height_dp
 
-    if _nav_bar_height is not None:
-        return _nav_bar_height
+    if _nav_bar_height_dp is not None:
+        return _nav_bar_height_dp
 
     if platform == 'android':
         try:
@@ -61,34 +63,37 @@ def get_navigation_bar_height():
                 'navigation_bar_height', 'dimen', 'android'
             )
             if resource_id > 0:
-                _nav_bar_height = Resources.getSystem().getDimensionPixelSize(resource_id)
-                logger.info(f"Высота нав-бара (Android): {_nav_bar_height}px ({dp(_nav_bar_height)}dp)")
-                return _nav_bar_height
+                pixels = Resources.getSystem().getDimensionPixelSize(resource_id)
+                # Конвертируем пиксели в dp
+                _nav_bar_height_dp = pixels // (Resources.getSystem().getDisplayMetrics().density)
+                logger.info(f"Высота нав-бара (Android): {pixels}px = {_nav_bar_height_dp}dp")
+                return _nav_bar_height_dp
         except Exception as e:
             logger.error(f"Ошибка получения высоты нав-бара: {e}")
 
     # На Windows используем симуляцию для тестирования
-    _nav_bar_height = WINDOWS_NAV_BAR_HEIGHT
-    logger.info(f"Высота нав-бара (симуляция Windows): {_nav_bar_height}px ({dp(_nav_bar_height)}dp)")
-    return _nav_bar_height
+    _nav_bar_height_dp = WINDOWS_NAV_BAR_HEIGHT_DP
+    logger.info(f"Высота нав-бара (симуляция Windows): {_nav_bar_height_dp}dp")
+    return _nav_bar_height_dp
 
 
-def get_status_bar_height_dp():
+# Для обратной совместимости (возвращают dp)
+def get_status_bar_height():
     """Возвращает высоту статус-бара в dp"""
-    return dp(get_status_bar_height())
+    return get_status_bar_height_dp()
 
 
-def get_navigation_bar_height_dp():
+def get_navigation_bar_height():
     """Возвращает высоту навигационной панели в dp"""
-    return dp(get_navigation_bar_height())
+    return get_navigation_bar_height_dp()
 
 
-def set_simulation_heights(status_px=30, nav_px=50):
-    """Для Windows: установить свои значения симуляции (в пикселях)"""
-    global _status_bar_height, _nav_bar_height, WINDOWS_STATUS_BAR_HEIGHT, WINDOWS_NAV_BAR_HEIGHT
+def set_simulation_heights(status_dp=24, nav_dp=48):
+    """Для Windows: установить свои значения симуляции (в dp)"""
+    global _status_bar_height_dp, _nav_bar_height_dp, WINDOWS_STATUS_BAR_HEIGHT_DP, WINDOWS_NAV_BAR_HEIGHT_DP
     if platform != 'android':
-        WINDOWS_STATUS_BAR_HEIGHT = status_px
-        WINDOWS_NAV_BAR_HEIGHT = nav_px
-        _status_bar_height = status_px
-        _nav_bar_height = nav_px
-        logger.info(f"Симуляция обновлена: статус-бар={status_px}px, нав-бар={nav_px}px")
+        WINDOWS_STATUS_BAR_HEIGHT_DP = status_dp
+        WINDOWS_NAV_BAR_HEIGHT_DP = nav_dp
+        _status_bar_height_dp = status_dp
+        _nav_bar_height_dp = nav_dp
+        logger.info(f"Симуляция обновлена: статус-бар={status_dp}dp, нав-бар={nav_dp}dp")
