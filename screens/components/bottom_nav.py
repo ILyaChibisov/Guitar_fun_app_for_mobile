@@ -24,6 +24,7 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -144,7 +145,7 @@ class BottomNav(BoxLayout):
 
         # Высота панели с иконками
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-        
+
         # На Android добавляем отступ, чтобы иконки были НАД системной навигацией
         # На Windows имитируем системную навигацию таким же отступом для консистентности
         if platform == 'android':
@@ -164,7 +165,7 @@ class BottomNav(BoxLayout):
             panel_padding[0],  # левый
             panel_padding[1],  # верхний
             panel_padding[2],  # правый
-            bottom_padding     # нижний отступ под системную навигацию
+            bottom_padding  # нижний отступ под системную навигацию
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
         self.md_bg_color = [0, 0, 0, 0]
@@ -225,9 +226,9 @@ class BottomNav(BoxLayout):
         """Обновляет конфигурацию панели (при изменении размера экрана)"""
         nav_bar_height_px = get_navigation_bar_height_px()
         nav_bar_height_dp = dp(nav_bar_height_px)
-        
+
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-        
+
         # На обеих платформах добавляем отступ под системную навигацию
         self.height = self.panel_height + nav_bar_height_dp
         bottom_padding = nav_bar_height_dp
