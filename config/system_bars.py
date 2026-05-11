@@ -13,12 +13,9 @@ logger = get_logger('SystemBars')
 _status_bar_height_px = None
 _nav_bar_height_px = None
 
-# Константы для симуляции на Windows (в пикселях) - имитируем реальное Android устройство
-# Стандартный Pixel 4a имеет плотность ~ 2.6, статус-бар 24dp, нав-бар 48dp (с кнопками)
-# При dpi ~ 160 (базовая), 24dp = 24px * (dpi/160) -> при dpi=160, 24dp = 24px
-WINDOWS_SIMULATION_DPI = 160  # Базовая плотность для симуляции
+# Константы для симуляции на Windows (в пикселях)
 WINDOWS_STATUS_BAR_HEIGHT_DP = 24  # 24dp - стандартная высота статус-бара на Android
-WINDOWS_NAV_BAR_HEIGHT_DP = 48  # 48dp - стандартная высота нав-бара с кнопками
+WINDOWS_NAV_BAR_HEIGHT_DP = 48     # 48dp - стандартная высота нав-бара с кнопками
 
 
 def get_screen_density():
@@ -30,7 +27,6 @@ def get_screen_density():
             Resources = autoclass('android.content.res.Resources')
             return Resources.getSystem().getDisplayMetrics().density
         else:
-            # Для Windows используем базовую плотность
             return Window.dpi / 160 if Window.dpi else 1.0
     except Exception:
         return Window.dpi / 160 if Window.dpi else 1.0
@@ -60,7 +56,6 @@ def get_status_bar_height_px():
             logger.error(f"Ошибка получения высоты статус-бара: {e}")
 
     # Для Windows - имитируем реальное Android устройство
-    # Вычисляем px из dp с учётом плотности экрана
     density = get_screen_density()
     _status_bar_height_px = int(WINDOWS_STATUS_BAR_HEIGHT_DP * density)
     logger.info(f"Высота статус-бара (симуляция Windows): {_status_bar_height_px}px "
@@ -97,7 +92,7 @@ def get_navigation_bar_height_px():
             from jnius import autoclass
             View = autoclass('android.view.View')
             decorView = mActivity.getWindow().getDecorView()
-            # Для жестов нав-бар может быть скрыт, но мы всё равно добавим небольшой отступ
+            # Для жестов нав-бар может быть скрыт
             _nav_bar_height_px = int(16 * get_screen_density())
             logger.info(f"Нав-бар не обнаружен (вероятно, жесты), добавлен отступ: {_nav_bar_height_px}px")
             return _nav_bar_height_px

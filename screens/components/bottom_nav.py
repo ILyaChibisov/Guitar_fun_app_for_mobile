@@ -1,4 +1,4 @@
-# screens/components/bottom_nav.py (исправленная версия)
+# screens/components/bottom_nav.py (с поддержкой имитации на Windows)
 """
 Современная нижняя навигация - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
 """
@@ -10,19 +10,21 @@ from kivy.animation import Animation
 from kivy.properties import StringProperty, BooleanProperty
 from kivy.metrics import dp, sp
 from kivy.core.image import Image as CoreImage
+from kivy.utils import platform
 from io import BytesIO
 from kivymd.app import MDApp
 
 from config.theme import theme
 from config.logger_config import get_logger
 from config.bottom_nav_config import BottomNavConfig
-from config.system_bars import get_navigation_bar_height_px
+from config.system_bars import get_navigation_bar_height_px, get_navigation_bar_height
 from utils.kivy_imports import MDBoxLayout
 
 logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -128,31 +130,42 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - ПРИЛЕГАЕТ НЕПОСРЕДСТВЕННО К СИСТЕМНОЙ НАВИГАЦИИ"""
+    """Нижняя панель навигации"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Получаем высоту системной навигации в пикселях (только для информации)
+        # Получаем высоту системной навигации
         nav_bar_height_px = get_navigation_bar_height_px()
         nav_bar_height_dp = dp(nav_bar_height_px)
 
-        logger.info(f"Высота системной навигации: {nav_bar_height_dp}dp")
+        logger.info(f"Высота системной навигации: {nav_bar_height_dp}dp (платформа: {platform})")
 
-        # ВАЖНО: Высота панели = только высота кнопок
-        # Системная навигация находится ПОД панелью, а НЕ внутри неё
+        # Высота панели с иконками
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-        self.height = self.panel_height
 
-        # Паддинги: левый, верхний, правый, нижний
+        # На Windows добавляем отступ для имитации системной навигации
+        # На Android системная навигация реальная, поэтому отступ не нужен
+        if platform == 'win':
+            # На Windows имитируем системную навигацию (полоска снизу)
+            self.height = self.panel_height + nav_bar_height_dp
+            bottom_padding = nav_bar_height_dp
+            logger.info(f"Windows: имитация системной навигации, добавлен отступ {nav_bar_height_dp}dp")
+        else:
+            # На Android системная навигация реальная, панель над ней
+            self.height = self.panel_height
+            bottom_padding = 0
+            logger.info(f"Android: реальная системная навигация, отступ не добавляем")
+
+        # Паддинги: [левый, верхний, правый, нижний]
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
             panel_padding[0],  # левый
             panel_padding[1],  # верхний
             panel_padding[2],  # правый
-            dp(0)              # нижний = 0 (прилегаем к системной навигации)
+            bottom_padding  # нижний (только на Windows для имитации)
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
         self.md_bg_color = [0, 0, 0, 0]
@@ -178,7 +191,7 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info(f'Нижняя навигация создана: высота={self.height}dp, нижний отступ=0')
+        logger.info(f'Нижняя навигация создана: высота={self.height}dp, нижний отступ={bottom_padding}dp')
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
@@ -211,15 +224,24 @@ class BottomNav(BoxLayout):
 
     def reload_config(self):
         """Обновляет конфигурацию панели (при изменении размера экрана)"""
+        nav_bar_height_px = get_navigation_bar_height_px()
+        nav_bar_height_dp = dp(nav_bar_height_px)
+
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-        self.height = self.panel_height
+
+        if platform == 'win':
+            self.height = self.panel_height + nav_bar_height_dp
+            bottom_padding = nav_bar_height_dp
+        else:
+            self.height = self.panel_height
+            bottom_padding = 0
 
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
             panel_padding[0],
             panel_padding[1],
             panel_padding[2],
-            dp(0)  # нижний отступ всегда 0
+            bottom_padding
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
 
@@ -233,4 +255,4 @@ class BottomNav(BoxLayout):
             item.text_label.size_hint = (1, 1 - new_config['icon_height'])
             item._reload_icon()
 
-        logger.info(f'Нижняя навигация обновлена: высота={self.height}dp')
+        logger.info(f'Нижняя навигация обновлена: высота={self.height}dp, нижний отступ={bottom_padding}dp')
