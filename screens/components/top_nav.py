@@ -13,7 +13,7 @@ from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import get_logger
 from screens.components.language_selector import LanguageSelector
-from config.system_bars import get_status_bar_height
+from config.system_bars import get_status_bar_height_px
 
 logger = get_logger('UI')
 
@@ -33,12 +33,14 @@ class TopNav(MDCard):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
 
-        # Получаем высоту статус-бара в dp
-        status_bar_height = get_status_bar_height()
+        # Получаем высоту статус-бара в ПИКСЕЛЯХ и переводим в dp
+        status_bar_height_px = get_status_bar_height_px()
+        status_bar_height_dp = dp(status_bar_height_px)
 
-        # Высота панели - только высота контента, статус-бар добавляется как отступ
+        # Высота панели в dp
         self.height = dp(56)
-        self.padding = [0, status_bar_height, 0, 0]
+        # Отступ сверху = высота статус-бара
+        self.padding = [0, status_bar_height_dp, 0, 0]
 
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]
@@ -55,17 +57,45 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # ============ ЛЕВАЯ ЧАСТЬ: иконка меню / назад ============
-        self.menu_btn = MDIconButton(
-            icon="menu",
+        # ============ ЛЕВАЯ ЧАСТЬ: контейнер для иконок (меню + назад) ============
+        self.left_container = MDBoxLayout(
+            orientation='horizontal',
             size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
+            width=dp(88),  # Ширина для двух иконок
+            height=dp(44),
+            spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
-        self.menu_btn.on_release = lambda: self._on_menu_press(self.menu_btn)
+
+        # Кнопка меню (гамбургер) - всегда видна
+        self.menu_btn = MDIconButton(
+            icon="menu",
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_menu_press,
+            pos_hint={'center_y': 0.5}
+        )
+
+        # Кнопка назад (стрелка) - видна только на экране исполнителей
+        self.back_btn = MDIconButton(
+            icon="arrow-left",
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_back_press,
+            pos_hint={'center_y': 0.5},
+            opacity=0,  # Изначально скрыта
+            disabled=True
+        )
+
+        self.left_container.add_widget(self.menu_btn)
+        self.left_container.add_widget(self.back_btn)
 
         # ============ ЦЕНТР: название текущего экрана ============
         self.screen_title = MDLabel(
@@ -124,7 +154,7 @@ class TopNav(MDCard):
         self.right_container.add_widget(self.profile_btn)
         self.right_container.add_widget(self.language_selector)
 
-        self.container.add_widget(self.menu_btn)
+        self.container.add_widget(self.left_container)
         self.container.add_widget(self.screen_title)
         self.container.add_widget(self.right_container)
 
@@ -139,7 +169,7 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info(f'TopNav создана (прозрачная, высота: {self.height}dp, отступ: {self.padding[1]}dp)')
+        logger.info(f'TopNav создана, высота: {self.height}dp, отступ сверху: {self.padding[1]}dp')
 
     def _get_screen_title(self, screen_name: str) -> str:
         """Возвращает заголовок для экрана"""
@@ -165,8 +195,10 @@ class TopNav(MDCard):
         self.current_screen_name = screen_name
 
         if screen_name != 'artists_by_letter':
-            self._reset_to_default()
+            self._hide_back_button()
             self.screen_title.text = self._get_screen_title(screen_name)
+        else:
+            self._show_back_button()
 
         logger.debug(f"Экран изменён: {screen_name}")
 
@@ -243,40 +275,38 @@ class TopNav(MDCard):
     def update_for_artists_screen(self, letter: str, show_back_button: bool = True):
         """Обновляет верхнюю панель для экрана исполнителей"""
         if show_back_button:
-            self._is_back_mode = True
-            self.menu_btn.icon = "arrow-left"
-            self.menu_btn.on_release = lambda: self._on_back_press(self.menu_btn)
+            self._show_back_button()
         else:
-            self._is_back_mode = False
-            self.menu_btn.icon = "menu"
-            self.menu_btn.on_release = lambda: self._on_menu_press(self.menu_btn)
+            self._hide_back_button()
 
+        # Устанавливаем заголовок "Буква X"
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
-        self.screen_title.text = display
-        self.screen_title.font_size = sp(22)  # Чуть крупнее для буквы
-        self.screen_title.bold = True
-
-        logger.info(f"TopNav обновлён для экрана исполнителей: буква={display}")
-
-    def reset_to_default(self):
-        """Публичный метод для сброса панели"""
-        self._reset_to_default()
-
-    def _reset_to_default(self):
-        """Сбрасывает панель к стандартному виду"""
-        if not self._is_back_mode:
-            return
-
-        self._is_back_mode = False
-        self.menu_btn.icon = "menu"
-        self.menu_btn.on_release = lambda: self._on_menu_press(self.menu_btn)
+        self.screen_title.text = f"Буква {display}"
         self.screen_title.font_size = sp(18)
         self.screen_title.bold = True
 
+        logger.info(f"TopNav обновлён для экрана исполнителей: {self.screen_title.text}")
+
+    def reset_to_default(self):
+        """Публичный метод для сброса панели"""
+        self._hide_back_button()
+        self.screen_title.font_size = sp(18)
+        self.screen_title.bold = True
         if self.sm:
             self.screen_title.text = self._get_screen_title(self.sm.current)
-
         logger.info("TopNav сброшен к стандартному виду")
+
+    def _show_back_button(self):
+        """Показывает кнопку назад"""
+        self._is_back_mode = True
+        self.back_btn.opacity = 1
+        self.back_btn.disabled = False
+
+    def _hide_back_button(self):
+        """Скрывает кнопку назад"""
+        self._is_back_mode = False
+        self.back_btn.opacity = 0
+        self.back_btn.disabled = True
 
     def hide_search_button(self, hide: bool = True):
         """Скрывает/показывает кнопку поиска"""

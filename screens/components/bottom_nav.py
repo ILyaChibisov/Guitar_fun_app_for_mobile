@@ -16,13 +16,14 @@ from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import get_logger
 from config.bottom_nav_config import BottomNavConfig
-from config.system_bars import get_navigation_bar_height
+from config.system_bars import get_navigation_bar_height_px
 from utils.kivy_imports import MDBoxLayout
 
 logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -135,14 +136,15 @@ class BottomNav(BoxLayout):
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Применяем настройки из конфига
-        nav_bar_height = get_navigation_bar_height()
+        # Получаем высоту нав-бара в ПИКСЕЛЯХ
+        nav_bar_height_px = get_navigation_bar_height_px()
+        nav_bar_height_dp = dp(nav_bar_height_px)
 
-        self.height = dp(BottomNavConfig.PANEL_HEIGHT) + nav_bar_height
+        self.height = dp(BottomNavConfig.PANEL_HEIGHT) + nav_bar_height_dp
         self.padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
-        self.padding = [self.padding[0], self.padding[1], self.padding[2], nav_bar_height]
+        self.padding = [self.padding[0], self.padding[1], self.padding[2], nav_bar_height_dp]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
-        self.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
+        self.md_bg_color = [0, 0, 0, 0]
 
         # Меню
         self.nav_items = [
@@ -165,7 +167,7 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info(f'Нижняя навигация создана (прозрачная, высота: {self.height}px)')
+        logger.info(f'Нижняя навигация создана, высота: {self.height}dp')
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
@@ -197,10 +199,12 @@ class BottomNav(BoxLayout):
         self.switch_to(screen_name)
 
     def reload_config(self):
-        nav_bar_height = get_navigation_bar_height()
-        self.height = dp(BottomNavConfig.PANEL_HEIGHT) + nav_bar_height
+        nav_bar_height_px = get_navigation_bar_height_px()
+        nav_bar_height_dp = dp(nav_bar_height_px)
+
+        self.height = dp(BottomNavConfig.PANEL_HEIGHT) + nav_bar_height_dp
         self.padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
-        self.padding = [self.padding[0], self.padding[1], self.padding[2], nav_bar_height]
+        self.padding = [self.padding[0], self.padding[1], self.padding[2], nav_bar_height_dp]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
 
         for item, (_, _, screen) in zip(self.items, self.nav_items):

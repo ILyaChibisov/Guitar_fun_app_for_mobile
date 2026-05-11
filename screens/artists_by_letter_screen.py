@@ -16,7 +16,8 @@ from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
-from config.system_bars import get_status_bar_height, get_navigation_bar_height
+from config.system_bars import get_status_bar_height, get_navigation_bar_height, get_status_bar_height_px, \
+    get_navigation_bar_height_px
 from api.client import api
 from screens.recycle_artist_card import ArtistRecycleView, set_shared_icon
 from kivymd.app import MDApp
@@ -130,13 +131,25 @@ class ArtistsByLetterScreen(MDScreen):
         # Основной вертикальный контейнер
         self._main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Получаем высоты системных панелей в dp
-        status_h = get_status_bar_height()
-        nav_bar_height = get_navigation_bar_height()
+        # Получаем высоты системных панелей в пикселях и dp
+        try:
+            status_h_px = get_status_bar_height_px()
+            nav_h_px = get_navigation_bar_height_px()
+            use_px = True
+        except (NameError, ImportError):
+            # Если функции нет, используем обычные
+            status_h_dp = get_status_bar_height()
+            nav_h_dp = get_navigation_bar_height()
+            use_px = False
 
-        # Отступ сверху: статус-бар + высота TopNav (64dp) + небольшой отступ
-        top_padding = status_h + dp(64) + dp(4)
-        self._main_layout.add_widget(Widget(size_hint_y=None, height=dp(top_padding)))
+        if use_px:
+            # Преобразуем в dp для Kivy
+            status_h_dp = dp(status_h_px)
+            nav_h_dp = dp(nav_h_px)
+
+        # Отступ сверху: статус-бар + высота TopNav (56dp)
+        top_padding = status_h_dp + dp(56)
+        self._main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
         # Счётчик исполнителей - под верхней навигацией
         self.count_label = MDLabel(
@@ -148,14 +161,14 @@ class ArtistsByLetterScreen(MDScreen):
             text_color=[1, 1, 1, 0.7],
             size_hint_y=None,
             height=dp(28),
-            padding=[0, dp(4), 0, dp(4)]
+            padding=[0, dp(2), 0, dp(2)]
         )
 
         # Контейнер для карточек с отступами по бокам
         cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(4), dp(12), nav_bar_height + dp(50)]
+            padding=[dp(12), dp(2), dp(12), nav_h_dp + dp(50)]
         )
 
         # RecycleView для карточек

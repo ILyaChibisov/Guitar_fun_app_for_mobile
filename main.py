@@ -1,7 +1,3 @@
-# main.py
-"""
-Главный файл приложения GuitarFuns - ПОЛНОСТЬЮ ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
-"""
 import os
 import sys
 import ssl
@@ -55,32 +51,43 @@ os.environ['SSL_CERT_FILE'] = ''
 os.environ['REQUESTS_CA_BUNDLE'] = ''
 # ================================================================
 
-# Настройка окна
-if platform == 'win':
+# ============ НАСТРОЙКА ОКНА ============
+if platform == 'android':
+    # Android: настройка прозрачных системных панелей
+    from android import mActivity
+    from jnius import autoclass
+
+    Window.clearcolor = (0, 0, 0, 0)
+
+    try:
+        View = autoclass('android.view.View')
+        window = mActivity.getWindow()
+        decorView = window.getDecorView()
+
+        # Устанавливаем флаги для прозрачных системных панелей
+        decorView.setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        )
+
+        # Делаем статус-бар и нав-бар прозрачными
+        window.setStatusBarColor(0x00000000)
+        window.setNavigationBarColor(0x00000000)
+
+        # Флаг для прозрачного статус-бара
+        window.addFlags(0x80000000)  # FLAG_TRANSLUCENT_STATUS
+        window.addFlags(0x40000000)  # FLAG_TRANSLUCENT_NAVIGATION
+
+    except Exception as e:
+        print(f"Ошибка настройки системных панелей: {e}")
+else:
+    # Windows: окно с фиксированным размером для тестирования
     Window.borderless = False
     Window.size = (400, 750)
     Window.top = 50
     Window.left = 50
     Window.clearcolor = (0, 0, 0, 0)
-else:
-    Window.clearcolor = (0, 0, 0, 0)
-    try:
-        from android import mActivity
-        from jnius import autoclass
-
-        View = autoclass('android.view.View')
-        decorView = mActivity.getWindow().getDecorView()
-        decorView.setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        )
-
-        window = mActivity.getWindow()
-        window.addFlags(0x80000000)  # FLAG_TRANSLUCENT_STATUS
-        window.addFlags(0x40000000)  # FLAG_TRANSLUCENT_NAVIGATION
-    except:
-        pass
 
 from config.logger_config import setup_logging, app_logger
 
