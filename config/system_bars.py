@@ -1,6 +1,7 @@
 # config/system_bars.py
 """
 Определение высоты системных панелей Android
+На Windows используем значения, имитирующие реальное Android устройство
 """
 from kivy.utils import platform
 from kivy.metrics import dp
@@ -12,9 +13,27 @@ logger = get_logger('SystemBars')
 _status_bar_height_px = None
 _nav_bar_height_px = None
 
-# Константы для Windows (в пикселях)
-WINDOWS_STATUS_BAR_HEIGHT_PX = 30
-WINDOWS_NAV_BAR_HEIGHT_PX = 0  # На Windows нет системного нав-бара
+# Константы для симуляции на Windows (в пикселях) - имитируем реальное Android устройство
+# Стандартный Pixel 4a имеет плотность ~ 2.6, статус-бар 24dp, нав-бар 48dp (с кнопками)
+# При dpi ~ 160 (базовая), 24dp = 24px * (dpi/160) -> при dpi=160, 24dp = 24px
+WINDOWS_SIMULATION_DPI = 160  # Базовая плотность для симуляции
+WINDOWS_STATUS_BAR_HEIGHT_DP = 24  # 24dp - стандартная высота статус-бара на Android
+WINDOWS_NAV_BAR_HEIGHT_DP = 48  # 48dp - стандартная высота нав-бара с кнопками
+
+
+def get_screen_density():
+    """Возвращает плотность экрана для корректного пересчёта dp в px"""
+    try:
+        if platform == 'android':
+            from android import mActivity
+            from jnius import autoclass
+            Resources = autoclass('android.content.res.Resources')
+            return Resources.getSystem().getDisplayMetrics().density
+        else:
+            # Для Windows используем базовую плотность
+            return Window.dpi / 160 if Window.dpi else 1.0
+    except Exception:
+        return Window.dpi / 160 if Window.dpi else 1.0
 
 
 def get_status_bar_height_px():
@@ -34,19 +53,18 @@ def get_status_bar_height_px():
             )
             if resource_id > 0:
                 _status_bar_height_px = Resources.getSystem().getDimensionPixelSize(resource_id)
-                logger.info(f"Высота статус-бара (Android): {_status_bar_height_px}px")
+                density = get_screen_density()
+                logger.info(f"Высота статус-бара (Android): {_status_bar_height_px}px, плотность={density:.2f}")
                 return _status_bar_height_px
         except Exception as e:
             logger.error(f"Ошибка получения высоты статус-бара: {e}")
-            # fallback значения для разных плотностей
-            density = Window.dpi / 160 if Window.dpi else 2.0
-            _status_bar_height_px = int(24 * density)
-            logger.info(f"Высота статус-бара (fallback): {_status_bar_height_px}px")
-            return _status_bar_height_px
 
-    # Windows
-    _status_bar_height_px = WINDOWS_STATUS_BAR_HEIGHT_PX
-    logger.info(f"Высота статус-бара (Windows): {_status_bar_height_px}px")
+    # Для Windows - имитируем реальное Android устройство
+    # Вычисляем px из dp с учётом плотности экрана
+    density = get_screen_density()
+    _status_bar_height_px = int(WINDOWS_STATUS_BAR_HEIGHT_DP * density)
+    logger.info(f"Высота статус-бара (симуляция Windows): {_status_bar_height_px}px "
+                f"(={WINDOWS_STATUS_BAR_HEIGHT_DP}dp, плотность={density:.2f})")
     return _status_bar_height_px
 
 
@@ -62,14 +80,13 @@ def get_navigation_bar_height_px():
             from android import mActivity
             from jnius import autoclass
             Resources = autoclass('android.content.res.Resources')
-
-            # Пробуем получить высоту нав-бара
             resource_id = Resources.getSystem().getIdentifier(
                 'navigation_bar_height', 'dimen', 'android'
             )
             if resource_id > 0:
                 _nav_bar_height_px = Resources.getSystem().getDimensionPixelSize(resource_id)
-                logger.info(f"Высота нав-бара (Android): {_nav_bar_height_px}px")
+                density = get_screen_density()
+                logger.info(f"Высота нав-бара (Android): {_nav_bar_height_px}px, плотность={density:.2f}")
                 return _nav_bar_height_px
         except Exception as e:
             logger.error(f"Ошибка получения высоты нав-бара: {e}")
@@ -80,23 +97,18 @@ def get_navigation_bar_height_px():
             from jnius import autoclass
             View = autoclass('android.view.View')
             decorView = mActivity.getWindow().getDecorView()
-
-            # Для жестов нав-бар может быть скрыт
-            _nav_bar_height_px = 0
-            logger.info("Нав-бар не обнаружен (вероятно, используются жесты)")
+            # Для жестов нав-бар может быть скрыт, но мы всё равно добавим небольшой отступ
+            _nav_bar_height_px = int(16 * get_screen_density())
+            logger.info(f"Нав-бар не обнаружен (вероятно, жесты), добавлен отступ: {_nav_bar_height_px}px")
             return _nav_bar_height_px
         except:
             pass
 
-        # fallback
-        density = Window.dpi / 160 if Window.dpi else 2.0
-        _nav_bar_height_px = int(48 * density)
-        logger.info(f"Высота нав-бара (fallback): {_nav_bar_height_px}px")
-        return _nav_bar_height_px
-
-    # Windows (нет нав-бара)
-    _nav_bar_height_px = WINDOWS_NAV_BAR_HEIGHT_PX
-    logger.info(f"Высота нав-бара (Windows): {_nav_bar_height_px}px")
+    # Для Windows - имитируем реальное Android устройство с кнопками
+    density = get_screen_density()
+    _nav_bar_height_px = int(WINDOWS_NAV_BAR_HEIGHT_DP * density)
+    logger.info(f"Высота нав-бара (симуляция Windows): {_nav_bar_height_px}px "
+                f"(={WINDOWS_NAV_BAR_HEIGHT_DP}dp, плотность={density:.2f})")
     return _nav_bar_height_px
 
 
@@ -110,22 +122,21 @@ def get_navigation_bar_height():
     return dp(get_navigation_bar_height_px())
 
 
-def get_status_bar_height_px_direct():
-    """Возвращает высоту статус-бара в пикселях (без dp)"""
-    return get_status_bar_height_px()
+def set_simulation_heights(status_dp=24, nav_dp=48):
+    """
+    Для Windows: установить свои значения симуляции (в dp)
+    Стандартные значения Android:
+    - Статус-бар: 24dp
+    - Нав-бар с кнопками: 48dp
+    - Нав-бар с жестами: 16dp
+    """
+    global WINDOWS_STATUS_BAR_HEIGHT_DP, WINDOWS_NAV_BAR_HEIGHT_DP
+    global _status_bar_height_px, _nav_bar_height_px
 
-
-def get_navigation_bar_height_px_direct():
-    """Возвращает высоту навигационной панели в пикселях (без dp)"""
-    return get_navigation_bar_height_px()
-
-
-def set_simulation_heights(status_px=30, nav_px=0):
-    """Для Windows: установить свои значения симуляции (в пикселях)"""
-    global _status_bar_height_px, _nav_bar_height_px, WINDOWS_STATUS_BAR_HEIGHT_PX, WINDOWS_NAV_BAR_HEIGHT_PX
     if platform != 'android':
-        WINDOWS_STATUS_BAR_HEIGHT_PX = status_px
-        WINDOWS_NAV_BAR_HEIGHT_PX = nav_px
-        _status_bar_height_px = status_px
-        _nav_bar_height_px = nav_px
-        logger.info(f"Симуляция обновлена: статус-бар={status_px}px, нав-бар={nav_px}px")
+        WINDOWS_STATUS_BAR_HEIGHT_DP = status_dp
+        WINDOWS_NAV_BAR_HEIGHT_DP = nav_dp
+        # Сбрасываем кэш, чтобы пересчитать px
+        _status_bar_height_px = None
+        _nav_bar_height_px = None
+        logger.info(f"Симуляция обновлена: статус-бар={status_dp}dp, нав-бар={nav_dp}dp")
