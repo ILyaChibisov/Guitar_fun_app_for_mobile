@@ -1,4 +1,4 @@
-# screens/components/bottom_nav.py (с поддержкой имитации на Windows)
+# screens/components/bottom_nav.py (исправленный для Android)
 """
 Современная нижняя навигация - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
 """
@@ -24,7 +24,6 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -137,7 +136,7 @@ class BottomNav(BoxLayout):
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Получаем высоту системной навигации
+        # Получаем высоту системной навигации в dp
         nav_bar_height_px = get_navigation_bar_height_px()
         nav_bar_height_dp = dp(nav_bar_height_px)
 
@@ -145,19 +144,19 @@ class BottomNav(BoxLayout):
 
         # Высота панели с иконками
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-
-        # На Windows добавляем отступ для имитации системной навигации
-        # На Android системная навигация реальная, поэтому отступ не нужен
-        if platform == 'win':
-            # На Windows имитируем системную навигацию (полоска снизу)
+        
+        # На Android добавляем отступ, чтобы иконки были НАД системной навигацией
+        # На Windows имитируем системную навигацию таким же отступом для консистентности
+        if platform == 'android':
+            # Android: добавляем отступ, чтобы иконки были над системной навигацией
             self.height = self.panel_height + nav_bar_height_dp
             bottom_padding = nav_bar_height_dp
-            logger.info(f"Windows: имитация системной навигации, добавлен отступ {nav_bar_height_dp}dp")
+            logger.info(f"Android: добавлен отступ {nav_bar_height_dp}dp под системную навигацию")
         else:
-            # На Android системная навигация реальная, панель над ней
-            self.height = self.panel_height
-            bottom_padding = 0
-            logger.info(f"Android: реальная системная навигация, отступ не добавляем")
+            # Windows: имитация для тестирования
+            self.height = self.panel_height + nav_bar_height_dp
+            bottom_padding = nav_bar_height_dp
+            logger.info(f"Windows: имитация системной навигации, отступ {nav_bar_height_dp}dp")
 
         # Паддинги: [левый, верхний, правый, нижний]
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
@@ -165,7 +164,7 @@ class BottomNav(BoxLayout):
             panel_padding[0],  # левый
             panel_padding[1],  # верхний
             panel_padding[2],  # правый
-            bottom_padding  # нижний (только на Windows для имитации)
+            bottom_padding     # нижний отступ под системную навигацию
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
         self.md_bg_color = [0, 0, 0, 0]
@@ -226,15 +225,12 @@ class BottomNav(BoxLayout):
         """Обновляет конфигурацию панели (при изменении размера экрана)"""
         nav_bar_height_px = get_navigation_bar_height_px()
         nav_bar_height_dp = dp(nav_bar_height_px)
-
+        
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-
-        if platform == 'win':
-            self.height = self.panel_height + nav_bar_height_dp
-            bottom_padding = nav_bar_height_dp
-        else:
-            self.height = self.panel_height
-            bottom_padding = 0
+        
+        # На обеих платформах добавляем отступ под системную навигацию
+        self.height = self.panel_height + nav_bar_height_dp
+        bottom_padding = nav_bar_height_dp
 
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
