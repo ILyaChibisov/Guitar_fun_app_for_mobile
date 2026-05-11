@@ -1,4 +1,4 @@
-# screens/manager.py
+# screens/manager.py (без изменений в логике, просто импорты те же)
 from kivy.uix.screenmanager import ScreenManager
 from config.logger_config import get_logger
 from .home_screen import HomeScreen

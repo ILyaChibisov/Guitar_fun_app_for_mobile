@@ -21,6 +21,8 @@ from io import BytesIO
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.system_bars import get_status_bar_height
+from config.layout_config import layout_config
+from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 
@@ -28,9 +30,12 @@ logger = screen_logger('Songs')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -433,84 +438,58 @@ class AlphabetGrid(MDCard):
             btn.set_active(False)
 
 
-class SongsScreen(MDScreen):
+class SongsScreen(BaseScreen):
     """Экран песен с алфавитной навигацией"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'songs'
         self.current_letter = None
-        self.bg_image = None
-
-        self.md_bg_color = [0, 0, 0, 0]
 
         self.init_ui()
-        self.load_background()
 
         logger.info('Экран песен создан')
 
-    def load_background(self):
-        try:
-            if HAS_ASSETS:
-                asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
-                bg_data = None
-                for name in asset_names:
-                    bg_data = load_asset_as_bytes(name)
-                    if bg_data:
-                        logger.info(f"Фон загружен из ассета: {name}")
-                        break
-
-                if bg_data:
-                    img = CoreImage(BytesIO(bg_data), ext="jpg")
-                    with self.canvas.before:
-                        Color(1, 1, 1, 1)
-                        self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
-                    self.bind(pos=self._update_bg, size=self._update_bg)
-                    return
-        except Exception as e:
-            logger.error(f'Ошибка загрузки фона: {e}')
-
-    def _update_bg(self, *args):
-        if self.bg_image:
-            self.bg_image.pos = self.pos
-            self.bg_image.size = self.size
-
     def init_ui(self):
-        from kivy.uix.scrollview import ScrollView
-        from kivy.uix.widget import Widget
-
-        scroll = ScrollView(size_hint=(1, 1))
-
-        main_layout = MDBoxLayout(
-            orientation='vertical',
-            padding=[dp(12), dp(2), dp(12), dp(8)],
-            spacing=dp(6),
-            size_hint_y=None
+        # Создаём контейнер с отступами
+        scroll = MDScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_color=[1, 1, 1, 0.2],
+            bar_width=dp(3)
         )
-        main_layout.bind(minimum_height=main_layout.setter('height'))
 
-        # Отступ под системные панели
-        status_h = get_status_bar_height()
-        total_top_padding = status_h + theme.TOP_NAV_HEIGHT
-        top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
-        main_layout.add_widget(top_spacer)
+        # Основной контентный контейнер
+        content = MDBoxLayout(
+            orientation='vertical',
+            spacing=dp(12),
+            size_hint_y=None,
+            adaptive_height=True,
+            padding=[0, 0, 0, layout_config.EXTRA_BOTTOM_PADDING]
+        )
+        content.bind(minimum_height=content.setter('height'))
 
+        # Поисковая строка
         self.search_bar = GoogleSearchBar(
             on_search=self.do_search,
             on_clear=self.clear_search
         )
-        main_layout.add_widget(self.search_bar)
+        content.add_widget(self.search_bar)
 
+        # Выбор языка
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
-        main_layout.add_widget(self.language_selector)
+        content.add_widget(self.language_selector)
 
+        # Сетка букв
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
-        main_layout.add_widget(self.alphabet_grid)
+        content.add_widget(self.alphabet_grid)
 
-        scroll.add_widget(main_layout)
-        self.add_widget(scroll)
+        scroll.add_widget(content)
+
+        # Используем базовый метод для построения UI с правильными отступами
+        self.build_ui(content_widget=scroll)
 
     def on_language_changed(self, language):
         logger.info(f"Язык изменён на: {language}")
