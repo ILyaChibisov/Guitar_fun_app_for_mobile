@@ -2,6 +2,7 @@
 """
 Экран списка песен выбранного исполнителя - переведён на BaseScreen
 """
+from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
