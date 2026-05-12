@@ -11,56 +11,56 @@ class BottomNavConfig:
     """Настройки нижней панели"""
 
     # ========== БАЗОВЫЕ РАЗМЕРЫ ==========
-    PANEL_HEIGHT = 76  # высота панели с иконками
-    PANEL_PADDING = [4, 0, 4, 0]  # [лево, верх, право, низ] - верхний отступ 0
+    PANEL_HEIGHT = 80
+    PANEL_PADDING = [4, 0, 4, 0]
     PANEL_SPACING = 0
 
     # ========== НАСТРОЙКИ ПО УМОЛЧАНИЮ ==========
-    DEFAULT_ICON_SIZE = 0.75
-    DEFAULT_ICON_CONTAINER_HEIGHT = 0.75
-    DEFAULT_FONT_SIZE = 12
+    DEFAULT_ICON_SIZE = 0.65
+    DEFAULT_ICON_CONTAINER_HEIGHT = 0.65
+    DEFAULT_FONT_SIZE = 11
     DEFAULT_SPACING = 0
-    DEFAULT_TOP_PADDING = 0  # убираем отступ сверху для кнопок
+    DEFAULT_TOP_PADDING = 0
 
     # ========== НАСТРОЙКИ ДЛЯ РАЗНЫХ ЭКРАНОВ (ПРЕСЕТЫ) ==========
     SCREEN_PRESETS = {
         'small': {
-            'PANEL_HEIGHT': 64,
+            'PANEL_HEIGHT': 68,
             'PANEL_PADDING': [2, 0, 2, 0],
             'PANEL_SPACING': 0,
-            'DEFAULT_ICON_SIZE': 0.70,
-            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.70,
-            'DEFAULT_FONT_SIZE': 10,
+            'DEFAULT_ICON_SIZE': 0.60,
+            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.60,
+            'DEFAULT_FONT_SIZE': 9,
             'DEFAULT_SPACING': 0,
             'DEFAULT_TOP_PADDING': 0
         },
         'normal': {
-            'PANEL_HEIGHT': 70,
+            'PANEL_HEIGHT': 74,
             'PANEL_PADDING': [4, 0, 4, 0],
             'PANEL_SPACING': 0,
-            'DEFAULT_ICON_SIZE': 0.72,
-            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.72,
-            'DEFAULT_FONT_SIZE': 11,
+            'DEFAULT_ICON_SIZE': 0.62,
+            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.62,
+            'DEFAULT_FONT_SIZE': 10,
             'DEFAULT_SPACING': 0,
             'DEFAULT_TOP_PADDING': 0
         },
         'large': {
-            'PANEL_HEIGHT': 76,
+            'PANEL_HEIGHT': 80,
             'PANEL_PADDING': [6, 0, 6, 0],
             'PANEL_SPACING': 0,
-            'DEFAULT_ICON_SIZE': 0.75,
-            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.75,
-            'DEFAULT_FONT_SIZE': 12,
+            'DEFAULT_ICON_SIZE': 0.65,
+            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.65,
+            'DEFAULT_FONT_SIZE': 11,
             'DEFAULT_SPACING': 0,
             'DEFAULT_TOP_PADDING': 0
         },
         'tablet': {
-            'PANEL_HEIGHT': 84,
+            'PANEL_HEIGHT': 88,
             'PANEL_PADDING': [8, 0, 8, 0],
             'PANEL_SPACING': 2,
-            'DEFAULT_ICON_SIZE': 0.78,
-            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.78,
-            'DEFAULT_FONT_SIZE': 14,
+            'DEFAULT_ICON_SIZE': 0.68,
+            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.68,
+            'DEFAULT_FONT_SIZE': 13,
             'DEFAULT_SPACING': 0,
             'DEFAULT_TOP_PADDING': 0
         }
@@ -69,37 +69,37 @@ class BottomNavConfig:
     # ========== ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ ДЛЯ КАЖДОЙ КНОПКИ ==========
     BUTTONS_CONFIG = {
         'home': {
-            'icon_size': 0.68,
-            'icon_height': 0.72,
-            'font_size': 11,
+            'icon_size': 0.60,
+            'icon_height': 0.62,
+            'font_size': 10,
             'spacing': 1,
             'top_padding': 0
         },
         'songs': {
-            'icon_size': 0.68,
-            'icon_height': 0.72,
-            'font_size': 11,
+            'icon_size': 0.60,
+            'icon_height': 0.62,
+            'font_size': 10,
             'spacing': 1,
             'top_padding': 0
         },
         'chords': {
-            'icon_size': 0.68,
-            'icon_height': 0.70,
-            'font_size': 11,
+            'icon_size': 0.60,
+            'icon_height': 0.60,
+            'font_size': 10,
             'spacing': 1,
             'top_padding': 0
         },
         'tuner': {
-            'icon_size': 0.68,
-            'icon_height': 0.70,
-            'font_size': 11,
+            'icon_size': 0.60,
+            'icon_height': 0.60,
+            'font_size': 10,
             'spacing': 1,
             'top_padding': 0
         },
         'favorites': {
-            'icon_size': 0.68,
-            'icon_height': 0.70,
-            'font_size': 10,
+            'icon_size': 0.60,
+            'icon_height': 0.60,
+            'font_size': 9,
             'spacing': 1,
             'top_padding': 0
         },
@@ -161,14 +161,6 @@ class BottomNavConfig:
             if key in ['icon_size', 'icon_height', 'font_size', 'spacing', 'top_padding']:
                 cls.BUTTONS_CONFIG[screen_name][key] = value
 
-        return cls
-
-    @classmethod
-    def update_global_config(cls, **kwargs):
-        """Обновляет глобальные настройки"""
-        for key, value in kwargs.items():
-            if hasattr(cls, key):
-                setattr(cls, key, value)
         return cls
 
 
