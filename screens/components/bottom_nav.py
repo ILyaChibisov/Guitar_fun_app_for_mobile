@@ -26,6 +26,7 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -155,7 +156,7 @@ class BottomNav(BoxLayout):
             self.height = self.panel_height + nav_bar_height_dp
             bottom_padding = nav_bar_height_dp
             top_padding = 0
-            
+
             logger.info(f"Android: панель={self.panel_height}dp, + нав={nav_bar_height_dp}dp, всего={self.height}dp")
         else:
             # Windows: для тестирования
@@ -168,10 +169,10 @@ class BottomNav(BoxLayout):
         # Паддинги панели - минимальные
         self.padding = [dp(4), top_padding, dp(4), bottom_padding]
         self.spacing = dp(2)
-        
+
         # ВРЕМЕННО: чёрный фон для отладки
         self.md_bg_color = [0, 0, 0, 1]
-        
+
         # Белая рамка вокруг панели
         self.bind(pos=self._update_panel_outline, size=self._update_panel_outline)
 
