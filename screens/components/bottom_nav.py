@@ -1,4 +1,4 @@
-# screens/components/bottom_nav.py (исправленный - уменьшенный отступ)
+# screens/components/bottom_nav.py (упрощённый - без отступа под системную навигацию)
 """
 Современная нижняя навигация - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
 """
@@ -17,14 +17,12 @@ from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import get_logger
 from config.bottom_nav_config import BottomNavConfig
-from config.system_bars import get_navigation_bar_height_px
 from utils.kivy_imports import MDBoxLayout
 
 logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -32,7 +30,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации - ПРОЗРАЧНЫЙ"""
+    """Элемент нижней навигации"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -43,18 +41,13 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.icon_asset = icon_asset
         self.text = text
         self.screen_name = screen_name
-
-        # Получаем настройки для этой кнопки
         self.config = BottomNavConfig.get_button_config(screen_name)
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-
-        # Применяем настройки
         self.spacing = dp(self.config['spacing'])
         self.padding = [0, dp(self.config['top_padding']), 0, 0]
 
-        # Создаём контейнер
         self.icon_container = MDBoxLayout(
             size_hint=(1, self.config['icon_height']),
             orientation='vertical'
@@ -63,14 +56,12 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.custom_image = None
         self._load_icon()
 
-        # Текст
         self.text_label = Label(
             text=self.text,
             font_size=sp(self.config['font_size']),
             size_hint=(1, 1 - self.config['icon_height']),
             color=theme.TEXT_SECONDARY,
             bold=False,
-            markup=False,
             halign='center',
             valign='top'
         )
@@ -130,42 +121,24 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации"""
+    """Нижняя панель навигации - БЕЗ ОТСТУПА ПОД СИСТЕМНУЮ НАВИГАЦИЮ"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Получаем высоту системной навигации в dp
-        nav_bar_height_px = get_navigation_bar_height_px()
-        nav_bar_height_dp = dp(nav_bar_height_px)
-
-        # Высота панели с иконками
+        # Только высота иконок, БЕЗ отступа под системную навигацию
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
+        self.height = self.panel_height
 
-        # ========== КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ==========
-        # На Android: используем МИНИМАЛЬНЫЙ отступ (только для безопасности)
-        # Иконки должны быть прямо над системной навигацией
-        if platform == 'android':
-            # Минимальный отступ - всего 4-8dp для красоты, не полная высота нав-бара
-            # Иконки НАД системной навигацией
-            self.height = self.panel_height
-            bottom_padding = dp(4)  # Только небольшой отступ для красоты
-            logger.info("Android: иконки над системной навигацией, отступ=4dp")
-        else:
-            # Windows: имитация системной навигации для тестирования
-            self.height = self.panel_height + nav_bar_height_dp
-            bottom_padding = nav_bar_height_dp
-            logger.info("Windows: имитация системной навигации, отступ=" + str(nav_bar_height_dp) + "dp")
-
-        # Паддинги: [левый, верхний, правый, нижний]
+        # Паддинги без нижнего отступа
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
             panel_padding[0],  # левый
             panel_padding[1],  # верхний
             panel_padding[2],  # правый
-            bottom_padding  # нижний отступ
+            dp(0)              # нижний отступ = 0
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
         self.md_bg_color = [0, 0, 0, 0]
@@ -191,8 +164,7 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info(
-            "Нижняя навигация создана: высота=" + str(self.height) + "dp, нижний отступ=" + str(bottom_padding) + "dp")
+        logger.info("Нижняя навигация создана: высота=" + str(self.height) + "dp, нижний отступ=0")
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
@@ -224,25 +196,16 @@ class BottomNav(BoxLayout):
         self.switch_to(screen_name)
 
     def reload_config(self):
-        """Обновляет конфигурацию панели (при изменении размера экрана)"""
-        nav_bar_height_px = get_navigation_bar_height_px()
-        nav_bar_height_dp = dp(nav_bar_height_px)
-
+        """Обновляет конфигурацию панели"""
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-
-        if platform == 'android':
-            self.height = self.panel_height
-            bottom_padding = dp(4)  # Минимальный отступ
-        else:
-            self.height = self.panel_height + nav_bar_height_dp
-            bottom_padding = nav_bar_height_dp
+        self.height = self.panel_height
 
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
             panel_padding[0],
             panel_padding[1],
             panel_padding[2],
-            bottom_padding
+            dp(0)
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
 
@@ -256,5 +219,4 @@ class BottomNav(BoxLayout):
             item.text_label.size_hint = (1, 1 - new_config['icon_height'])
             item._reload_icon()
 
-        logger.info("Нижняя навигация обновлена: высота=" + str(self.height) + "dp, нижний отступ=" + str(
-            bottom_padding) + "dp")
+        logger.info("Нижняя навигация обновлена: высота=" + str(self.height) + "dp")
