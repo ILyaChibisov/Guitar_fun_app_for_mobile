@@ -325,6 +325,13 @@ class GuitarFunsApp(MDApp):
         logger.info('Приложение закрыто')
         network_manager.stop_monitoring()
 
+    def on_config(self, config):
+        """Вызывается при изменении конфигурации (в т.ч. размера окна)"""
+        if hasattr(self, 'bottom_nav') and self.bottom_nav:
+            # Небольшая задержка для корректного определения нового размера
+            from kivy.clock import Clock
+            Clock.schedule_once(lambda dt: self.bottom_nav.reload_config(), 0.1)
+
 
 if __name__ == '__main__':
     GuitarFunsApp().run()
