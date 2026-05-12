@@ -39,7 +39,6 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
-
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -54,12 +53,12 @@ os.environ['REQUESTS_CA_BUNDLE'] = ''
 # ============ НАСТРОЙКА ОКНА ============
 if platform == 'android':
     # Android: настройка прозрачных системных панелей
-    from android import mActivity
-    from jnius import autoclass
-
-    Window.clearcolor = (0, 0, 0, 0)
-
     try:
+        from android import mActivity
+        from jnius import autoclass
+
+        Window.clearcolor = (0, 0, 0, 0)
+
         View = autoclass('android.view.View')
         window = mActivity.getWindow()
         decorView = window.getDecorView()
@@ -75,12 +74,15 @@ if platform == 'android':
         window.setStatusBarColor(0x00000000)
         window.setNavigationBarColor(0x00000000)
 
-        # Флаг для прозрачного статус-бара
+        # Флаг для прозрачного статус-бара и нав-бара
         window.addFlags(0x80000000)  # FLAG_TRANSLUCENT_STATUS
         window.addFlags(0x40000000)  # FLAG_TRANSLUCENT_NAVIGATION
 
+        print("✅ Системные панели настроены как прозрачные")
+
     except Exception as e:
         print(f"Ошибка настройки системных панелей: {e}")
+        Window.clearcolor = (0, 0, 0, 0)
 else:
     # Windows: окно с фиксированным размером для тестирования
     Window.borderless = False
@@ -108,7 +110,6 @@ from screens.components.blocking_layer import BlockingLayer
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
     print("✅ Модуль ассетов загружен")
 except ImportError as e:
@@ -287,8 +288,8 @@ class GuitarFunsApp(MDApp):
 
         # Добавляем всё в root (порядок важен!)
         root.add_widget(self.screen_manager)  # 1. Основной контент
-        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
-        root.add_widget(self.top_nav)  # 3. Верхняя панель
+        root.add_widget(self.bottom_nav)      # 2. Нижняя панель
+        root.add_widget(self.top_nav)         # 3. Верхняя панель
         root.add_widget(self.blocking_layer)  # 4. Блокирующий слой (САМЫЙ ВЕРХНИЙ)
 
         network_manager.start_monitoring()
