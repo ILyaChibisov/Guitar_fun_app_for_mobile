@@ -74,9 +74,8 @@ if platform == 'android':
         window.setStatusBarColor(0x00000000)
         window.setNavigationBarColor(0x00000000)
 
-        # Флаг для прозрачного статус-бара и нав-бара
-        window.addFlags(0x80000000)  # FLAG_TRANSLUCENT_STATUS
-        window.addFlags(0x40000000)  # FLAG_TRANSLUCENT_NAVIGATION
+        # Убираем флаги transluscent, чтобы не создавать лишних отступов
+        # window.addFlags(0x80000000) - убираем этот флаг
 
         print("✅ Системные панели настроены как прозрачные")
 

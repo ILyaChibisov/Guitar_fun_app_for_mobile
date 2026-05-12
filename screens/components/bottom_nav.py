@@ -1,4 +1,4 @@
-# screens/components/bottom_nav.py (исправленный)
+# screens/components/bottom_nav.py (исправленный - уменьшенный отступ)
 """
 Современная нижняя навигация - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
 """
@@ -141,22 +141,23 @@ class BottomNav(BoxLayout):
         nav_bar_height_px = get_navigation_bar_height_px()
         nav_bar_height_dp = dp(nav_bar_height_px)
 
-        logger.info("Высота системной навигации: " + str(nav_bar_height_dp) + "dp (платформа: " + str(platform) + ")")
-
         # Высота панели с иконками
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
 
-        # На Android нужен отступ, равный высоте системной навигации
+        # ========== КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ==========
+        # На Android: используем МИНИМАЛЬНЫЙ отступ (только для безопасности)
+        # Иконки должны быть прямо над системной навигацией
         if platform == 'android':
-            # Android: системная навигация рисуется поверх, добавляем отступ
-            self.height = self.panel_height + nav_bar_height_dp
-            bottom_padding = nav_bar_height_dp
-            logger.info("Android: добавлен отступ " + str(nav_bar_height_dp) + "dp, иконки над системной навигацией")
+            # Минимальный отступ - всего 4-8dp для красоты, не полная высота нав-бара
+            # Иконки НАД системной навигацией
+            self.height = self.panel_height
+            bottom_padding = dp(4)  # Только небольшой отступ для красоты
+            logger.info("Android: иконки над системной навигацией, отступ=4dp")
         else:
-            # Windows: имитация
+            # Windows: имитация системной навигации для тестирования
             self.height = self.panel_height + nav_bar_height_dp
             bottom_padding = nav_bar_height_dp
-            logger.info("Windows: имитация системной навигации, отступ " + str(nav_bar_height_dp) + "dp")
+            logger.info("Windows: имитация системной навигации, отступ=" + str(nav_bar_height_dp) + "dp")
 
         # Паддинги: [левый, верхний, правый, нижний]
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
@@ -164,7 +165,7 @@ class BottomNav(BoxLayout):
             panel_padding[0],  # левый
             panel_padding[1],  # верхний
             panel_padding[2],  # правый
-            bottom_padding  # нижний отступ под системную навигацию
+            bottom_padding  # нижний отступ
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
         self.md_bg_color = [0, 0, 0, 0]
@@ -229,9 +230,12 @@ class BottomNav(BoxLayout):
 
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
 
-        # На Android добавляем отступ под системную навигацию
-        self.height = self.panel_height + nav_bar_height_dp
-        bottom_padding = nav_bar_height_dp
+        if platform == 'android':
+            self.height = self.panel_height
+            bottom_padding = dp(4)  # Минимальный отступ
+        else:
+            self.height = self.panel_height + nav_bar_height_dp
+            bottom_padding = nav_bar_height_dp
 
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
