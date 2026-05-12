@@ -18,7 +18,7 @@ class LayoutConfig:
 
     # Дополнительные отступы
     EXTRA_TOP_PADDING = dp(4)
-    EXTRA_BOTTOM_PADDING = dp(8)  # Минимальный отступ от BottomNav
+    EXTRA_BOTTOM_PADDING = dp(8)  # Небольшой отступ от BottomNav
 
     # Отступы по бокам для карточек
     SIDE_PADDING = dp(12)
@@ -34,10 +34,10 @@ class LayoutConfig:
     def get_bottom_padding(cls):
         """
         Возвращает общий отступ снизу для контента.
-        Контент должен заканчиваться до BottomNav, чтобы не перекрываться.
-        BottomNav сам имеет отступ под системную навигацию.
+        Контент должен заканчиваться до BottomNav.
+        BottomNav на Android находится прямо над системной навигацией.
         """
-        # Возвращаем только небольшой отступ, чтобы контент не прилипал к BottomNav
+        # Небольшой отступ, чтобы контент не прилипал к BottomNav
         return cls.EXTRA_BOTTOM_PADDING
 
     @classmethod
@@ -55,7 +55,7 @@ class LayoutConfig:
         """Обновляет настройки в зависимости от платформы"""
         if platform == 'android':
             cls.EXTRA_TOP_PADDING = dp(2)
-            cls.EXTRA_BOTTOM_PADDING = dp(8)
+            cls.EXTRA_BOTTOM_PADDING = dp(6)
         elif platform == 'win':
             cls.EXTRA_TOP_PADDING = dp(4)
             cls.EXTRA_BOTTOM_PADDING = dp(12)
