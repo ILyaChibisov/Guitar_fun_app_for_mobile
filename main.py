@@ -116,32 +116,17 @@ logger = app_logger()
 
 class RootWidget(MDFloatLayout):
     """
-    Корневой виджет с фоновым изображением и правильными отступами
-    для системной навигации на Android
+    Корневой виджет с фоновым изображением
     """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.bg_image = None
         self.size_hint = (1, 1)
-
-        # ========== НАСТРОЙКА ОТСТУПОВ ДЛЯ СИСТЕМНОЙ НАВИГАЦИИ ==========
-        if platform == 'android':
-            # Получаем реальную высоту системной навигации в dp
-            nav_bar_height_px = get_navigation_bar_height_px()
-            nav_bar_height_dp = dp(nav_bar_height_px)
-
-            # Добавляем нижний отступ, чтобы системная навигация
-            # не перекрывала BottomNav и весь контент
-            self.padding = [0, 0, 0, nav_bar_height_dp]
-            logger.info("RootWidget: добавлен нижний отступ для системной навигации = " + str(nav_bar_height_dp) + "dp")
-        else:
-            # На Windows отступ не нужен (или минимальный для тестирования)
-            self.padding = [0, 0, 0, 0]
-            logger.info("RootWidget: отступы не добавлены (Windows)")
+        self.padding = [0, 0, 0, 0]  # Отступы都在 BottomNav
 
         self.load_background()
-        logger.info("RootWidget создан с отступами: " + str(self.padding))
+        logger.info("RootWidget создан")
 
     def load_background(self):
         """Загружает фоновое изображение на весь экран"""
@@ -165,14 +150,12 @@ class RootWidget(MDFloatLayout):
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
 
-        # fallback цвет, если фон не загрузился
         with self.canvas.before:
-            Color(0.46, 0.70, 0.71, 1)  # Мягкий зелёный
+            Color(0.46, 0.70, 0.71, 1)
             self.bg_image = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
     def _update_bg(self, *args):
-        """Обновляет позицию и размер фона"""
         if self.bg_image:
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
