@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Современная нижняя навигация - с чёрным фоном и рамками для отладки
+Современная нижняя навигация - оптимизирована для Android
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -12,7 +12,7 @@ from kivy.metrics import dp, sp
 from kivy.core.image import Image as CoreImage
 from kivy.utils import platform
 from kivy.core.window import Window
-from kivy.graphics import Color, Line, Rectangle
+from kivy.graphics import Color, Line
 from io import BytesIO
 from kivymd.app import MDApp
 
@@ -26,7 +26,6 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -34,7 +33,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации - с красной рамкой для отладки"""
+    """Элемент нижней навигации - компактный для Android"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -48,27 +47,27 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.config = BottomNavConfig.get_button_config(screen_name)
 
         self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.spacing = dp(self.config['spacing'])
-        self.padding = [0, dp(self.config['top_padding']), 0, 0]
+        self.size_hint = (1, None)  # меняем на None, чтобы высота не растягивалась
+        self.height = dp(56)  # фиксированная высота кнопки
+        self.spacing = dp(2)
+        self.padding = [0, dp(2), 0, dp(2)]
 
-        # ВРЕМЕННО: красная рамка для отладки
-        self.bind(pos=self._update_outline, size=self._update_outline)
-        self._update_outline()
-
+        # Контейнер иконки - фиксированная высота
         self.icon_container = MDBoxLayout(
-            size_hint=(1, self.config['icon_height']),
+            size_hint=(1, None),
+            height=dp(32),
             orientation='vertical'
         )
 
         self.custom_image = None
         self._load_icon()
 
+        # Текст - фиксированная высота
         self.text_label = Label(
             text=self.text,
-            font_size=sp(self.config['font_size']),
+            font_size=sp(10),
             size_hint=(1, None),
-            height=dp(18),
+            height=dp(16),
             color=theme.TEXT_SECONDARY,
             bold=False,
             halign='center',
@@ -83,8 +82,11 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
+        # ВРЕМЕННО: красная рамка для отладки
+        self.bind(pos=self._update_outline, size=self._update_outline)
+
     def _update_outline(self, *args):
-        """ВРЕМЕННО: рисует красную рамку вокруг каждой кнопки"""
+        """ВРЕМЕННО: красная рамка"""
         self.canvas.before.clear()
         with self.canvas.before:
             Color(1, 0, 0, 0.8)
@@ -103,7 +105,7 @@ class NavItem(ButtonBehavior, BoxLayout):
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
                     self.custom_image = Image(
                         texture=core_img.texture,
-                        size_hint=(self.config['icon_size'], self.config['icon_size']),
+                        size_hint=(0.7, 0.7),
                         pos_hint={'center_x': 0.5, 'center_y': 0.5},
                         allow_stretch=True,
                         keep_ratio=True
@@ -138,68 +140,46 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - с чёрным фоном для отладки"""
+    """Нижняя панель навигации - оптимизирована для Android"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Для Windows всегда используем пресет 'large'
-        if platform == 'win':
-            preset = 'large'
-            BottomNavConfig.apply_preset(preset)
-            logger.info(f"Windows: принудительно применён пресет '{preset}'")
-        else:
-            screen_width = Window.width
-            screen_height = Window.height
-            preset = BottomNavConfig.get_preset_for_screen(screen_width, screen_height)
-            BottomNavConfig.apply_preset(preset)
-            logger.info(f"Нижняя навигация: применён пресет '{preset}' (экран {screen_width}x{screen_height})")
-
-        # Высота панели из конфига
-        self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-
-        # Получаем высоту системной навигации в dp
-        nav_bar_height_dp = get_navigation_bar_height()
-
-        # Общая высота = иконки + системная навигация
-        self.height = self.panel_height + nav_bar_height_dp
-
+        # Настройки для Android
         if platform == 'android':
-            bottom_padding = 0
-            top_padding = 0
-            logger.info(f"Android: высота={self.height}dp, иконки={self.panel_height}dp, "
-                        f"системная нав={nav_bar_height_dp}dp")
-        else:
+            # Фиксированная высота панели (без системной навигации)
+            self.panel_height = dp(56)
+            nav_bar_height_dp = get_navigation_bar_height()
+            self.height = self.panel_height + nav_bar_height_dp
             bottom_padding = nav_bar_height_dp
             top_padding = 0
-            logger.info(f"Windows: высота={self.height}dp, иконки={self.panel_height}dp")
+            
+            logger.info(f"Android: панель={self.panel_height}dp, + нав={nav_bar_height_dp}dp, всего={self.height}dp")
+        else:
+            # Windows: для тестирования
+            self.panel_height = dp(76)
+            nav_bar_height_dp = get_navigation_bar_height()
+            self.height = self.panel_height + nav_bar_height_dp
+            bottom_padding = nav_bar_height_dp
+            top_padding = 0
 
-        # Паддинги
-        panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
-        self.padding = [
-            panel_padding[0],  # левый
-            top_padding,  # верхний (0)
-            panel_padding[2],  # правый
-            bottom_padding  # нижний (на Android = 0)
-        ]
-        self.spacing = dp(BottomNavConfig.PANEL_SPACING)
-
+        # Паддинги панели - минимальные
+        self.padding = [dp(4), top_padding, dp(4), bottom_padding]
+        self.spacing = dp(2)
+        
         # ВРЕМЕННО: чёрный фон для отладки
-        self.md_bg_color = [0, 0, 0, 1]  # полностью чёрный, непрозрачный
-
-        # Добавляем белую рамку вокруг всей панели
+        self.md_bg_color = [0, 0, 0, 1]
+        
+        # Белая рамка вокруг панели
         self.bind(pos=self._update_panel_outline, size=self._update_panel_outline)
-        self._update_panel_outline()
 
         logger.info("=" * 60)
-        logger.info("ВНИМАНИЕ: Нижняя панель имеет ЧЁРНЫЙ фон и КРАСНЫЕ рамки для отладки!")
-        logger.info(f"  - Высота панели: {self.height}dp")
-        logger.info(f"  - Высота иконок: {self.panel_height}dp")
-        logger.info(f"  - Системная навигация: {nav_bar_height_dp}dp")
-        logger.info(f"  - Верхний отступ: {self.padding[1]}dp")
-        logger.info(f"  - Нижний отступ: {self.padding[3]}dp")
+        logger.info("ВНИМАНИЕ: Нижняя панель - ОПТИМИЗИРОВАНА для Android")
+        logger.info(f"  - Высота панели: {self.panel_height}dp")
+        logger.info(f"  - Общая высота: {self.height}dp")
+        logger.info(f"  - Нижний отступ: {bottom_padding}dp")
         logger.info("=" * 60)
 
         # Меню
@@ -224,12 +204,11 @@ class BottomNav(BoxLayout):
             screen_manager.add_observer(self.on_screen_changed)
 
     def _update_panel_outline(self, *args):
-        """ВРЕМЕННО: рисует белую рамку вокруг всей панели"""
-        if hasattr(self, '_panel_outline'):
-            self.canvas.before.remove(self._panel_outline)
+        """ВРЕМЕННО: белая рамка вокруг панели"""
+        self.canvas.before.remove_group('panel_outline')
         with self.canvas.before:
             Color(1, 1, 1, 1)
-            self._panel_outline = Line(rectangle=(self.x, self.y, self.width, self.height), width=2)
+            Line(rectangle=(self.x, self.y, self.width, self.height), width=2, group='panel_outline')
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
@@ -256,41 +235,3 @@ class BottomNav(BoxLayout):
 
         self.sm.transition.direction = direction
         self.sm.current = screen_name
-
-    def switch_tab(self, screen_name):
-        self.switch_to(screen_name)
-
-    def reload_config(self):
-        """Обновляет конфигурацию панели"""
-        self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
-        nav_bar_height_dp = get_navigation_bar_height()
-
-        self.height = self.panel_height + nav_bar_height_dp
-
-        if platform == 'android':
-            bottom_padding = 0
-            top_padding = 0
-        else:
-            bottom_padding = nav_bar_height_dp
-            top_padding = 0
-
-        panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
-        self.padding = [
-            panel_padding[0],
-            top_padding,
-            panel_padding[2],
-            bottom_padding
-        ]
-        self.spacing = dp(BottomNavConfig.PANEL_SPACING)
-
-        for item, (_, _, screen) in zip(self.items, self.nav_items):
-            new_config = BottomNavConfig.get_button_config(screen)
-            item.config = new_config
-            item.spacing = dp(new_config['spacing'])
-            item.padding = [0, dp(new_config['top_padding']), 0, 0]
-            item.icon_container.size_hint = (1, new_config['icon_height'])
-            item.text_label.font_size = sp(new_config['font_size'])
-            item.text_label.height = dp(18)
-            item._reload_icon()
-
-        logger.info(f"Нижняя навигация обновлена: высота={self.height}dp")
