@@ -1,6 +1,6 @@
-# screens/components/bottom_nav.py (без отступа - только иконки)
+# screens/components/bottom_nav.py (финальная - без лишних отступов)
 """
-Современная нижняя навигация - БЕЗ ОТСТУПА
+Современная нижняя навигация
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -120,24 +120,24 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - ТОЛЬКО ИКОНКИ, БЕЗ ОТСТУПА"""
+    """Нижняя панель навигации - ТОЛЬКО ИКОНКИ"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Только высота иконок, БЕЗ отступа
+        # ТОЛЬКО высота иконок (из конфига)
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
         self.height = self.panel_height
 
-        # Паддинги без нижнего отступа
+        # Паддинги: нижний = 0
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
             panel_padding[0],  # левый
             panel_padding[1],  # верхний
             panel_padding[2],  # правый
-            dp(0)              # нижний отступ = 0
+            dp(0)              # НИЖНИЙ ОТСТУП = 0 (иконки прилегают к системной навигации)
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
         self.md_bg_color = [0, 0, 0, 0]
@@ -163,7 +163,7 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info("Нижняя навигация создана: высота=" + str(self.height) + "dp, нижний отступ=0")
+        logger.info("Нижняя навигация: высота=" + str(self.height) + "dp, нижний отступ=0")
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):

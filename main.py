@@ -1,5 +1,3 @@
-# main.py (исправленный - без отступа в BottomNav)
-
 import os
 import sys
 import ssl
@@ -19,6 +17,7 @@ import kivy
 
 kivy.require('2.3.0')
 
+
 # ============ ОБРАБОТКА НЕПЕРЕХВАЧЕННЫХ ОШИБОК ============
 def handle_exception(exc_type, exc_value, exc_traceback):
     error_msg = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
@@ -37,6 +36,7 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -72,9 +72,6 @@ if platform == 'android':
         window.setStatusBarColor(0x00000000)
         window.setNavigationBarColor(0x00000000)
 
-        # ВАЖНО: Не добавляем FLAG_TRANSLUCENT_NAVIGATION
-        # Он создаёт лишний отступ
-
         print("✅ Системные панели настроены как прозрачные")
 
     except Exception as e:
@@ -102,11 +99,12 @@ from api.network_handler import network_manager
 from screens.components.bottom_nav import BottomNav
 from screens.components.top_nav import TopNav
 from screens.components.blocking_layer import BlockingLayer
-from config.system_bars import get_navigation_bar_height_px
+from config.system_bars import get_navigation_bar_height_px, get_navigation_bar_height
 
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
     print("✅ Модуль ассетов загружен")
 except ImportError as e:
@@ -117,14 +115,33 @@ logger = app_logger()
 
 
 class RootWidget(MDFloatLayout):
-    """Корневой виджет с фоновым изображением"""
+    """
+    Корневой виджет с фоновым изображением и правильными отступами
+    для системной навигации на Android
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.bg_image = None
-        self.load_background()
         self.size_hint = (1, 1)
-        logger.info("RootWidget создан")
+
+        # ========== НАСТРОЙКА ОТСТУПОВ ДЛЯ СИСТЕМНОЙ НАВИГАЦИИ ==========
+        if platform == 'android':
+            # Получаем реальную высоту системной навигации в dp
+            nav_bar_height_px = get_navigation_bar_height_px()
+            nav_bar_height_dp = dp(nav_bar_height_px)
+
+            # Добавляем нижний отступ, чтобы системная навигация
+            # не перекрывала BottomNav и весь контент
+            self.padding = [0, 0, 0, nav_bar_height_dp]
+            logger.info("RootWidget: добавлен нижний отступ для системной навигации = " + str(nav_bar_height_dp) + "dp")
+        else:
+            # На Windows отступ не нужен (или минимальный для тестирования)
+            self.padding = [0, 0, 0, 0]
+            logger.info("RootWidget: отступы не добавлены (Windows)")
+
+        self.load_background()
+        logger.info("RootWidget создан с отступами: " + str(self.padding))
 
     def load_background(self):
         """Загружает фоновое изображение на весь экран"""
@@ -148,12 +165,14 @@ class RootWidget(MDFloatLayout):
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
 
+        # fallback цвет, если фон не загрузился
         with self.canvas.before:
-            Color(0.46, 0.70, 0.71, 1)
+            Color(0.46, 0.70, 0.71, 1)  # Мягкий зелёный
             self.bg_image = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
     def _update_bg(self, *args):
+        """Обновляет позицию и размер фона"""
         if self.bg_image:
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
@@ -243,8 +262,10 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
+        # Создаём корневой виджет с отступами для системной навигации
         root = RootWidget()
 
+        # Создаём менеджер экранов
         self.screen_manager = setup_screen_manager()
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
@@ -261,6 +282,7 @@ class GuitarFunsApp(MDApp):
         def on_prefetch_complete(total_artists, total_songs):
             logger.info(f"🎉 Предзагрузка завершена! Артистов: {total_artists}, Песен: {total_songs}")
 
+        # Запускаем предзагрузку (не блокирует UI)
         api.prefetch_all_artists(on_complete=on_prefetch_complete, force_refresh=False)
         # ===================================================
 
@@ -273,7 +295,7 @@ class GuitarFunsApp(MDApp):
         self.top_nav.md_bg_color = [0, 0, 0, 0]
         self.top_nav.theme_bg_color = "Custom"
 
-        # Создаём нижнюю панель - БЕЗ ЛИШНИХ ОТСТУПОВ
+        # Создаём нижнюю панель (без лишних отступов)
         self.bottom_nav = BottomNav(self.screen_manager)
 
         # Создаём блокирующий слой
@@ -281,11 +303,11 @@ class GuitarFunsApp(MDApp):
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
-        # Добавляем всё в root
+        # Добавляем всё в root (порядок важен!)
         root.add_widget(self.screen_manager)  # 1. Основной контент
-        root.add_widget(self.bottom_nav)      # 2. Нижняя панель
-        root.add_widget(self.top_nav)         # 3. Верхняя панель
-        root.add_widget(self.blocking_layer)  # 4. Блокирующий слой
+        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
+        root.add_widget(self.top_nav)  # 3. Верхняя панель
+        root.add_widget(self.blocking_layer)  # 4. Блокирующий слой (самый верхний)
 
         network_manager.start_monitoring()
 
