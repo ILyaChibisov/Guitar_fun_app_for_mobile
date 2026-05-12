@@ -1,6 +1,6 @@
 # screens/profile_screen.py
 """
-Экран профиля пользователя - переведён на BaseScreen
+Экран профиля пользователя - адаптивная карточка
 """
 from kivymd.app import MDApp
 from kivy.metrics import dp, sp
@@ -17,7 +17,7 @@ from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 from utils.kivy_imports import (
-    MDBoxLayout, MDLabel, MDCard, MDTextField, MDDialog, MDRaisedButton
+    MDBoxLayout, MDLabel, MDCard, MDTextField, MDDialog, MDRaisedButton, MDIconButton
 )
 
 logger = screen_logger('Profile')
@@ -32,6 +32,15 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
+
+
+class AdaptiveMDCard(MDCard):
+    """Карточка, которая подстраивает высоту под содержимое"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint_y = None
+        self.bind(minimum_height=self.setter('height'))
 
 
 class ProfileScreen(BaseScreen):
@@ -78,12 +87,13 @@ class ProfileScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        # Создаём контент
+        # Создаём контент (будет обёрнут в ScrollView)
         content = MDBoxLayout(
             orientation='vertical',
             spacing=dp(16),
             size_hint_y=None,
-            adaptive_height=True
+            adaptive_height=True,
+            padding=[dp(16), dp(8), dp(16), dp(16)]
         )
 
         # ============ АВАТАР И ИМЯ ПОЛЬЗОВАТЕЛЯ ============
@@ -95,15 +105,16 @@ class ProfileScreen(BaseScreen):
             padding=[dp(0), dp(8), dp(0), dp(8)]
         )
 
-        # Аватар
-        self.avatar_image = MDLabel(
-            text="👤",
-            font_size=sp(40),
-            halign="center",
-            size_hint_y=None,
-            height=dp(50),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95]
+        # Аватар - используем иконку из ассета или MDIconButton
+        self.avatar_icon = MDIconButton(
+            icon="account-circle",
+            size_hint=(None, None),
+            size=(dp(60), dp(60)),
+            pos_hint={'center_x': 0.5},
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0.1],
+            disabled=True
         )
 
         # Пытаемся загрузить аватар из ассета
@@ -112,14 +123,14 @@ class ProfileScreen(BaseScreen):
                 icon_data = load_asset_as_bytes('profile_png')
                 if icon_data:
                     img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.avatar_image = Image(
+                    self.avatar_icon = Image(
                         size_hint=(None, None),
-                        size=(dp(50), dp(50)),
+                        size=(dp(60), dp(60)),
                         pos_hint={'center_x': 0.5},
                         allow_stretch=True,
                         keep_ratio=True
                     )
-                    self.avatar_image.texture = img.texture
+                    self.avatar_icon.texture = img.texture
             except Exception as e:
                 logger.error(f"Ошибка загрузки аватара: {e}")
 
@@ -135,18 +146,17 @@ class ProfileScreen(BaseScreen):
             bold=True
         )
 
-        avatar_box.add_widget(self.avatar_image)
+        avatar_box.add_widget(self.avatar_icon)
         avatar_box.add_widget(self.username_label)
 
-        # ============ КАРТОЧКА ИНФОРМАЦИИ ============
-        info_card = MDCard(
+        # ============ КАРТОЧКА ИНФОРМАЦИИ - АДАПТИВНАЯ ============
+        info_card = AdaptiveMDCard(
             orientation='vertical',
-            size_hint=(1, None),
-            height=dp(210),
+            size_hint=(1, None),  # ширина на весь экран, высота автоматически
             padding=dp(16),
             spacing=dp(10),
             elevation=2,
-            radius=[theme.CORNER_RADIUS] * 4,
+            radius=[theme.CORNER_RADIUS_SMALL] * 4,
             md_bg_color=[1, 1, 1, 0.95],
             line_color=[0.8, 0.8, 0.8, 0.3],
             line_width=1
@@ -156,25 +166,26 @@ class ProfileScreen(BaseScreen):
         email_box = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(36),
+            height=dp(32),  # уменьшена высота
             spacing=dp(12)
         )
-        email_icon = MDLabel(
-            text="📧",
-            font_size=sp(16),
-            size_hint_x=None,
-            width=dp(30),
-            theme_text_color="Custom",
-            text_color=[0.3, 0.3, 0.3, 0.8]
+        email_icon = MDIconButton(
+            icon="email",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.3, 0.3, 0.3, 0.7],
+            disabled=True
         )
         self.email_label = MDLabel(
             text="",
-            font_size=sp(13),
+            font_size=sp(12),
             theme_text_color="Custom",
             text_color=[0.2, 0.2, 0.2, 0.9],
             valign="middle",
             shorten=True,
-            shorten_from="right"
+            shorten_from="center",
+            size_hint_x=1
         )
         email_box.add_widget(email_icon)
         email_box.add_widget(self.email_label)
@@ -183,16 +194,16 @@ class ProfileScreen(BaseScreen):
         name_box = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(30),
+            height=dp(32),
             spacing=dp(12)
         )
-        name_icon = MDLabel(
-            text="👤",
-            font_size=sp(16),
-            size_hint_x=None,
-            width=dp(30),
-            theme_text_color="Custom",
-            text_color=[0.3, 0.3, 0.3, 0.8]
+        name_icon = MDIconButton(
+            icon="account",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.3, 0.3, 0.3, 0.7],
+            disabled=True
         )
         self.fullname_label = MDLabel(
             text="",
@@ -210,16 +221,16 @@ class ProfileScreen(BaseScreen):
         reg_box = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(30),
+            height=dp(32),
             spacing=dp(12)
         )
-        reg_icon = MDLabel(
-            text="📅",
-            font_size=sp(16),
-            size_hint_x=None,
-            width=dp(30),
-            theme_text_color="Custom",
-            text_color=[0.3, 0.3, 0.3, 0.8]
+        reg_icon = MDIconButton(
+            icon="calendar",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.3, 0.3, 0.3, 0.7],
+            disabled=True
         )
         self.date_label = MDLabel(
             text="",
@@ -235,23 +246,25 @@ class ProfileScreen(BaseScreen):
         sub_box = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(30),
+            height=dp(32),
             spacing=dp(12)
         )
-        sub_icon = MDLabel(
-            text="⭐",
-            font_size=sp(16),
-            size_hint_x=None,
-            width=dp(30),
-            theme_text_color="Custom",
-            text_color=[0.3, 0.3, 0.3, 0.8]
+        sub_icon = MDIconButton(
+            icon="star",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.9, 0.7, 0.2, 0.8],
+            disabled=True
         )
         self.subscription_label = MDLabel(
             text="Подписка: не активна",
-            font_size=sp(13),
+            font_size=sp(12),
             theme_text_color="Custom",
             text_color=[0.2, 0.2, 0.2, 0.9],
-            valign="middle"
+            valign="middle",
+            shorten=True,
+            shorten_from="right"
         )
         sub_box.add_widget(sub_icon)
         sub_box.add_widget(self.subscription_label)
@@ -260,20 +273,20 @@ class ProfileScreen(BaseScreen):
         last_box = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(30),
+            height=dp(32),
             spacing=dp(12)
         )
-        last_icon = MDLabel(
-            text="🕐",
-            font_size=sp(16),
-            size_hint_x=None,
-            width=dp(30),
-            theme_text_color="Custom",
-            text_color=[0.3, 0.3, 0.3, 0.8]
+        last_icon = MDIconButton(
+            icon="clock-outline",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.3, 0.3, 0.3, 0.7],
+            disabled=True
         )
         self.last_login_label = MDLabel(
             text="",
-            font_size=sp(13),
+            font_size=sp(12),
             theme_text_color="Custom",
             text_color=[0.2, 0.2, 0.2, 0.9],
             valign="middle"
@@ -281,6 +294,7 @@ class ProfileScreen(BaseScreen):
         last_box.add_widget(last_icon)
         last_box.add_widget(self.last_login_label)
 
+        # Добавляем все строки в карточку
         info_card.add_widget(email_box)
         info_card.add_widget(name_box)
         info_card.add_widget(reg_box)
@@ -292,8 +306,9 @@ class ProfileScreen(BaseScreen):
             orientation='vertical',
             size_hint_y=None,
             spacing=dp(12),
-            padding=[dp(16), dp(0), dp(16), dp(0)]
+            padding=[dp(0), dp(8), dp(0), dp(0)]
         )
+        buttons_container.bind(minimum_height=buttons_container.setter('height'))
 
         # Кнопка админ-панели
         self.admin_btn = MDRaisedButton(
@@ -325,11 +340,16 @@ class ProfileScreen(BaseScreen):
         buttons_container.add_widget(change_password_btn)
         buttons_container.add_widget(logout_btn)
 
+        # Добавляем всё в контент
         content.add_widget(avatar_box)
         content.add_widget(info_card)
         content.add_widget(buttons_container)
 
-        # Используем ScrollView через BaseScreen
+        # Добавляем небольшой нижний отступ
+        from kivy.uix.widget import Widget
+        content.add_widget(Widget(size_hint_y=None, height=dp(20)))
+
+        # Строим UI с прокруткой
         self.build_ui(content_widget=content, use_scroll=True)
 
     def on_pre_enter(self):
