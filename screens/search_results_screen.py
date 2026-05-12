@@ -1,10 +1,8 @@
 # screens/search_results_screen.py
 """
-Экран результатов поиска
+Экран результатов поиска - переведён на BaseScreen
 """
-from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -15,41 +13,32 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
-from kivy.uix.floatlayout import FloatLayout
 from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.layout_config import layout_config
+from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 
 logger = screen_logger('SearchResults')
 
-# Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
 
-    logger.warning("Модуль data не найден")
-
-
 class LoadingSpinner(MDBoxLayout):
-    """Индикатор загрузки"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
         self.spacing = dp(16)
-
         self.progress = ProgressBar(
             size_hint=(0.8, None),
             height=dp(4),
@@ -81,8 +70,6 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class SearchResultCard(MDCard):
-    """Карточка результата поиска (без количества подборов)"""
-
     def __init__(self, song, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.song = song
@@ -99,14 +86,11 @@ class SearchResultCard(MDCard):
         self.radius = [theme.CORNER_RADIUS_SMALL]
         self.elevation = 2
         self.ripple_behavior = True
-
-        # Устанавливаем полупрозрачный фон
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.15]
         self.line_color = [1, 1, 1, 0.1]
         self.line_width = 1
 
-        # Иконка песни
         self.icon_image = Image(
             size_hint=(None, None),
             size=(dp(32), dp(32)),
@@ -116,14 +100,8 @@ class SearchResultCard(MDCard):
         )
         self._load_icon()
 
-        # Контейнер для текстовой информации (две строки)
-        self.text_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=1,
-            spacing=dp(2)
-        )
+        self.text_container = MDBoxLayout(orientation='vertical', size_hint_x=1, spacing=dp(2))
 
-        # Исполнитель (первая строка) - крупным шрифтом
         self.artist_label = MDLabel(
             text=self.artist,
             font_size=sp(16),
@@ -137,7 +115,6 @@ class SearchResultCard(MDCard):
             shorten_from="right"
         )
 
-        # Название песни (вторая строка) - обычным шрифтом
         self.title_label = MDLabel(
             text=self.title,
             font_size=sp(14),
@@ -153,7 +130,6 @@ class SearchResultCard(MDCard):
         self.text_container.add_widget(self.artist_label)
         self.text_container.add_widget(self.title_label)
 
-        # Стрелка вправо
         self.arrow_label = MDLabel(
             text="›",
             font_size=sp(28),
@@ -171,7 +147,6 @@ class SearchResultCard(MDCard):
         self.bind(on_release=self.on_click)
 
     def _load_icon(self):
-        """Загружает иконку из ассетов"""
         if HAS_ASSETS:
             try:
                 icon_data = load_asset_as_bytes('song_png')
@@ -181,7 +156,6 @@ class SearchResultCard(MDCard):
                     return
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки song_png: {e}")
-
         self.icon_image.text = "🎵"
 
     def on_click(self, instance):
@@ -189,9 +163,7 @@ class SearchResultCard(MDCard):
             self.on_click_callback(self.song_id, self.title)
 
 
-class SearchResultsScreen(MDScreen):
-    """Экран результатов поиска"""
-
+class SearchResultsScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'search_results'
@@ -200,18 +172,13 @@ class SearchResultsScreen(MDScreen):
         self.is_loading = False
         self.loading_spinner = None
         self.bg_image = None
-        self.fade_layer = None
-        self.has_results = False
-
-        self.md_bg_color = [0, 0, 0, 0]
 
         self.init_ui()
         self.load_background()
 
-        logger.info('Экран результатов поиска создан')
+        logger.info('Экран результатов поиска создан (BaseScreen)')
 
     def load_background(self):
-        """Загружает фоновое изображение"""
         try:
             if HAS_ASSETS:
                 asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
@@ -238,23 +205,8 @@ class SearchResultsScreen(MDScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        root_layout = FloatLayout()
-
-        main_layout = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            spacing=0
-        )
-
-        from config.system_bars import get_status_bar_height
-        from config.theme import theme
-        status_h = get_status_bar_height()
-        total_top_padding = status_h + theme.TOP_NAV_HEIGHT
-        top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
-        main_layout.add_widget(top_spacer)
-
-        # ============ ВЕРХНЯЯ ПАНЕЛЬ НАВИГАЦИИ ============
-        self.nav_row = MDBoxLayout(
+        # Верхняя панель
+        top_bar = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
             height=dp(50),
@@ -263,7 +215,6 @@ class SearchResultsScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Кнопка назад (стрелка)
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -274,7 +225,6 @@ class SearchResultsScreen(MDScreen):
             on_release=self.go_back
         )
 
-        # Иконка поиска
         self.search_icon = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
@@ -285,7 +235,6 @@ class SearchResultsScreen(MDScreen):
             disabled=True
         )
 
-        # Заголовок с запросом и количеством результатов
         self.info_label = MDLabel(
             text="",
             font_size=sp(14),
@@ -299,18 +248,11 @@ class SearchResultsScreen(MDScreen):
             shorten_from="right"
         )
 
-        self.nav_row.add_widget(self.back_btn)
-        self.nav_row.add_widget(self.search_icon)
-        self.nav_row.add_widget(self.info_label)
+        top_bar.add_widget(self.back_btn)
+        top_bar.add_widget(self.search_icon)
+        top_bar.add_widget(self.info_label)
 
-        # ============ СПИСОК РЕЗУЛЬТАТОВ ============
-        self.content_scroll = MDScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_color=[1, 1, 1, 0.3],
-            bar_width=dp(4)
-        )
-
+        # Контент
         self.content_container = MDBoxLayout(
             orientation='vertical',
             spacing=dp(8),
@@ -318,35 +260,9 @@ class SearchResultsScreen(MDScreen):
             adaptive_height=True,
             padding=[dp(16), dp(8), dp(16), dp(20)]
         )
-        self.content_scroll.add_widget(self.content_container)
 
-        main_layout.add_widget(self.nav_row)
-        main_layout.add_widget(self.content_scroll)
-
-        # ============ ПРОЗРАЧНЫЙ СЛОЙ НАД НИЖНЕЙ НАВИГАЦИЕЙ ============
-        self.fade_layer = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(80),
-            pos_hint={'x': 0, 'y': 0},
-            md_bg_color=[0, 0, 0, 0]
-        )
-
-        with self.fade_layer.canvas.before:
-            Color(0, 0, 0, 0.6)
-            self.fade_rect = Rectangle(pos=self.fade_layer.pos, size=self.fade_layer.size)
-
-        self.fade_layer.bind(pos=self._update_fade, size=self._update_fade)
-
-        root_layout.add_widget(main_layout)
-        root_layout.add_widget(self.fade_layer)
-
-        self.add_widget(root_layout)
-
-    def _update_fade(self, *args):
-        if hasattr(self, 'fade_rect'):
-            self.fade_rect.pos = self.fade_layer.pos
-            self.fade_rect.size = self.fade_layer.size
+        # Строим UI
+        self.build_ui(content_widget=self.content_container, top_widget=top_bar, use_scroll=True)
 
     def show_loading(self):
         if self.is_loading:
@@ -364,7 +280,6 @@ class SearchResultsScreen(MDScreen):
         self.content_container.clear_widgets()
 
     def update_info_label(self, count):
-        """Обновляет информационную метку: запрос + количество песен"""
         if count == 0:
             self.info_label.text = f"«{self.query}» — не найдено"
         elif count == 1:
@@ -377,7 +292,7 @@ class SearchResultsScreen(MDScreen):
     def display_results(self):
         self.content_container.clear_widgets()
 
-        if not self.results or len(self.results) == 0:
+        if not self.results:
             empty_card = MDCard(
                 orientation='vertical',
                 size_hint=(1, None),
@@ -445,14 +360,8 @@ class SearchResultsScreen(MDScreen):
         )
 
     def on_search_success(self, results):
-        logger.info(f"🔍 Результат поиска: {results}")
-        logger.info(f"🔍 Тип: {type(results)}")
-
         if isinstance(results, dict):
-            if 'results' in results:
-                raw_results = results.get('results', [])
-            else:
-                raw_results = []
+            raw_results = results.get('results', [])
         elif isinstance(results, list):
             raw_results = results
         else:
@@ -466,20 +375,8 @@ class SearchResultsScreen(MDScreen):
                     'artist': item.get('artist', ''),
                     'title': item.get('title', '')
                 })
-            elif isinstance(item, str):
-                parts = item.split(' - ', 1)
-                if len(parts) == 2:
-                    artist, title = parts[0], parts[1]
-                else:
-                    artist, title = '', item
-                formatted_results.append({
-                    'song_id': 0,
-                    'artist': artist,
-                    'title': title
-                })
 
         self.results = formatted_results
-        self.has_results = True
         self.hide_loading()
         self.update_info_label(len(self.results))
         self.display_results()
@@ -487,7 +384,6 @@ class SearchResultsScreen(MDScreen):
 
     def on_search_failed(self, req, error):
         self.results = []
-        self.has_results = False
         self.hide_loading()
         self.update_info_label(0)
         self.display_results()
@@ -495,8 +391,6 @@ class SearchResultsScreen(MDScreen):
         logger.error(f"Ошибка поиска: {error}")
 
     def on_song_selected(self, song_id, title):
-        logger.info(f"Выбрана песня: {title}, song_id: {song_id}")
-
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('song_detail'):
                 song_detail = self.manager.get_screen('song_detail')
@@ -509,8 +403,7 @@ class SearchResultsScreen(MDScreen):
             self.manager.current = 'songs'
 
     def on_pre_enter(self, *args):
-        logger.info(f"SearchResults.on_pre_enter: has_results={self.has_results}, results_count={len(self.results)}")
-        if self.has_results and self.results:
+        if self.results:
             self.update_info_label(len(self.results))
             self.display_results()
         elif self.query:

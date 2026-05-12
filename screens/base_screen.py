@@ -24,6 +24,8 @@ class BaseScreen(MDScreen):
         self.md_bg_color = [0, 0, 0, 0]
         self._content_container = None
         self._main_layout = None
+        self._top_spacer = None
+        self._bottom_spacer = None
 
     def on_enter(self):
         """Вызывается при входе на экран - можно переопределить в дочерних классах"""
@@ -33,40 +35,71 @@ class BaseScreen(MDScreen):
         """Вызывается при выходе с экрана - можно переопределить в дочерних классах"""
         pass
 
-    def build_ui(self, content_widget=None, top_widget=None):
+    def build_ui(self, content_widget=None, top_widget=None, bottom_widget=None,
+                 use_scroll=False, custom_padding=None):
         """
         Строит UI с правильными отступами.
 
         Args:
             content_widget: Основной виджет с контентом (RecycleView, ScrollView и т.д.)
             top_widget: Дополнительный виджет над контентом (счётчик, заголовок и т.д.)
+            bottom_widget: Дополнительный виджет под контентом
+            use_scroll: Использовать ли ScrollView для контента
+            custom_padding: Свои отступы [left, top, right, bottom]
         """
         # Создаём основной контейнер
         self._main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Верхний отступ
+        # Верхний отступ (под статус-бар и TopNav)
         top_padding = layout_config.get_top_padding()
-        self._main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+        self._top_spacer = Widget(size_hint_y=None, height=top_padding)
+        self._main_layout.add_widget(self._top_spacer)
 
         # Дополнительный виджет сверху (если есть)
         if top_widget:
             self._main_layout.add_widget(top_widget)
 
-        # Контейнер для контента с нижним отступом
-        bottom_padding = layout_config.get_bottom_padding()
-        side_padding = layout_config.SIDE_PADDING
+        # Контейнер для контента
+        padding = custom_padding if custom_padding else layout_config.get_content_padding()
 
         self._content_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[side_padding, dp(4), side_padding, bottom_padding]
+            padding=padding
         )
 
-        # Добавляем основной контент
-        if content_widget:
-            self._content_container.add_widget(content_widget)
+        # Добавляем основной контент (с ScrollView или без)
+        if use_scroll:
+            from kivy.uix.scrollview import ScrollView
+            scroll = ScrollView(
+                size_hint=(1, 1),
+                do_scroll_x=False,
+                bar_width=0,
+                bar_color=[0, 0, 0, 0],
+                bar_inactive_color=[0, 0, 0, 0]
+            )
+            if content_widget:
+                content_widget.size_hint_y = None
+                content_widget.bind(minimum_height=content_widget.setter('height'))
+                scroll.add_widget(content_widget)
+                self._content_container.add_widget(scroll)
+            else:
+                self._content_container.add_widget(Widget())
+        else:
+            if content_widget:
+                self._content_container.add_widget(content_widget)
 
         self._main_layout.add_widget(self._content_container)
+
+        # Дополнительный виджет снизу (если есть)
+        if bottom_widget:
+            self._main_layout.add_widget(bottom_widget)
+
+        # Нижний отступ (зазор перед BottomNav)
+        bottom_padding = layout_config.get_bottom_padding()
+        self._bottom_spacer = Widget(size_hint_y=None, height=bottom_padding)
+        self._main_layout.add_widget(self._bottom_spacer)
+
         self.add_widget(self._main_layout)
 
         logger.debug(f"BaseScreen UI построен для {self.name}, "
@@ -133,3 +166,7 @@ class BaseScreen(MDScreen):
         )
         self.add_content_widget(error_label)
         return error_label
+
+    def reset_ui(self):
+        """Сбрасывает UI (очищает контент и убирает сообщения)"""
+        self.clear_content()

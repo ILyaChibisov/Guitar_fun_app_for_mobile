@@ -1,12 +1,9 @@
 # screens/artists_by_letter_screen.py
 """
-Экран списка исполнителей по выбранной букве - МАКСИМАЛЬНО ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
+Экран списка исполнителей по выбранной букве - переведён на BaseScreen
 """
-from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.floatlayout import MDFloatLayout
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
@@ -16,9 +13,9 @@ from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
-from config.system_bars import get_status_bar_height, get_navigation_bar_height, get_status_bar_height_px, \
-    get_navigation_bar_height_px
+from config.layout_config import layout_config
 from api.client import api
+from screens.base_screen import BaseScreen
 from screens.recycle_artist_card import ArtistRecycleView, set_shared_icon
 from kivymd.app import MDApp
 
@@ -26,12 +23,9 @@ logger = screen_logger('ArtistsByLetter')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -60,7 +54,7 @@ def init_shared_icon():
 
 
 class SimpleLoadingLabel(MDLabel):
-    """Максимально лёгкий спиннер (без анимации прогресса)"""
+    """Максимально лёгкий спиннер"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -73,8 +67,8 @@ class SimpleLoadingLabel(MDLabel):
         self.height = dp(60)
 
 
-class ArtistsByLetterScreen(MDScreen):
-    """Экран списка исполнителей по букве - максимально быстрый"""
+class ArtistsByLetterScreen(BaseScreen):
+    """Экран списка исполнителей по букве"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -85,19 +79,15 @@ class ArtistsByLetterScreen(MDScreen):
         self.empty_label = None
         self.loading_label = None
         self.count_label = None
-        self.letter_label = None
-        self.back_btn = None
         self._pending_letter = None
-        self._main_layout = None
         self.bg_image = None
 
-        self.md_bg_color = [0, 0, 0, 0]
         self.init_ui()
         self.load_background()
 
         Clock.schedule_once(lambda dt: init_shared_icon(), 0.1)
 
-        logger.info('Экран исполнителей создан (RecycleView)')
+        logger.info('Экран исполнителей создан (BaseScreen)')
 
     def load_background(self):
         try:
@@ -126,32 +116,7 @@ class ArtistsByLetterScreen(MDScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        root = MDFloatLayout()
-
-        # Основной вертикальный контейнер
-        self._main_layout = MDBoxLayout(orientation='vertical', spacing=0)
-
-        # Получаем высоты системных панелей в пикселях и dp
-        try:
-            status_h_px = get_status_bar_height_px()
-            nav_h_px = get_navigation_bar_height_px()
-            use_px = True
-        except (NameError, ImportError):
-            # Если функции нет, используем обычные
-            status_h_dp = get_status_bar_height()
-            nav_h_dp = get_navigation_bar_height()
-            use_px = False
-
-        if use_px:
-            # Преобразуем в dp для Kivy
-            status_h_dp = dp(status_h_px)
-            nav_h_dp = dp(nav_h_px)
-
-        # Отступ сверху: статус-бар + высота TopNav (56dp)
-        top_padding = status_h_dp + dp(56)
-        self._main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
-
-        # Счётчик исполнителей - под верхней навигацией
+        # Счётчик исполнителей
         self.count_label = MDLabel(
             text="",
             font_size=sp(13),
@@ -164,33 +129,23 @@ class ArtistsByLetterScreen(MDScreen):
             padding=[0, dp(2), 0, dp(2)]
         )
 
-        # Контейнер для карточек с отступами по бокам
-        cards_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=[dp(12), dp(2), dp(12), nav_h_dp + dp(50)]
-        )
-
         # RecycleView для карточек
         self.recycle_view = ArtistRecycleView(on_artist_click=self.on_artist_selected)
-        # Скрываем полосу прокрутки
         self.recycle_view.bar_width = 0
         self.recycle_view.bar_color = [0, 0, 0, 0]
         self.recycle_view.bar_inactive_color = [0, 0, 0, 0]
 
-        cards_container.add_widget(self.recycle_view)
-
-        self._main_layout.add_widget(self.count_label)
-        self._main_layout.add_widget(cards_container)
-
-        root.add_widget(self._main_layout)
-        self.add_widget(root)
+        # Строим UI с помощью BaseScreen
+        self.build_ui(
+            content_widget=self.recycle_view,
+            top_widget=self.count_label
+        )
 
     def on_enter(self):
-        """Вызывается когда экран становится видимым - обновляем верхнюю панель"""
+        """Вызывается когда экран становится видимым"""
         logger.info(f"on_enter: current_letter={self.current_letter}, pending={self._pending_letter}")
 
-        # Обновляем верхнюю панель через приложение
+        # Обновляем верхнюю панель
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             if self.current_letter:
@@ -232,7 +187,7 @@ class ArtistsByLetterScreen(MDScreen):
         self._hide_loading()
         self._hide_empty()
 
-        self._update_count_label(0)  # Сначала показываем 0
+        self._update_count_label(0)
 
         if letter in self._cache:
             artists = self._cache[letter].get('artists', [])
@@ -267,10 +222,7 @@ class ArtistsByLetterScreen(MDScreen):
             self.recycle_view.clear()
 
         self.loading_label = SimpleLoadingLabel()
-
-        if self.recycle_view and self.recycle_view.parent:
-            index = self.recycle_view.parent.children.index(self.recycle_view)
-            self.recycle_view.parent.add_widget(self.loading_label, index)
+        self.add_content_widget(self.loading_label)
 
     def _hide_loading(self):
         if self.loading_label and self.loading_label.parent:
@@ -290,10 +242,7 @@ class ArtistsByLetterScreen(MDScreen):
             size_hint_y=None,
             height=dp(60)
         )
-
-        if self.recycle_view and self.recycle_view.parent:
-            index = self.recycle_view.parent.children.index(self.recycle_view)
-            self.recycle_view.parent.add_widget(self.empty_label, index)
+        self.add_content_widget(self.empty_label)
 
     def _hide_empty(self):
         if self.empty_label and self.empty_label.parent:
@@ -310,7 +259,6 @@ class ArtistsByLetterScreen(MDScreen):
 
         self._hide_loading()
         self._hide_empty()
-
         self._update_count_label(total)
 
         if not artists:
@@ -384,7 +332,3 @@ class ArtistsByLetterScreen(MDScreen):
                 screen = self.manager.get_screen('artist_songs')
                 screen.set_artist(artist)
                 self.manager.current = 'artist_songs'
-
-    def go_back(self, instance):
-        if hasattr(self, 'manager') and self.manager:
-            self.manager.current = 'songs'

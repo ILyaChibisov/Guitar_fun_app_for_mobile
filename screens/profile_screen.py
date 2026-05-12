@@ -1,11 +1,10 @@
 # screens/profile_screen.py
 """
-Экран профиля пользователя
+Экран профиля пользователя - переведён на BaseScreen
 """
 from kivymd.app import MDApp
 from kivy.metrics import dp, sp
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
@@ -13,15 +12,16 @@ from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.layout_config import layout_config
+from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 from utils.kivy_imports import (
-    MDBoxLayout, MDLabel, MDCard, MDTextField, MDDialog, MDScreen, MDRaisedButton
+    MDBoxLayout, MDLabel, MDCard, MDTextField, MDDialog, MDRaisedButton
 )
 
 logger = screen_logger('Profile')
 
-# Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
 
@@ -34,13 +34,7 @@ except ImportError:
         return None
 
 
-def hex_to_rgb(hex_color):
-    """Конвертирует hex цвет в RGB список от 0 до 1"""
-    hex_color = hex_color.lstrip('#')
-    return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
-
-
-class ProfileScreen(MDScreen):
+class ProfileScreen(BaseScreen):
     """Экран профиля пользователя"""
 
     def __init__(self, **kwargs):
@@ -51,15 +45,10 @@ class ProfileScreen(MDScreen):
         self._data_loaded = False
         self.bg_image = None
 
-        # Фон
-        self.md_bg_color = [0, 0, 0, 0]
-
-        # Загружаем фон
+        self.init_ui()
         self.load_background()
 
-        self.init_ui()
-
-        logger.info('Экран профиля создан')
+        logger.info('Экран профиля создан (BaseScreen)')
 
     def load_background(self):
         """Загружает фоновое изображение"""
@@ -83,59 +72,15 @@ class ProfileScreen(MDScreen):
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
 
-        # fallback цвет
-        with self.canvas.before:
-            Color(0.95, 0.93, 0.88, 1)
-            self.bg_image = Rectangle(pos=self.pos, size=self.size)
-        self.bind(pos=self._update_bg, size=self._update_bg)
-
     def _update_bg(self, *args):
         if self.bg_image:
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
-    def _load_avatar(self):
-        """Загружает аватар из ассета profile_png"""
-        if HAS_ASSETS:
-            try:
-                icon_data = load_asset_as_bytes('profile_png')
-                if icon_data:
-                    img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.avatar_image.texture = img.texture
-                    return True
-            except Exception as e:
-                logger.error(f"Ошибка загрузки аватара: {e}")
-
-        # Если не загрузилась, показываем эмодзи
-        self.avatar_image.text = "👤"
-        return False
-
     def init_ui(self):
-        # Основной контейнер
-        main_layout = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            spacing=0
-        )
-
-        # Отступ сверху для компенсации верхней панели
-        from config.system_bars import get_status_bar_height
-        from config.theme import theme
-        status_h = get_status_bar_height()
-        total_top_padding = status_h + theme.TOP_NAV_HEIGHT
-        top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
-        main_layout.add_widget(top_spacer)
-
-        # ============ ОСНОВНОЙ КОНТЕНТ ============
-        scroll = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_width=0
-        )
-
+        # Создаём контент
         content = MDBoxLayout(
             orientation='vertical',
-            padding=[dp(16), dp(8), dp(16), dp(85)],
             spacing=dp(16),
             size_hint_y=None,
             adaptive_height=True
@@ -160,13 +105,13 @@ class ProfileScreen(MDScreen):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95]
         )
+
         # Пытаемся загрузить аватар из ассета
         if HAS_ASSETS:
             try:
                 icon_data = load_asset_as_bytes('profile_png')
                 if icon_data:
                     img = CoreImage(BytesIO(icon_data), ext="png")
-                    # Создаем Image виджет для аватара
                     self.avatar_image = Image(
                         size_hint=(None, None),
                         size=(dp(50), dp(50)),
@@ -350,7 +295,7 @@ class ProfileScreen(MDScreen):
             padding=[dp(16), dp(0), dp(16), dp(0)]
         )
 
-        # Кнопка админ-панели (первая)
+        # Кнопка админ-панели
         self.admin_btn = MDRaisedButton(
             text="Админ-панель",
             size_hint=(1, None),
@@ -380,26 +325,15 @@ class ProfileScreen(MDScreen):
         buttons_container.add_widget(change_password_btn)
         buttons_container.add_widget(logout_btn)
 
-        buttons_container.height = dp(48) * 3 + dp(24)
-
         content.add_widget(avatar_box)
         content.add_widget(info_card)
         content.add_widget(buttons_container)
 
-        scroll.add_widget(content)
-
-        main_layout.add_widget(scroll)
-
-        self.add_widget(main_layout)
-
-    def go_back(self, instance):
-        """Возврат на главный экран"""
-        if hasattr(self, 'manager') and self.manager:
-            self.manager.current = 'home'
+        # Используем ScrollView через BaseScreen
+        self.build_ui(content_widget=content, use_scroll=True)
 
     def on_pre_enter(self):
-        """Вызывается перед показом экрана - загружаем данные"""
-        # Проверяем авторизацию перед загрузкой
+        """Вызывается перед показом экрана"""
         if not api.is_authenticated():
             logger.info("Не авторизован, возвращаемся на home")
             if hasattr(self, 'manager') and self.manager:
@@ -431,12 +365,10 @@ class ProfileScreen(MDScreen):
         self.update_ui()
 
     def on_user_load_failed(self, req, error):
-        """Обработчик ошибки загрузки профиля"""
         error_msg = str(error)
         logger.error(f'Ошибка загрузки профиля: {error_msg}')
 
         if 'Not authenticated' in error_msg or 'Invalid token' in error_msg or '401' in error_msg:
-            logger.info('Токен недействителен, очищаем')
             api._clear_tokens()
             notify.warning("Сессия истекла. Пожалуйста, войдите снова.")
             if hasattr(self, 'manager') and self.manager:
@@ -454,7 +386,6 @@ class ProfileScreen(MDScreen):
         username = self.user.get('username', 'Пользователь')
         email = self.user.get('email', 'не указан')
         full_name = self.user.get('full_name') or 'не указано'
-        role = self.user.get('role', 'user')
         last_login = self.user.get('last_login')
         subscription_days = self.user.get('subscription_days', 0)
 
@@ -462,7 +393,6 @@ class ProfileScreen(MDScreen):
         self.email_label.text = email
         self.fullname_label.text = full_name
 
-        # Форматируем последний вход
         if last_login:
             try:
                 from datetime import datetime
@@ -473,13 +403,11 @@ class ProfileScreen(MDScreen):
         else:
             self.last_login_label.text = 'неизвестно'
 
-        # Форматируем подписку
         if subscription_days > 0:
             self.subscription_label.text = f"Активна • осталось {subscription_days} дн."
         else:
             self.subscription_label.text = "Не активна"
 
-        # Дата регистрации
         created_at = self.user.get('created_at')
         if created_at:
             try:
@@ -499,7 +427,6 @@ class ProfileScreen(MDScreen):
             self.admin_btn.disabled = True
 
     def open_admin_panel(self, instance):
-        """Открывает админ-панель"""
         if api.is_admin():
             if hasattr(self, 'manager') and self.manager:
                 if 'admin' not in self.manager.screen_names:
@@ -510,7 +437,6 @@ class ProfileScreen(MDScreen):
             notify.error("У вас нет прав администратора")
 
     def show_change_password_dialog(self, instance):
-        """Показывает диалог смены пароля"""
         if self.change_password_dialog:
             self.change_password_dialog.dismiss()
 
@@ -569,7 +495,6 @@ class ProfileScreen(MDScreen):
         self.change_password_dialog.open()
 
     def do_change_password(self, instance):
-        """Выполняет смену пароля"""
         old = self.old_password.text
         new = self.new_password.text
         confirm = self.confirm_password.text
@@ -594,19 +519,12 @@ class ProfileScreen(MDScreen):
         self.change_password_dialog.dismiss()
 
     def logout(self, instance):
-        """Выход из аккаунта"""
-
         def on_logout_success(result):
             notify.success("Вы вышли из аккаунта")
-            # Очищаем данные пользователя
             api._clear_tokens()
             api.user_data = None
-            # Возвращаемся на home
             if hasattr(self, 'manager') and self.manager:
                 self.manager.current = 'home'
-                # Получаем home_screen и сбрасываем состояние авторизации
-                home_screen = self.manager.get_screen('home')
-                home_screen.reset_auth_state()
 
         def on_logout_failure(req, error):
             notify.error("Ошибка выхода")

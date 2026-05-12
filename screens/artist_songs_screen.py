@@ -1,13 +1,11 @@
 # screens/artist_songs_screen.py
 """
-Экран списка песен выбранного исполнителя - МАКСИМАЛЬНО ОПТИМИЗИРОВАННАЯ ВЕРСИЯ с RecycleView
+Экран списка песен выбранного исполнителя - переведён на BaseScreen
 """
-from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.floatlayout import MDFloatLayout
-from kivymd.uix.card import MDCard  # <-- ДОБАВИТЬ ЭТОТ ИМПОРТ
+from kivymd.uix.card import MDCard
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
@@ -22,7 +20,8 @@ from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
-from config.system_bars import get_status_bar_height
+from config.layout_config import layout_config
+from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 
@@ -30,21 +29,17 @@ logger = screen_logger('ArtistSongs')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
-# Глобальная текстура для иконки песни (ОДНА на все карточки)
+# Глобальная текстура для иконки песни
 _shared_song_texture = None
 
 
 def init_shared_song_icon():
-    """ОДНОКРАТНО загружает иконку песни в память для всех карточек"""
     global _shared_song_texture
     if _shared_song_texture is not None:
         return _shared_song_texture
@@ -63,8 +58,6 @@ def init_shared_song_icon():
 
 
 class RecycleSongCard(RecycleDataViewBehavior, MDCard):
-    """Переиспользуемая карточка песни для RecycleView"""
-
     title = StringProperty('')
     tabs_count = NumericProperty(0)
     song_id = NumericProperty(0)
@@ -84,11 +77,9 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
         self.md_bg_color = [0, 0, 0, 0.08]
         self.line_color = [1, 1, 1, 0.08]
         self.line_width = 1
-
         self._build_ui()
 
     def _build_ui(self):
-        # Иконка - общая для всех карточек
         self.icon = Image(
             size_hint=(None, None),
             size=(dp(28), dp(28)),
@@ -101,7 +92,6 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
         else:
             self.icon.text = "🎵"
 
-        # Текстовая часть
         text_layout = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
@@ -131,7 +121,6 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
         text_layout.add_widget(self.title_label)
         text_layout.add_widget(self.tabs_label)
 
-        # Стрелка
         arrow = MDLabel(
             text="›",
             font_size=sp(24),
@@ -147,14 +136,11 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
         self.add_widget(arrow)
 
     def refresh_view_attrs(self, rv, index, data):
-        """Обновляет данные при переиспользовании карточки"""
         self.title = data.get('title', '')
         self.tabs_count = data.get('tabs_count', 0)
         self.song_id = data.get('song_id', 0)
         self.on_click = data.get('on_click')
-
         self.title_label.text = self.title
-
         count = self.tabs_count
         if count == 1:
             suffix = "подбор"
@@ -163,7 +149,6 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
         else:
             suffix = "подборов"
         self.tabs_label.text = f"{count} {suffix}"
-
         return super().refresh_view_attrs(rv, index, data)
 
     def on_touch_down(self, touch):
@@ -175,16 +160,12 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
 
 
 class SongRecycleView(RecycleView):
-    """Виртуализированный список песен"""
-
     def __init__(self, on_song_click=None, **kwargs):
         super().__init__(**kwargs)
         self.on_song_click = on_song_click
-
         self.animate_scroll = False
         self.bar_color = [1, 1, 1, 0.2]
         self.bar_width = dp(3)
-
         self.layout_manager = RecycleBoxLayout(
             default_size=(None, dp(60)),
             default_size_hint=(1, None),
@@ -193,13 +174,11 @@ class SongRecycleView(RecycleView):
             orientation='vertical',
             spacing=dp(6)
         )
-
         self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
         self.viewclass = 'RecycleSongCard'
         self.add_widget(self.layout_manager)
 
     def set_songs(self, songs, on_click):
-        """Быстрое обновление списка песен"""
         data = []
         for song in songs:
             data.append({
@@ -216,9 +195,7 @@ class SongRecycleView(RecycleView):
         self.refresh_from_data()
 
 
-class ArtistSongsScreen(MDScreen):
-    """Экран списка песен исполнителя - максимально быстрый с RecycleView"""
-
+class ArtistSongsScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'artist_songs'
@@ -231,16 +208,13 @@ class ArtistSongsScreen(MDScreen):
         self.artist_label = None
         self.back_btn = None
         self._pending_artist = None
-        self._main_layout = None
-
-        self.md_bg_color = [0, 0, 0, 0]
+        self.bg_image = None
 
         self.init_ui()
         self.load_background()
 
         Clock.schedule_once(lambda dt: init_shared_song_icon(), 0.1)
-
-        logger.info('Экран песен исполнителя создан (RecycleView)')
+        logger.info('Экран песен исполнителя создан (BaseScreen)')
 
     def load_background(self):
         try:
@@ -264,20 +238,13 @@ class ArtistSongsScreen(MDScreen):
             logger.error(f'Ошибка загрузки фона: {e}')
 
     def _update_bg(self, *args):
-        if hasattr(self, 'bg_image') and self.bg_image:
+        if self.bg_image:
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
     def init_ui(self):
-        root = MDFloatLayout()
-
-        self._main_layout = MDBoxLayout(orientation='vertical', spacing=0)
-
-        status_h = get_status_bar_height()
-        self._main_layout.add_widget(Widget(size_hint_y=None, height=dp(status_h + theme.TOP_NAV_HEIGHT)))
-
         # Верхняя панель
-        self.top_bar = MDBoxLayout(
+        top_bar = MDBoxLayout(
             size_hint_y=None,
             height=dp(64),
             padding=[dp(16), dp(8), dp(16), dp(8)],
@@ -296,7 +263,6 @@ class ArtistSongsScreen(MDScreen):
         self.artist_label = MDLabel(
             text="",
             font_size=sp(18),
-            font_style="H6",
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -317,21 +283,29 @@ class ArtistSongsScreen(MDScreen):
             height=dp(24)
         )
 
-        self.top_bar.add_widget(self.back_btn)
-        self.top_bar.add_widget(self.artist_label)
-        self.top_bar.add_widget(Widget(size_hint_x=0.2))
+        top_bar.add_widget(self.back_btn)
+        top_bar.add_widget(self.artist_label)
+        top_bar.add_widget(Widget(size_hint_x=0.2))
 
         self.recycle_view = SongRecycleView(on_song_click=self.on_song_selected)
 
-        self._main_layout.add_widget(self.top_bar)
-        self._main_layout.add_widget(self.count_label)
-        self._main_layout.add_widget(self.recycle_view)
+        # Строим UI с помощью BaseScreen
+        self.build_ui(
+            content_widget=self.recycle_view,
+            top_widget=top_bar,
+            use_scroll=False
+        )
 
-        root.add_widget(self._main_layout)
-        self.add_widget(root)
+        # Добавляем счётчик после top_bar через add_content_widget
+        self.add_content_widget(self.count_label, index=1)
 
     def on_enter(self):
         logger.info(f"on_enter: current_artist={self.current_artist}, pending={self._pending_artist}")
+
+        # Обновляем верхнюю панель
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.reset_to_default()
 
         if self._pending_artist:
             artist = self._pending_artist
@@ -340,7 +314,6 @@ class ArtistSongsScreen(MDScreen):
 
     def set_artist(self, artist):
         logger.info(f"set_artist: {artist}")
-
         self.artist_label.text = artist
 
         if not self.manager or self.manager.current != self.name:
@@ -352,7 +325,6 @@ class ArtistSongsScreen(MDScreen):
 
     def _do_load_artist(self, artist):
         logger.info(f"_do_load_artist: {artist}")
-
         self.current_artist = artist
 
         if self.recycle_view:
@@ -388,22 +360,9 @@ class ArtistSongsScreen(MDScreen):
     def _show_loading(self):
         if self.loading_label:
             return
-
         if self.recycle_view:
             self.recycle_view.clear()
-
-        self.loading_label = MDLabel(
-            text="Загрузка песен...",
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            size_hint_y=None,
-            height=dp(60)
-        )
-
-        index = self._main_layout.children.index(self.recycle_view)
-        self._main_layout.add_widget(self.loading_label, index)
+        self.loading_label = self.show_loading("Загрузка песен...")
 
     def _hide_loading(self):
         if self.loading_label and self.loading_label.parent:
@@ -413,19 +372,7 @@ class ArtistSongsScreen(MDScreen):
     def _show_empty(self, text="Нет песен у этого исполнителя"):
         if self.empty_label:
             return
-
-        self.empty_label = MDLabel(
-            text=text,
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.4],
-            size_hint_y=None,
-            height=dp(60)
-        )
-
-        index = self._main_layout.children.index(self.recycle_view)
-        self._main_layout.add_widget(self.empty_label, index)
+        self.empty_label = self.show_empty(text)
 
     def _hide_empty(self):
         if self.empty_label and self.empty_label.parent:
@@ -442,7 +389,6 @@ class ArtistSongsScreen(MDScreen):
 
         self._hide_loading()
         self._hide_empty()
-
         self._update_count_label(total)
 
         if not songs:
@@ -482,34 +428,21 @@ class ArtistSongsScreen(MDScreen):
 
     def _on_songs_loaded(self, data):
         logger.info(f"_on_songs_loaded для {self.current_artist}")
-
         if data is None:
             data = {"songs": [], "total": 0}
-
         if not isinstance(data, dict):
             data = {"songs": [], "total": 0}
-
         songs = data.get('songs', [])
         total = data.get('total', 0)
-
-        if not isinstance(songs, list):
-            songs = []
-            total = 0
-
-        logger.info(f"Песен: {len(songs)}, Total: {total}")
-
         self._cache[self.current_artist] = {'songs': songs, 'total': total}
         self._display_songs(songs, total)
 
     def _on_load_failed(self, req, error):
         self._hide_loading()
         logger.error(f"Ошибка загрузки для {self.current_artist}: {error}")
-
         self._cache[self.current_artist] = {'songs': [], 'total': 0}
-
         if self.recycle_view:
             self.recycle_view.clear()
-
         self._update_count_label(0)
         self._show_empty("Ошибка загрузки\nПроверьте интернет")
 
@@ -518,7 +451,6 @@ class ArtistSongsScreen(MDScreen):
         if not song_id:
             notify.error("Ошибка: не удалось загрузить песню")
             return
-
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('song_detail'):
                 song_detail_screen = self.manager.get_screen('song_detail')

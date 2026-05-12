@@ -1,10 +1,8 @@
 # screens/favorites_screen.py
 """
-Экран избранного - список любимых песен пользователя
+Экран избранного - список любимых песен пользователя - переведён на BaseScreen
 """
-from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -15,39 +13,33 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
-from kivy.uix.floatlayout import FloatLayout
 from kivy.clock import Clock
 from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.layout_config import layout_config
+from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 
 logger = screen_logger('Favorites')
 
-# Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
 
 class LoadingSpinner(MDBoxLayout):
-    """Индикатор загрузки"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
         self.spacing = dp(16)
-
         self.progress = ProgressBar(
             size_hint=(0.8, None),
             height=dp(4),
@@ -79,18 +71,14 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class FavoriteSongCard(MDCard):
-    """Карточка избранной песни (без количества подборов)"""
-
     def __init__(self, song, on_click=None, **kwargs):
         super().__init__(**kwargs)
 
-        # Поддержка разных форматов данных
         if isinstance(song, dict):
             self.song_id = song.get('id') or song.get('song_id')
             self.song_title = song.get('title', '')
             self.artist = song.get('artist', '')
         elif isinstance(song, str):
-            # Если строка, пытаемся разобрать "artist - title"
             parts = song.split(' - ', 1)
             if len(parts) == 2:
                 self.artist, self.song_title = parts[0], parts[1]
@@ -112,14 +100,11 @@ class FavoriteSongCard(MDCard):
         self.radius = [theme.CORNER_RADIUS_SMALL]
         self.elevation = 2
         self.ripple_behavior = True
-
-        # Полупрозрачный фон как в artist_songs_screen
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.15]
         self.line_color = [1, 1, 1, 0.1]
         self.line_width = 1
 
-        # Иконка песни из ассетов
         self.icon_image = Image(
             size_hint=(None, None),
             size=(dp(32), dp(32)),
@@ -129,14 +114,8 @@ class FavoriteSongCard(MDCard):
         )
         self._load_icon()
 
-        # Контейнер для текстовой информации (две строки)
-        self.text_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=1,
-            spacing=dp(2)
-        )
+        self.text_container = MDBoxLayout(orientation='vertical', size_hint_x=1, spacing=dp(2))
 
-        # Исполнитель (первая строка) - крупный шрифт
         self.artist_label = MDLabel(
             text=self.artist,
             font_size=sp(16),
@@ -150,7 +129,6 @@ class FavoriteSongCard(MDCard):
             shorten_from="right"
         )
 
-        # Название песни (вторая строка) - обычный шрифт
         self.title_label = MDLabel(
             text=self.song_title,
             font_size=sp(14),
@@ -166,7 +144,6 @@ class FavoriteSongCard(MDCard):
         self.text_container.add_widget(self.artist_label)
         self.text_container.add_widget(self.title_label)
 
-        # Стрелка вправо
         self.arrow_label = MDLabel(
             text="›",
             font_size=sp(28),
@@ -184,7 +161,6 @@ class FavoriteSongCard(MDCard):
         self.bind(on_release=self.on_click)
 
     def _load_icon(self):
-        """Загружает иконку из ассетов"""
         if HAS_ASSETS:
             try:
                 icon_data = load_asset_as_bytes('song_png')
@@ -201,9 +177,7 @@ class FavoriteSongCard(MDCard):
             self.on_click_callback(self.song_id, self.song_title)
 
 
-class FavoritesScreen(MDScreen):
-    """Экран избранного"""
-
+class FavoritesScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'favorites'
@@ -212,17 +186,13 @@ class FavoritesScreen(MDScreen):
         self.loading_spinner = None
         self.bg_image = None
         self.fade_layer = None
-        self.empty_card = None
-
-        self.md_bg_color = [0, 0, 0, 0]
 
         self.init_ui()
         self.load_background()
 
-        logger.info('Экран избранного создан')
+        logger.info('Экран избранного создан (BaseScreen)')
 
     def load_background(self):
-        """Загружает фоновое изображение"""
         try:
             if HAS_ASSETS:
                 asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
@@ -249,23 +219,8 @@ class FavoritesScreen(MDScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        root_layout = FloatLayout()
-
-        main_layout = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            spacing=0
-        )
-
-        from config.system_bars import get_status_bar_height
-        from config.theme import theme
-        status_h = get_status_bar_height()
-        total_top_padding = status_h + theme.TOP_NAV_HEIGHT
-        top_spacer = Widget(size_hint_y=None, height=dp(total_top_padding))
-        main_layout.add_widget(top_spacer)
-
-        # ============ ВЕРХНЯЯ ПАНЕЛЬ ============
-        self.nav_row = MDBoxLayout(
+        # Верхняя панель
+        top_bar = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
             height=dp(50),
@@ -284,73 +239,47 @@ class FavoritesScreen(MDScreen):
             text_color=[1, 1, 1, 1],
             bold=True
         )
+        top_bar.add_widget(title)
 
-        self.nav_row.add_widget(title)
-
-        # ============ СПИСОК ПЕСЕН ============
-        self.content_scroll = MDScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_color=[1, 1, 1, 0.3],
-            bar_width=dp(4)
-        )
-
-        self.content_container = MDBoxLayout(
+        # Контент
+        content = MDBoxLayout(
             orientation='vertical',
             spacing=dp(8),
             size_hint_y=None,
             adaptive_height=True,
             padding=[dp(16), dp(12), dp(16), dp(20)]
         )
-        self.content_scroll.add_widget(self.content_container)
 
-        main_layout.add_widget(self.nav_row)
-        main_layout.add_widget(self.content_scroll)
+        self.content_container = content
 
-        # ============ ПРОЗРАЧНЫЙ СЛОЙ ============
-        self.fade_layer = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(80),
-            pos_hint={'x': 0, 'y': 0},
-            md_bg_color=[0, 0, 0, 0]
+        # Счётчик
+        self.count_label = MDLabel(
+            text="",
+            font_size=sp(12),
+            halign="center",
+            size_hint_y=None,
+            height=dp(24),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6]
         )
 
-        with self.fade_layer.canvas.before:
-            Color(0, 0, 0, 0.6)
-            self.fade_rect = Rectangle(pos=self.fade_layer.pos, size=self.fade_layer.size)
+        # Строим UI
+        self.build_ui(content_widget=content, top_widget=top_bar, use_scroll=True)
+        self.add_content_widget(self.count_label, index=1)
 
-        self.fade_layer.bind(pos=self._update_fade, size=self._update_fade)
-
-        root_layout.add_widget(main_layout)
-        root_layout.add_widget(self.fade_layer)
-
-        self.add_widget(root_layout)
-        self.root_layout = root_layout
-
-    def _update_fade(self, *args):
-        if hasattr(self, 'fade_rect'):
-            self.fade_rect.pos = self.fade_layer.pos
-            self.fade_rect.size = self.fade_layer.size
-
-    def show_loading(self):
-        if self.is_loading:
-            return
+    def show_loading_state(self):
         self.is_loading = True
-        self.clear_container()
+        self.content_container.clear_widgets()
         self.loading_spinner = LoadingSpinner()
         self.content_container.add_widget(self.loading_spinner)
         self.loading_spinner.start_animation()
+        self.count_label.text = ""
 
-    def hide_loading(self):
+    def hide_loading_state(self):
         self.is_loading = False
         if self.loading_spinner:
             self.loading_spinner.stop_animation()
-        self.clear_container()
-
-    def clear_container(self):
         self.content_container.clear_widgets()
-        self.empty_card = None
 
     def on_pre_enter(self):
         if not api.is_authenticated():
@@ -359,69 +288,60 @@ class FavoritesScreen(MDScreen):
         self.load_favorites()
 
     def load_favorites(self):
-        self.show_loading()
+        self.show_loading_state()
         api.get_favorites(
             on_success=self.on_favorites_loaded,
             on_failure=self.on_load_failed
         )
 
     def on_favorites_loaded(self, favorites):
-        """Отображает список избранных песен"""
-        self.hide_loading()
+        self.hide_loading_state()
 
-        # Обрабатываем разные форматы данных
         formatted_favorites = []
         for item in favorites:
             if isinstance(item, dict):
                 formatted_favorites.append(item)
             elif isinstance(item, str):
-                # Если строка, пытаемся разобрать "artist - title"
                 parts = item.split(' - ', 1)
                 if len(parts) == 2:
-                    formatted_favorites.append({
-                        'artist': parts[0],
-                        'title': parts[1],
-                        'id': 0
-                    })
+                    formatted_favorites.append({'artist': parts[0], 'title': parts[1], 'id': 0})
                 else:
-                    formatted_favorites.append({
-                        'artist': '',
-                        'title': item,
-                        'id': 0
-                    })
+                    formatted_favorites.append({'artist': '', 'title': item, 'id': 0})
 
         self.favorites = formatted_favorites
 
-        if not self.favorites or len(self.favorites) == 0:
+        if not self.favorites:
             self.show_empty_state()
+            self.count_label.text = "0 песен"
             return
 
-        # Отображаем карточки песен
+        total = len(self.favorites)
+        if total == 1:
+            self.count_label.text = "1 песня"
+        elif 2 <= total <= 4:
+            self.count_label.text = f"{total} песни"
+        else:
+            self.count_label.text = f"{total} песен"
+
         for song_data in self.favorites:
-            card = FavoriteSongCard(
-                song=song_data,
-                on_click=self.on_song_selected
-            )
+            card = FavoriteSongCard(song=song_data, on_click=self.on_song_selected)
             self.content_container.add_widget(card)
 
-        # Добавляем нижний спейсер
-        bottom_spacer = Widget(size_hint_y=None, height=dp(80))
+        bottom_spacer = Widget(size_hint_y=None, height=dp(20))
         self.content_container.add_widget(bottom_spacer)
-
         logger.info(f"Загружено {len(self.favorites)} избранных песен")
 
     def show_empty_state(self, is_authenticated=True):
-        """Показывает состояние когда избранное пусто - с той же прозрачностью что и карточки песен"""
-        self.clear_container()
+        self.hide_loading_state()
+        self.content_container.clear_widgets()
 
-        # Создаём карточку с такой же прозрачностью как в artist_songs_screen
         empty_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
             height=dp(160),
             padding=[dp(24), dp(24), dp(24), dp(24)],
             radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[0, 0, 0, 0.15],  # Такая же прозрачность как у карточек песен
+            md_bg_color=[0, 0, 0, 0.15],
             elevation=2,
             line_color=[1, 1, 1, 0.1],
             line_width=1
@@ -483,8 +403,8 @@ class FavoritesScreen(MDScreen):
         empty_card.add_widget(icon_label)
         empty_card.add_widget(text_label)
         empty_card.add_widget(hint_label)
-
         self.content_container.add_widget(empty_card)
+        self.count_label.text = "0 песен"
 
     def on_song_selected(self, song_id, song_title):
         if not song_id:
@@ -499,8 +419,7 @@ class FavoritesScreen(MDScreen):
                 self.manager.current = 'song_detail'
 
     def on_load_failed(self, req, error):
-        self.hide_loading()
-
+        self.hide_loading_state()
         if "401" in str(error) or "Unauthorized" in str(error):
             notify.warning("Сессия истекла. Пожалуйста, войдите снова.")
             if hasattr(self, 'manager') and self.manager:

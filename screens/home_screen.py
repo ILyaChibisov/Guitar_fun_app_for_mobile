@@ -1,6 +1,6 @@
 # screens/home_screen.py
 """
-Главный экран гитарного приложения
+Главный экран гитарного приложения - обновлён для использования layout_config
 """
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -32,35 +32,32 @@ def hex_to_rgb(hex_color):
 
 
 class AnimatedWelcomeLabel(FloatLayout):
-    """
-    Плавающий анимированный текст приветствия
-    Появляется по центру видимой области (между TopNav и BottomNav)
-    """
+    """Плавающий анимированный текст приветствия"""
 
     def __init__(self, username, top_nav_height=56, bottom_nav_height=76, on_complete=None, **kwargs):
         super().__init__(**kwargs)
         self.username = username
         self.on_complete = on_complete
 
-        # Занимаем весь экран, но с отступами для навигации
         self.size_hint = (1, 1)
         self.pos = (0, 0)
 
-        # Контейнер с отступами под панели навигации
+        # Используем layout_config для отступов
+        top_padding = layout_config.get_top_padding() + dp(20)
+        bottom_padding = layout_config.get_bottom_padding() + bottom_nav_height + dp(20)
+
         self.container = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(20), dp(top_nav_height + 20), dp(20), dp(bottom_nav_height + 20)]
+            padding=[dp(20), top_padding, dp(20), bottom_padding]
         )
 
-        # Центральный блок для текста
         self.text_container = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             spacing=dp(10)
         )
 
-        # Первая строка: "Добро пожаловать,"
         self.line1 = MDLabel(
             text="Добро пожаловать,",
             font_size=sp(28),
@@ -72,7 +69,6 @@ class AnimatedWelcomeLabel(FloatLayout):
             bold=False
         )
 
-        # Вторая строка: имя пользователя (крупно)
         self.line2 = MDLabel(
             text=username,
             font_size=sp(36),
@@ -89,18 +85,12 @@ class AnimatedWelcomeLabel(FloatLayout):
         self.container.add_widget(self.text_container)
         self.add_widget(self.container)
 
-        # Начальное состояние: прозрачные
         self.container.opacity = 0
-
-        # Анимация появления: плавное появление
         appear_anim = Animation(opacity=1, duration=0.4, t='out_quad')
         appear_anim.start(self.container)
-
-        # Через 2.5 секунды начинаем исчезать
         Clock.schedule_once(self._start_fade_out, 2.5)
 
     def _start_fade_out(self, dt):
-        """Анимация исчезновения"""
         fade_anim = Animation(opacity=0, duration=0.3, t='in_quad')
         fade_anim.bind(on_complete=lambda *args: self._on_complete())
         fade_anim.start(self.container)
@@ -113,34 +103,30 @@ class AnimatedWelcomeLabel(FloatLayout):
 
 
 class AnimatedLogoLabel(FloatLayout):
-    """
-    Плавающий анимированный текст логотипа после приветствия
-    Появляется по центру видимой области
-    """
+    """Плавающий анимированный текст логотипа"""
 
     def __init__(self, top_nav_height=56, bottom_nav_height=76, on_complete=None, **kwargs):
         super().__init__(**kwargs)
         self.on_complete = on_complete
 
-        # Занимаем весь экран, но с отступами для навигации
         self.size_hint = (1, 1)
         self.pos = (0, 0)
 
-        # Контейнер с отступами под панели навигации
+        top_padding = layout_config.get_top_padding() + dp(20)
+        bottom_padding = layout_config.get_bottom_padding() + bottom_nav_height + dp(20)
+
         self.container = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(20), dp(top_nav_height + 20), dp(20), dp(bottom_nav_height + 20)]
+            padding=[dp(20), top_padding, dp(20), bottom_padding]
         )
 
-        # Центральный блок для текста
         self.text_container = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             spacing=dp(8)
         )
 
-        # Логотип GuitarFuns
         self.logo_label = MDLabel(
             text="GuitarFuns",
             font_size=sp(44),
@@ -152,7 +138,6 @@ class AnimatedLogoLabel(FloatLayout):
             bold=True
         )
 
-        # Подзаголовок
         self.subtitle = MDLabel(
             text="твои любимые песни и аккорды",
             font_size=sp(14),
@@ -169,19 +154,13 @@ class AnimatedLogoLabel(FloatLayout):
         self.container.add_widget(self.text_container)
         self.add_widget(self.container)
 
-        # Начальное состояние: прозрачные и чуть уменьшенные
         self.container.opacity = 0
         self.container.scale = 0.85
-
-        # Анимация появления: масштабирование и появление
         anim = Animation(opacity=1, scale=1, duration=0.4, t='out_back')
         anim.start(self.container)
-
-        # Через 1.8 секунды исчезаем
         Clock.schedule_once(self._start_fade_out, 1.8)
 
     def _start_fade_out(self, dt):
-        """Анимация исчезновения"""
         fade_anim = Animation(opacity=0, duration=0.3, t='in_quad')
         fade_anim.bind(on_complete=lambda *args: self._on_complete())
         fade_anim.start(self.container)
@@ -212,7 +191,6 @@ class LoginModal(MDCard):
         self.padding = [dp(16), dp(16), dp(16), dp(16)]
         self.spacing = dp(12)
 
-        # Кнопка назад
         back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -223,7 +201,6 @@ class LoginModal(MDCard):
         )
         self.add_widget(back_btn)
 
-        # Заголовок
         title = MDLabel(
             text="Вход в аккаунт",
             halign="center",
@@ -235,7 +212,6 @@ class LoginModal(MDCard):
         )
         self.add_widget(title)
 
-        # Поле username
         self.username_field = MDTextField(
             hint_text="Имя пользователя или Email",
             mode="fill",
@@ -246,7 +222,6 @@ class LoginModal(MDCard):
         )
         self.add_widget(self.username_field)
 
-        # Поле пароль
         self.password_field = MDTextField(
             hint_text="Пароль",
             mode="fill",
@@ -258,7 +233,6 @@ class LoginModal(MDCard):
         )
         self.add_widget(self.password_field)
 
-        # Кнопки
         buttons_box = MDBoxLayout(
             orientation='horizontal',
             spacing=dp(12),
@@ -332,7 +306,6 @@ class RegisterModal(MDCard):
         self.padding = [dp(16), dp(16), dp(16), dp(16)]
         self.spacing = dp(8)
 
-        # Кнопка назад
         back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -343,7 +316,6 @@ class RegisterModal(MDCard):
         )
         self.add_widget(back_btn)
 
-        # Заголовок
         title = MDLabel(
             text="Регистрация",
             halign="center",
@@ -355,7 +327,6 @@ class RegisterModal(MDCard):
         )
         self.add_widget(title)
 
-        # Поле username
         self.username_field = MDTextField(
             hint_text="Имя пользователя",
             mode="fill",
@@ -366,7 +337,6 @@ class RegisterModal(MDCard):
         )
         self.add_widget(self.username_field)
 
-        # Поле email
         self.email_field = MDTextField(
             hint_text="Email",
             mode="fill",
@@ -377,7 +347,6 @@ class RegisterModal(MDCard):
         )
         self.add_widget(self.email_field)
 
-        # Поле пароль
         self.password_field = MDTextField(
             hint_text="Пароль",
             mode="fill",
@@ -389,7 +358,6 @@ class RegisterModal(MDCard):
         )
         self.add_widget(self.password_field)
 
-        # Поле подтверждения пароля
         self.confirm_field = MDTextField(
             hint_text="Подтвердите пароль",
             mode="fill",
@@ -401,7 +369,6 @@ class RegisterModal(MDCard):
         )
         self.add_widget(self.confirm_field)
 
-        # Кнопки
         buttons_box = MDBoxLayout(
             orientation='horizontal',
             spacing=dp(12),
@@ -469,7 +436,7 @@ class RegisterModal(MDCard):
 
 
 class AuthModal(MDCard):
-    """Главное модальное окно авторизации (выбор способа входа)"""
+    """Главное модальное окно авторизации"""
 
     def __init__(self, parent_screen, on_close=None, on_login_success=None, **kwargs):
         super().__init__(**kwargs)
@@ -490,7 +457,6 @@ class AuthModal(MDCard):
         self.login_modal = None
         self.register_modal = None
 
-        # Заголовок
         title = MDLabel(
             text="Войдите в свой аккаунт",
             halign="center",
@@ -502,7 +468,6 @@ class AuthModal(MDCard):
         )
         self.add_widget(title)
 
-        # Подзаголовок
         subtitle = MDLabel(
             text="чтобы получить доступ ко всем функциям приложения",
             halign="center",
@@ -515,7 +480,6 @@ class AuthModal(MDCard):
 
         self.add_widget(MDBoxLayout(size_hint_y=None, height=dp(4)))
 
-        # Кнопка входа через Google
         google_btn = MDRaisedButton(
             text="Войти через Google",
             size_hint=(0.9, None),
@@ -525,7 +489,6 @@ class AuthModal(MDCard):
         google_btn.pos_hint = {'center_x': 0.5}
         self.add_widget(google_btn)
 
-        # Кнопка входа по логину/паролю
         login_btn = MDRaisedButton(
             text="Войти по логину и паролю",
             size_hint=(0.9, None),
@@ -535,7 +498,6 @@ class AuthModal(MDCard):
         login_btn.pos_hint = {'center_x': 0.5}
         self.add_widget(login_btn)
 
-        # Кнопка регистрации
         register_btn = MDRaisedButton(
             text="Зарегистрироваться",
             size_hint=(0.9, None),
@@ -545,7 +507,6 @@ class AuthModal(MDCard):
         register_btn.pos_hint = {'center_x': 0.5}
         self.add_widget(register_btn)
 
-        # Кнопка пропуска
         skip_btn = MDRaisedButton(
             text="Пропустить",
             size_hint=(0.9, None),
@@ -629,9 +590,7 @@ class HomeScreen(BaseScreen):
         logger.info('Главный экран создан')
 
     def init_ui(self):
-        """Инициализация интерфейса с вертикальным центрированием карусели"""
-
-        # Создаём заголовок (изначально скрыт, покажут после анимации приветствия)
+        # Создаём заголовок
         self.title = MDLabel(
             text="GuitarFuns",
             font_size=dp(42),
@@ -641,69 +600,42 @@ class HomeScreen(BaseScreen):
             text_color=[1, 1, 1, 1],
             size_hint_y=None,
             height=dp(60),
-            opacity=0  # Изначально скрыт
+            opacity=0
         )
 
-        # Создаём карусель (изначально скрыта)
+        # Создаём карусель
         self.carousel = MainCarousel(
             screen_manager=self.manager,
             on_item_selected=self._on_carousel_item_selected
         )
         self.carousel.opacity = 0
 
-        # Контейнер для центрирования карусели по вертикали
+        # Контейнер для центрирования карусели
         center_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             spacing=dp(10)
         )
 
-        # Добавляем заголовок (фиксированная высота)
         center_container.add_widget(self.title)
-
-        # Добавляем растягивающийся виджет (толкает карусель вниз для центрирования)
         center_container.add_widget(Widget(size_hint_y=1))
-
-        # Добавляем карусель
         center_container.add_widget(self.carousel)
-
-        # Добавляем небольшой отступ снизу карусели
         center_container.add_widget(Widget(size_hint_y=None, height=dp(30)))
-
-        # Добавляем растягивающийся виджет снизу
         center_container.add_widget(Widget(size_hint_y=1))
 
-        # Используем базовый метод с нашим центрированным контейнером
-        self.build_ui(content_widget=center_container, top_widget=None)
-
-        # Настраиваем отступы контейнера
-        if self._content_container:
-            self._content_container.padding = [
-                layout_config.SIDE_PADDING,  # левый
-                dp(0),  # верхний (убираем)
-                layout_config.SIDE_PADDING,  # правый
-                dp(0)  # нижний (убираем)
-            ]
+        # Используем BaseScreen
+        self.build_ui(content_widget=center_container)
 
     def _show_welcome_sequence(self, username):
-        """
-        Показывает последовательность приветствий:
-        1. "Добро пожаловать, Имя" (2.5 сек)
-        2. "GuitarFuns" с подзаголовком (1.8 сек)
-        3. Показывает основной контент
-        """
         if self.welcome_label and self.welcome_label.parent:
             return
-
         if self.logo_label and self.logo_label.parent:
             return
 
-        # Получаем высоты панелей навигации из приложения
         app = MDApp.get_running_app()
-        top_nav_height = dp(56)  # Стандартная высота TopNav
+        top_nav_height = dp(56)
         bottom_nav_height = app.bottom_nav.height if hasattr(app, 'bottom_nav') and app.bottom_nav else dp(76)
 
-        # Первое окно: приветствие с именем
         self.welcome_label = AnimatedWelcomeLabel(
             username,
             top_nav_height=top_nav_height,
@@ -713,15 +645,12 @@ class HomeScreen(BaseScreen):
         self.add_widget(self.welcome_label)
 
     def _on_welcome_closed(self):
-        """После закрытия приветствия показываем логотип GuitarFuns"""
         self.welcome_label = None
 
-        # Получаем высоты панелей навигации из приложения
         app = MDApp.get_running_app()
         top_nav_height = dp(56)
         bottom_nav_height = app.bottom_nav.height if hasattr(app, 'bottom_nav') and app.bottom_nav else dp(76)
 
-        # Второе окно: логотип GuitarFuns
         self.logo_label = AnimatedLogoLabel(
             top_nav_height=top_nav_height,
             bottom_nav_height=bottom_nav_height,
@@ -730,19 +659,15 @@ class HomeScreen(BaseScreen):
         self.add_widget(self.logo_label)
 
     def _on_logo_closed(self):
-        """После закрытия логотипа показываем основной контент"""
         self.logo_label = None
         self._show_main_content()
 
     def _show_main_content(self):
-        """Показывает основной контент с анимацией появления"""
-        # Плавно показываем заголовок и карусель
         anim = Animation(opacity=1, duration=0.4, t='out_quad')
         anim.start(self.title)
         anim.start(self.carousel)
 
     def _check_auth(self, dt):
-        """Проверяет авторизацию при запуске"""
         if self.auth_check_done:
             return
         self.auth_check_done = True
@@ -754,32 +679,26 @@ class HomeScreen(BaseScreen):
             )
         else:
             logger.info("Нет токена, показываем AuthModal")
-            # Показываем сразу контент (без приветствия для неавторизованных)
             self._show_main_content()
             app = MDApp.get_running_app()
             if hasattr(app, 'open_profile'):
                 Clock.schedule_once(lambda x: app.open_profile(), 0.1)
 
     def _on_auth_success(self, user):
-        """Обработчик успешной авторизации"""
         self.user = user
         api.user_data = user
         username = user.get('username', 'Гость')
         logger.info(f'Пользователь авторизован: {username}')
-        # Показываем последовательность приветствий
         Clock.schedule_once(lambda dt: self._show_welcome_sequence(username), 0.2)
 
     def _on_auth_failure(self, req, error):
-        """Обработчик ошибки авторизации"""
         logger.warning(f'Авторизация не пройдена: {error}')
-        # Показываем контент (без приветствия)
         self._show_main_content()
         app = MDApp.get_running_app()
         if hasattr(app, 'open_profile'):
             Clock.schedule_once(lambda x: app.open_profile(), 0.1)
 
     def on_login_success(self):
-        """Обработчик успешного входа через модальное окно"""
         if api.access_token:
             api.get_current_user(
                 on_success=self._on_user_data_loaded,
@@ -787,14 +706,12 @@ class HomeScreen(BaseScreen):
             )
 
     def _on_user_data_loaded(self, user):
-        """Обработчик загрузки данных пользователя"""
         self.user = user
         api.user_data = user
         username = user.get('username', 'Гость')
         self._show_welcome_sequence(username)
 
     def _on_carousel_item_selected(self, screen_name):
-        """Обработчик выбора элемента в карусели"""
         if screen_name == 'profile':
             self._open_profile()
         elif hasattr(self, 'manager') and self.manager:
@@ -802,7 +719,6 @@ class HomeScreen(BaseScreen):
             self.manager.current = screen_name
 
     def _open_profile(self):
-        """Открывает экран профиля"""
         if api.is_authenticated():
             if hasattr(self, 'manager') and self.manager:
                 if 'profile' in self.manager.screen_names:
@@ -815,13 +731,11 @@ class HomeScreen(BaseScreen):
                 app.open_profile()
 
     def on_pre_enter(self):
-        """Вызывается перед входом на экран"""
         if self.carousel:
             self.carousel.start_auto_scroll()
         return super().on_pre_enter()
 
     def on_leave(self):
-        """Вызывается при выходе с экрана"""
         if self.carousel:
             self.carousel.stop_auto_scroll()
         return super().on_leave()

@@ -2,7 +2,6 @@
 """
 Экран песен с алфавитной навигацией и современным поиском
 """
-from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.scrollview import MDScrollView
@@ -20,7 +19,6 @@ from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
-from config.system_bars import get_status_bar_height
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from api.client import api
@@ -30,12 +28,9 @@ logger = screen_logger('Songs')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -465,7 +460,7 @@ class SongsScreen(BaseScreen):
             spacing=dp(12),
             size_hint_y=None,
             adaptive_height=True,
-            padding=[0, 0, 0, layout_config.EXTRA_BOTTOM_PADDING]
+            padding=[0, 0, 0, dp(8)]  # ИСПРАВЛЕНО: убрано использование EXTRA_BOTTOM_PADDING
         )
         content.bind(minimum_height=content.setter('height'))
 
