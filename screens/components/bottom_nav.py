@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Современная нижняя навигация с адаптивными размерами
+Современная нижняя навигация
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -25,7 +25,6 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -51,9 +50,6 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.spacing = dp(self.config['spacing'])
         self.padding = [0, dp(self.config['top_padding']), 0, 0]
 
-        # Используем sp для адаптивного шрифта
-        self.font_size = sp(self.config['font_size'])
-
         self.icon_container = MDBoxLayout(
             size_hint=(1, self.config['icon_height']),
             orientation='vertical'
@@ -64,7 +60,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
         self.text_label = Label(
             text=self.text,
-            font_size=self.font_size,
+            font_size=sp(self.config['font_size']),
             size_hint=(1, 1 - self.config['icon_height']),
             color=theme.TEXT_SECONDARY,
             bold=False,
@@ -127,19 +123,24 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации с адаптивными размерами"""
+    """Нижняя панель навигации"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Применяем пресет в зависимости от размера экрана
-        screen_width = Window.width
-        screen_height = Window.height
-        preset = BottomNavConfig.get_preset_for_screen(screen_width, screen_height)
-        BottomNavConfig.apply_preset(preset)
-        logger.info(f"Нижняя навигация: применён пресет '{preset}' (экран {screen_width}x{screen_height})")
+        # Для Windows всегда используем пресет 'large'
+        if platform == 'win':
+            preset = 'large'
+            BottomNavConfig.apply_preset(preset)
+            logger.info(f"Windows: принудительно применён пресет '{preset}'")
+        else:
+            screen_width = Window.width
+            screen_height = Window.height
+            preset = BottomNavConfig.get_preset_for_screen(screen_width, screen_height)
+            BottomNavConfig.apply_preset(preset)
+            logger.info(f"Нижняя навигация: применён пресет '{preset}' (экран {screen_width}x{screen_height})")
 
         # Высота панели из конфига
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
@@ -148,13 +149,11 @@ class BottomNav(BoxLayout):
         nav_bar_height_dp = get_navigation_bar_height()
 
         if platform == 'android':
-            # Android: добавляем отступ под системную навигацию
+            # Android: иконки прилегают к системной навигации
             self.height = self.panel_height + nav_bar_height_dp
             bottom_padding = nav_bar_height_dp
-            # Небольшой отступ сверху для центрирования иконок
             top_padding = dp(BottomNavConfig.PANEL_PADDING[1])
-            logger.info(f"Android: высота={self.height}dp, иконки={self.panel_height}dp, "
-                        f"системная нав={nav_bar_height_dp}dp")
+            logger.info(f"Android: высота={self.height}dp, иконки={self.panel_height}dp, системная нав={nav_bar_height_dp}dp")
         else:
             # Windows: большие иконки для удобной отладки
             self.height = self.panel_height + nav_bar_height_dp
@@ -162,13 +161,13 @@ class BottomNav(BoxLayout):
             bottom_padding = nav_bar_height_dp
             logger.info(f"Windows: высота={self.height}dp, иконки={self.panel_height}dp")
 
-        # Применяем паддинги
+        # Паддинги
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
-            panel_padding[0],  # левый отступ
-            top_padding,  # верхний отступ
-            panel_padding[2],  # правый отступ
-            bottom_padding  # нижний отступ
+            panel_padding[0],  # левый
+            top_padding,       # верхний
+            panel_padding[2],  # правый
+            bottom_padding     # нижний
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
         self.md_bg_color = [0, 0, 0, 0]
@@ -194,8 +193,8 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info(f"Нижняя навигация: платформа={platform}, высота={self.height}dp, "
-                    f"верхний отступ={self.padding[1]}dp, нижний={self.padding[3]}dp")
+        logger.info(f"Нижняя навигация инициализирована: высота={self.height}dp, "
+                   f"верхний отступ={self.padding[1]}dp, нижний отступ={self.padding[3]}dp")
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
@@ -227,12 +226,7 @@ class BottomNav(BoxLayout):
         self.switch_to(screen_name)
 
     def reload_config(self):
-        """Обновляет конфигурацию панели при изменении размера экрана"""
-        screen_width = Window.width
-        screen_height = Window.height
-        preset = BottomNavConfig.get_preset_for_screen(screen_width, screen_height)
-        BottomNavConfig.apply_preset(preset)
-
+        """Обновляет конфигурацию панели"""
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
         nav_bar_height_dp = get_navigation_bar_height()
 
@@ -254,7 +248,6 @@ class BottomNav(BoxLayout):
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
 
-        # Обновляем каждую кнопку
         for item, (_, _, screen) in zip(self.items, self.nav_items):
             new_config = BottomNavConfig.get_button_config(screen)
             item.config = new_config
@@ -265,4 +258,4 @@ class BottomNav(BoxLayout):
             item.text_label.size_hint = (1, 1 - new_config['icon_height'])
             item._reload_icon()
 
-        logger.info(f"Нижняя навигация обновлена: пресет='{preset}', высота={self.height}dp")
+        logger.info(f"Нижняя навигация обновлена: высота={self.height}dp")
