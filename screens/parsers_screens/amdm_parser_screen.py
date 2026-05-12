@@ -1,6 +1,6 @@
 # screens/parsers_screens/amdm_parser_screen.py
 """
-Экран управления парсером AMDM - современный дизайн
+Экран управления парсером AMDM - переведён на BaseParserScreen
 """
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
@@ -16,19 +16,20 @@ from kivy.uix.scrollview import ScrollView
 from io import BytesIO
 
 from utils.kivy_imports import (
-    MDBoxLayout, MDLabel, MDCard, MDScreen,
-    MDScrollView, MDRaisedButton, MDFlatButton
+    MDBoxLayout, MDLabel, MDCard, MDScrollView,
+    MDRaisedButton, MDFlatButton
 )
 from kivymd.uix.textfield import MDTextField
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.layout_config import layout_config
 from utils.notifications import notify
 from api.client import api
+from .base_parser_screen import BaseParserScreen
 
 logger = screen_logger('AMDMParserScreen')
 
-# Попытка импорта ассетов
 try:
     from data import load_asset_as_bytes
     HAS_ASSETS = True
@@ -54,7 +55,6 @@ ALL_LETTERS = ['0..9'] + list(PAGE_TO_LETTER.values())[1:]
 
 
 class LetterButton(ButtonBehavior, BoxLayout):
-    """Кнопка выбора буквы"""
     def __init__(self, letter, on_select, **kwargs):
         super().__init__(**kwargs)
         self.letter = letter
@@ -62,14 +62,9 @@ class LetterButton(ButtonBehavior, BoxLayout):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
         self.height = dp(48)
-
         letter_label = Label(
-            text=letter,
-            font_size=sp(16),
-            color=[1, 1, 1, 1],
-            bold=True,
-            halign='center',
-            valign='middle'
+            text=letter, font_size=sp(16), color=[1, 1, 1, 1],
+            bold=True, halign='center', valign='middle'
         )
         self.add_widget(letter_label)
         self.bind(on_release=self._on_release)
@@ -79,28 +74,24 @@ class LetterButton(ButtonBehavior, BoxLayout):
 
 
 class CloseButton(ButtonBehavior, BoxLayout):
-    """Кнопка закрытия Popup"""
     def __init__(self, on_close, **kwargs):
         super().__init__(**kwargs)
         self.on_close = on_close
         self.orientation = 'vertical'
         self.size_hint = (None, None)
         self.size = (dp(40), dp(40))
-
         close_label = Label(
-            text="✕",
-            font_size=sp(20),
-            color=[0.9, 0.3, 0.3, 1],
-            bold=True,
-            halign='center',
-            valign='middle'
+            text="✕", font_size=sp(20), color=[0.9, 0.3, 0.3, 1],
+            bold=True, halign='center', valign='middle'
         )
         self.add_widget(close_label)
         self.bind(on_release=lambda x: self.on_close())
 
+    def _on_release(self, instance):
+        self.on_close()
+
 
 class LetterSelector(ButtonBehavior, BoxLayout):
-    """Компонент выбора буквы - Popup с клавиатурой на весь экран"""
     def __init__(self, title="Буква", on_select=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
@@ -111,33 +102,17 @@ class LetterSelector(ButtonBehavior, BoxLayout):
         self.popup = None
 
         self.title_label = Label(
-            text=title,
-            font_size=sp(11),
-            color=[0.7, 0.7, 0.7, 1],
-            size_hint=(0.4, 1),
-            halign='center',
-            valign='middle'
+            text=title, font_size=sp(11), color=[0.7, 0.7, 0.7, 1],
+            size_hint=(0.4, 1), halign='center', valign='middle'
         )
-
         self.value_label = Label(
-            text=self.current_letter,
-            font_size=sp(16),
-            color=[1, 1, 1, 1],
-            bold=True,
-            size_hint=(0.4, 1),
-            halign='center',
-            valign='middle'
+            text=self.current_letter, font_size=sp(16), color=[1, 1, 1, 1],
+            bold=True, size_hint=(0.4, 1), halign='center', valign='middle'
         )
-
         self.arrow_label = Label(
-            text="▼",
-            font_size=sp(12),
-            color=[0.7, 0.7, 0.7, 1],
-            size_hint=(0.2, 1),
-            halign='center',
-            valign='middle'
+            text="▼", font_size=sp(12), color=[0.7, 0.7, 0.7, 1],
+            size_hint=(0.2, 1), halign='center', valign='middle'
         )
-
         self.add_widget(self.title_label)
         self.add_widget(self.value_label)
         self.add_widget(self.arrow_label)
@@ -145,29 +120,16 @@ class LetterSelector(ButtonBehavior, BoxLayout):
         self._create_popup()
 
     def _create_popup(self):
-        """Создаёт Popup с клавиатурой букв на весь экран"""
         content = BoxLayout(
-            orientation='vertical',
-            spacing=dp(8),
+            orientation='vertical', spacing=dp(8),
             padding=[dp(16), dp(16), dp(16), dp(16)],
             size_hint=(1, 1)
         )
-
-        header = BoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(50),
-            spacing=dp(10)
-        )
-
+        header = BoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(50), spacing=dp(10))
         header_title = Label(
-            text="ВЫБЕРИТЕ БУКВУ",
-            font_size=sp(16),
-            color=[1, 1, 1, 1],
-            bold=True,
-            size_hint_x=1
+            text="ВЫБЕРИТЕ БУКВУ", font_size=sp(16),
+            color=[1, 1, 1, 1], bold=True, size_hint_x=1
         )
-
         close_btn = CloseButton(on_close=self._close_popup)
         header.add_widget(header_title)
         header.add_widget(close_btn)
@@ -175,7 +137,6 @@ class LetterSelector(ButtonBehavior, BoxLayout):
 
         grid = GridLayout(cols=8, spacing=dp(6), size_hint_y=None)
         grid.bind(minimum_height=grid.setter('height'))
-
         for letter in ALL_LETTERS:
             letter_btn = LetterButton(letter=letter, on_select=self._select_letter)
             grid.add_widget(letter_btn)
@@ -185,12 +146,9 @@ class LetterSelector(ButtonBehavior, BoxLayout):
         content.add_widget(scroll)
 
         self.popup = Popup(
-            title="",
-            content=content,
-            size_hint=(1, 1),
+            title="", content=content, size_hint=(1, 1),
             background_color=[0.08, 0.08, 0.08, 0.98],
-            separator_color=[0, 0, 0, 0],
-            auto_dismiss=True,
+            separator_color=[0, 0, 0, 0], auto_dismiss=True,
             overlay_color=[0, 0, 0, 0.8]
         )
 
@@ -219,7 +177,6 @@ class LetterSelector(ButtonBehavior, BoxLayout):
 
 
 class StatCard(MDCard):
-    """Карточка статистики (без иконок)"""
     def __init__(self, title, value, color, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
@@ -234,26 +191,15 @@ class StatCard(MDCard):
         self.line_width = 1
 
         self.value_label = MDLabel(
-            text=str(value),
-            font_size=sp(28),
-            bold=True,
-            halign="center",
-            size_hint_y=None,
-            height=dp(36),
-            theme_text_color="Custom",
+            text=str(value), font_size=sp(28), bold=True, halign="center",
+            size_hint_y=None, height=dp(36), theme_text_color="Custom",
             text_color=[color[0], color[1], color[2], 1]
         )
-
         self.title_label = MDLabel(
-            text=title,
-            font_size=sp(9),
-            halign="center",
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
+            text=title, font_size=sp(9), halign="center",
+            size_hint_y=None, height=dp(20), theme_text_color="Custom",
             text_color=[1, 1, 1, 0.6]
         )
-
         self.add_widget(self.value_label)
         self.add_widget(self.title_label)
 
@@ -262,7 +208,6 @@ class StatCard(MDCard):
 
 
 class RecentSongCard(MDCard):
-    """Карточка последней песни с иконкой из ассета"""
     def __init__(self, song_data=None, icon_data=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
@@ -280,7 +225,6 @@ class RecentSongCard(MDCard):
     def update_content(self, song_data=None):
         if song_data:
             self.song_data = song_data
-
         self.clear_widgets()
 
         filename = self.song_data.get('filename', '')
@@ -290,10 +234,8 @@ class RecentSongCard(MDCard):
 
         if not filename:
             empty_label = MDLabel(
-                text="Нет загруженных песен",
-                halign="center",
-                font_size=sp(12),
-                theme_text_color="Custom",
+                text="Нет загруженных песен", halign="center",
+                font_size=sp(12), theme_text_color="Custom",
                 text_color=[0.5, 0.5, 0.5, 0.7]
             )
             self.add_widget(empty_label)
@@ -320,13 +262,9 @@ class RecentSongCard(MDCard):
         self.line_color = line_color
 
         icon_image = Image(
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            pos_hint={'center_y': 0.5},
-            allow_stretch=True,
-            keep_ratio=True
+            size_hint=(None, None), size=(dp(32), dp(32)),
+            pos_hint={'center_y': 0.5}, allow_stretch=True, keep_ratio=True
         )
-
         if self.icon_data:
             try:
                 img = CoreImage(BytesIO(self.icon_data), ext="png")
@@ -339,25 +277,13 @@ class RecentSongCard(MDCard):
             name = name[:32] + "..."
 
         name_label = MDLabel(
-            text=name,
-            font_size=sp(13),
-            bold=True,
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95],
-            valign="middle"
+            text=name, font_size=sp(13), bold=True, size_hint_x=1,
+            theme_text_color="Custom", text_color=[1, 1, 1, 0.95], valign="middle"
         )
-
         status_label = MDLabel(
-            text=status_text,
-            font_size=sp(10),
-            size_hint_x=None,
-            width=dp(70),
-            halign="center",
-            bold=True,
-            theme_text_color="Custom",
-            text_color=line_color,
-            valign="middle"
+            text=status_text, font_size=sp(10), size_hint_x=None, width=dp(70),
+            halign="center", bold=True, theme_text_color="Custom",
+            text_color=line_color, valign="middle"
         )
 
         self.add_widget(icon_image)
@@ -365,7 +291,7 @@ class RecentSongCard(MDCard):
         self.add_widget(status_label)
 
 
-class AMDMParserScreen(MDScreen):
+class AMDMParserScreen(BaseParserScreen):
     """Экран управления парсером AMDM"""
 
     def __init__(self, **kwargs):
@@ -375,13 +301,11 @@ class AMDMParserScreen(MDScreen):
         self.is_on_screen = False
         self.last_song = None
         self.song_icon_data = None
-        self.md_bg_color = [0, 0, 0, 0]
         self.load_icon()
         self.init_ui()
-        logger.info('Экран AMDM парсера создан')
+        logger.info('Экран AMDM парсера создан (BaseParserScreen)')
 
     def load_icon(self):
-        """Загрузить иконку песни из ассетов"""
         if HAS_ASSETS:
             try:
                 self.song_icon_data = load_asset_as_bytes('song_png')
@@ -389,7 +313,6 @@ class AMDMParserScreen(MDScreen):
                 logger.error(f"Ошибка загрузки иконки: {e}")
 
     def exit_to_admin(self, *args):
-        """Выход в админ панель"""
         try:
             self.manager.current = 'admin'
             logger.info("Возврат в админ панель")
@@ -398,15 +321,14 @@ class AMDMParserScreen(MDScreen):
             notify.error("Ошибка возврата")
 
     def init_ui(self):
-        scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False)
-
-        main_layout = MDBoxLayout(
+        # Создаём контент (без ручных отступов!)
+        content = MDBoxLayout(
             orientation='vertical',
-            padding=[dp(16), dp(65), dp(16), dp(16)],
             spacing=dp(12),
-            size_hint_y=None
+            size_hint_y=None,
+            adaptive_height=True,
+            padding=[dp(16), dp(0), dp(16), dp(0)]
         )
-        main_layout.bind(minimum_height=main_layout.setter('height'))
 
         # Заголовок
         title_card = MDCard(
@@ -418,25 +340,18 @@ class AMDMParserScreen(MDScreen):
             md_bg_color=[0.15, 0.25, 0.35, 0.5],
             elevation=0
         )
-
         title_label = MDLabel(
-            text="AMDM ПАРСЕР",
-            font_size=sp(22),
-            halign="center",
-            bold=True,
-            theme_text_color="Custom",
-            text_color=[0.4, 0.7, 0.9, 1]
+            text="AMDM ПАРСЕР", font_size=sp(22), halign="center",
+            bold=True, theme_text_color="Custom", text_color=[0.4, 0.7, 0.9, 1]
         )
         subtitle_label = MDLabel(
-            text="загрузка аккордов с amdm.ru",
-            font_size=sp(11),
-            halign="center",
-            theme_text_color="Custom",
+            text="загрузка аккордов с amdm.ru", font_size=sp(11),
+            halign="center", theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5]
         )
         title_card.add_widget(title_label)
         title_card.add_widget(subtitle_label)
-        main_layout.add_widget(title_card)
+        content.add_widget(title_card)
 
         # Настройки
         settings_card = MDCard(
@@ -462,23 +377,14 @@ class AMDMParserScreen(MDScreen):
         settings_card.add_widget(self.subdomain_field)
 
         letters_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(50))
-
-        self.start_letter_selector = LetterSelector(
-            title="ОТ",
-            on_select=self.on_start_letter_selected
-        )
-
-        self.end_letter_selector = LetterSelector(
-            title="ДО",
-            on_select=self.on_end_letter_selected
-        )
-
+        self.start_letter_selector = LetterSelector(title="ОТ", on_select=self.on_start_letter_selected)
+        self.end_letter_selector = LetterSelector(title="ДО", on_select=self.on_end_letter_selected)
         letters_layout.add_widget(self.start_letter_selector)
         letters_layout.add_widget(self.end_letter_selector)
         settings_card.add_widget(letters_layout)
-        main_layout.add_widget(settings_card)
+        content.add_widget(settings_card)
 
-        # Кнопки управления (3 кнопки в ряд)
+        # Кнопки управления
         buttons_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -488,31 +394,23 @@ class AMDMParserScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0.2],
             elevation=0
         )
-
         buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
 
         self.start_btn = MDRaisedButton(
-            text="ЗАПУСТИТЬ",
-            size_hint_x=0.45,
-            md_bg_color=[0.2, 0.6, 0.2, 1],
-            font_size=sp(13)
+            text="ЗАПУСТИТЬ", size_hint_x=0.45,
+            md_bg_color=[0.2, 0.6, 0.2, 1], font_size=sp(13)
         )
         self.start_btn.bind(on_release=self.start_parser)
 
         self.stop_btn = MDRaisedButton(
-            text="ОСТАНОВИТЬ",
-            size_hint_x=0.45,
-            disabled=True,
-            md_bg_color=[0.6, 0.2, 0.2, 1],
-            font_size=sp(13)
+            text="ОСТАНОВИТЬ", size_hint_x=0.45,
+            disabled=True, md_bg_color=[0.6, 0.2, 0.2, 1], font_size=sp(13)
         )
         self.stop_btn.bind(on_release=self.stop_parser)
 
         self.exit_btn = MDRaisedButton(
-            text="ВЫХОД",
-            size_hint_x=0.45,
-            md_bg_color=[0.4, 0.4, 0.8, 1],
-            font_size=sp(13)
+            text="ВЫХОД", size_hint_x=0.45,
+            md_bg_color=[0.4, 0.4, 0.8, 1], font_size=sp(13)
         )
         self.exit_btn.bind(on_release=self.exit_to_admin)
 
@@ -520,39 +418,34 @@ class AMDMParserScreen(MDScreen):
         buttons_layout.add_widget(self.stop_btn)
         buttons_layout.add_widget(self.exit_btn)
         buttons_card.add_widget(buttons_layout)
-        main_layout.add_widget(buttons_card)
+        content.add_widget(buttons_card)
 
-        # 4 карточки статистики
+        # Статистика
         stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
-
         self.total_card = StatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
         self.new_card = StatCard("НОВЫЕ", 0, [0.3, 0.8, 0.3])
         self.dup_card = StatCard("ПОВТОР", 0, [0.9, 0.7, 0.2])
         self.err_card = StatCard("ОШИБКИ", 0, [0.9, 0.4, 0.4])
-
         stats_grid.add_widget(self.total_card)
         stats_grid.add_widget(self.new_card)
         stats_grid.add_widget(self.dup_card)
         stats_grid.add_widget(self.err_card)
-        main_layout.add_widget(stats_grid)
+        content.add_widget(stats_grid)
 
-        # Карточка последней песни
+        # Последняя песня
         self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
-        main_layout.add_widget(self.last_song_container)
+        content.add_widget(self.last_song_container)
 
+        # Статус
         self.status_label = MDLabel(
-            text="Готов к работе",
-            halign="center",
-            size_hint_y=None,
-            height=dp(35),
-            font_size=sp(11),
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 1]
+            text="Готов к работе", halign="center", size_hint_y=None,
+            height=dp(35), font_size=sp(11), theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7]
         )
-        main_layout.add_widget(self.status_label)
+        content.add_widget(self.status_label)
 
-        scroll.add_widget(main_layout)
-        self.add_widget(scroll)
+        # Строим UI с помощью базового класса
+        self.build_ui(content, scroll=True)
 
     def on_start_letter_selected(self, letter):
         pass
@@ -564,7 +457,6 @@ class AMDMParserScreen(MDScreen):
         return LETTER_TO_PAGE.get(letter, 0)
 
     def start_auto_update(self):
-        """Начать автоматическое обновление статуса"""
         if not self.is_on_screen:
             return
         if self.update_event:
@@ -572,7 +464,6 @@ class AMDMParserScreen(MDScreen):
         self.update_event = Clock.schedule_interval(self._check_status_loop, 2)
 
     def stop_auto_update(self):
-        """Остановить автоматическое обновление"""
         if self.update_event:
             self.update_event.cancel()
             self.update_event = None
@@ -585,10 +476,8 @@ class AMDMParserScreen(MDScreen):
     def _fetch_status(self):
         try:
             result = api.get_amdm_parser_status_sync()
-
             if result and result.get('success'):
                 data = result.get('data', result)
-
                 is_running = data.get('is_running', False)
                 is_paused = data.get('is_paused', False)
 
@@ -617,7 +506,6 @@ class AMDMParserScreen(MDScreen):
                 self.err_card.update_value(stats.get('errors', 0))
 
                 last_song = data.get('last_song', {})
-
                 if last_song and last_song.get('filename'):
                     if self.last_song != last_song.get('filename'):
                         self.last_song = last_song.get('filename')
@@ -669,11 +557,6 @@ class AMDMParserScreen(MDScreen):
             if result and result.get('success'):
                 notify.info("Парсер остановлен")
                 self._fetch_status()
-            else:
-                api.stop_amdm_parser(
-                    on_success=lambda x: (notify.info("Парсер остановлен"), self._fetch_status()),
-                    on_failure=lambda x, e: notify.error(f"Ошибка: {e}")
-                )
         except Exception as e:
             logger.error(f"Ошибка: {e}")
             notify.error(f"Ошибка: {e}")

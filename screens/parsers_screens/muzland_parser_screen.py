@@ -1,6 +1,6 @@
 # screens/parsers_screens/muzland_parser_screen.py
 """
-Экран управления парсером Muzland.Ru - парсит по группам
+Экран управления парсером Muzland.Ru - переведён на BaseParserScreen
 """
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
@@ -11,25 +11,24 @@ from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
 
 from utils.kivy_imports import (
-    MDBoxLayout, MDLabel, MDCard, MDScreen,
+    MDBoxLayout, MDLabel, MDCard,
     MDScrollView, MDRaisedButton
 )
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.layout_config import layout_config
 from utils.notifications import notify
 from api.client import api
+from .base_parser_screen import BaseParserScreen
 
 logger = screen_logger('MuzlandParserScreen')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -84,13 +83,19 @@ class MuzlandRecentSongCard(MDCard):
         if song_data:
             self.song_data = song_data
         self.clear_widgets()
+
         filename = self.song_data.get('filename', '')
         status = self.song_data.get('status', 'unknown')
+
         if not filename:
-            empty_label = MDLabel(text="Нет загруженных песен", halign="center", font_size=sp(12),
-                                  theme_text_color="Custom", text_color=[0.5, 0.5, 0.5, 0.7])
+            empty_label = MDLabel(
+                text="Нет загруженных песен", halign="center",
+                font_size=sp(12), theme_text_color="Custom",
+                text_color=[0.5, 0.5, 0.5, 0.7]
+            )
             self.add_widget(empty_label)
             return
+
         if status == 'new':
             bg_color = [0.2, 0.7, 0.2, 0.2]
             line_color = [0.2, 0.8, 0.2, 0.8]
@@ -107,30 +112,41 @@ class MuzlandRecentSongCard(MDCard):
             bg_color = [0.3, 0.3, 0.3, 0.2]
             line_color = [0.5, 0.5, 0.5, 0.8]
             status_text = "ОЖИДАНИЕ"
+
         self.md_bg_color = bg_color
         self.line_color = line_color
-        icon_image = Image(size_hint=(None, None), size=(dp(32), dp(32)), pos_hint={'center_y': 0.5},
-                           allow_stretch=True, keep_ratio=True)
+
+        icon_image = Image(
+            size_hint=(None, None), size=(dp(32), dp(32)),
+            pos_hint={'center_y': 0.5}, allow_stretch=True, keep_ratio=True
+        )
         if self.icon_data:
             try:
                 img = CoreImage(BytesIO(self.icon_data), ext="png")
                 icon_image.texture = img.texture
             except:
                 pass
+
         name = filename.replace('.txt', '')
         if len(name) > 35:
             name = name[:32] + "..."
-        name_label = MDLabel(text=name, font_size=sp(13), bold=True, size_hint_x=1,
-                             theme_text_color="Custom", text_color=[1, 1, 1, 0.95], valign="middle")
-        status_label = MDLabel(text=status_text, font_size=sp(10), size_hint_x=None, width=dp(70),
-                               halign="center", bold=True, theme_text_color="Custom",
-                               text_color=line_color, valign="middle")
+
+        name_label = MDLabel(
+            text=name, font_size=sp(13), bold=True, size_hint_x=1,
+            theme_text_color="Custom", text_color=[1, 1, 1, 0.95], valign="middle"
+        )
+        status_label = MDLabel(
+            text=status_text, font_size=sp(10), size_hint_x=None, width=dp(70),
+            halign="center", bold=True, theme_text_color="Custom",
+            text_color=line_color, valign="middle"
+        )
+
         self.add_widget(icon_image)
         self.add_widget(name_label)
         self.add_widget(status_label)
 
 
-class MuzlandParserScreen(MDScreen):
+class MuzlandParserScreen(BaseParserScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'muzland_parser'
@@ -138,10 +154,9 @@ class MuzlandParserScreen(MDScreen):
         self.is_on_screen = False
         self.last_song = None
         self.song_icon_data = None
-        self.md_bg_color = [0, 0, 0, 0]
         self.load_icon()
         self.init_ui()
-        logger.info('Экран Muzland парсера создан')
+        logger.info('Экран Muzland парсера создан (BaseParserScreen)')
 
     def load_icon(self):
         if HAS_ASSETS:
@@ -159,16 +174,15 @@ class MuzlandParserScreen(MDScreen):
             notify.error("Ошибка возврата")
 
     def init_ui(self):
-        scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False)
-
-        main_layout = MDBoxLayout(
+        content = MDBoxLayout(
             orientation='vertical',
-            padding=[dp(16), dp(65), dp(16), dp(16)],
             spacing=dp(12),
-            size_hint_y=None
+            size_hint_y=None,
+            adaptive_height=True,
+            padding=[dp(16), dp(0), dp(16), dp(0)]
         )
-        main_layout.bind(minimum_height=main_layout.setter('height'))
 
+        # Заголовок
         title_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -178,26 +192,19 @@ class MuzlandParserScreen(MDScreen):
             md_bg_color=[0.15, 0.25, 0.35, 0.5],
             elevation=0
         )
-
         title_label = MDLabel(
-            text="MUZLAND ПАРСЕР",
-            font_size=sp(22),
-            halign="center",
-            bold=True,
-            theme_text_color="Custom",
-            text_color=[0.5, 0.8, 0.6, 1]
+            text="MUZLAND ПАРСЕР", font_size=sp(22), halign="center",
+            bold=True, theme_text_color="Custom", text_color=[0.5, 0.8, 0.6, 1]
         )
         subtitle_label = MDLabel(
-            text="загрузка аккордов с muzland.ru",
-            font_size=sp(11),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5]
+            text="загрузка аккордов с muzland.ru", font_size=sp(11),
+            halign="center", theme_text_color="Custom", text_color=[1, 1, 1, 0.5]
         )
         title_card.add_widget(title_label)
         title_card.add_widget(subtitle_label)
-        main_layout.add_widget(title_card)
+        content.add_widget(title_card)
 
+        # Информационная карточка
         info_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -208,17 +215,15 @@ class MuzlandParserScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0.2],
             elevation=0
         )
-
         info_text = MDLabel(
             text="Парсер загружает все группы подряд\nот начала до конца. Для остановки\nиспользуйте кнопку ОСТАНОВИТЬ",
-            font_size=sp(12),
-            halign="center",
-            theme_text_color="Custom",
+            font_size=sp(12), halign="center", theme_text_color="Custom",
             text_color=[1, 1, 1, 0.7]
         )
         info_card.add_widget(info_text)
-        main_layout.add_widget(info_card)
+        content.add_widget(info_card)
 
+        # Кнопки управления
         buttons_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -228,31 +233,23 @@ class MuzlandParserScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0.2],
             elevation=0
         )
-
         buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
 
         self.start_btn = MDRaisedButton(
-            text="ЗАПУСТИТЬ",
-            size_hint_x=0.45,
-            md_bg_color=[0.2, 0.6, 0.2, 1],
-            font_size=sp(13)
+            text="ЗАПУСТИТЬ", size_hint_x=0.45,
+            md_bg_color=[0.2, 0.6, 0.2, 1], font_size=sp(13)
         )
         self.start_btn.bind(on_release=self.start_parser)
 
         self.stop_btn = MDRaisedButton(
-            text="ОСТАНОВИТЬ",
-            size_hint_x=0.45,
-            disabled=True,
-            md_bg_color=[0.6, 0.2, 0.2, 1],
-            font_size=sp(13)
+            text="ОСТАНОВИТЬ", size_hint_x=0.45,
+            disabled=True, md_bg_color=[0.6, 0.2, 0.2, 1], font_size=sp(13)
         )
         self.stop_btn.bind(on_release=self.stop_parser)
 
         self.exit_btn = MDRaisedButton(
-            text="ВЫХОД",
-            size_hint_x=0.45,
-            md_bg_color=[0.4, 0.4, 0.8, 1],
-            font_size=sp(13)
+            text="ВЫХОД", size_hint_x=0.45,
+            md_bg_color=[0.4, 0.4, 0.8, 1], font_size=sp(13)
         )
         self.exit_btn.bind(on_release=self.exit_to_admin)
 
@@ -260,71 +257,53 @@ class MuzlandParserScreen(MDScreen):
         buttons_layout.add_widget(self.stop_btn)
         buttons_layout.add_widget(self.exit_btn)
         buttons_card.add_widget(buttons_layout)
-        main_layout.add_widget(buttons_card)
+        content.add_widget(buttons_card)
 
+        # Статистика
         stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
-
         self.total_card = MuzlandStatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
         self.new_card = MuzlandStatCard("НОВЫЕ", 0, [0.3, 0.8, 0.3])
         self.dup_card = MuzlandStatCard("ПОВТОР", 0, [0.9, 0.7, 0.2])
         self.err_card = MuzlandStatCard("ОШИБКИ", 0, [0.9, 0.4, 0.4])
-
         stats_grid.add_widget(self.total_card)
         stats_grid.add_widget(self.new_card)
         stats_grid.add_widget(self.dup_card)
         stats_grid.add_widget(self.err_card)
-        main_layout.add_widget(stats_grid)
+        content.add_widget(stats_grid)
 
+        # Последняя песня
         self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
-        main_layout.add_widget(self.last_song_container)
+        content.add_widget(self.last_song_container)
 
+        # Статус
         self.status_label = MDLabel(
-            text="Готов к работе",
-            halign="center",
-            size_hint_y=None,
-            height=dp(35),
-            font_size=sp(11),
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 1]
+            text="Готов к работе", halign="center", size_hint_y=None,
+            height=dp(35), font_size=sp(11), theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7]
         )
-        main_layout.add_widget(self.status_label)
+        content.add_widget(self.status_label)
 
-        scroll.add_widget(main_layout)
-        self.add_widget(scroll)
-
-    # ============ НОВЫЕ МЕТОДЫ ДЛЯ ФИЛЬТРАЦИИ ============
+        self.build_ui(content, scroll=True)
 
     def _is_real_song(self, filename, status):
-        """
-        Проверяет, является ли запись реальной песней.
-        Возвращает True только для настоящих песен.
-        """
         if status not in ['new', 'duplicate', 'error']:
             return False
-
         if not filename:
             return False
-
-        # Проверяем, что это не служебное сообщение
         service_patterns = [
             'Группа:', 'Обработка', 'Найдено', 'Запуск',
             'Завершение', 'Получение', 'Поиск файлов', 'Удаление файлов'
         ]
-
         filename_lower = filename.lower()
         for pattern in service_patterns:
             if pattern.lower() in filename_lower:
                 return False
-
-        # Реальная песня должна содержать дефис (Артист - Песня) или заканчиваться на .txt
         if ' - ' in filename or filename.endswith('.txt'):
             if len(filename) > 5:
                 return True
-
         return False
 
     def _update_last_song_display(self, last_song):
-        """Обновляет отображение последней песни, показывая только реальные песни"""
         if not last_song:
             if self.last_song_container.height != 0:
                 self.last_song_container.height = dp(0)
@@ -371,6 +350,7 @@ class MuzlandParserScreen(MDScreen):
             if result and result.get('success'):
                 data = result.get('data', result)
                 is_running = data.get('is_running', False)
+
                 if is_running:
                     self.start_btn.disabled = True
                     self.start_btn.md_bg_color = [0.3, 0.3, 0.3, 1]

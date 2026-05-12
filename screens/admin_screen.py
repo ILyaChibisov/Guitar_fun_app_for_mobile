@@ -2,7 +2,7 @@
 """
 Экран администратора - переведён на BaseScreen
 """
-from kivy.uix.widget import Widget
+from kivy.uix.widget import Widget  # ДОБАВЛЕН ИМПОРТ
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -262,6 +262,9 @@ class AdminScreen(BaseScreen):
             on_click=self.clear_cache
         )
         content.add_widget(clear_cache_card)
+
+        # Нижний отступ
+        content.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
         # Строим UI с помощью BaseScreen (с ScrollView)
         self.build_ui(content_widget=content, use_scroll=True)

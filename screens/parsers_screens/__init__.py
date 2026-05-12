@@ -1,4 +1,5 @@
 # screens/parsers_screens/__init__.py
+from .base_parser_screen import BaseParserScreen
 from .amdm_parser_screen import AMDMParserScreen
 from .mytabs_parser_screen import MyTabsParserScreen
 from .accord_pro_parser_screen import AccordProParserScreen
@@ -11,6 +12,7 @@ from .domhve_parser_screen import DomhveParserScreen
 from .rushsound_parser_screen import RushSoundParserScreen
 
 __all__ = [
+    'BaseParserScreen',
     'AMDMParserScreen',
     'MyTabsParserScreen',
     'AccordProParserScreen',

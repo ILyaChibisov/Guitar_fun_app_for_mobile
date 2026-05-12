@@ -1,6 +1,6 @@
 # screens/parsers_screens/chordie_parser_screen.py
 """
-Экран управления парсером Chordie.com - выбор букв A-Z и цифр 0-9
+Экран управления парсером Chordie.com - переведён на BaseParserScreen
 """
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
@@ -16,28 +16,27 @@ from kivy.uix.scrollview import ScrollView
 from io import BytesIO
 
 from utils.kivy_imports import (
-    MDBoxLayout, MDLabel, MDCard, MDScreen,
-    MDScrollView, MDRaisedButton, MDFlatButton
+    MDBoxLayout, MDLabel, MDCard,
+    MDScrollView, MDRaisedButton
 )
-from kivymd.uix.textfield import MDTextField
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.layout_config import layout_config
 from utils.notifications import notify
 from api.client import api
+from .base_parser_screen import BaseParserScreen
 
 logger = screen_logger('ChordieParserScreen')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
+
 
 CHORDIE_LETTERS = []
 for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
@@ -56,8 +55,10 @@ class ChordieLetterButton(ButtonBehavior, BoxLayout):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
         self.height = dp(48)
-        letter_label = Label(text=letter, font_size=sp(16), color=[1, 1, 1, 1], bold=True,
-                             halign='center', valign='middle')
+        letter_label = Label(
+            text=letter, font_size=sp(16), color=[1, 1, 1, 1],
+            bold=True, halign='center', valign='middle'
+        )
         self.add_widget(letter_label)
         self.bind(on_release=self._on_release)
 
@@ -72,10 +73,15 @@ class ChordieCloseButton(ButtonBehavior, BoxLayout):
         self.orientation = 'vertical'
         self.size_hint = (None, None)
         self.size = (dp(40), dp(40))
-        close_label = Label(text="✕", font_size=sp(20), color=[0.9, 0.3, 0.3, 1],
-                            bold=True, halign='center', valign='middle')
+        close_label = Label(
+            text="✕", font_size=sp(20), color=[0.9, 0.3, 0.3, 1],
+            bold=True, halign='center', valign='middle'
+        )
         self.add_widget(close_label)
         self.bind(on_release=lambda x: self.on_close())
+
+    def _on_release(self, instance):
+        self.on_close()
 
 
 class ChordieLetterSelector(ButtonBehavior, BoxLayout):
@@ -88,12 +94,18 @@ class ChordieLetterSelector(ButtonBehavior, BoxLayout):
         self.current_letter = 'A'
         self.popup = None
 
-        self.title_label = Label(text=title, font_size=sp(11), color=[0.7, 0.7, 0.7, 1],
-                                 size_hint=(0.4, 1), halign='center', valign='middle')
-        self.value_label = Label(text=self.current_letter, font_size=sp(16), color=[1, 1, 1, 1],
-                                 bold=True, size_hint=(0.4, 1), halign='center', valign='middle')
-        self.arrow_label = Label(text="▼", font_size=sp(12), color=[0.7, 0.7, 0.7, 1],
-                                 size_hint=(0.2, 1), halign='center', valign='middle')
+        self.title_label = Label(
+            text=title, font_size=sp(11), color=[0.7, 0.7, 0.7, 1],
+            size_hint=(0.4, 1), halign='center', valign='middle'
+        )
+        self.value_label = Label(
+            text=self.current_letter, font_size=sp(16), color=[1, 1, 1, 1],
+            bold=True, size_hint=(0.4, 1), halign='center', valign='middle'
+        )
+        self.arrow_label = Label(
+            text="▼", font_size=sp(12), color=[0.7, 0.7, 0.7, 1],
+            size_hint=(0.2, 1), halign='center', valign='middle'
+        )
         self.add_widget(self.title_label)
         self.add_widget(self.value_label)
         self.add_widget(self.arrow_label)
@@ -101,25 +113,37 @@ class ChordieLetterSelector(ButtonBehavior, BoxLayout):
         self._create_popup()
 
     def _create_popup(self):
-        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=[dp(16), dp(16), dp(16), dp(16)],
-                            size_hint=(1, 1))
+        content = BoxLayout(
+            orientation='vertical', spacing=dp(8),
+            padding=[dp(16), dp(16), dp(16), dp(16)],
+            size_hint=(1, 1)
+        )
         header = BoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(50), spacing=dp(10))
-        header_title = Label(text="ВЫБЕРИТЕ БУКВУ (CHORDIE)", font_size=sp(16), color=[1, 1, 1, 1],
-                             bold=True, size_hint_x=1)
+        header_title = Label(
+            text="ВЫБЕРИТЕ БУКВУ (CHORDIE)", font_size=sp(16),
+            color=[1, 1, 1, 1], bold=True, size_hint_x=1
+        )
         close_btn = ChordieCloseButton(on_close=self._close_popup)
         header.add_widget(header_title)
         header.add_widget(close_btn)
         content.add_widget(header)
+
         grid = GridLayout(cols=9, spacing=dp(6), size_hint_y=None)
         grid.bind(minimum_height=grid.setter('height'))
         for letter in CHORDIE_LETTERS:
             letter_btn = ChordieLetterButton(letter=letter, on_select=self._select_letter)
             grid.add_widget(letter_btn)
+
         scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False, do_scroll_y=True)
         scroll.add_widget(grid)
         content.add_widget(scroll)
-        self.popup = Popup(title="", content=content, size_hint=(1, 1), background_color=[0.08, 0.08, 0.08, 0.98],
-                           separator_color=[0, 0, 0, 0], auto_dismiss=True, overlay_color=[0, 0, 0, 0.8])
+
+        self.popup = Popup(
+            title="", content=content, size_hint=(1, 1),
+            background_color=[0.08, 0.08, 0.08, 0.98],
+            separator_color=[0, 0, 0, 0], auto_dismiss=True,
+            overlay_color=[0, 0, 0, 0.8]
+        )
 
     def _close_popup(self):
         if self.popup:
@@ -153,11 +177,17 @@ class ChordieStatCard(MDCard):
         self.md_bg_color = [color[0], color[1], color[2], 0.12]
         self.line_color = [color[0], color[1], color[2], 0.4]
         self.line_width = 1
-        self.value_label = MDLabel(text=str(value), font_size=sp(28), bold=True, halign="center",
-                                   size_hint_y=None, height=dp(36), theme_text_color="Custom",
-                                   text_color=[color[0], color[1], color[2], 1])
-        self.title_label = MDLabel(text=title, font_size=sp(9), halign="center", size_hint_y=None, height=dp(20),
-                                   theme_text_color="Custom", text_color=[1, 1, 1, 0.6])
+
+        self.value_label = MDLabel(
+            text=str(value), font_size=sp(28), bold=True, halign="center",
+            size_hint_y=None, height=dp(36), theme_text_color="Custom",
+            text_color=[color[0], color[1], color[2], 1]
+        )
+        self.title_label = MDLabel(
+            text=title, font_size=sp(9), halign="center",
+            size_hint_y=None, height=dp(20), theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6]
+        )
         self.add_widget(self.value_label)
         self.add_widget(self.title_label)
 
@@ -184,13 +214,19 @@ class ChordieRecentSongCard(MDCard):
         if song_data:
             self.song_data = song_data
         self.clear_widgets()
+
         filename = self.song_data.get('filename', '')
         status = self.song_data.get('status', 'unknown')
+
         if not filename:
-            empty_label = MDLabel(text="Нет загруженных песен", halign="center", font_size=sp(12),
-                                  theme_text_color="Custom", text_color=[0.5, 0.5, 0.5, 0.7])
+            empty_label = MDLabel(
+                text="Нет загруженных песен", halign="center",
+                font_size=sp(12), theme_text_color="Custom",
+                text_color=[0.5, 0.5, 0.5, 0.7]
+            )
             self.add_widget(empty_label)
             return
+
         if status == 'new':
             bg_color = [0.2, 0.7, 0.2, 0.2]
             line_color = [0.2, 0.8, 0.2, 0.8]
@@ -207,30 +243,41 @@ class ChordieRecentSongCard(MDCard):
             bg_color = [0.3, 0.3, 0.3, 0.2]
             line_color = [0.5, 0.5, 0.5, 0.8]
             status_text = "ОЖИДАНИЕ"
+
         self.md_bg_color = bg_color
         self.line_color = line_color
-        icon_image = Image(size_hint=(None, None), size=(dp(32), dp(32)), pos_hint={'center_y': 0.5},
-                           allow_stretch=True, keep_ratio=True)
+
+        icon_image = Image(
+            size_hint=(None, None), size=(dp(32), dp(32)),
+            pos_hint={'center_y': 0.5}, allow_stretch=True, keep_ratio=True
+        )
         if self.icon_data:
             try:
                 img = CoreImage(BytesIO(self.icon_data), ext="png")
                 icon_image.texture = img.texture
             except:
                 pass
+
         name = filename.replace('.txt', '')
         if len(name) > 35:
             name = name[:32] + "..."
-        name_label = MDLabel(text=name, font_size=sp(13), bold=True, size_hint_x=1,
-                             theme_text_color="Custom", text_color=[1, 1, 1, 0.95], valign="middle")
-        status_label = MDLabel(text=status_text, font_size=sp(10), size_hint_x=None, width=dp(70),
-                               halign="center", bold=True, theme_text_color="Custom",
-                               text_color=line_color, valign="middle")
+
+        name_label = MDLabel(
+            text=name, font_size=sp(13), bold=True, size_hint_x=1,
+            theme_text_color="Custom", text_color=[1, 1, 1, 0.95], valign="middle"
+        )
+        status_label = MDLabel(
+            text=status_text, font_size=sp(10), size_hint_x=None, width=dp(70),
+            halign="center", bold=True, theme_text_color="Custom",
+            text_color=line_color, valign="middle"
+        )
+
         self.add_widget(icon_image)
         self.add_widget(name_label)
         self.add_widget(status_label)
 
 
-class ChordieParserScreen(MDScreen):
+class ChordieParserScreen(BaseParserScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'chordie_parser'
@@ -238,10 +285,9 @@ class ChordieParserScreen(MDScreen):
         self.is_on_screen = False
         self.last_song = None
         self.song_icon_data = None
-        self.md_bg_color = [0, 0, 0, 0]
         self.load_icon()
         self.init_ui()
-        logger.info('Экран Chordie парсера создан')
+        logger.info('Экран Chordie парсера создан (BaseParserScreen)')
 
     def load_icon(self):
         if HAS_ASSETS:
@@ -259,16 +305,15 @@ class ChordieParserScreen(MDScreen):
             notify.error("Ошибка возврата")
 
     def init_ui(self):
-        scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False)
-
-        main_layout = MDBoxLayout(
+        content = MDBoxLayout(
             orientation='vertical',
-            padding=[dp(16), dp(65), dp(16), dp(16)],
             spacing=dp(12),
-            size_hint_y=None
+            size_hint_y=None,
+            adaptive_height=True,
+            padding=[dp(16), dp(0), dp(16), dp(0)]
         )
-        main_layout.bind(minimum_height=main_layout.setter('height'))
 
+        # Заголовок
         title_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -278,26 +323,19 @@ class ChordieParserScreen(MDScreen):
             md_bg_color=[0.15, 0.25, 0.35, 0.5],
             elevation=0
         )
-
         title_label = MDLabel(
-            text="CHORDIE ПАРСЕР",
-            font_size=sp(22),
-            halign="center",
-            bold=True,
-            theme_text_color="Custom",
-            text_color=[0.3, 0.8, 0.5, 1]
+            text="CHORDIE ПАРСЕР", font_size=sp(22), halign="center",
+            bold=True, theme_text_color="Custom", text_color=[0.3, 0.8, 0.5, 1]
         )
         subtitle_label = MDLabel(
-            text="загрузка аккордов с chordie.com",
-            font_size=sp(11),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5]
+            text="загрузка аккордов с chordie.com", font_size=sp(11),
+            halign="center", theme_text_color="Custom", text_color=[1, 1, 1, 0.5]
         )
         title_card.add_widget(title_label)
         title_card.add_widget(subtitle_label)
-        main_layout.add_widget(title_card)
+        content.add_widget(title_card)
 
+        # Настройки (выбор букв)
         settings_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -310,24 +348,15 @@ class ChordieParserScreen(MDScreen):
             line_color=[1, 1, 1, 0.05],
             line_width=1
         )
-
         letters_layout = MDBoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None, height=dp(50))
-
-        self.start_letter_selector = ChordieLetterSelector(
-            title="ОТ",
-            on_select=self.on_start_letter_selected
-        )
-
-        self.end_letter_selector = ChordieLetterSelector(
-            title="ДО",
-            on_select=self.on_end_letter_selected
-        )
-
+        self.start_letter_selector = ChordieLetterSelector(title="ОТ", on_select=self.on_start_letter_selected)
+        self.end_letter_selector = ChordieLetterSelector(title="ДО", on_select=self.on_end_letter_selected)
         letters_layout.add_widget(self.start_letter_selector)
         letters_layout.add_widget(self.end_letter_selector)
         settings_card.add_widget(letters_layout)
-        main_layout.add_widget(settings_card)
+        content.add_widget(settings_card)
 
+        # Кнопки управления
         buttons_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -337,31 +366,23 @@ class ChordieParserScreen(MDScreen):
             md_bg_color=[0, 0, 0, 0.2],
             elevation=0
         )
-
         buttons_layout = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
 
         self.start_btn = MDRaisedButton(
-            text="ЗАПУСТИТЬ",
-            size_hint_x=0.45,
-            md_bg_color=[0.2, 0.6, 0.2, 1],
-            font_size=sp(13)
+            text="ЗАПУСТИТЬ", size_hint_x=0.45,
+            md_bg_color=[0.2, 0.6, 0.2, 1], font_size=sp(13)
         )
         self.start_btn.bind(on_release=self.start_parser)
 
         self.stop_btn = MDRaisedButton(
-            text="ОСТАНОВИТЬ",
-            size_hint_x=0.45,
-            disabled=True,
-            md_bg_color=[0.6, 0.2, 0.2, 1],
-            font_size=sp(13)
+            text="ОСТАНОВИТЬ", size_hint_x=0.45,
+            disabled=True, md_bg_color=[0.6, 0.2, 0.2, 1], font_size=sp(13)
         )
         self.stop_btn.bind(on_release=self.stop_parser)
 
         self.exit_btn = MDRaisedButton(
-            text="ВЫХОД",
-            size_hint_x=0.45,
-            md_bg_color=[0.4, 0.4, 0.8, 1],
-            font_size=sp(13)
+            text="ВЫХОД", size_hint_x=0.45,
+            md_bg_color=[0.4, 0.4, 0.8, 1], font_size=sp(13)
         )
         self.exit_btn.bind(on_release=self.exit_to_admin)
 
@@ -369,21 +390,21 @@ class ChordieParserScreen(MDScreen):
         buttons_layout.add_widget(self.stop_btn)
         buttons_layout.add_widget(self.exit_btn)
         buttons_card.add_widget(buttons_layout)
-        main_layout.add_widget(buttons_card)
+        content.add_widget(buttons_card)
 
+        # Статистика
         stats_grid = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(85))
-
         self.total_card = ChordieStatCard("ВСЕГО", 0, [0.4, 0.7, 0.9])
         self.new_card = ChordieStatCard("НОВЫЕ", 0, [0.3, 0.8, 0.3])
         self.dup_card = ChordieStatCard("ПОВТОР", 0, [0.9, 0.7, 0.2])
         self.err_card = ChordieStatCard("ОШИБКИ", 0, [0.9, 0.4, 0.4])
-
         stats_grid.add_widget(self.total_card)
         stats_grid.add_widget(self.new_card)
         stats_grid.add_widget(self.dup_card)
         stats_grid.add_widget(self.err_card)
-        main_layout.add_widget(stats_grid)
+        content.add_widget(stats_grid)
 
+        # Текущая буква
         self.letter_card = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -393,33 +414,26 @@ class ChordieParserScreen(MDScreen):
             md_bg_color=[0.2, 0.3, 0.4, 0.3],
             elevation=0
         )
-
         self.letter_label = MDLabel(
-            text="Текущая буква: --",
-            font_size=sp(13),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8]
+            text="Текущая буква: --", font_size=sp(13), halign="center",
+            theme_text_color="Custom", text_color=[1, 1, 1, 0.8]
         )
         self.letter_card.add_widget(self.letter_label)
-        main_layout.add_widget(self.letter_card)
+        content.add_widget(self.letter_card)
 
+        # Последняя песня
         self.last_song_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(0))
-        main_layout.add_widget(self.last_song_container)
+        content.add_widget(self.last_song_container)
 
+        # Статус
         self.status_label = MDLabel(
-            text="Готов к работе",
-            halign="center",
-            size_hint_y=None,
-            height=dp(35),
-            font_size=sp(11),
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 1]
+            text="Готов к работе", halign="center", size_hint_y=None,
+            height=dp(35), font_size=sp(11), theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7]
         )
-        main_layout.add_widget(self.status_label)
+        content.add_widget(self.status_label)
 
-        scroll.add_widget(main_layout)
-        self.add_widget(scroll)
+        self.build_ui(content, scroll=True)
 
     def on_start_letter_selected(self, letter):
         pass
@@ -430,39 +444,25 @@ class ChordieParserScreen(MDScreen):
     def _get_page_from_letter(self, letter):
         return LETTER_TO_INDEX.get(letter, 0)
 
-    # ============ НОВЫЕ МЕТОДЫ ДЛЯ ФИЛЬТРАЦИИ ============
-
     def _is_real_song(self, filename, status):
-        """
-        Проверяет, является ли запись реальной песней.
-        Возвращает True только для настоящих песен.
-        """
         if status not in ['new', 'duplicate', 'error']:
             return False
-
         if not filename:
             return False
-
-        # Проверяем, что это не служебное сообщение
         service_patterns = [
             'Буква:', 'Обработка', 'Найдено', 'Запуск',
             'Завершение', 'Получение', 'Поиск файлов', 'Удаление файлов'
         ]
-
         filename_lower = filename.lower()
         for pattern in service_patterns:
             if pattern.lower() in filename_lower:
                 return False
-
-        # Реальная песня должна содержать дефис (Артист - Песня) или заканчиваться на .txt
         if ' - ' in filename or filename.endswith('.txt'):
             if len(filename) > 5:
                 return True
-
         return False
 
     def _update_last_song_display(self, last_song):
-        """Обновляет отображение последней песни, показывая только реальные песни"""
         if not last_song:
             if self.last_song_container.height != 0:
                 self.last_song_container.height = dp(0)
@@ -510,12 +510,8 @@ class ChordieParserScreen(MDScreen):
                 data = result.get('data', result)
                 is_running = data.get('is_running', False)
                 current_letter = data.get('current_letter', 0)
-
                 current_letter_name = CHORDIE_LETTERS[current_letter] if current_letter < len(CHORDIE_LETTERS) else '?'
-                if current_letter_name.isdigit():
-                    self.letter_label.text = f"Текущая цифра: {current_letter_name}"
-                else:
-                    self.letter_label.text = f"Текущая буква: {current_letter_name}"
+                self.letter_label.text = f"Текущая буква: {current_letter_name}"
 
                 if is_running:
                     self.start_btn.disabled = True
@@ -548,9 +544,11 @@ class ChordieParserScreen(MDScreen):
             end_letter = self.end_letter_selector.get_letter()
             start_page = self._get_page_from_letter(start_letter)
             end_page = self._get_page_from_letter(end_letter)
+
             if start_page > end_page:
                 notify.error("Начальная буква не может быть позже конечной")
                 return
+
             result = api.start_chordie_parser_sync(start_page, end_page)
             if result and result.get('success'):
                 notify.success(f"Парсер Chordie запущен (буквы {start_letter}-{end_letter})")
