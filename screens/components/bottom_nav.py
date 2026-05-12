@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Современная нижняя навигация
+Современная нижняя навигация - иконки прилегают к системной навигации
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -25,6 +25,7 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -123,7 +124,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации"""
+    """Нижняя панель навигации - иконки прилегают к системной навигации"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -148,26 +149,28 @@ class BottomNav(BoxLayout):
         # Получаем высоту системной навигации в dp
         nav_bar_height_dp = get_navigation_bar_height()
 
+        # Общая высота = иконки + системная навигация (без лишних отступов)
+        self.height = self.panel_height + nav_bar_height_dp
+
         if platform == 'android':
-            # Android: иконки прилегают к системной навигации
-            self.height = self.panel_height + nav_bar_height_dp
-            bottom_padding = nav_bar_height_dp
-            top_padding = dp(BottomNavConfig.PANEL_PADDING[1])
-            logger.info(f"Android: высота={self.height}dp, иконки={self.panel_height}dp, системная нав={nav_bar_height_dp}dp")
+            # Android: иконки прилегают к системной навигации (нижний отступ = 0)
+            bottom_padding = 0
+            top_padding = 0  # убираем верхний отступ, чтобы иконки были выше
+            logger.info(f"Android: высота={self.height}dp, иконки={self.panel_height}dp, "
+                        f"системная нав={nav_bar_height_dp}dp, иконки прилегают к системной навигации")
         else:
-            # Windows: большие иконки для удобной отладки
-            self.height = self.panel_height + nav_bar_height_dp
-            top_padding = dp(BottomNavConfig.PANEL_PADDING[1])
+            # Windows: для имитации
             bottom_padding = nav_bar_height_dp
+            top_padding = 0
             logger.info(f"Windows: высота={self.height}dp, иконки={self.panel_height}dp")
 
-        # Паддинги
+        # Паддинги - иконки вплотную к системной навигации
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [
             panel_padding[0],  # левый
-            top_padding,       # верхний
+            top_padding,  # верхний (0)
             panel_padding[2],  # правый
-            bottom_padding     # нижний
+            bottom_padding  # нижний (на Android = 0, на Windows = высота системной навигации)
         ]
         self.spacing = dp(BottomNavConfig.PANEL_SPACING)
         self.md_bg_color = [0, 0, 0, 0]
@@ -193,8 +196,8 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info(f"Нижняя навигация инициализирована: высота={self.height}dp, "
-                   f"верхний отступ={self.padding[1]}dp, нижний отступ={self.padding[3]}dp")
+        logger.info(f"Нижняя навигация: высота={self.height}dp, "
+                    f"верхний отступ={self.padding[1]}dp, нижний отступ={self.padding[3]}dp")
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
@@ -230,14 +233,15 @@ class BottomNav(BoxLayout):
         self.panel_height = dp(BottomNavConfig.PANEL_HEIGHT)
         nav_bar_height_dp = get_navigation_bar_height()
 
+        # Общая высота
+        self.height = self.panel_height + nav_bar_height_dp
+
         if platform == 'android':
-            self.height = self.panel_height + nav_bar_height_dp
-            bottom_padding = nav_bar_height_dp
-            top_padding = dp(BottomNavConfig.PANEL_PADDING[1])
+            bottom_padding = 0
+            top_padding = 0
         else:
-            self.height = self.panel_height + nav_bar_height_dp
-            top_padding = dp(BottomNavConfig.PANEL_PADDING[1])
             bottom_padding = nav_bar_height_dp
+            top_padding = 0
 
         panel_padding = [dp(x) for x in BottomNavConfig.PANEL_PADDING]
         self.padding = [

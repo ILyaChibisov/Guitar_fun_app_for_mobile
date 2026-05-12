@@ -1,7 +1,6 @@
 # config/bottom_nav_config.py
 """
 Конфигурация нижней панели навигации
-Фиксированные размеры для Windows, оптимальные для Android
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -9,112 +8,106 @@ from kivy.core.window import Window
 
 
 class BottomNavConfig:
-    """Настройки нижней панели - фиксированные размеры"""
+    """Настройки нижней панели"""
 
-    # ========== БАЗОВЫЕ РАЗМЕРЫ (будут использоваться на обеих платформах) ==========
-    # Вернём исходные большие значения
-
-    # Высота панели с иконками
-    PANEL_HEIGHT = 76  # исходное значение
-
-    # Отступы панели
-    PANEL_PADDING = [4, 2, 4, 2]  # исходное
-    PANEL_SPACING = 0  # исходное
+    # ========== БАЗОВЫЕ РАЗМЕРЫ ==========
+    PANEL_HEIGHT = 76  # высота панели с иконками
+    PANEL_PADDING = [4, 0, 4, 0]  # [лево, верх, право, низ] - верхний отступ 0
+    PANEL_SPACING = 0
 
     # ========== НАСТРОЙКИ ПО УМОЛЧАНИЮ ==========
-    DEFAULT_ICON_SIZE = 0.75  # увеличен для видимости
+    DEFAULT_ICON_SIZE = 0.75
     DEFAULT_ICON_CONTAINER_HEIGHT = 0.75
     DEFAULT_FONT_SIZE = 12
     DEFAULT_SPACING = 0
-    DEFAULT_TOP_PADDING = 2
+    DEFAULT_TOP_PADDING = 0  # убираем отступ сверху для кнопок
 
     # ========== НАСТРОЙКИ ДЛЯ РАЗНЫХ ЭКРАНОВ (ПРЕСЕТЫ) ==========
     SCREEN_PRESETS = {
         'small': {
             'PANEL_HEIGHT': 64,
-            'PANEL_PADDING': [2, 1, 2, 1],
+            'PANEL_PADDING': [2, 0, 2, 0],
             'PANEL_SPACING': 0,
-            'DEFAULT_ICON_SIZE': 0.68,
-            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.68,
+            'DEFAULT_ICON_SIZE': 0.70,
+            'DEFAULT_ICON_CONTAINER_HEIGHT': 0.70,
             'DEFAULT_FONT_SIZE': 10,
             'DEFAULT_SPACING': 0,
-            'DEFAULT_TOP_PADDING': 1
+            'DEFAULT_TOP_PADDING': 0
         },
         'normal': {
             'PANEL_HEIGHT': 70,
-            'PANEL_PADDING': [4, 2, 4, 2],
+            'PANEL_PADDING': [4, 0, 4, 0],
             'PANEL_SPACING': 0,
             'DEFAULT_ICON_SIZE': 0.72,
             'DEFAULT_ICON_CONTAINER_HEIGHT': 0.72,
             'DEFAULT_FONT_SIZE': 11,
             'DEFAULT_SPACING': 0,
-            'DEFAULT_TOP_PADDING': 2
+            'DEFAULT_TOP_PADDING': 0
         },
         'large': {
             'PANEL_HEIGHT': 76,
-            'PANEL_PADDING': [6, 2, 6, 2],
+            'PANEL_PADDING': [6, 0, 6, 0],
             'PANEL_SPACING': 0,
             'DEFAULT_ICON_SIZE': 0.75,
             'DEFAULT_ICON_CONTAINER_HEIGHT': 0.75,
             'DEFAULT_FONT_SIZE': 12,
             'DEFAULT_SPACING': 0,
-            'DEFAULT_TOP_PADDING': 2
+            'DEFAULT_TOP_PADDING': 0
         },
         'tablet': {
             'PANEL_HEIGHT': 84,
-            'PANEL_PADDING': [8, 3, 8, 3],
-            'PANEL_SPACING': 0,
+            'PANEL_PADDING': [8, 0, 8, 0],
+            'PANEL_SPACING': 2,
             'DEFAULT_ICON_SIZE': 0.78,
             'DEFAULT_ICON_CONTAINER_HEIGHT': 0.78,
             'DEFAULT_FONT_SIZE': 14,
-            'DEFAULT_SPACING': 1,
-            'DEFAULT_TOP_PADDING': 3
+            'DEFAULT_SPACING': 0,
+            'DEFAULT_TOP_PADDING': 0
         }
     }
 
     # ========== ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ ДЛЯ КАЖДОЙ КНОПКИ ==========
     BUTTONS_CONFIG = {
         'home': {
-            'icon_size': 0.65,
+            'icon_size': 0.68,
             'icon_height': 0.72,
             'font_size': 11,
             'spacing': 1,
-            'top_padding': 2
+            'top_padding': 0
         },
         'songs': {
-            'icon_size': 0.65,
+            'icon_size': 0.68,
             'icon_height': 0.72,
             'font_size': 11,
             'spacing': 1,
-            'top_padding': 2
+            'top_padding': 0
         },
         'chords': {
-            'icon_size': 0.65,
+            'icon_size': 0.68,
             'icon_height': 0.70,
             'font_size': 11,
             'spacing': 1,
-            'top_padding': 2
+            'top_padding': 0
         },
         'tuner': {
-            'icon_size': 0.65,
+            'icon_size': 0.68,
             'icon_height': 0.70,
             'font_size': 11,
             'spacing': 1,
-            'top_padding': 2
+            'top_padding': 0
         },
         'favorites': {
-            'icon_size': 0.65,
+            'icon_size': 0.68,
             'icon_height': 0.70,
             'font_size': 10,
             'spacing': 1,
-            'top_padding': 2
+            'top_padding': 0
         },
     }
 
     @classmethod
     def get_preset_for_screen(cls, width, height):
         """Определяет пресет по размеру экрана"""
-        # Для Windows всегда используем 'large' чтобы иконки были большими
         if platform == 'win':
             return 'large'
 
