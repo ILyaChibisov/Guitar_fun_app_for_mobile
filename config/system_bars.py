@@ -15,7 +15,8 @@ _nav_bar_height_px = None
 
 # Константы для симуляции на Windows (в пикселях)
 WINDOWS_STATUS_BAR_HEIGHT_DP = 24  # 24dp - стандартная высота статус-бара на Android
-WINDOWS_NAV_BAR_HEIGHT_DP = 48     # 48dp - стандартная высота нав-бара с кнопками
+WINDOWS_NAV_BAR_HEIGHT_DP = 48  # 48dp - стандартная высота нав-бара с кнопками
+GESTURE_NAV_BAR_HEIGHT_DP = 16  # 16dp - высота нав-бара при жестах
 
 
 def get_screen_density():
@@ -75,29 +76,47 @@ def get_navigation_bar_height_px():
             from android import mActivity
             from jnius import autoclass
             Resources = autoclass('android.content.res.Resources')
+
+            # Пробуем получить реальную высоту нав-бара
             resource_id = Resources.getSystem().getIdentifier(
                 'navigation_bar_height', 'dimen', 'android'
             )
             if resource_id > 0:
                 _nav_bar_height_px = Resources.getSystem().getDimensionPixelSize(resource_id)
                 density = get_screen_density()
-                logger.info(f"Высота нав-бара (Android): {_nav_bar_height_px}px, плотность={density:.2f}")
+                logger.info(f"Высота нав-бара (Android, реальная): {_nav_bar_height_px}px, "
+                            f"плотность={density:.2f}, это = {_nav_bar_height_px / density:.0f}dp")
                 return _nav_bar_height_px
         except Exception as e:
             logger.error(f"Ошибка получения высоты нав-бара: {e}")
 
-        # Проверяем, есть ли вообще нав-бар (для устройств с жестами)
+        # Если не удалось получить реальную высоту, проверяем режим жестов
         try:
             from android import mActivity
             from jnius import autoclass
             View = autoclass('android.view.View')
             decorView = mActivity.getWindow().getDecorView()
-            # Для жестов нав-бар может быть скрыт
-            _nav_bar_height_px = int(16 * get_screen_density())
-            logger.info(f"Нав-бар не обнаружен (вероятно, жесты), добавлен отступ: {_nav_bar_height_px}px")
-            return _nav_bar_height_px
-        except:
-            pass
+
+            # Проверяем, скрыт ли нав-бар (режим жестов)
+            systemUiVisibility = decorView.getSystemUiVisibility()
+            # Флаг SYSTEM_UI_FLAG_HIDE_NAVIGATION = 0x00000002
+            # Флаг SYSTEM_UI_FLAG_IMMERSIVE_STICKY = 0x00001000
+            if systemUiVisibility & 0x00000002:
+                # Режим жестов - нужен небольшой отступ
+                _nav_bar_height_px = int(GESTURE_NAV_BAR_HEIGHT_DP * get_screen_density())
+                logger.info(f"Нав-бар в режиме жестов, отступ: {_nav_bar_height_px}px "
+                            f"(={GESTURE_NAV_BAR_HEIGHT_DP}dp)")
+                return _nav_bar_height_px
+            else:
+                # По умолчанию для Android - стандартная высота
+                _nav_bar_height_px = int(WINDOWS_NAV_BAR_HEIGHT_DP * get_screen_density())
+                logger.info(f"Нав-бар (Android, умолчание): {_nav_bar_height_px}px "
+                            f"(={WINDOWS_NAV_BAR_HEIGHT_DP}dp)")
+                return _nav_bar_height_px
+        except Exception as e:
+            logger.error(f"Ошибка проверки режима нав-бара: {e}")
+            # Fallback - стандартная высота
+            _nav_bar_height_px = int(WINDOWS_NAV_BAR_HEIGHT_DP * get_screen_density())
 
     # Для Windows - имитируем реальное Android устройство с кнопками
     density = get_screen_density()
@@ -135,3 +154,16 @@ def set_simulation_heights(status_dp=24, nav_dp=48):
         _status_bar_height_px = None
         _nav_bar_height_px = None
         logger.info(f"Симуляция обновлена: статус-бар={status_dp}dp, нав-бар={nav_dp}dp")
+
+
+def set_gesture_mode(enabled=True):
+    """
+    Устанавливает режим жестов (для симуляции на Windows)
+    """
+    if platform != 'android':
+        if enabled:
+            set_simulation_heights(status_dp=24, nav_dp=GESTURE_NAV_BAR_HEIGHT_DP)
+            logger.info(f"Режим жестов включён: нав-бар={GESTURE_NAV_BAR_HEIGHT_DP}dp")
+        else:
+            set_simulation_heights(status_dp=24, nav_dp=WINDOWS_NAV_BAR_HEIGHT_DP)
+            logger.info(f"Режим кнопок включён: нав-бар={WINDOWS_NAV_BAR_HEIGHT_DP}dp")
