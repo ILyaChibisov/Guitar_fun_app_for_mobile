@@ -25,11 +25,11 @@ class BottomNavConfig:
 
     # Индивидуальные настройки для кнопок
     BUTTONS_CONFIG = {
-        'home': {'icon_ratio': 0.74, 'font_size': sp(12), 'text': 'Главная'},
+        'home': {'icon_ratio': 0.72, 'font_size': sp(12), 'text': 'Главная'},
         'songs': {'icon_ratio': 0.74, 'font_size': sp(12), 'text': 'Песни'},
         'chords': {'icon_ratio': 0.72, 'font_size': sp(12), 'text': 'Аккорды'},
         'tuner': {'icon_ratio': 0.72, 'font_size': sp(12), 'text': 'Тюнер'},
-        'favorites': {'icon_ratio': 0.72, 'font_size': sp(11), 'text': 'Избранное'},
+        'favorites': {'icon_ratio': 0.50, 'font_size': sp(11), 'text': 'Избранное'},
     }
 
     @classmethod

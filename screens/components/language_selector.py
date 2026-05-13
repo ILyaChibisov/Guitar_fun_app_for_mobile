@@ -36,15 +36,15 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (None, None)
-        self.size = (dp(50), dp(32))
+        self.size = (dp(50), dp(36))  # УВЕЛИЧЕНА высота для лучшего отображения
         self.on_language_change = on_language_change
         self.current_lang = 'ru'
         self.popup = None
 
-        # Только текст, без иконки
+        # Только текст, без иконки - УВЕЛИЧЕН шрифт
         self.main_text = Label(
             text="RU",
-            font_size=sp(12),
+            font_size=sp(14),  # БЫЛО sp(12) - СТАЛО sp(14) (как у заголовка)
             color=[1, 1, 1, 1],
             bold=True,
             size_hint=(1, 1),
@@ -64,7 +64,7 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             padding=dp(12),
             size_hint=(None, None),
             width=dp(200),
-            height=dp(130)
+            height=dp(140)  # НЕМНОГО УВЕЛИЧЕНА высота
         )
 
         # Кнопка Русский
@@ -168,7 +168,7 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
             content=content,
             size_hint=(None, None),
             width=dp(200),
-            height=dp(130),
+            height=dp(140),
             background_color=[0.08, 0.08, 0.08, 0.95],
             separator_color=[0, 0, 0, 0],
             auto_dismiss=True
@@ -193,7 +193,7 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
 
         return Label(
             text="✓",
-            font_size=sp(16),
+            font_size=sp(18),  # НЕМНОГО УВЕЛИЧЕН размер галочки
             color=theme.PRIMARY,
             size_hint=(None, 1),
             width=dp(24),
@@ -215,7 +215,7 @@ class LanguageSelector(ButtonBehavior, BoxLayout):
 
             # Устанавливаем размер Popup
             self.popup.width = dp(200)
-            self.popup.height = dp(160)
+            self.popup.height = dp(140)
 
             # Позиционируем Popup: привязываем к правому краю кнопки
             popup_x = button_right - self.popup.width

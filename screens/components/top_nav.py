@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - проверенный рабочий вариант (MDCard)
+Верхняя панель навигации - с выравниванием текста и иконок по вертикали
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -21,7 +21,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - прозрачная с LanguageSelector"""
+    """Верхняя панель навигации - с выравниванием"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -43,8 +43,9 @@ class TopNav(MDCard):
         nav_height = dp(56)
         self.height = nav_height
 
-        # Отступ сверху под статус-бар
-        self.padding = [0, status_h, 0, 0]
+        # Отступ сверху под статус-бар (уменьшен)
+        top_padding = max(0, status_h - dp(8))
+        self.padding = [0, top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
@@ -54,16 +55,16 @@ class TopNav(MDCard):
         # Отладка
         screen_density = get_screen_density()
         logger.info("=" * 70)
-        logger.info(f"📱 TOP NAV (MDCard прозрачный)")
+        logger.info(f"📱 TOP NAV (с выравниванием)")
         logger.info(f"📱 Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px)")
-        logger.info(f"📱 Высота панели: {nav_height}dp")
+        logger.info(f"📱 Верхний отступ: {top_padding}dp")
         logger.info("=" * 70)
 
         # Основной контейнер
         self.container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
-            padding=[dp(12), 0, dp(12), 0],
+            padding=[dp(8), 0, dp(8), 0],
             spacing=dp(8),
             md_bg_color=[0, 0, 0, 0]
         )
@@ -72,8 +73,8 @@ class TopNav(MDCard):
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(88),
-            height=dp(44),
+            width=dp(76),
+            height=dp(48),  # ФИКСИРОВАННАЯ высота
             spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
@@ -106,7 +107,7 @@ class TopNav(MDCard):
         self.left_container.add_widget(self.menu_btn)
         self.left_container.add_widget(self.back_btn)
 
-        # Центр (заголовок)
+        # Центр (заголовок) - ВЫРОВНЕН по центру по вертикали
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
             font_size=sp(18),
@@ -116,6 +117,7 @@ class TopNav(MDCard):
             text_color=[1, 1, 1, 1],
             bold=True,
             size_hint_x=1,
+            size_hint_y=1,  # РАСТЯГИВАЕТСЯ на всю высоту
             pos_hint={'center_y': 0.5}
         )
 
@@ -123,9 +125,9 @@ class TopNav(MDCard):
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(140),
-            height=dp(44),
-            spacing=dp(6),
+            width=dp(130),
+            height=dp(48),  # ФИКСИРОВАННАЯ высота, такая же как у левой части
+            spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
@@ -152,9 +154,17 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
+        # LanguageSelector с единым шрифтом и выравниванием
         self.language_selector = LanguageSelector(
             on_language_change=self._on_language_changed
         )
+        # Настройка размера и выравнивания
+        self.language_selector.size_hint = (None, None)
+        self.language_selector.size = (dp(50), dp(32))
+        self.language_selector.pos_hint = {'center_y': 0.5}
+        # Шрифт как у заголовка
+        self.language_selector.main_text.font_size = sp(14)
+        self.language_selector.main_text.bold = True
 
         self.right_container.add_widget(self.search_btn)
         self.right_container.add_widget(self.profile_btn)
@@ -207,13 +217,10 @@ class TopNav(MDCard):
             return
         if self.app and hasattr(self.app, 'open_drawer'):
             self.app.open_drawer(btn)
-        else:
-            logger.info("Меню нажато")
 
     def _on_back_press(self, btn):
         if self.sm:
             self.sm.current = 'songs'
-            logger.info("Возврат на экран песен")
 
     def _on_profile_press(self, btn):
         app = MDApp.get_running_app()
@@ -239,8 +246,6 @@ class TopNav(MDCard):
             search_screen = self.sm.get_screen('search')
             search_screen.set_chords_screen(chords_screen)
             self.sm.current = 'search'
-        else:
-            logger.info("Поиск нажат")
 
     def set_app(self, app):
         self.app = app
@@ -264,13 +269,11 @@ class TopNav(MDCard):
             self._hide_back_button()
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
         self.screen_title.text = f"Буква {display}"
-        logger.info(f"TopNav обновлён для экрана исполнителей: {self.screen_title.text}")
 
     def reset_to_default(self):
         self._hide_back_button()
         if self.sm:
             self.screen_title.text = self._get_screen_title(self.sm.current)
-        logger.info("TopNav сброшен к стандартному виду")
 
     def _show_back_button(self):
         self._is_back_mode = True
@@ -293,7 +296,8 @@ class TopNav(MDCard):
     def reload_config(self):
         """Обновляет конфигурацию при повороте экрана"""
         status_h = get_status_bar_height()
-        self.padding = [0, status_h, 0, 0]
+        top_padding = max(0, status_h - dp(8))
+        self.padding = [0, top_padding, 0, 0]
 
         screen_density = get_screen_density()
-        logger.info(f"🔄 TopNav | Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px)")
+        logger.info(f"🔄 TopNav | Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px), отступ: {top_padding}dp")

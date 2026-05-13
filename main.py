@@ -62,16 +62,21 @@ if platform == 'android':
         window = mActivity.getWindow()
         decorView = window.getDecorView()
 
-        # Минимальные флаги - системная навигация НЕ перекрывает приложение
+        # Флаги для стабильной раскладки
         decorView.setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         )
 
         # Делаем статус-бар и нав-бар прозрачными
         window.setStatusBarColor(0x00000000)
         window.setNavigationBarColor(0x00000000)
 
-        print("✅ Системные панели настроены (навигация НЕ перекрывает приложение)")
+        # Устанавливаем тёмные иконки на статус-баре (если нужно)
+        # Для светлых иконок используйте SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        # decorView.setSystemUiVisibility(decorView.getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)
+
+        print("✅ Системные панели настроены как прозрачные (тёмная тема)")
 
     except Exception as e:
         print(f"Ошибка настройки системных панелей: {e}")
