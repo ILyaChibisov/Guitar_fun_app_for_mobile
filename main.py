@@ -100,7 +100,7 @@ from api.network_handler import network_manager
 from screens.components.bottom_nav import BottomNav
 from screens.components.top_nav import TopNav
 from screens.components.blocking_layer import BlockingLayer
-from config.system_bars import get_navigation_bar_height
+from config.system_bars import get_navigation_bar_height, get_status_bar_height
 
 # Импортируем ассеты
 try:
@@ -246,7 +246,7 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
-        # Создаём корневой виджет с отступами для системной навигации
+        # Создаём корневой виджет
         root = RootWidget()
 
         # Создаём менеджер экранов
@@ -274,29 +274,48 @@ class GuitarFunsApp(MDApp):
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
-        self.top_nav.height = dp(56)
+        # Высота будет установлена внутри TopNav
         self.top_nav.pos_hint = {'top': 1}
-        self.top_nav.md_bg_color = [0, 0, 0, 0]
-        self.top_nav.theme_bg_color = "Custom"
 
         # Создаём нижнюю панель
         self.bottom_nav = BottomNav(self.screen_manager)
+        # Нижняя панель будет прижата к низу
+        self.bottom_nav.pos_hint = {'y': 0}
 
         # Создаём блокирующий слой
         self.blocking_layer = BlockingLayer()
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
-        # Добавляем всё в root (порядок важен!)
-        root.add_widget(self.screen_manager)  # 1. Основной контент
-        root.add_widget(self.bottom_nav)  # 2. Нижняя панель
-        root.add_widget(self.top_nav)  # 3. Верхняя панель
-        root.add_widget(self.blocking_layer)  # 4. Блокирующий слой (самый верхний)
+        # ============ ВАЖНО: ПРАВИЛЬНЫЙ ПОРЯДОК ДОБАВЛЕНИЯ ВИДЖЕТОВ ============
+        # 1. Сначала менеджер экранов (основной контент)
+        root.add_widget(self.screen_manager)
+
+        # 2. Затем нижняя панель (чтобы быть ПОД TopNav, но НАД контентом)
+        root.add_widget(self.bottom_nav)
+
+        # 3. Затем верхняя панель (самая верхняя)
+        root.add_widget(self.top_nav)
+
+        # 4. Блокирующий слой (самый верхний)
+        root.add_widget(self.blocking_layer)
 
         network_manager.start_monitoring()
 
         # Подписываемся на изменение размера окна (поворот экрана)
         Window.bind(on_resize=self.on_window_resize)
+
+        # Логируем информацию об отступах
+        if platform == 'android':
+            nav_h = get_navigation_bar_height()
+            status_h = get_status_bar_height()
+            logger.info("=" * 60)
+            logger.info("📱 НАСТРОЙКИ ЭКРАНА (Android)")
+            logger.info(f"   Размер окна: {Window.width}x{Window.height}px")
+            logger.info(f"   Плотность: {Window.dpi / 160:.2f}")
+            logger.info(f"   Статус-бар: {status_h}dp")
+            logger.info(f"   Системная навигация: {nav_h}dp")
+            logger.info("=" * 60)
 
         logger.info('Интерфейс успешно создан')
         return root
@@ -304,6 +323,7 @@ class GuitarFunsApp(MDApp):
     def on_window_resize(self, window, width, height):
         """Обработчик изменения размера окна (в т.ч. поворота экрана)"""
         from config.layout_config import layout_config
+        from kivy.clock import Clock
 
         logger.info(f"🔄 Поворот экрана: {width}x{height}")
 
