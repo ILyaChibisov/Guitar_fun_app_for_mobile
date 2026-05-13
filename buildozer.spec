@@ -13,7 +13,8 @@ source.include_patterns = chords/**, **/*.py
 # Исключаем ненужные файлы
 source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py
 
-version = 1.0.0
+version = 1.0.1  # ПОВЫШАЕМ ВЕРСИЮ
+version.code = 2  # УВЕЛИЧИВАЕМ CODE (важно для обновлений!)
 orientation = portrait
 
 # --- ЗАВИСИМОСТИ ---
@@ -37,9 +38,13 @@ p4a.branch = develop
 android.gradle_repository_threads = 4
 
 # --- ПОДПИСЬ (для релиза) ---
-# android.keystore =
-# android.keystore_alias =
-# android.keystore_password =
+# РАСКОММЕНТИРУЙТЕ И ЗАПОЛНИТЕ ЭТИ СТРОКИ:
+android.keystore = guitarfuns_keystore.jks
+android.keystore_alias = guitarfuns
+android.keystore_password = guitarfuns2024  # ЗАМЕНИТЕ НА ВАШ ПАРОЛЬ
+
+# Если пароль ключа отличается от пароля хранилища, добавьте:
+# android.keystore_key_password = lexx311285
 
 [buildozer]
 log_level = 2
