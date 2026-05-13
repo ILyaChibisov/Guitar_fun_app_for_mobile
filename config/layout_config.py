@@ -39,58 +39,46 @@ class LayoutConfig:
     def is_tablet(cls):
         """Определяет, является ли устройство планшетом"""
         if cls._is_tablet is None:
-            # Планшет: ширина >= 600dp
             min_width = min(Window.width, Window.height)
             cls._is_tablet = min_width >= dp(600)
+            logger.info(f"[LayoutConfig] is_tablet: {cls._is_tablet} (min_width={min_width}dp)")
         return cls._is_tablet
 
     @classmethod
     def get_top_nav_height(cls):
         """Возвращает адаптивную высоту верхней панели"""
-        if cls.is_tablet():
-            return cls.TOP_NAV_HEIGHT_TABLET
-        return cls.TOP_NAV_HEIGHT
+        height = cls.TOP_NAV_HEIGHT_TABLET if cls.is_tablet() else cls.TOP_NAV_HEIGHT
+        logger.info(f"[LayoutConfig] get_top_nav_height: {height}dp")
+        return height
 
     @classmethod
     def get_bottom_nav_height(cls):
         """Возвращает адаптивную высоту нижней панели (только иконки)"""
-        if cls.is_tablet():
-            return cls.BOTTOM_NAV_HEIGHT_TABLET
-        return cls.BOTTOM_NAV_HEIGHT
+        height = cls.BOTTOM_NAV_HEIGHT_TABLET if cls.is_tablet() else cls.BOTTOM_NAV_HEIGHT
+        logger.info(f"[LayoutConfig] get_bottom_nav_height: {height}dp")
+        return height
 
     @classmethod
     def get_top_padding(cls, include_top_nav=True):
-        """
-        Возвращает общий отступ сверху для контента.
-
-        Args:
-            include_top_nav: Включать ли высоту TopNav (обычно True)
-
-        Returns:
-            Отступ в dp
-        """
+        """Возвращает общий отступ сверху для контента"""
         status_h = get_status_bar_height()
-
         total = status_h
         if include_top_nav:
             total += cls.get_top_nav_height()
-
+        logger.info(
+            f"[LayoutConfig] get_top_padding: {total}dp (status={status_h}dp, top_nav={cls.get_top_nav_height()}dp)")
         return total
 
     @classmethod
     def get_bottom_padding(cls):
-        """
-        Возвращает отступ снизу для контента (над BottomNav).
-        Включает зазор между контентом и иконками BottomNav.
-        """
-        return cls.GAP_BETWEEN_CONTENT_AND_NAV
+        """Возвращает отступ снизу для контента (над BottomNav)"""
+        padding = cls.GAP_BETWEEN_CONTENT_AND_NAV
+        logger.info(f"[LayoutConfig] get_bottom_padding: {padding}dp")
+        return padding
 
     @classmethod
     def get_content_padding(cls):
-        """
-        Возвращает готовый padding для контейнера контента
-        [left, top, right, bottom]
-        """
+        """Возвращает готовый padding для контейнера контента [left, top, right, bottom]"""
         return [
             cls.SIDE_PADDING,
             cls.CONTENT_TOP_PADDING,
@@ -102,16 +90,21 @@ class LayoutConfig:
     def get_total_bottom_height(cls):
         """Общая высота нижней части (BottomNav + системная навигация)"""
         nav_h = get_navigation_bar_height()
-        return cls.get_bottom_nav_height() + nav_h
+        total = cls.get_bottom_nav_height() + nav_h
+        logger.info(
+            f"[LayoutConfig] get_total_bottom_height: {total}dp (nav={cls.get_bottom_nav_height()}dp, sys_nav={nav_h}dp)")
+        return total
 
     @classmethod
     def update_for_platform(cls):
         """Обновляет настройки в зависимости от платформы"""
-        logger.info(f"LayoutConfig обновлён для платформы: {platform}")
-        logger.info(f"  - TOP_NAV_HEIGHT: {cls.get_top_nav_height()}dp")
-        logger.info(f"  - BOTTOM_NAV_HEIGHT: {cls.get_bottom_nav_height()}dp")
-        logger.info(f"  - SIDE_PADDING: {cls.SIDE_PADDING}dp")
-        logger.info(f"  - is_tablet: {cls.is_tablet()}")
+        logger.info("=" * 50)
+        logger.info(f"[LayoutConfig] Обновление для платформы: {platform}")
+        logger.info(f"[LayoutConfig] TOP_NAV_HEIGHT: {cls.get_top_nav_height()}dp")
+        logger.info(f"[LayoutConfig] BOTTOM_NAV_HEIGHT: {cls.get_bottom_nav_height()}dp")
+        logger.info(f"[LayoutConfig] SIDE_PADDING: {cls.SIDE_PADDING}dp")
+        logger.info(f"[LayoutConfig] is_tablet: {cls.is_tablet()}")
+        logger.info("=" * 50)
 
 
 # Создаём экземпляр для удобства

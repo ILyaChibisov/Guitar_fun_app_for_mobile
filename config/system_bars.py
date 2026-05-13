@@ -79,52 +79,22 @@ def get_navigation_bar_height_px():
             from jnius import autoclass
             Resources = autoclass('android.content.res.Resources')
 
-            # Пробуем получить реальную высоту нав-бара
             resource_id = Resources.getSystem().getIdentifier(
                 'navigation_bar_height', 'dimen', 'android'
             )
             if resource_id > 0:
                 _nav_bar_height_px = Resources.getSystem().getDimensionPixelSize(resource_id)
                 density = get_screen_density()
-                logger.info(f"Высота нав-бара (Android, реальная): {_nav_bar_height_px}px, "
-                            f"плотность={density:.2f}, "
-                            f"в dp={_nav_bar_height_px / density:.0f}dp")
+                logger.info(
+                    f"[SystemBars] Android нав-бар: {_nav_bar_height_px}px, плотность={density:.2f}, в dp={_nav_bar_height_px / density:.0f}dp")
                 return _nav_bar_height_px
         except Exception as e:
             logger.error(f"Ошибка получения высоты нав-бара: {e}")
 
-        # Если не удалось получить реальную высоту, пробуем определить режим
-        try:
-            from android import mActivity
-            from jnius import autoclass
-            View = autoclass('android.view.View')
-            decorView = mActivity.getWindow().getDecorView()
-
-            # Проверяем, используется ли режим жестов
-            # SYSTEM_UI_FLAG_HIDE_NAVIGATION = 0x00000002
-            systemUiVisibility = decorView.getSystemUiVisibility()
-
-            if systemUiVisibility & 0x00000002:
-                # Режим жестов - нужен небольшой отступ
-                _nav_bar_height_px = int(GESTURE_NAV_BAR_HEIGHT_DP * get_screen_density())
-                logger.info(f"Нав-бар в режиме жестов, отступ: {_nav_bar_height_px}px "
-                            f"(={GESTURE_NAV_BAR_HEIGHT_DP}dp)")
-                return _nav_bar_height_px
-        except Exception as e:
-            logger.error(f"Ошибка проверки режима нав-бара: {e}")
-
-        # Fallback - стандартная высота для Android с кнопками
-        density = get_screen_density()
-        _nav_bar_height_px = int(WINDOWS_NAV_BAR_HEIGHT_DP * density)
-        logger.info(f"Нав-бар (Android, значение по умолчанию): {_nav_bar_height_px}px "
-                    f"(={WINDOWS_NAV_BAR_HEIGHT_DP}dp, плотность={density:.2f})")
-        return _nav_bar_height_px
-
-    # Для Windows - имитируем реальное Android устройство с кнопками
+    # Для Windows
     density = get_screen_density()
-    _nav_bar_height_px = int(WINDOWS_NAV_BAR_HEIGHT_DP * density)
-    logger.info(f"Высота нав-бара (симуляция Windows): {_nav_bar_height_px}px "
-                f"(={WINDOWS_NAV_BAR_HEIGHT_DP}dp, плотность={density:.2f})")
+    _nav_bar_height_px = int(48 * density)
+    logger.info(f"[SystemBars] Симуляция нав-бара: {_nav_bar_height_px}px, в dp=48dp")
     return _nav_bar_height_px
 
 

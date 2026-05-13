@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя навигация - полностью адаптивная (Material Design стиль)
+Нижняя навигация - полностью адаптивная с логированием для ADB
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -12,6 +12,7 @@ from kivy.metrics import dp, sp
 from kivy.core.image import Image as CoreImage
 from kivy.utils import platform
 from kivy.core.window import Window
+from kivy.graphics import Color, Line
 from io import BytesIO
 from kivymd.app import MDApp
 
@@ -22,7 +23,7 @@ from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height
 from utils.kivy_imports import MDBoxLayout
 
-logger = get_logger('UI')
+logger = get_logger('BottomNav')
 
 try:
     from data import load_asset_as_bytes
@@ -34,7 +35,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации - адаптивный"""
+    """Элемент нижней навигации - с отладочными рамками"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -48,10 +49,10 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.config = BottomNavConfig.get_button_config(screen_name)
 
         self.orientation = 'vertical'
-        self.size_hint = (1, 1)  # растягивается на всю высоту панели
+        self.size_hint = (1, 1)
         self.spacing = dp(2)
 
-        # Контейнер иконки (процент от высоты кнопки)
+        # Контейнер иконки
         icon_height_ratio = self.config.get('icon_height', 0.68)
         self.icon_container = MDBoxLayout(
             size_hint=(1, icon_height_ratio),
@@ -78,10 +79,22 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.add_widget(self.icon_container)
         self.add_widget(self.text_label)
 
-        # Обновляем состояние
+        # ОТЛАДКА: жёлтая рамка вокруг кнопки
+        self.bind(pos=self._debug_outline, size=self._debug_outline)
+
         self.update_state(None, self.active)
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
+
+        # Логирование размера кнопки
+        logger.info(f"[NavItem] {screen_name}: icon_height_ratio={icon_height_ratio}, font_size={font_size}")
+
+    def _debug_outline(self, *args):
+        """Жёлтая рамка для отладки"""
+        self.canvas.before.remove_group('navitem_debug')
+        with self.canvas.before:
+            Color(1, 1, 0, 0.9)  # Ярко-жёлтый
+            Line(rectangle=(self.x, self.y, self.width, self.height), width=2, group='navitem_debug')
 
     def _reload_icon(self, *args):
         self._load_icon()
@@ -95,7 +108,6 @@ class NavItem(ButtonBehavior, BoxLayout):
                 icon_data = load_asset_as_bytes(self.icon_asset)
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
-                    # Иконка центрируется и занимает 75% контейнера
                     self.icon_image = Image(
                         texture=core_img.texture,
                         size_hint=(0.75, 0.75),
@@ -104,6 +116,7 @@ class NavItem(ButtonBehavior, BoxLayout):
                         keep_ratio=True
                     )
                     self.icon_container.add_widget(self.icon_image)
+                    logger.info(f"[NavItem] Иконка загружена: {self.icon_asset}")
                     return
             except Exception as e:
                 logger.error(f'Ошибка загрузки иконки {self.icon_asset}: {e}')
@@ -118,6 +131,7 @@ class NavItem(ButtonBehavior, BoxLayout):
             valign='center'
         )
         self.icon_container.add_widget(self.icon_image)
+        logger.warning(f"[NavItem] Используется заглушка для {self.icon_asset}")
 
     def update_state(self, instance, value):
         if value:
@@ -134,7 +148,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - полностью адаптивная"""
+    """Нижняя панель навигации - с подробным логированием"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -145,15 +159,33 @@ class BottomNav(BoxLayout):
         self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
 
+        # ============ ПОДРОБНОЕ ЛОГИРОВАНИЕ ============
+        logger.info("=" * 70)
+        logger.info("BOTTOM NAV DEBUG INFO")
+        logger.info("=" * 70)
+        logger.info(f"[BottomNav] Платформа: {platform}")
+        logger.info(f"[BottomNav] Размер окна: {Window.width}x{Window.height}")
+        logger.info(f"[BottomNav] layout_config.get_bottom_nav_height(): {self.nav_height}dp")
+        logger.info(f"[BottomNav] get_navigation_bar_height(): {nav_bar_height}dp")
+        logger.info(f"[BottomNav] Общая высота панели: {self.nav_height + nav_bar_height}dp")
+        logger.info(f"[BottomNav] padding верхний: 0dp")
+        logger.info(f"[BottomNav] padding нижний: {nav_bar_height}dp")
+        logger.info(f"[BottomNav] padding левый/правый: 8dp")
+        logger.info(f"[BottomNav] spacing: 4dp")
+        logger.info("=" * 70)
+
         # Общая высота = панель + системная навигация
         self.height = self.nav_height + nav_bar_height
 
         # Паддинги
         self.padding = [dp(8), 0, dp(8), nav_bar_height]
         self.spacing = dp(4)
-        self.md_bg_color = [0, 0, 0, 0]
 
-        logger.info(f"BottomNav: высота={self.height}dp, панель={self.nav_height}dp, системная нав={nav_bar_height}dp")
+        # ВРЕМЕННО: красный фон для отладки (видно всю область панели)
+        self.md_bg_color = [1, 0, 0, 0.4]  # Красный полупрозрачный
+
+        # Белая рамка вокруг всей панели
+        self.bind(pos=self._panel_outline, size=self._panel_outline)
 
         # Меню
         self.nav_items = [
@@ -175,9 +207,19 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
+        logger.info(f"[BottomNav] Инициализация завершена. Всего кнопок: {len(self.items)}")
+
+    def _panel_outline(self, *args):
+        """Белая рамка вокруг всей панели"""
+        self.canvas.before.remove_group('panel_debug')
+        with self.canvas.before:
+            Color(1, 1, 1, 1)
+            Line(rectangle=(self.x, self.y, self.width, self.height), width=2, group='panel_debug')
+
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
             item.active = (screen == screen_name)
+        logger.info(f"[BottomNav] Экран изменён: {screen_name}")
 
     def switch_to(self, screen_name):
         app = MDApp.get_running_app()
@@ -199,20 +241,19 @@ class BottomNav(BoxLayout):
 
         self.sm.transition.direction = direction
         self.sm.current = screen_name
+        logger.info(f"[BottomNav] Переход на экран: {screen_name}, direction={direction}")
 
     def switch_tab(self, screen_name):
-        """Алиас для switch_to"""
         self.switch_to(screen_name)
 
     def reload_config(self):
-        """Обновляет конфигурацию панели при изменении размера экрана"""
+        """Обновляет конфигурацию панели"""
         self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
         self.height = self.nav_height + nav_bar_height
         self.padding = [dp(8), 0, dp(8), nav_bar_height]
 
-        # Обновляем каждую кнопку
+        logger.info(f"[BottomNav] Перезагрузка конфига: высота={self.height}dp")
+
         for item in self.items:
             item._reload_icon()
-
-        logger.info(f"BottomNav обновлена: высота={self.height}dp")
