@@ -14,7 +14,7 @@ source.include_patterns = chords/**, **/*.py
 source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py
 
 # ПОВЫШАЕМ ВЕРСИЮ ДЛЯ ОБНОВЛЕНИЯ
-version = 1.0.1
+version = 1.0.2
 version.code = 2
 orientation = portrait
 
