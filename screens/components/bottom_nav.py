@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя навигация - полностью адаптивная с логированием
+Нижняя навигация - полностью адаптивная с отладкой
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -34,7 +34,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации - адаптивный"""
+    """Элемент нижней навигации - адаптивный с крупными иконками"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -49,10 +49,10 @@ class NavItem(ButtonBehavior, BoxLayout):
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-        self.spacing = dp(2)
+        self.spacing = dp(4)
 
-        # Контейнер иконки (процент от высоты кнопки)
-        icon_height_ratio = self.config.get('icon_height', 0.68)
+        # Увеличиваем пропорции для более крупных иконок
+        icon_height_ratio = self.config.get('icon_height', 0.72)  # было 0.68, увеличил
         self.icon_container = MDBoxLayout(
             size_hint=(1, icon_height_ratio),
             orientation='vertical'
@@ -63,7 +63,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         self._load_icon()
 
         # Текст
-        font_size = self.config.get('font_size', sp(11))
+        font_size = self.config.get('font_size', sp(12))  # увеличил шрифт
         self.text_label = Label(
             text=self.config.get('text', text),
             font_size=font_size,
@@ -82,13 +82,14 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
+        # ОТЛАДКА
         logger.info(f"[NavItem] {screen_name}: icon_height_ratio={icon_height_ratio}, font_size={font_size}")
 
     def _reload_icon(self, *args):
         self._load_icon()
 
     def _load_icon(self):
-        """Загружает иконку с адаптивным размером"""
+        """Загружает иконку с увеличенным размером"""
         self.icon_container.clear_widgets()
 
         if HAS_ASSETS and self.icon_asset:
@@ -96,9 +97,10 @@ class NavItem(ButtonBehavior, BoxLayout):
                 icon_data = load_asset_as_bytes(self.icon_asset)
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
+                    # Увеличиваем размер иконки: 85% от контейнера (было 75%)
                     self.icon_image = Image(
                         texture=core_img.texture,
-                        size_hint=(0.75, 0.75),
+                        size_hint=(0.85, 0.85),
                         pos_hint={'center_x': 0.5, 'center_y': 0.5},
                         allow_stretch=True,
                         keep_ratio=True
@@ -112,7 +114,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         # Заглушка
         self.icon_image = Label(
             text="?",
-            font_size=sp(18),
+            font_size=sp(20),
             size_hint=(1, 1),
             color=theme.TEXT_SECONDARY,
             halign='center',
@@ -143,30 +145,37 @@ class BottomNav(BoxLayout):
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Получаем высоты (уже в dp, не нужно дополнительно преобразовывать)
+        # Получаем информацию об устройстве
+        screen_width = Window.width
+        screen_height = Window.height
+        screen_density = Window.dpi / 160 if Window.dpi else 1.0
+
+        # Получаем высоты
         self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
 
-        # ============ ПОДРОБНОЕ ЛОГИРОВАНИЕ ============
+        # ============ ПОДРОБНАЯ ОТЛАДОЧНАЯ ИНФОРМАЦИЯ ============
         logger.info("=" * 70)
-        logger.info("BOTTOM NAV DEBUG INFO")
+        logger.info("📱 BOTTOM NAV DEBUG INFO")
         logger.info("=" * 70)
         logger.info(f"[BottomNav] Платформа: {platform}")
-        logger.info(f"[BottomNav] Размер окна: {Window.width}x{Window.height}")
-        logger.info(f"[BottomNav] layout_config.get_bottom_nav_height(): {self.nav_height}dp")
-        logger.info(f"[BottomNav] get_navigation_bar_height(): {nav_bar_height}dp")
-        logger.info(f"[BottomNav] Общая высота панели: {self.nav_height + nav_bar_height}dp")
-        logger.info(f"[BottomNav] padding верхний: 0dp")
-        logger.info(f"[BottomNav] padding нижний: {nav_bar_height}dp")
-        logger.info(f"[BottomNav] padding левый/правый: 8dp")
+        logger.info(f"[BottomNav] Размер экрана: {screen_width} x {screen_height} px")
+        logger.info(f"[BottomNav] Плотность экрана (dpi/160): {screen_density:.2f}")
+        logger.info(f"[BottomNav] Высота панели (dp): {self.nav_height}dp")
+        logger.info(f"[BottomNav] Высота панели (px): {self.nav_height * screen_density:.0f}px")
+        logger.info(f"[BottomNav] Системная навигация: {nav_bar_height}dp")
+        logger.info(f"[BottomNav] Системная навигация (px): {nav_bar_height * screen_density:.0f}px")
+        logger.info(f"[BottomNav] Общая высота (dp): {self.nav_height + nav_bar_height}dp")
+        logger.info(f"[BottomNav] Общая высота (px): {(self.nav_height + nav_bar_height) * screen_density:.0f}px")
+        logger.info(f"[BottomNav] padding: [8, 0, 8, 0]")
         logger.info(f"[BottomNav] spacing: 4dp")
         logger.info("=" * 70)
 
         # Общая высота = панель + системная навигация
         self.height = self.nav_height + nav_bar_height
 
-        # Паддинги
-        self.padding = [dp(8), 0, dp(8), nav_bar_height]
+        # ВАЖНО: нижний отступ = 0, иконки прилегают к системной навигации
+        self.padding = [dp(8), 0, dp(8), 0]
         self.spacing = dp(4)
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -222,23 +231,20 @@ class BottomNav(BoxLayout):
     def switch_tab(self, screen_name):
         self.switch_to(screen_name)
 
-
     def reload_config(self):
         """Обновляет конфигурацию панели при повороте экрана"""
-        from config.layout_config import layout_config
-        from config.system_bars import get_navigation_bar_height
-        from kivy.metrics import dp
+        screen_width = Window.width
+        screen_height = Window.height
+        screen_density = Window.dpi / 160 if Window.dpi else 1.0
 
-        # Получаем новые высоты
         self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
 
-        # Обновляем размеры
         self.height = self.nav_height + nav_bar_height
-        self.padding = [dp(8), 0, dp(8), nav_bar_height]
+        self.padding = [dp(8), 0, dp(8), 0]
 
-        # Обновляем каждую кнопку
+        logger.info(
+            f"[BottomNav] 🔄 Перезагрузка после поворота: {screen_width}x{screen_height}, высота={self.height}dp")
+
         for item in self.items:
             item._reload_icon()
-
-        logger.info(f"[BottomNav] 🔄 Перезагрузка после поворота: высота={self.height}dp, нав-бар={nav_bar_height}dp")

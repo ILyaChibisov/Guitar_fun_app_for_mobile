@@ -1,10 +1,11 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - полностью адаптивная (Material Design стиль)
+Верхняя панель навигации - полностью адаптивная с отладкой
 """
 from kivy.metrics import dp, sp
 from kivy.uix.widget import Widget
 from kivy.utils import platform
+from kivy.core.window import Window
 
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
@@ -18,7 +19,7 @@ from config.layout_config import layout_config
 from config.system_bars import get_status_bar_height
 from screens.components.language_selector import LanguageSelector
 
-logger = get_logger('UI')
+logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
@@ -35,11 +36,31 @@ class TopNav(MDCard):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
 
-        # Получаем адаптивную высоту
+        # Получаем информацию об устройстве
+        screen_width = Window.width
+        screen_height = Window.height
+        screen_density = Window.dpi / 160 if Window.dpi else 1.0
+
+        # Получаем высоты
         status_h = get_status_bar_height()
         nav_height = layout_config.get_top_nav_height()
 
-        # Общая высота = статус-бар + панель
+        # ============ ПОДРОБНАЯ ОТЛАДОЧНАЯ ИНФОРМАЦИЯ ============
+        logger.info("=" * 70)
+        logger.info("📱 TOP NAV DEBUG INFO")
+        logger.info("=" * 70)
+        logger.info(f"[TopNav] Платформа: {platform}")
+        logger.info(f"[TopNav] Размер экрана: {screen_width} x {screen_height} px")
+        logger.info(f"[TopNav] Плотность экрана (dpi/160): {screen_density:.2f}")
+        logger.info(f"[TopNav] Высота статус-бара: {status_h}dp")
+        logger.info(f"[TopNav] Высота статус-бара (px): {status_h * screen_density:.0f}px")
+        logger.info(f"[TopNav] Высота панели: {nav_height}dp")
+        logger.info(f"[TopNav] Высота панели (px): {nav_height * screen_density:.0f}px")
+        logger.info(f"[TopNav] Общая высота: {nav_height}dp (статус-бар внутри padding)")
+        logger.info(f"[TopNav] padding: [0, {status_h}dp, 0, 0]")
+        logger.info("=" * 70)
+
+        # Общая высота = панель
         self.height = nav_height
         self.padding = [0, status_h, 0, 0]
 
@@ -47,8 +68,6 @@ class TopNav(MDCard):
         self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
         self.spacing = 0
-
-        logger.info(f"TopNav: высота={self.height}dp, статус-бар={status_h}dp")
 
         # Основной контейнер
         self.container = MDBoxLayout(
@@ -166,6 +185,8 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
+        logger.info(f"[TopNav] Инициализация завершена")
+
     def _get_screen_title(self, screen_name: str) -> str:
         titles = {
             'home': 'Главная',
@@ -191,6 +212,7 @@ class TopNav(MDCard):
             self.screen_title.text = self._get_screen_title(screen_name)
         else:
             self._show_back_button()
+        logger.info(f"[TopNav] Экран изменён: {screen_name}")
 
     def _on_menu_press(self, btn):
         app = MDApp.get_running_app()
@@ -202,6 +224,7 @@ class TopNav(MDCard):
     def _on_back_press(self, btn):
         if self.sm:
             self.sm.current = 'songs'
+            logger.info(f"[TopNav] Назад на экран: songs")
 
     def _on_profile_press(self, btn):
         app = MDApp.get_running_app()
@@ -246,11 +269,13 @@ class TopNav(MDCard):
             self._hide_back_button()
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
         self.screen_title.text = f"Буква {display}"
+        logger.info(f"[TopNav] Экран исполнителей: {self.screen_title.text}")
 
     def reset_to_default(self):
         self._hide_back_button()
         if self.sm:
             self.screen_title.text = self._get_screen_title(self.sm.current)
+        logger.info(f"[TopNav] Сброс к стандартному виду")
 
     def _show_back_button(self):
         self._is_back_mode = True
@@ -262,16 +287,29 @@ class TopNav(MDCard):
         self.back_btn.opacity = 0
         self.back_btn.disabled = True
 
+    def hide_search_button(self, hide: bool = True):
+        self.search_btn.opacity = 0 if hide else 1
+        self.search_btn.disabled = hide
+
+    def hide_profile_button(self, hide: bool = True):
+        self.profile_btn.opacity = 0 if hide else 1
+        self.profile_btn.disabled = hide
+
     def reload_config(self):
         """Обновляет конфигурацию при повороте экрана"""
-        from config.layout_config import layout_config
-        from config.system_bars import get_status_bar_height
-        from kivy.metrics import dp
-
+        screen_width = Window.width
+        screen_height = Window.height
+        screen_density = Window.dpi / 160 if Window.dpi else 1.0
         status_h = get_status_bar_height()
         nav_height = layout_config.get_top_nav_height()
 
         self.height = nav_height
         self.padding = [0, status_h, 0, 0]
 
-        logger.info(f"[TopNav] 🔄 Обновлён после поворота: высота={self.height}dp, статус-бар={status_h}dp")
+        logger.info("=" * 70)
+        logger.info("📱 TOP NAV RELOAD (поворот экрана)")
+        logger.info(f"[TopNav] Новый размер: {screen_width}x{screen_height} px")
+        logger.info(f"[TopNav] Плотность: {screen_density:.2f}")
+        logger.info(f"[TopNav] Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px)")
+        logger.info(f"[TopNav] Высота панели: {nav_height}dp ({nav_height * screen_density:.0f}px)")
+        logger.info("=" * 70)
