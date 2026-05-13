@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - полностью адаптивная
+Верхняя панель навигации - автоматически подстраивается под статус-бар
 """
 from kivy.metrics import dp, sp
 from kivy.uix.widget import Widget
@@ -23,7 +23,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - полностью адаптивная"""
+    """Верхняя панель навигации - автоматически подстраивается под статус-бар"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -35,39 +35,33 @@ class TopNav(MDCard):
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
+        self.pos_hint = {'top': 1}
 
-        # Получаем информацию об устройстве
-        screen_width = Window.width
-        screen_height = Window.height
-        screen_density = get_screen_density()
-
-        # Получаем высоты
+        # Получаем реальную высоту статус-бара
         status_h = get_status_bar_height()
+
+        # Высота панели из конфига (в dp)
         nav_height = layout_config.get_top_nav_height()
 
-        # ============ ПОДРОБНАЯ ОТЛАДОЧНАЯ ИНФОРМАЦИЯ ============
-        logger.info("=" * 70)
-        logger.info("📱 TOP NAV DEBUG INFO")
-        logger.info("=" * 70)
-        logger.info(f"[TopNav] Платформа: {platform}")
-        logger.info(f"[TopNav] Размер экрана: {screen_width} x {screen_height} px")
-        logger.info(f"[TopNav] Плотность экрана: {screen_density:.2f}")
-        logger.info(f"[TopNav] Высота статус-бара: {status_h}dp")
-        logger.info(f"[TopNav] Высота статус-бара (px): {status_h * screen_density:.0f}px")
-        logger.info(f"[TopNav] Высота панели: {nav_height}dp")
-        logger.info(f"[TopNav] Высота панели (px): {nav_height * screen_density:.0f}px")
-        logger.info(f"[TopNav] padding: [0, {status_h}dp, 0, 0]")
-        logger.info("=" * 70)
-
-        # Общая высота = панель
+        # ============ КЛЮЧЕВОЙ МОМЕНТ ============
+        # Высота панели = высота контента + отступ сверху под статус-бар
         self.height = nav_height
-        # ВАЖНО: отступ сверху = высота статус-бара, чтобы контент не перекрывался
+
+        # Паддинг сверху = высоте статус-бара, чтобы контент был НИЖЕ него
         self.padding = [0, status_h, 0, 0]
 
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
         self.spacing = 0
+
+        # Отладка
+        screen_density = get_screen_density()
+        logger.info("=" * 70)
+        logger.info(f"📱 TOP NAV | Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px)")
+        logger.info(f"📱 TOP NAV | Панель: {nav_height}dp ({nav_height * screen_density:.0f}px)")
+        logger.info(f"📱 TOP NAV | Верхний отступ: {status_h}dp")
+        logger.info("=" * 70)
 
         # Основной контейнер
         self.container = MDBoxLayout(
@@ -185,8 +179,6 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info(f"[TopNav] Инициализация завершена")
-
     def _get_screen_title(self, screen_name: str) -> str:
         titles = {
             'home': 'Главная',
@@ -212,7 +204,6 @@ class TopNav(MDCard):
             self.screen_title.text = self._get_screen_title(screen_name)
         else:
             self._show_back_button()
-        logger.info(f"[TopNav] Экран изменён: {screen_name}")
 
     def _on_menu_press(self, btn):
         app = MDApp.get_running_app()
@@ -224,7 +215,6 @@ class TopNav(MDCard):
     def _on_back_press(self, btn):
         if self.sm:
             self.sm.current = 'songs'
-            logger.info(f"[TopNav] Назад на экран: songs")
 
     def _on_profile_press(self, btn):
         app = MDApp.get_running_app()
@@ -269,13 +259,11 @@ class TopNav(MDCard):
             self._hide_back_button()
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
         self.screen_title.text = f"Буква {display}"
-        logger.info(f"[TopNav] Экран исполнителей: {self.screen_title.text}")
 
     def reset_to_default(self):
         self._hide_back_button()
         if self.sm:
             self.screen_title.text = self._get_screen_title(self.sm.current)
-        logger.info(f"[TopNav] Сброс к стандартному виду")
 
     def _show_back_button(self):
         self._is_back_mode = True
@@ -297,19 +285,11 @@ class TopNav(MDCard):
 
     def reload_config(self):
         """Обновляет конфигурацию при повороте экрана"""
-        screen_width = Window.width
-        screen_height = Window.height
-        screen_density = get_screen_density()
         status_h = get_status_bar_height()
         nav_height = layout_config.get_top_nav_height()
 
         self.height = nav_height
         self.padding = [0, status_h, 0, 0]
 
-        logger.info("=" * 70)
-        logger.info("📱 TOP NAV RELOAD (поворот экрана)")
-        logger.info(f"[TopNav] Новый размер: {screen_width}x{screen_height} px")
-        logger.info(f"[TopNav] Плотность: {screen_density:.2f}")
-        logger.info(f"[TopNav] Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px)")
-        logger.info(f"[TopNav] Высота панели: {nav_height}dp ({nav_height * screen_density:.0f}px)")
-        logger.info("=" * 70)
+        screen_density = get_screen_density()
+        logger.info(f"🔄 TopNav | Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px)")

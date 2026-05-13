@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя навигация - полностью адаптивная с отладкой
+Нижняя навигация - полностью адаптивная, автоматически подстраивается под системную навигацию
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -79,7 +79,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
-        logger.info(f"[NavItem] {screen_name}: icon_height_ratio={icon_height_ratio}, font_size={font_size}")
+        logger.debug(f"[NavItem] {screen_name}: icon_height_ratio={icon_height_ratio}, font_size={font_size}")
 
     def _reload_icon(self, *args):
         self._load_icon()
@@ -100,7 +100,6 @@ class NavItem(ButtonBehavior, BoxLayout):
                         keep_ratio=True
                     )
                     self.icon_container.add_widget(self.icon_image)
-                    logger.info(f"[NavItem] Иконка загружена: {self.icon_asset}")
                     return
             except Exception as e:
                 logger.error(f'Ошибка загрузки иконки {self.icon_asset}: {e}')
@@ -114,7 +113,6 @@ class NavItem(ButtonBehavior, BoxLayout):
             valign='center'
         )
         self.icon_container.add_widget(self.icon_image)
-        logger.warning(f"[NavItem] Используется заглушка для {self.icon_asset}")
 
     def update_state(self, instance, value):
         if value:
@@ -131,52 +129,38 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - полностью адаптивная с запасом 12dp"""
+    """Нижняя панель навигации - автоматически подстраивается под системную навигацию"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
         self.size_hint = (1, None)
+        self.pos_hint = {'y': 0}
 
-        # Получаем информацию об устройстве
-        screen_width = Window.width
-        screen_height = Window.height
-        screen_density = get_screen_density()
-
-        # Получаем высоты
-        self.nav_height = layout_config.get_bottom_nav_height()
+        # Получаем реальную высоту системной навигации
         nav_bar_height = get_navigation_bar_height()
 
-        # ДОБАВЛЯЕМ ЗАПАС 12dp ДЛЯ БЕЗОПАСНОГО РАСПОЛОЖЕНИЯ
-        BOTTOM_SAFETY_MARGIN = dp(12)
+        # Высота панели из конфига (в dp)
+        self.nav_height = layout_config.get_bottom_nav_height()
 
-        # ============ ПОДРОБНАЯ ОТЛАДОЧНАЯ ИНФОРМАЦИЯ ============
-        logger.info("=" * 70)
-        logger.info("📱 BOTTOM NAV DEBUG INFO")
-        logger.info("=" * 70)
-        logger.info(f"[BottomNav] Платформа: {platform}")
-        logger.info(f"[BottomNav] Размер экрана: {screen_width} x {screen_height} px")
-        logger.info(f"[BottomNav] Плотность экрана: {screen_density:.2f}")
-        logger.info(f"[BottomNav] Высота панели (dp): {self.nav_height}dp")
-        logger.info(f"[BottomNav] Высота панели (px): {self.nav_height * screen_density:.0f}px")
-        logger.info(f"[BottomNav] Системная навигация: {nav_bar_height}dp")
-        logger.info(f"[BottomNav] Системная навигация (px): {nav_bar_height * screen_density:.0f}px")
-        logger.info(
-            f"[BottomNav] Запас снизу: {BOTTOM_SAFETY_MARGIN}dp ({BOTTOM_SAFETY_MARGIN * screen_density:.0f}px)")
-        logger.info(f"[BottomNav] Общая высота (dp): {self.nav_height + nav_bar_height + BOTTOM_SAFETY_MARGIN}dp")
-        logger.info(
-            f"[BottomNav] Общая высота (px): {(self.nav_height + nav_bar_height + BOTTOM_SAFETY_MARGIN) * screen_density:.0f}px")
-        logger.info(f"[BottomNav] padding: [8, 0, 8, {BOTTOM_SAFETY_MARGIN}]")
-        logger.info(f"[BottomNav] spacing: 4dp")
-        logger.info("=" * 70)
+        # ============ КЛЮЧЕВОЙ МОМЕНТ ============
+        # Общая высота = высота панели + высота системной навигации
+        # НО нижний отступ = высоте системной навигации, чтобы панель была НАД ней
+        self.height = self.nav_height + nav_bar_height
 
-        # Общая высота = панель + системная навигация + запас 12dp
-        self.height = self.nav_height + nav_bar_height + BOTTOM_SAFETY_MARGIN
-
-        # Паддинги: нижний отступ = запас 12dp
-        self.padding = [dp(8), 0, dp(8), BOTTOM_SAFETY_MARGIN]
+        # Паддинги: верхний 0, нижний = высоте системной навигации
+        self.padding = [dp(8), 0, dp(8), nav_bar_height]
         self.spacing = dp(4)
         self.md_bg_color = [0, 0, 0, 0]
+
+        # Отладка
+        screen_density = get_screen_density()
+        logger.info("=" * 70)
+        logger.info(f"📱 BOTTOM NAV | Системная нав: {nav_bar_height}dp ({nav_bar_height * screen_density:.0f}px)")
+        logger.info(f"📱 BOTTOM NAV | Панель: {self.nav_height}dp ({self.nav_height * screen_density:.0f}px)")
+        logger.info(f"📱 BOTTOM NAV | Общая высота: {self.height}dp ({self.height * screen_density:.0f}px)")
+        logger.info(f"📱 BOTTOM NAV | Нижний отступ: {nav_bar_height}dp")
+        logger.info("=" * 70)
 
         # Меню
         self.nav_items = [
@@ -198,12 +182,9 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        logger.info(f"[BottomNav] Инициализация завершена. Всего кнопок: {len(self.items)}")
-
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
             item.active = (screen == screen_name)
-        logger.info(f"[BottomNav] Экран изменён: {screen_name}")
 
     def switch_to(self, screen_name):
         app = MDApp.get_running_app()
@@ -225,26 +206,20 @@ class BottomNav(BoxLayout):
 
         self.sm.transition.direction = direction
         self.sm.current = screen_name
-        logger.info(f"[BottomNav] Переход на экран: {screen_name}, direction={direction}")
 
     def switch_tab(self, screen_name):
         self.switch_to(screen_name)
 
     def reload_config(self):
         """Обновляет конфигурацию панели при повороте экрана"""
-        screen_width = Window.width
-        screen_height = Window.height
-        screen_density = get_screen_density()
-        BOTTOM_SAFETY_MARGIN = dp(12)
-
-        self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
+        self.nav_height = layout_config.get_bottom_nav_height()
 
-        self.height = self.nav_height + nav_bar_height + BOTTOM_SAFETY_MARGIN
-        self.padding = [dp(8), 0, dp(8), BOTTOM_SAFETY_MARGIN]
+        self.height = self.nav_height + nav_bar_height
+        self.padding = [dp(8), 0, dp(8), nav_bar_height]
 
-        logger.info(f"[BottomNav] 🔄 Перезагрузка после поворота: {screen_width}x{screen_height}, "
-                    f"высота={self.height}dp, плотность={screen_density:.2f}, запас={BOTTOM_SAFETY_MARGIN}dp")
+        screen_density = get_screen_density()
+        logger.info(f"🔄 BottomNav | Системная нав: {nav_bar_height}dp ({nav_bar_height * screen_density:.0f}px)")
 
         for item in self.items:
             item._reload_icon()
