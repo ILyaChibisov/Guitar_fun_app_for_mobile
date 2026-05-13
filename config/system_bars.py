@@ -1,6 +1,7 @@
 # config/system_bars.py
 """
 Определение высоты системных панелей Android
+На Windows используем значения, имитирующие реальное Android устройство
 """
 from kivy.utils import platform
 from kivy.metrics import dp
@@ -19,21 +20,34 @@ GESTURE_NAV_BAR_HEIGHT_DP = 16
 
 
 def get_screen_density():
-    """Возвращает плотность экрана"""
+    """
+    Возвращает плотность экрана (scale factor)
+    На Android: реальная плотность (обычно 2.0, 2.75, 3.0 и т.д.)
+    На Windows: dpi/160
+    """
     try:
         if platform == 'android':
             from android import mActivity
             from jnius import autoclass
             Resources = autoclass('android.content.res.Resources')
-            return Resources.getSystem().getDisplayMetrics().density
+            density = Resources.getSystem().getDisplayMetrics().density
+            logger.info(f"[SystemBars] Плотность экрана (Android): {density:.2f}")
+            return density
         else:
-            return Window.dpi / 160 if Window.dpi else 1.0
-    except Exception:
+            density = Window.dpi / 160 if Window.dpi else 1.0
+            logger.info(f"[SystemBars] Плотность экрана (Windows): {density:.2f}")
+            return density
+    except Exception as e:
+        logger.error(f"Ошибка получения плотности экрана: {e}")
         return Window.dpi / 160 if Window.dpi else 1.0
 
 
 def get_status_bar_height():
-    """Возвращает высоту статус-бара в dp (уже преобразованную)"""
+    """
+    Возвращает высоту статус-бара в dp (уже преобразованную)
+    На Android: реальная высота
+    На Windows: 24dp
+    """
     global _status_bar_height_dp
 
     if _status_bar_height_dp is not None:
@@ -64,7 +78,12 @@ def get_status_bar_height():
 
 
 def get_navigation_bar_height():
-    """Возвращает высоту навигационной панели в dp (уже преобразованную)"""
+    """
+    Возвращает высоту навигационной панели в dp (уже преобразованную)
+    На Android с кнопками: ~48dp
+    На Android с жестами: ~16dp
+    На Windows: 48dp
+    """
     global _nav_bar_height_dp
 
     if _nav_bar_height_dp is not None:
@@ -95,6 +114,7 @@ def get_navigation_bar_height():
             View = autoclass('android.view.View')
             systemUiVisibility = mActivity.getWindow().getDecorView().getSystemUiVisibility()
 
+            # SYSTEM_UI_FLAG_HIDE_NAVIGATION = 0x00000002
             if systemUiVisibility & 0x00000002:
                 _nav_bar_height_dp = GESTURE_NAV_BAR_HEIGHT_DP
                 logger.info(f"[SystemBars] Режим жестов: {_nav_bar_height_dp}dp")
@@ -109,7 +129,9 @@ def get_navigation_bar_height():
 
 
 def set_simulation_heights(status_dp=24, nav_dp=48):
-    """Для Windows: установить свои значения симуляции (в dp)"""
+    """
+    Для Windows: установить свои значения симуляции (в dp)
+    """
     global WINDOWS_STATUS_BAR_HEIGHT_DP, WINDOWS_NAV_BAR_HEIGHT_DP
     global _status_bar_height_dp, _nav_bar_height_dp
 
@@ -122,7 +144,9 @@ def set_simulation_heights(status_dp=24, nav_dp=48):
 
 
 def set_gesture_mode(enabled=True):
-    """Устанавливает режим жестов (для симуляции на Windows)"""
+    """
+    Устанавливает режим жестов (для симуляции на Windows)
+    """
     if platform != 'android':
         if enabled:
             set_simulation_heights(status_dp=24, nav_dp=GESTURE_NAV_BAR_HEIGHT_DP)

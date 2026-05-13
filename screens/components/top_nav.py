@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - полностью адаптивная с отладкой
+Верхняя панель навигации - полностью адаптивная
 """
 from kivy.metrics import dp, sp
 from kivy.uix.widget import Widget
@@ -16,7 +16,7 @@ from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import get_logger
 from config.layout_config import layout_config
-from config.system_bars import get_status_bar_height
+from config.system_bars import get_status_bar_height, get_screen_density
 from screens.components.language_selector import LanguageSelector
 
 logger = get_logger('TopNav')
@@ -39,7 +39,7 @@ class TopNav(MDCard):
         # Получаем информацию об устройстве
         screen_width = Window.width
         screen_height = Window.height
-        screen_density = Window.dpi / 160 if Window.dpi else 1.0
+        screen_density = get_screen_density()
 
         # Получаем высоты
         status_h = get_status_bar_height()
@@ -51,17 +51,17 @@ class TopNav(MDCard):
         logger.info("=" * 70)
         logger.info(f"[TopNav] Платформа: {platform}")
         logger.info(f"[TopNav] Размер экрана: {screen_width} x {screen_height} px")
-        logger.info(f"[TopNav] Плотность экрана (dpi/160): {screen_density:.2f}")
+        logger.info(f"[TopNav] Плотность экрана: {screen_density:.2f}")
         logger.info(f"[TopNav] Высота статус-бара: {status_h}dp")
         logger.info(f"[TopNav] Высота статус-бара (px): {status_h * screen_density:.0f}px")
         logger.info(f"[TopNav] Высота панели: {nav_height}dp")
         logger.info(f"[TopNav] Высота панели (px): {nav_height * screen_density:.0f}px")
-        logger.info(f"[TopNav] Общая высота: {nav_height}dp (статус-бар внутри padding)")
         logger.info(f"[TopNav] padding: [0, {status_h}dp, 0, 0]")
         logger.info("=" * 70)
 
         # Общая высота = панель
         self.height = nav_height
+        # ВАЖНО: отступ сверху = высота статус-бара, чтобы контент не перекрывался
         self.padding = [0, status_h, 0, 0]
 
         self.radius = [0, 0, 0, 0]
@@ -78,7 +78,7 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Левая часть (меню)
+        # Левая часть (меню и назад)
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -299,7 +299,7 @@ class TopNav(MDCard):
         """Обновляет конфигурацию при повороте экрана"""
         screen_width = Window.width
         screen_height = Window.height
-        screen_density = Window.dpi / 160 if Window.dpi else 1.0
+        screen_density = get_screen_density()
         status_h = get_status_bar_height()
         nav_height = layout_config.get_top_nav_height()
 

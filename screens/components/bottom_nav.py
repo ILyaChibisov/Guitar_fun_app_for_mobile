@@ -19,7 +19,7 @@ from config.theme import theme
 from config.logger_config import get_logger
 from config.bottom_nav_config import BottomNavConfig
 from config.layout_config import layout_config
-from config.system_bars import get_navigation_bar_height
+from config.system_bars import get_navigation_bar_height, get_screen_density
 from utils.kivy_imports import MDBoxLayout
 
 logger = get_logger('BottomNav')
@@ -51,19 +51,16 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.size_hint = (1, 1)
         self.spacing = dp(4)
 
-        # Увеличиваем пропорции для более крупных иконок
-        icon_height_ratio = self.config.get('icon_height', 0.72)  # было 0.68, увеличил
+        icon_height_ratio = self.config.get('icon_height', 0.72)
         self.icon_container = MDBoxLayout(
             size_hint=(1, icon_height_ratio),
             orientation='vertical'
         )
 
-        # Иконка
         self.icon_image = None
         self._load_icon()
 
-        # Текст
-        font_size = self.config.get('font_size', sp(12))  # увеличил шрифт
+        font_size = self.config.get('font_size', sp(12))
         self.text_label = Label(
             text=self.config.get('text', text),
             font_size=font_size,
@@ -82,14 +79,12 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
-        # ОТЛАДКА
         logger.info(f"[NavItem] {screen_name}: icon_height_ratio={icon_height_ratio}, font_size={font_size}")
 
     def _reload_icon(self, *args):
         self._load_icon()
 
     def _load_icon(self):
-        """Загружает иконку с увеличенным размером"""
         self.icon_container.clear_widgets()
 
         if HAS_ASSETS and self.icon_asset:
@@ -97,7 +92,6 @@ class NavItem(ButtonBehavior, BoxLayout):
                 icon_data = load_asset_as_bytes(self.icon_asset)
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
-                    # Увеличиваем размер иконки: 85% от контейнера (было 75%)
                     self.icon_image = Image(
                         texture=core_img.texture,
                         size_hint=(0.85, 0.85),
@@ -111,7 +105,6 @@ class NavItem(ButtonBehavior, BoxLayout):
             except Exception as e:
                 logger.error(f'Ошибка загрузки иконки {self.icon_asset}: {e}')
 
-        # Заглушка
         self.icon_image = Label(
             text="?",
             font_size=sp(20),
@@ -148,7 +141,7 @@ class BottomNav(BoxLayout):
         # Получаем информацию об устройстве
         screen_width = Window.width
         screen_height = Window.height
-        screen_density = Window.dpi / 160 if Window.dpi else 1.0
+        screen_density = get_screen_density()  # ИСПРАВЛЕНО: используем get_screen_density()
 
         # Получаем высоты
         self.nav_height = layout_config.get_bottom_nav_height()
@@ -160,14 +153,14 @@ class BottomNav(BoxLayout):
         logger.info("=" * 70)
         logger.info(f"[BottomNav] Платформа: {platform}")
         logger.info(f"[BottomNav] Размер экрана: {screen_width} x {screen_height} px")
-        logger.info(f"[BottomNav] Плотность экрана (dpi/160): {screen_density:.2f}")
+        logger.info(f"[BottomNav] Плотность экрана: {screen_density:.2f}")
         logger.info(f"[BottomNav] Высота панели (dp): {self.nav_height}dp")
         logger.info(f"[BottomNav] Высота панели (px): {self.nav_height * screen_density:.0f}px")
         logger.info(f"[BottomNav] Системная навигация: {nav_bar_height}dp")
         logger.info(f"[BottomNav] Системная навигация (px): {nav_bar_height * screen_density:.0f}px")
         logger.info(f"[BottomNav] Общая высота (dp): {self.nav_height + nav_bar_height}dp")
         logger.info(f"[BottomNav] Общая высота (px): {(self.nav_height + nav_bar_height) * screen_density:.0f}px")
-        logger.info(f"[BottomNav] padding: [8, 0, 8, 0]")
+        logger.info(f"[BottomNav] padding: [8, 0, 0, 0]")  # ИСПРАВЛЕНО: нижний отступ 0
         logger.info(f"[BottomNav] spacing: 4dp")
         logger.info("=" * 70)
 
@@ -235,7 +228,7 @@ class BottomNav(BoxLayout):
         """Обновляет конфигурацию панели при повороте экрана"""
         screen_width = Window.width
         screen_height = Window.height
-        screen_density = Window.dpi / 160 if Window.dpi else 1.0
+        screen_density = get_screen_density()
 
         self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
@@ -244,7 +237,7 @@ class BottomNav(BoxLayout):
         self.padding = [dp(8), 0, dp(8), 0]
 
         logger.info(
-            f"[BottomNav] 🔄 Перезагрузка после поворота: {screen_width}x{screen_height}, высота={self.height}dp")
+            f"[BottomNav] 🔄 Перезагрузка после поворота: {screen_width}x{screen_height}, высота={self.height}dp, плотность={screen_density:.2f}")
 
         for item in self.items:
             item._reload_icon()
