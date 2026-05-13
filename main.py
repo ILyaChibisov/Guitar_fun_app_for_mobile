@@ -11,6 +11,7 @@ from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
+from kivy.clock import Clock
 from io import BytesIO
 
 import kivy
@@ -100,6 +101,7 @@ from screens.components.bottom_nav import BottomNav
 from screens.components.top_nav import TopNav
 from screens.components.blocking_layer import BlockingLayer
 from config.system_bars import get_navigation_bar_height
+
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
@@ -122,7 +124,7 @@ class RootWidget(MDFloatLayout):
         super().__init__(**kwargs)
         self.bg_image = None
         self.size_hint = (1, 1)
-        self.padding = [0, 0, 0, 0]  # Отступы都在 BottomNav
+        self.padding = [0, 0, 0, 0]
 
         self.load_background()
         logger.info("RootWidget создан")
@@ -277,7 +279,7 @@ class GuitarFunsApp(MDApp):
         self.top_nav.md_bg_color = [0, 0, 0, 0]
         self.top_nav.theme_bg_color = "Custom"
 
-        # Создаём нижнюю панель (без лишних отступов)
+        # Создаём нижнюю панель
         self.bottom_nav = BottomNav(self.screen_manager)
 
         # Создаём блокирующий слой
@@ -293,8 +295,42 @@ class GuitarFunsApp(MDApp):
 
         network_manager.start_monitoring()
 
+        # Подписываемся на изменение размера окна (поворот экрана)
+        Window.bind(on_resize=self.on_window_resize)
+
         logger.info('Интерфейс успешно создан')
         return root
+
+    def on_window_resize(self, window, width, height):
+        """Обработчик изменения размера окна (в т.ч. поворота экрана)"""
+        from config.layout_config import layout_config
+
+        logger.info(f"🔄 Поворот экрана: {width}x{height}")
+
+        # Обновляем layout_config
+        layout_config.force_update()
+
+        # Перезагружаем панели навигации
+        Clock.schedule_once(lambda dt: self._reload_nav_bars(), 0.1)
+        Clock.schedule_once(lambda dt: self._reload_content_screens(), 0.2)
+
+    def _reload_nav_bars(self):
+        """Перезагружает конфигурацию панелей навигации"""
+        if hasattr(self, 'bottom_nav') and self.bottom_nav:
+            self.bottom_nav.reload_config()
+
+        if hasattr(self, 'top_nav') and self.top_nav:
+            if hasattr(self.top_nav, 'reload_config'):
+                self.top_nav.reload_config()
+
+        logger.info("✅ Панели навигации обновлены после поворота")
+
+    def _reload_content_screens(self):
+        """Обновляет контентные экраны после поворота"""
+        if hasattr(self, 'screen_manager') and self.screen_manager:
+            current_screen = self.screen_manager.current_screen
+            if hasattr(current_screen, 'on_orientation_changed'):
+                current_screen.on_orientation_changed()
 
     def open_support(self, instance=None):
         from utils.notifications import notify
@@ -323,13 +359,6 @@ class GuitarFunsApp(MDApp):
     def on_stop(self):
         logger.info('Приложение закрыто')
         network_manager.stop_monitoring()
-
-    def on_config(self, config):
-        """Вызывается при изменении конфигурации (в т.ч. размера окна)"""
-        if hasattr(self, 'bottom_nav') and self.bottom_nav:
-            # Небольшая задержка для корректного определения нового размера
-            from kivy.clock import Clock
-            Clock.schedule_once(lambda dt: self.bottom_nav.reload_config(), 0.1)
 
 
 if __name__ == '__main__':

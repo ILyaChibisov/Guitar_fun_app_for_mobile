@@ -222,14 +222,23 @@ class BottomNav(BoxLayout):
     def switch_tab(self, screen_name):
         self.switch_to(screen_name)
 
+
     def reload_config(self):
-        """Обновляет конфигурацию панели при изменении размера экрана"""
+        """Обновляет конфигурацию панели при повороте экрана"""
+        from config.layout_config import layout_config
+        from config.system_bars import get_navigation_bar_height
+        from kivy.metrics import dp
+
+        # Получаем новые высоты
         self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
+
+        # Обновляем размеры
         self.height = self.nav_height + nav_bar_height
         self.padding = [dp(8), 0, dp(8), nav_bar_height]
 
-        logger.info(f"[BottomNav] Перезагрузка конфига: высота={self.height}dp")
-
+        # Обновляем каждую кнопку
         for item in self.items:
             item._reload_icon()
+
+        logger.info(f"[BottomNav] 🔄 Перезагрузка после поворота: высота={self.height}dp, нав-бар={nav_bar_height}dp")

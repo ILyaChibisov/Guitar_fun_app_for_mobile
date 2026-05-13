@@ -261,3 +261,17 @@ class TopNav(MDCard):
         self._is_back_mode = False
         self.back_btn.opacity = 0
         self.back_btn.disabled = True
+
+    def reload_config(self):
+        """Обновляет конфигурацию при повороте экрана"""
+        from config.layout_config import layout_config
+        from config.system_bars import get_status_bar_height
+        from kivy.metrics import dp
+
+        status_h = get_status_bar_height()
+        nav_height = layout_config.get_top_nav_height()
+
+        self.height = nav_height
+        self.padding = [0, status_h, 0, 0]
+
+        logger.info(f"[TopNav] 🔄 Обновлён после поворота: высота={self.height}dp, статус-бар={status_h}dp")

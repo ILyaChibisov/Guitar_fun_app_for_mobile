@@ -170,3 +170,10 @@ class BaseScreen(MDScreen):
     def reset_ui(self):
         """Сбрасывает UI (очищает контент и убирает сообщения)"""
         self.clear_content()
+
+    def on_orientation_changed(self):
+        """Вызывается при повороте экрана (можно переопределить в дочерних экранах)"""
+        # По умолчанию ничего не делаем
+        # Дочерние экраны могут переопределить для пересчёта размеров
+        logger.debug(f"[BaseScreen] {self.name}: ориентация изменена")
+        pass

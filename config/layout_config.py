@@ -106,6 +106,13 @@ class LayoutConfig:
         logger.info(f"[LayoutConfig] is_tablet: {cls.is_tablet()}")
         logger.info("=" * 50)
 
+    @classmethod
+    def force_update(cls):
+        """Принудительно обновляет настройки (после поворота экрана)"""
+        cls._is_tablet = None
+        cls.update_for_platform()
+        logger.info(f"[LayoutConfig] 🔄 Принудительное обновление после поворота")
+
 
 # Создаём экземпляр
 layout_config = LayoutConfig()
