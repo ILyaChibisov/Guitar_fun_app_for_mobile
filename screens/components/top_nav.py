@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - с рамками для отладки
+Верхняя панель навигации - с отладочными рамками
 """
 from kivy.metrics import dp, sp
 from kivy.uix.widget import Widget
@@ -21,7 +21,7 @@ logger = get_logger('UI')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - с рамками для отладки"""
+    """Верхняя панель навигации - с отладочными рамками"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -31,29 +31,24 @@ class TopNav(MDCard):
         self.current_screen_name = 'home'
         self._is_back_mode = False
 
-        # Настройки карточки (панели)
         self.orientation = 'vertical'
         self.size_hint = (1, None)
 
-        # Получаем высоту статус-бара в пикселях и переводим в dp
         status_bar_height_px = get_status_bar_height_px()
         status_bar_height_dp = dp(status_bar_height_px)
 
-        # Высота панели в dp
         self.height = dp(56)
-        # Отступ сверху = высота статус-бара
         self.padding = [0, status_bar_height_dp, 0, 0]
 
         self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0.8]  # ВРЕМЕННО: полупрозрачный чёрный фон для отладки
+        self.md_bg_color = [0, 0, 0, 0]  # ПРОЗРАЧНЫЙ ФОН
         self.theme_bg_color = "Custom"
         self.elevation = 0
         self.spacing = 0
 
-        # ВРЕМЕННО: белая рамка вокруг всей панели
+        # БЕЛАЯ РАМКА ВОКРУГ ВСЕЙ ПАНЕЛИ
         self.bind(pos=self._update_panel_outline, size=self._update_panel_outline)
 
-        # Основной горизонтальный контейнер для элементов
         self.container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
@@ -62,7 +57,7 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # ============ ЛЕВАЯ ЧАСТЬ: контейнер для иконок (меню + назад) ============
+        # ============ ЛЕВАЯ ЧАСТЬ ============
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -73,7 +68,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Кнопка меню (гамбургер) - всегда видна
         self.menu_btn = MDIconButton(
             icon="menu",
             size_hint=(None, None),
@@ -85,7 +79,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Кнопка назад (стрелка) - видна только на экране исполнителей
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -102,7 +95,10 @@ class TopNav(MDCard):
         self.left_container.add_widget(self.menu_btn)
         self.left_container.add_widget(self.back_btn)
 
-        # ============ ЦЕНТР: название текущего экрана ============
+        # КРАСНАЯ РАМКА ВОКРУГ ЛЕВОГО КОНТЕЙНЕРА
+        self.left_container.bind(pos=self._update_left_outline, size=self._update_left_outline)
+
+        # ============ ЦЕНТР ============
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
             font_size=sp(18),
@@ -115,7 +111,10 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # ============ ПРАВАЯ ЧАСТЬ: поиск, профиль и выбор языка ============
+        # КРАСНАЯ РАМКА ВОКРУГ ЦЕНТРАЛЬНОГО КОНТЕЙНЕРА
+        self.screen_title.bind(pos=self._update_title_outline, size=self._update_title_outline)
+
+        # ============ ПРАВАЯ ЧАСТЬ ============
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -126,7 +125,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Кнопка поиска (лупа)
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
@@ -138,7 +136,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Кнопка профиля
         self.profile_btn = MDIconButton(
             icon="account-circle",
             size_hint=(None, None),
@@ -150,7 +147,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # LanguageSelector
         self.language_selector = LanguageSelector(
             on_language_change=self._on_language_changed
         )
@@ -159,16 +155,15 @@ class TopNav(MDCard):
         self.right_container.add_widget(self.profile_btn)
         self.right_container.add_widget(self.language_selector)
 
+        # КРАСНАЯ РАМКА ВОКРУГ ПРАВОГО КОНТЕЙНЕРА
+        self.right_container.bind(pos=self._update_right_outline, size=self._update_right_outline)
+
         self.container.add_widget(self.left_container)
         self.container.add_widget(self.screen_title)
         self.container.add_widget(self.right_container)
 
         self.add_widget(self.container)
 
-        # ВРЕМЕННО: красные рамки вокруг каждого контейнера для отладки
-        self._add_debug_outlines()
-
-        # Подписываемся на изменение экранов
         if hasattr(self.sm, 'add_observer'):
             self.sm.add_observer(self._on_screen_changed)
         elif hasattr(self.sm, 'bind'):
@@ -177,38 +172,22 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        # Выводим информацию об отладке
         logger.info("=" * 60)
-        logger.info("ВНИМАНИЕ: Верхняя панель имеет отладочные рамки!")
+        logger.info("Верхняя панель: белая рамка вокруг панели, красные рамки вокруг контейнеров")
         logger.info(f"  - Высота панели: {self.height}dp")
         logger.info(f"  - Отступ сверху (статус-бар): {self.padding[1]}dp")
         logger.info("=" * 60)
 
-    def _add_debug_outlines(self):
-        """ВРЕМЕННО: добавляет красные рамки вокруг контейнеров для отладки"""
-        # Рамка вокруг левого контейнера
-        self.left_container.bind(pos=self._update_left_outline, size=self._update_left_outline)
-        self._update_left_outline()
-
-        # Рамка вокруг центрального контейнера (заголовок)
-        self.screen_title.bind(pos=self._update_title_outline, size=self._update_title_outline)
-        self._update_title_outline()
-
-        # Рамка вокруг правого контейнера
-        self.right_container.bind(pos=self._update_right_outline, size=self._update_right_outline)
-        self._update_right_outline()
-
     def _update_panel_outline(self, *args):
-        """ВРЕМЕННО: белая рамка вокруг всей панели"""
+        """Белая рамка вокруг всей панели"""
         self.canvas.before.remove_group('topnav_panel_outline')
         with self.canvas.before:
             Color(1, 1, 1, 1)
             Line(rectangle=(self.x, self.y, self.width, self.height), width=2, group='topnav_panel_outline')
 
     def _update_left_outline(self, *args):
-        """ВРЕМЕННО: красная рамка вокруг левого контейнера"""
-        if hasattr(self, '_left_outline_group'):
-            self.canvas.before.remove_group('left_outline')
+        """Красная рамка вокруг левого контейнера"""
+        self.canvas.before.remove_group('left_outline')
         with self.canvas.before:
             Color(1, 0, 0, 0.8)
             Line(rectangle=(
@@ -219,11 +198,10 @@ class TopNav(MDCard):
             ), width=1, group='left_outline')
 
     def _update_title_outline(self, *args):
-        """ВРЕМЕННО: синяя рамка вокруг заголовка"""
-        if hasattr(self, '_title_outline_group'):
-            self.canvas.before.remove_group('title_outline')
+        """Красная рамка вокруг заголовка"""
+        self.canvas.before.remove_group('title_outline')
         with self.canvas.before:
-            Color(0, 0, 1, 0.8)
+            Color(1, 0, 0, 0.8)
             Line(rectangle=(
                 self.screen_title.x,
                 self.screen_title.y,
@@ -232,11 +210,10 @@ class TopNav(MDCard):
             ), width=1, group='title_outline')
 
     def _update_right_outline(self, *args):
-        """ВРЕМЕННО: зелёная рамка вокруг правого контейнера"""
-        if hasattr(self, '_right_outline_group'):
-            self.canvas.before.remove_group('right_outline')
+        """Красная рамка вокруг правого контейнера"""
+        self.canvas.before.remove_group('right_outline')
         with self.canvas.before:
-            Color(0, 1, 0, 0.8)
+            Color(1, 0, 0, 0.8)
             Line(rectangle=(
                 self.right_container.x,
                 self.right_container.y,
@@ -245,7 +222,6 @@ class TopNav(MDCard):
             ), width=1, group='right_outline')
 
     def _get_screen_title(self, screen_name: str) -> str:
-        """Возвращает заголовок для экрана"""
         titles = {
             'home': 'Главная',
             'songs': 'Песни',
@@ -264,7 +240,6 @@ class TopNav(MDCard):
         return titles.get(screen_name, screen_name.capitalize())
 
     def _on_screen_changed(self, instance, screen_name):
-        """Обработчик смены экрана"""
         self.current_screen_name = screen_name
 
         if screen_name != 'artists_by_letter':
@@ -276,7 +251,6 @@ class TopNav(MDCard):
         logger.debug(f"Экран изменён: {screen_name}")
 
     def _on_menu_press(self, btn):
-        """Обработчик кнопки меню"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
@@ -288,13 +262,11 @@ class TopNav(MDCard):
             logger.info("Меню нажато")
 
     def _on_back_press(self, btn):
-        """Обработчик кнопки назад (для экрана исполнителей)"""
         logger.info("Кнопка назад нажата")
         if self.sm:
             self.sm.current = 'songs'
 
     def _on_profile_press(self, btn):
-        """Обработчик кнопки профиля"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
@@ -307,12 +279,10 @@ class TopNav(MDCard):
                 self.sm.current = 'profile'
 
     def _on_language_changed(self, lang_code):
-        """Обработчик смены языка"""
         if self.app and hasattr(self.app, 'change_language'):
             self.app.change_language(lang_code)
 
     def _on_search_press(self, btn):
-        """Обработчик кнопки поиска"""
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             logger.debug("Навигация заблокирована")
@@ -326,26 +296,21 @@ class TopNav(MDCard):
                 self.sm.current = 'search'
 
     def set_app(self, app):
-        """Устанавливает ссылку на приложение"""
         self.app = app
 
     def get_current_language(self):
-        """Возвращает текущий язык"""
         if self.language_selector:
             return self.language_selector.get_current_lang()
         return 'ru'
 
     def set_current_language(self, lang_code):
-        """Устанавливает текущий язык"""
         if self.language_selector:
             self.language_selector.set_current_lang(lang_code)
 
     def update_title(self, screen_name: str):
-        """Обновляет заголовок панели"""
         self.screen_title.text = self._get_screen_title(screen_name)
 
     def update_for_artists_screen(self, letter: str, show_back_button: bool = True):
-        """Обновляет верхнюю панель для экрана исполнителей"""
         if show_back_button:
             self._show_back_button()
         else:
@@ -357,7 +322,6 @@ class TopNav(MDCard):
         logger.info(f"TopNav обновлён для экрана исполнителей: {self.screen_title.text}")
 
     def reset_to_default(self):
-        """Публичный метод для сброса панели"""
         self._hide_back_button()
         self.screen_title.bold = True
         if self.sm:
@@ -365,23 +329,19 @@ class TopNav(MDCard):
         logger.info("TopNav сброшен к стандартному виду")
 
     def _show_back_button(self):
-        """Показывает кнопку назад"""
         self._is_back_mode = True
         self.back_btn.opacity = 1
         self.back_btn.disabled = False
 
     def _hide_back_button(self):
-        """Скрывает кнопку назад"""
         self._is_back_mode = False
         self.back_btn.opacity = 0
         self.back_btn.disabled = True
 
     def hide_search_button(self, hide: bool = True):
-        """Скрывает/показывает кнопку поиска"""
         self.search_btn.opacity = 0 if hide else 1
         self.search_btn.disabled = hide
 
     def hide_profile_button(self, hide: bool = True):
-        """Скрывает/показывает кнопку профиля"""
         self.profile_btn.opacity = 0 if hide else 1
         self.profile_btn.disabled = hide
