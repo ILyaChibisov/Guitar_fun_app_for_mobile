@@ -2,6 +2,8 @@
 """
 Экран песен с алфавитной навигацией и современным поиском
 """
+import time
+
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.scrollview import MDScrollView
@@ -309,15 +311,28 @@ class LanguageSelector(MDBoxLayout):
             self.on_language_change(self.current_language)
 
     def set_language(self, language):
-        for lang in self.languages:
-            if lang['code'] == language:
-                self.current_language = language
-                self._update_display()
-                break
+        import time
+        start = time.time()
+        logger.info(f"    🔤 AlphabetGrid.set_language({language}) - НАЧАЛО")
+
+        if self.current_language == language:
+            logger.info(f"    ⏱ Язык не изменился, выход")
+            return
+
+        self.current_language = language
+        self.current_selected = None
+
+        mid = time.time()
+        logger.info(f"    ⏱ До update_display: {(mid - start) * 1000:.2f}мс")
+
+        self.update_display()
+
+        end = time.time()
+        logger.info(f"    ⏱ AlphabetGrid.set_language() - ВСЕГО: {(end - start) * 1000:.2f}мс")
 
 
 class AlphabetGrid(MDCard):
-    """Сетка с буквами - без тени"""
+    """Сетка с буквами - оптимизированная, сохраняет размеры"""
 
     RU_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
                   'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т',
@@ -336,7 +351,6 @@ class AlphabetGrid(MDCard):
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
-        self.height = dp(170)
         self.padding = [dp(6), dp(6), dp(6), dp(6)]
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.md_bg_color = [0.06, 0.18, 0.12, 0.92]
@@ -347,7 +361,16 @@ class AlphabetGrid(MDCard):
         self.rows = []
         self.buttons = []
 
-        for i in range(4):
+        # СОЗДАЁМ КНОПКИ ОДИН РАЗ
+        self._create_all_buttons()
+
+        # Устанавливаем начальную высоту
+        self._update_height()
+
+    def _create_all_buttons(self):
+        """Создаёт все возможные кнопки один раз"""
+        # Создаём строки (максимум 5 для русского)
+        for i in range(5):
             row = MDBoxLayout(
                 orientation='horizontal',
                 spacing=dp(6),
@@ -357,65 +380,80 @@ class AlphabetGrid(MDCard):
             self.rows.append(row)
             self.add_widget(row)
 
-        self.update_display()
-
-    def set_language(self, language):
-        self.current_language = language
-        self.current_selected = None
-        self.update_display()
-
-    def update_display(self):
-        if self.current_language == 'ru':
-            items = self.RU_LETTERS[:]
-            rows_count = 5
-            self.height = dp(182)
-        else:
-            items = self.EN_LETTERS[:]
-            rows_count = 4
-            self.height = dp(148)
-
-        while len(self.rows) > rows_count:
-            old_row = self.rows.pop()
-            self.remove_widget(old_row)
-
-        while len(self.rows) < rows_count:
-            row = MDBoxLayout(
-                orientation='horizontal',
-                spacing=dp(6),
-                size_hint_y=None,
-                height=dp(34)
+        # Создаём кнопки для максимального количества (русский - 35 букв)
+        max_buttons = len(self.RU_LETTERS)
+        for i in range(max_buttons):
+            btn = LetterButton(
+                text="",
+                is_active=False,
+                on_press_callback=self._on_letter_press
             )
-            self.rows.append(row)
-            self.add_widget(row)
+            self.buttons.append(btn)
 
+        # Распределяем кнопки по строкам
+        self._redistribute_buttons()
+
+    def _redistribute_buttons(self):
+        """Распределяет кнопки по строкам в зависимости от языка"""
+        # Очищаем все строки
         for row in self.rows:
             row.clear_widgets()
 
-        self.buttons.clear()
+        # Определяем параметры для текущего языка
+        if self.current_language == 'ru':
+            items = self.RU_LETTERS
+            rows_count = 5
+        else:
+            items = self.EN_LETTERS
+            rows_count = 4
 
+        # Показываем/скрываем строки
+        for i, row in enumerate(self.rows):
+            row.height = dp(34) if i < rows_count else 0
+            row.opacity = 1 if i < rows_count else 0
+
+        # Вычисляем количество кнопок в строке
         total_items = len(items)
         items_per_row = (total_items + rows_count - 1) // rows_count
 
+        # Распределяем кнопки
+        btn_index = 0
         for row_idx in range(rows_count):
-            start_idx = row_idx * items_per_row
-            end_idx = min(start_idx + items_per_row, total_items)
-            row_items = items[start_idx:end_idx]
+            for col_idx in range(items_per_row):
+                if btn_index < total_items:
+                    btn = self.buttons[btn_index]
+                    # Обновляем текст кнопки
+                    text = items[btn_index]
+                    btn.btn_text = text
+                    display_text = '0-9' if text == '09' else text
+                    btn.label.text = display_text
+                    btn.opacity = 1
+                    btn.disabled = False
+                    self.rows[row_idx].add_widget(btn)
+                    btn_index += 1
+                else:
+                    # Добавляем прозрачный spacer для пустых мест
+                    spacer = MDBoxLayout(size_hint=(1, 1))
+                    self.rows[row_idx].add_widget(spacer)
 
-            for item in row_items:
-                btn = LetterButton(
-                    text=item,
-                    is_active=(item == self.current_selected),
-                    on_press_callback=self.on_letter_press_callback
-                )
-                self.buttons.append(btn)
-                self.rows[row_idx].add_widget(btn)
+        # Скрываем оставшиеся неиспользуемые кнопки
+        for i in range(btn_index, len(self.buttons)):
+            self.buttons[i].opacity = 0
+            self.buttons[i].disabled = True
 
-            max_per_row = items_per_row
-            for _ in range(max_per_row - len(row_items)):
-                spacer = MDBoxLayout(size_hint=(1, 1))
-                self.rows[row_idx].add_widget(spacer)
+        self._update_height()
 
-    def on_letter_press_callback(self, letter):
+    def _update_height(self):
+        """Обновляет высоту карточки в зависимости от языка"""
+        if self.current_language == 'ru':
+            # Русский: 5 строк + отступы
+            self.height = dp(34) * 5 + dp(12)  # 170 + 12 = 182dp
+        else:
+            # Английский: 4 строки + отступы
+            self.height = dp(34) * 4 + dp(12)  # 136 + 12 = 148dp
+
+    def _on_letter_press(self, letter):
+        """Обработчик нажатия на букву"""
         self.current_selected = letter
         for btn in self.buttons:
             btn.set_active(btn.btn_text == letter)
@@ -425,10 +463,30 @@ class AlphabetGrid(MDCard):
             else:
                 self.on_letter_press(letter)
 
+    def set_language(self, language):
+        """БЫСТРАЯ смена языка - просто перераспределяем кнопки"""
+        if self.current_language == language:
+            return
+
+        self.current_language = language
+        self.current_selected = None
+
+        # Очищаем активное состояние у всех кнопок
+        for btn in self.buttons:
+            btn.set_active(False)
+
+        # Перераспределяем кнопки (без пересоздания!)
+        self._redistribute_buttons()
+
     def clear_selection(self):
+        """Снимает выделение со всех кнопок"""
         self.current_selected = None
         for btn in self.buttons:
             btn.set_active(False)
+
+    def on_letter_press_callback(self, letter):
+        """Для совместимости со старым кодом"""
+        self._on_letter_press(letter)
 
 
 class SongsScreen(BaseScreen):
@@ -485,10 +543,25 @@ class SongsScreen(BaseScreen):
         self.build_ui(content_widget=scroll)
 
     def on_language_changed(self, language):
-        logger.info(f"Язык изменён на: {language}")
+        start = time.time()
+        logger.info(f"🔤 Язык изменён на: {language}")
+
+        # Измеряем время set_language
+        mid1 = time.time()
         self.alphabet_grid.set_language(language)
+        mid2 = time.time()
+        logger.info(f"  ⏱ set_language() заняло: {(mid2 - mid1) * 1000:.2f}мс")
+
+        # Измеряем время clear_selection
+        mid3 = time.time()
         self.alphabet_grid.clear_selection()
+        mid4 = time.time()
+        logger.info(f"  ⏱ clear_selection() заняло: {(mid4 - mid3) * 1000:.2f}мс")
+
+        # Устанавливаем current_letter
         self.current_letter = None
+        end = time.time()
+        logger.info(f"  ⏱ ВСЕГО заняло: {(end - start) * 1000:.2f}мс")
 
     def on_letter_press(self, letter):
         logger.info(f"Выбрана буква/группа: {letter}")
