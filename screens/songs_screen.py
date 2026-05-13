@@ -96,7 +96,7 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
 
 
 class GoogleSearchBar(MDCard):
-    """Современная поисковая строка"""
+    """Современная поисковая строка - без тени, с placeholder"""
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
@@ -108,7 +108,7 @@ class GoogleSearchBar(MDCard):
         self.height = dp(48)
         self.radius = [dp(24), dp(24), dp(24), dp(24)]
         self.md_bg_color = [0.96, 0.96, 0.96, 1]
-        self.elevation = 1
+        self.elevation = 0
         self.padding = [dp(16), dp(6), dp(12), dp(6)]
         self.spacing = dp(8)
 
@@ -116,7 +116,7 @@ class GoogleSearchBar(MDCard):
         self.line_width = 1.0
 
         self.search_field = MDTextField(
-            hint_text="",
+            hint_text="Поиск",
             size_hint_x=1,
             font_size=sp(15),
             height=dp(36),
@@ -191,104 +191,102 @@ class GoogleSearchBar(MDCard):
 
 
 class LanguageSelector(MDBoxLayout):
-    """Выбор языка с пагинацией"""
+    """Выбор языка - стрелки из ассетов, текст по центру"""
 
     def __init__(self, on_language_change=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = dp(44)
-        self.spacing = dp(6)
-        self.padding = [dp(12), dp(2), dp(12), dp(2)]
+        self.height = dp(48)
+        self.padding = [dp(16), dp(4), dp(16), dp(4)]
 
         self.on_language_change = on_language_change
         self.current_language = 'ru'
 
         self.languages = [
-            {'code': 'ru', 'name': 'Русский', 'icon': 'rus_png'},
-            {'code': 'en', 'name': 'English', 'icon': 'eng_png'}
+            {'code': 'ru', 'name': 'Русский'},
+            {'code': 'en', 'name': 'English'}
         ]
 
-        self.prev_btn = MDIconButton(
-            icon="chevron-left",
-            size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            theme_icon_color="Custom",
-            icon_color="#FFFFFF",
-            on_release=self.prev_language,
-            md_bg_color=[0, 0, 0, 0]
+        # СОЗДАЁМ КНОПКУ ВЛЕВО из ассета
+        self.prev_btn = self._create_arrow_button('left_arrow_png', '◀')
+        self.prev_btn.bind(on_release=self.prev_language)
+
+        # Название языка (крупно и жирно)
+        self.language_label = MDLabel(
+            text="Русский",
+            font_size=sp(18),
+            halign="center",
+            valign="middle",
+            size_hint_x=None,
+            width=dp(120),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            bold=True,
+            pos_hint={'center_y': 0.5}
         )
 
-        self.content_container = MDBoxLayout(
+        # СОЗДАЁМ КНОПКУ ВПРАВО из ассета
+        self.next_btn = self._create_arrow_button('right_arrow_png', '▶')
+        self.next_btn.bind(on_release=self.next_language)
+
+        # Контейнер для центрирования всей группы
+        self.center_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(100),
-            height=dp(32),
-            spacing=dp(6),
+            width=dp(200),
+            height=dp(48),
+            spacing=dp(12),
             pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
 
-        self.language_icon = Image(
-            size_hint=(None, None),
-            size=(dp(20), dp(20)),
-            pos_hint={'center_y': 0.5},
-            allow_stretch=True,
-            keep_ratio=True
-        )
+        self.center_container.add_widget(self.prev_btn)
+        self.center_container.add_widget(self.language_label)
+        self.center_container.add_widget(self.next_btn)
 
-        self.language_label = MDLabel(
-            text="Русский",
-            font_size=sp(13),
-            halign="left",
-            valign="middle",
-            size_hint_x=0.7,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True
-        )
-
-        self.content_container.add_widget(self.language_icon)
-        self.content_container.add_widget(self.language_label)
-
-        self.next_btn = MDIconButton(
-            icon="chevron-right",
-            size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            theme_icon_color="Custom",
-            icon_color="#FFFFFF",
-            on_release=self.next_language,
-            md_bg_color=[0, 0, 0, 0]
-        )
-
+        # Добавляем растягивающиеся отступы для центрирования
         self.add_widget(MDBoxLayout(size_hint_x=1))
-        self.add_widget(self.prev_btn)
-        self.add_widget(self.content_container)
-        self.add_widget(self.next_btn)
+        self.add_widget(self.center_container)
         self.add_widget(MDBoxLayout(size_hint_x=1))
 
         self._update_display()
 
-    def _load_icon(self, icon_name):
+    def _create_arrow_button(self, icon_name, fallback_text):
+        """Создаёт кнопку со стрелкой из ассета"""
+        from kivy.uix.behaviors import ButtonBehavior
+        from kivy.uix.image import Image
+
+        class ArrowButton(ButtonBehavior, Image):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                self.allow_stretch = True
+                self.keep_ratio = True
+
+        btn = ArrowButton(
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            pos_hint={'center_y': 0.5}
+        )
+
+        # Загружаем иконку из ассета
         if HAS_ASSETS:
             try:
                 icon_data = load_asset_as_bytes(icon_name)
                 if icon_data:
                     img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.language_icon.texture = img.texture
-                    return True
+                    btn.texture = img.texture
+                    return btn
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
-        if icon_name == 'rus_png':
-            self.language_icon.text = "🇷🇺"
-        elif icon_name == 'eng_png':
-            self.language_icon.text = "🇬🇧"
-        return False
+
+        # Заглушка - текстовая стрелка
+        btn.text = fallback_text
+        return btn
 
     def _update_display(self):
         for lang in self.languages:
             if lang['code'] == self.current_language:
                 self.language_label.text = lang['name']
-                self._load_icon(lang['icon'])
                 break
 
     def get_current_language(self):
@@ -319,7 +317,7 @@ class LanguageSelector(MDBoxLayout):
 
 
 class AlphabetGrid(MDCard):
-    """Сетка с буквами"""
+    """Сетка с буквами - без тени"""
 
     RU_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
                   'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т',
@@ -344,7 +342,7 @@ class AlphabetGrid(MDCard):
         self.md_bg_color = [0.06, 0.18, 0.12, 0.92]
         self.line_color = [0.9, 0.9, 0.8, 0.15]
         self.line_width = 1
-        self.elevation = 3
+        self.elevation = 0
 
         self.rows = []
         self.buttons = []
@@ -457,10 +455,10 @@ class SongsScreen(BaseScreen):
         # Основной контентный контейнер
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(12),
+            spacing=dp(20),  # УВЕЛИЧЕНО расстояние
             size_hint_y=None,
             adaptive_height=True,
-            padding=[0, 0, 0, dp(8)]  # ИСПРАВЛЕНО: убрано использование EXTRA_BOTTOM_PADDING
+            padding=[0, dp(60), 0, dp(8)]  # УВЕЛИЧЕН отступ сверху до 60dp
         )
         content.bind(minimum_height=content.setter('height'))
 
@@ -471,7 +469,7 @@ class SongsScreen(BaseScreen):
         )
         content.add_widget(self.search_bar)
 
-        # Выбор языка
+        # Выбор языка (все элементы на одной линии)
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
