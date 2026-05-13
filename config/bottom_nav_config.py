@@ -1,65 +1,45 @@
 # config/bottom_nav_config.py
 """
-Конфигурация нижней панели навигации - упрощённая для Android
+Конфигурация нижней панели навигации - использует layout_config
 """
 from kivy.metrics import dp, sp
-from kivy.utils import platform
+from config.layout_config import layout_config
 
 
 class BottomNavConfig:
-    """Настройки нижней панели - упрощённые"""
+    """Настройки нижней панели - берёт размеры из layout_config"""
 
-    # Базовые настройки (будут переопределены для Android)
-    PANEL_HEIGHT = 56
-    PANEL_PADDING = [4, 0, 4, 0]
-    PANEL_SPACING = 2
+    # Размеры берутся из layout_config
+    PANEL_HEIGHT = layout_config.get_bottom_nav_height()
 
-    DEFAULT_ICON_SIZE = 0.70
-    DEFAULT_ICON_CONTAINER_HEIGHT = 0.68
-    DEFAULT_FONT_SIZE = 10
-    DEFAULT_SPACING = 2
-    DEFAULT_TOP_PADDING = 2
+    # Отступы
+    PANEL_PADDING = [8, 4, 8, 4]
+    PANEL_SPACING = 4
 
-    # Настройки для разных размеров экрана
-    SCREEN_PRESETS = {
-        'small': {
-            'PANEL_HEIGHT': 52,
-            'DEFAULT_ICON_SIZE': 0.65,
-            'DEFAULT_FONT_SIZE': 9,
-        },
-        'normal': {
-            'PANEL_HEIGHT': 56,
-            'DEFAULT_ICON_SIZE': 0.68,
-            'DEFAULT_FONT_SIZE': 10,
-        },
-        'large': {
-            'PANEL_HEIGHT': 60,
-            'DEFAULT_ICON_SIZE': 0.70,
-            'DEFAULT_FONT_SIZE': 10,
-        },
-        'tablet': {
-            'PANEL_HEIGHT': 68,
-            'DEFAULT_ICON_SIZE': 0.72,
-            'DEFAULT_FONT_SIZE': 11,
-        }
+    # Пропорции внутри кнопки (относительные)
+    ICON_CONTAINER_RATIO = 0.68  # 68% высоты кнопки под иконку
+    TEXT_CONTAINER_RATIO = 0.32  # 32% высоты кнопки под текст
+    ICON_SIZE_RATIO = 0.75  # 75% от контейнера иконки
+
+    # Шрифт (sp - адаптируется под настройки пользователя)
+    FONT_SIZE = sp(11)
+
+    # Индивидуальные настройки для каждой кнопки
+    BUTTONS_CONFIG = {
+        'home': {'icon_ratio': 0.72, 'text': 'Главная'},
+        'songs': {'icon_ratio': 0.72, 'text': 'Песни'},
+        'chords': {'icon_ratio': 0.70, 'text': 'Аккорды'},
+        'tuner': {'icon_ratio': 0.70, 'text': 'Тюнер'},
+        'favorites': {'icon_ratio': 0.70, 'text': 'Избранное'},
     }
 
     @classmethod
-    def apply_preset(cls, preset_name='normal'):
-        preset = cls.SCREEN_PRESETS.get(preset_name, cls.SCREEN_PRESETS['normal'])
-        cls.PANEL_HEIGHT = preset.get('PANEL_HEIGHT', cls.PANEL_HEIGHT)
-        cls.DEFAULT_ICON_SIZE = preset.get('DEFAULT_ICON_SIZE', cls.DEFAULT_ICON_SIZE)
-        cls.DEFAULT_FONT_SIZE = preset.get('DEFAULT_FONT_SIZE', cls.DEFAULT_FONT_SIZE)
-        return cls
-
-    @classmethod
     def get_button_config(cls, screen_name):
+        config = cls.BUTTONS_CONFIG.get(screen_name, {})
         return {
-            'icon_size': cls.DEFAULT_ICON_SIZE,
-            'icon_height': 0.65,
-            'font_size': cls.DEFAULT_FONT_SIZE,
-            'spacing': 1,
-            'top_padding': 2
+            'icon_height': config.get('icon_ratio', cls.ICON_CONTAINER_RATIO),
+            'font_size': cls.FONT_SIZE,
+            'text': config.get('text', screen_name),
         }
 
 
