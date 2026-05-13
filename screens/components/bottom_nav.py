@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя навигация - полностью адаптивная, автоматически подстраивается под системную навигацию
+Нижняя навигация - крупные иконки, прилегает к системной навигации
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -34,7 +34,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации - адаптивный с крупными иконками"""
+    """Элемент нижней навигации - крупные иконки"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -49,9 +49,10 @@ class NavItem(ButtonBehavior, BoxLayout):
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-        self.spacing = dp(4)
+        self.spacing = dp(2)  # минимальный зазор между иконкой и текстом
 
-        icon_height_ratio = self.config.get('icon_height', 0.72)
+        # Увеличиваем пропорции для более крупных иконок
+        icon_height_ratio = 0.76  # 76% высоты под иконку (было 0.72)
         self.icon_container = MDBoxLayout(
             size_hint=(1, icon_height_ratio),
             orientation='vertical'
@@ -60,9 +61,10 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.icon_image = None
         self._load_icon()
 
-        font_size = self.config.get('font_size', sp(12))
+        # Увеличиваем шрифт
+        font_size = sp(13)  # увеличил с 12 до 13
         self.text_label = Label(
-            text=self.config.get('text', text),
+            text=text,
             font_size=font_size,
             size_hint=(1, 1 - icon_height_ratio),
             color=theme.TEXT_SECONDARY,
@@ -79,7 +81,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
-        logger.debug(f"[NavItem] {screen_name}: icon_height_ratio={icon_height_ratio}, font_size={font_size}")
+        logger.debug(f"[NavItem] {screen_name}")
 
     def _reload_icon(self, *args):
         self._load_icon()
@@ -92,6 +94,7 @@ class NavItem(ButtonBehavior, BoxLayout):
                 icon_data = load_asset_as_bytes(self.icon_asset)
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
+                    # Иконка занимает 85% контейнера, центрирована
                     self.icon_image = Image(
                         texture=core_img.texture,
                         size_hint=(0.85, 0.85),
@@ -129,7 +132,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - автоматически подстраивается под системную навигацию"""
+    """Нижняя панель навигации - крупные иконки, прилегает к системной навигации"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -140,15 +143,14 @@ class BottomNav(BoxLayout):
         # Получаем реальную высоту системной навигации
         nav_bar_height = get_navigation_bar_height()
 
-        # Высота панели из конфига (в dp)
-        self.nav_height = layout_config.get_bottom_nav_height()
+        # Высота панели из конфига (в dp) - увеличиваем для крупных иконок
+        self.nav_height = dp(64)  # увеличил с 56 до 64
 
-        # ============ КЛЮЧЕВОЙ МОМЕНТ ============
         # Общая высота = высота панели + высота системной навигации
-        # НО нижний отступ = высоте системной навигации, чтобы панель была НАД ней
         self.height = self.nav_height + nav_bar_height
 
         # Паддинги: верхний 0, нижний = высоте системной навигации
+        # Это заставляет панель быть НАД системной навигацией
         self.padding = [dp(8), 0, dp(8), nav_bar_height]
         self.spacing = dp(4)
         self.md_bg_color = [0, 0, 0, 0]
@@ -213,7 +215,7 @@ class BottomNav(BoxLayout):
     def reload_config(self):
         """Обновляет конфигурацию панели при повороте экрана"""
         nav_bar_height = get_navigation_bar_height()
-        self.nav_height = layout_config.get_bottom_nav_height()
+        self.nav_height = dp(64)
 
         self.height = self.nav_height + nav_bar_height
         self.padding = [dp(8), 0, dp(8), nav_bar_height]

@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - автоматически подстраивается под статус-бар
+Верхняя панель навигации - оптимальные отступы
 """
 from kivy.metrics import dp, sp
 from kivy.uix.widget import Widget
@@ -23,7 +23,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - автоматически подстраивается под статус-бар"""
+    """Верхняя панель навигации - оптимальные отступы"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -40,11 +40,10 @@ class TopNav(MDCard):
         # Получаем реальную высоту статус-бара
         status_h = get_status_bar_height()
 
-        # Высота панели из конфига (в dp)
-        nav_height = layout_config.get_top_nav_height()
+        # Высота панели (немного меньше для экономии места)
+        nav_height = dp(56)
 
-        # ============ КЛЮЧЕВОЙ МОМЕНТ ============
-        # Высота панели = высота контента + отступ сверху под статус-бар
+        # Общая высота = высота панели (статус-бар внутри padding)
         self.height = nav_height
 
         # Паддинг сверху = высоте статус-бара, чтобы контент был НИЖЕ него
@@ -286,7 +285,7 @@ class TopNav(MDCard):
     def reload_config(self):
         """Обновляет конфигурацию при повороте экрана"""
         status_h = get_status_bar_height()
-        nav_height = layout_config.get_top_nav_height()
+        nav_height = dp(56)
 
         self.height = nav_height
         self.padding = [0, status_h, 0, 0]
