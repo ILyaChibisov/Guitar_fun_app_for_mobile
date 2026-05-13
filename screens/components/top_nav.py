@@ -1,9 +1,11 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ
+Верхняя панель навигации - с рамками для отладки
 """
 from kivy.metrics import dp, sp
 from kivy.uix.widget import Widget
+from kivy.graphics import Color, Line
+from kivy.utils import platform
 
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
@@ -19,7 +21,7 @@ logger = get_logger('UI')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - ПОЛНОСТЬЮ ПРОЗРАЧНАЯ"""
+    """Верхняя панель навигации - с рамками для отладки"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -33,7 +35,7 @@ class TopNav(MDCard):
         self.orientation = 'vertical'
         self.size_hint = (1, None)
 
-        # Получаем высоту статус-бара в ПИКСЕЛЯХ и переводим в dp
+        # Получаем высоту статус-бара в пикселях и переводим в dp
         status_bar_height_px = get_status_bar_height_px()
         status_bar_height_dp = dp(status_bar_height_px)
 
@@ -43,10 +45,13 @@ class TopNav(MDCard):
         self.padding = [0, status_bar_height_dp, 0, 0]
 
         self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]
+        self.md_bg_color = [0, 0, 0, 0.8]  # ВРЕМЕННО: полупрозрачный чёрный фон для отладки
         self.theme_bg_color = "Custom"
         self.elevation = 0
         self.spacing = 0
+
+        # ВРЕМЕННО: белая рамка вокруг всей панели
+        self.bind(pos=self._update_panel_outline, size=self._update_panel_outline)
 
         # Основной горизонтальный контейнер для элементов
         self.container = MDBoxLayout(
@@ -61,7 +66,7 @@ class TopNav(MDCard):
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(88),  # Ширина для двух иконок
+            width=dp(88),
             height=dp(44),
             spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
@@ -90,7 +95,7 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0],
             on_release=self._on_back_press,
             pos_hint={'center_y': 0.5},
-            opacity=0,  # Изначально скрыта
+            opacity=0,
             disabled=True
         )
 
@@ -160,6 +165,9 @@ class TopNav(MDCard):
 
         self.add_widget(self.container)
 
+        # ВРЕМЕННО: красные рамки вокруг каждого контейнера для отладки
+        self._add_debug_outlines()
+
         # Подписываемся на изменение экранов
         if hasattr(self.sm, 'add_observer'):
             self.sm.add_observer(self._on_screen_changed)
@@ -169,7 +177,72 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        logger.info(f'TopNav создана, высота: {self.height}dp, отступ сверху: {self.padding[1]}dp')
+        # Выводим информацию об отладке
+        logger.info("=" * 60)
+        logger.info("ВНИМАНИЕ: Верхняя панель имеет отладочные рамки!")
+        logger.info(f"  - Высота панели: {self.height}dp")
+        logger.info(f"  - Отступ сверху (статус-бар): {self.padding[1]}dp")
+        logger.info("=" * 60)
+
+    def _add_debug_outlines(self):
+        """ВРЕМЕННО: добавляет красные рамки вокруг контейнеров для отладки"""
+        # Рамка вокруг левого контейнера
+        self.left_container.bind(pos=self._update_left_outline, size=self._update_left_outline)
+        self._update_left_outline()
+
+        # Рамка вокруг центрального контейнера (заголовок)
+        self.screen_title.bind(pos=self._update_title_outline, size=self._update_title_outline)
+        self._update_title_outline()
+
+        # Рамка вокруг правого контейнера
+        self.right_container.bind(pos=self._update_right_outline, size=self._update_right_outline)
+        self._update_right_outline()
+
+    def _update_panel_outline(self, *args):
+        """ВРЕМЕННО: белая рамка вокруг всей панели"""
+        self.canvas.before.remove_group('topnav_panel_outline')
+        with self.canvas.before:
+            Color(1, 1, 1, 1)
+            Line(rectangle=(self.x, self.y, self.width, self.height), width=2, group='topnav_panel_outline')
+
+    def _update_left_outline(self, *args):
+        """ВРЕМЕННО: красная рамка вокруг левого контейнера"""
+        if hasattr(self, '_left_outline_group'):
+            self.canvas.before.remove_group('left_outline')
+        with self.canvas.before:
+            Color(1, 0, 0, 0.8)
+            Line(rectangle=(
+                self.left_container.x,
+                self.left_container.y,
+                self.left_container.width,
+                self.left_container.height
+            ), width=1, group='left_outline')
+
+    def _update_title_outline(self, *args):
+        """ВРЕМЕННО: синяя рамка вокруг заголовка"""
+        if hasattr(self, '_title_outline_group'):
+            self.canvas.before.remove_group('title_outline')
+        with self.canvas.before:
+            Color(0, 0, 1, 0.8)
+            Line(rectangle=(
+                self.screen_title.x,
+                self.screen_title.y,
+                self.screen_title.width,
+                self.screen_title.height
+            ), width=1, group='title_outline')
+
+    def _update_right_outline(self, *args):
+        """ВРЕМЕННО: зелёная рамка вокруг правого контейнера"""
+        if hasattr(self, '_right_outline_group'):
+            self.canvas.before.remove_group('right_outline')
+        with self.canvas.before:
+            Color(0, 1, 0, 0.8)
+            Line(rectangle=(
+                self.right_container.x,
+                self.right_container.y,
+                self.right_container.width,
+                self.right_container.height
+            ), width=1, group='right_outline')
 
     def _get_screen_title(self, screen_name: str) -> str:
         """Возвращает заголовок для экрана"""
@@ -270,7 +343,6 @@ class TopNav(MDCard):
     def update_title(self, screen_name: str):
         """Обновляет заголовок панели"""
         self.screen_title.text = self._get_screen_title(screen_name)
-        self.screen_title.font_size = sp(18)
 
     def update_for_artists_screen(self, letter: str, show_back_button: bool = True):
         """Обновляет верхнюю панель для экрана исполнителей"""
@@ -279,18 +351,14 @@ class TopNav(MDCard):
         else:
             self._hide_back_button()
 
-        # Устанавливаем заголовок "Буква X"
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
         self.screen_title.text = f"Буква {display}"
-        self.screen_title.font_size = sp(18)
         self.screen_title.bold = True
-
         logger.info(f"TopNav обновлён для экрана исполнителей: {self.screen_title.text}")
 
     def reset_to_default(self):
         """Публичный метод для сброса панели"""
         self._hide_back_button()
-        self.screen_title.font_size = sp(18)
         self.screen_title.bold = True
         if self.sm:
             self.screen_title.text = self._get_screen_title(self.sm.current)
