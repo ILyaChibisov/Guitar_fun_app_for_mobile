@@ -62,18 +62,19 @@ if platform == 'android':
         window = mActivity.getWindow()
         decorView = window.getDecorView()
 
-        # Устанавливаем флаги для прозрачных системных панелей
+        # ============ ВАРИАНТ 1: ОПТИМАЛЬНЫЙ (РЕКОМЕНДУЮ НАЧАТЬ С НЕГО) ============
+        # Убираем LAYOUT_HIDE_NAVIGATION - он заставляет приложение рисоваться ПОД навигацией
         decorView.setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         )
 
         # Делаем статус-бар и нав-бар прозрачными
         window.setStatusBarColor(0x00000000)
         window.setNavigationBarColor(0x00000000)
 
-        print("✅ Системные панели настроены как прозрачные")
+        print("✅ Системные панели настроены (режим IMMERSIVE_STICKY)")
 
     except Exception as e:
         print(f"Ошибка настройки системных панелей: {e}")
@@ -274,12 +275,10 @@ class GuitarFunsApp(MDApp):
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
-        # Высота будет установлена внутри TopNav
         self.top_nav.pos_hint = {'top': 1}
 
         # Создаём нижнюю панель
         self.bottom_nav = BottomNav(self.screen_manager)
-        # Нижняя панель будет прижата к низу
         self.bottom_nav.pos_hint = {'y': 0}
 
         # Создаём блокирующий слой
@@ -287,16 +286,13 @@ class GuitarFunsApp(MDApp):
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
-        # ============ ВАЖНО: ПРАВИЛЬНЫЙ ПОРЯДОК ДОБАВЛЕНИЯ ВИДЖЕТОВ ============
-        # 1. Сначала менеджер экранов (основной контент)
+        # ============ ПРАВИЛЬНЫЙ ПОРЯДОК ДОБАВЛЕНИЯ ============
+        # 1. Сначала менеджер экранов
         root.add_widget(self.screen_manager)
-
-        # 2. Затем нижняя панель (чтобы быть ПОД TopNav, но НАД контентом)
+        # 2. Затем нижняя панель
         root.add_widget(self.bottom_nav)
-
-        # 3. Затем верхняя панель (самая верхняя)
+        # 3. Затем верхняя панель
         root.add_widget(self.top_nav)
-
         # 4. Блокирующий слой (самый верхний)
         root.add_widget(self.blocking_layer)
 
