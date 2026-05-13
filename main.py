@@ -99,8 +99,7 @@ from api.network_handler import network_manager
 from screens.components.bottom_nav import BottomNav
 from screens.components.top_nav import TopNav
 from screens.components.blocking_layer import BlockingLayer
-from config.system_bars import get_navigation_bar_height_px, get_navigation_bar_height
-
+from config.system_bars import get_navigation_bar_height
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes

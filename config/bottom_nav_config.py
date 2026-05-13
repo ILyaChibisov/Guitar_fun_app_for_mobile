@@ -1,46 +1,53 @@
 # config/bottom_nav_config.py
 """
-Конфигурация нижней панели навигации - использует layout_config
+Конфигурация нижней панели - ТОЛЬКО ОТНОСИТЕЛЬНЫЕ значения
 """
-from kivy.metrics import dp, sp
+from kivy.metrics import sp
 from config.layout_config import layout_config
+from config.logger_config import get_logger
+
+logger = get_logger('BottomNavConfig')
 
 
 class BottomNavConfig:
-    """Настройки нижней панели - берёт размеры из layout_config"""
+    """Настройки нижней панели - ТОЛЬКО ОТНОСИТЕЛЬНЫЕ значения"""
 
-    # Размеры берутся из layout_config
-    PANEL_HEIGHT = layout_config.get_bottom_nav_height()
-
-    # Отступы
-    PANEL_PADDING = [8, 4, 8, 4]
-    PANEL_SPACING = 4
-
-    # Пропорции внутри кнопки (относительные)
+    # Относительные пропорции (не в dp, а в долях)
     ICON_CONTAINER_RATIO = 0.68  # 68% высоты кнопки под иконку
     TEXT_CONTAINER_RATIO = 0.32  # 32% высоты кнопки под текст
     ICON_SIZE_RATIO = 0.75  # 75% от контейнера иконки
 
-    # Шрифт (sp - адаптируется под настройки пользователя)
+    # Базовый размер шрифта в sp (адаптивный)
     FONT_SIZE = sp(11)
 
-    # Индивидуальные настройки для каждой кнопки
+    # Индивидуальные настройки для кнопок
     BUTTONS_CONFIG = {
-        'home': {'icon_ratio': 0.72, 'text': 'Главная'},
-        'songs': {'icon_ratio': 0.72, 'text': 'Песни'},
-        'chords': {'icon_ratio': 0.70, 'text': 'Аккорды'},
-        'tuner': {'icon_ratio': 0.70, 'text': 'Тюнер'},
-        'favorites': {'icon_ratio': 0.70, 'text': 'Избранное'},
+        'home': {'icon_ratio': 0.70, 'font_size': sp(11), 'text': 'Главная'},
+        'songs': {'icon_ratio': 0.70, 'font_size': sp(11), 'text': 'Песни'},
+        'chords': {'icon_ratio': 0.68, 'font_size': sp(11), 'text': 'Аккорды'},
+        'tuner': {'icon_ratio': 0.68, 'font_size': sp(11), 'text': 'Тюнер'},
+        'favorites': {'icon_ratio': 0.68, 'font_size': sp(10), 'text': 'Избранное'},
     }
 
     @classmethod
     def get_button_config(cls, screen_name):
+        """Возвращает настройки для конкретной кнопки"""
         config = cls.BUTTONS_CONFIG.get(screen_name, {})
-        return {
+        result = {
             'icon_height': config.get('icon_ratio', cls.ICON_CONTAINER_RATIO),
-            'font_size': cls.FONT_SIZE,
-            'text': config.get('text', screen_name),
+            'font_size': config.get('font_size', cls.FONT_SIZE),
+            'text': config.get('text', screen_name.capitalize()),
         }
+        logger.info(
+            f"[BottomNavConfig] get_button_config({screen_name}): icon_height={result['icon_height']}, font_size={result['font_size']}")
+        return result
+
+    @classmethod
+    def get_panel_height(cls):
+        """Возвращает высоту панели из layout_config"""
+        height = layout_config.get_bottom_nav_height()
+        logger.info(f"[BottomNavConfig] get_panel_height: {height}dp")
+        return height
 
 
 bottom_nav_config = BottomNavConfig()

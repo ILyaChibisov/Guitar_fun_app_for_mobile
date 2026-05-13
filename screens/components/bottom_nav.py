@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя навигация - полностью адаптивная с логированием для ADB
+Нижняя навигация - полностью адаптивная с логированием
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -12,7 +12,6 @@ from kivy.metrics import dp, sp
 from kivy.core.image import Image as CoreImage
 from kivy.utils import platform
 from kivy.core.window import Window
-from kivy.graphics import Color, Line
 from io import BytesIO
 from kivymd.app import MDApp
 
@@ -35,7 +34,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации - с отладочными рамками"""
+    """Элемент нижней навигации - адаптивный"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -52,7 +51,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.size_hint = (1, 1)
         self.spacing = dp(2)
 
-        # Контейнер иконки
+        # Контейнер иконки (процент от высоты кнопки)
         icon_height_ratio = self.config.get('icon_height', 0.68)
         self.icon_container = MDBoxLayout(
             size_hint=(1, icon_height_ratio),
@@ -79,22 +78,11 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.add_widget(self.icon_container)
         self.add_widget(self.text_label)
 
-        # ОТЛАДКА: жёлтая рамка вокруг кнопки
-        self.bind(pos=self._debug_outline, size=self._debug_outline)
-
         self.update_state(None, self.active)
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
-        # Логирование размера кнопки
         logger.info(f"[NavItem] {screen_name}: icon_height_ratio={icon_height_ratio}, font_size={font_size}")
-
-    def _debug_outline(self, *args):
-        """Жёлтая рамка для отладки"""
-        self.canvas.before.remove_group('navitem_debug')
-        with self.canvas.before:
-            Color(1, 1, 0, 0.9)  # Ярко-жёлтый
-            Line(rectangle=(self.x, self.y, self.width, self.height), width=2, group='navitem_debug')
 
     def _reload_icon(self, *args):
         self._load_icon()
@@ -148,14 +136,14 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - с подробным логированием"""
+    """Нижняя панель навигации - полностью адаптивная"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
         self.size_hint = (1, None)
 
-        # Получаем адаптивную высоту из конфига
+        # Получаем высоты (уже в dp, не нужно дополнительно преобразовывать)
         self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
 
@@ -180,12 +168,7 @@ class BottomNav(BoxLayout):
         # Паддинги
         self.padding = [dp(8), 0, dp(8), nav_bar_height]
         self.spacing = dp(4)
-
-        # ВРЕМЕННО: красный фон для отладки (видно всю область панели)
-        self.md_bg_color = [1, 0, 0, 0.4]  # Красный полупрозрачный
-
-        # Белая рамка вокруг всей панели
-        self.bind(pos=self._panel_outline, size=self._panel_outline)
+        self.md_bg_color = [0, 0, 0, 0]
 
         # Меню
         self.nav_items = [
@@ -208,13 +191,6 @@ class BottomNav(BoxLayout):
             screen_manager.add_observer(self.on_screen_changed)
 
         logger.info(f"[BottomNav] Инициализация завершена. Всего кнопок: {len(self.items)}")
-
-    def _panel_outline(self, *args):
-        """Белая рамка вокруг всей панели"""
-        self.canvas.before.remove_group('panel_debug')
-        with self.canvas.before:
-            Color(1, 1, 1, 1)
-            Line(rectangle=(self.x, self.y, self.width, self.height), width=2, group='panel_debug')
 
     def on_screen_changed(self, screen_name):
         for item, (_, _, screen) in zip(self.items, self.nav_items):
@@ -247,7 +223,7 @@ class BottomNav(BoxLayout):
         self.switch_to(screen_name)
 
     def reload_config(self):
-        """Обновляет конфигурацию панели"""
+        """Обновляет конфигурацию панели при изменении размера экрана"""
         self.nav_height = layout_config.get_bottom_nav_height()
         nav_bar_height = get_navigation_bar_height()
         self.height = self.nav_height + nav_bar_height

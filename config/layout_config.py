@@ -14,23 +14,21 @@ logger = get_logger('LayoutConfig')
 class LayoutConfig:
     """Централизованная конфигурация - адаптивная"""
 
-    # ========== РАЗМЕРЫ ПАНЕЛЕЙ (в dp - адаптируются под плотность экрана) ==========
+    # ========== РАЗМЕРЫ ПАНЕЛЕЙ (в dp - просто числа, БЕЗ вызова dp()) ==========
 
-    # Стандартные размеры Material Design
-    TOP_NAV_HEIGHT = dp(56)  # стандартная высота TopAppBar
-    BOTTOM_NAV_HEIGHT = dp(56)  # стандартная высота BottomNavigationView (телефоны)
+    # Стандартные размеры Material Design (чистые числа)
+    TOP_NAV_HEIGHT = 56  # стандартная высота TopAppBar
+    BOTTOM_NAV_HEIGHT = 56  # стандартная высота BottomNavigationView
 
     # Альтернативные размеры для планшетов
-    TOP_NAV_HEIGHT_TABLET = dp(64)
-    BOTTOM_NAV_HEIGHT_TABLET = dp(64)
+    TOP_NAV_HEIGHT_TABLET = 64
+    BOTTOM_NAV_HEIGHT_TABLET = 64
 
-    # Отступы
-    SIDE_PADDING = dp(16)  # стандартный отступ Material Design
-    GAP_BETWEEN_CONTENT_AND_NAV = dp(8)
-
-    # Внутренние отступы для контента
-    CONTENT_TOP_PADDING = dp(8)
-    CONTENT_BOTTOM_PADDING = dp(8)
+    # Отступы (чистые числа)
+    SIDE_PADDING = 16
+    GAP_BETWEEN_CONTENT_AND_NAV = 8
+    CONTENT_TOP_PADDING = 8
+    CONTENT_BOTTOM_PADDING = 8
 
     # Флаги для определения типа устройства
     _is_tablet = None
@@ -46,22 +44,24 @@ class LayoutConfig:
 
     @classmethod
     def get_top_nav_height(cls):
-        """Возвращает адаптивную высоту верхней панели"""
-        height = cls.TOP_NAV_HEIGHT_TABLET if cls.is_tablet() else cls.TOP_NAV_HEIGHT
-        logger.info(f"[LayoutConfig] get_top_nav_height: {height}dp")
-        return height
+        """Возвращает адаптивную высоту верхней панели в dp"""
+        raw = cls.TOP_NAV_HEIGHT_TABLET if cls.is_tablet() else cls.TOP_NAV_HEIGHT
+        result = dp(raw)
+        logger.info(f"[LayoutConfig] get_top_nav_height: {result}dp (raw={raw})")
+        return result
 
     @classmethod
     def get_bottom_nav_height(cls):
-        """Возвращает адаптивную высоту нижней панели (только иконки)"""
-        height = cls.BOTTOM_NAV_HEIGHT_TABLET if cls.is_tablet() else cls.BOTTOM_NAV_HEIGHT
-        logger.info(f"[LayoutConfig] get_bottom_nav_height: {height}dp")
-        return height
+        """Возвращает адаптивную высоту нижней панели (только иконки) в dp"""
+        raw = cls.BOTTOM_NAV_HEIGHT_TABLET if cls.is_tablet() else cls.BOTTOM_NAV_HEIGHT
+        result = dp(raw)
+        logger.info(f"[LayoutConfig] get_bottom_nav_height: {result}dp (raw={raw})")
+        return result
 
     @classmethod
     def get_top_padding(cls, include_top_nav=True):
-        """Возвращает общий отступ сверху для контента"""
-        status_h = get_status_bar_height()
+        """Возвращает общий отступ сверху для контента в dp"""
+        status_h = get_status_bar_height()  # уже в dp
         total = status_h
         if include_top_nav:
             total += cls.get_top_nav_height()
@@ -71,25 +71,25 @@ class LayoutConfig:
 
     @classmethod
     def get_bottom_padding(cls):
-        """Возвращает отступ снизу для контента (над BottomNav)"""
-        padding = cls.GAP_BETWEEN_CONTENT_AND_NAV
-        logger.info(f"[LayoutConfig] get_bottom_padding: {padding}dp")
-        return padding
+        """Возвращает отступ снизу для контента (над BottomNav) в dp"""
+        result = dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
+        logger.info(f"[LayoutConfig] get_bottom_padding: {result}dp")
+        return result
 
     @classmethod
     def get_content_padding(cls):
-        """Возвращает готовый padding для контейнера контента [left, top, right, bottom]"""
+        """Возвращает готовый padding для контейнера контента [left, top, right, bottom] в dp"""
         return [
-            cls.SIDE_PADDING,
-            cls.CONTENT_TOP_PADDING,
-            cls.SIDE_PADDING,
-            cls.CONTENT_BOTTOM_PADDING
+            dp(cls.SIDE_PADDING),
+            dp(cls.CONTENT_TOP_PADDING),
+            dp(cls.SIDE_PADDING),
+            dp(cls.CONTENT_BOTTOM_PADDING)
         ]
 
     @classmethod
     def get_total_bottom_height(cls):
-        """Общая высота нижней части (BottomNav + системная навигация)"""
-        nav_h = get_navigation_bar_height()
+        """Общая высота нижней части (BottomNav + системная навигация) в dp"""
+        nav_h = get_navigation_bar_height()  # уже в dp
         total = cls.get_bottom_nav_height() + nav_h
         logger.info(
             f"[LayoutConfig] get_total_bottom_height: {total}dp (nav={cls.get_bottom_nav_height()}dp, sys_nav={nav_h}dp)")
@@ -102,11 +102,11 @@ class LayoutConfig:
         logger.info(f"[LayoutConfig] Обновление для платформы: {platform}")
         logger.info(f"[LayoutConfig] TOP_NAV_HEIGHT: {cls.get_top_nav_height()}dp")
         logger.info(f"[LayoutConfig] BOTTOM_NAV_HEIGHT: {cls.get_bottom_nav_height()}dp")
-        logger.info(f"[LayoutConfig] SIDE_PADDING: {cls.SIDE_PADDING}dp")
+        logger.info(f"[LayoutConfig] SIDE_PADDING: {dp(cls.SIDE_PADDING)}dp")
         logger.info(f"[LayoutConfig] is_tablet: {cls.is_tablet()}")
         logger.info("=" * 50)
 
 
-# Создаём экземпляр для удобства
+# Создаём экземпляр
 layout_config = LayoutConfig()
 layout_config.update_for_platform()
