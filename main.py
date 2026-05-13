@@ -62,19 +62,16 @@ if platform == 'android':
         window = mActivity.getWindow()
         decorView = window.getDecorView()
 
-        # ============ ВАРИАНТ 1: ОПТИМАЛЬНЫЙ (РЕКОМЕНДУЮ НАЧАТЬ С НЕГО) ============
-        # Убираем LAYOUT_HIDE_NAVIGATION - он заставляет приложение рисоваться ПОД навигацией
+        # Минимальные флаги - системная навигация НЕ перекрывает приложение
         decorView.setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         )
 
         # Делаем статус-бар и нав-бар прозрачными
         window.setStatusBarColor(0x00000000)
         window.setNavigationBarColor(0x00000000)
 
-        print("✅ Системные панели настроены (режим IMMERSIVE_STICKY)")
+        print("✅ Системные панели настроены (навигация НЕ перекрывает приложение)")
 
     except Exception as e:
         print(f"Ошибка настройки системных панелей: {e}")
