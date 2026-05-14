@@ -1,9 +1,11 @@
 # screens/artists_by_letter_screen.py
 """
-Экран списка исполнителей по выбранной букве - переведён на BaseScreen
+Экран списка исполнителей по выбранной букве - исправлены отступы
 """
 from kivymd.uix.label import MDLabel
+from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.floatlayout import MDFloatLayout
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
@@ -13,19 +15,23 @@ from io import BytesIO
 
 from config.theme import theme
 from config.logger_config import screen_logger
+from config.system_bars import get_status_bar_height, get_navigation_bar_height
 from config.layout_config import layout_config
 from api.client import api
-from screens.base_screen import BaseScreen
 from screens.recycle_artist_card import ArtistRecycleView, set_shared_icon
+from screens.base_screen import BaseScreen
 from kivymd.app import MDApp
 
 logger = screen_logger('ArtistsByLetter')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -54,8 +60,6 @@ def init_shared_icon():
 
 
 class SimpleLoadingLabel(MDLabel):
-    """Максимально лёгкий спиннер"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.text = "Загрузка исполнителей..."
@@ -79,9 +83,13 @@ class ArtistsByLetterScreen(BaseScreen):
         self.empty_label = None
         self.loading_label = None
         self.count_label = None
+        self.letter_label = None
+        self.back_btn = None
         self._pending_letter = None
+        self._main_layout = None
         self.bg_image = None
 
+        self.md_bg_color = [0, 0, 0, 0]
         self.init_ui()
         self.load_background()
 
@@ -116,7 +124,15 @@ class ArtistsByLetterScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        # Счётчик исполнителей
+        # Создаём вертикальный контейнер
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+
+        # ============ ВЕРХНИЙ ОТСТУП ============
+        # Отступ сверху под статус-бар и TopNav
+        top_padding = layout_config.get_top_padding()
+        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        # ============ СЧЁТЧИК ИСПОЛНИТЕЛЕЙ ============
         self.count_label = MDLabel(
             text="",
             font_size=sp(13),
@@ -125,8 +141,25 @@ class ArtistsByLetterScreen(BaseScreen):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.7],
             size_hint_y=None,
-            height=dp(28),
-            padding=[0, dp(2), 0, dp(2)]
+            height=dp(32),
+            padding=[0, dp(4), 0, dp(4)]
+        )
+        main_layout.add_widget(self.count_label)
+
+        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
+        # Получаем высоту системной навигации
+        nav_bar_height = get_navigation_bar_height()
+
+        # Высота BottomNav из конфига (60dp для телефона)
+        bottom_nav_height = dp(60)  # базовая высота BottomNav
+
+        # Общая высота нижней части = BottomNav + системная навигация + зазор
+        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+
+        cards_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[dp(12), dp(4), dp(12), total_bottom]
         )
 
         # RecycleView для карточек
@@ -135,17 +168,15 @@ class ArtistsByLetterScreen(BaseScreen):
         self.recycle_view.bar_color = [0, 0, 0, 0]
         self.recycle_view.bar_inactive_color = [0, 0, 0, 0]
 
-        # Строим UI с помощью BaseScreen
-        self.build_ui(
-            content_widget=self.recycle_view,
-            top_widget=self.count_label
-        )
+        cards_container.add_widget(self.recycle_view)
+        main_layout.add_widget(cards_container)
+
+        self.add_widget(main_layout)
 
     def on_enter(self):
         """Вызывается когда экран становится видимым"""
         logger.info(f"on_enter: current_letter={self.current_letter}, pending={self._pending_letter}")
 
-        # Обновляем верхнюю панель
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             if self.current_letter:
@@ -176,7 +207,6 @@ class ArtistsByLetterScreen(BaseScreen):
 
         self.current_letter = letter
 
-        # Обновляем верхнюю панель
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.update_for_artists_screen(letter, show_back_button=True)
@@ -186,7 +216,6 @@ class ArtistsByLetterScreen(BaseScreen):
 
         self._hide_loading()
         self._hide_empty()
-
         self._update_count_label(0)
 
         if letter in self._cache:
@@ -217,12 +246,12 @@ class ArtistsByLetterScreen(BaseScreen):
     def _show_loading(self):
         if self.loading_label:
             return
-
         if self.recycle_view:
             self.recycle_view.clear()
-
         self.loading_label = SimpleLoadingLabel()
-        self.add_content_widget(self.loading_label)
+        # Добавляем в основную layout, а не в recycle_view
+        if self._main_layout:
+            self._main_layout.add_widget(self.loading_label)
 
     def _hide_loading(self):
         if self.loading_label and self.loading_label.parent:
@@ -232,7 +261,6 @@ class ArtistsByLetterScreen(BaseScreen):
     def _show_empty(self, text="Нет исполнителей на эту букву"):
         if self.empty_label:
             return
-
         self.empty_label = MDLabel(
             text=text,
             halign="center",
@@ -242,7 +270,8 @@ class ArtistsByLetterScreen(BaseScreen):
             size_hint_y=None,
             height=dp(60)
         )
-        self.add_content_widget(self.empty_label)
+        if self._main_layout:
+            self._main_layout.add_widget(self.empty_label)
 
     def _hide_empty(self):
         if self.empty_label and self.empty_label.parent:
@@ -281,7 +310,6 @@ class ArtistsByLetterScreen(BaseScreen):
         logger.info(f"Отображено {len(data)} исполнителей для {self.current_letter}")
 
     def _update_count_label(self, total):
-        """Обновляет счётчик исполнителей"""
         if total == 0:
             text = "Найдено 0 исполнителей"
         elif total == 1:
@@ -332,3 +360,7 @@ class ArtistsByLetterScreen(BaseScreen):
                 screen = self.manager.get_screen('artist_songs')
                 screen.set_artist(artist)
                 self.manager.current = 'artist_songs'
+
+    def go_back(self, instance):
+        if hasattr(self, 'manager') and self.manager:
+            self.manager.current = 'songs'
