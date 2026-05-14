@@ -21,8 +21,6 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации"""
-
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
@@ -35,15 +33,11 @@ class TopNav(MDCard):
         self.size_hint = (1, None)
         self.pos_hint = {'top': 1}
 
-        # Получаем высоту статус-бара
         status_h = get_status_bar_height()
-
-        # Высота панели (увеличена для видимости)
         self.height = dp(56)
 
-        # Отступ сверху = статус-бар + БОЛЬШОЙ зазор (12dp для Android)
-        # Это чтобы панель точно не уходила под статус-бар
-        top_padding = status_h + dp(12)  # было 4, стало 12
+        # Увеличенный отступ сверху: статус-бар + 20dp запаса
+        top_padding = status_h + dp(20)
         self.padding = [0, top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
@@ -51,13 +45,11 @@ class TopNav(MDCard):
         self.elevation = 0
         self.spacing = 0
 
-        # Отладка
         screen_density = get_screen_density()
         logger.info("=" * 70)
         logger.info(f"📱 TOP NAV")
-        logger.info(f"📱 Статус-бар: {status_h:.1f}dp = {status_h * screen_density:.0f}px")
-        logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp = {top_padding * screen_density:.0f}px")
-        logger.info(f"📱 Высота панели: {self.height}dp = {self.height * screen_density:.0f}px")
+        logger.info(f"📱 Статус-бар: {status_h:.1f}dp")
+        logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp")
         logger.info("=" * 70)
 
         # Основной контейнер
@@ -69,7 +61,6 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Левая часть
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -107,7 +98,6 @@ class TopNav(MDCard):
         self.left_container.add_widget(self.menu_btn)
         self.left_container.add_widget(self.back_btn)
 
-        # Центр
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
             font_size=sp(18),
@@ -121,7 +111,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Правая часть
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -285,5 +274,4 @@ class TopNav(MDCard):
 
     def reload_config(self):
         status_h = get_status_bar_height()
-        self.padding = [0, status_h + dp(12), 0, 0]
-        logger.info(f"🔄 TopNav | Статус-бар: {status_h:.1f}dp")
+        self.padding = [0, status_h + dp(20), 0, 0]
