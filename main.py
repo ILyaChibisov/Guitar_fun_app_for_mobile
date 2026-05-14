@@ -62,21 +62,16 @@ if platform == 'android':
         window = mActivity.getWindow()
         decorView = window.getDecorView()
 
-        # Флаги для стабильной раскладки
+        # Минимальные флаги - системная навигация НЕ перекрывает приложение
         decorView.setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         )
 
         # Делаем статус-бар и нав-бар прозрачными
         window.setStatusBarColor(0x00000000)
         window.setNavigationBarColor(0x00000000)
 
-        # Устанавливаем тёмные иконки на статус-баре (если нужно)
-        # Для светлых иконок используйте SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        # decorView.setSystemUiVisibility(decorView.getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)
-
-        print("✅ Системные панели настроены как прозрачные (тёмная тема)")
+        print("✅ Системные панели настроены (навигация НЕ перекрывает приложение)")
 
     except Exception as e:
         print(f"Ошибка настройки системных панелей: {e}")
@@ -103,7 +98,7 @@ from api.network_handler import network_manager
 from screens.components.bottom_nav import BottomNav
 from screens.components.top_nav import TopNav
 from screens.components.blocking_layer import BlockingLayer
-from config.system_bars import get_navigation_bar_height, get_status_bar_height
+from config.system_bars import get_navigation_bar_height, get_status_bar_height, get_screen_density, get_all_system_info
 
 # Импортируем ассеты
 try:
@@ -244,6 +239,26 @@ class GuitarFunsApp(MDApp):
     def build(self):
         logger.debug('Создание интерфейса...')
 
+        # ============ ДИАГНОСТИКА СИСТЕМНЫХ ПАНЕЛЕЙ ============
+        logger.info("=" * 70)
+        logger.info("🔧 ДИАГНОСТИКА СИСТЕМНЫХ ПАНЕЛЕЙ ПРИ ЗАПУСКЕ")
+        logger.info("=" * 70)
+        logger.info(f"📱 Платформа: {platform}")
+        logger.info(f"📱 Размер окна: {Window.width} x {Window.height} px")
+        logger.info(f"📱 DPI: {Window.dpi}")
+
+        # Получаем плотность экрана
+        density = get_screen_density()
+        logger.info(f"📱 Плотность экрана: {density:.3f}")
+
+        # Получаем высоты системных панелей
+        status_h = get_status_bar_height()
+        nav_h = get_navigation_bar_height()
+
+        logger.info(f"📊 СТАТУС-БАР: {status_h:.1f}dp = {status_h * density:.0f}px")
+        logger.info(f"📊 НАВИГАЦИОННАЯ ПАНЕЛЬ: {nav_h:.1f}dp = {nav_h * density:.0f}px")
+        logger.info("=" * 70)
+
         self.theme_cls.primary_palette = "Teal"
         self.theme_cls.primary_hue = "300"
         self.theme_cls.theme_style = "Light"
@@ -302,18 +317,6 @@ class GuitarFunsApp(MDApp):
 
         # Подписываемся на изменение размера окна (поворот экрана)
         Window.bind(on_resize=self.on_window_resize)
-
-        # Логируем информацию об отступах
-        if platform == 'android':
-            nav_h = get_navigation_bar_height()
-            status_h = get_status_bar_height()
-            logger.info("=" * 60)
-            logger.info("📱 НАСТРОЙКИ ЭКРАНА (Android)")
-            logger.info(f"   Размер окна: {Window.width}x{Window.height}px")
-            logger.info(f"   Плотность: {Window.dpi / 160:.2f}")
-            logger.info(f"   Статус-бар: {status_h}dp")
-            logger.info(f"   Системная навигация: {nav_h}dp")
-            logger.info("=" * 60)
 
         logger.info('Интерфейс успешно создан')
         return root
