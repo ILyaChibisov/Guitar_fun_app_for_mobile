@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - исправленная (правильные размеры)
+Верхняя панель навигации - полностью адаптивная для Android
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -22,7 +22,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - правильные размеры"""
+    """Верхняя панель навигации - полностью адаптивная"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -37,17 +37,17 @@ class TopNav(MDCard):
         self.size_hint = (1, None)
         self.pos_hint = {'top': 1}
 
-        # Получаем высоту статус-бара (уже в dp)
+        # Получаем высоту статус-бара (автоматически)
         status_h = get_status_bar_height()
 
-        # Получаем базовую высоту панели (просто число, не dp)
-        nav_height_raw = layout_config.get_top_nav_height()  # 56 или 64
+        # Получаем базовую высоту панели (56 для телефона, 64 для планшета)
+        nav_height = layout_config.get_top_nav_height()
 
-        # ТОЛЬКО ЗДЕСЬ ПРИМЕНЯЕМ dp() ОДИН РАЗ
-        self.height = dp(nav_height_raw)
+        # Высота панели в dp (Kivy сам масштабирует в пиксели)
+        self.height = nav_height
 
         # Отступ сверху = статус-бар + небольшой зазор (4dp)
-        top_padding = status_h + dp(4)
+        top_padding = status_h + 4
         self.padding = [0, top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
@@ -58,11 +58,10 @@ class TopNav(MDCard):
         # Отладка
         screen_density = get_screen_density()
         logger.info("=" * 70)
-        logger.info(f"📱 TOP NAV (исправленный)")
+        logger.info(f"📱 TOP NAV")
         logger.info(f"📱 Статус-бар: {status_h:.1f}dp = {status_h * screen_density:.0f}px")
         logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp = {top_padding * screen_density:.0f}px")
         logger.info(f"📱 Высота панели: {self.height}dp = {self.height * screen_density:.0f}px")
-        logger.info(f"📱 Базовая высота: {nav_height_raw}dp")
         logger.info("=" * 70)
 
         # Основной контейнер
@@ -207,7 +206,6 @@ class TopNav(MDCard):
             self.screen_title.text = self._get_screen_title(screen_name)
         else:
             self._show_back_button()
-        logger.debug(f"Экран изменён: {screen_name}")
 
     def _on_menu_press(self, btn):
         app = MDApp.get_running_app()
@@ -233,7 +231,6 @@ class TopNav(MDCard):
     def _on_language_changed(self, lang_code):
         if self.app and hasattr(self.app, 'change_language'):
             self.app.change_language(lang_code)
-        logger.info(f"Язык изменён на: {lang_code}")
 
     def _on_search_press(self, btn):
         app = MDApp.get_running_app()
@@ -267,7 +264,6 @@ class TopNav(MDCard):
             self._hide_back_button()
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
         self.screen_title.text = f"Буква {display}"
-        logger.info(f"TopNav обновлён для экрана исполнителей: {self.screen_title.text}")
 
     def reset_to_default(self):
         self._hide_back_button()
@@ -293,13 +289,11 @@ class TopNav(MDCard):
         self.profile_btn.disabled = hide
 
     def reload_config(self):
-        """Обновляет конфигурацию при повороте экрана"""
         status_h = get_status_bar_height()
-        nav_height_raw = layout_config.get_top_nav_height()
+        nav_height = layout_config.get_top_nav_height()
 
-        self.height = dp(nav_height_raw)
-        top_padding = status_h + dp(4)
-        self.padding = [0, top_padding, 0, 0]
+        self.height = nav_height
+        self.padding = [0, status_h + 4, 0, 0]
 
         screen_density = get_screen_density()
-        logger.info(f"🔄 TopNav | Статус-бар: {status_h:.1f}dp, отступ: {top_padding:.1f}dp, высота: {self.height}dp")
+        logger.info(f"🔄 TopNav | Статус-бар: {status_h:.1f}dp, высота: {self.height}dp")

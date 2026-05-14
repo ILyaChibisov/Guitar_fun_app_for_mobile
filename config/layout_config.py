@@ -12,15 +12,15 @@ logger = get_logger('LayoutConfig')
 
 
 class LayoutConfig:
-    """Централизованная конфигурация - ПРОСТЫЕ ЧИСЛА (не dp!)"""
+    """Централизованная конфигурация"""
 
-    # ========== РАЗМЕРЫ ПАНЕЛЕЙ (просто числа, БЕЗ dp) ==========
-    TOP_NAV_HEIGHT = 56
-    BOTTOM_NAV_HEIGHT = 56
-    TOP_NAV_HEIGHT_TABLET = 64
-    BOTTOM_NAV_HEIGHT_TABLET = 64
+    # ========== БАЗОВЫЕ РАЗМЕРЫ (просто числа, НЕ dp!) ==========
+    TOP_NAV_HEIGHT = 56  # для телефонов
+    BOTTOM_NAV_HEIGHT = 56  # для телефонов
+    TOP_NAV_HEIGHT_TABLET = 64  # для планшетов
+    BOTTOM_NAV_HEIGHT_TABLET = 64  # для планшетов
 
-    # Отступы (просто числа)
+    # Отступы
     SIDE_PADDING = 16
     GAP_BETWEEN_CONTENT_AND_NAV = 8
     CONTENT_TOP_PADDING = 8
@@ -30,6 +30,7 @@ class LayoutConfig:
 
     @classmethod
     def is_tablet(cls):
+        """Определяет, планшет ли это (ширина >= 600dp)"""
         if cls._is_tablet is None:
             min_width = min(Window.width, Window.height)
             cls._is_tablet = min_width >= dp(600)
@@ -65,7 +66,7 @@ class LayoutConfig:
 
     @classmethod
     def get_content_padding(cls):
-        """Возвращает готовый padding для контейнера контента [left, top, right, bottom] в dp"""
+        """Возвращает padding для контейнера контента [left, top, right, bottom] в dp"""
         return [
             dp(cls.SIDE_PADDING),
             dp(cls.CONTENT_TOP_PADDING),
@@ -74,17 +75,15 @@ class LayoutConfig:
         ]
 
     @classmethod
+    def force_update(cls):
+        """Принудительное обновление после поворота экрана"""
+        cls._is_tablet = None
+        logger.info(f"LayoutConfig: принудительное обновление после поворота")
+
+    @classmethod
     def update_for_platform(cls):
         logger.info(f"LayoutConfig: TOP_NAV_HEIGHT={cls.TOP_NAV_HEIGHT}dp, BOTTOM_NAV_HEIGHT={cls.BOTTOM_NAV_HEIGHT}dp")
 
-    @classmethod
-    def force_update(cls):
-        """Принудительно обновляет настройки (после поворота экрана)"""
-        cls._is_tablet = None
-        cls.update_for_platform()
-        logger.info(f"LayoutConfig: принудительное обновление после поворота")
 
-
-# Создаём экземпляр
 layout_config = LayoutConfig()
 layout_config.update_for_platform()
