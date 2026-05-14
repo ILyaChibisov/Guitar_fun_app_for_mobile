@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя панель навигации - Windows: принудительно крупные иконки
+Нижняя панель навигации - максимально крупные иконки для Windows
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -33,7 +33,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации"""
+    """Элемент нижней навигации - индивидуальные настройки"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -48,49 +48,66 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
 
-        # ============ РАЗНЫЕ РАЗМЕРЫ ДЛЯ РАЗНЫХ ПЛАТФОРМ ============
-        if platform == 'android':
-            # Android: стандартные размеры
-            self.spacing = dp(4)
-            self.padding = [0, dp(4), 0, dp(4)]
-            self.icon_size = 0.72
-            self.font_size = sp(11)
+        # ============ ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ ДЛЯ "ИЗБРАННОЕ" ============
+        if screen_name == 'favorites':
+            # Избранное - меньше шрифт, чтобы текст поместился
+            if platform == 'android':
+                self.font_size = sp(9)  # меньше стандартного
+            else:
+                self.font_size = sp(13)  # на Windows тоже меньше
+            self.text_height = dp(20) if platform != 'android' else None
         else:
-            # Windows: ФИКСИРОВАННЫЕ крупные размеры
+            # Остальные кнопки
+            if platform == 'android':
+                self.font_size = sp(11)
+            else:
+                self.font_size = sp(16)
+            self.text_height = dp(24) if platform != 'android' else None
+
+        # Общие настройки
+        if platform == 'android':
             self.spacing = dp(2)
             self.padding = [0, dp(2), 0, dp(2)]
-            # ФИКСИРОВАННЫЙ размер контейнера иконки в px
-            self.fixed_icon_size = dp(48)  # 48dp фиксированной высоты для иконки
-            self.font_size = sp(14)
-
-        # Контейнер иконки - с фиксированной высотой для Windows
-        if platform == 'android':
-            self.icon_container = MDBoxLayout(
-                size_hint=(1, 0.68),
-                orientation='vertical'
-            )
+            self.icon_container_ratio = 0.70
+            self.icon_size = 0.82
+            self.text_ratio = 0.30
         else:
-            # Windows: фиксированная высота для контейнера иконки
-            self.icon_container = MDBoxLayout(
-                size_hint=(1, None),
-                height=self.fixed_icon_size,
-                orientation='vertical'
-            )
+            self.spacing = dp(4)
+            self.padding = [0, dp(4), 0, dp(4)]
+            self.icon_container_ratio = 0.75
+            self.icon_size = 0.90
+
+        # Контейнер иконки
+        self.icon_container = MDBoxLayout(
+            size_hint=(1, self.icon_container_ratio),
+            orientation='vertical'
+        )
 
         self.custom_image = None
         self._load_icon()
 
         # Текст
-        self.text_label = Label(
-            text=self.text,
-            font_size=self.font_size,
-            size_hint=(1, None) if platform != 'android' else (1, 0.32),
-            height=dp(20) if platform != 'android' else None,
-            color=theme.TEXT_SECONDARY,
-            bold=False,
-            halign='center',
-            valign='top'
-        )
+        if platform == 'android':
+            self.text_label = Label(
+                text=self.text,
+                font_size=self.font_size,
+                size_hint=(1, self.text_ratio),
+                color=theme.TEXT_SECONDARY,
+                bold=False,
+                halign='center',
+                valign='top'
+            )
+        else:
+            self.text_label = Label(
+                text=self.text,
+                font_size=self.font_size,
+                size_hint=(1, None),
+                height=self.text_height,
+                color=theme.TEXT_SECONDARY,
+                bold=False,
+                halign='center',
+                valign='middle'
+            )
         self.text_label.bind(size=self.text_label.setter('text_size'))
 
         self.add_widget(self.icon_container)
@@ -100,8 +117,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
-        logger.info(
-            f"[NavItem] {screen_name}: platform={platform}, icon_size={self.icon_size if platform == 'android' else self.fixed_icon_size}")
+        logger.debug(f"[NavItem] {screen_name}: font_size={self.font_size}, platform={platform}")
 
     def _reload_icon(self, *args):
         self._load_icon()
@@ -114,39 +130,22 @@ class NavItem(ButtonBehavior, BoxLayout):
                 icon_data = load_asset_as_bytes(self.icon_asset)
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
-
-                    if platform == 'android':
-                        # Android: относительный размер
-                        self.custom_image = Image(
-                            texture=core_img.texture,
-                            size_hint=(self.icon_size, self.icon_size),
-                            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-                            allow_stretch=True,
-                            keep_ratio=True
-                        )
-                    else:
-                        # Windows: ФИКСИРОВАННЫЙ размер в пикселях
-                        self.custom_image = Image(
-                            texture=core_img.texture,
-                            size_hint=(None, None),
-                            size=(dp(40), dp(40)),
-                            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-                            allow_stretch=True,
-                            keep_ratio=True
-                        )
+                    self.custom_image = Image(
+                        texture=core_img.texture,
+                        size_hint=(self.icon_size, self.icon_size),
+                        pos_hint={'center_x': 0.5, 'center_y': 0.5},
+                        allow_stretch=True,
+                        keep_ratio=True
+                    )
                     self.icon_container.add_widget(self.custom_image)
                     return
             except Exception as e:
                 logger.error('Ошибка загрузки иконки: ' + str(e))
 
-        # Заглушка
-        if platform == 'android':
-            text_size = sp(20)
-        else:
-            text_size = sp(28)
+        fallback_font = sp(20) if platform == 'android' else sp(28)
         self.custom_image = Label(
             text="?",
-            font_size=text_size,
+            font_size=fallback_font,
             size_hint=(1, 1),
             color=theme.TEXT_SECONDARY,
             halign='center',
@@ -180,22 +179,18 @@ class BottomNav(BoxLayout):
         # Получаем высоту системной навигации
         nav_bar_height = get_navigation_bar_height()
 
-        # ============ РАЗНАЯ ВЫСОТА ДЛЯ РАЗНЫХ ПЛАТФОРМ ============
+        # ============ ВЫСОТА ПАНЕЛИ ============
         if platform == 'android':
-            # Android: стандартная высота
-            nav_height_raw = layout_config.get_bottom_nav_height()
-            self.nav_height = nav_height_raw  # 56 или 64
+            self.nav_height = dp(56)
             bottom_padding = nav_bar_height
             button_spacing = dp(4)
-            logger.info("📱 BOTTOM NAV - Android режим")
         else:
-            # Windows: ФИКСИРОВАННАЯ увеличенная высота
-            self.nav_height = 85  # общая высота панели
-            bottom_padding = nav_bar_height
-            button_spacing = dp(2)
-            logger.info("📱 BOTTOM NAV - Windows режим (фиксированные размеры)")
+            # Windows - УВЕЛИЧЕННАЯ ВЫСОТА
+            self.nav_height = dp(85)
+            bottom_padding = nav_bar_height + dp(10)
+            button_spacing = dp(6)
 
-        # Общая высота = панель + отступ
+        # Общая высота
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
@@ -206,13 +201,13 @@ class BottomNav(BoxLayout):
 
         # Диагностика
         logger.info("=" * 70)
-        logger.info(f"📱 BOTTOM NAV - ПЛАТФОРМА: {platform.upper()}")
+        logger.info(f"📱 BOTTOM NAV - {platform.upper()}")
         logger.info(f"📱 Высота панели: {self.nav_height}dp")
         logger.info(f"📱 Системная навигация: {nav_bar_height:.1f}dp")
         logger.info(f"📱 Нижний отступ: {bottom_padding}dp")
         logger.info(f"📱 Общая высота: {self.total_height:.1f}dp")
         if platform != 'android':
-            logger.info("🔧 Windows: иконки 40x40px, шрифт 14sp")
+            logger.info("🔧 Windows: иконки 90%, шрифт 16sp, высота панели 85dp")
         logger.info("=" * 70)
 
         # Меню
@@ -267,14 +262,13 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            nav_height_raw = layout_config.get_bottom_nav_height()
-            self.nav_height = nav_height_raw
+            self.nav_height = dp(56)
             bottom_padding = nav_bar_height
             button_spacing = dp(4)
         else:
-            self.nav_height = 85
-            bottom_padding = nav_bar_height
-            button_spacing = dp(2)
+            self.nav_height = dp(85)
+            bottom_padding = nav_bar_height + dp(10)
+            button_spacing = dp(6)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
