@@ -51,7 +51,7 @@ os.environ['REQUESTS_CA_BUNDLE'] = ''
 
 # ============ НАСТРОЙКА ОКНА ============
 if platform == 'android':
-    # Android: настройка прозрачных системных панелей
+    # Android: настройка системных панелей
     try:
         from android import mActivity
         from jnius import autoclass
@@ -62,16 +62,19 @@ if platform == 'android':
         window = mActivity.getWindow()
         decorView = window.getDecorView()
 
-        # Минимальные флаги - системная навигация НЕ перекрывает приложение
+        # Флаги для стабильной раскладки
         decorView.setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         )
 
-        # Делаем статус-бар и нав-бар прозрачными
-        window.setStatusBarColor(0x00000000)
-        window.setNavigationBarColor(0x00000000)
+        # Делаем статус-бар ЧЁРНЫМ (непрозрачным)
+        window.setStatusBarColor(0xFF000000)  # Чёрный цвет (0xFF = alpha, 000000 = black)
 
-        print("✅ Системные панели настроены (навигация НЕ перекрывает приложение)")
+        # Делаем нав-бар прозрачным или тоже чёрным
+        window.setNavigationBarColor(0xFF000000)  # Чёрный цвет для нав-бара
+
+        print("✅ Системные панели настроены: статус-бар ЧЁРНЫЙ")
 
     except Exception as e:
         print(f"Ошибка настройки системных панелей: {e}")
@@ -297,6 +300,20 @@ class GuitarFunsApp(MDApp):
         # Создаём нижнюю панель
         self.bottom_nav = BottomNav(self.screen_manager)
         self.bottom_nav.pos_hint = {'y': 0}
+
+        # ============ ДИАГНОСТИКА НИЖНЕЙ ПАНЕЛИ (ПОСЛЕ СОЗДАНИЯ) ============
+        logger.info("=" * 70)
+        logger.info("📱 ДИАГНОСТИКА НИЖНЕЙ ПАНЕЛИ")
+        logger.info("=" * 70)
+        if self.bottom_nav:
+            logger.info(f"🔹 bottom_nav.height: {self.bottom_nav.height}dp")
+            logger.info(f"🔹 bottom_nav.padding: {self.bottom_nav.padding}")
+            logger.info(f"🔹 bottom_nav.pos_hint: {self.bottom_nav.pos_hint}")
+            if hasattr(self.bottom_nav, 'nav_height'):
+                logger.info(f"🔹 bottom_nav.nav_height: {self.bottom_nav.nav_height}dp")
+        else:
+            logger.error("❌ bottom_nav не создан!")
+        logger.info("=" * 70)
 
         # Создаём блокирующий слой
         self.blocking_layer = BlockingLayer()

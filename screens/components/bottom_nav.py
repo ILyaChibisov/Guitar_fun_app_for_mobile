@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя панель навигации - увеличенные иконки и текст для удобного нажатия
+Нижняя панель навигации - с полной диагностикой
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -32,7 +32,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации с увеличенными иконками"""
+    """Элемент нижней навигации"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -46,24 +46,22 @@ class NavItem(ButtonBehavior, BoxLayout):
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-        self.spacing = dp(4)  # УВЕЛИЧЕНО расстояние между иконкой и текстом
+        self.spacing = dp(4)
         self.padding = [0, dp(4), 0, dp(4)]
 
-        # УВЕЛИЧЕН контейнер иконки
         self.icon_container = MDBoxLayout(
-            size_hint=(1, 0.70),  # 70% высоты под иконку
+            size_hint=(1, 0.72),
             orientation='vertical'
         )
 
         self.custom_image = None
         self._load_icon()
 
-        # УВЕЛИЧЕН шрифт текста
-        font_size = sp(12) if platform == 'android' else sp(13)  # БЫЛО 10-11, СТАЛО 12-13
+        font_size = sp(11) if platform == 'android' else sp(12)
         self.text_label = Label(
             text=self.text,
             font_size=font_size,
-            size_hint=(1, 0.30),  # 30% высоты под текст
+            size_hint=(1, 0.28),
             color=theme.TEXT_SECONDARY,
             bold=False,
             halign='center',
@@ -89,16 +87,9 @@ class NavItem(ButtonBehavior, BoxLayout):
                 icon_data = load_asset_as_bytes(self.icon_asset)
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
-
-                    # УВЕЛИЧЕН размер иконок
-                    if self.screen_name == 'favorites':
-                        icon_size = 0.68  # для Избранного чуть меньше, но всё равно увеличен
-                    else:
-                        icon_size = 0.78  # УВЕЛИЧЕНО (было 0.72)
-
                     self.custom_image = Image(
                         texture=core_img.texture,
-                        size_hint=(icon_size, icon_size),
+                        size_hint=(0.75, 0.75),
                         pos_hint={'center_x': 0.5, 'center_y': 0.5},
                         allow_stretch=True,
                         keep_ratio=True
@@ -110,7 +101,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
         self.custom_image = Label(
             text="?",
-            font_size=sp(20),
+            font_size=sp(18),
             size_hint=(1, 1),
             color=theme.TEXT_SECONDARY,
             halign='center',
@@ -133,7 +124,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - увеличенная для удобного нажатия"""
+    """Нижняя панель навигации - с полной диагностикой"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -141,29 +132,42 @@ class BottomNav(BoxLayout):
         self.size_hint = (1, None)
         self.pos_hint = {'y': 0}
 
-        # Получаем реальную высоту системной навигации
+        # Получаем информацию об устройстве
+        screen_width = Window.width
+        screen_height = Window.height
+        screen_density = get_screen_density()
+
+        # Получаем высоту системной навигации
         nav_bar_height = get_navigation_bar_height()
 
-        # УВЕЛИЧЕНА высота панели (было 60, стало 72)
+        # Высота панели
         self.nav_height = dp(72)
 
         # Общая высота = панель + системная навигация
-        self.height = self.nav_height + nav_bar_height
+        self.total_height = self.nav_height + nav_bar_height
+        self.height = self.total_height
 
-        # Паддинги: нижний отступ = высоте системной навигации
-        self.padding = [dp(8), dp(4), dp(8), nav_bar_height]
-        self.spacing = dp(6)  # УВЕЛИЧЕНО расстояние между кнопками
+        # Нижний отступ = высоте системной навигации (чтобы иконки были НАД ней)
+        bottom_padding = nav_bar_height
+        self.padding = [dp(8), 0, dp(8), bottom_padding]
+        self.spacing = dp(6)
         self.md_bg_color = [0, 0, 0, 0]
 
-        # Отладка
-        screen_density = get_screen_density()
+        # ============ ПОЛНАЯ ДИАГНОСТИКА ============
         logger.info("=" * 70)
-        logger.info(f"📱 BOTTOM NAV (увеличенная)")
-        logger.info(f"📱 Системная навигация: {nav_bar_height}dp ({nav_bar_height * screen_density:.0f}px)")
-        logger.info(f"📱 Панель: {self.nav_height}dp ({self.nav_height * screen_density:.0f}px)")
-        logger.info(f"📱 Общая высота: {self.height}dp ({self.height * screen_density:.0f}px)")
-        logger.info(f"📱 Размер иконок: увеличен до 78% от контейнера")
-        logger.info(f"📱 Размер текста: {sp(12)}sp")
+        logger.info("📱 BOTTOM NAV - ПОЛНАЯ ДИАГНОСТИКА")
+        logger.info("=" * 70)
+        logger.info(f"📱 Платформа: {platform}")
+        logger.info(f"📱 Размер экрана: {screen_width} x {screen_height} px")
+        logger.info(f"📱 Плотность экрана: {screen_density:.3f}")
+        logger.info("-" * 40)
+        logger.info(f"📊 Системная навигация: {nav_bar_height:.1f}dp = {nav_bar_height * screen_density:.0f}px")
+        logger.info(f"📊 Высота панели: {self.nav_height}dp = {self.nav_height * screen_density:.0f}px")
+        logger.info(f"📊 Общая высота: {self.total_height:.1f}dp = {self.total_height * screen_density:.0f}px")
+        logger.info(f"📊 Нижний отступ (padding): {bottom_padding:.1f}dp = {bottom_padding * screen_density:.0f}px")
+        logger.info("-" * 40)
+        logger.info(f"🔧 Расчёт: {self.nav_height}dp + {nav_bar_height}dp = {self.total_height:.1f}dp")
+        logger.info(f"🔧 Иконки будут находиться на {bottom_padding:.1f}dp ВЫШЕ системной навигации")
         logger.info("=" * 70)
 
         # Меню
@@ -217,9 +221,14 @@ class BottomNav(BoxLayout):
     def reload_config(self):
         """Обновляет конфигурацию при повороте экрана"""
         nav_bar_height = get_navigation_bar_height()
+        screen_density = get_screen_density()
 
         self.height = self.nav_height + nav_bar_height
-        self.padding = [dp(8), dp(4), dp(8), nav_bar_height]
+        self.padding = [dp(8), 0, dp(8), nav_bar_height]
 
-        screen_density = get_screen_density()
-        logger.info(f"🔄 BottomNav | Системная нав: {nav_bar_height}dp ({nav_bar_height * screen_density:.0f}px)")
+        logger.info("=" * 70)
+        logger.info(f"🔄 BOTTOM NAV - ПОВОРОТ ЭКРАНА")
+        logger.info(f"📊 Системная навигация: {nav_bar_height:.1f}dp = {nav_bar_height * screen_density:.0f}px")
+        logger.info(f"📊 Общая высота: {self.height:.1f}dp = {self.height * screen_density:.0f}px")
+        logger.info(f"📊 Нижний отступ: {nav_bar_height:.1f}dp")
+        logger.info("=" * 70)

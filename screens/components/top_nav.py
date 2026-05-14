@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - с правильным отступом под статус-бар
+Верхняя панель навигации - динамический отступ под статус-бар
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -21,7 +21,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - с отступом под статус-бар"""
+    """Верхняя панель навигации - динамический отступ"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -43,22 +43,26 @@ class TopNav(MDCard):
         nav_height = dp(56)
         self.height = nav_height
 
-        # ВАЖНО: отступ сверху = высоте статус-бара + небольшой запас
-        # Добавляем +4dp для гарантии, что панель не уйдёт под статус-бар
-        top_padding = status_h + dp(4)
+        # ДИНАМИЧЕСКИЙ ОТСТУП:
+        # - Маленький отступ для эстетики (2-4dp)
+        # - Но не больше 8dp, чтобы не было слишком много пустого места
+        aesthetic_padding = min(dp(4), status_h * 0.1)  # 10% от статус-бара, но не больше 4dp
+        top_padding = status_h + aesthetic_padding
+
         self.padding = [0, top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]  # ПОЛНОСТЬЮ ПРОЗРАЧНЫЙ
+        self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
         self.spacing = 0
 
         # Отладка
         screen_density = get_screen_density()
         logger.info("=" * 70)
-        logger.info(f"📱 TOP NAV")
-        logger.info(f"📱 Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px)")
-        logger.info(f"📱 Верхний отступ: {top_padding}dp")
+        logger.info(f"📱 TOP NAV (динамический отступ)")
+        logger.info(f"📱 Статус-бар: {status_h:.1f}dp")
+        logger.info(f"📱 Декоративный отступ: {aesthetic_padding:.1f}dp")
+        logger.info(f"📱 Итоговый отступ: {top_padding:.1f}dp")
         logger.info(f"📱 Высота панели: {nav_height}dp")
         logger.info("=" * 70)
 
@@ -290,8 +294,9 @@ class TopNav(MDCard):
     def reload_config(self):
         """Обновляет конфигурацию при повороте экрана"""
         status_h = get_status_bar_height()
-        top_padding = status_h + dp(4)
+        aesthetic_padding = min(dp(4), status_h * 0.1)
+        top_padding = status_h + aesthetic_padding
         self.padding = [0, top_padding, 0, 0]
 
         screen_density = get_screen_density()
-        logger.info(f"🔄 TopNav | Статус-бар: {status_h}dp ({status_h * screen_density:.0f}px), отступ: {top_padding}dp")
+        logger.info(f"🔄 TopNav | Статус-бар: {status_h:.1f}dp, отступ: {top_padding:.1f}dp")
