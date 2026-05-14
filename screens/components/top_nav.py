@@ -37,7 +37,7 @@ class TopNav(MDCard):
         self.height = dp(56)
 
         # Увеличенный отступ сверху: статус-бар + 20dp запаса
-        top_padding = status_h + dp(20)
+        top_padding = status_h + dp(40)
         self.padding = [0, top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
