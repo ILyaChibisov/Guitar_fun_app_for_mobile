@@ -21,6 +21,8 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
+    """Верхняя панель навигации - увеличенная"""
+
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
@@ -34,10 +36,16 @@ class TopNav(MDCard):
         self.pos_hint = {'top': 1}
 
         status_h = get_status_bar_height()
-        self.height = dp(56)
 
-        # Увеличенный отступ сверху: статус-бар + 20dp запаса
-        top_padding = status_h + dp(80)
+        # УВЕЛИЧИВАЕМ ВСЮ ВЫСОТУ ПАНЕЛИ вместо просто отступа
+        if platform == 'android':
+            self.height = dp(80)  # было 56, стало 80
+            # Отступ сверху = статус-бар + 20dp (значительный запас)
+            top_padding = status_h + dp(20)
+        else:
+            self.height = dp(56)
+            top_padding = status_h + dp(4)
+
         self.padding = [0, top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
@@ -47,9 +55,10 @@ class TopNav(MDCard):
 
         screen_density = get_screen_density()
         logger.info("=" * 70)
-        logger.info(f"📱 TOP NAV")
-        logger.info(f"📱 Статус-бар: {status_h:.1f}dp")
-        logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp")
+        logger.info(f"📱 TOP NAV - {platform.upper()}")
+        logger.info(f"📱 Статус-бар: {status_h:.1f}dp = {status_h * screen_density:.0f}px")
+        logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp = {top_padding * screen_density:.0f}px")
+        logger.info(f"📱 Высота панели: {self.height}dp = {self.height * screen_density:.0f}px")
         logger.info("=" * 70)
 
         # Основной контейнер
@@ -61,6 +70,7 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
+        # Левая часть
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -74,7 +84,7 @@ class TopNav(MDCard):
         self.menu_btn = MDIconButton(
             icon="menu",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(44), dp(44)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -85,7 +95,7 @@ class TopNav(MDCard):
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(44), dp(44)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -98,9 +108,10 @@ class TopNav(MDCard):
         self.left_container.add_widget(self.menu_btn)
         self.left_container.add_widget(self.back_btn)
 
+        # Центр
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
-            font_size=sp(18),
+            font_size=sp(20),  # увеличен
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -111,12 +122,13 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
+        # Правая часть
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(140),
+            width=dp(150),
             height=dp(44),
-            spacing=dp(6),
+            spacing=dp(8),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
@@ -124,7 +136,7 @@ class TopNav(MDCard):
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
-            size=(dp(36), dp(36)),
+            size=(dp(40), dp(40)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -135,7 +147,7 @@ class TopNav(MDCard):
         self.profile_btn = MDIconButton(
             icon="account-circle",
             size_hint=(None, None),
-            size=(dp(36), dp(36)),
+            size=(dp(40), dp(40)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -274,4 +286,9 @@ class TopNav(MDCard):
 
     def reload_config(self):
         status_h = get_status_bar_height()
-        self.padding = [0, status_h + dp(20), 0, 0]
+        if platform == 'android':
+            self.height = dp(80)
+            self.padding = [0, status_h + dp(20), 0, 0]
+        else:
+            self.height = dp(56)
+            self.padding = [0, status_h + dp(4), 0, 0]

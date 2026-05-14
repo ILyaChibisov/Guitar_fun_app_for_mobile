@@ -63,8 +63,8 @@ class NavItem(ButtonBehavior, BoxLayout):
 
             # УВЕЛИЧЕННЫЕ размеры иконок
             if screen_name == 'favorites':
-                self.icon_size = dp(44)  # Избранное (было 36)
-                self.font_size = sp(10)
+                self.icon_size = dp(48)  # Избранное (было 36)
+                self.font_size = sp(12)
             else:
                 self.icon_size = dp(54)  # Остальные (было 44)
                 self.font_size = sp(13)
@@ -93,7 +93,7 @@ class NavItem(ButtonBehavior, BoxLayout):
             )
 
             if screen_name == 'favorites':
-                self.icon_size = dp(42)
+                self.icon_size = dp(46)
                 self.font_size = sp(13)
             else:
                 self.icon_size = dp(50)
