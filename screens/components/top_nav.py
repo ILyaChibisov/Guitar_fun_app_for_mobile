@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - динамический отступ под статус-бар
+Верхняя панель навигации - исправленная (правильные размеры)
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -14,6 +14,7 @@ from kivymd.app import MDApp
 
 from config.theme import theme
 from config.logger_config import get_logger
+from config.layout_config import layout_config
 from config.system_bars import get_status_bar_height, get_screen_density
 from screens.components.language_selector import LanguageSelector
 
@@ -21,7 +22,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - динамический отступ"""
+    """Верхняя панель навигации - правильные размеры"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -36,34 +37,32 @@ class TopNav(MDCard):
         self.size_hint = (1, None)
         self.pos_hint = {'top': 1}
 
-        # Получаем высоту статус-бара
+        # Получаем высоту статус-бара (уже в dp)
         status_h = get_status_bar_height()
 
-        # Высота панели
-        nav_height = dp(56)
-        self.height = nav_height
+        # Получаем базовую высоту панели (просто число, не dp)
+        nav_height_raw = layout_config.get_top_nav_height()  # 56 или 64
 
-        # ДИНАМИЧЕСКИЙ ОТСТУП:
-        # - Маленький отступ для эстетики (2-4dp)
-        # - Но не больше 8dp, чтобы не было слишком много пустого места
-        aesthetic_padding = min(dp(4), status_h * 0.1)  # 10% от статус-бара, но не больше 4dp
-        top_padding = status_h + aesthetic_padding
+        # ТОЛЬКО ЗДЕСЬ ПРИМЕНЯЕМ dp() ОДИН РАЗ
+        self.height = dp(nav_height_raw)
 
+        # Отступ сверху = статус-бар + небольшой зазор (4dp)
+        top_padding = status_h + dp(4)
         self.padding = [0, top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]
+        self.md_bg_color = [0, 0, 0, 0]  # Прозрачный фон
         self.elevation = 0
         self.spacing = 0
 
         # Отладка
         screen_density = get_screen_density()
         logger.info("=" * 70)
-        logger.info(f"📱 TOP NAV (динамический отступ)")
-        logger.info(f"📱 Статус-бар: {status_h:.1f}dp")
-        logger.info(f"📱 Декоративный отступ: {aesthetic_padding:.1f}dp")
-        logger.info(f"📱 Итоговый отступ: {top_padding:.1f}dp")
-        logger.info(f"📱 Высота панели: {nav_height}dp")
+        logger.info(f"📱 TOP NAV (исправленный)")
+        logger.info(f"📱 Статус-бар: {status_h:.1f}dp = {status_h * screen_density:.0f}px")
+        logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp = {top_padding * screen_density:.0f}px")
+        logger.info(f"📱 Высота панели: {self.height}dp = {self.height * screen_density:.0f}px")
+        logger.info(f"📱 Базовая высота: {nav_height_raw}dp")
         logger.info("=" * 70)
 
         # Основной контейнер
@@ -208,6 +207,7 @@ class TopNav(MDCard):
             self.screen_title.text = self._get_screen_title(screen_name)
         else:
             self._show_back_button()
+        logger.debug(f"Экран изменён: {screen_name}")
 
     def _on_menu_press(self, btn):
         app = MDApp.get_running_app()
@@ -267,6 +267,7 @@ class TopNav(MDCard):
             self._hide_back_button()
         display = "0-9" if letter in ("digits", "0-9") else letter.upper()
         self.screen_title.text = f"Буква {display}"
+        logger.info(f"TopNav обновлён для экрана исполнителей: {self.screen_title.text}")
 
     def reset_to_default(self):
         self._hide_back_button()
@@ -294,9 +295,11 @@ class TopNav(MDCard):
     def reload_config(self):
         """Обновляет конфигурацию при повороте экрана"""
         status_h = get_status_bar_height()
-        aesthetic_padding = min(dp(4), status_h * 0.1)
-        top_padding = status_h + aesthetic_padding
+        nav_height_raw = layout_config.get_top_nav_height()
+
+        self.height = dp(nav_height_raw)
+        top_padding = status_h + dp(4)
         self.padding = [0, top_padding, 0, 0]
 
         screen_density = get_screen_density()
-        logger.info(f"🔄 TopNav | Статус-бар: {status_h:.1f}dp, отступ: {top_padding:.1f}dp")
+        logger.info(f"🔄 TopNav | Статус-бар: {status_h:.1f}dp, отступ: {top_padding:.1f}dp, высота: {self.height}dp")

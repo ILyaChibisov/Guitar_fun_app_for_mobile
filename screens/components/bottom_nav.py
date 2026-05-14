@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя панель навигации - с полной диагностикой
+Нижняя панель навигации - исправленная (правильные размеры)
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -17,6 +17,7 @@ from kivymd.app import MDApp
 
 from config.theme import theme
 from config.logger_config import get_logger
+from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height, get_screen_density
 from utils.kivy_imports import MDBoxLayout
 
@@ -124,7 +125,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - с полной диагностикой"""
+    """Нижняя панель навигации - исправленная"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -137,17 +138,20 @@ class BottomNav(BoxLayout):
         screen_height = Window.height
         screen_density = get_screen_density()
 
-        # Получаем высоту системной навигации
+        # Получаем высоту системной навигации (уже в dp)
         nav_bar_height = get_navigation_bar_height()
 
-        # Высота панели
-        self.nav_height = dp(72)
+        # Получаем базовую высоту панели (просто число, не dp)
+        nav_height_raw = layout_config.get_bottom_nav_height()  # 56 или 64
+
+        # ТОЛЬКО ЗДЕСЬ ПРИМЕНЯЕМ dp() ОДИН РАЗ
+        self.nav_height = dp(nav_height_raw)
 
         # Общая высота = панель + системная навигация
         self.total_height = self.nav_height + nav_bar_height
         self.height = self.total_height
 
-        # Нижний отступ = высоте системной навигации (чтобы иконки были НАД ней)
+        # Нижний отступ = высоте системной навигации (иконки будут НАД ней)
         bottom_padding = nav_bar_height
         self.padding = [dp(8), 0, dp(8), bottom_padding]
         self.spacing = dp(6)
@@ -155,19 +159,20 @@ class BottomNav(BoxLayout):
 
         # ============ ПОЛНАЯ ДИАГНОСТИКА ============
         logger.info("=" * 70)
-        logger.info("📱 BOTTOM NAV - ПОЛНАЯ ДИАГНОСТИКА")
+        logger.info("📱 BOTTOM NAV - ИСПРАВЛЕННАЯ")
         logger.info("=" * 70)
         logger.info(f"📱 Платформа: {platform}")
         logger.info(f"📱 Размер экрана: {screen_width} x {screen_height} px")
         logger.info(f"📱 Плотность экрана: {screen_density:.3f}")
         logger.info("-" * 40)
         logger.info(f"📊 Системная навигация: {nav_bar_height:.1f}dp = {nav_bar_height * screen_density:.0f}px")
-        logger.info(f"📊 Высота панели: {self.nav_height}dp = {self.nav_height * screen_density:.0f}px")
+        logger.info(f"📊 Базовая высота панели: {nav_height_raw}dp")
+        logger.info(f"📊 Высота панели (dp): {self.nav_height}dp = {self.nav_height * screen_density:.0f}px")
         logger.info(f"📊 Общая высота: {self.total_height:.1f}dp = {self.total_height * screen_density:.0f}px")
-        logger.info(f"📊 Нижний отступ (padding): {bottom_padding:.1f}dp = {bottom_padding * screen_density:.0f}px")
+        logger.info(f"📊 Нижний отступ: {bottom_padding:.1f}dp = {bottom_padding * screen_density:.0f}px")
         logger.info("-" * 40)
         logger.info(f"🔧 Расчёт: {self.nav_height}dp + {nav_bar_height}dp = {self.total_height:.1f}dp")
-        logger.info(f"🔧 Иконки будут находиться на {bottom_padding:.1f}dp ВЫШЕ системной навигации")
+        logger.info(f"🔧 Иконки будут НАД системной навигацией (отступ {bottom_padding:.1f}dp)")
         logger.info("=" * 70)
 
         # Меню
@@ -221,14 +226,17 @@ class BottomNav(BoxLayout):
     def reload_config(self):
         """Обновляет конфигурацию при повороте экрана"""
         nav_bar_height = get_navigation_bar_height()
+        nav_height_raw = layout_config.get_bottom_nav_height()
         screen_density = get_screen_density()
 
-        self.height = self.nav_height + nav_bar_height
+        self.nav_height = dp(nav_height_raw)
+        self.total_height = self.nav_height + nav_bar_height
+        self.height = self.total_height
         self.padding = [dp(8), 0, dp(8), nav_bar_height]
 
         logger.info("=" * 70)
         logger.info(f"🔄 BOTTOM NAV - ПОВОРОТ ЭКРАНА")
         logger.info(f"📊 Системная навигация: {nav_bar_height:.1f}dp = {nav_bar_height * screen_density:.0f}px")
-        logger.info(f"📊 Общая высота: {self.height:.1f}dp = {self.height * screen_density:.0f}px")
-        logger.info(f"📊 Нижний отступ: {nav_bar_height:.1f}dp")
+        logger.info(f"📊 Высота панели: {self.nav_height}dp")
+        logger.info(f"📊 Общая высота: {self.total_height:.1f}dp")
         logger.info("=" * 70)
