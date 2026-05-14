@@ -1,6 +1,6 @@
 # screens/components/bottom_nav.py
 """
-Нижняя панель навигации - индивидуальные настройки для каждой кнопки
+Нижняя панель навигации - увеличенные иконки для Android
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -32,7 +32,7 @@ except ImportError:
 
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации - индивидуальные настройки"""
+    """Элемент нижней навигации"""
 
     icon_asset = StringProperty('')
     text = StringProperty('')
@@ -48,67 +48,71 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.size_hint = (1, 1)
 
         if platform == 'android':
-            # ============ ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ ДЛЯ КАЖДОЙ КНОПКИ ============
-
-            # Общие настройки
+            # ============ УВЕЛИЧЕННЫЕ НАСТРОЙКИ ДЛЯ ANDROID ============
             self.spacing = dp(8)
-            self.padding = [0, dp(8), 0, dp(8)]
-            self.icon_container_ratio = 0.70
-            self.text_ratio = 0.30
+            self.padding = [0, dp(6), 0, dp(6)]
 
-            # ИНДИВИДУАЛЬНЫЕ РАЗМЕРЫ ИКОНОК И ШРИФТОВ
-            if screen_name == 'home':
-                self.icon_size = 0.92  # Главная
-                self.font_size = sp(13)
-            elif screen_name == 'songs':
-                self.icon_size = 0.92  # Песни
-                self.font_size = sp(13)
-            elif screen_name == 'chords':
-                self.icon_size = 0.92  # Аккорды
-                self.font_size = sp(13)
-            elif screen_name == 'tuner':
-                self.icon_size = 0.92  # Тюнер
-                self.font_size = sp(13)
-            elif screen_name == 'favorites':
-                self.icon_size = 0.75  # Избранное (меньше на ~18%)
-                self.font_size = sp(10)  # Шрифт тоже меньше
+            # УВЕЛИЧЕННЫЙ контейнер иконки (было 48, стало 64)
+            self.icon_container_height = dp(64)
+
+            self.icon_container = MDBoxLayout(
+                size_hint=(1, None),
+                height=self.icon_container_height,
+                orientation='vertical'
+            )
+
+            # УВЕЛИЧЕННЫЕ размеры иконок
+            if screen_name == 'favorites':
+                self.icon_size = dp(44)  # Избранное (было 36)
+                self.font_size = sp(10)
             else:
-                self.icon_size = 0.92
+                self.icon_size = dp(54)  # Остальные (было 44)
                 self.font_size = sp(13)
+
+            # Текст
+            self.text_label = Label(
+                text=self.text,
+                font_size=self.font_size,
+                size_hint=(1, None),
+                height=dp(22),
+                color=theme.TEXT_SECONDARY,
+                bold=False,
+                halign='center',
+                valign='middle'
+            )
         else:
             # Windows
-            self.spacing = dp(4)
-            self.padding = [0, dp(4), 0, dp(6)]
-            self.icon_container_ratio = 0.72
-            self.text_ratio = 0.28
+            self.spacing = dp(6)
+            self.padding = [0, dp(6), 0, dp(6)]
+
+            self.icon_container_height = dp(60)
+            self.icon_container = MDBoxLayout(
+                size_hint=(1, None),
+                height=self.icon_container_height,
+                orientation='vertical'
+            )
 
             if screen_name == 'favorites':
-                self.icon_size = 0.80
+                self.icon_size = dp(42)
                 self.font_size = sp(13)
             else:
-                self.icon_size = 0.88
+                self.icon_size = dp(50)
                 self.font_size = sp(15)
 
-        # Контейнер иконки
-        self.icon_container = MDBoxLayout(
-            size_hint=(1, self.icon_container_ratio),
-            orientation='vertical'
-        )
+            self.text_label = Label(
+                text=self.text,
+                font_size=self.font_size,
+                size_hint=(1, None),
+                height=dp(22),
+                color=theme.TEXT_SECONDARY,
+                bold=False,
+                halign='center',
+                valign='middle'
+            )
 
         self.custom_image = None
         self._load_icon()
 
-        # Текст
-        self.text_label = Label(
-            text=self.text,
-            font_size=self.font_size,
-            size_hint=(1, None),
-            height=dp(24),
-            color=theme.TEXT_SECONDARY,
-            bold=False,
-            halign='center',
-            valign='middle'
-        )
         self.text_label.bind(size=self.text_label.setter('text_size'))
 
         self.add_widget(self.icon_container)
@@ -118,7 +122,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.bind(active=self.update_state)
         self.bind(icon_asset=self._reload_icon)
 
-        logger.info(f"[NavItem] {screen_name}: icon_size={self.icon_size}, font={self.font_size}")
+        logger.info(f"[NavItem] {screen_name}: icon_size={self.icon_size}dp, font={self.font_size}")
 
     def _reload_icon(self, *args):
         self._load_icon()
@@ -132,10 +136,10 @@ class NavItem(ButtonBehavior, BoxLayout):
                 if icon_data:
                     core_img = CoreImage(BytesIO(icon_data), ext="png")
 
-                    # Используем индивидуальный размер иконки
                     self.custom_image = Image(
                         texture=core_img.texture,
-                        size_hint=(self.icon_size, self.icon_size),
+                        size_hint=(None, None),
+                        size=(self.icon_size, self.icon_size),
                         pos_hint={'center_x': 0.5, 'center_y': 0.5},
                         allow_stretch=True,
                         keep_ratio=True
@@ -145,7 +149,7 @@ class NavItem(ButtonBehavior, BoxLayout):
             except Exception as e:
                 logger.error('Ошибка загрузки иконки: ' + str(e))
 
-        fallback_font = sp(24) if platform == 'android' else sp(26)
+        fallback_font = sp(28) if platform == 'android' else sp(26)
         self.custom_image = Label(
             text="?",
             font_size=fallback_font,
@@ -182,13 +186,14 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            self.nav_height = dp(80)
+            # Увеличенная высота всей панели
+            self.nav_height = dp(90)  # было 80, стало 90
             bottom_padding = 0
-            button_spacing = dp(6)
+            button_spacing = dp(8)
         else:
-            self.nav_height = dp(72)
+            self.nav_height = dp(80)
             bottom_padding = nav_bar_height + dp(8)
-            button_spacing = dp(4)
+            button_spacing = dp(6)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
@@ -201,12 +206,8 @@ class BottomNav(BoxLayout):
         logger.info(f"📱 BOTTOM NAV - {platform.upper()}")
         logger.info(f"📱 Высота панели: {self.nav_height}dp")
         logger.info(f"📱 Системная навигация: {nav_bar_height:.1f}dp")
-        logger.info(f"📱 Индивидуальные размеры иконок:")
-        logger.info(f"   - Главная: 0.92")
-        logger.info(f"   - Песни: 0.92")
-        logger.info(f"   - Аккорды: 0.92")
-        logger.info(f"   - Тюнер: 0.92")
-        logger.info(f"   - Избранное: 0.75 (на 18% меньше)")
+        logger.info(f"📱 Размер иконок: 54dp (Избранное 44dp)")
+        logger.info(f"📱 Шрифт: 13sp (Избранное 10sp)")
         logger.info("=" * 70)
 
         self.nav_items = [
@@ -260,13 +261,13 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            self.nav_height = dp(80)
+            self.nav_height = dp(90)
             bottom_padding = 0
-            button_spacing = dp(6)
+            button_spacing = dp(8)
         else:
-            self.nav_height = dp(72)
+            self.nav_height = dp(80)
             bottom_padding = nav_bar_height + dp(8)
-            button_spacing = dp(4)
+            button_spacing = dp(6)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
