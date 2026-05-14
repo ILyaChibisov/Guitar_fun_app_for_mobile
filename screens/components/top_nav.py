@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - полностью автономная
+Верхняя панель навигации - увеличенный отступ для Android
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -21,7 +21,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - полностью автономная"""
+    """Верхняя панель навигации"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -31,7 +31,6 @@ class TopNav(MDCard):
         self.current_screen_name = 'home'
         self._is_back_mode = False
 
-        # Настройки панели
         self.orientation = 'vertical'
         self.size_hint = (1, None)
         self.pos_hint = {'top': 1}
@@ -39,15 +38,16 @@ class TopNav(MDCard):
         # Получаем высоту статус-бара
         status_h = get_status_bar_height()
 
-        # Высота панели (фиксированная)
+        # Высота панели (увеличена для видимости)
         self.height = dp(56)
 
-        # Отступ сверху = статус-бар + небольшой зазор (4dp)
-        top_padding = status_h + dp(4)
+        # Отступ сверху = статус-бар + БОЛЬШОЙ зазор (12dp для Android)
+        # Это чтобы панель точно не уходила под статус-бар
+        top_padding = status_h + dp(12)  # было 4, стало 12
         self.padding = [0, top_padding, 0, 0]
 
         self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]  # Прозрачный фон
+        self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
         self.spacing = 0
 
@@ -69,7 +69,7 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Левая часть (меню и назад)
+        # Левая часть
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -107,7 +107,7 @@ class TopNav(MDCard):
         self.left_container.add_widget(self.menu_btn)
         self.left_container.add_widget(self.back_btn)
 
-        # Центр (заголовок)
+        # Центр
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
             font_size=sp(18),
@@ -121,7 +121,7 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Правая часть (поиск, профиль, язык)
+        # Правая часть
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -168,7 +168,6 @@ class TopNav(MDCard):
 
         self.add_widget(self.container)
 
-        # Подписываемся на смену экранов
         if hasattr(self.sm, 'add_observer'):
             self.sm.add_observer(self._on_screen_changed)
         elif hasattr(self.sm, 'bind'):
@@ -227,7 +226,6 @@ class TopNav(MDCard):
     def _on_language_changed(self, lang_code):
         if self.app and hasattr(self.app, 'change_language'):
             self.app.change_language(lang_code)
-        logger.info(f"Язык изменён на: {lang_code}")
 
     def _on_search_press(self, btn):
         app = MDApp.get_running_app()
@@ -287,5 +285,5 @@ class TopNav(MDCard):
 
     def reload_config(self):
         status_h = get_status_bar_height()
-        self.padding = [0, status_h + dp(4), 0, 0]
+        self.padding = [0, status_h + dp(12), 0, 0]
         logger.info(f"🔄 TopNav | Статус-бар: {status_h:.1f}dp")
