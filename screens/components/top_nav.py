@@ -195,11 +195,19 @@ class TopNav(MDCard):
         }
         return titles.get(screen_name, screen_name.capitalize())
 
+    def update_title(self, screen_name: str):
+        """Обновляет заголовок по имени экрана"""
+        self.screen_title.text = self._get_screen_title(screen_name)
+
+    def set_custom_title(self, title: str):
+        """Устанавливает произвольный заголовок (например, имя артиста)"""
+        self.screen_title.text = title
+
     def _on_screen_changed(self, instance, screen_name):
         self.current_screen_name = screen_name
-        if screen_name != 'artists_by_letter':
+        if screen_name not in ['artists_by_letter', 'artist_songs']:
             self._hide_back_button()
-            self.screen_title.text = self._get_screen_title(screen_name)
+            self.update_title(screen_name)
         else:
             self._show_back_button()
 
@@ -250,9 +258,6 @@ class TopNav(MDCard):
         if self.language_selector:
             self.language_selector.set_current_lang(lang_code)
 
-    def update_title(self, screen_name: str):
-        self.screen_title.text = self._get_screen_title(screen_name)
-
     def update_for_artists_screen(self, letter: str, show_back_button: bool = True):
         if show_back_button:
             self._show_back_button()
@@ -264,7 +269,7 @@ class TopNav(MDCard):
     def reset_to_default(self):
         self._hide_back_button()
         if self.sm:
-            self.screen_title.text = self._get_screen_title(self.sm.current)
+            self.update_title(self.sm.current)
 
     def _show_back_button(self):
         self._is_back_mode = True

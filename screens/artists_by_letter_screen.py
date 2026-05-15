@@ -26,12 +26,9 @@ logger = screen_logger('ArtistsByLetter')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -126,9 +123,9 @@ class ArtistsByLetterScreen(BaseScreen):
     def init_ui(self):
         # Создаём вертикальный контейнер
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+        self._main_layout = main_layout
 
         # ============ ВЕРХНИЙ ОТСТУП ============
-        # Отступ сверху под статус-бар и TopNav
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
@@ -147,13 +144,8 @@ class ArtistsByLetterScreen(BaseScreen):
         main_layout.add_widget(self.count_label)
 
         # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
-        # Получаем высоту системной навигации
         nav_bar_height = get_navigation_bar_height()
-
-        # Высота BottomNav из конфига (60dp для телефона)
-        bottom_nav_height = dp(60)  # базовая высота BottomNav
-
-        # Общая высота нижней части = BottomNav + системная навигация + зазор
+        bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
 
         cards_container = MDBoxLayout(
@@ -249,7 +241,6 @@ class ArtistsByLetterScreen(BaseScreen):
         if self.recycle_view:
             self.recycle_view.clear()
         self.loading_label = SimpleLoadingLabel()
-        # Добавляем в основную layout, а не в recycle_view
         if self._main_layout:
             self._main_layout.add_widget(self.loading_label)
 
@@ -309,9 +300,11 @@ class ArtistsByLetterScreen(BaseScreen):
 
         logger.info(f"Отображено {len(data)} исполнителей для {self.current_letter}")
 
+    # screens/artists_by_letter_screen.py - исправленный метод _update_count_label
+
     def _update_count_label(self, total):
         if total == 0:
-            text = "Найдено 0 исполнителей"
+            text = "Не найдено исполнителей"
         elif total == 1:
             text = "Найден 1 исполнитель"
         elif 2 <= total <= 4:
@@ -354,7 +347,7 @@ class ArtistsByLetterScreen(BaseScreen):
         self._show_empty("Ошибка загрузки\nПроверьте интернет")
 
     def on_artist_selected(self, artist, songs_count):
-        logger.info(f"Выбран: {artist}")
+        logger.info(f"Выбран исполнитель: {artist}")
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('artist_songs'):
                 screen = self.manager.get_screen('artist_songs')

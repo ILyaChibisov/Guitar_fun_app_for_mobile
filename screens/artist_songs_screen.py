@@ -308,11 +308,15 @@ class ArtistSongsScreen(BaseScreen):
         if app and hasattr(app, 'top_nav'):
             if self.current_artist or self._pending_artist:
                 artist_name = self.current_artist or self._pending_artist
-                # Сокращаем длинное название
+                # Сохраняем оригинальное название без изменений
+                # Сокращаем только для отображения если слишком длинное
                 if len(artist_name) > 25:
-                    artist_name = artist_name[:22] + "..."
-                # Обновляем верхнюю панель с названием исполнителя
-                app.top_nav.update_title(artist_name)
+                    display_name = artist_name[:22] + "..."
+                else:
+                    display_name = artist_name
+
+                # Обновляем верхнюю панель - используем set_custom_title
+                app.top_nav.set_custom_title(display_name)
                 # Показываем стрелочку назад
                 app.top_nav._show_back_button()
                 # Устанавливаем callback для стрелки
@@ -333,10 +337,15 @@ class ArtistSongsScreen(BaseScreen):
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Сокращаем длинное название
-            artist_display = artist if len(artist) <= 25 else artist[:22] + "..."
-            # Обновляем заголовок
-            app.top_nav.update_title(artist_display)
+            # Сохраняем оригинальное название
+            # Сокращаем только для отображения если слишком длинное
+            if len(artist) > 25:
+                display_name = artist[:22] + "..."
+            else:
+                display_name = artist
+
+            # Обновляем заголовок через set_custom_title
+            app.top_nav.set_custom_title(display_name)
             # Показываем стрелочку назад
             app.top_nav._show_back_button()
             # Устанавливаем callback для стрелки
@@ -415,17 +424,15 @@ class ArtistSongsScreen(BaseScreen):
 
     def _update_count_label(self, total, artist_name=None):
         """Обновляет счётчик песен с правильным склонением"""
-
         if total == 0:
-            songs_word = "песен"
+            text = "Не найдено песен"
         elif total == 1:
-            songs_word = "песня"
+            text = "Найдена 1 песня"
         elif 2 <= total <= 4:
-            songs_word = "песни"
+            text = f"Найдено {total} песни"
         else:
-            songs_word = "песен"
+            text = f"Найдено {total} песен"
 
-        text = f"Найдено {total} {songs_word}"
         if self.count_label:
             self.count_label.text = text
 
@@ -495,4 +502,3 @@ class ArtistSongsScreen(BaseScreen):
                 song_detail_screen.set_previous_screen('artist_songs')
                 song_detail_screen.set_song(song_id)
                 self.manager.current = 'song_detail'
-
