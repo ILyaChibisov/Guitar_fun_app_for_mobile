@@ -103,6 +103,12 @@ from screens.components.top_nav import TopNav
 from screens.components.blocking_layer import BlockingLayer
 from config.system_bars import get_navigation_bar_height, get_status_bar_height, get_screen_density, get_all_system_info
 
+# ============ ОТКЛЮЧЕНИЕ RIPPLE ЭФФЕКТА ГЛОБАЛЬНО ============
+from kivymd.uix.button import MDIconButton
+MDIconButton.ripple_scale = 0
+MDIconButton.ripple_alpha = 0
+# ============================================================
+
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes

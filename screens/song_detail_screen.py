@@ -207,11 +207,11 @@ class SongDetailScreen(BaseScreen):
         top_padding = layout_config.get_top_padding()
         main_container.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # Карточка с текстом - с отступами по бокам для красоты
+        # Карточка с текстом - с отступами по бокам
         card_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[12, 0, 12, 0]
+            padding=[8, 0, 8, 0]  # Уменьшил боковые отступы
         )
 
         self.song_card = MDCard(
@@ -230,7 +230,7 @@ class SongDetailScreen(BaseScreen):
         self._create_top_menu()
         self.song_card.add_widget(self.top_menu)
 
-        # Разделитель сверху
+        # Разделитель
         top_separator = MDBoxLayout(
             size_hint=(1, None),
             height=1,
@@ -270,20 +270,12 @@ class SongDetailScreen(BaseScreen):
         self.content_label.bind(texture_size=self._update_content_height)
         scroll_content.add_widget(self.content_label)
 
-        # Статистика в конце текста (очень мелко, в правом углу)
+        # Статистика в конце текста
         self._create_stats_line()
         scroll_content.add_widget(self.stats_line)
 
         self.content_scroll.add_widget(scroll_content)
         self.song_card.add_widget(self.content_scroll)
-
-        # Разделитель снизу
-        bottom_separator = MDBoxLayout(
-            size_hint=(1, None),
-            height=1,
-            md_bg_color=[0.85, 0.85, 0.85, 0.8]
-        )
-        self.song_card.add_widget(bottom_separator)
 
         # ============ НИЖНЕЕ МЕНЮ ============
         self._create_bottom_menu()
@@ -301,27 +293,28 @@ class SongDetailScreen(BaseScreen):
         self.add_widget(main_container)
 
     def _create_top_menu(self):
-        """Создаёт верхнее меню: название песни + иконки"""
+        """Создаёт верхнее меню: исполнитель крупно, название мелко, иконки справа"""
         self.top_menu = MDBoxLayout(
-            orientation='horizontal',
+            orientation='vertical',
             size_hint=(1, None),
-            height=48,
-            spacing=4,
-            padding=[10, 6, 8, 6]
+            height=dp(60),
+            padding=[4, 4, 0, 4],  # Убран правый отступ
+            spacing=2,
+            md_bg_color=[1, 1, 1, 0]
         )
 
-        # Левая часть: иконка + название
-        left_box = MDBoxLayout(
+        # Первая строка
+        row1 = MDBoxLayout(
             orientation='horizontal',
-            size_hint_x=0.65,
-            spacing=8,
-            padding=[2, 0, 0, 0]
+            size_hint=(1, None),
+            height=dp(30),
+            spacing=2
         )
 
         # Иконка песни
         self.song_icon = Image(
             size_hint=(None, None),
-            size=(22, 22),
+            size=(dp(16), dp(16)),
             pos_hint={'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
@@ -335,77 +328,115 @@ class SongDetailScreen(BaseScreen):
             except:
                 pass
 
-        # Название песни
-        self.song_title_label = MDLabel(
+        # Исполнитель (уменьшаем шрифт чтобы освободить место)
+        self.artist_label = MDLabel(
             text="",
-            font_size=12,
+            font_size=sp(11),
             size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.9],
+            text_color=[0, 0, 0, 0.85],
             bold=True,
             valign="middle",
             shorten=True,
             shorten_from="right"
         )
 
-        left_box.add_widget(self.song_icon)
-        left_box.add_widget(self.song_title_label)
-
-        # Правая часть: кнопки
-        right_box = MDBoxLayout(
+        # Блок иконок - с минимальными отступами
+        actions_box = MDBoxLayout(
             orientation='horizontal',
-            size_hint_x=0.35,
-            spacing=0,
-            padding=[0, 0, 2, 0],
+            size_hint=(1, 1),
+            width=dp(180),  # 4 иконки по 20dp
+            spacing=dp(0),
             pos_hint={'center_y': 0.5}
         )
 
+        # Избранное - уменьшен размер и отступы
         self.favorite_btn = MDIconButton(
             icon="star-outline",
-            size_hint=(None, None),
-            size=(28, 28),
+            size_hint=(1, 1),
+            size=(dp(15), dp(15)),
             theme_icon_color="Custom",
-            icon_color=[0.9, 0.7, 0.2, 0.8],
+            icon_color=[0.9, 0.7, 0.2, 0.9],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            padding=0,  # Убираем внутренние отступы
             on_release=self.toggle_favorite
         )
 
+        # Лайк
         self.like_btn = MDIconButton(
             icon="heart-outline",
-            size_hint=(None, None),
-            size=(28, 28),
+            size_hint=(1, 1),
+            size=(dp(15), dp(15)),
             theme_icon_color="Custom",
-            icon_color=[0.8, 0.3, 0.3, 0.8],
+            icon_color=[0.8, 0.3, 0.3, 0.9],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            padding=0,  # Убираем внутренние отступы
             on_release=self.toggle_like
         )
 
+        # Минус
         self.zoom_out_btn = MDIconButton(
             icon="minus-circle-outline",
-            size_hint=(None, None),
-            size=(26, 26),
+            size_hint=(1, 1),
+            size=(dp(15), dp(15)),
             theme_icon_color="Custom",
             icon_color=[0.4, 0.6, 0.4, 0.8],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            padding=0,  # Убираем внутренние отступы
             on_release=self.zoom_out
         )
 
+        # Плюс
         self.zoom_in_btn = MDIconButton(
             icon="plus-circle-outline",
-            size_hint=(None, None),
-            size=(26, 26),
+            size_hint=(1, 1),
+            size=(dp(15), dp(15)),
             theme_icon_color="Custom",
             icon_color=[0.4, 0.6, 0.4, 0.8],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            padding=0,  # Убираем внутренние отступы
             on_release=self.zoom_in
         )
 
-        right_box.add_widget(self.favorite_btn)
-        right_box.add_widget(self.like_btn)
-        right_box.add_widget(self.zoom_out_btn)
-        right_box.add_widget(self.zoom_in_btn)
+        actions_box.add_widget(self.favorite_btn)
+        actions_box.add_widget(self.like_btn)
+        actions_box.add_widget(self.zoom_out_btn)
+        actions_box.add_widget(self.zoom_in_btn)
 
-        self.top_menu.add_widget(left_box)
-        self.top_menu.add_widget(right_box)
+        row1.add_widget(self.song_icon)
+        row1.add_widget(self.artist_label)
+        row1.add_widget(actions_box)
+
+        # Вторая строка
+        row2 = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(20),
+            padding=[22, 0, 0, 0]
+        )
+
+        self.song_title_label = MDLabel(
+            text="",
+            font_size=sp(10),
+            size_hint_x=1,
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 0.8],
+            valign="middle",
+            shorten=True,
+            shorten_from="right"
+        )
+
+        row2.add_widget(self.song_title_label)
+
+        self.top_menu.add_widget(row1)
+        self.top_menu.add_widget(row2)
 
     def _create_stats_line(self):
-        """Создаёт строку статистики - очень мелко, в правом углу карточки"""
+        """Создаёт строку статистики - очень мелко, в правом углу"""
         self.stats_line = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -414,11 +445,11 @@ class SongDetailScreen(BaseScreen):
             padding=[0, 0, dp(6), 0]
         )
 
-        # Растягивающийся spacer слева (прижимает всё вправо)
+        # Spacer слева
         spacer = Widget(size_hint_x=1)
         self.stats_line.add_widget(spacer)
 
-        # ===== ЛАЙКИ =====
+        # Лайки
         like_icon = MDIconButton(
             icon="heart",
             size_hint=(None, None),
@@ -426,6 +457,8 @@ class SongDetailScreen(BaseScreen):
             theme_icon_color="Custom",
             icon_color=[0.9, 0.3, 0.3, 0.7],
             disabled=True,
+            md_bg_color=[0, 0, 0, 0],
+            _no_ripple_effect=True,
             pos_hint={'center_y': 0.5}
         )
 
@@ -441,7 +474,7 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # ===== ИЗБРАННОЕ =====
+        # Избранное
         fav_icon = MDIconButton(
             icon="star",
             size_hint=(None, None),
@@ -449,6 +482,8 @@ class SongDetailScreen(BaseScreen):
             theme_icon_color="Custom",
             icon_color=[1, 0.75, 0.1, 0.7],
             disabled=True,
+            md_bg_color=[0, 0, 0, 0],
+            _no_ripple_effect=True,
             pos_hint={'center_y': 0.5}
         )
 
@@ -464,7 +499,7 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # ===== ПРОСМОТРЫ =====
+        # Просмотры
         views_icon = MDIconButton(
             icon="eye-outline",
             size_hint=(None, None),
@@ -472,6 +507,8 @@ class SongDetailScreen(BaseScreen):
             theme_icon_color="Custom",
             icon_color=[0.5, 0.5, 0.5, 0.6],
             disabled=True,
+            md_bg_color=[0, 0, 0, 0],
+            _no_ripple_effect=True,
             pos_hint={'center_y': 0.5}
         )
 
@@ -486,7 +523,6 @@ class SongDetailScreen(BaseScreen):
             text_color=[0.5, 0.5, 0.5, 0.7]
         )
 
-        # Добавляем элементы напрямую (без лишних вложенных боксов)
         self.stats_line.add_widget(like_icon)
         self.stats_line.add_widget(self.like_count)
         self.stats_line.add_widget(fav_icon)
@@ -501,22 +537,23 @@ class SongDetailScreen(BaseScreen):
             size_hint=(1, None),
             height=44,
             spacing=4,
-            padding=[10, 4, 10, 4]
+            padding=[10, 4, 10, 4],
+            md_bg_color=[1, 1, 1, 0]
         )
 
-        # Левая часть: тональность
+        # Левая часть: тональность (оптимизировано)
         tonality_box = MDBoxLayout(
             orientation='horizontal',
-            size_hint_x=0.5,
-            spacing=4,
+            size_hint_x=0.5,  # Занимает половину ширины
+            spacing=dp(0),  # Минимальный отступ
             pos_hint={'center_y': 0.5}
         )
 
         tonality_label = MDLabel(
-            text="Тон",
-            font_size=10,
-            size_hint_x=None,
-            width=26,
+            text="Тональность",  # Сокращено для экономии места
+            font_size=sp(10),
+            size_hint=(1, 1),
+            width=dp(66),  # Фиксированная ширина под "Тон"
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.6],
             valign="middle"
@@ -525,17 +562,20 @@ class SongDetailScreen(BaseScreen):
         self.minus_ton_btn = MDIconButton(
             icon="minus",
             size_hint=(None, None),
-            size=(26, 26),
+            size=(dp(24), dp(24)),  # Чуть меньше
             theme_icon_color="Custom",
             icon_color=[0.46, 0.70, 0.71, 0.8],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            padding=0,  # Убираем внутренние отступы
             on_release=self.decrease_tonality
         )
 
         self.tonality_value = MDLabel(
             text="0",
-            font_size=11,
-            size_hint_x=None,
-            width=22,
+            font_size=sp(11),
+            size_hint=(None, None),
+            width=dp(20),  # Узко под число
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True,
@@ -546,9 +586,12 @@ class SongDetailScreen(BaseScreen):
         self.plus_ton_btn = MDIconButton(
             icon="plus",
             size_hint=(None, None),
-            size=(26, 26),
+            size=(dp(24), dp(24)),
             theme_icon_color="Custom",
             icon_color=[0.46, 0.70, 0.71, 0.8],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            padding=0,
             on_release=self.increase_tonality
         )
 
@@ -556,6 +599,7 @@ class SongDetailScreen(BaseScreen):
         tonality_box.add_widget(self.minus_ton_btn)
         tonality_box.add_widget(self.tonality_value)
         tonality_box.add_widget(self.plus_ton_btn)
+
 
         # Правая часть: переключение подборов
         tabs_box = MDBoxLayout(
@@ -568,16 +612,17 @@ class SongDetailScreen(BaseScreen):
         self.prev_tab_btn = MDIconButton(
             icon="chevron-up",
             size_hint=(None, None),
-            size=(26, 26),
+            size=(10, 10),
             theme_icon_color="Custom",
             icon_color=[0.46, 0.70, 0.71, 0.8],
+            md_bg_color=[0, 0, 0, 0],
             on_release=self.prev_tab
         )
 
         self.tab_label = MDLabel(
             text="Подбор",
             font_size=10,
-            size_hint_x=None,
+            size_hint=(None, None),
             width=48,
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.7],
@@ -589,9 +634,10 @@ class SongDetailScreen(BaseScreen):
         self.next_tab_btn = MDIconButton(
             icon="chevron-down",
             size_hint=(None, None),
-            size=(26, 26),
+            size=(10, 10),
             theme_icon_color="Custom",
             icon_color=[0.46, 0.70, 0.71, 0.8],
+            md_bg_color=[0, 0, 0, 0],
             on_release=self.next_tab
         )
 
@@ -646,7 +692,6 @@ class SongDetailScreen(BaseScreen):
             return
 
         text_height = self.content_label.texture_size[1]
-        # Высота статистики 18dp + отступы
         stats_height = dp(26)
         self.content_label.height = max(dp(50), text_height + dp(8))
 
@@ -702,8 +747,9 @@ class SongDetailScreen(BaseScreen):
 
         self.current_tab_index = 0
 
-        full_title = f"{self.artist} — {self.title}"
-        self.song_title_label.text = full_title if len(full_title) <= 30 else full_title[:27] + "..."
+        # Заполняем верхнее меню
+        self.artist_label.text = self.artist.upper()
+        self.song_title_label.text = self.title
 
         if self.tabs:
             raw_content = self.tabs[0].get('content', 'Текст не загружен')
