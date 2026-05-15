@@ -25,7 +25,7 @@ from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from utils.notifications import notify
-from api.client import api
+from api import parser_client
 from .base_parser_screen import BaseParserScreen
 
 logger = screen_logger('AMDMParserScreen')
@@ -475,7 +475,7 @@ class AMDMParserScreen(BaseParserScreen):
 
     def _fetch_status(self):
         try:
-            result = api.get_amdm_parser_status_sync()
+            result = parser_client.get_amdm_parser_status_sync()
             if result and result.get('success'):
                 data = result.get('data', result)
                 is_running = data.get('is_running', False)
@@ -536,7 +536,7 @@ class AMDMParserScreen(BaseParserScreen):
                 notify.error("Введите поддомен (amdm или 1-999)")
                 return
 
-            result = api.start_amdm_parser_sync(start_page, end_page, subdomain)
+            result = parser_client.start_amdm_parser_sync(start_page, end_page, subdomain)
             if result and result.get('success'):
                 notify.success(f"Парсер запущен (буквы {start_letter}-{end_letter})")
                 self.last_song = None
@@ -553,7 +553,7 @@ class AMDMParserScreen(BaseParserScreen):
 
     def stop_parser(self, *args):
         try:
-            result = api.stop_amdm_parser_sync()
+            result = parser_client.stop_amdm_parser_sync()
             if result and result.get('success'):
                 notify.info("Парсер остановлен")
                 self._fetch_status()

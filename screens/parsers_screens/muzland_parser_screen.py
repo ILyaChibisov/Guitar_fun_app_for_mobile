@@ -19,7 +19,7 @@ from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from utils.notifications import notify
-from api.client import api
+from api import parser_client
 from .base_parser_screen import BaseParserScreen
 
 logger = screen_logger('MuzlandParserScreen')
@@ -346,7 +346,7 @@ class MuzlandParserScreen(BaseParserScreen):
 
     def _fetch_status(self):
         try:
-            result = api.get_muzland_parser_status_sync()
+            result = parser_client.get_muzland_parser_status_sync()
             if result and result.get('success'):
                 data = result.get('data', result)
                 is_running = data.get('is_running', False)
@@ -378,7 +378,7 @@ class MuzlandParserScreen(BaseParserScreen):
 
     def start_parser(self, *args):
         try:
-            result = api.start_muzland_parser_sync(0, 999)
+            result = parser_client.start_muzland_parser_sync(0, 999)
             if result and result.get('success'):
                 notify.success("Парсер Muzland.Ru запущен")
                 self.last_song = None
@@ -394,7 +394,7 @@ class MuzlandParserScreen(BaseParserScreen):
 
     def stop_parser(self, *args):
         try:
-            result = api.stop_muzland_parser_sync()
+            result = parser_client.stop_muzland_parser_sync()
             if result and result.get('success'):
                 notify.info("Парсер Muzland.Ru остановлен")
                 self._fetch_status()

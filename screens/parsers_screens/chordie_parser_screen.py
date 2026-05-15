@@ -24,7 +24,7 @@ from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from utils.notifications import notify
-from api.client import api
+from api import parser_client
 from .base_parser_screen import BaseParserScreen
 
 logger = screen_logger('ChordieParserScreen')
@@ -505,7 +505,7 @@ class ChordieParserScreen(BaseParserScreen):
 
     def _fetch_status(self):
         try:
-            result = api.get_chordie_parser_status_sync()
+            result = parser_client.get_chordie_parser_status_sync()
             if result and result.get('success'):
                 data = result.get('data', result)
                 is_running = data.get('is_running', False)
@@ -549,7 +549,7 @@ class ChordieParserScreen(BaseParserScreen):
                 notify.error("Начальная буква не может быть позже конечной")
                 return
 
-            result = api.start_chordie_parser_sync(start_page, end_page)
+            result = parser_client.start_chordie_parser_sync(start_page, end_page)
             if result and result.get('success'):
                 notify.success(f"Парсер Chordie запущен (буквы {start_letter}-{end_letter})")
                 self.last_song = None
@@ -565,7 +565,7 @@ class ChordieParserScreen(BaseParserScreen):
 
     def stop_parser(self, *args):
         try:
-            result = api.stop_chordie_parser_sync()
+            result = parser_client.stop_chordie_parser_sync()
             if result and result.get('success'):
                 notify.info("Парсер Chordie остановлен")
                 self._fetch_status()

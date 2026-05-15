@@ -1,4 +1,4 @@
-# screens/admin_screen.py
+# screens/admin_screen.py (обновленный)
 """
 Экран администратора - горизонтальный скролл парсеров
 Иконки из ассетов, все парсеры в один ряд
@@ -29,12 +29,9 @@ logger = screen_logger('AdminScreen')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -452,7 +449,7 @@ class AdminScreen(BaseScreen):
     def clear_cache(self):
         """Очищает кэш API"""
         try:
-            from api.client import api
+            from api import api
             api.clear_cache()
             logger.info("Кэш очищен")
             notify.success("Кэш очищен")
