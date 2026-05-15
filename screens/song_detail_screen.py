@@ -1,7 +1,8 @@
 # screens/song_detail_screen.py
 """
-Экран просмотра песни с текстом и подборами - переведён на BaseScreen
+Экран просмотра песни с текстом и подборами
 """
+from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
@@ -14,6 +15,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
+from kivy.uix.behaviors import ButtonBehavior
 from io import BytesIO
 import re
 from kivy.clock import Clock
@@ -21,6 +23,7 @@ from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
+from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
@@ -29,16 +32,52 @@ logger = screen_logger('SongDetail')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
 
+class IconButton(ButtonBehavior, Image):
+    """Кнопка с иконкой из ассета (для тональности)"""
+
+    def __init__(self, asset_name, size=(30, 30), on_release=None, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, None)
+        self.size = size
+        self.allow_stretch = True
+        self.keep_ratio = True
+        self.on_release_callback = on_release
+        self._load_icon(asset_name)
+
+    def _load_icon(self, asset_name):
+        if HAS_ASSETS:
+            try:
+                icon_data = load_asset_as_bytes(asset_name)
+                if icon_data:
+                    img = CoreImage(BytesIO(icon_data), ext="png")
+                    self.texture = img.texture
+                    return
+            except Exception as e:
+                logger.error(f"Ошибка загрузки иконки {asset_name}: {e}")
+        # Заглушка
+        self.text = "●"
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            if self.on_release_callback:
+                self.on_release_callback(self)
+            return True
+        return super().on_touch_down(touch)
+
+
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
-    return [int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4)]
+    return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
 
 
 class LoadingSpinner(MDBoxLayout):
@@ -95,7 +134,7 @@ class SongDetailScreen(BaseScreen):
         self.init_ui()
         self.load_background()
 
-        logger.info('Экран просмотра песни создан (BaseScreen)')
+        logger.info('Экран просмотра песни создан')
 
     def set_previous_screen(self, screen_name):
         self.previous_screen = screen_name
@@ -126,298 +165,305 @@ class SongDetailScreen(BaseScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
-    def _load_icon(self, icon_name, image_widget):
-        if HAS_ASSETS:
-            try:
-                icon_data = load_asset_as_bytes(icon_name)
-                if icon_data:
-                    img = CoreImage(BytesIO(icon_data), ext="png")
-                    image_widget.texture = img.texture
-                    return True
-            except Exception as e:
-                logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
-        return False
-
     def init_ui(self):
-        # Верхняя панель
-        top_bar = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(50),
-            padding=[dp(16), dp(8), dp(16), dp(8)],
-            spacing=dp(12),
-            md_bg_color=[0, 0, 0, 0]
-        )
-
-        self.back_btn = MDIconButton(
-            icon="arrow-left",
-            size_hint=(None, None),
-            size=(dp(36), dp(36)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.go_back
-        )
-
-        self.song_icon = Image(
-            size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            pos_hint={'center_y': 0.5},
-            allow_stretch=True,
-            keep_ratio=True
-        )
-        self._load_icon('song_png', self.song_icon)
-
-        self.title_label = MDLabel(
-            text="",
-            font_size=sp(14),
-            halign="left",
-            valign="middle",
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
-            bold=True,
-            shorten=True,
-            shorten_from="right"
-        )
-
-        top_bar.add_widget(self.back_btn)
-        top_bar.add_widget(self.song_icon)
-        top_bar.add_widget(self.title_label)
-
-        # Карточка с текстом песни
-        card_container = MDBoxLayout(
+        # Создаём основной контейнер с отступами для панелей
+        main_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(16), dp(8), dp(16), dp(0)]
+            padding=[0, 0, 0, 0]
         )
 
+        # Верхний отступ под статус-бар и TopNav
+        top_padding = layout_config.get_top_padding()
+        main_container.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        # Карточка с текстом (белый фон) - растягивается на оставшееся пространство
         self.song_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(10), dp(12), dp(10)],
-            spacing=dp(8),
-            radius=[theme.CORNER_RADIUS_SMALL],
-            md_bg_color=[1, 1, 1, 0.95],
-            elevation=4,
-            line_color=[0.8, 0.8, 0.8, 0.5],
-            line_width=1
+            padding=[0, 8, 0, 8],
+            spacing=8,
+            radius=[0, 0, 0, 0],
+            md_bg_color=[1, 1, 1, 1],
+            elevation=0,
+            line_color=[0, 0, 0, 0],
+            line_width=0.01
         )
 
         # Верхняя строка с кнопками
-        tools_row = self._build_tools_row()
-        self.song_card.add_widget(tools_row)
+        self._create_tools_row()
+        self.song_card.add_widget(self.tools_row)
 
-        # Текст песни
+        # Контейнер для текста песни с прокруткой
         self.content_scroll = MDScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
-            bar_color=[0.5, 0.5, 0.5, 0],
-            bar_width=0
+            bar_width=3,
+            bar_color=[0.5, 0.5, 0.5, 0.2],
+            bar_inactive_color=[0.5, 0.5, 0.5, 0.1]
         )
 
         scroll_content = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            spacing=dp(8),
+            spacing=8,
+            padding=[16, 8, 16, 16],
             adaptive_height=True
         )
 
+        # Заголовок с иконкой song_png и названием
+        self.song_header = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=60,
+            spacing=12,
+            padding=[0, 8, 0, 8]
+        )
+
+        # Иконка песни из ассета
+        self.song_icon = Image(
+            size_hint=(None, None),
+            size=(32, 32),
+            pos_hint={'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        if HAS_ASSETS:
+            try:
+                icon_data = load_asset_as_bytes('song_png')
+                if icon_data:
+                    img = CoreImage(BytesIO(icon_data), ext="png")
+                    self.song_icon.texture = img.texture
+            except Exception as e:
+                logger.error(f"Ошибка загрузки song_png: {e}")
+
+        # Текст заголовка
+        self.song_title_label = MDLabel(
+            text="",
+            font_size=16,
+            size_hint_x=1,
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 0.9],
+            bold=True,
+            valign="middle"
+        )
+
+        self.song_header.add_widget(self.song_icon)
+        self.song_header.add_widget(self.song_title_label)
+
+        # Разделитель
+        separator = MDBoxLayout(
+            size_hint_y=None,
+            height=1,
+            md_bg_color=[0.8, 0.8, 0.8, 0.5]
+        )
+
+        # Основной текст песни (чёрным цветом)
         self.content_label = MDLabel(
             text="",
-            font_size=sp(14),
+            font_size=14,
             size_hint_y=None,
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.85],
             markup=True,
             valign="top",
-            line_height=1.4
+            line_height=1.5
         )
         self.content_label.bind(texture_size=self._update_content_height)
+
+        scroll_content.add_widget(self.song_header)
+        scroll_content.add_widget(separator)
         scroll_content.add_widget(self.content_label)
+
         self.content_scroll.add_widget(scroll_content)
         self.song_card.add_widget(self.content_scroll)
 
         # Нижняя строка со счётчиками
-        bottom_stats = self._build_bottom_stats()
-        self.song_card.add_widget(bottom_stats)
+        self._create_bottom_stats()
+        self.song_card.add_widget(self.bottom_stats)
 
-        card_container.add_widget(self.song_card)
+        # Добавляем карточку в контейнер
+        main_container.add_widget(self.song_card)
 
-        # Строим UI
-        self.build_ui(content_widget=card_container, top_widget=top_bar)
+        # Нижний отступ для BottomNav
+        bottom_nav_height = dp(60)
+        nav_bar_height = get_navigation_bar_height()
+        total_bottom = bottom_nav_height + nav_bar_height + dp(20)
+        main_container.add_widget(Widget(size_hint_y=None, height=total_bottom))
 
-    def _build_tools_row(self):
-        tools_row = MDBoxLayout(
+        # Добавляем контейнер на экран
+        self.add_widget(main_container)
+
+    def _create_tools_row(self):
+        """Создаёт строку с кнопками управления"""
+        self.tools_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(38),
-            spacing=dp(4),
-            padding=[dp(4), dp(4), dp(4), dp(4)]
+            height=52,
+            spacing=8,
+            padding=[12, 4, 12, 4]
         )
 
+        # Кнопка избранного (звёздочка из Material Design)
         self.favorite_btn = MDIconButton(
             icon="star-outline",
             size_hint=(None, None),
-            size=(dp(30), dp(30)),
+            size=(36, 36),
             theme_icon_color="Custom",
             icon_color=[0.9, 0.7, 0.2, 0.8],
             on_release=self.toggle_favorite
         )
 
+        # Кнопка лайка (сердечко из Material Design)
         self.like_btn = MDIconButton(
             icon="heart-outline",
             size_hint=(None, None),
-            size=(dp(30), dp(30)),
+            size=(36, 36),
             theme_icon_color="Custom",
             icon_color=[0.8, 0.3, 0.3, 0.8],
             on_release=self.toggle_like
         )
 
-        spacer1 = Widget(size_hint_x=None, width=dp(30))
+        spacer1 = Widget(size_hint_x=1)
 
+        # Тональность
         tonality_label = MDLabel(
             text="Тональность",
-            font_size=sp(12),
+            font_size=13,
             size_hint_x=None,
-            width=dp(105),
+            width=100,
             theme_text_color="Custom",
-            text_color=[0.3, 0.3, 0.3, 0.9],
+            text_color=[0, 0, 0, 0.7],
             valign="middle"
         )
 
-        spacer2 = Widget(size_hint_x=None, width=dp(10))
+        spacer2 = Widget(size_hint_x=None, width=8)
 
-        self.minus_ton_btn = MDIconButton(
-            icon="minus",
-            size_hint=(None, None),
-            size=(dp(26), dp(26)),
-            theme_icon_color="Custom",
-            icon_color=[0.5, 0.5, 0.5, 0.8],
-            md_bg_color=[0.9, 0.9, 0.9, 0.5],
+        # Кнопка минус тон (из ассета)
+        self.minus_ton_btn = IconButton(
+            asset_name='minus_ton_png',
+            size=(30, 30),
             on_release=self.decrease_tonality
         )
 
+        # Значение тональности
         self.tonality_value = MDLabel(
             text="0",
-            font_size=sp(13),
+            font_size=14,
             size_hint_x=None,
-            width=dp(25),
+            width=30,
             theme_text_color="Custom",
-            text_color=hex_to_rgb(theme.PRIMARY) + [1],
+            text_color=[0.46, 0.70, 0.71, 1],
             bold=True,
             valign="middle",
             halign="center"
         )
 
-        self.plus_ton_btn = MDIconButton(
-            icon="plus",
-            size_hint=(None, None),
-            size=(dp(26), dp(26)),
-            theme_icon_color="Custom",
-            icon_color=[0.5, 0.5, 0.5, 0.8],
-            md_bg_color=[0.9, 0.9, 0.9, 0.5],
+        # Кнопка плюс тон (из ассета)
+        self.plus_ton_btn = IconButton(
+            asset_name='plus_ton_png',
+            size=(30, 30),
             on_release=self.increase_tonality
         )
 
-        tools_row.add_widget(self.favorite_btn)
-        tools_row.add_widget(self.like_btn)
-        tools_row.add_widget(spacer1)
-        tools_row.add_widget(tonality_label)
-        tools_row.add_widget(spacer2)
-        tools_row.add_widget(self.minus_ton_btn)
-        tools_row.add_widget(self.tonality_value)
-        tools_row.add_widget(self.plus_ton_btn)
+        self.tools_row.add_widget(self.favorite_btn)
+        self.tools_row.add_widget(self.like_btn)
+        self.tools_row.add_widget(spacer1)
+        self.tools_row.add_widget(tonality_label)
+        self.tools_row.add_widget(spacer2)
+        self.tools_row.add_widget(self.minus_ton_btn)
+        self.tools_row.add_widget(self.tonality_value)
+        self.tools_row.add_widget(self.plus_ton_btn)
 
-        return tools_row
-
-    def _build_bottom_stats(self):
-        bottom_stats = MDBoxLayout(
+    def _create_bottom_stats(self):
+        """Создаёт нижнюю строку со счётчиками"""
+        self.bottom_stats = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(32),
-            spacing=dp(20),
-            padding=[dp(8), dp(4), dp(8), dp(4)]
+            height=44,
+            spacing=20,
+            padding=[12, 6, 12, 6]
         )
 
+        # Сердечко для лайков
         like_icon = MDIconButton(
             icon="heart",
             size_hint=(None, None),
-            size=(dp(20), dp(20)),
+            size=(18, 18),
             theme_icon_color="Custom",
             icon_color=[0.8, 0.3, 0.3, 0.7],
             disabled=True
         )
         self.like_count = MDLabel(
             text="0",
-            font_size=sp(12),
+            font_size=12,
             size_hint_x=None,
-            width=dp(35),
+            width=35,
             theme_text_color="Custom",
             text_color=[0.8, 0.3, 0.3, 0.8],
             bold=True,
             valign="middle"
         )
-        like_box = MDBoxLayout(orientation='horizontal', spacing=dp(4), size_hint_x=None, width=dp(60))
+        like_box = MDBoxLayout(orientation='horizontal', spacing=4, size_hint_x=None, width=55)
         like_box.add_widget(like_icon)
         like_box.add_widget(self.like_count)
 
+        # Звёздочка для избранного
         fav_icon = MDIconButton(
             icon="star",
             size_hint=(None, None),
-            size=(dp(20), dp(20)),
+            size=(18, 18),
             theme_icon_color="Custom",
             icon_color=[0.9, 0.7, 0.2, 0.7],
             disabled=True
         )
         self.favorite_count = MDLabel(
             text="0",
-            font_size=sp(12),
+            font_size=12,
             size_hint_x=None,
-            width=dp(35),
+            width=35,
             theme_text_color="Custom",
             text_color=[0.9, 0.7, 0.2, 0.8],
             bold=True,
             valign="middle"
         )
-        fav_box = MDBoxLayout(orientation='horizontal', spacing=dp(4), size_hint_x=None, width=dp(60))
+        fav_box = MDBoxLayout(orientation='horizontal', spacing=4, size_hint_x=None, width=55)
         fav_box.add_widget(fav_icon)
         fav_box.add_widget(self.favorite_count)
 
+        # Глазик для просмотров
         views_icon = MDIconButton(
             icon="eye-outline",
             size_hint=(None, None),
-            size=(dp(20), dp(20)),
+            size=(18, 18),
             theme_icon_color="Custom",
             icon_color=[0.5, 0.5, 0.5, 0.6],
             disabled=True
         )
         self.views_count = MDLabel(
             text="0",
-            font_size=sp(12),
+            font_size=12,
             size_hint_x=None,
-            width=dp(40),
+            width=40,
             theme_text_color="Custom",
             text_color=[0.5, 0.5, 0.5, 0.7],
             valign="middle"
         )
-        views_box = MDBoxLayout(orientation='horizontal', spacing=dp(4), size_hint_x=None, width=dp(65))
+        views_box = MDBoxLayout(orientation='horizontal', spacing=4, size_hint_x=None, width=60)
         views_box.add_widget(views_icon)
         views_box.add_widget(self.views_count)
 
         left_spacer = Widget(size_hint_x=1)
         right_spacer = Widget(size_hint_x=1)
 
-        bottom_stats.add_widget(left_spacer)
-        bottom_stats.add_widget(like_box)
-        bottom_stats.add_widget(fav_box)
-        bottom_stats.add_widget(views_box)
-        bottom_stats.add_widget(right_spacer)
-
-        return bottom_stats
+        self.bottom_stats.add_widget(left_spacer)
+        self.bottom_stats.add_widget(like_box)
+        self.bottom_stats.add_widget(fav_box)
+        self.bottom_stats.add_widget(views_box)
+        self.bottom_stats.add_widget(right_spacer)
 
     def _update_content_height(self, *args):
-        self.content_label.height = self.content_label.texture_size[1] + dp(20)
+        self.content_label.height = self.content_label.texture_size[1] + 20
 
     def set_song(self, song_id):
         self.song_id = song_id
@@ -451,7 +497,8 @@ class SongDetailScreen(BaseScreen):
         self.title = data.get('title') or data.get('song_title') or 'Без названия'
         self.current_tab_id = data.get('id')
 
-        self.title_label.text = f"{self.artist} — {self.title}"
+        # Формируем заголовок
+        self.song_title_label.text = f"{self.artist} — {self.title}"
 
         raw_content = data.get('content', 'Текст не загружен')
         cleaned_content = self.clean_text(raw_content)
@@ -466,14 +513,15 @@ class SongDetailScreen(BaseScreen):
         self.is_favorite = data.get('is_favorite', False)
         self.update_buttons_state()
 
+        # Прокрутка вверх
         Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
         self.hide_loading()
         logger.info(f"Песня загружена: {self.artist} - {self.title}")
 
     def on_load_failed(self, req, error):
         self.hide_loading()
+        self.content_label.text = "Ошибка загрузки песни"
         notify.error(f"Ошибка загрузки песни: {error}")
-        self.go_back(None)
 
     def clean_text(self, text):
         if not text:
@@ -493,15 +541,8 @@ class SongDetailScreen(BaseScreen):
 
     def update_buttons_state(self):
         if api.is_authenticated():
-            if self.is_liked:
-                self.like_btn.icon = "heart"
-            else:
-                self.like_btn.icon = "heart-outline"
-
-            if self.is_favorite:
-                self.favorite_btn.icon = "star"
-            else:
-                self.favorite_btn.icon = "star-outline"
+            self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
+            self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
     def toggle_like(self, instance):
         if not api.is_authenticated():
@@ -564,6 +605,24 @@ class SongDetailScreen(BaseScreen):
         self.current_tonality -= 1
         self.tonality_value.text = str(self.current_tonality)
 
-    def go_back(self, instance):
+    def go_back(self, instance=None):
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = self.previous_screen
+
+    def on_enter(self):
+        """При входе на экран - настраиваем верхнюю панель"""
+        logger.info("Вход в экран просмотра песни")
+
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.set_custom_title("Подбор песни")
+            app.top_nav._show_back_button()
+            app.top_nav.back_btn.on_release = self.go_back
+
+    def on_leave(self):
+        """При выходе с экрана - восстанавливаем верхнюю панель"""
+        logger.info("Выход из экрана просмотра песни")
+
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.reset_to_default()
