@@ -2,7 +2,9 @@
 """
 Экран гитарных аккордов - с 4 карточками селекторами
 ТОН, ТИП, АККОРД, ПОЗИЦИЯ в стиле админки
+Порядок: название+описание → гриф → карточки → иконки (пальцы, ноты, звук)
 """
+from kivy.uix.behaviors import ButtonBehavior
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDIconButton, MDRaisedButton
@@ -185,39 +187,37 @@ class SelectorCard(MDCard):
         self.value_label.text = new_value
 
 
-class ModeToggleButton(MDCard):
-    """Кнопка переключения режима (ПАЛЬЦЫ/НОТЫ)"""
+class ActionIconButton(MDCard):
+    """Кнопка действия с иконкой из ассета (пальцы, ноты, звук)"""
 
-    def __init__(self, text, icon, is_active=False, on_click=None, **kwargs):
+    def __init__(self, icon_name, text, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
-        self.btn_text = text
-        self.icon = icon
-        self.is_active = is_active
-        self.on_click_callback = on_click
+        self.icon_name = icon_name
+        self.text = text
+        self.on_press_callback = on_press_callback
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
         self.radius = [dp(16)]
         self.elevation = 0
-        self.padding = [dp(8), dp(8), dp(8), dp(8)]
-        self.spacing = dp(4)
-        self.ripple_behavior = True
-
-        # Начальные значения
         self.md_bg_color = [0, 0, 0, 0.08]
         self.line_color = [1, 1, 1, 0.05]
         self.line_width = 0.5
+        self.padding = [dp(8), dp(8), dp(8), dp(8)]
+        self.spacing = dp(6)
+        self.ripple_behavior = True
 
-        # Создаём виджеты
-        self.icon_label = MDLabel(
-            text=icon,
-            font_size=sp(24),
-            halign="center",
-            size_hint_y=None,
-            height=dp(36),
-            theme_text_color="Custom"
+        # Иконка из ассета
+        self.icon_image = Image(
+            size_hint=(None, None),
+            size=(dp(36), dp(36)),
+            pos_hint={'center_x': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
         )
+        self._load_icon()
 
+        # Текст
         self.text_label = MDLabel(
             text=text,
             font_size=sp(10),
@@ -225,38 +225,41 @@ class ModeToggleButton(MDCard):
             size_hint_y=None,
             height=dp(20),
             theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7],
             bold=True
         )
 
-        self.add_widget(self.icon_label)
+        self.add_widget(self.icon_image)
         self.add_widget(self.text_label)
-
-        # Обновляем стиль
-        self.update_style()
-
         self.bind(on_release=self._on_click)
 
-    def update_style(self):
-        if self.is_active:
+    def _load_icon(self):
+        if HAS_ASSETS:
+            try:
+                icon_data = load_asset_as_bytes(self.icon_name)
+                if icon_data:
+                    img = CoreImage(BytesIO(icon_data), ext="png")
+                    self.icon_image.texture = img.texture
+                    return
+            except Exception as e:
+                logger.error(f"Ошибка загрузки иконки {self.icon_name}: {e}")
+        self.icon_image.text = "?"
+
+    def set_active(self, active):
+        if active:
             self.md_bg_color = [0.46, 0.70, 0.71, 0.3]
             self.line_color = [0.46, 0.70, 0.71, 0.5]
             self.line_width = 1
-            self.icon_label.text_color = [0.46, 0.70, 0.71, 1]
             self.text_label.text_color = [0.46, 0.70, 0.71, 1]
         else:
             self.md_bg_color = [0, 0, 0, 0.08]
             self.line_color = [1, 1, 1, 0.05]
             self.line_width = 0.5
-            self.icon_label.text_color = [1, 1, 1, 0.5]
-            self.text_label.text_color = [1, 1, 1, 0.5]
-
-    def set_active(self, active):
-        self.is_active = active
-        self.update_style()
+            self.text_label.text_color = [1, 1, 1, 0.7]
 
     def _on_click(self, instance):
-        if self.on_click_callback:
-            self.on_click_callback(self.btn_text)
+        if self.on_press_callback:
+            self.on_press_callback(self.text)
 
 
 class ChordsScreen(BaseScreen):
@@ -296,6 +299,7 @@ class ChordsScreen(BaseScreen):
         self.chord_renderer = None
         self.finger_btn = None
         self.note_btn = None
+        self.sound_btn = None
 
         self.bg_image = None
 
@@ -343,11 +347,59 @@ class ChordsScreen(BaseScreen):
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
+        # ============ НАЗВАНИЕ И ОПИСАНИЕ АККОРДА ============
+        info_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(80),
+            radius=[dp(20), dp(20), dp(20), dp(20)],
+            md_bg_color=[0, 0, 0, 0.08],
+            elevation=0,
+            padding=[dp(16), dp(12), dp(16), dp(12)]
+        )
+
+        self.chord_name_label = MDLabel(
+            text="A",
+            font_size=sp(26),
+            halign="center",
+            bold=True,
+            size_hint_y=None,
+            height=dp(42),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95]
+        )
+
+        self.chord_desc_label = MDLabel(
+            text="",
+            font_size=sp(12),
+            halign="center",
+            size_hint_y=None,
+            height=dp(22),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.5]
+        )
+
+        info_card.add_widget(self.chord_name_label)
+        info_card.add_widget(self.chord_desc_label)
+        main_layout.add_widget(info_card)
+
+        # ============ ГРИФ АККОРДА ============
+        griff_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(260),
+            padding=[dp(4), dp(4), dp(4), dp(4)]
+        )
+
+        self.chord_renderer = ChordRenderer()
+        griff_container.add_widget(self.chord_renderer)
+        main_layout.add_widget(griff_container)
+
         # ============ РЯД 1: ТОН и ТИП ============
         row1 = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(76),  # Уменьшено (было 90)
+            height=dp(76),
             spacing=dp(12)
         )
 
@@ -375,7 +427,7 @@ class ChordsScreen(BaseScreen):
         row2 = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(76),  # Уменьшено (было 90)
+            height=dp(76),
             spacing=dp(12)
         )
 
@@ -399,80 +451,38 @@ class ChordsScreen(BaseScreen):
         row2.add_widget(self.position_card)
         main_layout.add_widget(row2)
 
-        # ============ НАЗВАНИЕ И ОПИСАНИЕ АККОРДА ============
-        info_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(70),
-            radius=[dp(16), dp(16), dp(16), dp(16)],
-            md_bg_color=[0, 0, 0, 0.08],
-            elevation=0,
-            padding=[dp(16), dp(12), dp(16), dp(12)]
-        )
-
-        self.chord_name_label = MDLabel(
-            text="A",
-            font_size=sp(24),
-            halign="center",
-            bold=True,
-            size_hint_y=None,
-            height=dp(38),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95]
-        )
-
-        self.chord_desc_label = MDLabel(
-            text="",
-            font_size=sp(12),
-            halign="center",
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5]
-        )
-
-        info_card.add_widget(self.chord_name_label)
-        info_card.add_widget(self.chord_desc_label)
-        main_layout.add_widget(info_card)
-
-        # ============ ГРИФ ============
-        griff_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(260),
-            padding=[dp(4), dp(4), dp(4), dp(4)]
-        )
-
-        self.chord_renderer = ChordRenderer()
-        griff_container.add_widget(self.chord_renderer)
-        main_layout.add_widget(griff_container)
-
-        # ============ ПЕРЕКЛЮЧАТЕЛЬ ПАЛЬЦЫ/НОТЫ ============
-        mode_row = MDBoxLayout(
+        # ============ ИКОНКИ ДЕЙСТВИЙ (ПАЛЬЦЫ, НОТЫ, ЗВУК) ============
+        icons_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(70),
-            spacing=dp(12),
+            height=dp(80),
+            spacing=dp(16),
             padding=[dp(20), dp(8), dp(20), dp(8)]
         )
 
-        self.finger_btn = ModeToggleButton(
+        self.finger_btn = ActionIconButton(
+            icon_name="fingers_png",
             text="ПАЛЬЦЫ",
-            icon="🖐️",
-            is_active=True,
-            on_click=self.set_mode
+            on_press_callback=self.set_mode
         )
+        self.finger_btn.set_active(True)
 
-        self.note_btn = ModeToggleButton(
+        self.note_btn = ActionIconButton(
+            icon_name="notes_png",
             text="НОТЫ",
-            icon="🎵",
-            is_active=False,
-            on_click=self.set_mode
+            on_press_callback=self.set_mode
         )
 
-        mode_row.add_widget(self.finger_btn)
-        mode_row.add_widget(self.note_btn)
-        main_layout.add_widget(mode_row)
+        self.sound_btn = ActionIconButton(
+            icon_name="sound_png",
+            text="ЗВУК",
+            on_press_callback=self.on_sound_press
+        )
+
+        icons_row.add_widget(self.finger_btn)
+        icons_row.add_widget(self.note_btn)
+        icons_row.add_widget(self.sound_btn)
+        main_layout.add_widget(icons_row)
 
         # Нижний отступ
         bottom_padding = dp(20)
@@ -497,6 +507,10 @@ class ChordsScreen(BaseScreen):
                     self.chord_renderer.set_background(img.texture)
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
+
+    def on_sound_press(self, mode):
+        """Обработчик нажатия на кнопку звука"""
+        notify.info("🔊 Звук аккорда (будет доступно в следующей версии)")
 
     # ============ МЕТОДЫ ДЛЯ ТОНАЛЬНОСТИ ============
     def prev_tonality(self, instance):
@@ -747,7 +761,7 @@ class ChordsScreen(BaseScreen):
         row = MDBoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
         for i in range(len(self.current_variants)):
             btn = MDRaisedButton(
-                text=f"Pos {i + 1}",
+                text=str(i + 1),
                 size_hint=(1, 1),
                 md_bg_color=[0.46, 0.70, 0.71, 1] if i == self.current_variant_index else [0.2, 0.2, 0.2, 0.8],
                 on_release=lambda x, p=i: self._select_position(p)
@@ -785,7 +799,7 @@ class ChordsScreen(BaseScreen):
             self.current_mode = "finger"
             self.finger_btn.set_active(True)
             self.note_btn.set_active(False)
-        else:
+        elif mode == "НОТЫ":
             self.current_mode = "note"
             self.finger_btn.set_active(False)
             self.note_btn.set_active(True)
@@ -912,13 +926,27 @@ class ChordsScreen(BaseScreen):
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
 
-        # Название аккорда (короткое имя)
-        self.chord_name_label.text = self.current_chord_name
+        # Полное название аккорда (как в старой версии)
+        chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
+        name_parts = chord_name.split('|')
+        unique_names = []
+        seen_names = set()
+        for part in name_parts:
+            part_clean = part.strip()
+            if part_clean and part_clean not in seen_names:
+                seen_names.add(part_clean)
+                unique_names.append(part_clean)
+        display_name = ' | '.join(unique_names)
+        self.chord_name_label.text = display_name
 
         # Описание из METADATA
         description = variant.get('description', '')
         if description:
             description = description.replace('!', ' | ').replace('$', '/')
+            # Очищаем от дублирования названия аккорда
+            for name in unique_names:
+                if name in description:
+                    description = description.replace(name, '').strip(' |')
         else:
             description = TYPE_DISPLAY.get(self.current_type, self.current_type)
 
