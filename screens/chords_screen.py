@@ -198,19 +198,19 @@ class ActionIconButton(MDCard):
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-        self.radius = [dp(16)]
+        self.radius = [dp(12)]
         self.elevation = 0
         self.md_bg_color = [0, 0, 0, 0.08]
         self.line_color = [1, 1, 1, 0.05]
         self.line_width = 0.5
-        self.padding = [dp(8), dp(8), dp(8), dp(8)]
-        self.spacing = dp(6)
+        self.padding = [dp(6), dp(6), dp(6), dp(6)]
+        self.spacing = dp(4)
         self.ripple_behavior = True
 
         # Иконка из ассета
         self.icon_image = Image(
             size_hint=(None, None),
-            size=(dp(36), dp(36)),
+            size=(dp(32), dp(32)),
             pos_hint={'center_x': 0.5},
             allow_stretch=True,
             keep_ratio=True
@@ -220,10 +220,10 @@ class ActionIconButton(MDCard):
         # Текст
         self.text_label = MDLabel(
             text=text,
-            font_size=sp(10),
+            font_size=sp(9),
             halign="center",
             size_hint_y=None,
-            height=dp(20),
+            height=dp(16),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.7],
             bold=True
@@ -339,42 +339,51 @@ class ChordsScreen(BaseScreen):
         # Основной контейнер
         main_layout = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(12),
+            spacing=dp(10),
             padding=[dp(12), 0, dp(12), 0]
         )
 
-        # Верхний отступ
-        top_padding = layout_config.get_top_padding()
+        # ВРЕМЕННЫЙ ФИКСИРОВАННЫЙ ОТСТУП для теста
+        # Вместо layout_config.get_top_padding()
+        from kivy.utils import platform
+
+        if platform == 'android':
+            top_padding = dp(48)  # Фиксированный отступ для Android
+        else:
+            top_padding = dp(16)  # Фиксированный отступ для ПК
+
+        logger.info(f"Используемый top_padding: {top_padding}dp")
+
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
         # ============ НАЗВАНИЕ И ОПИСАНИЕ АККОРДА ============
         info_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(80),
-            radius=[dp(20), dp(20), dp(20), dp(20)],
+            height=dp(65),
+            radius=[dp(16), dp(16), dp(16), dp(16)],
             md_bg_color=[0, 0, 0, 0.08],
             elevation=0,
-            padding=[dp(16), dp(12), dp(16), dp(12)]
+            padding=[dp(12), dp(8), dp(12), dp(8)]
         )
 
         self.chord_name_label = MDLabel(
             text="A",
-            font_size=sp(26),
+            font_size=sp(22),
             halign="center",
             bold=True,
             size_hint_y=None,
-            height=dp(42),
+            height=dp(34),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95]
         )
 
         self.chord_desc_label = MDLabel(
             text="",
-            font_size=sp(12),
+            font_size=sp(11),
             halign="center",
             size_hint_y=None,
-            height=dp(22),
+            height=dp(18),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5]
         )
@@ -387,7 +396,7 @@ class ChordsScreen(BaseScreen):
         griff_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(260),
+            height=dp(240),
             padding=[dp(4), dp(4), dp(4), dp(4)]
         )
 
@@ -399,8 +408,8 @@ class ChordsScreen(BaseScreen):
         row1 = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(76),
-            spacing=dp(12)
+            height=dp(70),
+            spacing=dp(10)
         )
 
         self.tonality_card = SelectorCard(
@@ -427,8 +436,8 @@ class ChordsScreen(BaseScreen):
         row2 = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(76),
-            spacing=dp(12)
+            height=dp(70),
+            spacing=dp(10)
         )
 
         self.chord_card = SelectorCard(
@@ -455,9 +464,9 @@ class ChordsScreen(BaseScreen):
         icons_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(80),
-            spacing=dp(16),
-            padding=[dp(20), dp(8), dp(20), dp(8)]
+            height=dp(70),
+            spacing=dp(12),
+            padding=[dp(16), dp(6), dp(16), dp(6)]
         )
 
         self.finger_btn = ActionIconButton(
