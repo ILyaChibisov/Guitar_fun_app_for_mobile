@@ -2,7 +2,7 @@
 """
 Экран гитарных аккордов - с 4 карточками селекторами
 ТОН, ТИП, АККОРД, ПОЗИЦИЯ в стиле админки
-Порядок: название+описание → гриф → карточки → иконки (пальцы, ноты, звук)
+Иконки как в начале (ChordActionButton)
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.uix.label import MDLabel
@@ -73,7 +73,7 @@ TYPE_DISPLAY = {
 
 
 class SelectorCard(MDCard):
-    """Карточка селектора в стиле админки (без стрелки вниз)"""
+    """Карточка селектора в стиле админки"""
 
     def __init__(self, title, value, on_left=None, on_right=None, on_center=None, **kwargs):
         super().__init__(**kwargs)
@@ -187,51 +187,24 @@ class SelectorCard(MDCard):
         self.value_label.text = new_value
 
 
-class ActionIconButton(MDCard):
-    """Кнопка действия с иконкой из ассета (пальцы, ноты, звук)"""
+class ChordActionButton(ButtonBehavior, MDBoxLayout):
+    """Кнопка действия с иконкой из ассета (как в начале)"""
 
-    def __init__(self, icon_name, text, on_press_callback=None, **kwargs):
+    def __init__(self, icon_name, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.icon_name = icon_name
-        self.text = text
         self.on_press_callback = on_press_callback
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.radius = [dp(12)]
-        self.elevation = 0
-        self.md_bg_color = [0, 0, 0, 0.08]
-        self.line_color = [1, 1, 1, 0.05]
-        self.line_width = 0.5
-        self.padding = [dp(6), dp(6), dp(6), dp(6)]
-        self.spacing = dp(4)
-        self.ripple_behavior = True
-
-        # Иконка из ассета
-        self.icon_image = Image(
+        self.size_hint = (None, None)
+        self.size = (dp(42), dp(42))
+        self.icon = Image(
             size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            pos_hint={'center_x': 0.5},
-            allow_stretch=True,
-            keep_ratio=True
+            size=(dp(24), dp(24)),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            allow_stretch=True
         )
+        self.add_widget(self.icon)
+        self.bind(on_release=self._on_press)
         self._load_icon()
-
-        # Текст
-        self.text_label = MDLabel(
-            text=text,
-            font_size=sp(9),
-            halign="center",
-            size_hint_y=None,
-            height=dp(16),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7],
-            bold=True
-        )
-
-        self.add_widget(self.icon_image)
-        self.add_widget(self.text_label)
-        self.bind(on_release=self._on_click)
 
     def _load_icon(self):
         if HAS_ASSETS:
@@ -239,27 +212,21 @@ class ActionIconButton(MDCard):
                 icon_data = load_asset_as_bytes(self.icon_name)
                 if icon_data:
                     img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.icon_image.texture = img.texture
+                    self.icon.texture = img.texture
                     return
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки {self.icon_name}: {e}")
-        self.icon_image.text = "?"
+        self.icon.text = "?"
 
     def set_active(self, active):
         if active:
             self.md_bg_color = [0.46, 0.70, 0.71, 0.3]
-            self.line_color = [0.46, 0.70, 0.71, 0.5]
-            self.line_width = 1
-            self.text_label.text_color = [0.46, 0.70, 0.71, 1]
         else:
-            self.md_bg_color = [0, 0, 0, 0.08]
-            self.line_color = [1, 1, 1, 0.05]
-            self.line_width = 0.5
-            self.text_label.text_color = [1, 1, 1, 0.7]
+            self.md_bg_color = [0, 0, 0, 0]
 
-    def _on_click(self, instance):
+    def _on_press(self, instance):
         if self.on_press_callback:
-            self.on_press_callback(self.text)
+            self.on_press_callback(self.icon_name)
 
 
 class ChordsScreen(BaseScreen):
@@ -307,7 +274,7 @@ class ChordsScreen(BaseScreen):
         self.load_background()
         self.scan_chords()
 
-        logger.info('Экран аккордов создан (4 карточки)')
+        logger.info('Экран аккордов создан')
 
     def load_background(self):
         try:
@@ -336,25 +303,13 @@ class ChordsScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        # Основной контейнер
-        main_layout = MDBoxLayout(
+        # Создаём контент
+        content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(10),
-            padding=[dp(12), 0, dp(12), 0]
+            spacing=dp(12),
+            size_hint_y=None,
+            adaptive_height=True
         )
-
-        # ВРЕМЕННЫЙ ФИКСИРОВАННЫЙ ОТСТУП для теста
-        # Вместо layout_config.get_top_padding()
-        from kivy.utils import platform
-
-        if platform == 'android':
-            top_padding = dp(48)  # Фиксированный отступ для Android
-        else:
-            top_padding = dp(16)  # Фиксированный отступ для ПК
-
-        logger.info(f"Используемый top_padding: {top_padding}dp")
-
-        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
         # ============ НАЗВАНИЕ И ОПИСАНИЕ АККОРДА ============
         info_card = MDCard(
@@ -368,7 +323,7 @@ class ChordsScreen(BaseScreen):
         )
 
         self.chord_name_label = MDLabel(
-            text="A",
+            text="A | Amaj",
             font_size=sp(22),
             halign="center",
             bold=True,
@@ -379,7 +334,7 @@ class ChordsScreen(BaseScreen):
         )
 
         self.chord_desc_label = MDLabel(
-            text="",
+            text="мажор",
             font_size=sp(11),
             halign="center",
             size_hint_y=None,
@@ -390,7 +345,7 @@ class ChordsScreen(BaseScreen):
 
         info_card.add_widget(self.chord_name_label)
         info_card.add_widget(self.chord_desc_label)
-        main_layout.add_widget(info_card)
+        content.add_widget(info_card)
 
         # ============ ГРИФ АККОРДА ============
         griff_container = MDBoxLayout(
@@ -402,7 +357,42 @@ class ChordsScreen(BaseScreen):
 
         self.chord_renderer = ChordRenderer()
         griff_container.add_widget(self.chord_renderer)
-        main_layout.add_widget(griff_container)
+        content.add_widget(griff_container)
+
+        # ============ ИКОНКИ ДЕЙСТВИЙ (как в начале) ============
+        icons_row = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(54),
+            spacing=dp(16),
+            padding=[dp(16), dp(6), dp(16), dp(6)]
+        )
+
+        # Центрируем иконки
+        icons_row.add_widget(Widget(size_hint_x=1))
+
+        self.finger_btn = ChordActionButton(
+            icon_name="fingers_png",
+            on_press_callback=self.set_mode
+        )
+        self.finger_btn.set_active(True)
+
+        self.note_btn = ChordActionButton(
+            icon_name="notes_png",
+            on_press_callback=self.set_mode
+        )
+
+        self.sound_btn = ChordActionButton(
+            icon_name="sound_png",
+            on_press_callback=self.on_sound_press
+        )
+
+        icons_row.add_widget(self.finger_btn)
+        icons_row.add_widget(self.note_btn)
+        icons_row.add_widget(self.sound_btn)
+        icons_row.add_widget(Widget(size_hint_x=1))
+
+        content.add_widget(icons_row)
 
         # ============ РЯД 1: ТОН и ТИП ============
         row1 = MDBoxLayout(
@@ -430,7 +420,7 @@ class ChordsScreen(BaseScreen):
 
         row1.add_widget(self.tonality_card)
         row1.add_widget(self.type_card)
-        main_layout.add_widget(row1)
+        content.add_widget(row1)
 
         # ============ РЯД 2: АККОРД и ПОЗИЦИЯ ============
         row2 = MDBoxLayout(
@@ -458,54 +448,13 @@ class ChordsScreen(BaseScreen):
 
         row2.add_widget(self.chord_card)
         row2.add_widget(self.position_card)
-        main_layout.add_widget(row2)
-
-        # ============ ИКОНКИ ДЕЙСТВИЙ (ПАЛЬЦЫ, НОТЫ, ЗВУК) ============
-        icons_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(70),
-            spacing=dp(12),
-            padding=[dp(16), dp(6), dp(16), dp(6)]
-        )
-
-        self.finger_btn = ActionIconButton(
-            icon_name="fingers_png",
-            text="ПАЛЬЦЫ",
-            on_press_callback=self.set_mode
-        )
-        self.finger_btn.set_active(True)
-
-        self.note_btn = ActionIconButton(
-            icon_name="notes_png",
-            text="НОТЫ",
-            on_press_callback=self.set_mode
-        )
-
-        self.sound_btn = ActionIconButton(
-            icon_name="sound_png",
-            text="ЗВУК",
-            on_press_callback=self.on_sound_press
-        )
-
-        icons_row.add_widget(self.finger_btn)
-        icons_row.add_widget(self.note_btn)
-        icons_row.add_widget(self.sound_btn)
-        main_layout.add_widget(icons_row)
+        content.add_widget(row2)
 
         # Нижний отступ
-        bottom_padding = dp(20)
-        main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
+        content.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
-        # Добавляем в ScrollView
-        scroll = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_width=0,
-            bar_color=[0, 0, 0, 0]
-        )
-        scroll.add_widget(main_layout)
-        self.add_widget(scroll)
+        # Используем BaseScreen.build_ui с прокруткой
+        self.build_ui(content_widget=content, use_scroll=True)
 
         # Загружаем фон грифа
         try:
@@ -517,9 +466,23 @@ class ChordsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
-    def on_sound_press(self, mode):
+    def on_sound_press(self, icon_name):
         """Обработчик нажатия на кнопку звука"""
         notify.info("🔊 Звук аккорда (будет доступно в следующей версии)")
+
+    def set_mode(self, icon_name):
+        """Обработчик нажатия на кнопки пальцы/ноты"""
+        if icon_name == "fingers_png":
+            self.current_mode = "finger"
+            self.finger_btn.set_active(True)
+            self.note_btn.set_active(False)
+        elif icon_name == "notes_png":
+            self.current_mode = "note"
+            self.finger_btn.set_active(False)
+            self.note_btn.set_active(True)
+
+        if self.current_chord_module and self.chord_renderer:
+            self.chord_renderer.set_mode(self.current_mode)
 
     # ============ МЕТОДЫ ДЛЯ ТОНАЛЬНОСТИ ============
     def prev_tonality(self, instance):
@@ -802,20 +765,6 @@ class ChordsScreen(BaseScreen):
         if hasattr(self, 'position_dialog'):
             self.position_dialog.dismiss()
 
-    # ============ РЕЖИМ ОТОБРАЖЕНИЯ ============
-    def set_mode(self, mode):
-        if mode == "ПАЛЬЦЫ":
-            self.current_mode = "finger"
-            self.finger_btn.set_active(True)
-            self.note_btn.set_active(False)
-        elif mode == "НОТЫ":
-            self.current_mode = "note"
-            self.finger_btn.set_active(False)
-            self.note_btn.set_active(True)
-
-        if self.current_chord_module and self.chord_renderer:
-            self.chord_renderer.set_mode(self.current_mode)
-
     # ============ ЗАГРУЗКА АККОРДОВ ============
     def scan_chords(self):
         print("\n" + "=" * 60)
@@ -885,7 +834,6 @@ class ChordsScreen(BaseScreen):
                 continue
             filtered.append(chord)
 
-        # Группируем по короткому имени
         chords_by_name = {}
         for chord in filtered:
             name = chord['short_name']
@@ -893,17 +841,14 @@ class ChordsScreen(BaseScreen):
                 chords_by_name[name] = []
             chords_by_name[name].append(chord)
 
-        # Сортируем
         self.available_chords = sorted(chords_by_name.keys())
 
         if self.available_chords:
-            # Находим текущий аккорд в новом списке
             if self.current_chord_name not in self.available_chords:
                 self.current_chord_index = 0
                 self.current_chord_name = self.available_chords[0]
                 self.chord_card.update_value(self.current_chord_name)
 
-            # Загружаем данные для текущего аккорда
             chord_data = chords_by_name.get(self.current_chord_name)
             if chord_data:
                 self.load_chord_variants(chord_data)
@@ -935,7 +880,6 @@ class ChordsScreen(BaseScreen):
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
 
-        # Полное название аккорда (как в старой версии)
         chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
         name_parts = chord_name.split('|')
         unique_names = []
@@ -948,11 +892,9 @@ class ChordsScreen(BaseScreen):
         display_name = ' | '.join(unique_names)
         self.chord_name_label.text = display_name
 
-        # Описание из METADATA
         description = variant.get('description', '')
         if description:
             description = description.replace('!', ' | ').replace('$', '/')
-            # Очищаем от дублирования названия аккорда
             for name in unique_names:
                 if name in description:
                     description = description.replace(name, '').strip(' |')
@@ -961,7 +903,6 @@ class ChordsScreen(BaseScreen):
 
         self.chord_desc_label.text = description
 
-        # Обновляем гриф
         if self.chord_renderer:
             self.chord_renderer.load_chord(self.current_chord_module)
             self.chord_renderer.set_mode(self.current_mode)
