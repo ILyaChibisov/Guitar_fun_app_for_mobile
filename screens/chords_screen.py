@@ -2,7 +2,7 @@
 """
 Экран гитарных аккордов - с 4 карточками селекторами
 ТОН, ТИП, АККОРД, ПОЗИЦИЯ в стиле админки
-Иконки как в начале (ChordActionButton)
+Чистые иконки без выделений
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.uix.label import MDLabel
@@ -188,7 +188,7 @@ class SelectorCard(MDCard):
 
 
 class ChordActionButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка действия с иконкой из ассета (как в начале)"""
+    """Кнопка действия с иконкой из ассета (без выделений)"""
 
     def __init__(self, icon_name, on_press_callback=None, **kwargs):
         super().__init__(**kwargs)
@@ -196,6 +196,7 @@ class ChordActionButton(ButtonBehavior, MDBoxLayout):
         self.on_press_callback = on_press_callback
         self.size_hint = (None, None)
         self.size = (dp(42), dp(42))
+        self.md_bg_color = [0, 0, 0, 0]
         self.icon = Image(
             size_hint=(None, None),
             size=(dp(24), dp(24)),
@@ -217,12 +218,6 @@ class ChordActionButton(ButtonBehavior, MDBoxLayout):
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки {self.icon_name}: {e}")
         self.icon.text = "?"
-
-    def set_active(self, active):
-        if active:
-            self.md_bg_color = [0.46, 0.70, 0.71, 0.3]
-        else:
-            self.md_bg_color = [0, 0, 0, 0]
 
     def _on_press(self, instance):
         if self.on_press_callback:
@@ -359,7 +354,7 @@ class ChordsScreen(BaseScreen):
         griff_container.add_widget(self.chord_renderer)
         content.add_widget(griff_container)
 
-        # ============ ИКОНКИ ДЕЙСТВИЙ (как в начале) ============
+        # ============ ИКОНКИ ДЕЙСТВИЙ (без выделений) ============
         icons_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -375,7 +370,6 @@ class ChordsScreen(BaseScreen):
             icon_name="fingers_png",
             on_press_callback=self.set_mode
         )
-        self.finger_btn.set_active(True)
 
         self.note_btn = ChordActionButton(
             icon_name="notes_png",
@@ -474,12 +468,8 @@ class ChordsScreen(BaseScreen):
         """Обработчик нажатия на кнопки пальцы/ноты"""
         if icon_name == "fingers_png":
             self.current_mode = "finger"
-            self.finger_btn.set_active(True)
-            self.note_btn.set_active(False)
         elif icon_name == "notes_png":
             self.current_mode = "note"
-            self.finger_btn.set_active(False)
-            self.note_btn.set_active(True)
 
         if self.current_chord_module and self.chord_renderer:
             self.chord_renderer.set_mode(self.current_mode)
@@ -620,13 +610,38 @@ class ChordsScreen(BaseScreen):
             self.type_dialog.dismiss()
 
     # ============ МЕТОДЫ ДЛЯ АККОРДА ============
+    def _load_variants_for_chord(self, chord_name):
+        """Загружает варианты для указанного аккорда"""
+        variants = []
+        for chord in self.all_chords:
+            if chord['short_name'] == chord_name:
+                tonality = self.extract_tonality(chord['name'])
+                if tonality == self.current_tonality:
+                    chord_types = chord['type'].split('|') if chord['type'] else []
+                    if self.current_type in chord_types or self.current_type == chord.get('type', ''):
+                        variants.append(chord)
+
+        if variants:
+            variants.sort(key=lambda x: x['variant'])
+            self.current_variants = variants
+            self.current_variant_index = 0
+            self.current_position = 1
+            self.position_card.update_value("1")
+            self.load_current_variant()
+        else:
+            self.current_variants = []
+            self.current_variant_index = 0
+            self.current_position = 1
+            self.chord_name_label.text = chord_name
+            self.chord_desc_label.text = "Нет вариантов"
+
     def prev_chord(self, instance):
         if not self.available_chords:
             return
         self.current_chord_index = (self.current_chord_index - 1) % len(self.available_chords)
         self.current_chord_name = self.available_chords[self.current_chord_index]
         self.chord_card.update_value(self.current_chord_name)
-        self.load_current_variant()
+        self._load_variants_for_chord(self.current_chord_name)
 
     def next_chord(self, instance):
         if not self.available_chords:
@@ -634,7 +649,7 @@ class ChordsScreen(BaseScreen):
         self.current_chord_index = (self.current_chord_index + 1) % len(self.available_chords)
         self.current_chord_name = self.available_chords[self.current_chord_index]
         self.chord_card.update_value(self.current_chord_name)
-        self.load_current_variant()
+        self._load_variants_for_chord(self.current_chord_name)
 
     def show_chord_picker(self):
         if not self.available_chords:
@@ -689,7 +704,7 @@ class ChordsScreen(BaseScreen):
         self.current_chord_name = chord_name
         self.current_chord_index = self.available_chords.index(chord_name)
         self.chord_card.update_value(self.current_chord_name)
-        self.load_current_variant()
+        self._load_variants_for_chord(self.current_chord_name)
         if hasattr(self, 'chord_dialog'):
             self.chord_dialog.dismiss()
 
@@ -849,12 +864,14 @@ class ChordsScreen(BaseScreen):
                 self.current_chord_name = self.available_chords[0]
                 self.chord_card.update_value(self.current_chord_name)
 
+            # Загружаем варианты для текущего аккорда
             chord_data = chords_by_name.get(self.current_chord_name)
             if chord_data:
                 self.load_chord_variants(chord_data)
         else:
             self.available_chords = []
             self.current_variants = []
+            self.current_chord_data = None
             self.chord_name_label.text = "Нет аккордов"
             self.chord_desc_label.text = ""
 
@@ -880,6 +897,7 @@ class ChordsScreen(BaseScreen):
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
 
+        # Полное название аккорда
         chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
         name_parts = chord_name.split('|')
         unique_names = []
@@ -892,6 +910,7 @@ class ChordsScreen(BaseScreen):
         display_name = ' | '.join(unique_names)
         self.chord_name_label.text = display_name
 
+        # Описание из METADATA
         description = variant.get('description', '')
         if description:
             description = description.replace('!', ' | ').replace('$', '/')
@@ -903,6 +922,7 @@ class ChordsScreen(BaseScreen):
 
         self.chord_desc_label.text = description
 
+        # Обновляем гриф
         if self.chord_renderer:
             self.chord_renderer.load_chord(self.current_chord_module)
             self.chord_renderer.set_mode(self.current_mode)
@@ -923,15 +943,5 @@ class ChordsScreen(BaseScreen):
                             self.current_chord_name = chord_name
                             self.current_chord_index = self.available_chords.index(chord_name)
                             self.chord_card.update_value(self.current_chord_name)
-
-                            chords_by_name = {}
-                            for ch in self.all_chords:
-                                name = ch['short_name']
-                                if name not in chords_by_name:
-                                    chords_by_name[name] = []
-                                chords_by_name[name].append(ch)
-
-                            chord_data = chords_by_name.get(chord_name)
-                            if chord_data:
-                                self.load_chord_variants(chord_data)
+                            self._load_variants_for_chord(self.current_chord_name)
                     break
