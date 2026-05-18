@@ -82,6 +82,7 @@ class SearchBar(MDCard):
         self.on_search = on_search
         self.on_clear = on_clear
         self.current_query = ""
+        self._search_timer = None
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
@@ -139,10 +140,28 @@ class SearchBar(MDCard):
     def _on_text_change(self, instance, text):
         self.clear_btn.opacity = 1 if text else 0
         self.current_query = text
-        if self.on_search and len(text) >= 2:
-            Clock.schedule_once(lambda dt: self.on_search(text), 0.3)
+
+        if self._search_timer:
+            Clock.unschedule(self._search_timer)
+            self._search_timer = None
+
+        if not text.strip():
+            if self.on_clear:
+                self.on_clear()
+        else:
+            self._search_timer = Clock.schedule_once(lambda dt: self._do_search(), 0.3)
+
+    def _do_search(self):
+        if self.on_search and self.current_query:
+            text = self.current_query.strip()
+            if text:
+                self.on_search(text)
 
     def _on_search(self, instance):
+        if self._search_timer:
+            Clock.unschedule(self._search_timer)
+            self._search_timer = None
+
         if self.on_search:
             text = self.search_field.text.strip()
             if text:
@@ -173,12 +192,11 @@ class SearchBar(MDCard):
 class SelectorCard(MDCard):
     """Карточка селектора в стиле админки (как карточки парсеров)"""
 
-    # Цвета для разных селекторов
     SELECTOR_COLORS = {
-        'TON': ('#2196F3', '#1976D2'),  # синий
-        'TIP': ('#9C27B0', '#7B1FA2'),  # фиолетовый
-        'AKKORD': ('#FF5722', '#E64A19'),  # тёмно-оранжевый
-        'POZICIYA': ('#009688', '#00796B'),  # бирюзовый
+        'TON': ('#2196F3', '#1976D2'),
+        'TIP': ('#9C27B0', '#7B1FA2'),
+        'AKKORD': ('#FF5722', '#E64A19'),
+        'POZICIYA': ('#009688', '#00796B'),
     }
 
     def __init__(self, selector_type, title, value, on_left=None, on_right=None, on_center=None, **kwargs):
@@ -198,13 +216,12 @@ class SelectorCard(MDCard):
         self.radius = [dp(16)]
         self.elevation = 0
         self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.3)
-        self.line_color = [1, 1, 1, 0.15]
-        self.line_width = 0.5
+        self.line_color = [1, 1, 1, 0.25]
+        self.line_width = 0.8
         self.padding = [dp(6), dp(8), dp(6), dp(8)]
         self.spacing = dp(4)
         self.ripple_behavior = True
 
-        # Заголовок
         self.title_label = MDLabel(
             text=title,
             font_size=sp(10),
@@ -216,7 +233,6 @@ class SelectorCard(MDCard):
             bold=True
         )
 
-        # Строка со стрелками и значением
         self.row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -224,12 +240,10 @@ class SelectorCard(MDCard):
             spacing=dp(4)
         )
 
-        # Левая стрелка
         self.left_btn = self._create_arrow_button('left_arrow_png', '◀')
         if on_left:
             self.left_btn.bind(on_release=on_left)
 
-        # Значение (кликабельное)
         self.value_label = MDLabel(
             text=value,
             font_size=sp(16),
@@ -241,7 +255,6 @@ class SelectorCard(MDCard):
             bold=True
         )
 
-        # Правая стрелка
         self.right_btn = self._create_arrow_button('right_arrow_png', '▶')
         if on_right:
             self.right_btn.bind(on_release=on_right)
@@ -253,10 +266,7 @@ class SelectorCard(MDCard):
         self.add_widget(self.title_label)
         self.add_widget(self.row)
 
-        # Эффект при наведении
         self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
-
-        # Делаем центральную область кликабельной
         self.value_label.bind(on_touch_down=self._on_value_click)
 
     def _create_arrow_button(self, icon_name, fallback_text):
@@ -361,7 +371,6 @@ class ChordsScreen(BaseScreen):
         self.is_search_mode = False
         self.search_results = []
 
-        # Текущие значения
         self.current_tonality = "A"
         self.current_tonality_index = 0
 
@@ -379,7 +388,6 @@ class ChordsScreen(BaseScreen):
 
         self.current_mode = "finger"
 
-        # UI элементы
         self.search_bar = None
         self.tonality_card = None
         self.type_card = None
@@ -391,6 +399,7 @@ class ChordsScreen(BaseScreen):
         self.finger_btn = None
         self.note_btn = None
         self.sound_btn = None
+        self.chord_icon = None
 
         self.bg_image = None
 
@@ -427,7 +436,6 @@ class ChordsScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        # Создаём контент
         content = MDBoxLayout(
             orientation='vertical',
             spacing=dp(12),
@@ -435,45 +443,75 @@ class ChordsScreen(BaseScreen):
             adaptive_height=True
         )
 
-        # ============ ВЕРХНЯЯ КАРТОЧКА С НАЗВАНИЕМ АККОРДА (С ОБВОДКОЙ) ============
-        name_card = MDCard(
+        # Верхняя карточка с названием аккорда
+        name_card_wrapper = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(70),
+            height=dp(72),
             radius=[dp(16), dp(16), dp(16), dp(16)],
             md_bg_color=[0, 0, 0, 0.08],
             elevation=0,
             line_color=[1, 1, 1, 0.25],
             line_width=0.8,
-            padding=[dp(12), dp(10), dp(12), dp(10)]
+            padding=[dp(12), dp(8), dp(12), dp(8)]
+        )
+
+        # Горизонтальный контейнер для центрирования
+        name_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, 1),
+            spacing=dp(12),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        )
+
+        self.chord_icon = Image(
+            size_hint=(None, None),
+            size=(dp(36), dp(36)),
+            pos_hint={'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        self._load_chord_icon()
+
+        text_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint_x=1,
+            spacing=dp(4),
+            pos_hint={'center_y': 0.5}
         )
 
         self.chord_name_label = MDLabel(
             text="A | Amaj",
-            font_size=sp(22),
+            font_size=sp(20),
             halign="center",
             bold=True,
             size_hint_y=None,
-            height=dp(34),
+            height=dp(30),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95]
         )
 
         self.chord_desc_label = MDLabel(
-            text="мажор",
+            text="",
             font_size=sp(11),
             halign="center",
             size_hint_y=None,
             height=dp(18),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5]
+            text_color=[1, 1, 1, 0.5],
+            shorten=True,
+            shorten_from="right"
         )
 
-        name_card.add_widget(self.chord_name_label)
-        name_card.add_widget(self.chord_desc_label)
-        content.add_widget(name_card)
+        text_container.add_widget(self.chord_name_label)
+        text_container.add_widget(self.chord_desc_label)
 
-        # ============ ГРИФ АККОРДА ============
+        name_container.add_widget(self.chord_icon)
+        name_container.add_widget(text_container)
+        name_card_wrapper.add_widget(name_container)
+        content.add_widget(name_card_wrapper)
+
+        # Гриф
         griff_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -485,7 +523,7 @@ class ChordsScreen(BaseScreen):
         griff_container.add_widget(self.chord_renderer)
         content.add_widget(griff_container)
 
-        # ============ ИКОНКИ ДЕЙСТВИЙ ============
+        # Иконки действий
         icons_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -518,14 +556,14 @@ class ChordsScreen(BaseScreen):
 
         content.add_widget(icons_row)
 
-        # ============ ПОИСКОВАЯ СТРОКА ============
+        # Поиск
         self.search_bar = SearchBar(
             on_search=self.do_search,
             on_clear=self.clear_search
         )
         content.add_widget(self.search_bar)
 
-        # ============ РЯД 1: ТОН и ТИП ============
+        # Ряд 1: ТОН и ТИП
         row1 = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -555,7 +593,7 @@ class ChordsScreen(BaseScreen):
         row1.add_widget(self.type_card)
         content.add_widget(row1)
 
-        # ============ РЯД 2: АККОРД и ПОЗИЦИЯ ============
+        # Ряд 2: АККОРД и ПОЗИЦИЯ
         row2 = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -585,13 +623,10 @@ class ChordsScreen(BaseScreen):
         row2.add_widget(self.position_card)
         content.add_widget(row2)
 
-        # Нижний отступ
         content.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
-        # Используем BaseScreen.build_ui с прокруткой
         self.build_ui(content_widget=content, use_scroll=True)
 
-        # Загружаем фон грифа
         try:
             bg_data = load_asset_as_bytes("griff_png")
             if bg_data:
@@ -601,11 +636,24 @@ class ChordsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
-    def do_search(self, query):
-        """Поиск аккордов по названию"""
-        query_lower = query.lower().strip()
+    def _load_chord_icon(self):
+        if HAS_ASSETS:
+            try:
+                icon_data = load_asset_as_bytes("chord_caption_png")
+                if icon_data:
+                    img = CoreImage(BytesIO(icon_data), ext="png")
+                    self.chord_icon.texture = img.texture
+                    return
+            except Exception as e:
+                logger.error(f"Ошибка загрузки иконки chord_caption_png: {e}")
+        self.chord_icon.text = "🎸"
 
-        if len(query_lower) < 2:
+    def do_search(self, query):
+        """Поиск аккордов по точному совпадению названия или описания"""
+        query_original = query.strip()
+        query_lower = query_original.lower()
+
+        if not query_lower:
             if self.is_search_mode:
                 self.clear_search()
             return
@@ -613,18 +661,57 @@ class ChordsScreen(BaseScreen):
         self.is_search_mode = True
         self.search_results = []
 
-        # Ищем аккорды
+        # Очищаем запрос от знаков препинания для поиска по описанию
+        import string
+        query_for_desc = query_lower
+        for punct in string.punctuation:
+            query_for_desc = query_for_desc.replace(punct, ' ')
+        query_for_desc = ' '.join(query_for_desc.split())
+
+        # Карта соответствий для b и # (альтернативные названия)
+        alt_map = {
+            'bb': 'a#',
+            'a#': 'bb',
+            'db': 'c#',
+            'c#': 'db',
+            'eb': 'd#',
+            'd#': 'eb',
+            'gb': 'f#',
+            'f#': 'gb',
+            'ab': 'g#',
+            'g#': 'ab'
+        }
+
+        alt_query = alt_map.get(query_lower, None)
+
+        # Поиск по названию (точное совпадение)
         for chord in self.all_chords:
             short_name_lower = chord['short_name'].lower()
-            full_name_lower = chord['name'].lower().replace('!', ' ').replace('$', '/')
 
-            if query_lower in short_name_lower or query_lower in full_name_lower:
+            if short_name_lower == query_lower or (alt_query and short_name_lower == alt_query):
                 if chord not in self.search_results:
                     self.search_results.append(chord)
 
-        # Убираем дубликаты по short_name
+        # Если не нашли по названию - ищем по описанию (точное совпадение всей строки)
+        if not self.search_results:
+            for chord in self.all_chords:
+                description = chord.get('description', '')
+                if description:
+                    # Очищаем описание от знаков препинания
+                    desc_clean = description.lower()
+                    for punct in string.punctuation:
+                        desc_clean = desc_clean.replace(punct, ' ')
+                    desc_clean = ' '.join(desc_clean.split())
+
+                    # ТОЧНОЕ совпадение всей строки описания
+                    if desc_clean == query_for_desc:
+                        if chord not in self.search_results:
+                            self.search_results.append(chord)
+
+        # Убираем дубликаты
         unique_results = []
         seen_names = set()
+
         for chord in self.search_results:
             if chord['short_name'] not in seen_names:
                 seen_names.add(chord['short_name'])
@@ -633,8 +720,9 @@ class ChordsScreen(BaseScreen):
         self.search_results = unique_results
 
         if self.search_results:
-            first_result = self.search_results[0]
-            self.current_chord_name = first_result['short_name']
+            selected_chord = self.search_results[0]
+
+            self.current_chord_name = selected_chord['short_name']
             self.chord_card.update_value(self.current_chord_name)
 
             variants = []
@@ -652,12 +740,6 @@ class ChordsScreen(BaseScreen):
 
             notify.info(f"Найдено аккордов: {len(self.search_results)}", duration=1.5)
         else:
-            self.chord_name_label.text = "❌"
-            self.chord_desc_label.text = f"По запросу '{query}' ничего не найдено"
-            self.current_variants = []
-            self.current_chord_module = None
-            if self.chord_renderer:
-                self.chord_renderer.load_chord(None)
             self.search_bar.search_field.hint_text = f"'{query}' не найдено"
             Clock.schedule_once(lambda dt: self._reset_hint(), 2)
 
@@ -851,8 +933,6 @@ class ChordsScreen(BaseScreen):
             self.current_variants = []
             self.current_variant_index = 0
             self.current_position = 1
-            self.chord_name_label.text = chord_name
-            self.chord_desc_label.text = "Нет вариантов"
 
     def prev_chord(self, instance):
         if self.is_search_mode:
@@ -1097,8 +1177,6 @@ class ChordsScreen(BaseScreen):
             self.available_chords = []
             self.current_variants = []
             self.current_chord_data = None
-            self.chord_name_label.text = "Нет аккордов"
-            self.chord_desc_label.text = ""
 
     def extract_tonality(self, chord_name):
         if not chord_name:
@@ -1122,7 +1200,7 @@ class ChordsScreen(BaseScreen):
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
 
-        # Умное форматирование названия
+        # Форматирование названия
         chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
         name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
 
@@ -1142,7 +1220,7 @@ class ChordsScreen(BaseScreen):
 
         self.chord_name_label.text = display_name
 
-        # Умное форматирование описания
+        # Описание
         description = variant.get('description', '')
         if description:
             desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
@@ -1163,6 +1241,9 @@ class ChordsScreen(BaseScreen):
 
             formatted_desc = re.sub(r'\s*\|\s*', ' | ', formatted_desc).strip(' |')
             formatted_desc = re.sub(r'\s+', ' ', formatted_desc)
+
+            if len(formatted_desc) > 50:
+                formatted_desc = formatted_desc[:47] + "..."
 
             self.chord_desc_label.text = formatted_desc
         else:
@@ -1203,13 +1284,13 @@ class ChordsScreen(BaseScreen):
                 if up not in unique_parts_unique:
                     unique_parts_unique.append(up)
 
-            first_part = parts[0]
-            other_parts = unique_parts_unique[1:] if len(unique_parts_unique) > 1 else []
+            first_unique = unique_parts_unique[0] if unique_parts_unique else ""
+            other_uniques = unique_parts_unique[1:] if len(unique_parts_unique) > 1 else []
 
-            if other_parts:
-                return f"{first_part} ({', '.join(other_parts)})"
+            if other_uniques:
+                return f"{first_unique} ({', '.join(other_uniques)}) {common_substring}".strip()
             else:
-                return first_part
+                return f"{first_unique} {common_substring}".strip()
         else:
             return ', '.join(parts)
 
