@@ -897,26 +897,37 @@ class ChordsScreen(BaseScreen):
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
 
-        # Полное название аккорда
+        # Полное название аккорда из METADATA
         chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
         name_parts = chord_name.split('|')
-        unique_names = []
-        seen_names = set()
-        for part in name_parts:
-            part_clean = part.strip()
-            if part_clean and part_clean not in seen_names:
-                seen_names.add(part_clean)
-                unique_names.append(part_clean)
-        display_name = ' | '.join(unique_names)
+
+        if len(name_parts) > 1:
+            # Первое название - основное
+            main_name = name_parts[0].strip()
+            # Остальные названия - дополнительные
+            other_names = [name.strip() for name in name_parts[1:] if name.strip()]
+
+            # Форматируем: основное (доп.1, доп.2, доп.3)
+            display_name = f"{main_name} ({', '.join(other_names)})"
+        else:
+            display_name = name_parts[0].strip()
+
         self.chord_name_label.text = display_name
 
         # Описание из METADATA
         description = variant.get('description', '')
         if description:
             description = description.replace('!', ' | ').replace('$', '/')
-            for name in unique_names:
+            # Убираем дублирование основного названия из описания
+            main_name = name_parts[0].strip()
+            if main_name in description:
+                description = description.replace(main_name, '').strip(' |')
+            # Также убираем альтернативные названия
+            for name in other_names:
                 if name in description:
                     description = description.replace(name, '').strip(' |')
+            # Если после очистки остались символы |, убираем их
+            description = re.sub(r'\s*\|\s*', ' | ', description).strip(' |')
         else:
             description = TYPE_DISPLAY.get(self.current_type, self.current_type)
 
