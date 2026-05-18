@@ -456,24 +456,31 @@ class ChordsScreen(BaseScreen):
             padding=[dp(12), dp(8), dp(12), dp(8)]
         )
 
-        # Горизонтальный контейнер для центрирования
+        # Горизонтальный контейнер с тремя частями: иконка, центр, пустота
         name_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
-            spacing=dp(12),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            spacing=dp(12)
         )
 
+        # Левая часть - иконка (фиксированная ширина)
+        left_box = MDBoxLayout(
+            size_hint_x=None,
+            width=dp(36),
+            pos_hint={'center_y': 0.5}
+        )
         self.chord_icon = Image(
             size_hint=(None, None),
             size=(dp(36), dp(36)),
-            pos_hint={'center_y': 0.5},
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
         )
         self._load_chord_icon()
+        left_box.add_widget(self.chord_icon)
 
-        text_container = MDBoxLayout(
+        # Центральная часть - текст (растягивается)
+        center_box = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
             spacing=dp(4),
@@ -503,11 +510,18 @@ class ChordsScreen(BaseScreen):
             shorten_from="right"
         )
 
-        text_container.add_widget(self.chord_name_label)
-        text_container.add_widget(self.chord_desc_label)
+        center_box.add_widget(self.chord_name_label)
+        center_box.add_widget(self.chord_desc_label)
 
-        name_container.add_widget(self.chord_icon)
-        name_container.add_widget(text_container)
+        # Правая часть - пустая для баланса (такой же ширины как левая)
+        right_box = MDBoxLayout(
+            size_hint_x=None,
+            width=dp(36)
+        )
+
+        name_container.add_widget(left_box)
+        name_container.add_widget(center_box)
+        name_container.add_widget(right_box)
         name_card_wrapper.add_widget(name_container)
         content.add_widget(name_card_wrapper)
 
@@ -1311,3 +1325,31 @@ class ChordsScreen(BaseScreen):
                             self.chord_card.update_value(self.current_chord_name)
                             self._load_variants_for_chord(self.current_chord_name)
                 break
+
+    def select_chord_by_name(self, chord_name):
+        """Выбирает аккорд по точному имени (из поиска)"""
+        # Ищем аккорд с точным совпадением short_name
+        target_chord = None
+        for chord in self.all_chords:
+            if chord['short_name'].lower() == chord_name.lower():
+                target_chord = chord
+                break
+
+        if target_chord:
+            # Устанавливаем тональность
+            tonality = self.extract_tonality(target_chord['name'])
+            if tonality in TONALITIES:
+                self.current_tonality = tonality
+                self.current_tonality_index = TONALITIES.index(tonality)
+                self.tonality_card.update_value(self.current_tonality)
+
+                # Обновляем список доступных аккордов
+                self.update_available_chords()
+
+                # Если аккорд есть в списке, выбираем его
+                if chord_name in self.available_chords:
+                    self.current_chord_name = chord_name
+                    self.current_chord_index = self.available_chords.index(chord_name)
+                    self.chord_card.update_value(self.current_chord_name)
+                    self._load_variants_for_chord(self.current_chord_name)
+                    self.load_current_variant()
