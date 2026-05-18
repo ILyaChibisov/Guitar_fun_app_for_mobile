@@ -2,7 +2,7 @@
 """
 Экран гитарных аккордов - с 4 карточками селекторами
 ТОН, ТИП, АККОРД, ПОЗИЦИЯ в стиле админки
-Чистые иконки без выделений
+С поиском аккордов
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.uix.label import MDLabel
@@ -22,6 +22,8 @@ import pkgutil
 import importlib
 import re
 import traceback
+
+from kivymd.uix.textfield import MDTextField
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -72,22 +74,135 @@ TYPE_DISPLAY = {
 }
 
 
-class SelectorCard(MDCard):
-    """Карточка селектора в стиле админки"""
+class SearchBar(MDCard):
+    """Поисковая строка как в songs_screen.py"""
 
-    def __init__(self, title, value, on_left=None, on_right=None, on_center=None, **kwargs):
+    def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
+        self.on_search = on_search
+        self.on_clear = on_clear
+        self.current_query = ""
+
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(48)
+        self.radius = [dp(24), dp(24), dp(24), dp(24)]
+        self.md_bg_color = [0.96, 0.96, 0.96, 1]
+        self.elevation = 0
+        self.padding = [dp(16), dp(6), dp(12), dp(6)]
+        self.spacing = dp(8)
+
+        self.line_color = [0.46, 0.70, 0.71, 0.4]
+        self.line_width = 1.0
+
+        self.search_field = MDTextField(
+            hint_text="Поиск аккордов...",
+            size_hint_x=1,
+            font_size=sp(15),
+            height=dp(36),
+            on_text_validate=self._on_search,
+            mode="fill"
+        )
+
+        self.search_field.line_color_normal = [0, 0, 0, 0]
+        self.search_field.line_color_focus = [0, 0, 0, 0]
+        self.search_field.fill_color_normal = [1, 1, 1, 0]
+        self.search_field.fill_color_focus = [1, 1, 1, 0]
+        self.search_field.hint_text_color = [0.7, 0.7, 0.7, 1]
+        self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
+
+        self.search_field.bind(text=self._on_text_change)
+
+        self.clear_btn = MDIconButton(
+            icon="close-circle",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.6, 0.6, 0.6, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_clear,
+            opacity=0
+        )
+
+        self.search_icon = MDIconButton(
+            icon="magnify",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_search,
+            pos_hint={'center_y': 0.5}
+        )
+
+        self.add_widget(self.search_field)
+        self.add_widget(self.clear_btn)
+        self.add_widget(self.search_icon)
+
+    def _on_text_change(self, instance, text):
+        self.clear_btn.opacity = 1 if text else 0
+        self.current_query = text
+        # Поиск при вводе (опционально)
+        if self.on_search and len(text) >= 2:
+            Clock.schedule_once(lambda dt: self.on_search(text), 0.3)
+
+    def _on_search(self, instance):
+        if self.on_search:
+            text = self.search_field.text.strip()
+            if text:
+                self.on_search(text)
+
+    def _on_clear(self, instance):
+        self.search_field.text = ""
+        self.search_field.focus = True
+        self.clear_btn.opacity = 0
+        if self.on_clear:
+            self.on_clear()
+
+    def get_text(self):
+        return self.search_field.text.strip()
+
+    def set_text(self, text):
+        self.search_field.text = text
+        self.clear_btn.opacity = 1 if text else 0
+
+    def clear(self):
+        self.search_field.text = ""
+        self.clear_btn.opacity = 0
+
+    def focus(self):
+        self.search_field.focus = True
+
+
+class SelectorCard(MDCard):
+    """Карточка селектора в стиле админки (как карточки парсеров)"""
+
+    # Цвета для разных селекторов
+    SELECTOR_COLORS = {
+        'TON': ('#2196F3', '#1976D2'),  # синий
+        'TIP': ('#9C27B0', '#7B1FA2'),  # фиолетовый
+        'AKKORD': ('#FF5722', '#E64A19'),  # тёмно-оранжевый
+        'POZICIYA': ('#009688', '#00796B'),  # бирюзовый
+    }
+
+    def __init__(self, selector_type, title, value, on_left=None, on_right=None, on_center=None, **kwargs):
+        super().__init__(**kwargs)
+        self.selector_type = selector_type
         self.title = title
         self.value = value
         self.on_left_callback = on_left
         self.on_right_callback = on_right
         self.on_center_callback = on_center
 
+        # Получаем цвет для типа селектора
+        colors = self.SELECTOR_COLORS.get(selector_type, ('#757575', '#616161'))
+        self.bg_color = colors[0]
+
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
         self.radius = [dp(16)]
-        self.elevation = 2
-        self.md_bg_color = [0, 0, 0, 0.15]
+        self.elevation = 0
+        self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.3)
         self.line_color = [1, 1, 1, 0.1]
         self.line_width = 0.5
         self.padding = [dp(6), dp(8), dp(6), dp(8)]
@@ -102,7 +217,7 @@ class SelectorCard(MDCard):
             size_hint_y=None,
             height=dp(20),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
+            text_color=[1, 1, 1, 0.7],
             bold=True
         )
 
@@ -127,7 +242,7 @@ class SelectorCard(MDCard):
             valign="middle",
             size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 1],
+            text_color=[1, 1, 1, 0.95],
             bold=True
         )
 
@@ -142,6 +257,9 @@ class SelectorCard(MDCard):
 
         self.add_widget(self.title_label)
         self.add_widget(self.row)
+
+        # Эффект при наведении
+        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
 
         # Делаем центральную область кликабельной
         self.value_label.bind(on_touch_down=self._on_value_click)
@@ -174,6 +292,19 @@ class SelectorCard(MDCard):
 
         btn.text = fallback_text
         return btn
+
+    def _hex_to_rgba(self, hex_color, alpha=1.0):
+        hex_color = hex_color.lstrip('#')
+        return [
+            int(hex_color[i:i + 2], 16) / 255.0
+            for i in (0, 2, 4)
+        ] + [alpha]
+
+    def _on_enter(self, *args):
+        self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.5)
+
+    def _on_leave(self, *args):
+        self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.3)
 
     def _on_value_click(self, instance, touch):
         if self.value_label.collide_point(*touch.pos):
@@ -225,13 +356,15 @@ class ChordActionButton(ButtonBehavior, MDBoxLayout):
 
 
 class ChordsScreen(BaseScreen):
-    """Экран аккордов с 4 карточками-селекторами"""
+    """Экран аккордов с 4 карточками-селекторами и поиском"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'chords'
         self.all_chords = []
         self.current_chord_module = None
+        self.is_search_mode = False
+        self.search_results = []
 
         # Текущие значения
         self.current_tonality = "A"
@@ -252,6 +385,7 @@ class ChordsScreen(BaseScreen):
         self.current_mode = "finger"
 
         # UI элементы
+        self.search_bar = None
         self.tonality_card = None
         self.type_card = None
         self.chord_card = None
@@ -269,7 +403,7 @@ class ChordsScreen(BaseScreen):
         self.load_background()
         self.scan_chords()
 
-        logger.info('Экран аккордов создан')
+        logger.info('Экран аккордов создан с поиском')
 
     def load_background(self):
         try:
@@ -354,7 +488,7 @@ class ChordsScreen(BaseScreen):
         griff_container.add_widget(self.chord_renderer)
         content.add_widget(griff_container)
 
-        # ============ ИКОНКИ ДЕЙСТВИЙ (без выделений) ============
+        # ============ ИКОНКИ ДЕЙСТВИЙ ============
         icons_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -388,6 +522,13 @@ class ChordsScreen(BaseScreen):
 
         content.add_widget(icons_row)
 
+        # ============ ПОИСКОВАЯ СТРОКА (перед карточками) ============
+        self.search_bar = SearchBar(
+            on_search=self.do_search,
+            on_clear=self.clear_search
+        )
+        content.add_widget(self.search_bar)
+
         # ============ РЯД 1: ТОН и ТИП ============
         row1 = MDBoxLayout(
             orientation='horizontal',
@@ -397,6 +538,7 @@ class ChordsScreen(BaseScreen):
         )
 
         self.tonality_card = SelectorCard(
+            selector_type='TON',
             title="ТОН",
             value=self.current_tonality,
             on_left=self.prev_tonality,
@@ -405,6 +547,7 @@ class ChordsScreen(BaseScreen):
         )
 
         self.type_card = SelectorCard(
+            selector_type='TIP',
             title="ТИП",
             value=self.current_type,
             on_left=self.prev_type,
@@ -425,6 +568,7 @@ class ChordsScreen(BaseScreen):
         )
 
         self.chord_card = SelectorCard(
+            selector_type='AKKORD',
             title="АККОРД",
             value=self.current_chord_name,
             on_left=self.prev_chord,
@@ -433,6 +577,7 @@ class ChordsScreen(BaseScreen):
         )
 
         self.position_card = SelectorCard(
+            selector_type='POZICIYA',
             title="ПОЗИЦИЯ",
             value=str(self.current_position),
             on_left=self.prev_position,
@@ -460,12 +605,89 @@ class ChordsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
+    def do_search(self, query):
+        """Поиск аккордов по названию"""
+        query_lower = query.lower().strip()
+
+        if len(query_lower) < 2:
+            if self.is_search_mode:
+                self.clear_search()
+            return
+
+        self.is_search_mode = True
+        self.search_results = []
+
+        # Ищем аккорды
+        for chord in self.all_chords:
+            short_name_lower = chord['short_name'].lower()
+            full_name_lower = chord['name'].lower().replace('!', ' ').replace('$', '/')
+
+            # Проверяем основное название и альтернативные
+            if query_lower in short_name_lower or query_lower in full_name_lower:
+                if chord not in self.search_results:
+                    self.search_results.append(chord)
+
+        # Убираем дубликаты по short_name
+        unique_results = []
+        seen_names = set()
+        for chord in self.search_results:
+            if chord['short_name'] not in seen_names:
+                seen_names.add(chord['short_name'])
+                unique_results.append(chord)
+
+        self.search_results = unique_results
+
+        if self.search_results:
+            # Находим первый результат и загружаем его
+            first_result = self.search_results[0]
+            self.current_chord_name = first_result['short_name']
+            self.chord_card.update_value(self.current_chord_name)
+
+            # Собираем варианты для найденного аккорда
+            variants = []
+            for chord in self.all_chords:
+                if chord['short_name'] == self.current_chord_name:
+                    variants.append(chord)
+
+            if variants:
+                variants.sort(key=lambda x: x['variant'])
+                self.current_variants = variants
+                self.current_variant_index = 0
+                self.current_position = 1
+                self.position_card.update_value("1")
+                self.load_current_variant()
+
+            # Показываем сообщение о количестве найденных аккордов
+            notify.info(f"Найдено аккордов: {len(self.search_results)}", duration=1.5)
+        else:
+            # Ничего не найдено
+            self.chord_name_label.text = "❌"
+            self.chord_desc_label.text = f"По запросу '{query}' ничего не найдено"
+            # Очищаем текущие варианты
+            self.current_variants = []
+            self.current_chord_module = None
+            if self.chord_renderer:
+                self.chord_renderer.load_chord(None)
+            self.search_bar.search_field.hint_text = f"'{query}' не найдено"
+            Clock.schedule_once(lambda dt: self._reset_hint(), 2)
+
+    def _reset_hint(self):
+        """Сбрасывает подсказку поиска"""
+        self.search_bar.search_field.hint_text = "Поиск аккордов..."
+
+    def clear_search(self):
+        """Очищает поиск и возвращает к обычному режиму"""
+        self.is_search_mode = False
+        self.search_results = []
+        self.search_bar.search_field.hint_text = "Поиск аккордов..."
+
+        # Возвращаемся к текущим настройкам тональности и типа
+        self.update_available_chords()
+
     def on_sound_press(self, icon_name):
-        """Обработчик нажатия на кнопку звука"""
         notify.info("🔊 Звук аккорда (будет доступно в следующей версии)")
 
     def set_mode(self, icon_name):
-        """Обработчик нажатия на кнопки пальцы/ноты"""
         if icon_name == "fingers_png":
             self.current_mode = "finger"
         elif icon_name == "notes_png":
@@ -476,18 +698,24 @@ class ChordsScreen(BaseScreen):
 
     # ============ МЕТОДЫ ДЛЯ ТОНАЛЬНОСТИ ============
     def prev_tonality(self, instance):
+        if self.is_search_mode:
+            self.clear_search()
         self.current_tonality_index = (self.current_tonality_index - 1) % len(TONALITIES)
         self.current_tonality = TONALITIES[self.current_tonality_index]
         self.tonality_card.update_value(self.current_tonality)
         self.update_available_chords()
 
     def next_tonality(self, instance):
+        if self.is_search_mode:
+            self.clear_search()
         self.current_tonality_index = (self.current_tonality_index + 1) % len(TONALITIES)
         self.current_tonality = TONALITIES[self.current_tonality_index]
         self.tonality_card.update_value(self.current_tonality)
         self.update_available_chords()
 
     def show_tonality_picker(self):
+        if self.is_search_mode:
+            self.clear_search()
         content = MDBoxLayout(
             orientation='vertical',
             spacing=dp(8),
@@ -544,18 +772,24 @@ class ChordsScreen(BaseScreen):
 
     # ============ МЕТОДЫ ДЛЯ ТИПА ============
     def prev_type(self, instance):
+        if self.is_search_mode:
+            self.clear_search()
         self.current_type_index = (self.current_type_index - 1) % len(CHORD_TYPES)
         self.current_type = CHORD_TYPES[self.current_type_index]
         self.type_card.update_value(self.current_type)
         self.update_available_chords()
 
     def next_type(self, instance):
+        if self.is_search_mode:
+            self.clear_search()
         self.current_type_index = (self.current_type_index + 1) % len(CHORD_TYPES)
         self.current_type = CHORD_TYPES[self.current_type_index]
         self.type_card.update_value(self.current_type)
         self.update_available_chords()
 
     def show_type_picker(self):
+        if self.is_search_mode:
+            self.clear_search()
         content = MDBoxLayout(
             orientation='vertical',
             spacing=dp(8),
@@ -611,7 +845,6 @@ class ChordsScreen(BaseScreen):
 
     # ============ МЕТОДЫ ДЛЯ АККОРДА ============
     def _load_variants_for_chord(self, chord_name):
-        """Загружает варианты для указанного аккорда"""
         variants = []
         for chord in self.all_chords:
             if chord['short_name'] == chord_name:
@@ -636,6 +869,8 @@ class ChordsScreen(BaseScreen):
             self.chord_desc_label.text = "Нет вариантов"
 
     def prev_chord(self, instance):
+        if self.is_search_mode:
+            return
         if not self.available_chords:
             return
         self.current_chord_index = (self.current_chord_index - 1) % len(self.available_chords)
@@ -644,6 +879,8 @@ class ChordsScreen(BaseScreen):
         self._load_variants_for_chord(self.current_chord_name)
 
     def next_chord(self, instance):
+        if self.is_search_mode:
+            return
         if not self.available_chords:
             return
         self.current_chord_index = (self.current_chord_index + 1) % len(self.available_chords)
@@ -652,6 +889,8 @@ class ChordsScreen(BaseScreen):
         self._load_variants_for_chord(self.current_chord_name)
 
     def show_chord_picker(self):
+        if self.is_search_mode:
+            return
         if not self.available_chords:
             notify.info("Нет доступных аккордов")
             return
@@ -838,7 +1077,8 @@ class ChordsScreen(BaseScreen):
             print(f"    ❌ Ошибка загрузки модуля {module_name}: {e}")
 
     def update_available_chords(self):
-        """Обновляет список доступных аккордов по текущим ТОН и ТИП"""
+        if self.is_search_mode:
+            return
         filtered = []
         for chord in self.all_chords:
             tonality = self.extract_tonality(chord['name'])
@@ -864,7 +1104,6 @@ class ChordsScreen(BaseScreen):
                 self.current_chord_name = self.available_chords[0]
                 self.chord_card.update_value(self.current_chord_name)
 
-            # Загружаем варианты для текущего аккорда
             chord_data = chords_by_name.get(self.current_chord_name)
             if chord_data:
                 self.load_chord_variants(chord_data)
@@ -891,14 +1130,13 @@ class ChordsScreen(BaseScreen):
         self.position_card.update_value("1")
         self.load_current_variant()
 
-
     def load_current_variant(self):
         if not self.current_variants:
             return
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
 
-        # ============ УМНОЕ ФОРМАТИРОВАНИЕ НАЗВАНИЯ ============
+        # Умное форматирование названия
         chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
         name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
 
@@ -918,30 +1156,25 @@ class ChordsScreen(BaseScreen):
 
         self.chord_name_label.text = display_name
 
-        # ============ УМНОЕ ФОРМАТИРОВАНИЕ ОПИСАНИЯ ============
+        # Умное форматирование описания
         description = variant.get('description', '')
         if description:
-            # Разбиваем на части
             desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
 
-            # Убираем дубликаты
             unique_parts = []
             for part in desc_parts:
                 if part not in unique_parts:
                     unique_parts.append(part)
 
             if len(unique_parts) > 1:
-                # Ищем общую часть для сокращения
                 formatted_desc = self._compact_description(unique_parts)
             else:
                 formatted_desc = unique_parts[0] if unique_parts else ""
 
-            # Убираем основное название из описания если оно там есть
             main_name = name_parts[0] if name_parts else ""
             if main_name and main_name in formatted_desc:
                 formatted_desc = formatted_desc.replace(main_name, '').strip(' |')
 
-            # Очищаем от лишних символов
             formatted_desc = re.sub(r'\s*\|\s*', ' | ', formatted_desc).strip(' |')
             formatted_desc = re.sub(r'\s+', ' ', formatted_desc)
 
@@ -949,55 +1182,41 @@ class ChordsScreen(BaseScreen):
         else:
             self.chord_desc_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
 
-        # Обновляем гриф
         if self.chord_renderer:
             self.chord_renderer.load_chord(self.current_chord_module)
             self.chord_renderer.set_mode(self.current_mode)
 
     def _compact_description(self, parts):
-        """
-        Умное форматирование описания.
-        Ищем самую длинную общую подстроку для сокращения.
-        """
         if len(parts) == 1:
             return parts[0]
 
         def find_longest_common_substring(strings):
-            """Находит самую длинную общую подстроку"""
             if not strings:
                 return ""
-
             shortest = min(strings, key=len)
             longest_common = ""
-
             for i in range(len(shortest)):
                 for j in range(i + 1, len(shortest) + 1):
                     substring = shortest[i:j]
                     if all(substring in s for s in strings):
                         if len(substring) > len(longest_common):
                             longest_common = substring
-
             return longest_common
 
-        # Находим самую длинную общую подстроку
         common_substring = find_longest_common_substring(parts)
 
         if common_substring:
-            # Извлекаем уникальные части
             unique_parts = []
             for part in parts:
-                # Убираем общую подстроку
                 unique = part.replace(common_substring, '').strip()
                 if unique:
                     unique_parts.append(unique)
 
-            # Убираем дубликаты
             unique_parts_unique = []
             for up in unique_parts:
                 if up not in unique_parts_unique:
                     unique_parts_unique.append(up)
 
-            # Первая часть - полная, остальные - только уникальные
             first_part = parts[0]
             other_parts = unique_parts_unique[1:] if len(unique_parts_unique) > 1 else []
 
@@ -1006,11 +1225,9 @@ class ChordsScreen(BaseScreen):
             else:
                 return first_part
         else:
-            # Если нет общей подстроки, просто перечисляем
             return ', '.join(parts)
 
     def load_chord_by_name(self, chord_name):
-        """Загружает аккорд по имени (из поиска)"""
         for chord in self.all_chords:
             if chord['short_name'].lower() == chord_name.lower():
                 tonality = self.extract_tonality(chord['name'])
@@ -1026,4 +1243,4 @@ class ChordsScreen(BaseScreen):
                             self.current_chord_index = self.available_chords.index(chord_name)
                             self.chord_card.update_value(self.current_chord_name)
                             self._load_variants_for_chord(self.current_chord_name)
-                    break
+                break
