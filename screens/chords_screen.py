@@ -891,52 +891,123 @@ class ChordsScreen(BaseScreen):
         self.position_card.update_value("1")
         self.load_current_variant()
 
+
     def load_current_variant(self):
         if not self.current_variants:
             return
         variant = self.current_variants[self.current_variant_index]
         self.current_chord_module = variant['module']
 
-        # Полное название аккорда из METADATA
+        # ============ УМНОЕ ФОРМАТИРОВАНИЕ НАЗВАНИЯ ============
         chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
-        name_parts = chord_name.split('|')
+        name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
 
         if len(name_parts) > 1:
-            # Первое название - основное
-            main_name = name_parts[0].strip()
-            # Остальные названия - дополнительные
-            other_names = [name.strip() for name in name_parts[1:] if name.strip()]
+            main_name = name_parts[0]
+            other_names = []
+            for name in name_parts[1:]:
+                if name != main_name and name not in other_names:
+                    other_names.append(name)
 
-            # Форматируем: основное (доп.1, доп.2, доп.3)
-            display_name = f"{main_name} ({', '.join(other_names)})"
+            if other_names:
+                display_name = f"{main_name} ({', '.join(other_names)})"
+            else:
+                display_name = main_name
         else:
-            display_name = name_parts[0].strip()
+            display_name = name_parts[0] if name_parts else "?"
 
         self.chord_name_label.text = display_name
 
-        # Описание из METADATA
+        # ============ УМНОЕ ФОРМАТИРОВАНИЕ ОПИСАНИЯ ============
         description = variant.get('description', '')
         if description:
-            description = description.replace('!', ' | ').replace('$', '/')
-            # Убираем дублирование основного названия из описания
-            main_name = name_parts[0].strip()
-            if main_name in description:
-                description = description.replace(main_name, '').strip(' |')
-            # Также убираем альтернативные названия
-            for name in other_names:
-                if name in description:
-                    description = description.replace(name, '').strip(' |')
-            # Если после очистки остались символы |, убираем их
-            description = re.sub(r'\s*\|\s*', ' | ', description).strip(' |')
-        else:
-            description = TYPE_DISPLAY.get(self.current_type, self.current_type)
+            # Разбиваем на части
+            desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
 
-        self.chord_desc_label.text = description
+            # Убираем дубликаты
+            unique_parts = []
+            for part in desc_parts:
+                if part not in unique_parts:
+                    unique_parts.append(part)
+
+            if len(unique_parts) > 1:
+                # Ищем общую часть для сокращения
+                formatted_desc = self._compact_description(unique_parts)
+            else:
+                formatted_desc = unique_parts[0] if unique_parts else ""
+
+            # Убираем основное название из описания если оно там есть
+            main_name = name_parts[0] if name_parts else ""
+            if main_name and main_name in formatted_desc:
+                formatted_desc = formatted_desc.replace(main_name, '').strip(' |')
+
+            # Очищаем от лишних символов
+            formatted_desc = re.sub(r'\s*\|\s*', ' | ', formatted_desc).strip(' |')
+            formatted_desc = re.sub(r'\s+', ' ', formatted_desc)
+
+            self.chord_desc_label.text = formatted_desc
+        else:
+            self.chord_desc_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
 
         # Обновляем гриф
         if self.chord_renderer:
             self.chord_renderer.load_chord(self.current_chord_module)
             self.chord_renderer.set_mode(self.current_mode)
+
+    def _compact_description(self, parts):
+        """
+        Умное форматирование описания.
+        Ищем самую длинную общую подстроку для сокращения.
+        """
+        if len(parts) == 1:
+            return parts[0]
+
+        def find_longest_common_substring(strings):
+            """Находит самую длинную общую подстроку"""
+            if not strings:
+                return ""
+
+            shortest = min(strings, key=len)
+            longest_common = ""
+
+            for i in range(len(shortest)):
+                for j in range(i + 1, len(shortest) + 1):
+                    substring = shortest[i:j]
+                    if all(substring in s for s in strings):
+                        if len(substring) > len(longest_common):
+                            longest_common = substring
+
+            return longest_common
+
+        # Находим самую длинную общую подстроку
+        common_substring = find_longest_common_substring(parts)
+
+        if common_substring:
+            # Извлекаем уникальные части
+            unique_parts = []
+            for part in parts:
+                # Убираем общую подстроку
+                unique = part.replace(common_substring, '').strip()
+                if unique:
+                    unique_parts.append(unique)
+
+            # Убираем дубликаты
+            unique_parts_unique = []
+            for up in unique_parts:
+                if up not in unique_parts_unique:
+                    unique_parts_unique.append(up)
+
+            # Первая часть - полная, остальные - только уникальные
+            first_part = parts[0]
+            other_parts = unique_parts_unique[1:] if len(unique_parts_unique) > 1 else []
+
+            if other_parts:
+                return f"{first_part} ({', '.join(other_parts)})"
+            else:
+                return first_part
+        else:
+            # Если нет общей подстроки, просто перечисляем
+            return ', '.join(parts)
 
     def load_chord_by_name(self, chord_name):
         """Загружает аккорд по имени (из поиска)"""
