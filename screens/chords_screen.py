@@ -361,6 +361,8 @@ class ChordActionButton(ButtonBehavior, MDBoxLayout):
 
 
 class ChordsScreen(BaseScreen):
+    TONALITIES = TONALITIES
+    CHORD_TYPES = CHORD_TYPES
     """Экран аккордов с 4 карточками-селекторами и поиском"""
 
     def __init__(self, **kwargs):

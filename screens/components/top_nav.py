@@ -191,7 +191,7 @@ class TopNav(MDCard):
             'search_results': 'Результаты поиска',
             'dictionary': 'Словарь',
             'admin': 'Админ панель',
-            'search': 'Поиск'
+            'search': 'Быстрый поиск'
         }
         return titles.get(screen_name, screen_name.capitalize())
 
