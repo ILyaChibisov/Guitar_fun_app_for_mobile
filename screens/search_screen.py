@@ -23,6 +23,7 @@ from kivymd.uix.dialog import MDDialog
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.system_bars import get_navigation_bar_height
+from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
@@ -39,9 +40,6 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
-
-# Константы для отступов (фиксированные)
-TOP_NAV_HEIGHT = 56  # Высота верхней панели навигации
 
 
 class SearchBar(MDCard):
@@ -249,7 +247,6 @@ class SearchScreen(BaseScreen):
         self.is_loading = False
         self._search_thread = None
         self.is_search_active = False
-        self._top_padding = 0  # Будет вычислено при on_enter
 
         self.init_ui()
         self.load_background()
@@ -290,11 +287,10 @@ class SearchScreen(BaseScreen):
         from kivy.uix.floatlayout import FloatLayout
         root = FloatLayout()
 
-        # Рассчитываем отступ сверху (под верхнюю панель навигации)
-        # На Windows высота TopNav = 56dp, статус-бар не учитываем
-        self._top_padding = dp(TOP_NAV_HEIGHT)
+        # Рассчитываем верхний отступ (под верхнюю панель навигации)
+        top_padding = layout_config.get_top_padding()
 
-        # Рассчитываем центр экрана для поисковой строки
+        # Рассчитываем центр экрана для поисковой строки (относительно видимой области)
         search_height = dp(48)
         center_y = (Window.height - search_height) / 2
 
@@ -316,44 +312,48 @@ class SearchScreen(BaseScreen):
         self.search_bar.pos_hint = {'center_x': 0.5}
         self.search_bar.y = center_y
 
-        # Контейнер для результатов (начинается сразу под верхней панелью)
+        # ============ КОНТЕЙНЕР ДЛЯ РЕЗУЛЬТАТОВ (с верхним отступом) ============
+        nav_bar_height = get_navigation_bar_height()
+        bottom_nav_height = dp(60)
+        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+
+        # Верхний отступ для контейнера результатов (под верхнюю панель)
+        results_top_padding = top_padding + dp(8)
+
+        self.results_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[dp(12), results_top_padding, dp(12), total_bottom]
+        )
+
+        # ScrollView для результатов
         self.results_scroll = ScrollView(
-            size_hint=(1, None),
-            height=dp(0),
-            y=self._top_padding,
+            size_hint=(1, 1),
             do_scroll_x=False,
             bar_width=dp(4),
             bar_color=[1, 1, 1, 0.2],
             bar_inactive_color=[1, 1, 1, 0.05]
         )
 
-        self.results_container = MDBoxLayout(
+        self.results_list = MDBoxLayout(
             orientation='vertical',
             spacing=dp(8),
             size_hint_y=None,
-            adaptive_height=True,
-            padding=[dp(12), dp(8), dp(12), dp(0)]
+            adaptive_height=True
         )
-        self.results_container.bind(minimum_height=self.results_container.setter('height'))
-        self.results_scroll.add_widget(self.results_container)
+        self.results_list.bind(minimum_height=self.results_list.setter('height'))
+        self.results_scroll.add_widget(self.results_list)
+        self.results_container.add_widget(self.results_scroll)
 
         # Добавляем виджеты
         root.add_widget(self.title_label)
         root.add_widget(self.search_bar)
-        root.add_widget(self.results_scroll)
+        root.add_widget(self.results_container)
+
+        # Изначально скрываем контейнер результатов
+        self.results_container.opacity = 0
 
         self.add_widget(root)
-
-    def _update_results_height(self):
-        """Обновляет высоту контейнера результатов"""
-        from kivy.core.window import Window
-
-        # Высота от верхней панели до нижней навигации
-        nav_bar_height = get_navigation_bar_height()
-        bottom_nav_height = dp(60)
-        # Доступная высота
-        available_height = Window.height - self._top_padding - bottom_nav_height - nav_bar_height - dp(8)
-        return max(available_height, dp(200))  # Минимум 200dp
 
     def perform_search(self, query):
         """Выполняет поиск"""
@@ -372,12 +372,11 @@ class SearchScreen(BaseScreen):
         self.is_search_active = True
 
         # Показываем контейнер результатов
-        available_height = self._update_results_height()
-        self.results_scroll.height = available_height
-        self.results_scroll.y = self._top_padding
+        anim_results = Animation(opacity=1, duration=0.3)
+        anim_results.start(self.results_container)
 
         # Очищаем предыдущие результаты
-        self.results_container.clear_widgets()
+        self.results_list.clear_widgets()
 
         # Показываем индикатор загрузки
         loading_label = MDLabel(
@@ -389,7 +388,7 @@ class SearchScreen(BaseScreen):
             size_hint_y=None,
             height=dp(40)
         )
-        self.results_container.add_widget(loading_label)
+        self.results_list.add_widget(loading_label)
 
         # Запускаем поиск в потоке
         if self._search_thread and self._search_thread.is_alive():
@@ -484,7 +483,7 @@ class SearchScreen(BaseScreen):
 
     def _on_search_complete(self, query, chord_results, song_results):
         """Обработчик завершения поиска"""
-        self.results_container.clear_widgets()
+        self.results_list.clear_widgets()
 
         if not chord_results and not song_results:
             no_results = MDLabel(
@@ -496,7 +495,7 @@ class SearchScreen(BaseScreen):
                 size_hint_y=None,
                 height=dp(60)
             )
-            self.results_container.add_widget(no_results)
+            self.results_list.add_widget(no_results)
             return
 
         if chord_results:
@@ -510,7 +509,7 @@ class SearchScreen(BaseScreen):
                 theme_text_color="Custom",
                 text_color=[1, 1, 1, 0.8]
             )
-            self.results_container.add_widget(chords_header)
+            self.results_list.add_widget(chords_header)
 
             for chord in chord_results:
                 tonality = self._extract_tonality(chord['name'])
@@ -521,7 +520,7 @@ class SearchScreen(BaseScreen):
                     chord_name=chord['short_name'],
                     on_click=self.on_result_selected
                 )
-                self.results_container.add_widget(card)
+                self.results_list.add_widget(card)
 
         if song_results:
             songs_header = MDLabel(
@@ -534,7 +533,7 @@ class SearchScreen(BaseScreen):
                 theme_text_color="Custom",
                 text_color=[1, 1, 1, 0.8]
             )
-            self.results_container.add_widget(songs_header)
+            self.results_list.add_widget(songs_header)
 
             for song in song_results[:15]:
                 card = ResultCard(
@@ -544,17 +543,17 @@ class SearchScreen(BaseScreen):
                     song_id=song.get('song_id'),
                     on_click=self.on_result_selected
                 )
-                self.results_container.add_widget(card)
+                self.results_list.add_widget(card)
 
         # Добавляем нижний отступ
         bottom_spacer = Widget(size_hint_y=None, height=dp(20))
-        self.results_container.add_widget(bottom_spacer)
+        self.results_list.add_widget(bottom_spacer)
 
         logger.info(f"Поиск завершён: {len(chord_results)} аккордов, {len(song_results)} песен")
 
     def _on_search_error(self, error_msg):
         """Обработчик ошибки поиска"""
-        self.results_container.clear_widgets()
+        self.results_list.clear_widgets()
         error_label = MDLabel(
             text=f"Ошибка поиска: {error_msg}",
             halign="center",
@@ -564,7 +563,7 @@ class SearchScreen(BaseScreen):
             size_hint_y=None,
             height=dp(60)
         )
-        self.results_container.add_widget(error_label)
+        self.results_list.add_widget(error_label)
 
     def on_result_selected(self, result_type, chord_name, song_id):
         """Обработчик выбора результата"""
@@ -621,16 +620,9 @@ class SearchScreen(BaseScreen):
         """При входе на экран"""
         from kivy.core.window import Window
 
-        # Рассчитываем отступ сверху
-        self._top_padding = dp(TOP_NAV_HEIGHT)
-
         # Рассчитываем центр экрана для поисковой строки
         search_height = dp(48)
         center_y = (Window.height - search_height) / 2
-
-        # Скрываем контейнер результатов
-        self.results_scroll.height = dp(0)
-        self.results_scroll.y = self._top_padding
 
         # Сбрасываем состояние
         self.is_search_active = False
@@ -638,8 +630,11 @@ class SearchScreen(BaseScreen):
         self.title_label.y = center_y + dp(50)
         self.search_bar.opacity = 1
         self.search_bar.y = center_y
-        self.results_container.clear_widgets()
+        self.results_list.clear_widgets()
         self.search_bar.clear()
+
+        # Скрываем контейнер результатов
+        self.results_container.opacity = 0
 
         # Устанавливаем фокус на поле поиска
         Clock.schedule_once(lambda dt: setattr(self.search_bar.search_field, 'focus', True), 0.1)
