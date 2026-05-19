@@ -30,6 +30,7 @@ class TopNav(MDCard):
         self.language_selector = None
         self.current_screen_name = 'home'
         self._is_back_mode = False
+        self._previous_screen = None  # Сохраняем предыдущий экран для корректного возврата
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
@@ -204,12 +205,23 @@ class TopNav(MDCard):
         self.screen_title.text = title
 
     def _on_screen_changed(self, instance, screen_name):
+        """Сохраняем предыдущий экран для корректного возврата"""
+        # Сохраняем предыдущий экран
+        old = self.current_screen_name
         self.current_screen_name = screen_name
-        if screen_name not in ['artists_by_letter', 'artist_songs']:
+        if old and old != screen_name:
+            self._previous_screen = old
+            logger.debug(f"📝 Сохранён предыдущий экран: {self._previous_screen} -> {screen_name}")
+
+        # Обновляем отображение кнопки назад
+        if screen_name not in ['artists_by_letter', 'artist_songs', 'song_detail', 'search_results']:
             self._hide_back_button()
             self.update_title(screen_name)
         else:
             self._show_back_button()
+            # Для artist_songs не меняем заголовок (он устанавливается отдельно)
+            if screen_name != 'artist_songs':
+                self.update_title(screen_name)
 
     def _on_menu_press(self, btn):
         app = MDApp.get_running_app()
@@ -219,8 +231,33 @@ class TopNav(MDCard):
             self.app.open_drawer(btn)
 
     def _on_back_press(self, btn):
-        if self.sm:
-            self.sm.current = 'songs'
+        """Обработчик кнопки назад - возвращается на предыдущий экран"""
+        if not self.sm:
+            return
+
+        current = self.sm.current
+        logger.info(
+            f"🔙 _on_back_press: текущий экран = {current}, предыдущий = {getattr(self, '_previous_screen', None)}")
+
+        # Если есть сохранённый предыдущий экран - используем его
+        if hasattr(self, '_previous_screen') and self._previous_screen:
+            target = self._previous_screen
+            logger.info(f"🔙 Возврат на сохранённый экран: {target}")
+            self.sm.current = target
+            self._previous_screen = None
+        else:
+            # Fallback - правила по умолчанию
+            back_map = {
+                'artists_by_letter': 'songs',
+                'artist_songs': 'artists_by_letter',
+                'song_detail': 'artist_songs',
+                'search_results': 'songs',
+                'profile': 'home',
+                'admin': 'profile',
+            }
+            target = back_map.get(current, 'songs')
+            logger.info(f"🔙 Возврат на {target} (по умолчанию)")
+            self.sm.current = target
 
     def _on_profile_press(self, btn):
         app = MDApp.get_running_app()
@@ -245,10 +282,9 @@ class TopNav(MDCard):
             search_screen = self.sm.get_screen('search')
             search_screen.set_chords_screen(chords_screen)
 
-            # Если мы уже на экране поиска - обновляем его состояние
+            # Если мы уже на экране поиска - обновляем его
             if self.sm.current == 'search':
-                # Перезагружаем экран поиска (очищаем и фокусируем)
-                search_screen.on_enter()
+                search_screen.refresh_search()
             else:
                 self.sm.current = 'search'
 

@@ -1,4 +1,4 @@
-# screens/recycle_artist_card.py
+# screens/recycle_artist_card.py - РАБОЧАЯ ВЕРСИЯ (без изменений)
 """
 Переиспользуемая карточка исполнителя для RecycleView
 """
@@ -10,6 +10,7 @@ from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 from kivy.metrics import dp, sp
 from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
+from kivy.uix.image import Image
 
 # Предзагруженная текстура иконки (ОДНА на все карточки)
 _shared_icon_texture = None
@@ -32,7 +33,7 @@ class RecycleArtistCard(RecycleDataViewBehavior, MDCard):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(64)  # Фиксированная высота - максимальная скорость!
+        self.height = dp(64)
         self.padding = [dp(16), dp(10), dp(12), dp(10)]
         self.spacing = dp(14)
         self.radius = [dp(20), dp(20), dp(20), dp(20)]
@@ -141,12 +142,12 @@ class ArtistRecycleView(RecycleView):
         self.bar_color = [1, 1, 1, 0.2]
         self.bar_width = dp(3)
 
-        # Создаём layout ПРАВИЛЬНО - без использования minimum_height здесь
+        # Создаём layout ПРАВИЛЬНО
         self.layout_manager = RecycleBoxLayout(
-            default_size=(None, dp(64)),  # Фиксированная высота!
+            default_size=(None, dp(64)),
             default_size_hint=(1, None),
             size_hint_y=None,
-            height=dp(64) * 10,  # Временная высота, потом пересчитается автоматически
+            height=dp(64) * 10,
             orientation='vertical',
             spacing=dp(8)
         )
@@ -171,7 +172,6 @@ class ArtistRecycleView(RecycleView):
                     'on_click': on_click
                 })
 
-        # Мгновенное обновление через batch assign
         self.data = data
         self.refresh_from_data()
 

@@ -242,6 +242,7 @@ class ArtistsByLetterScreen(BaseScreen):
             self.recycle_view.clear()
         self.loading_label = SimpleLoadingLabel()
         if self._main_layout:
+            # Добавляем после контейнера с карточками
             self._main_layout.add_widget(self.loading_label)
 
     def _hide_loading(self):
@@ -300,8 +301,6 @@ class ArtistsByLetterScreen(BaseScreen):
 
         logger.info(f"Отображено {len(data)} исполнителей для {self.current_letter}")
 
-    # screens/artists_by_letter_screen.py - исправленный метод _update_count_label
-
     def _update_count_label(self, total):
         if total == 0:
             text = "Не найдено исполнителей"
@@ -320,7 +319,6 @@ class ArtistsByLetterScreen(BaseScreen):
 
         if data is None:
             data = {"artists": [], "total": 0}
-
         if not isinstance(data, dict):
             data = {"artists": [], "total": 0}
 
