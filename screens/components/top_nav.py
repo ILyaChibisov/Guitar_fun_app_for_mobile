@@ -244,7 +244,13 @@ class TopNav(MDCard):
             chords_screen = self.sm.get_screen('chords')
             search_screen = self.sm.get_screen('search')
             search_screen.set_chords_screen(chords_screen)
-            self.sm.current = 'search'
+
+            # Если мы уже на экране поиска - обновляем его состояние
+            if self.sm.current == 'search':
+                # Перезагружаем экран поиска (очищаем и фокусируем)
+                search_screen.on_enter()
+            else:
+                self.sm.current = 'search'
 
     def set_app(self, app):
         self.app = app
