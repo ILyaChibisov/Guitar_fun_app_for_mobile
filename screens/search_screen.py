@@ -1,4 +1,4 @@
-# screens/search_screen.py - простая версия с ручным центрированием
+# screens/search_screen.py - финальная версия с правильным расположением
 """
 Экран поиска (аккорды и песни)
 """
@@ -13,7 +13,7 @@ from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 from io import BytesIO
 from threading import Thread
@@ -57,7 +57,7 @@ class SearchBar(MDCard):
         self._search_timer = None
 
         self.orientation = 'horizontal'
-        self.size_hint = (0.85, None)
+        self.size_hint = (0.9, None)
         self.height = dp(48)
         self.radius = [dp(24), dp(24), dp(24), dp(24)]
         self.md_bg_color = [0.96, 0.96, 0.96, 1]
@@ -260,7 +260,7 @@ class ResultCard(MDCard):
 
 
 class SearchScreen(BaseScreen):
-    """Экран поиска - простая версия с ручным центрированием"""
+    """Экран поиска - финальная версия"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -309,23 +309,33 @@ class SearchScreen(BaseScreen):
         logger.info("🎸 Установлен chords_screen")
 
     def init_ui(self):
-        """Инициализирует UI вручную с центрированием"""
+        """Инициализирует UI с правильным расположением элементов"""
 
-        # Основной контейнер
-        main_layout = FloatLayout()
+        # Основной вертикальный контейнер
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+
+        # Верхний отступ (под статус-бар и TopNav)
+        top_padding = layout_config.get_top_padding()
+        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        # Небольшой отступ сверху для эстетики
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
         # Заголовок
         self.title_label = MDLabel(
             text="Что будем искать?",
             font_size=sp(16),
             halign="center",
-            size_hint=(1, None),
+            size_hint_y=None,
             height=dp(40),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.7],
             bold=True
         )
         main_layout.add_widget(self.title_label)
+
+        # Небольшой отступ между заголовком и строкой поиска
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(16)))
 
         # Поисковая строка
         self.search_bar = SearchBar(
@@ -335,17 +345,21 @@ class SearchScreen(BaseScreen):
         )
         main_layout.add_widget(self.search_bar)
 
-        # Контейнер для результатов
+        # Небольшой отступ перед результатами
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
+
+        # Контейнер для результатов с правильными отступами снизу
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
 
-        self.results_container = MDBoxLayout(
+        cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             padding=[dp(12), dp(8), dp(12), total_bottom]
         )
 
+        # ScrollView для результатов
         scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
@@ -363,37 +377,16 @@ class SearchScreen(BaseScreen):
         self.results_list.bind(minimum_height=self.results_list.setter('height'))
 
         scroll.add_widget(self.results_list)
-        self.results_container.add_widget(scroll)
-        self.results_container.opacity = 0
-        main_layout.add_widget(self.results_container)
+        cards_container.add_widget(scroll)
+        main_layout.add_widget(cards_container)
 
         self.add_widget(main_layout)
 
-        # Центрируем элементы
-        Clock.schedule_once(self._center_widgets, 0.1)
-
         logger.info("✅ UI поиска построен")
-
-    def _center_widgets(self, dt):
-        """Центрирует заголовок и строку поиска"""
-        top_padding = layout_config.get_top_padding()
-        nav_bar_height = layout_config.get_bottom_nav_height()
-        bottom_nav_height = dp(60)
-        bottom_padding = bottom_nav_height + nav_bar_height + dp(16)
-
-        available_height = Window.height - top_padding - bottom_padding
-
-        # Заголовок над строкой поиска
-        self.title_label.y = top_padding + (available_height - self.title_label.height - dp(60)) / 2
-
-        # Строка поиска по центру
-        search_height = self.search_bar.height
-        self.search_bar.y = top_padding + (available_height - search_height) / 2
 
     def on_enter(self):
         logger.info("🚪 on_enter вызван")
         self.clear_search()
-        Clock.schedule_once(self._center_widgets, 0.1)
         self.search_bar.focus()
 
     def on_leave(self):
@@ -413,11 +406,9 @@ class SearchScreen(BaseScreen):
             self._search_thread = None
 
         self.title_label.opacity = 1
-        self.results_container.opacity = 0
         self.results_list.clear_widgets()
         self.current_query = ""
         self.search_bar.clear()
-        Clock.schedule_once(self._center_widgets, 0.1)
         logger.info("✅ Поиск очищен")
 
     def perform_search(self, query, auto=False):
@@ -434,7 +425,6 @@ class SearchScreen(BaseScreen):
 
         self._is_searching = True
         self.title_label.opacity = 0
-        self.results_container.opacity = 1
         self.results_list.clear_widgets()
 
         if not auto:
