@@ -1,10 +1,9 @@
 # screens/artist_songs_screen.py
 """
-Экран списка песен выбранного исполнителя - исправленная версия
+Экран списка песен выбранного исполнителя - приведён к единому стандарту
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivy.metrics import dp, sp
@@ -22,7 +21,7 @@ from io import BytesIO
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
-from config.system_bars import get_status_bar_height, get_navigation_bar_height
+from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
@@ -77,8 +76,7 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
         self.height = dp(60)
         self.padding = [dp(12), dp(8), dp(12), dp(8)]
         self.spacing = dp(10)
-        self.radius = [theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL,
-                       theme.CORNER_RADIUS_SMALL, theme.CORNER_RADIUS_SMALL]
+        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
         self.ripple_behavior = True
         self.theme_bg_color = "Custom"
@@ -211,7 +209,7 @@ class SongRecycleView(RecycleView):
 
 
 class ArtistSongsScreen(BaseScreen):
-    """Экран списка песен исполнителя"""
+    """Экран списка песен исполнителя - приведён к единому стандарту"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -224,12 +222,14 @@ class ArtistSongsScreen(BaseScreen):
         self.count_label = None
         self._pending_artist = None
         self.bg_image = None
+        self._main_layout = None
+        self.content_container = None
 
         self.init_ui()
         self.load_background()
 
         Clock.schedule_once(lambda dt: init_shared_song_icon(), 0.1)
-        logger.info('Экран песен исполнителя создан (BaseScreen)')
+        logger.info('Экран песен исполнителя создан')
 
     def load_background(self):
         try:
@@ -258,14 +258,17 @@ class ArtistSongsScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        # Создаём вертикальный контейнер
-        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+        """Инициализирует UI вручную (как в artists_by_letter)"""
 
-        # ============ ВЕРХНИЙ ОТСТУП ============
+        # Основной контейнер
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+        self._main_layout = main_layout
+
+        # Верхний отступ
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # ============ СЧЁТЧИК ПЕСЕН ============
+        # Счётчик песен
         self.count_label = MDLabel(
             text="",
             font_size=sp(13),
@@ -279,7 +282,7 @@ class ArtistSongsScreen(BaseScreen):
         )
         main_layout.add_widget(self.count_label)
 
-        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
+        # Контейнер для карточек с отступами снизу
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
@@ -290,6 +293,7 @@ class ArtistSongsScreen(BaseScreen):
             padding=[dp(12), dp(4), dp(12), total_bottom]
         )
 
+        # RecycleView для песен
         self.recycle_view = SongRecycleView(on_song_click=self.on_song_selected)
         self.recycle_view.bar_width = 0
         self.recycle_view.bar_color = [0, 0, 0, 0]
@@ -299,6 +303,7 @@ class ArtistSongsScreen(BaseScreen):
         main_layout.add_widget(cards_container)
 
         self.add_widget(main_layout)
+        logger.info("UI построен")
 
     def on_enter(self):
         """Вызывается когда экран становится видимым"""
@@ -308,18 +313,12 @@ class ArtistSongsScreen(BaseScreen):
         if app and hasattr(app, 'top_nav'):
             if self.current_artist or self._pending_artist:
                 artist_name = self.current_artist or self._pending_artist
-                # Сохраняем оригинальное название без изменений
-                # Сокращаем только для отображения если слишком длинное
                 if len(artist_name) > 25:
                     display_name = artist_name[:22] + "..."
                 else:
                     display_name = artist_name
-
-                # Обновляем верхнюю панель - используем set_custom_title
                 app.top_nav.set_custom_title(display_name)
-                # Показываем стрелочку назад
                 app.top_nav._show_back_button()
-                # Устанавливаем callback для стрелки
                 app.top_nav.back_btn.on_release = self.go_back
             else:
                 app.top_nav.reset_to_default()
@@ -337,18 +336,12 @@ class ArtistSongsScreen(BaseScreen):
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Сохраняем оригинальное название
-            # Сокращаем только для отображения если слишком длинное
             if len(artist) > 25:
                 display_name = artist[:22] + "..."
             else:
                 display_name = artist
-
-            # Обновляем заголовок через set_custom_title
             app.top_nav.set_custom_title(display_name)
-            # Показываем стрелочку назад
             app.top_nav._show_back_button()
-            # Устанавливаем callback для стрелки
             app.top_nav.back_btn.on_release = self.go_back
 
         if not self.manager or self.manager.current != self.name:
@@ -360,13 +353,12 @@ class ArtistSongsScreen(BaseScreen):
 
     def go_back(self, instance=None):
         """Возврат на экран списка исполнителей (по буквам)"""
+        logger.info("🔙 go_back: возврат на artists_by_letter")
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'artists_by_letter'
-            logger.info(f"Возврат на экран artists_by_letter")
 
     def _do_load_artist(self, artist):
         logger.info(f"_do_load_artist: {artist}")
-
         self.current_artist = artist
 
         if self.recycle_view:
@@ -405,7 +397,17 @@ class ArtistSongsScreen(BaseScreen):
             return
         if self.recycle_view:
             self.recycle_view.clear()
-        self.loading_label = self.show_loading("Загрузка песен...")
+        self.loading_label = MDLabel(
+            text="Загрузка песен...",
+            halign="center",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6],
+            size_hint_y=None,
+            height=dp(60)
+        )
+        if self._main_layout:
+            self._main_layout.add_widget(self.loading_label)
 
     def _hide_loading(self):
         if self.loading_label and self.loading_label.parent:
@@ -415,15 +417,24 @@ class ArtistSongsScreen(BaseScreen):
     def _show_empty(self, text="Нет песен у этого исполнителя"):
         if self.empty_label:
             return
-        self.empty_label = self.show_empty(text)
+        self.empty_label = MDLabel(
+            text=text,
+            halign="center",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4],
+            size_hint_y=None,
+            height=dp(60)
+        )
+        if self._main_layout:
+            self._main_layout.add_widget(self.empty_label)
 
     def _hide_empty(self):
         if self.empty_label and self.empty_label.parent:
             self.empty_label.parent.remove_widget(self.empty_label)
         self.empty_label = None
 
-    def _update_count_label(self, total, artist_name=None):
-        """Обновляет счётчик песен с правильным склонением"""
+    def _update_count_label(self, total):
         if total == 0:
             text = "Не найдено песен"
         elif total == 1:
@@ -467,6 +478,7 @@ class ArtistSongsScreen(BaseScreen):
         if self.recycle_view:
             self.recycle_view.data = data
             self.recycle_view.refresh_from_data()
+            logger.info(f"RecycleView обновлён, данных: {len(self.recycle_view.data)}")
 
         logger.info(f"Отображено {len(data)} песен для {self.current_artist}")
 
