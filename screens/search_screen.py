@@ -1,4 +1,4 @@
-# screens/search_screen.py - финальная версия с правильным расположением
+# screens/search_screen.py - финальная версия со всеми исправлениями
 """
 Экран поиска (аккорды и песни)
 """
@@ -13,7 +13,6 @@ from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 from io import BytesIO
 from threading import Thread
@@ -54,7 +53,6 @@ class SearchBar(MDCard):
         self.on_search = on_search
         self.on_clear = on_clear
         self.on_text_change = on_text_change
-        self._search_timer = None
 
         self.orientation = 'horizontal'
         self.size_hint = (0.9, None)
@@ -71,7 +69,7 @@ class SearchBar(MDCard):
             size_hint_x=1,
             font_size=sp(15),
             height=dp(36),
-            on_text_validate=self._on_search,
+            on_text_validate=self._on_search,  # Enter
             mode="fill"
         )
 
@@ -112,31 +110,14 @@ class SearchBar(MDCard):
 
     def _on_text_change(self, instance, text):
         self.clear_btn.opacity = 1 if text else 0
-
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-
-        if text.strip() and len(text.strip()) >= 1:
-            self._search_timer = Clock.schedule_once(lambda dt: self._auto_search(), 0.3)
-        elif not text.strip() and self.on_clear:
-            self._search_timer = Clock.schedule_once(lambda dt: self.on_clear(), 0.1)
-
         if self.on_text_change:
             self.on_text_change(text)
 
-    def _auto_search(self):
-        if self.on_search:
-            text = self.search_field.text.strip()
-            if text:
-                self.on_search(text, auto=True)
-
     def _on_search(self, instance):
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
         if self.on_search:
             text = self.search_field.text.strip()
             if text:
-                self.on_search(text, auto=False)
+                self.on_search(text)
 
     def _on_clear(self, instance):
         self.search_field.text = ""
@@ -274,6 +255,9 @@ class SearchScreen(BaseScreen):
         self.init_ui()
         self.load_background()
 
+        # Отключаем изменение размера окна при появлении клавиатуры
+        Window.softinput_mode = 'pan'
+
         logger.info('✅ Экран поиска создан')
 
     def load_background(self):
@@ -359,13 +343,13 @@ class SearchScreen(BaseScreen):
             padding=[dp(12), dp(8), dp(12), total_bottom]
         )
 
-        # ScrollView для результатов
+        # ScrollView для результатов (скрываем скроллбар)
         scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
-            bar_width=dp(4),
-            bar_color=[1, 1, 1, 0.2],
-            bar_inactive_color=[1, 1, 1, 0.05]
+            bar_width=0,  # Убираем скроллбар
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0]
         )
 
         self.results_list = MDBoxLayout(
@@ -396,8 +380,8 @@ class SearchScreen(BaseScreen):
             self._search_thread = None
 
     def on_text_changed(self, text):
-        if text and len(text) >= 1 and not self._is_searching:
-            self.perform_search(text, auto=True)
+        """Только отслеживаем изменение текста, поиск только по Enter или кнопке"""
+        pass
 
     def clear_search(self):
         logger.info("🧹 clear_search вызван")
@@ -411,8 +395,9 @@ class SearchScreen(BaseScreen):
         self.search_bar.clear()
         logger.info("✅ Поиск очищен")
 
-    def perform_search(self, query, auto=False):
-        logger.info(f"🔍 perform_search: query='{query}', auto={auto}")
+    def perform_search(self, query):
+        """Выполняет поиск только по Enter или кнопке"""
+        logger.info(f"🔍 perform_search: query='{query}'")
         query = query.strip()
         self.current_query = query
 
@@ -427,17 +412,17 @@ class SearchScreen(BaseScreen):
         self.title_label.opacity = 0
         self.results_list.clear_widgets()
 
-        if not auto:
-            loading_label = MDLabel(
-                text="Поиск...",
-                halign="center",
-                font_size=sp(14),
-                theme_text_color="Custom",
-                text_color=[1, 1, 1, 0.5],
-                size_hint_y=None,
-                height=dp(40)
-            )
-            self.results_list.add_widget(loading_label)
+        # Показываем индикатор загрузки
+        loading_label = MDLabel(
+            text="Поиск...",
+            halign="center",
+            font_size=sp(14),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.5],
+            size_hint_y=None,
+            height=dp(40)
+        )
+        self.results_list.add_widget(loading_label)
 
         if self._search_thread and self._search_thread.is_alive():
             self._search_thread = None
@@ -448,46 +433,85 @@ class SearchScreen(BaseScreen):
     def _search_worker(self, query):
         try:
             chord_results = self._search_chords(query)
-            song_results = []
-            if len(query) >= 2 or not chord_results:
-                song_results = self._search_songs(query)
+            song_results = self._search_songs(query)
             Clock.schedule_once(lambda dt: self._show_results(query, chord_results, song_results), 0)
         except Exception as e:
             logger.error(f"❌ Ошибка: {e}")
             Clock.schedule_once(lambda dt: self._search_error(str(e)), 0)
 
     def _search_chords(self, query):
+        """Поиск аккордов - точное совпадение по названию и описанию"""
         if not self.chords_screen or not hasattr(self.chords_screen, 'all_chords'):
             return []
 
         results = []
         query_lower = query.lower().strip()
 
+        # Очищаем запрос от знаков препинания для поиска по описанию
+        import string
+        query_for_desc = query_lower
+        for punct in string.punctuation:
+            query_for_desc = query_for_desc.replace(punct, ' ')
+        query_for_desc = ' '.join(query_for_desc.split())
+
+        # Карта альтернативных названий (b/#)
         alt_map = {
             'bb': 'a#', 'a#': 'bb',
             'db': 'c#', 'c#': 'db',
             'eb': 'd#', 'd#': 'eb',
             'gb': 'f#', 'f#': 'gb',
-            'ab': 'g#', 'g#': 'ab'
+            'ab': 'g#', 'g#': 'ab',
         }
         alt_query = alt_map.get(query_lower, None)
 
+        # 1. Поиск по названию (точное совпадение)
         for chord in self.chords_screen.all_chords:
             short_name = chord['short_name'].lower()
-            if short_name == query_lower or (alt_query and short_name == alt_query):
+
+            # Точное совпадение
+            if short_name == query_lower:
                 if chord not in results:
                     results.append(chord)
-                    break
+            # Альтернативное совпадение (например, A# и Bb)
+            elif alt_query and short_name == alt_query:
+                if chord not in results:
+                    results.append(chord)
 
-        if not results and len(query) >= 1:
+        # 2. Если не нашли по названию - ищем по описанию (ТОЛЬКО ТОЧНОЕ СОВПАДЕНИЕ)
+        if not results:
             for chord in self.chords_screen.all_chords:
-                short_name = chord['short_name'].lower()
-                if short_name.startswith(query_lower):
-                    if chord not in results:
-                        results.append(chord)
-                        if len(results) >= 10:
-                            break
+                description = chord.get('description', '')
+                if description:
+                    # Очищаем описание от знаков препинания
+                    desc_clean = description.lower()
+                    for punct in string.punctuation:
+                        desc_clean = desc_clean.replace(punct, ' ')
+                    desc_clean = ' '.join(desc_clean.split())
 
+                    # ТОЧНОЕ совпадение всей строки описания
+                    if desc_clean == query_for_desc:
+                        if chord not in results:
+                            results.append(chord)
+                            break  # Нашли точное совпадение - выходим
+
+        # 3. Если всё ещё не нашли - пробуем поиск по началу описания (только для длинных запросов)
+        if not results and len(query_for_desc) >= 4:
+            for chord in self.chords_screen.all_chords:
+                description = chord.get('description', '')
+                if description:
+                    desc_clean = description.lower()
+                    for punct in string.punctuation:
+                        desc_clean = desc_clean.replace(punct, ' ')
+                    desc_clean = ' '.join(desc_clean.split())
+
+                    # Проверяем, начинается ли описание с запроса
+                    if desc_clean.startswith(query_for_desc):
+                        if chord not in results:
+                            results.append(chord)
+                            if len(results) >= 3:
+                                break
+
+        # Убираем дубликаты по short_name
         unique = []
         seen = set()
         for chord in results:
@@ -495,9 +519,11 @@ class SearchScreen(BaseScreen):
                 seen.add(chord['short_name'])
                 unique.append(chord)
 
+        logger.info(f"🔍 Поиск аккорда '{query}': найдено {len(unique)} совпадений")
         return unique[:15]
 
     def _search_songs(self, query):
+        """Поиск песен через API"""
         if len(query) < 2:
             return []
         try:
@@ -534,11 +560,13 @@ class SearchScreen(BaseScreen):
             self.results_list.add_widget(no_results)
             return
 
+        # Аккорды
         if chord_results:
             chords_header = MDLabel(
-                text="Аккорды",
+                text="Найденные аккорды",
                 font_size=sp(14),
                 bold=True,
+                halign="center",
                 size_hint_y=None,
                 height=dp(30),
                 theme_text_color="Custom",
@@ -548,8 +576,10 @@ class SearchScreen(BaseScreen):
 
             for chord in chord_results:
                 tonality = self._extract_tonality(chord['name'])
+                # Для аккорда показываем полное название
+                display_title = chord['short_name']
                 card = ResultCard(
-                    title=chord['short_name'],
+                    title=display_title,
                     result_type="chord",
                     subtitle=f"Тональность: {tonality}",
                     chord_name=chord['short_name'],
@@ -557,11 +587,13 @@ class SearchScreen(BaseScreen):
                 )
                 self.results_list.add_widget(card)
 
+        # Песни
         if song_results:
             songs_header = MDLabel(
-                text="Песни",
+                text="Найденные песни",
                 font_size=sp(14),
                 bold=True,
+                halign="center",
                 size_hint_y=None,
                 height=dp(30),
                 theme_text_color="Custom",
@@ -600,10 +632,14 @@ class SearchScreen(BaseScreen):
             self.select_song(song_id)
 
     def select_chord(self, chord_name):
+        """Выбор аккорда - передаём точное имя аккорда"""
+        logger.info(f"🎸 Выбран аккорд: {chord_name}")
+
         if not self.chords_screen:
             notify.error("Ошибка навигации")
             return
 
+        # Передаём точное имя аккорда (Cm, C, Am и т.д.)
         if hasattr(self.chords_screen, 'select_chord_by_name'):
             self.chords_screen.select_chord_by_name(chord_name)
         elif hasattr(self.chords_screen, 'load_chord_by_name'):
@@ -622,6 +658,6 @@ class SearchScreen(BaseScreen):
     def refresh_search(self):
         logger.info("🔄 refresh_search вызван")
         if self.current_query:
-            self.perform_search(self.current_query, auto=False)
+            self.perform_search(self.current_query)
         else:
             self.clear_search()
