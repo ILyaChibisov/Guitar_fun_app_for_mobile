@@ -15,14 +15,19 @@ class LayoutConfig:
     """Централизованная конфигурация"""
 
     # ========== БАЗОВЫЕ РАЗМЕРЫ (просто числа, НЕ dp!) ==========
-    TOP_NAV_HEIGHT = 64          # ← было 56, стало 64 (увеличено)
+    TOP_NAV_HEIGHT = 64  # высота верхней панели
     BOTTOM_NAV_HEIGHT = 56
-    TOP_NAV_HEIGHT_TABLET = 72   # ← было 64, стало 72
+    TOP_NAV_HEIGHT_TABLET = 72
     BOTTOM_NAV_HEIGHT_TABLET = 64
 
     # Отступы
     SIDE_PADDING = 16
     GAP_BETWEEN_CONTENT_AND_NAV = 8
+
+    # ДОПОЛНИТЕЛЬНЫЙ ОТСТУП СВЕРХУ (после TopNav)
+    # Увеличь это значение, чтобы увеличить отступ на всех экранах
+    EXTRA_TOP_PADDING = 12  # ← добавь эту строку (было 0, стало 12)
+
     CONTENT_TOP_PADDING = 8
     CONTENT_BOTTOM_PADDING = 8
 
@@ -57,6 +62,8 @@ class LayoutConfig:
         total = status_h
         if include_top_nav:
             total += cls.get_top_nav_height()
+        # Добавляем дополнительный отступ сверху
+        total += dp(cls.EXTRA_TOP_PADDING)  # ← добавлено
         return total
 
     @classmethod
@@ -83,6 +90,7 @@ class LayoutConfig:
     @classmethod
     def update_for_platform(cls):
         logger.info(f"LayoutConfig: TOP_NAV_HEIGHT={cls.TOP_NAV_HEIGHT}dp, BOTTOM_NAV_HEIGHT={cls.BOTTOM_NAV_HEIGHT}dp")
+        logger.info(f"LayoutConfig: EXTRA_TOP_PADDING={cls.EXTRA_TOP_PADDING}dp")
 
 
 layout_config = LayoutConfig()

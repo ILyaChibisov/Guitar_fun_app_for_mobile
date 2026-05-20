@@ -20,6 +20,7 @@ logger = screen_logger('BaseScreen')
 class BaseScreen(MDScreen):
     """
     Базовый экран с автоматическими отступами для контента.
+    Все экраны должны наследоваться от этого класса.
     """
 
     def __init__(self, **kwargs):
@@ -126,12 +127,14 @@ class BaseScreen(MDScreen):
             nav_bar_height = layout_config.get_bottom_nav_height()
             extra_bottom = dp(nav_bar_height + 16)
 
+            # Создаём ScrollView со СКРЫТЫМ скроллбаром
             self._scroll_view = ScrollView(
                 size_hint=(1, 1),
                 do_scroll_x=False,
-                bar_width=dp(4),
-                bar_color=[1, 1, 1, 0.2],
-                bar_inactive_color=[1, 1, 1, 0.05]
+                bar_width=0,  # ← скрываем ширину скроллбара
+                bar_color=[0, 0, 0, 0],  # ← прозрачный цвет
+                bar_inactive_color=[0, 0, 0, 0],  # ← прозрачный цвет
+                bar_margin=0  # ← убираем отступ
             )
 
             # Создаём внутренний контейнер для отступов
@@ -143,6 +146,7 @@ class BaseScreen(MDScreen):
             )
 
             if content_widget:
+                # Если content_widget имеет adaptive_height, привязываем его
                 if hasattr(content_widget, 'minimum_height'):
                     content_widget.size_hint_y = None
                     content_widget.bind(minimum_height=content_widget.setter('height'))

@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - увеличенная, адаптивная
+Верхняя панель навигации - заголовок по левому краю
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -21,7 +21,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - увеличенная, адаптивная"""
+    """Верхняя панель навигации - заголовок по левому краю"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -38,12 +38,11 @@ class TopNav(MDCard):
 
         status_h = get_status_bar_height()
 
-        # Увеличенная высота панели - адаптивная под платформу
         if platform == 'android':
-            self.height = dp(88)  # увеличенная высота для Android
-            top_padding = status_h + dp(24)  # увеличенный отступ сверху
+            self.height = dp(88)
+            top_padding = status_h + dp(24)
         else:
-            self.height = dp(64)  # увеличенная высота для Windows
+            self.height = dp(64)
             top_padding = status_h + dp(8)
 
         self.padding = [0, top_padding, 0, 0]
@@ -73,9 +72,8 @@ class TopNav(MDCard):
         # Левая часть
         self.left_container = MDBoxLayout(
             orientation='horizontal',
-            size_hint=(None, None),
+            size_hint=(None, 1),
             width=dp(96),
-            height=dp(48),
             spacing=dp(6),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
@@ -108,26 +106,24 @@ class TopNav(MDCard):
         self.left_container.add_widget(self.menu_btn)
         self.left_container.add_widget(self.back_btn)
 
-        # Центр
+        # Заголовок - просто по левому краю, без лишних контейнеров
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
             font_size=sp(22),
-            halign="center",
+            halign="left",
             valign="middle",
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             bold=True,
             size_hint_x=1,
-            size_hint_y=1,
-            pos_hint={'center_y': 0.5}
+            shorten=False
         )
 
         # Правая часть
         self.right_container = MDBoxLayout(
             orientation='horizontal',
-            size_hint=(None, None),
+            size_hint=(None, 1),
             width=dp(160),
-            height=dp(48),
             spacing=dp(12),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
@@ -196,22 +192,17 @@ class TopNav(MDCard):
         return titles.get(screen_name, screen_name.capitalize())
 
     def update_title(self, screen_name: str):
-        """Обновляет заголовок по имени экрана"""
         self.screen_title.text = self._get_screen_title(screen_name)
 
     def set_custom_title(self, title: str):
-        """Устанавливает произвольный заголовок (например, имя артиста)"""
         self.screen_title.text = title
 
     def _on_screen_changed(self, instance, screen_name):
-        """Сохраняем предыдущий экран для корректного возврата"""
         old = self.current_screen_name
         self.current_screen_name = screen_name
         if old and old != screen_name:
             self._previous_screen = old
-            logger.debug(f"📝 Сохранён предыдущий экран: {self._previous_screen} -> {screen_name}")
 
-        # Обновляем отображение кнопки назад
         if screen_name not in ['artists_by_letter', 'artist_songs', 'song_detail', 'search_results']:
             self._hide_back_button()
             self.update_title(screen_name)
@@ -228,22 +219,16 @@ class TopNav(MDCard):
             self.app.open_drawer(btn)
 
     def _on_back_press(self, btn):
-        """Обработчик кнопки назад - возвращается на предыдущий экран"""
         if not self.sm:
             return
 
         current = self.sm.current
-        logger.info(
-            f"🔙 _on_back_press: текущий экран = {current}, предыдущий = {getattr(self, '_previous_screen', None)}")
 
-        # Если есть сохранённый предыдущий экран - используем его
         if hasattr(self, '_previous_screen') and self._previous_screen:
             target = self._previous_screen
-            logger.info(f"🔙 Возврат на сохранённый экран: {target}")
             self.sm.current = target
             self._previous_screen = None
         else:
-            # Fallback - правила по умолчанию
             back_map = {
                 'artists_by_letter': 'songs',
                 'artist_songs': 'artists_by_letter',
@@ -253,7 +238,6 @@ class TopNav(MDCard):
                 'admin': 'profile',
             }
             target = back_map.get(current, 'songs')
-            logger.info(f"🔙 Возврат на {target} (по умолчанию)")
             self.sm.current = target
 
     def _on_profile_press(self, btn):
@@ -310,12 +294,10 @@ class TopNav(MDCard):
             self.update_title(self.sm.current)
 
     def _show_back_button(self):
-        self._is_back_mode = True
         self.back_btn.opacity = 1
         self.back_btn.disabled = False
 
     def _hide_back_button(self):
-        self._is_back_mode = False
         self.back_btn.opacity = 0
         self.back_btn.disabled = True
 
@@ -328,7 +310,6 @@ class TopNav(MDCard):
         self.profile_btn.disabled = hide
 
     def reload_config(self):
-        """Обновляет конфигурацию при повороте экрана"""
         status_h = get_status_bar_height()
         if platform == 'android':
             self.height = dp(88)
@@ -336,4 +317,3 @@ class TopNav(MDCard):
         else:
             self.height = dp(64)
             self.padding = [0, status_h + dp(8), 0, 0]
-        logger.info(f"TopNav перезагружен: height={self.height}dp, padding={self.padding}")
