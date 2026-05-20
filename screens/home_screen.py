@@ -1,6 +1,6 @@
-# screens/home_screen.py
+# screens/home_screen.py - финальная версия
 """
-Главный экран гитарного приложения - обновлён для использования layout_config
+Главный экран гитарного приложения - ручное построение UI (как в других экранах)
 """
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -34,7 +34,7 @@ def hex_to_rgb(hex_color):
 class AnimatedWelcomeLabel(FloatLayout):
     """Плавающий анимированный текст приветствия"""
 
-    def __init__(self, username, top_nav_height=56, bottom_nav_height=76, on_complete=None, **kwargs):
+    def __init__(self, username, on_complete=None, **kwargs):
         super().__init__(**kwargs)
         self.username = username
         self.on_complete = on_complete
@@ -42,9 +42,10 @@ class AnimatedWelcomeLabel(FloatLayout):
         self.size_hint = (1, 1)
         self.pos = (0, 0)
 
-        # Используем layout_config для отступов
         top_padding = layout_config.get_top_padding() + dp(20)
-        bottom_padding = layout_config.get_bottom_padding() + bottom_nav_height + dp(20)
+        bottom_nav_height = dp(60)
+        nav_bar_height = dp(48)
+        bottom_padding = layout_config.get_bottom_padding() + bottom_nav_height + nav_bar_height + dp(20)
 
         self.container = BoxLayout(
             orientation='vertical',
@@ -105,7 +106,7 @@ class AnimatedWelcomeLabel(FloatLayout):
 class AnimatedLogoLabel(FloatLayout):
     """Плавающий анимированный текст логотипа"""
 
-    def __init__(self, top_nav_height=56, bottom_nav_height=76, on_complete=None, **kwargs):
+    def __init__(self, on_complete=None, **kwargs):
         super().__init__(**kwargs)
         self.on_complete = on_complete
 
@@ -113,7 +114,9 @@ class AnimatedLogoLabel(FloatLayout):
         self.pos = (0, 0)
 
         top_padding = layout_config.get_top_padding() + dp(20)
-        bottom_padding = layout_config.get_bottom_padding() + bottom_nav_height + dp(20)
+        bottom_nav_height = dp(60)
+        nav_bar_height = dp(48)
+        bottom_padding = layout_config.get_bottom_padding() + bottom_nav_height + nav_bar_height + dp(20)
 
         self.container = BoxLayout(
             orientation='vertical',
@@ -572,7 +575,7 @@ class AuthModal(MDCard):
 
 
 class HomeScreen(BaseScreen):
-    """Главный экран приложения"""
+    """Главный экран приложения - ручное построение UI"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -590,7 +593,19 @@ class HomeScreen(BaseScreen):
         logger.info('Главный экран создан')
 
     def init_ui(self):
-        # Создаём заголовок
+        """Инициализирует UI вручную (как в artists_by_letter_screen)"""
+
+        # Основной контейнер
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+
+        # Верхний отступ (под статус-бар и TopNav)
+        top_padding = layout_config.get_top_padding()
+        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        # Дополнительный отступ сверху для эстетики
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(20)))
+
+        # Заголовок
         self.title = MDLabel(
             text="GuitarFuns",
             font_size=dp(42),
@@ -602,72 +617,61 @@ class HomeScreen(BaseScreen):
             height=dp(60),
             opacity=0
         )
+        main_layout.add_widget(self.title)
 
-        # Создаём карусель
+        # Небольшой отступ между заголовком и каруселью
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(20)))
+
+        # Карусель
         self.carousel = MainCarousel(
             screen_manager=self.manager,
             on_item_selected=self._on_carousel_item_selected
         )
         self.carousel.opacity = 0
+        main_layout.add_widget(self.carousel)
 
-        # Контейнер для центрирования карусели
-        center_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            spacing=dp(10)
-        )
+        # Добавляем растягивающийся виджет, чтобы прижать контент к верху
+        main_layout.add_widget(Widget(size_hint_y=1))
 
-        center_container.add_widget(self.title)
-        center_container.add_widget(Widget(size_hint_y=1))
-        center_container.add_widget(self.carousel)
-        center_container.add_widget(Widget(size_hint_y=None, height=dp(30)))
-        center_container.add_widget(Widget(size_hint_y=1))
+        self.add_widget(main_layout)
 
-        # Используем BaseScreen
-        self.build_ui(content_widget=center_container)
+        logger.info(f"HomeScreen: top_padding = {top_padding}dp")
 
     def _show_welcome_sequence(self, username):
+        """Показывает анимацию приветствия"""
         if self.welcome_label and self.welcome_label.parent:
             return
         if self.logo_label and self.logo_label.parent:
             return
 
-        app = MDApp.get_running_app()
-        top_nav_height = dp(56)
-        bottom_nav_height = app.bottom_nav.height if hasattr(app, 'bottom_nav') and app.bottom_nav else dp(76)
-
         self.welcome_label = AnimatedWelcomeLabel(
             username,
-            top_nav_height=top_nav_height,
-            bottom_nav_height=bottom_nav_height,
             on_complete=self._on_welcome_closed
         )
         self.add_widget(self.welcome_label)
 
     def _on_welcome_closed(self):
+        """После приветствия показываем логотип"""
         self.welcome_label = None
 
-        app = MDApp.get_running_app()
-        top_nav_height = dp(56)
-        bottom_nav_height = app.bottom_nav.height if hasattr(app, 'bottom_nav') and app.bottom_nav else dp(76)
-
         self.logo_label = AnimatedLogoLabel(
-            top_nav_height=top_nav_height,
-            bottom_nav_height=bottom_nav_height,
             on_complete=self._on_logo_closed
         )
         self.add_widget(self.logo_label)
 
     def _on_logo_closed(self):
+        """После логотипа показываем основной контент"""
         self.logo_label = None
         self._show_main_content()
 
     def _show_main_content(self):
+        """Показывает основной контент с анимацией"""
         anim = Animation(opacity=1, duration=0.4, t='out_quad')
         anim.start(self.title)
         anim.start(self.carousel)
 
     def _check_auth(self, dt):
+        """Проверяет авторизацию"""
         if self.auth_check_done:
             return
         self.auth_check_done = True
@@ -699,6 +703,7 @@ class HomeScreen(BaseScreen):
             Clock.schedule_once(lambda x: app.open_profile(), 0.1)
 
     def on_login_success(self):
+        """Обработчик успешного входа"""
         if api.access_token:
             api.get_current_user(
                 on_success=self._on_user_data_loaded,
@@ -712,6 +717,7 @@ class HomeScreen(BaseScreen):
         self._show_welcome_sequence(username)
 
     def _on_carousel_item_selected(self, screen_name):
+        """Обработчик выбора пункта в карусели"""
         if screen_name == 'profile':
             self._open_profile()
         elif hasattr(self, 'manager') and self.manager:
@@ -719,6 +725,7 @@ class HomeScreen(BaseScreen):
             self.manager.current = screen_name
 
     def _open_profile(self):
+        """Открывает профиль"""
         if api.is_authenticated():
             if hasattr(self, 'manager') and self.manager:
                 if 'profile' in self.manager.screen_names:
@@ -731,11 +738,17 @@ class HomeScreen(BaseScreen):
                 app.open_profile()
 
     def on_pre_enter(self):
+        """Перед входом на экран"""
         if self.carousel:
             self.carousel.start_auto_scroll()
         return super().on_pre_enter()
 
+    def on_enter(self):
+        """При входе на экран"""
+        logger.info("Вход в главный экран")
+
     def on_leave(self):
+        """При выходе с экрана"""
         if self.carousel:
             self.carousel.stop_auto_scroll()
         return super().on_leave()

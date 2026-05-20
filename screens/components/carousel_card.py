@@ -1,6 +1,6 @@
 # screens/components/carousel_card.py
 """
-Карточка для карусели главного экрана - полностью прозрачная
+Карточка для карусели главного экрана - увеличенный шрифт подписи
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -19,18 +19,15 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
 
 class CarouselCard(ButtonBehavior, BoxLayout):
-    """Полностью прозрачная карточка для карусели"""
+    """Карточка для карусели с увеличенным шрифтом"""
 
     def __init__(self, icon_asset, title, screen_name, on_click_callback=None, **kwargs):
         super().__init__(**kwargs)
@@ -43,7 +40,7 @@ class CarouselCard(ButtonBehavior, BoxLayout):
         self.size_hint = (None, None)
         self.size = (dp(CarouselConfig.CAROUSEL_WIDTH), dp(CarouselConfig.CAROUSEL_HEIGHT))
         self.padding = [dp(12), dp(12), dp(12), dp(12)]
-        self.spacing = dp(8)
+        self.spacing = dp(4)  # Уменьшен отступ между иконкой и текстом (было 8)
 
         # Делаем фон полностью прозрачным
         self.background_color = [0, 0, 0, 0]
@@ -63,15 +60,15 @@ class CarouselCard(ButtonBehavior, BoxLayout):
             keep_ratio=True
         )
 
-        # Название
+        # Название - увеличенный шрифт, ближе к иконке
         self.title_label = Label(
             text=title,
-            font_size=sp(CarouselConfig.FONT_SIZE),
+            font_size=sp(16),  # Увеличен с 14 до 16
             size_hint=(1, 1 - CarouselConfig.ICON_CONTAINER_HEIGHT),
             color=CarouselConfig.TEXT_COLOR,
             bold=True,
             halign='center',
-            valign='middle'
+            valign='top'  # Выравнивание по верху, чтобы быть ближе к иконке
         )
 
         self.icon_container.add_widget(self.icon_image)
