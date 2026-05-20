@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - увеличенный отступ для Android
+Верхняя панель навигации - увеличенная, адаптивная
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -21,7 +21,7 @@ logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации - увеличенная"""
+    """Верхняя панель навигации - увеличенная, адаптивная"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -30,7 +30,7 @@ class TopNav(MDCard):
         self.language_selector = None
         self.current_screen_name = 'home'
         self._is_back_mode = False
-        self._previous_screen = None  # Сохраняем предыдущий экран для корректного возврата
+        self._previous_screen = None
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
@@ -38,14 +38,13 @@ class TopNav(MDCard):
 
         status_h = get_status_bar_height()
 
-        # УВЕЛИЧИВАЕМ ВСЮ ВЫСОТУ ПАНЕЛИ вместо просто отступа
+        # Увеличенная высота панели - адаптивная под платформу
         if platform == 'android':
-            self.height = dp(80)  # было 56, стало 80
-            # Отступ сверху = статус-бар + 20dp (значительный запас)
-            top_padding = status_h + dp(20)
+            self.height = dp(88)  # увеличенная высота для Android
+            top_padding = status_h + dp(24)  # увеличенный отступ сверху
         else:
-            self.height = dp(56)
-            top_padding = status_h + dp(4)
+            self.height = dp(64)  # увеличенная высота для Windows
+            top_padding = status_h + dp(8)
 
         self.padding = [0, top_padding, 0, 0]
 
@@ -58,16 +57,16 @@ class TopNav(MDCard):
         logger.info("=" * 70)
         logger.info(f"📱 TOP NAV - {platform.upper()}")
         logger.info(f"📱 Статус-бар: {status_h:.1f}dp = {status_h * screen_density:.0f}px")
-        logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp = {top_padding * screen_density:.0f}px")
-        logger.info(f"📱 Высота панели: {self.height}dp = {self.height * screen_density:.0f}px")
+        logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp")
+        logger.info(f"📱 Высота панели: {self.height}dp")
         logger.info("=" * 70)
 
         # Основной контейнер
         self.container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
-            padding=[dp(12), 0, dp(12), 0],
-            spacing=dp(8),
+            padding=[dp(16), 0, dp(16), 0],
+            spacing=dp(12),
             md_bg_color=[0, 0, 0, 0]
         )
 
@@ -75,9 +74,9 @@ class TopNav(MDCard):
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(88),
-            height=dp(44),
-            spacing=dp(4),
+            width=dp(96),
+            height=dp(48),
+            spacing=dp(6),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
@@ -85,7 +84,7 @@ class TopNav(MDCard):
         self.menu_btn = MDIconButton(
             icon="menu",
             size_hint=(None, None),
-            size=(dp(44), dp(44)),
+            size=(dp(48), dp(48)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -96,7 +95,7 @@ class TopNav(MDCard):
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
-            size=(dp(44), dp(44)),
+            size=(dp(48), dp(48)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -112,7 +111,7 @@ class TopNav(MDCard):
         # Центр
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
-            font_size=sp(20),  # увеличен
+            font_size=sp(22),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -127,9 +126,9 @@ class TopNav(MDCard):
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            width=dp(150),
-            height=dp(44),
-            spacing=dp(8),
+            width=dp(160),
+            height=dp(48),
+            spacing=dp(12),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
@@ -137,7 +136,7 @@ class TopNav(MDCard):
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(44), dp(44)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -148,7 +147,7 @@ class TopNav(MDCard):
         self.profile_btn = MDIconButton(
             icon="account-circle",
             size_hint=(None, None),
-            size=(dp(40), dp(40)),
+            size=(dp(44), dp(44)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -206,7 +205,6 @@ class TopNav(MDCard):
 
     def _on_screen_changed(self, instance, screen_name):
         """Сохраняем предыдущий экран для корректного возврата"""
-        # Сохраняем предыдущий экран
         old = self.current_screen_name
         self.current_screen_name = screen_name
         if old and old != screen_name:
@@ -219,7 +217,6 @@ class TopNav(MDCard):
             self.update_title(screen_name)
         else:
             self._show_back_button()
-            # Для artist_songs не меняем заголовок (он устанавливается отдельно)
             if screen_name != 'artist_songs':
                 self.update_title(screen_name)
 
@@ -282,7 +279,6 @@ class TopNav(MDCard):
             search_screen = self.sm.get_screen('search')
             search_screen.set_chords_screen(chords_screen)
 
-            # Если мы уже на экране поиска - обновляем его
             if self.sm.current == 'search':
                 search_screen.refresh_search()
             else:
@@ -332,10 +328,12 @@ class TopNav(MDCard):
         self.profile_btn.disabled = hide
 
     def reload_config(self):
+        """Обновляет конфигурацию при повороте экрана"""
         status_h = get_status_bar_height()
         if platform == 'android':
-            self.height = dp(80)
-            self.padding = [0, status_h + dp(20), 0, 0]
+            self.height = dp(88)
+            self.padding = [0, status_h + dp(24), 0, 0]
         else:
-            self.height = dp(56)
-            self.padding = [0, status_h + dp(4), 0, 0]
+            self.height = dp(64)
+            self.padding = [0, status_h + dp(8), 0, 0]
+        logger.info(f"TopNav перезагружен: height={self.height}dp, padding={self.padding}")

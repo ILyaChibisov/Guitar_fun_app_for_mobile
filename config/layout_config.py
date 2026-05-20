@@ -15,10 +15,10 @@ class LayoutConfig:
     """Централизованная конфигурация"""
 
     # ========== БАЗОВЫЕ РАЗМЕРЫ (просто числа, НЕ dp!) ==========
-    TOP_NAV_HEIGHT = 56  # для телефонов
-    BOTTOM_NAV_HEIGHT = 56  # для телефонов
-    TOP_NAV_HEIGHT_TABLET = 64  # для планшетов
-    BOTTOM_NAV_HEIGHT_TABLET = 64  # для планшетов
+    TOP_NAV_HEIGHT = 64          # ← было 56, стало 64 (увеличено)
+    BOTTOM_NAV_HEIGHT = 56
+    TOP_NAV_HEIGHT_TABLET = 72   # ← было 64, стало 72
+    BOTTOM_NAV_HEIGHT_TABLET = 64
 
     # Отступы
     SIDE_PADDING = 16
@@ -38,17 +38,17 @@ class LayoutConfig:
 
     @classmethod
     def get_top_nav_height(cls):
-        """Возвращает высоту верхней панели (просто число)"""
+        """Возвращает высоту верхней панели в dp"""
         if cls.is_tablet():
-            return cls.TOP_NAV_HEIGHT_TABLET
-        return cls.TOP_NAV_HEIGHT
+            return dp(cls.TOP_NAV_HEIGHT_TABLET)
+        return dp(cls.TOP_NAV_HEIGHT)
 
     @classmethod
     def get_bottom_nav_height(cls):
-        """Возвращает высоту нижней панели (просто число)"""
+        """Возвращает высоту нижней панели в dp"""
         if cls.is_tablet():
-            return cls.BOTTOM_NAV_HEIGHT_TABLET
-        return cls.BOTTOM_NAV_HEIGHT
+            return dp(cls.BOTTOM_NAV_HEIGHT_TABLET)
+        return dp(cls.BOTTOM_NAV_HEIGHT)
 
     @classmethod
     def get_top_padding(cls, include_top_nav=True):
@@ -56,7 +56,7 @@ class LayoutConfig:
         status_h = get_status_bar_height()
         total = status_h
         if include_top_nav:
-            total += dp(cls.get_top_nav_height())
+            total += cls.get_top_nav_height()
         return total
 
     @classmethod
