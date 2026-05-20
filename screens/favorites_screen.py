@@ -1,7 +1,6 @@
 # screens/favorites_screen.py
 """
 Экран избранного - список любимых песен пользователя
-Приведён к единому стандарту
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -64,12 +63,11 @@ def init_shared_song_icon():
 
 
 class FavoriteSongCard(MDCard):
-    """Карточка избранной песни в стиле artist_songs_screen"""
+    """Карточка избранной песни"""
 
     def __init__(self, song, on_click=None, **kwargs):
         super().__init__(**kwargs)
 
-        # Извлекаем данные из песни
         if isinstance(song, dict):
             self.song_id = song.get('id') or song.get('song_id')
             self.song_title = song.get('title', '')
@@ -88,7 +86,6 @@ class FavoriteSongCard(MDCard):
 
         self.on_click_callback = on_click
 
-        # Стилизация как в artist_songs_screen
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(60)
@@ -105,7 +102,6 @@ class FavoriteSongCard(MDCard):
         self._build_ui()
 
     def _build_ui(self):
-        # Иконка песни
         self.icon_image = Image(
             size_hint=(None, None),
             size=(dp(28), dp(28)),
@@ -118,7 +114,6 @@ class FavoriteSongCard(MDCard):
         else:
             self.icon_image.text = "🎵"
 
-        # Текстовая часть
         text_layout = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
@@ -126,7 +121,6 @@ class FavoriteSongCard(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Исполнитель
         self.artist_label = MDLabel(
             text=self.artist,
             font_size=sp(15),
@@ -140,7 +134,6 @@ class FavoriteSongCard(MDCard):
             shorten_from="right"
         )
 
-        # Название песни
         self.title_label = MDLabel(
             text=self.song_title,
             font_size=sp(11),
@@ -156,7 +149,6 @@ class FavoriteSongCard(MDCard):
         text_layout.add_widget(self.artist_label)
         text_layout.add_widget(self.title_label)
 
-        # Стрелка
         arrow = MDLabel(
             text="›",
             font_size=sp(24),
@@ -178,8 +170,67 @@ class FavoriteSongCard(MDCard):
             self.on_click_callback(self.song_id, self.song_title)
 
 
+class AuthMessageCard(MDCard):
+    """Карточка сообщения для неавторизованных пользователей (в стиле аккордов)"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.orientation = 'vertical'
+        self.size_hint = (1, None)
+        self.height = dp(150)
+        self.padding = [dp(20), dp(24), dp(20), dp(24)]
+        self.spacing = dp(12)
+        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.elevation = 0
+        self.ripple_behavior = False
+        self.theme_bg_color = "Custom"
+        self.md_bg_color = [0, 0, 0, 0.08]
+        self.line_color = [1, 1, 1, 0.25]
+        self.line_width = 1
+
+        # Иконка
+        self.icon_label = MDLabel(
+            text="🔒",
+            font_size=sp(48),
+            halign="center",
+            size_hint_y=None,
+            height=dp(60),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7]
+        )
+
+        # Заголовок
+        self.title_label = MDLabel(
+            text="Требуется авторизация",
+            font_size=sp(16),
+            halign="center",
+            size_hint_y=None,
+            height=dp(30),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.9],
+            bold=True
+        )
+
+        # Текст сообщения
+        self.message_label = MDLabel(
+            text="Чтобы увидеть ваши избранные треки,\nнеобходимо войти в аккаунт",
+            font_size=sp(12),
+            halign="center",
+            size_hint_y=None,
+            height=dp(50),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6],
+            line_height=1.4
+        )
+
+        self.add_widget(self.icon_label)
+        self.add_widget(self.title_label)
+        self.add_widget(self.message_label)
+
+
 class FavoritesScreen(BaseScreen):
-    """Экран избранного - приведён к единому стандарту"""
+    """Экран избранного"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -191,7 +242,6 @@ class FavoritesScreen(BaseScreen):
         self.count_label = None
         self._main_layout = None
         self.loading_label = None
-        self.empty_label = None
 
         self.init_ui()
         self.load_background()
@@ -226,7 +276,7 @@ class FavoritesScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        """Инициализирует UI вручную (как в artist_songs_screen)"""
+        """Инициализирует UI вручную"""
 
         # Основной контейнер
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
@@ -236,7 +286,7 @@ class FavoritesScreen(BaseScreen):
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # Счётчик песен
+        # Счётчик песен (будет скрыт для неавторизованных)
         self.count_label = MDLabel(
             text="",
             font_size=sp(13),
@@ -285,11 +335,19 @@ class FavoritesScreen(BaseScreen):
         self.add_widget(main_layout)
         logger.info("UI избранного построен")
 
+    def _show_auth_message(self):
+        """Показывает сообщение о необходимости авторизации"""
+        self.cards_container.clear_widgets()
+        self.count_label.opacity = 0  # Скрываем счётчик
+        auth_card = AuthMessageCard()
+        self.cards_container.add_widget(auth_card)
+
     def _show_loading(self):
         """Показывает состояние загрузки"""
         if self.loading_label:
             return
-        self._clear_state_widgets()
+        self.cards_container.clear_widgets()
+        self.count_label.opacity = 1
         self.loading_label = MDLabel(
             text="Загрузка избранного...",
             halign="center",
@@ -299,34 +357,56 @@ class FavoritesScreen(BaseScreen):
             size_hint_y=None,
             height=dp(60)
         )
-        if self._main_layout:
-            self._main_layout.add_widget(self.loading_label)
+        self.cards_container.add_widget(self.loading_label)
 
-    def _show_empty(self, text="Нет избранных песен"):
-        """Показывает пустое состояние"""
-        if self.empty_label:
-            return
-        self._clear_state_widgets()
-        self.empty_label = MDLabel(
-            text=text,
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.4],
-            size_hint_y=None,
-            height=dp(60)
+    def _show_empty(self):
+        """Показывает пустое состояние (нет избранных, но пользователь авторизован)"""
+        self.cards_container.clear_widgets()
+        self.count_label.opacity = 1
+        self._update_count_label(0)
+
+        empty_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(120),
+            padding=[dp(20), dp(20), dp(20), dp(20)],
+            radius=[theme.CORNER_RADIUS_SMALL] * 4,
+            md_bg_color=[0, 0, 0, 0.08],
+            elevation=0,
+            line_color=[1, 1, 1, 0.25],
+            line_width=1
         )
-        if self._main_layout:
-            self._main_layout.add_widget(self.empty_label)
 
-    def _clear_state_widgets(self):
-        """Очищает временные виджеты (загрузка/пусто)"""
+        icon_label = MDLabel(
+            text="❤️",
+            font_size=sp(48),
+            halign="center",
+            size_hint_y=None,
+            height=dp(60),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7]
+        )
+
+        text_label = MDLabel(
+            text="Нет избранных песен",
+            font_size=sp(14),
+            halign="center",
+            size_hint_y=None,
+            height=dp(30),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.8],
+            bold=True
+        )
+
+        empty_card.add_widget(icon_label)
+        empty_card.add_widget(text_label)
+        self.cards_container.add_widget(empty_card)
+
+    def _clear_loading(self):
+        """Убирает индикатор загрузки"""
         if self.loading_label and self.loading_label.parent:
-            self.loading_label.parent.remove_widget(self.loading_label)
+            self.cards_container.remove_widget(self.loading_label)
         self.loading_label = None
-        if self.empty_label and self.empty_label.parent:
-            self.empty_label.parent.remove_widget(self.empty_label)
-        self.empty_label = None
 
     def _update_count_label(self, total):
         """Обновляет счётчик с правильным склонением"""
@@ -345,7 +425,6 @@ class FavoritesScreen(BaseScreen):
     def load_favorites(self):
         """Загружает избранные песни"""
         self._show_loading()
-        self.cards_container.clear_widgets()
         self._update_count_label(0)
 
         api.get_favorites(
@@ -355,7 +434,9 @@ class FavoritesScreen(BaseScreen):
 
     def on_favorites_loaded(self, favorites):
         """Обработчик успешной загрузки избранного"""
-        self._clear_state_widgets()
+        self._clear_loading()
+        self.cards_container.clear_widgets()
+        self.count_label.opacity = 1
 
         formatted_favorites = []
         for item in favorites:
@@ -372,17 +453,14 @@ class FavoritesScreen(BaseScreen):
 
         if not self.favorites:
             self._show_empty()
-            self._update_count_label(0)
             return
 
         self._update_count_label(len(self.favorites))
 
-        # Добавляем карточки
         for song_data in self.favorites:
             card = FavoriteSongCard(song=song_data, on_click=self.on_song_selected)
             self.cards_container.add_widget(card)
 
-        # Добавляем нижний отступ
         bottom_spacer = Widget(size_hint_y=None, height=dp(20))
         self.cards_container.add_widget(bottom_spacer)
 
@@ -390,14 +468,16 @@ class FavoritesScreen(BaseScreen):
 
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
-        self._clear_state_widgets()
+        self._clear_loading()
+        self.cards_container.clear_widgets()
+
         if "401" in str(error) or "Unauthorized" in str(error):
-            notify.warning("Сессия истекла. Пожалуйста, войдите снова.")
-            if hasattr(self, 'manager') and self.manager:
-                self.manager.current = 'home'
+            # Не авторизован - показываем красивое сообщение
+            self._show_auth_message()
+            self.count_label.opacity = 0  # Скрываем счётчик
         else:
             logger.error(f"Ошибка загрузки избранного: {error}")
-            self._show_empty("Ошибка загрузки\nПроверьте интернет")
+            self._show_empty()
             notify.error("Ошибка загрузки избранного")
 
     def on_song_selected(self, song_id, song_title):
@@ -416,15 +496,11 @@ class FavoritesScreen(BaseScreen):
     def on_pre_enter(self):
         """Вызывается перед входом на экран"""
         if not api.is_authenticated():
-            self._show_empty("Требуется авторизация\nВойдите в аккаунт")
-            self._update_count_label(0)
+            self._show_auth_message()
+            self.count_label.opacity = 0  # Скрываем счётчик
             return
 
-        # Обновляем заголовок в верхней панели
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.update_title('favorites')
-
+        self.count_label.opacity = 1
         self.load_favorites()
 
     def on_enter(self):
@@ -436,3 +512,4 @@ class FavoritesScreen(BaseScreen):
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из экрана избранного")
+        self._clear_loading()
