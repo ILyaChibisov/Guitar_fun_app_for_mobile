@@ -1,12 +1,11 @@
 # screens/songs_screen.py
 """
-Экран песен с алфавитной навигацией и современным поиском
+Экран песен с алфавитной навигацией и современным поиском - единые отступы
 """
 import time
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -22,6 +21,7 @@ from io import BytesIO
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
+from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
@@ -30,9 +30,12 @@ logger = screen_logger('Songs')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -98,7 +101,7 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
 
 
 class GoogleSearchBar(MDCard):
-    """Современная поисковая строка - без тени, с placeholder"""
+    """Современная поисковая строка"""
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
@@ -210,11 +213,9 @@ class LanguageSelector(MDBoxLayout):
             {'code': 'en', 'name': 'English'}
         ]
 
-        # СОЗДАЁМ КНОПКУ ВЛЕВО из ассета
         self.prev_btn = self._create_arrow_button('left_arrow_png', '◀')
         self.prev_btn.bind(on_release=self.prev_language)
 
-        # Название языка (крупно и жирно)
         self.language_label = MDLabel(
             text="Русский",
             font_size=sp(18),
@@ -228,11 +229,9 @@ class LanguageSelector(MDBoxLayout):
             pos_hint={'center_y': 0.5}
         )
 
-        # СОЗДАЁМ КНОПКУ ВПРАВО из ассета
         self.next_btn = self._create_arrow_button('right_arrow_png', '▶')
         self.next_btn.bind(on_release=self.next_language)
 
-        # Контейнер для центрирования всей группы
         self.center_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -246,7 +245,6 @@ class LanguageSelector(MDBoxLayout):
         self.center_container.add_widget(self.language_label)
         self.center_container.add_widget(self.next_btn)
 
-        # Добавляем растягивающиеся отступы для центрирования
         self.add_widget(MDBoxLayout(size_hint_x=1))
         self.add_widget(self.center_container)
         self.add_widget(MDBoxLayout(size_hint_x=1))
@@ -254,7 +252,6 @@ class LanguageSelector(MDBoxLayout):
         self._update_display()
 
     def _create_arrow_button(self, icon_name, fallback_text):
-        """Создаёт кнопку со стрелкой из ассета"""
         from kivy.uix.behaviors import ButtonBehavior
         from kivy.uix.image import Image
 
@@ -270,7 +267,6 @@ class LanguageSelector(MDBoxLayout):
             pos_hint={'center_y': 0.5}
         )
 
-        # Загружаем иконку из ассета
         if HAS_ASSETS:
             try:
                 icon_data = load_asset_as_bytes(icon_name)
@@ -281,7 +277,6 @@ class LanguageSelector(MDBoxLayout):
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
 
-        # Заглушка - текстовая стрелка
         btn.text = fallback_text
         return btn
 
@@ -311,28 +306,14 @@ class LanguageSelector(MDBoxLayout):
             self.on_language_change(self.current_language)
 
     def set_language(self, language):
-        import time
-        start = time.time()
-        logger.info(f"    🔤 AlphabetGrid.set_language({language}) - НАЧАЛО")
-
         if self.current_language == language:
-            logger.info(f"    ⏱ Язык не изменился, выход")
             return
-
         self.current_language = language
-        self.current_selected = None
-
-        mid = time.time()
-        logger.info(f"    ⏱ До update_display: {(mid - start) * 1000:.2f}мс")
-
-        self.update_display()
-
-        end = time.time()
-        logger.info(f"    ⏱ AlphabetGrid.set_language() - ВСЕГО: {(end - start) * 1000:.2f}мс")
+        self._redistribute_buttons()
 
 
 class AlphabetGrid(MDCard):
-    """Сетка с буквами - оптимизированная, сохраняет размеры"""
+    """Сетка с буквами - оптимизированная"""
 
     RU_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
                   'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т',
@@ -361,15 +342,10 @@ class AlphabetGrid(MDCard):
         self.rows = []
         self.buttons = []
 
-        # СОЗДАЁМ КНОПКИ ОДИН РАЗ
         self._create_all_buttons()
-
-        # Устанавливаем начальную высоту
         self._update_height()
 
     def _create_all_buttons(self):
-        """Создаёт все возможные кнопки один раз"""
-        # Создаём строки (максимум 5 для русского)
         for i in range(5):
             row = MDBoxLayout(
                 orientation='horizontal',
@@ -380,7 +356,6 @@ class AlphabetGrid(MDCard):
             self.rows.append(row)
             self.add_widget(row)
 
-        # Создаём кнопки для максимального количества (русский - 35 букв)
         max_buttons = len(self.RU_LETTERS)
         for i in range(max_buttons):
             btn = LetterButton(
@@ -390,16 +365,12 @@ class AlphabetGrid(MDCard):
             )
             self.buttons.append(btn)
 
-        # Распределяем кнопки по строкам
         self._redistribute_buttons()
 
     def _redistribute_buttons(self):
-        """Распределяет кнопки по строкам в зависимости от языка"""
-        # Очищаем все строки
         for row in self.rows:
             row.clear_widgets()
 
-        # Определяем параметры для текущего языка
         if self.current_language == 'ru':
             items = self.RU_LETTERS
             rows_count = 5
@@ -407,22 +378,18 @@ class AlphabetGrid(MDCard):
             items = self.EN_LETTERS
             rows_count = 4
 
-        # Показываем/скрываем строки
         for i, row in enumerate(self.rows):
             row.height = dp(34) if i < rows_count else 0
             row.opacity = 1 if i < rows_count else 0
 
-        # Вычисляем количество кнопок в строке
         total_items = len(items)
         items_per_row = (total_items + rows_count - 1) // rows_count
 
-        # Распределяем кнопки
         btn_index = 0
         for row_idx in range(rows_count):
             for col_idx in range(items_per_row):
                 if btn_index < total_items:
                     btn = self.buttons[btn_index]
-                    # Обновляем текст кнопки
                     text = items[btn_index]
                     btn.btn_text = text
                     display_text = '0-9' if text == '09' else text
@@ -432,11 +399,9 @@ class AlphabetGrid(MDCard):
                     self.rows[row_idx].add_widget(btn)
                     btn_index += 1
                 else:
-                    # Добавляем прозрачный spacer для пустых мест
                     spacer = MDBoxLayout(size_hint=(1, 1))
                     self.rows[row_idx].add_widget(spacer)
 
-        # Скрываем оставшиеся неиспользуемые кнопки
         for i in range(btn_index, len(self.buttons)):
             self.buttons[i].opacity = 0
             self.buttons[i].disabled = True
@@ -444,16 +409,12 @@ class AlphabetGrid(MDCard):
         self._update_height()
 
     def _update_height(self):
-        """Обновляет высоту карточки в зависимости от языка"""
         if self.current_language == 'ru':
-            # Русский: 5 строк + отступы
-            self.height = dp(34) * 5 + dp(12)  # 170 + 12 = 182dp
+            self.height = dp(34) * 5 + dp(12)
         else:
-            # Английский: 4 строки + отступы
-            self.height = dp(34) * 4 + dp(12)  # 136 + 12 = 148dp
+            self.height = dp(34) * 4 + dp(12)
 
     def _on_letter_press(self, letter):
-        """Обработчик нажатия на букву"""
         self.current_selected = letter
         for btn in self.buttons:
             btn.set_active(btn.btn_text == letter)
@@ -464,33 +425,22 @@ class AlphabetGrid(MDCard):
                 self.on_letter_press(letter)
 
     def set_language(self, language):
-        """БЫСТРАЯ смена языка - просто перераспределяем кнопки"""
         if self.current_language == language:
             return
-
         self.current_language = language
         self.current_selected = None
-
-        # Очищаем активное состояние у всех кнопок
         for btn in self.buttons:
             btn.set_active(False)
-
-        # Перераспределяем кнопки (без пересоздания!)
         self._redistribute_buttons()
 
     def clear_selection(self):
-        """Снимает выделение со всех кнопок"""
         self.current_selected = None
         for btn in self.buttons:
             btn.set_active(False)
 
-    def on_letter_press_callback(self, letter):
-        """Для совместимости со старым кодом"""
-        self._on_letter_press(letter)
-
 
 class SongsScreen(BaseScreen):
-    """Экран песен с алфавитной навигацией"""
+    """Экран песен с алфавитной навигацией - единые отступы"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -502,21 +452,43 @@ class SongsScreen(BaseScreen):
         logger.info('Экран песен создан')
 
     def init_ui(self):
-        # Создаём контейнер с отступами
-        scroll = MDScrollView(
+        """Инициализирует UI с едиными отступами через layout_config"""
+
+        # Основной контейнер
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+
+        # Верхний отступ (под статус-бар и TopNav)
+        top_padding = layout_config.get_top_padding()
+        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        # Дополнительный отступ сверху для эстетики
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
+
+        # Получаем стандартные боковые отступы из layout_config
+        content_padding = layout_config.get_content_padding()
+        # content_padding = [left, top, right, bottom]
+
+        # Контейнер с едиными отступами
+        content_wrapper = MDBoxLayout(
+            orientation='vertical',
             size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_color=[1, 1, 1, 0.2],
-            bar_width=dp(3)
+            padding=[content_padding[0], 0, content_padding[2], 0]  # left и right из layout_config
         )
 
-        # Основной контентный контейнер
+        from kivy.uix.scrollview import ScrollView
+        scroll = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_width=dp(3),
+            bar_color=[1, 1, 1, 0.2]
+        )
+
+        # Контент
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(20),  # УВЕЛИЧЕНО расстояние
+            spacing=dp(20),
             size_hint_y=None,
-            adaptive_height=True,
-            padding=[0, dp(60), 0, dp(8)]  # УВЕЛИЧЕН отступ сверху до 60dp
+            adaptive_height=True
         )
         content.bind(minimum_height=content.setter('height'))
 
@@ -527,7 +499,7 @@ class SongsScreen(BaseScreen):
         )
         content.add_widget(self.search_bar)
 
-        # Выбор языка (все элементы на одной линии)
+        # Выбор языка
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
@@ -537,31 +509,27 @@ class SongsScreen(BaseScreen):
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
         content.add_widget(self.alphabet_grid)
 
-        scroll.add_widget(content)
+        # Нижний отступ для BottomNav
+        nav_bar_height = get_navigation_bar_height()
+        bottom_nav_height = dp(60)
+        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+        content.add_widget(Widget(size_hint_y=None, height=total_bottom))
 
-        # Используем базовый метод для построения UI с правильными отступами
-        self.build_ui(content_widget=scroll)
+        scroll.add_widget(content)
+        content_wrapper.add_widget(scroll)
+        main_layout.add_widget(content_wrapper)
+
+        self.add_widget(main_layout)
+
+        logger.info(f"SongsScreen: top_padding = {top_padding}dp, side_padding = {content_padding[0]}dp")
 
     def on_language_changed(self, language):
         start = time.time()
         logger.info(f"🔤 Язык изменён на: {language}")
-
-        # Измеряем время set_language
-        mid1 = time.time()
         self.alphabet_grid.set_language(language)
-        mid2 = time.time()
-        logger.info(f"  ⏱ set_language() заняло: {(mid2 - mid1) * 1000:.2f}мс")
-
-        # Измеряем время clear_selection
-        mid3 = time.time()
         self.alphabet_grid.clear_selection()
-        mid4 = time.time()
-        logger.info(f"  ⏱ clear_selection() заняло: {(mid4 - mid3) * 1000:.2f}мс")
-
-        # Устанавливаем current_letter
         self.current_letter = None
-        end = time.time()
-        logger.info(f"  ⏱ ВСЕГО заняло: {(end - start) * 1000:.2f}мс")
+        logger.info(f"  ⏱ ВСЕГО: {(time.time() - start) * 1000:.2f}мс")
 
     def on_letter_press(self, letter):
         logger.info(f"Выбрана буква/группа: {letter}")
@@ -600,3 +568,11 @@ class SongsScreen(BaseScreen):
     def clear_search(self):
         self.alphabet_grid.clear_selection()
         self.current_letter = None
+
+    def on_enter(self):
+        """При входе на экран"""
+        logger.info("Вход в экран песен")
+
+    def on_leave(self):
+        """При выходе с экрана"""
+        logger.info("Выход из экрана песен")

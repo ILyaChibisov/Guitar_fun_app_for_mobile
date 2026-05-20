@@ -205,12 +205,16 @@ class SearchResultsScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
+        # Получаем единые боковые отступы из layout_config
+        content_padding = layout_config.get_content_padding()
+        # content_padding = [left, top, right, bottom]
+
         # Верхняя панель
         top_bar = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
             height=dp(50),
-            padding=[dp(16), dp(8), dp(16), dp(8)],
+            padding=[content_padding[0], dp(8), content_padding[2], dp(8)],  # left и right из layout_config
             spacing=dp(12),
             md_bg_color=[0, 0, 0, 0]
         )
@@ -252,17 +256,19 @@ class SearchResultsScreen(BaseScreen):
         top_bar.add_widget(self.search_icon)
         top_bar.add_widget(self.info_label)
 
-        # Контент
+        # Контент - с едиными отступами
         self.content_container = MDBoxLayout(
             orientation='vertical',
             spacing=dp(8),
             size_hint_y=None,
             adaptive_height=True,
-            padding=[dp(16), dp(8), dp(16), dp(20)]
+            padding=[content_padding[0], dp(8), content_padding[2], content_padding[3]]  # все отступы из layout_config
         )
 
         # Строим UI
         self.build_ui(content_widget=self.content_container, top_widget=top_bar, use_scroll=True)
+
+        logger.info(f"SearchResultsScreen: side_padding = {content_padding[0]}dp")
 
     def show_loading(self):
         if self.is_loading:

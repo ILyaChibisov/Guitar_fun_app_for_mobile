@@ -206,8 +206,19 @@ class SongDetailScreen(BaseScreen):
         top_padding = layout_config.get_top_padding()
         main_container.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # Карточка с текстом
-        card_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[8, 0, 8, 0])
+        # Дополнительный отступ сверху для эстетики
+        main_container.add_widget(Widget(size_hint_y=None, height=dp(8)))
+
+        # Получаем единые боковые отступы из layout_config
+        content_padding = layout_config.get_content_padding()
+        # content_padding = [left, top, right, bottom]
+
+        # Карточка с текстом - с едиными боковыми отступами
+        card_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[content_padding[0], 0, content_padding[2], 0]  # left и right из layout_config
+        )
 
         self.song_card = MDCard(
             orientation='vertical',
@@ -264,17 +275,27 @@ class SongDetailScreen(BaseScreen):
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
 
-        # Компактная панель инструментов
-        self._create_compact_toolbar()
-        main_container.add_widget(self.compact_toolbar)
+        # Компактная панель инструментов - с едиными боковыми отступами
+        toolbar_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(65),
+            padding=[content_padding[0], dp(8), content_padding[2], dp(8)]
+        )
 
-        # Нижний отступ
+        self._create_compact_toolbar()
+        toolbar_container.add_widget(self.compact_toolbar)
+        main_container.add_widget(toolbar_container)
+
+        # Нижний отступ для BottomNav
         bottom_nav_height = dp(60)
         nav_bar_height = get_navigation_bar_height()
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
         main_container.add_widget(Widget(size_hint_y=None, height=total_bottom))
 
         self.add_widget(main_container)
+
+        logger.info(f"SongDetailScreen: top_padding = {top_padding}dp, side_padding = {content_padding[0]}dp")
 
     def _create_top_menu(self):
         """Верхнее меню с кнопкой лупы (как в chords_screen)"""

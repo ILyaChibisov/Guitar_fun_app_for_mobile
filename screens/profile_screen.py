@@ -9,6 +9,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from io import BytesIO
+from kivy.uix.widget import Widget
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -87,13 +88,17 @@ class ProfileScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        # Создаём контент (будет обёрнут в ScrollView)
+        # Получаем единые отступы из layout_config
+        content_padding = layout_config.get_content_padding()
+        # content_padding = [left, top, right, bottom]
+
+        # Создаём контент (будет обёрнут в ScrollView) - с едиными отступами
         content = MDBoxLayout(
             orientation='vertical',
             spacing=dp(16),
             size_hint_y=None,
             adaptive_height=True,
-            padding=[dp(16), dp(8), dp(16), dp(16)]
+            padding=[content_padding[0], content_padding[1], content_padding[2], content_padding[3]]
         )
 
         # ============ АВАТАР И ИМЯ ПОЛЬЗОВАТЕЛЯ ============
@@ -105,7 +110,7 @@ class ProfileScreen(BaseScreen):
             padding=[dp(0), dp(8), dp(0), dp(8)]
         )
 
-        # Аватар - используем иконку из ассета или MDIconButton
+        # Аватар
         self.avatar_icon = MDIconButton(
             icon="account-circle",
             size_hint=(None, None),
@@ -149,10 +154,10 @@ class ProfileScreen(BaseScreen):
         avatar_box.add_widget(self.avatar_icon)
         avatar_box.add_widget(self.username_label)
 
-        # ============ КАРТОЧКА ИНФОРМАЦИИ - АДАПТИВНАЯ ============
+        # ============ КАРТОЧКА ИНФОРМАЦИИ ============
         info_card = AdaptiveMDCard(
             orientation='vertical',
-            size_hint=(1, None),  # ширина на весь экран, высота автоматически
+            size_hint=(1, None),
             padding=dp(16),
             spacing=dp(10),
             elevation=2,
@@ -166,7 +171,7 @@ class ProfileScreen(BaseScreen):
         email_box = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(32),  # уменьшена высота
+            height=dp(32),
             spacing=dp(12)
         )
         email_icon = MDIconButton(
@@ -294,7 +299,6 @@ class ProfileScreen(BaseScreen):
         last_box.add_widget(last_icon)
         last_box.add_widget(self.last_login_label)
 
-        # Добавляем все строки в карточку
         info_card.add_widget(email_box)
         info_card.add_widget(name_box)
         info_card.add_widget(reg_box)
@@ -310,7 +314,6 @@ class ProfileScreen(BaseScreen):
         )
         buttons_container.bind(minimum_height=buttons_container.setter('height'))
 
-        # Кнопка админ-панели
         self.admin_btn = MDRaisedButton(
             text="Админ-панель",
             size_hint=(1, None),
@@ -320,7 +323,6 @@ class ProfileScreen(BaseScreen):
         self.admin_btn.opacity = 0
         self.admin_btn.disabled = True
 
-        # Кнопка смены пароля
         change_password_btn = MDRaisedButton(
             text="Сменить пароль",
             size_hint=(1, None),
@@ -328,7 +330,6 @@ class ProfileScreen(BaseScreen):
             on_release=self.show_change_password_dialog
         )
 
-        # Кнопка выхода
         logout_btn = MDRaisedButton(
             text="Выйти из аккаунта",
             size_hint=(1, None),
@@ -340,17 +341,17 @@ class ProfileScreen(BaseScreen):
         buttons_container.add_widget(change_password_btn)
         buttons_container.add_widget(logout_btn)
 
-        # Добавляем всё в контент
         content.add_widget(avatar_box)
         content.add_widget(info_card)
         content.add_widget(buttons_container)
 
-        # Добавляем небольшой нижний отступ
-        from kivy.uix.widget import Widget
+        # Нижний отступ
         content.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
         # Строим UI с прокруткой
         self.build_ui(content_widget=content, use_scroll=True)
+
+        logger.info(f"ProfileScreen: side_padding = {content_padding[0]}dp")
 
     def on_pre_enter(self):
         """Вызывается перед показом экрана"""
