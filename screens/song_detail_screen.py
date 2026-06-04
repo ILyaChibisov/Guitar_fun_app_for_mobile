@@ -109,23 +109,17 @@ class LoadingSpinner(MDBoxLayout):
         self.progress.value = 0
 
 
-class ChordActionButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка действия с иконкой из ассета (как в chords_screen)"""
+class IconImageButton(ButtonBehavior, Image):
+    """Кнопка с иконкой из PNG ассета"""
 
-    def __init__(self, icon_name, on_press_callback=None, **kwargs):
+    def __init__(self, icon_name, on_press_callback=None, size=dp(18), **kwargs):
         super().__init__(**kwargs)
         self.icon_name = icon_name
         self.on_press_callback = on_press_callback
         self.size_hint = (None, None)
-        self.size = (dp(42), dp(42))
-        self.md_bg_color = [0, 0, 0, 0]
-        self.icon = Image(
-            size_hint=(None, None),
-            size=(dp(24), dp(24)),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            allow_stretch=True
-        )
-        self.add_widget(self.icon)
+        self.size = (size, size)
+        self.allow_stretch = True
+        self.keep_ratio = True
         self.bind(on_release=self._on_press)
         self._load_icon()
 
@@ -135,15 +129,40 @@ class ChordActionButton(ButtonBehavior, MDBoxLayout):
                 icon_data = load_asset_as_bytes(self.icon_name)
                 if icon_data:
                     img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.icon.texture = img.texture
+                    self.texture = img.texture
                     return
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки {self.icon_name}: {e}")
-        self.icon.text = "?"
+        self.opacity = 0
 
     def _on_press(self, instance):
         if self.on_press_callback:
             self.on_press_callback(self.icon_name)
+
+
+class FontSizeButton(MDIconButton):
+    """Кнопка изменения размера шрифта (меняет иконку +/ -)"""
+
+    def __init__(self, on_press_callback=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_press_callback = on_press_callback
+        self.size_hint = (None, None)
+        self.size = (dp(28), dp(28))
+        self.theme_icon_color = "Custom"
+        self.icon_color = [0.46, 0.70, 0.71, 0.9]
+        self.md_bg_color = [0, 0, 0, 0]
+        self.icon = "magnify-plus"
+        self.bind(on_release=self._on_press)
+
+    def set_icon_plus(self):
+        self.icon = "magnify-plus"
+
+    def set_icon_minus(self):
+        self.icon = "magnify-minus"
+
+    def _on_press(self, instance):
+        if self.on_press_callback:
+            self.on_press_callback()
 
 
 class SongDetailScreen(BaseScreen):
@@ -211,13 +230,12 @@ class SongDetailScreen(BaseScreen):
 
         # Получаем единые боковые отступы из layout_config
         content_padding = layout_config.get_content_padding()
-        # content_padding = [left, top, right, bottom]
 
-        # Карточка с текстом - с едиными боковыми отступами
+        # Карточка с текстом - с едиными боковыми отступами, растянутая до низа
         card_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[content_padding[0], 0, content_padding[2], 0]  # left и right из layout_config
+            padding=[content_padding[0], 0, content_padding[2], content_padding[3]]
         )
 
         self.song_card = MDCard(
@@ -232,13 +250,21 @@ class SongDetailScreen(BaseScreen):
             line_width=0.5
         )
 
-        # Верхнее меню
+        # Верхнее меню (шапка с артистом и песней)
         self._create_top_menu()
         self.song_card.add_widget(self.top_menu)
 
         # Разделитель
         top_separator = MDBoxLayout(size_hint=(1, None), height=1, md_bg_color=[0.85, 0.85, 0.85, 0.8])
         self.song_card.add_widget(top_separator)
+
+        # Панель управления (тональность, подборы)
+        self._create_control_panel()
+        self.song_card.add_widget(self.control_panel)
+
+        # Разделитель после панели
+        panel_separator = MDBoxLayout(size_hint=(1, None), height=1, md_bg_color=[0.85, 0.85, 0.85, 0.5])
+        self.song_card.add_widget(panel_separator)
 
         # Контейнер для текста
         self.content_scroll = MDScrollView(
@@ -275,22 +301,10 @@ class SongDetailScreen(BaseScreen):
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
 
-        # Компактная панель инструментов - с едиными боковыми отступами
-        toolbar_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(65),
-            padding=[content_padding[0], dp(8), content_padding[2], dp(8)]
-        )
-
-        self._create_compact_toolbar()
-        toolbar_container.add_widget(self.compact_toolbar)
-        main_container.add_widget(toolbar_container)
-
         # Нижний отступ для BottomNav
         bottom_nav_height = dp(60)
         nav_bar_height = get_navigation_bar_height()
-        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+        total_bottom = bottom_nav_height + nav_bar_height + dp(12)
         main_container.add_widget(Widget(size_hint_y=None, height=total_bottom))
 
         self.add_widget(main_container)
@@ -298,28 +312,28 @@ class SongDetailScreen(BaseScreen):
         logger.info(f"SongDetailScreen: top_padding = {top_padding}dp, side_padding = {content_padding[0]}dp")
 
     def _create_top_menu(self):
-        """Верхнее меню с кнопкой лупы (как в chords_screen)"""
+        """Верхнее меню с информацией об артисте и песне, а также кнопками действий"""
         self.top_menu = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(70),
-            padding=[dp(8), dp(8), dp(6), dp(2)],  # изменено: верхний отступ 10, правый 4
-            spacing=dp(4),
+            height=dp(60),
+            padding=[dp(12), dp(6), dp(12), dp(2)],
+            spacing=dp(2),
             md_bg_color=[1, 1, 1, 0]
         )
 
-        # Первая строка
+        # Первая строка: артист, действия, кнопка изменения шрифта
         row1 = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(32),
-            spacing=dp(8)
+            height=dp(28),
+            spacing=dp(6)
         )
 
         # Иконка артиста
         self.artist_icon = Image(
             size_hint=(None, None),
-            size=(dp(28), dp(28)),
+            size=(dp(24), dp(24)),
             pos_hint={'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
@@ -333,10 +347,10 @@ class SongDetailScreen(BaseScreen):
             except:
                 pass
 
-        # Имя артиста
+        # Имя артиста (растягивается)
         self.artist_label = MDLabel(
             text="",
-            font_size=sp(14),
+            font_size=sp(15),
             size_hint_x=1,
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.85],
@@ -345,30 +359,49 @@ class SongDetailScreen(BaseScreen):
             shorten=False
         )
 
-        # Кнопка лупы
-        self.font_btn = ChordActionButton(
-            icon_name='loupe_png',
-            on_press_callback=self.cycle_font_size
+        # Кнопка "Избранное"
+        self.favorite_btn = MDIconButton(
+            icon="star-outline",
+            size_hint=(None, None),
+            size=(dp(28), dp(28)),
+            theme_icon_color="Custom",
+            icon_color=[0.9, 0.7, 0.2, 0.9],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self.toggle_favorite
         )
-        # Добавляем небольшое смещение для кнопки, если нужно
-        self.font_btn.pos_hint = {'center_y': 0.5, 'right': 1}  # прижать к правому краю
+
+        # Кнопка "Лайк"
+        self.like_btn = MDIconButton(
+            icon="heart-outline",
+            size_hint=(None, None),
+            size=(dp(28), dp(28)),
+            theme_icon_color="Custom",
+            icon_color=[0.8, 0.3, 0.3, 0.9],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self.toggle_like
+        )
+
+        # Кнопка изменения размера шрифта (меняет иконку)
+        self.font_btn = FontSizeButton(on_press_callback=self.cycle_font_size)
 
         row1.add_widget(self.artist_icon)
         row1.add_widget(self.artist_label)
+        row1.add_widget(self.favorite_btn)
+        row1.add_widget(self.like_btn)
         row1.add_widget(self.font_btn)
 
-        # Вторая строка
+        # Вторая строка: название песни
         row2 = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(26),
-            spacing=dp(8)
+            height=dp(22),
+            spacing=dp(6)
         )
 
         # Иконка песни
         self.song_icon = Image(
             size_hint=(None, None),
-            size=(dp(24), dp(24)),
+            size=(dp(20), dp(20)),
             pos_hint={'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
@@ -385,16 +418,17 @@ class SongDetailScreen(BaseScreen):
         # Название песни
         self.song_title_label = MDLabel(
             text="",
-            font_size=sp(11),
+            font_size=sp(12),
             size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 0.8],
+            text_color=[0.4, 0.4, 0.4, 0.9],
             valign="middle",
-            shorten=False
+            shorten=False,
+            bold=True
         )
 
-        # Пустой виджет для баланса
-        spacer = Widget(size_hint_x=None, width=dp(42))
+        # Пустой виджет для баланса (под 3 кнопки)
+        spacer = Widget(size_hint_x=None, width=dp(28 + 28 + 28))
 
         row2.add_widget(self.song_icon)
         row2.add_widget(self.song_title_label)
@@ -403,83 +437,50 @@ class SongDetailScreen(BaseScreen):
         self.top_menu.add_widget(row1)
         self.top_menu.add_widget(row2)
 
-    def cycle_font_size(self, icon_name):
-        """Циклическое изменение размера шрифта при нажатии на лупу"""
-        self.font_size_index = (self.font_size_index + 1) % len(self.font_size_levels)
-        self.current_font_size = self.font_size_levels[self.font_size_index]
-        self.content_label.font_size = self.current_font_size
-        self._update_content_height()
-
-        # Визуальная обратная связь
-        anim = Animation(opacity=0.5, duration=0.05) + Animation(opacity=1, duration=0.1)
-        anim.start(self.font_btn)
-
-        logger.info(f"Размер шрифта: {self.current_font_size}")
-
-    def _create_compact_toolbar(self):
-        """Создаёт компактную панель инструментов"""
-
-        self.compact_toolbar = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(65),
-            radius=[dp(16), dp(16), dp(16), dp(16)],
-            md_bg_color=[0, 0, 0, 0.08],
-            elevation=0,
-            line_color=[1, 1, 1, 0.25],
-            line_width=0.8,
-            padding=[dp(8), dp(6), dp(8), dp(6)],
-            pos_hint={'center_x': 0.5}
-        )
-
-        sections_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(53),
-            spacing=dp(4)
-        )
-
-        # Секция 1: ТОНАЛЬНОСТЬ
-        tonality_section = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=0.33,
-            spacing=dp(2)
-        )
-
-        tonality_title = MDLabel(
-            text="ТОНАЛЬНОСТЬ",
-            font_size=sp(9),
-            halign="center",
-            size_hint_y=None,
-            height=dp(16),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            bold=True
-        )
-
-        tonality_controls = MDBoxLayout(
+    def _create_control_panel(self):
+        """Создаёт панель управления: Тональность и Подбор - всё в одну строку по размеру содержимого"""
+        self.control_panel = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(32),
-            spacing=dp(4),
-            pos_hint={'center_x': 0.5}
+            padding=[dp(8), dp(2), dp(8), dp(2)],
+            spacing=dp(6),
+            md_bg_color=[0.96, 0.96, 0.96, 0.5]
         )
 
-        self.tonality_minus_btn = MDIconButton(
-            icon="minus",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[0.9, 0.7, 0.2, 0.9],
-            md_bg_color=[0, 0, 0, 0.15],
-            on_release=self.decrease_tonality
+        # Блок 1: Тональность (ширина по содержимому)
+        tonality_section = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=None,
+            width=dp(110),  # 58(текст) + 18(минус) + 20(цифра) + 18(плюс) + отступы
+            spacing=dp(2),
+            pos_hint={'center_y': 0.5}
+        )
+
+        tonality_label = MDLabel(
+            text="Тональность",
+            font_size=sp(9),
+            size_hint_x=None,
+            width=dp(58),
+            halign="left",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.4, 0.4, 0.4, 0.8],
+            bold=False
+        )
+
+        # Минус
+        self.tonality_minus_btn = IconImageButton(
+            icon_name='minus_ton_png',
+            on_press_callback=self.decrease_tonality,
+            size=dp(18)
         )
 
         self.tonality_value_label = MDLabel(
             text=str(self.current_tonality),
-            font_size=sp(14),
+            font_size=sp(12),
             size_hint_x=None,
-            width=dp(32),
+            width=dp(20),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -487,65 +488,54 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        self.tonality_plus_btn = MDIconButton(
-            icon="plus",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[0.9, 0.7, 0.2, 0.9],
-            md_bg_color=[0, 0, 0, 0.15],
-            on_release=self.increase_tonality
+        # Плюс
+        self.tonality_plus_btn = IconImageButton(
+            icon_name='plus_ton_png',
+            on_press_callback=self.increase_tonality,
+            size=dp(18)
         )
 
-        tonality_controls.add_widget(self.tonality_minus_btn)
-        tonality_controls.add_widget(self.tonality_value_label)
-        tonality_controls.add_widget(self.tonality_plus_btn)
-        tonality_section.add_widget(tonality_title)
-        tonality_section.add_widget(tonality_controls)
+        tonality_section.add_widget(tonality_label)
+        tonality_section.add_widget(self.tonality_minus_btn)
+        tonality_section.add_widget(self.tonality_value_label)
+        tonality_section.add_widget(self.tonality_plus_btn)
 
-        divider1 = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[1, 1, 1, 0.2])
+        # Разделитель
+        divider = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[0.8, 0.8, 0.8, 0.5])
 
-        # Секция 2: ПОДБОР
+        # Блок 2: Подбор (ширина по содержимому)
         tabs_section = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=0.34,
-            spacing=dp(2)
-        )
-
-        tabs_title = MDLabel(
-            text="ПОДБОР",
-            font_size=sp(9),
-            halign="center",
-            size_hint_y=None,
-            height=dp(16),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            bold=True
-        )
-
-        tabs_controls = MDBoxLayout(
             orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(32),
-            spacing=dp(4),
-            pos_hint={'center_x': 0.5}
+            size_hint_x=None,
+            width=dp(92),  # 38(текст) + 18(стрелка) + 20(цифра) + 18(стрелка) + отступы
+            spacing=dp(2),
+            pos_hint={'center_y': 0.5}
         )
 
-        self.tabs_prev_btn = MDIconButton(
-            icon="chevron-left",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[0.46, 0.70, 0.71, 0.9],
-            md_bg_color=[0, 0, 0, 0.15],
-            on_release=self.prev_tab
+        tabs_label = MDLabel(
+            text="Подбор",
+            font_size=sp(9),
+            size_hint_x=None,
+            width=dp(38),
+            halign="left",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.4, 0.4, 0.4, 0.8],
+            bold=False
+        )
+
+        # Стрелка влево
+        self.tabs_prev_btn = IconImageButton(
+            icon_name='left_arrow_png',
+            on_press_callback=self.prev_tab,
+            size=dp(18)
         )
 
         self.tabs_value_label = MDLabel(
-            text="1/1",
+            text="1",
             font_size=sp(12),
             size_hint_x=None,
-            width=dp(40),
+            width=dp(20),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -553,97 +543,59 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        self.tabs_next_btn = MDIconButton(
-            icon="chevron-right",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[0.46, 0.70, 0.71, 0.9],
-            md_bg_color=[0, 0, 0, 0.15],
-            on_release=self.next_tab
+        # Стрелка вправо
+        self.tabs_next_btn = IconImageButton(
+            icon_name='right_arrow_png',
+            on_press_callback=self.next_tab,
+            size=dp(18)
         )
 
-        tabs_controls.add_widget(self.tabs_prev_btn)
-        tabs_controls.add_widget(self.tabs_value_label)
-        tabs_controls.add_widget(self.tabs_next_btn)
-        tabs_section.add_widget(tabs_title)
-        tabs_section.add_widget(tabs_controls)
+        tabs_section.add_widget(tabs_label)
+        tabs_section.add_widget(self.tabs_prev_btn)
+        tabs_section.add_widget(self.tabs_value_label)
+        tabs_section.add_widget(self.tabs_next_btn)
 
-        divider2 = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[1, 1, 1, 0.2])
+        # Spacer для выравнивания влево
+        spacer = Widget(size_hint_x=1)
 
-        # Секция 3: ДЕЙСТВИЯ
-        actions_section = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=0.33,
-            spacing=dp(2)
-        )
+        self.control_panel.add_widget(tonality_section)
+        self.control_panel.add_widget(divider)
+        self.control_panel.add_widget(tabs_section)
+        self.control_panel.add_widget(spacer)
 
-        actions_title = MDLabel(
-            text="ДЕЙСТВИЯ",
-            font_size=sp(9),
-            halign="center",
-            size_hint_y=None,
-            height=dp(16),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            bold=True
-        )
+    def cycle_font_size(self):
+        """Циклическое изменение размера шрифта при нажатии на кнопку"""
+        self.font_size_index = (self.font_size_index + 1) % len(self.font_size_levels)
+        self.current_font_size = self.font_size_levels[self.font_size_index]
+        self.content_label.font_size = self.current_font_size
+        self._update_content_height()
 
-        actions_controls = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(32),
-            spacing=dp(8),
-            pos_hint={'center_x': 0.5}
-        )
+        # Меняем иконку в зависимости от положения
+        if self.font_size_index == len(self.font_size_levels) - 1:
+            self.font_btn.set_icon_minus()
+        else:
+            self.font_btn.set_icon_plus()
 
-        self.favorite_btn = MDIconButton(
-            icon="star-outline",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[0.9, 0.7, 0.2, 0.9],
-            md_bg_color=[0, 0, 0, 0.15],
-            on_release=self.toggle_favorite
-        )
+        # Визуальная обратная связь
+        anim = Animation(opacity=0.5, duration=0.05) + Animation(opacity=1, duration=0.1)
+        anim.start(self.font_btn)
 
-        self.like_btn = MDIconButton(
-            icon="heart-outline",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[0.8, 0.3, 0.3, 0.9],
-            md_bg_color=[0, 0, 0, 0.15],
-            on_release=self.toggle_like
-        )
-
-        actions_controls.add_widget(self.favorite_btn)
-        actions_controls.add_widget(self.like_btn)
-        actions_section.add_widget(actions_title)
-        actions_section.add_widget(actions_controls)
-
-        sections_row.add_widget(tonality_section)
-        sections_row.add_widget(divider1)
-        sections_row.add_widget(tabs_section)
-        sections_row.add_widget(divider2)
-        sections_row.add_widget(actions_section)
-
-        self.compact_toolbar.add_widget(sections_row)
+        logger.info(f"Размер шрифта: {self.current_font_size}")
 
     def _update_tab_display(self):
         if self.tabs and len(self.tabs) > 1:
-            self.tabs_value_label.text = f"{self.current_tab_index + 1}/{len(self.tabs)}"
+            self.tabs_value_label.text = str(self.current_tab_index + 1)
         elif self.tabs and len(self.tabs) == 1:
-            self.tabs_value_label.text = "1/1"
+            self.tabs_value_label.text = "1"
         else:
             self.tabs_value_label.text = "—"
 
-    def prev_tab(self, instance):
+    def prev_tab(self, *args):
         if self.tabs and len(self.tabs) > 1:
             self.current_tab_index = (self.current_tab_index - 1) % len(self.tabs)
             self._load_current_tab()
 
-    def next_tab(self, instance):
+    def next_tab(self, *args):
         if self.tabs and len(self.tabs) > 1:
             self.current_tab_index = (self.current_tab_index + 1) % len(self.tabs)
             self._load_current_tab()
@@ -667,12 +619,12 @@ class SongDetailScreen(BaseScreen):
         if self.content_label.parent:
             self.content_label.parent.height = text_height + dp(16)
 
-    def increase_tonality(self, instance):
+    def increase_tonality(self, *args):
         if self.current_tonality < 7:
             self.current_tonality += 1
             self.tonality_value_label.text = str(self.current_tonality)
 
-    def decrease_tonality(self, instance):
+    def decrease_tonality(self, *args):
         if self.current_tonality > -7:
             self.current_tonality -= 1
             self.tonality_value_label.text = str(self.current_tonality)
