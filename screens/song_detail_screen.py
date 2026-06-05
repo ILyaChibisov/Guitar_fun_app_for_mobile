@@ -28,6 +28,14 @@ from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 
+# Импорт для подсветки аккордов
+from utils.chord_highlighter import (
+    ChordTextLabel,
+    highlight_chords_in_text,
+    extract_chords_from_text,
+    init_chord_patterns
+)
+
 logger = screen_logger('SongDetail')
 
 try:
@@ -190,6 +198,8 @@ class SongDetailScreen(BaseScreen):
         super().__init__(**kwargs)
         self.name = 'song_detail'
         self.song_id = None
+        self.song_title = None
+        self.song_artist = None
         self.is_liked = False
         self.is_favorite = False
         self.is_loading = False
@@ -295,14 +305,17 @@ class SongDetailScreen(BaseScreen):
             adaptive_height=True
         )
 
-        self.content_label = MDLabel(
+        # Используем ChordTextLabel для кликабельных аккордов
+        self.content_label = ChordTextLabel(
             text="",
             font_size=self.current_font_size,
             size_hint_y=None,
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.85],
             valign="top",
-            line_height=1.4
+            line_height=1.4,
+            on_chord_click=self.on_chord_click,
+            markup=True
         )
         self.content_label.bind(texture_size=self._update_content_height)
         scroll_content.add_widget(self.content_label)
@@ -310,7 +323,7 @@ class SongDetailScreen(BaseScreen):
         self.content_scroll.add_widget(scroll_content)
         self.song_card.add_widget(self.content_scroll)
 
-        # Панель управления (тональность, подборы) - ПОД ТЕКСТОМ (без разделителя)
+        # Панель управления (тональность, подборы) - ПОД ТЕКСТОМ
         self._create_control_panel()
         self.song_card.add_widget(self.control_panel)
 
@@ -473,7 +486,7 @@ class SongDetailScreen(BaseScreen):
             height=dp(40),
             padding=[dp(12), dp(6), dp(12), dp(6)],
             spacing=dp(8),
-            radius=[0, 0, 18, 18],  # Закругление только снизу
+            radius=[0, 0, 18, 18],
             md_bg_color=[0.96, 0.96, 0.96, 0.95],
             elevation=0,
             line_color=[0.8, 0.8, 0.8, 0.2],
@@ -627,15 +640,78 @@ class SongDetailScreen(BaseScreen):
             self.current_tab_index = (self.current_tab_index + 1) % len(self.tabs)
             self._load_current_tab()
 
+    def _extract_and_log_chords(self, text):
+        """Извлекает аккорды из текста и логирует их"""
+        chords = extract_chords_from_text(text)
+
+        if chords:
+            unique_chords = sorted(set(chords))
+            chords_str = ', '.join(unique_chords)
+            artist_part = f"{self.song_artist} - " if self.song_artist else ""
+            name_part = self.song_title if self.song_title else "Песня"
+            logger.info(f"🎸 Найдены аккорды в {artist_part}{name_part}: {chords_str}")
+        else:
+            artist_part = f"{self.song_artist} - " if self.song_artist else ""
+            name_part = self.song_title if self.song_title else "Песня"
+            logger.info(f"🎸 В {artist_part}{name_part} аккордов не найдено")
+
+        return chords
+
     def _load_current_tab(self):
+        """Загружает текущий подбор с подсветкой аккордов"""
         if self.tabs and self.current_tab_index < len(self.tabs):
             tab = self.tabs[self.current_tab_index]
             raw_content = tab.get('content', 'Текст не загружен')
             cleaned = clean_text(raw_content)
-            self.content_label.text = cleaned if cleaned else "Текст не загружен"
+
+            # Логируем найденные аккорды
+            self._extract_and_log_chords(cleaned)
+
+            # Подсвечиваем аккорды
+            if cleaned:
+                highlighted_text = highlight_chords_in_text(cleaned)
+                self.content_label.text = highlighted_text
+                self.content_label.markup = True
+            else:
+                self.content_label.text = "Текст не загружен"
+                self.content_label.markup = False
+
             self._update_content_height()
             self._update_tab_display()
             Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
+
+    def on_chord_click(self, chord_name):
+        """Обработчик клика по аккорду в тексте"""
+        logger.info(f"🎸 НАЖАТ АККОРД: {chord_name}")
+        print(f"🎸 НАЖАТ АККОРД: {chord_name}")  # Отладка в консоль
+
+        # Проверяем, что менеджер существует
+        if not hasattr(self, 'manager') or not self.manager:
+            logger.error("❌ Нет доступа к ScreenManager")
+            print("❌ Нет доступа к ScreenManager")
+            return
+
+        # Проверяем, что экран chords существует
+        if not self.manager.has_screen('chords'):
+            logger.error("❌ Экран chords не найден в ScreenManager")
+            print("❌ Экран chords не найден")
+            notify.warning("Экран аккордов недоступен")
+            return
+
+        # Получаем экран аккордов
+        chords_screen = self.manager.get_screen('chords')
+        print(f"✅ Экран chords получен: {chords_screen}")
+
+        # Вызываем метод выбора аккорда
+        if hasattr(chords_screen, 'select_chord_by_name'):
+            result = chords_screen.select_chord_by_name(chord_name)
+            print(f"✅ select_chord_by_name вернул: {result}")
+            self.manager.current = 'chords'
+            print(f"✅ Переход на экран chords выполнен")
+        else:
+            logger.error("❌ У экрана chords нет метода select_chord_by_name")
+            print("❌ Нет метода select_chord_by_name")
+            notify.warning("Функция временно недоступна")
 
     def _update_content_height(self, *args):
         if not self.content_label.texture:
@@ -687,6 +763,9 @@ class SongDetailScreen(BaseScreen):
         artist = data.get('artist') or 'Неизвестный'
         title = data.get('title') or 'Без названия'
 
+        self.song_artist = artist
+        self.song_title = title
+
         self.tabs = data.get('tabs', [])
         if not self.tabs and data.get('content'):
             self.tabs = [{'content': data.get('content', '')}]
@@ -696,10 +775,28 @@ class SongDetailScreen(BaseScreen):
         self.artist_label.text = artist
         self.song_title_label.text = title
 
+        # Инициализируем паттерны аккордов из экрана chords
+        if self.manager and self.manager.has_screen('chords'):
+            chords_screen = self.manager.get_screen('chords')
+            init_chord_patterns(chords_screen)
+            logger.info("🎸 Паттерны аккордов инициализированы из базы")
+
         if self.tabs:
             raw_content = self.tabs[0].get('content', 'Текст не загружен')
             cleaned = clean_text(raw_content)
-            self.content_label.text = cleaned if cleaned else "Текст не загружен"
+
+            # Логируем найденные аккорды
+            self._extract_and_log_chords(cleaned)
+
+            # Подсвечиваем аккорды
+            if cleaned:
+                highlighted_text = highlight_chords_in_text(cleaned)
+                self.content_label.text = highlighted_text
+                self.content_label.markup = True
+            else:
+                self.content_label.text = "Текст не загружен"
+                self.content_label.markup = False
+
             self._update_content_height()
 
         self.is_liked = data.get('is_liked', False)

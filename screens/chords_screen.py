@@ -1329,28 +1329,44 @@ class ChordsScreen(BaseScreen):
                 break
 
     def select_chord_by_name(self, chord_name):
-        """Выбирает аккорд по точному имени (из поиска) с учётом типа"""
+        """Выбирает аккорд по точному имени или альтернативному названию (из текста песни или поиска)"""
         logger.info(f"🎸 select_chord_by_name: ищем аккорд '{chord_name}'")
 
-        # Ищем аккорд с точным совпадением short_name
+        # Поиск по прямому совпадению short_name
         target_chord = None
         for chord in self.all_chords:
-            # Сравниваем short_name без учёта регистра
-            if chord['short_name'].lower() == chord_name.lower():
+            if chord['short_name'] == chord_name:
                 target_chord = chord
-                logger.info(f"   Найден аккорд: {chord['short_name']} (тип: {chord.get('type', 'Unknown')})")
                 break
 
-        if target_chord:
-            # Извлекаем тональность из полного имени (A, Am, C# и т.д.)
-            full_name = target_chord['name']
-            # Разбираем имя: например "Am" -> тональность "A", тип "Minor"
-            tonality = self._extract_tonality(full_name)
+        # Если не нашли по short_name, ищем по альтернативным названиям в поле name
+        if not target_chord:
+            for chord in self.all_chords:
+                name_variants = chord['name'].split('|')
+                for variant in name_variants:
+                    variant_clean = variant.strip().replace('$', '/')
+                    if variant_clean == chord_name:
+                        target_chord = chord
+                        logger.info(
+                            f"   Найден по альтернативному названию: {chord['short_name']} (ориг: {chord['name']})")
+                        break
+                if target_chord:
+                    break
 
-            # Определяем тип аккорда из METADATA
+        # Если всё ещё не нашли, пробуем поиск с заменой # на b
+        if not target_chord:
+            alt_name = chord_name.replace('#', 'b')
+            if alt_name != chord_name:
+                logger.info(f"   Пробуем альтернативное написание: {alt_name}")
+                return self.select_chord_by_name(alt_name)
+
+        if target_chord:
+            # Получаем тональность и тип
+            full_name = target_chord['name']
+            tonality = self._extract_tonality_from_name(full_name)
             chord_type = target_chord.get('type', 'Major')
 
-            logger.info(f"   Тональность: {tonality}, Тип: {chord_type}")
+            logger.info(f"   Найден: {target_chord['short_name']}, тональность: {tonality}, тип: {chord_type}")
 
             # Устанавливаем тональность
             if tonality in self.TONALITIES:
@@ -1358,38 +1374,46 @@ class ChordsScreen(BaseScreen):
                 self.current_tonality_index = self.TONALITIES.index(tonality)
                 self.tonality_card.update_value(self.current_tonality)
 
-                # Устанавливаем тип аккорда
-                if chord_type in self.CHORD_TYPES:
-                    self.current_type = chord_type
-                    self.current_type_index = self.CHORD_TYPES.index(chord_type)
-                    self.type_card.update_value(self.current_type)
+            # Устанавливаем тип аккорда
+            if chord_type in self.CHORD_TYPES:
+                self.current_type = chord_type
+                self.current_type_index = self.CHORD_TYPES.index(chord_type)
+                self.type_card.update_value(self.current_type)
 
-                # Обновляем список доступных аккордов
-                self.update_available_chords()
+            # Обновляем список доступных аккордов
+            self.update_available_chords()
 
-                # Если аккорд есть в списке, выбираем его
-                if chord_name in self.available_chords:
-                    self.current_chord_name = chord_name
-                    self.current_chord_index = self.available_chords.index(chord_name)
-                    self.chord_card.update_value(self.current_chord_name)
-                    self._load_variants_for_chord(self.current_chord_name)
-                    self.load_current_variant()
-                    logger.info(f"✅ Аккорд {chord_name} успешно загружен")
-                else:
-                    logger.warning(f"⚠️ Аккорд {chord_name} не найден в available_chords")
-                    # Пробуем найти вариант в all_chords
-                    self._find_and_load_chord_variant(target_chord)
+            # Если аккорд есть в списке, выбираем его
+            chord_key = target_chord['short_name']
+            if chord_key in self.available_chords:
+                self.current_chord_name = chord_key
+                self.current_chord_index = self.available_chords.index(chord_key)
+                self.chord_card.update_value(self.current_chord_name)
+                self._load_variants_for_chord(self.current_chord_name)
+                self.load_current_variant()
+                logger.info(f"✅ Аккорд {chord_name} успешно загружен")
+                return True
             else:
-                logger.warning(f"⚠️ Тональность {tonality} не найдена в списке")
+                logger.warning(f"⚠️ Аккорд {chord_key} не найден в available_chords")
+                return self._find_and_load_chord_variant(target_chord)
         else:
             logger.warning(f"⚠️ Аккорд {chord_name} не найден в базе")
             notify.warning(f"Аккорд {chord_name} не найден")
+            return False
+
+    def _extract_tonality_from_name(self, chord_name):
+        """Извлекает тональность из названия аккорда"""
+        if not chord_name:
+            return "A"
+        match = re.match(r'^([A-H][#b]?)', chord_name)
+        if match:
+            return match.group(1)
+        return chord_name[0] if chord_name else "A"
 
     def _find_and_load_chord_variant(self, target_chord):
         """Находит и загружает вариант аккорда напрямую"""
         logger.info(f"🔍 _find_and_load_chord_variant для {target_chord['short_name']}")
 
-        # Собираем все варианты этого аккорда
         variants = []
         for chord in self.all_chords:
             if chord['short_name'] == target_chord['short_name']:
@@ -1405,8 +1429,10 @@ class ChordsScreen(BaseScreen):
             self.chord_card.update_value(self.current_chord_name)
             self.load_current_variant()
             logger.info(f"✅ Загружен вариант аккорда {target_chord['short_name']}")
+            return True
         else:
             logger.error(f"❌ Не найдено вариантов для {target_chord['short_name']}")
+            return False
 
     def _extract_tonality(self, chord_name):
         """Извлекает тональность из названия аккорда"""
