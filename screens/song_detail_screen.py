@@ -109,17 +109,37 @@ class LoadingSpinner(MDBoxLayout):
         self.progress.value = 0
 
 
-class IconImageButton(ButtonBehavior, Image):
-    """Кнопка с иконкой из PNG ассета"""
+class IconImageButton(ButtonBehavior, MDBoxLayout):
+    """Кнопка с иконкой из PNG ассета с возможностью смещения через padding"""
 
-    def __init__(self, icon_name, on_press_callback=None, size=dp(18), **kwargs):
+    def __init__(self, icon_name, on_press_callback=None, size=dp(18), offset_y=0, **kwargs):
         super().__init__(**kwargs)
-        self.icon_name = icon_name
-        self.on_press_callback = on_press_callback
+        self.orientation = 'vertical'
         self.size_hint = (None, None)
         self.size = (size, size)
-        self.allow_stretch = True
-        self.keep_ratio = True
+        self.md_bg_color = [0, 0, 0, 0]
+
+        # Смещение через padding (положительное = смещение вниз)
+        self.offset_y = offset_y
+
+        # Контейнер для иконки с возможностью смещения
+        self.icon_container = MDBoxLayout(
+            size_hint=(1, 1),
+            padding=[0, offset_y, 0, 0]  # [left, top, right, bottom]
+        )
+
+        self.icon = Image(
+            size_hint=(0.8, 0.8),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
+        )
+
+        self.icon_container.add_widget(self.icon)
+        self.add_widget(self.icon_container)
+
+        self.icon_name = icon_name
+        self.on_press_callback = on_press_callback
         self.bind(on_release=self._on_press)
         self._load_icon()
 
@@ -129,11 +149,11 @@ class IconImageButton(ButtonBehavior, Image):
                 icon_data = load_asset_as_bytes(self.icon_name)
                 if icon_data:
                     img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.texture = img.texture
+                    self.icon.texture = img.texture
                     return
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки {self.icon_name}: {e}")
-        self.opacity = 0
+        self.icon.opacity = 0
 
     def _on_press(self, instance):
         if self.on_press_callback:
@@ -243,7 +263,7 @@ class SongDetailScreen(BaseScreen):
             size_hint=(1, 1),
             padding=[0, 0, 0, 0],
             spacing=0,
-            radius=[12, 12, 12, 12],
+            radius=[18, 18, 18, 18],
             md_bg_color=[1, 1, 1, 0.98],
             elevation=2,
             line_color=[0.8, 0.8, 0.8, 0.3],
@@ -258,15 +278,7 @@ class SongDetailScreen(BaseScreen):
         top_separator = MDBoxLayout(size_hint=(1, None), height=1, md_bg_color=[0.85, 0.85, 0.85, 0.8])
         self.song_card.add_widget(top_separator)
 
-        # Панель управления (тональность, подборы)
-        self._create_control_panel()
-        self.song_card.add_widget(self.control_panel)
-
-        # Разделитель после панели
-        panel_separator = MDBoxLayout(size_hint=(1, None), height=1, md_bg_color=[0.85, 0.85, 0.85, 0.5])
-        self.song_card.add_widget(panel_separator)
-
-        # Контейнер для текста
+        # Контейнер для текста (текст песни)
         self.content_scroll = MDScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
@@ -297,6 +309,10 @@ class SongDetailScreen(BaseScreen):
 
         self.content_scroll.add_widget(scroll_content)
         self.song_card.add_widget(self.content_scroll)
+
+        # Панель управления (тональность, подборы) - ПОД ТЕКСТОМ (без разделителя)
+        self._create_control_panel()
+        self.song_card.add_widget(self.control_panel)
 
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
@@ -386,8 +402,20 @@ class SongDetailScreen(BaseScreen):
 
         row1.add_widget(self.artist_icon)
         row1.add_widget(self.artist_label)
+
+        # Отступ перед избранным
+        row1.add_widget(Widget(size_hint_x=None, width=dp(12)))
+
         row1.add_widget(self.favorite_btn)
+
+        # Отступ между избранным и лайком
+        row1.add_widget(Widget(size_hint_x=None, width=dp(4)))
+
         row1.add_widget(self.like_btn)
+
+        # Отступ между лайком и лупой
+        row1.add_widget(Widget(size_hint_x=None, width=dp(8)))
+
         row1.add_widget(self.font_btn)
 
         # Вторая строка: название песни
@@ -438,30 +466,34 @@ class SongDetailScreen(BaseScreen):
         self.top_menu.add_widget(row2)
 
     def _create_control_panel(self):
-        """Создаёт панель управления: Тональность и Подбор - всё в одну строку по размеру содержимого"""
-        self.control_panel = MDBoxLayout(
+        """Создаёт панель управления: Тональность и Подбор - внизу карточки с закруглением"""
+        self.control_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(32),
-            padding=[dp(8), dp(2), dp(8), dp(2)],
-            spacing=dp(6),
-            md_bg_color=[0.96, 0.96, 0.96, 0.5]
+            height=dp(40),
+            padding=[dp(12), dp(6), dp(12), dp(6)],
+            spacing=dp(8),
+            radius=[0, 0, 18, 18],  # Закругление только снизу
+            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            elevation=0,
+            line_color=[0.8, 0.8, 0.8, 0.2],
+            line_width=0.5
         )
 
-        # Блок 1: Тональность (ширина по содержимому)
+        # Блок 1: Тональность
         tonality_section = MDBoxLayout(
             orientation='horizontal',
             size_hint_x=None,
-            width=dp(110),  # 58(текст) + 18(минус) + 20(цифра) + 18(плюс) + отступы
-            spacing=dp(2),
+            width=dp(180),
+            spacing=dp(4),
             pos_hint={'center_y': 0.5}
         )
 
         tonality_label = MDLabel(
             text="Тональность",
-            font_size=sp(9),
+            font_size=sp(10),
             size_hint_x=None,
-            width=dp(58),
+            width=dp(98),
             halign="left",
             valign="middle",
             theme_text_color="Custom",
@@ -473,14 +505,14 @@ class SongDetailScreen(BaseScreen):
         self.tonality_minus_btn = IconImageButton(
             icon_name='minus_ton_png',
             on_press_callback=self.decrease_tonality,
-            size=dp(18)
+            size=dp(20)
         )
 
         self.tonality_value_label = MDLabel(
             text=str(self.current_tonality),
-            font_size=sp(12),
+            font_size=sp(13),
             size_hint_x=None,
-            width=dp(20),
+            width=dp(24),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -492,7 +524,7 @@ class SongDetailScreen(BaseScreen):
         self.tonality_plus_btn = IconImageButton(
             icon_name='plus_ton_png',
             on_press_callback=self.increase_tonality,
-            size=dp(18)
+            size=dp(20)
         )
 
         tonality_section.add_widget(tonality_label)
@@ -503,20 +535,19 @@ class SongDetailScreen(BaseScreen):
         # Разделитель
         divider = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[0.8, 0.8, 0.8, 0.5])
 
-        # Блок 2: Подбор (ширина по содержимому)
+        # Блок 2: Подбор
         tabs_section = MDBoxLayout(
             orientation='horizontal',
-            size_hint_x=None,
-            width=dp(92),  # 38(текст) + 18(стрелка) + 20(цифра) + 18(стрелка) + отступы
-            spacing=dp(2),
+            size_hint_x=1,
+            spacing=dp(4),
             pos_hint={'center_y': 0.5}
         )
 
         tabs_label = MDLabel(
             text="Подбор",
-            font_size=sp(9),
+            font_size=sp(10),
             size_hint_x=None,
-            width=dp(38),
+            width=dp(74),
             halign="left",
             valign="middle",
             theme_text_color="Custom",
@@ -528,14 +559,14 @@ class SongDetailScreen(BaseScreen):
         self.tabs_prev_btn = IconImageButton(
             icon_name='left_arrow_png',
             on_press_callback=self.prev_tab,
-            size=dp(18)
+            size=dp(20)
         )
 
         self.tabs_value_label = MDLabel(
             text="1",
-            font_size=sp(12),
+            font_size=sp(13),
             size_hint_x=None,
-            width=dp(20),
+            width=dp(24),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -547,7 +578,7 @@ class SongDetailScreen(BaseScreen):
         self.tabs_next_btn = IconImageButton(
             icon_name='right_arrow_png',
             on_press_callback=self.next_tab,
-            size=dp(18)
+            size=dp(20)
         )
 
         tabs_section.add_widget(tabs_label)
@@ -555,13 +586,9 @@ class SongDetailScreen(BaseScreen):
         tabs_section.add_widget(self.tabs_value_label)
         tabs_section.add_widget(self.tabs_next_btn)
 
-        # Spacer для выравнивания влево
-        spacer = Widget(size_hint_x=1)
-
         self.control_panel.add_widget(tonality_section)
         self.control_panel.add_widget(divider)
         self.control_panel.add_widget(tabs_section)
-        self.control_panel.add_widget(spacer)
 
     def cycle_font_size(self):
         """Циклическое изменение размера шрифта при нажатии на кнопку"""
