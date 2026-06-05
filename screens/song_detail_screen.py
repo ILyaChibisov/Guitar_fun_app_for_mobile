@@ -27,7 +27,7 @@ from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
-
+from utils.screen_state import screen_state
 # Импорт для подсветки аккордов
 from utils.chord_highlighter import (
     ChordTextLabel,
@@ -682,36 +682,19 @@ class SongDetailScreen(BaseScreen):
 
     def on_chord_click(self, chord_name):
         """Обработчик клика по аккорду в тексте"""
-        logger.info(f"🎸 НАЖАТ АККОРД: {chord_name}")
-        print(f"🎸 НАЖАТ АККОРД: {chord_name}")  # Отладка в консоль
+        logger.info(f"🎸 Нажат аккорд: {chord_name}")
 
-        # Проверяем, что менеджер существует
-        if not hasattr(self, 'manager') or not self.manager:
-            logger.error("❌ Нет доступа к ScreenManager")
-            print("❌ Нет доступа к ScreenManager")
-            return
+        from utils.screen_state import screen_state
 
-        # Проверяем, что экран chords существует
-        if not self.manager.has_screen('chords'):
-            logger.error("❌ Экран chords не найден в ScreenManager")
-            print("❌ Экран chords не найден")
-            notify.warning("Экран аккордов недоступен")
-            return
+        # Сохраняем текущий экран как предыдущий (ВАЖНО: именно name текущего экрана)
+        screen_state.set_previous_screen(self.name)  # self.name = 'song_detail'
+        # Сохраняем нажатый аккорд
+        screen_state.set_pending_chord(chord_name)
 
-        # Получаем экран аккордов
-        chords_screen = self.manager.get_screen('chords')
-        print(f"✅ Экран chords получен: {chords_screen}")
-
-        # Вызываем метод выбора аккорда
-        if hasattr(chords_screen, 'select_chord_by_name'):
-            result = chords_screen.select_chord_by_name(chord_name)
-            print(f"✅ select_chord_by_name вернул: {result}")
-            self.manager.current = 'chords'
-            print(f"✅ Переход на экран chords выполнен")
-        else:
-            logger.error("❌ У экрана chords нет метода select_chord_by_name")
-            print("❌ Нет метода select_chord_by_name")
-            notify.warning("Функция временно недоступна")
+        # Переходим на экран аккордов
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('chords'):
+                self.manager.current = 'chords'
 
     def _update_content_height(self, *args):
         if not self.content_label.texture:
@@ -867,8 +850,16 @@ class SongDetailScreen(BaseScreen):
                     Clock.schedule_once(lambda dt: fav_screen.load_favorites(), 0.5)
 
     def go_back(self, instance=None):
-        if hasattr(self, 'manager') and self.manager:
-            self.manager.current = self.previous_screen
+        """Возврат на предыдущий экран"""
+        logger.info("🔙 Нажата кнопка возврата")
+
+        # Сразу переходим на song_detail, игнорируя сохранённый экран
+        if self.manager and self.manager.has_screen('song_detail'):
+            screen_state.clear_pending_chord()
+            self.manager.current = 'song_detail'
+            logger.info("✅ Принудительный возврат на song_detail")
+        elif self.manager and self.manager.has_screen('home'):
+            self.manager.current = 'home'
 
     def on_enter(self):
         app = MDApp.get_running_app()

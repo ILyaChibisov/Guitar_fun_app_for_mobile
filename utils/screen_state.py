@@ -24,6 +24,8 @@ class ScreenStateManager:
             return
         self._initialized = True
         self._states = {}  # {screen_name: state_dict}
+        self._previous_screen = None  # Добавляем хранение предыдущего экрана
+        self._pending_chord = None  # Аккорд, который нужно показать
 
     def save_state(self, screen_name, state):
         """Сохраняет состояние экрана"""
@@ -44,6 +46,29 @@ class ScreenStateManager:
         """Очищает все состояния"""
         self._states.clear()
         logger.debug("Очищены все состояния")
+
+
+    def set_previous_screen(self, screen_name):
+        """Устанавливает предыдущий экран"""
+        self._previous_screen = screen_name
+        logger.debug(f"✅ screen_state: установлен предыдущий экран = {screen_name}")
+
+    def get_previous_screen(self):
+        """Возвращает предыдущий экран"""
+        return self._previous_screen
+
+    def set_pending_chord(self, chord_name):
+        """Устанавливает аккорд, который нужно показать"""
+        self._pending_chord = chord_name
+        logger.debug(f"Установлен ожидающий аккорд: {chord_name}")
+
+    def get_pending_chord(self):
+        """Возвращает ожидающий аккорд"""
+        return self._pending_chord
+
+    def clear_pending_chord(self):
+        """Очищает ожидающий аккорд"""
+        self._pending_chord = None
 
 
 # Глобальный экземпляр

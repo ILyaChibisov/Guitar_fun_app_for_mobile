@@ -5,6 +5,7 @@
 С поиском аккордов
 """
 from kivy.uix.behaviors import ButtonBehavior
+from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDIconButton, MDRaisedButton
@@ -31,6 +32,7 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
 from utils.notifications import notify
+from utils.screen_state import screen_state
 
 logger = screen_logger('Chords')
 
@@ -1438,10 +1440,68 @@ class ChordsScreen(BaseScreen):
         """Извлекает тональность из названия аккорда"""
         if not chord_name:
             return ""
-        # Ищем букву с возможным диезом/бемолем в начале
         match = re.match(r'^([A-H][#b]?)', chord_name)
         if match:
             return match.group(1)
-        # Если не нашли, берём первый символ
         return chord_name[0] if chord_name else ""
 
+    # ============ МЕТОДЫ ДЛЯ ВОЗВРАТА НА ПРЕДЫДУЩИЙ ЭКРАН ============
+
+    # В chords_screen.py замени метод on_enter:
+
+    def on_enter(self):
+        """При входе на экран аккордов"""
+        logger.info("🚪 Вход в экран аккордов")
+
+        # Проверяем, есть ли ожидающий аккорд
+        pending_chord = screen_state.get_pending_chord()
+        if pending_chord:
+            logger.info(f"🎸 Есть ожидающий аккорд: {pending_chord}")
+            Clock.schedule_once(lambda dt: self.select_chord_by_name(pending_chord), 0.1)
+            screen_state.clear_pending_chord()
+
+        # Показываем кнопку возврата с задержкой (даём время top_nav на обработку)
+        previous_screen = screen_state.get_previous_screen()
+        if previous_screen:
+            Clock.schedule_once(lambda dt: self._show_back_button(), 0.3)  # Задержка 0.3 сек
+
+    def _show_back_button(self):
+        """Показывает кнопку возврата в верхней навигации"""
+        try:
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'top_nav'):
+                # Принудительно устанавливаем свойства
+                app.top_nav.back_btn.opacity = 1
+                app.top_nav.back_btn.disabled = False
+                app.top_nav._custom_back_callback = self.go_back
+                app.top_nav.screen_title.text = "Аккорды"
+                logger.info("✅ Кнопка возврата принудительно показана")
+        except Exception as e:
+            logger.error(f"❌ Ошибка: {e}")
+
+    def on_leave(self):
+        """При выходе с экрана аккордов - восстанавливаем заголовок"""
+        logger.info("🚪 Выход из экрана аккордов")
+        # Не скрываем кнопку здесь, она скроется сама при смене экрана
+
+    def go_back(self, instance=None):
+        """Возврат на предыдущий экран"""
+        logger.info("🔙 Нажата кнопка возврата")
+
+        previous_screen = screen_state.get_previous_screen()
+        logger.info(f"   Сохранённый предыдущий экран: {previous_screen}")
+
+        if previous_screen and self.manager and self.manager.has_screen(previous_screen):
+            # Очищаем ожидающий аккорд
+            screen_state.clear_pending_chord()
+            # Переходим обратно
+            self.manager.current = previous_screen
+            logger.info(f"✅ Возврат на экран: {previous_screen}")
+        else:
+            # Если нет предыдущего экрана, идём на тот, откуда пришли через стек
+            logger.warning(f"Нет сохранённого предыдущего экрана или он не существует: {previous_screen}")
+            # Пытаемся вернуться на song_detail, если есть
+            if self.manager and self.manager.has_screen('song_detail'):
+                self.manager.current = 'song_detail'
+            elif self.manager and self.manager.has_screen('home'):
+                self.manager.current = 'home'

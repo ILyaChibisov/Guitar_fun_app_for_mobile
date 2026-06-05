@@ -16,6 +16,7 @@ from config.theme import theme
 from config.logger_config import get_logger
 from config.system_bars import get_status_bar_height, get_screen_density
 from screens.components.language_selector import LanguageSelector
+from utils.screen_state import screen_state
 
 logger = get_logger('TopNav')
 
@@ -31,6 +32,7 @@ class TopNav(MDCard):
         self.current_screen_name = 'home'
         self._is_back_mode = False
         self._previous_screen = None
+        self._custom_back_callback = None
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
@@ -106,7 +108,7 @@ class TopNav(MDCard):
         self.left_container.add_widget(self.menu_btn)
         self.left_container.add_widget(self.back_btn)
 
-        # Заголовок - просто по левому краю, без лишних контейнеров
+        # Заголовок
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
             font_size=sp(22),
@@ -197,18 +199,49 @@ class TopNav(MDCard):
     def set_custom_title(self, title: str):
         self.screen_title.text = title
 
+    def set_custom_back_callback(self, callback):
+        """Устанавливает кастомный callback для кнопки возврата"""
+        self._custom_back_callback = callback
+        logger.debug(f"Установлен кастомный callback для возврата: {callback}")
+
+    def clear_custom_back_callback(self):
+        """Очищает кастомный callback"""
+        self._custom_back_callback = None
+        logger.debug("Очищен кастомный callback для возврата")
+
+    def force_show_back_button(self, title=None, back_callback=None):
+        """Принудительно показывает кнопку возврата"""
+        self._show_back_button()
+        if title:
+            self.screen_title.text = title
+        if back_callback:
+            self.set_custom_back_callback(back_callback)
+        logger.info(f"🔙 Принудительно показана кнопка возврата, заголовок: {title}")
+
+    def force_hide_back_button(self):
+        """Принудительно скрывает кнопку возврата"""
+        self._hide_back_button()
+        self.clear_custom_back_callback()
+        logger.info("🔙 Кнопка возврата принудительно скрыта")
+
     def _on_screen_changed(self, instance, screen_name):
         old = self.current_screen_name
         self.current_screen_name = screen_name
         if old and old != screen_name:
             self._previous_screen = old
 
-        if screen_name not in ['artists_by_letter', 'artist_songs', 'song_detail', 'search_results']:
+        # Очищаем кастомный callback при смене экрана (кроме chords)
+        if screen_name != 'chords':
+            self.clear_custom_back_callback()
+
+        if screen_name not in ['artists_by_letter', 'artist_songs', 'song_detail', 'search_results', 'chords']:
             self._hide_back_button()
             self.update_title(screen_name)
         else:
             self._show_back_button()
-            if screen_name != 'artist_songs':
+            if screen_name == 'chords':
+                self.screen_title.text = "Аккорды"
+            else:
                 self.update_title(screen_name)
 
     def _on_menu_press(self, btn):
@@ -219,10 +252,24 @@ class TopNav(MDCard):
             self.app.open_drawer(btn)
 
     def _on_back_press(self, btn):
+        # Если есть кастомный callback - используем его
+        if self._custom_back_callback:
+            logger.debug("Используем кастомный callback для возврата")
+            self._custom_back_callback()
+            return
+
         if not self.sm:
             return
 
         current = self.sm.current
+
+        # Для экрана аккордов используем screen_state для возврата
+        if current == 'chords':
+            previous_screen = screen_state.get_previous_screen()
+            if previous_screen and self.sm.has_screen(previous_screen):
+                self.sm.current = previous_screen
+                logger.info(f"🔙 Возврат с аккордов на {previous_screen}")
+                return
 
         if hasattr(self, '_previous_screen') and self._previous_screen:
             target = self._previous_screen
@@ -290,6 +337,7 @@ class TopNav(MDCard):
 
     def reset_to_default(self):
         self._hide_back_button()
+        self.clear_custom_back_callback()
         if self.sm:
             self.update_title(self.sm.current)
 
