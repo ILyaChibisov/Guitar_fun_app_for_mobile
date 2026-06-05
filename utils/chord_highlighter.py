@@ -46,7 +46,7 @@ def init_chord_patterns(chords_screen):
     _all_chords_set = all_names
 
     print(f"🎸 Инициализировано {len(all_names)} названий аккордов (только из базы)")
-    return True2
+    return True
 
 
 def extract_chords_from_text(text):
