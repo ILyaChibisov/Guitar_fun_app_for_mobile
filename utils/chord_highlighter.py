@@ -23,9 +23,9 @@ def init_chord_patterns(chords_screen):
     all_names = set()
 
     for chord in chords_screen.all_chords:
-        # Добавляем short_name
+        # Добавляем основное название
         all_names.add(chord['short_name'])
-        # Добавляем варианты из поля name
+        # Добавляем альтернативные названия из METADATA
         name_variants = chord['name'].split('|')
         for variant in name_variants:
             variant_clean = variant.strip().replace('$', '/')
@@ -37,29 +37,26 @@ def init_chord_patterns(chords_screen):
     # Экранируем спецсимволы
     escaped_names = [re.escape(name) for name in sorted_names]
 
-    # Паттерн: границы слова (пробел, начало/конец строки, знаки препинания)
-    # Важно: не захватывать части аккордов
-    pattern = r'(?<![A-Z0-9#b/])(' + '|'.join(escaped_names) + r')(?![A-Z0-9#b/])'
+    # Паттерн с границами, учитывающими #, b, / и другие символы
+    # Используем lookbehind и lookahead для проверки границ
+    # Аккорд не должен быть частью другого слова
+    pattern = r'(?<![A-Za-z0-9#b/])(' + '|'.join(escaped_names) + r')(?![A-Za-z0-9#b/])'
 
     _chord_regex = re.compile(pattern, re.IGNORECASE)
     _all_chords_set = all_names
 
-    print(f"🎸 Инициализировано {len(all_names)} названий аккордов")
-    return True
+    print(f"🎸 Инициализировано {len(all_names)} названий аккордов (только из базы)")
+    return True2
 
 
 def extract_chords_from_text(text):
-    """Извлекает все аккорды из текста (без дубликатов)"""
     if not text or not _chord_regex:
         return []
 
-    # Удаляем разметку для поиска
     clean_text = re.sub(r'\[color=[^\]]+\]', '', text)
     clean_text = re.sub(r'\[/color\]', '', clean_text)
-
     matches = _chord_regex.findall(clean_text)
 
-    # Убираем дубликаты
     seen = set()
     unique_matches = []
     for match in matches:
@@ -77,18 +74,19 @@ class ChordTextLabel(ButtonBehavior, MDLabel):
     def __init__(self, on_chord_click=None, **kwargs):
         super().__init__(**kwargs)
         self.on_chord_click = on_chord_click
-        self._chord_positions = []
-        self.bind(size=self._update_positions)
-        self.bind(text=self._update_positions)
+        self._chord_regions = []
+        self._update_regions()
+        self.bind(size=self._update_regions)
+        self.bind(text=self._update_regions)
+        self.bind(font_size=self._update_regions)
+        self.bind(font_name=self._update_regions)
 
-    def _update_positions(self, *args):
-        """Обновляет позиции аккордов"""
+    def _update_regions(self, *args):
         if self.text and _chord_regex:
-            Clock.schedule_once(self._calculate_positions, 0.1)
+            Clock.schedule_once(self._calculate_regions, 0.1)
 
-    def _calculate_positions(self, *args):
-        """Вычисляет позиции аккордов в тексте"""
-        self._chord_positions = []
+    def _calculate_regions(self, *args):
+        self._chord_regions = []
 
         if not self.text or not self.texture or not self.texture_size:
             return
@@ -101,60 +99,103 @@ class ChordTextLabel(ButtonBehavior, MDLabel):
         if not matches:
             return
 
+        from kivy.core.text import Label as CoreLabel
+
+        test_label = CoreLabel(
+            font_size=self.font_size,
+            font_name=self.font_name,
+            bold=self.bold,
+            italic=self.italic
+        )
+
         lines = clean_text.split('\n')
         line_height = self.texture_size[1] / len(lines) if lines else 0
-
-        if line_height <= 0:
-            return
 
         current_char = 0
         for line_idx, line in enumerate(lines):
             line_start = current_char
             line_end = current_char + len(line)
 
+            line_y = self.y + self.height - (line_idx + 1) * line_height
+
             for match in matches:
                 if match.start() >= line_start and match.end() <= line_end:
                     chord = match.group(0)
-                    char_in_line = match.start() - line_start
+                    char_start = match.start() - line_start
 
-                    char_width = sp(7)
-                    x_start = self.x + dp(12) + (char_in_line * char_width)
-                    y_start = self.y + self.height - (line_idx + 1) * line_height
-                    width = len(chord) * char_width
+                    prefix_text = line[:char_start]
+                    test_label.text = prefix_text
+                    test_label.refresh()
+                    prefix_width = test_label.texture.width if test_label.texture else 0
 
-                    self._chord_positions.append({
+                    test_label.text = chord
+                    test_label.refresh()
+                    chord_width = test_label.texture.width if test_label.texture else len(chord) * sp(7)
+
+                    x_start = self.x + prefix_width
+
+                    self._chord_regions.append({
                         'x': x_start,
-                        'y': y_start,
-                        'width': width,
+                        'y': line_y - line_height,
+                        'width': chord_width,
                         'height': line_height,
                         'chord': chord
                     })
 
             current_char = line_end + 1
 
+        print(f"🎸 Создано {len(self._chord_regions)} областей аккордов")
+
     def on_touch_down(self, touch):
         if not self.collide_point(*touch.pos):
             return False
 
-        for pos in self._chord_positions:
-            if (pos['x'] <= touch.x <= pos['x'] + pos['width'] and
-                    pos['y'] - pos['height'] <= touch.y <= pos['y']):
+        chord = self._find_nearest_chord(touch.x, touch.y)
 
-                if self.on_chord_click:
-                    self.on_chord_click(pos['chord'])
-                return True
+        if chord:
+            print(f"✅ НАЙДЕН БЛИЖАЙШИЙ АККОРД: {chord}")
+            if self.on_chord_click:
+                self.on_chord_click(chord)
+            return True
 
         return super().on_touch_down(touch)
 
+    def _find_nearest_chord(self, x, y):
+        if not self._chord_regions:
+            return None
+
+        best_chord = None
+        best_distance = float('inf')
+
+        for region in self._chord_regions:
+            center_x = region['x'] + region['width'] / 2
+            center_y = region['y'] + region['height'] / 2
+
+            distance = ((x - center_x) ** 2 + (y - center_y) ** 2) ** 0.5
+
+            # Точное попадание
+            if (region['x'] <= x <= region['x'] + region['width'] and
+                    region['y'] <= y <= region['y'] + region['height']):
+                print(f"   Точное попадание в {region['chord']}")
+                return region['chord']
+
+            # Ближайший в радиусе 50px
+            if distance < best_distance and distance < 50:
+                best_distance = distance
+                best_chord = region['chord']
+
+        if best_chord:
+            print(f"   Ближайший к клику: {best_chord} (расстояние: {best_distance:.1f}px)")
+
+        return best_chord
+
 
 def highlight_chords_in_text(text):
-    """Возвращает текст с подсветкой аккордов"""
     if not text or not _chord_regex:
         return text
 
     def replace_chord(match):
-        chord = match.group(0)
-        return f'[color=4680c2]{chord}[/color]'
+        return f'[color=4680c2]{match.group(0)}[/color]'
 
     return _chord_regex.sub(replace_chord, text)
 
