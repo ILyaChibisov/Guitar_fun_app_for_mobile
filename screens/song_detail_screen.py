@@ -217,7 +217,7 @@ class SongDetailScreen(BaseScreen):
         # Для меню аккордов
         self._song_chords = []
         self._current_chord_index = 0
-        self.chords_dialog = None
+        self.chords_card = None
         self.chord_preview_renderer = None
 
         self.init_ui()
@@ -473,77 +473,50 @@ class SongDetailScreen(BaseScreen):
     # ==================== МЕНЮ АККОРДОВ ====================
 
     def on_chords_press(self):
-        """Показывает всплывающее меню с аккордами песни"""
+        """Показывает всплывающую карточку с аккордами песни"""
         logger.info("🎸 Нажата кнопка аккордов")
 
-        # Получаем аккорды из текста
         self._extract_and_cache_chords()
 
         if not self._song_chords:
             notify.info("Аккорды не найдены в тексте песни")
             return
 
-        # Создаём содержимое меню
-        content = MDBoxLayout(
+        # Создаём компактную карточку
+        self.chords_card = MDCard(
             orientation='vertical',
-            spacing=dp(4),
-            padding=[dp(8), dp(4), dp(8), dp(12)],
-            size_hint_y=None,
-            adaptive_height=True
-        )
-
-        # Отдельная строка только для крестика (самый верхний правый угол)
-        close_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(28),
-            spacing=dp(0),
-            padding=[dp(0), dp(0), dp(0), dp(0)]
-        )
-
-        # Пустой виджет для отталкивания крестика вправо
-        close_row.add_widget(Widget(size_hint_x=1))
-
-        # Крестик в кружочке - в правом верхнем углу
-        close_btn = MDIconButton(
-            icon="close-circle",
             size_hint=(None, None),
-            size=(dp(24), dp(24)),
-            theme_icon_color="Custom",
-            icon_color=[0.6, 0.6, 0.6, 0.7],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.chords_dialog.dismiss(),
-            pos_hint={'center_y': 0.5}
+            size=(dp(280), dp(210)),
+            spacing=dp(2),
+            padding=[dp(8), dp(6), dp(8), dp(6)],  # Уменьшены отступы
+            radius=[20, 20, 20, 20],
+            elevation=6,
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            md_bg_color=[0.98, 0.98, 0.98, 0.95]
         )
-        close_row.add_widget(close_btn)
 
-        content.add_widget(close_row)
-
-        # Строка с пагинацией и названием аккорда
-        header = MDBoxLayout(
+        # Пагинация и название аккорда (без фона у кнопок)
+        pagination_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(44),
-            spacing=dp(8),
-            padding=[dp(4), dp(0), dp(4), dp(0)],
-            pos_hint={'center_y': 0.5}
+            height=dp(36),
+            spacing=dp(4),
+            padding=[dp(4), dp(0), dp(4), dp(0)]
         )
 
-        # Стрелка влево
         self.chord_prev_btn = MDIconButton(
             icon="chevron-left",
             size_hint=(None, None),
-            size=(dp(36), dp(36)),
+            size=(dp(32), dp(32)),
             theme_icon_color="Custom",
             icon_color=[0.46, 0.70, 0.71, 1],
-            md_bg_color=[0, 0, 0, 0.08],
-            on_release=self._prev_chord_in_menu,
-            pos_hint={'center_y': 0.5}
+            md_bg_color=[0, 0, 0, 0],  # Полностью прозрачный фон
+            on_release=self._prev_chord_in_card,
+            ripple_scale=0,  # Отключаем ripple эффект
         )
 
-        # Название аккорда
         self.chord_name_label = MDLabel(
-            text=self._song_chords[0],
+            text=self._song_chords[0] if self._song_chords else "",
             font_size=sp(18),
             halign="center",
             valign="middle",
@@ -553,123 +526,104 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # Стрелка вправо
         self.chord_next_btn = MDIconButton(
             icon="chevron-right",
             size_hint=(None, None),
-            size=(dp(36), dp(36)),
+            size=(dp(32), dp(32)),
             theme_icon_color="Custom",
             icon_color=[0.46, 0.70, 0.71, 1],
-            md_bg_color=[0, 0, 0, 0.08],
-            on_release=self._next_chord_in_menu,
-            pos_hint={'center_y': 0.5}
+            md_bg_color=[0, 0, 0, 0],  # Полностью прозрачный фон
+            on_release=self._next_chord_in_card,
+            ripple_scale=0,  # Отключаем ripple эффект
         )
 
-        header.add_widget(self.chord_prev_btn)
-        header.add_widget(self.chord_name_label)
-        header.add_widget(self.chord_next_btn)
+        pagination_row.add_widget(self.chord_prev_btn)
+        pagination_row.add_widget(self.chord_name_label)
+        pagination_row.add_widget(self.chord_next_btn)
+        self.chords_card.add_widget(pagination_row)
 
-        content.add_widget(header)
-
-        # Описание аккорда
-        self.chord_desc_label = MDLabel(
-            text="",
-            font_size=sp(10),
-            halign="center",
-            size_hint=(1, None),
-            height=dp(20),
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 0.7],
-            shorten=True,
-            shorten_from="right"
-        )
-        content.add_widget(self.chord_desc_label)
-
-        # Контейнер для грифа
+        # Гриф
         griff_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(180),
-            padding=[dp(4), dp(4), dp(4), dp(4)]
+            height=dp(130),
+            padding=[dp(2), dp(0), dp(2), dp(0)]
         )
 
-        # Создаём мини-рендерер
         self.chord_preview_renderer = ChordRenderer()
         griff_container.add_widget(self.chord_preview_renderer)
 
-        # Загружаем фон грифа
         try:
-            bg_data = load_asset_as_bytes("griff_png")
-            if bg_data:
-                img = CoreImage(BytesIO(bg_data), ext="png")
-                if img and img.texture:
-                    self.chord_preview_renderer.set_background(img.texture)
+            griff_data = load_asset_as_bytes("griff_png")
+            if griff_data:
+                griff_img = CoreImage(BytesIO(griff_data), ext="png")
+                if griff_img and griff_img.texture:
+                    self.chord_preview_renderer.set_background(griff_img.texture)
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
-        content.add_widget(griff_container)
+        self.chords_card.add_widget(griff_container)
 
-        # Создаём диалог
-        self.chords_dialog = MDDialog(
-            type="custom",
-            content_cls=content,
-            size_hint=(0.85, None),
-            height=dp(320),
-            radius=[18, 18, 18, 18],
-            buttons=[]
+        # Кнопка "Закрыть" под грифом
+        close_label = MDLabel(
+            text="Закрыть",
+            font_size=sp(13),
+            halign="center",
+            size_hint=(1, None),
+            height=dp(28),
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 0.8],
+            bold=False
         )
+        close_label.bind(on_touch_down=lambda instance, touch: self._close_chords_card() if instance.collide_point(
+            *touch.pos) else None)
+        self.chords_card.add_widget(close_label)
 
-        # Сохраняем индекс и загружаем первый аккорд
+        # Добавляем карточку на экран
+        self.add_widget(self.chords_card)
+
         self._current_chord_index = 0
         self._update_chord_display()
         self._load_chord_for_preview(self._song_chords[0])
 
-        self.chords_dialog.open()
+    def _update_card_bg(self, instance, *args):
+        """Обновляет позицию и размер фона карточки"""
+        if hasattr(self, 'card_bg_rect'):
+            self.card_bg_rect.pos = instance.pos
+            self.card_bg_rect.size = instance.size
+
+    def _close_chords_card(self):
+        """Закрывает карточку аккордов"""
+        if hasattr(self, 'chords_card') and self.chords_card:
+            self.remove_widget(self.chords_card)
+            self.chords_card = None
 
     def _extract_and_cache_chords(self):
         """Извлекает и кэширует аккорды из песни (с сохранением оригинального регистра)"""
         chords = set()
 
-        # Собираем аккорды из всех подборов
         for tab in self.tabs:
             content = tab.get('content', '')
             if content:
                 cleaned = clean_text(content)
-                extracted = extract_chords_from_text(cleaned)
-                # Сохраняем оригинальные названия (с учётом регистра)
+                extracted = extract_chords_from_text(cleaned)  # теперь возвращает оригинальный регистр
                 chords.update(extracted)
 
-        # Сортируем по имени
-        self._song_chords = sorted(list(chords))
+        self._song_chords = sorted(list(chords))  # сортировка сохраняет регистр
         logger.info(f"🎸 Найдено аккордов в песне: {len(self._song_chords)} - {self._song_chords}")
 
     def _get_chord_description(self, chord_name):
         """Получает описание аккорда из базы"""
         if self.manager and self.manager.has_screen('chords'):
             chords_screen = self.manager.get_screen('chords')
-            chord_normalized = chord_name.replace('B', 'H')
-
             for chord in chords_screen.all_chords:
-                if chord['short_name'] == chord_normalized or chord['short_name'] == chord_name:
+                if chord['short_name'].lower() == chord_name.lower():
                     description = chord.get('description', '')
                     if description:
-                        # Берём первую часть описания
                         parts = description.replace('!', '|').split('|')
                         if parts:
                             return parts[0].strip()
                     return chord.get('type', 'Аккорд')
-
-                # Поиск по альтернативным названиям
-                name_variants = chord['name'].split('|')
-                for variant in name_variants:
-                    variant_clean = variant.strip().replace('$', '/')
-                    if variant_clean == chord_name:
-                        description = chord.get('description', '')
-                        if description:
-                            parts = description.replace('!', '|').split('|')
-                            if parts:
-                                return parts[0].strip()
-                        return chord.get('type', 'Аккорд')
         return 'Аккорд'
 
     def _update_chord_display(self):
@@ -681,62 +635,70 @@ class SongDetailScreen(BaseScreen):
         current = self._current_chord_index
         chord_name = self._song_chords[current]
 
-        # Обновляем название аккорда (сохраняем оригинальный регистр)
         if hasattr(self, 'chord_name_label'):
             self.chord_name_label.text = chord_name
 
-        # Обновляем описание
         if hasattr(self, 'chord_desc_label'):
             desc = self._get_chord_description(chord_name)
             self.chord_desc_label.text = desc
 
-        # Обновляем кнопки пагинации
+        # Убираем блокировку кнопок (теперь они всегда активны для циклического перехода)
         if hasattr(self, 'chord_prev_btn'):
-            self.chord_prev_btn.disabled = (current == 0)
-            self.chord_prev_btn.opacity = 1 if current > 0 else 0.3
+            self.chord_prev_btn.disabled = False
+            self.chord_prev_btn.opacity = 1  # Всегда видимы
 
         if hasattr(self, 'chord_next_btn'):
-            self.chord_next_btn.disabled = (current == total - 1)
-            self.chord_next_btn.opacity = 1 if current < total - 1 else 0.3
+            self.chord_next_btn.disabled = False
+            self.chord_next_btn.opacity = 1  # Всегда видимы
 
-    def _prev_chord_in_menu(self, *args):
-        """Предыдущий аккорд в меню"""
-        if self._current_chord_index > 0:
+    def _prev_chord_in_card(self, *args):
+        """Предыдущий аккорд в карточке (циклический переход)"""
+        if not self._song_chords:
+            return
+
+        total = len(self._song_chords)
+        # Если первый аккорд, переходим к последнему
+        if self._current_chord_index == 0:
+            self._current_chord_index = total - 1
+        else:
             self._current_chord_index -= 1
-            chord = self._song_chords[self._current_chord_index]
-            self._update_chord_display()
-            self._load_chord_for_preview(chord)
 
-    def _next_chord_in_menu(self, *args):
-        """Следующий аккорд в меню"""
-        if self._current_chord_index < len(self._song_chords) - 1:
+        chord = self._song_chords[self._current_chord_index]
+        self._update_chord_display()
+        self._load_chord_for_preview(chord)
+
+    def _next_chord_in_card(self, *args):
+        """Следующий аккорд в карточке (циклический переход)"""
+        if not self._song_chords:
+            return
+
+        total = len(self._song_chords)
+        # Если последний аккорд, переходим к первому
+        if self._current_chord_index == total - 1:
+            self._current_chord_index = 0
+        else:
             self._current_chord_index += 1
-            chord = self._song_chords[self._current_chord_index]
-            self._update_chord_display()
-            self._load_chord_for_preview(chord)
+
+        chord = self._song_chords[self._current_chord_index]
+        self._update_chord_display()
+        self._load_chord_for_preview(chord)
 
     def _load_chord_for_preview(self, chord_name):
         """Загружает аккорд для предпросмотра в мини-рендерере"""
         if not hasattr(self, 'chord_preview_renderer') or not self.chord_preview_renderer:
             return
 
-        # Нормализуем имя аккорда для поиска (B -> H)
-        chord_normalized = chord_name.replace('B', 'H')
-
-        # Ищем модуль аккорда
         if self.manager and self.manager.has_screen('chords'):
             chords_screen = self.manager.get_screen('chords')
-
             target_chord = None
             for chord in chords_screen.all_chords:
-                if chord['short_name'] == chord_normalized or chord['short_name'] == chord_name:
+                if chord['short_name'].lower() == chord_name.lower():
                     target_chord = chord
                     break
-                # Поиск по альтернативным названиям
                 name_variants = chord['name'].split('|')
                 for variant in name_variants:
                     variant_clean = variant.strip().replace('$', '/')
-                    if variant_clean == chord_name:
+                    if variant_clean.lower() == chord_name.lower():
                         target_chord = chord
                         break
                 if target_chord:
@@ -749,7 +711,8 @@ class SongDetailScreen(BaseScreen):
                 logger.info(f"✅ Загружен аккорд для превью: {chord_name}")
             else:
                 logger.warning(f"⚠️ Аккорд {chord_name} не найден в базе")
-                self.chord_preview_renderer.sprite_layer.clear_widgets()
+                if hasattr(self.chord_preview_renderer, 'sprite_layer'):
+                    self.chord_preview_renderer.sprite_layer.clear_widgets()
 
     # ==================== ТОНАЛЬНОСТЬ ====================
 
@@ -804,7 +767,6 @@ class SongDetailScreen(BaseScreen):
         dialog.open()
 
     def _apply_tonality(self, dialog):
-        """Применяет выбранную тональность"""
         new_tonality = int(self.tonality_slider.value)
         if new_tonality != self.current_tonality:
             self.current_tonality = new_tonality
@@ -847,7 +809,6 @@ class SongDetailScreen(BaseScreen):
         self.tabs_dialog = dialog
 
     def _select_tab(self, index):
-        """Выбирает подбор"""
         if hasattr(self, 'tabs_dialog'):
             self.tabs_dialog.dismiss()
         self.current_tab_index = index
@@ -869,24 +830,16 @@ class SongDetailScreen(BaseScreen):
 
         anim = Animation(opacity=0.5, duration=0.05) + Animation(opacity=1, duration=0.1)
         anim.start(self.font_btn)
-
         logger.info(f"Размер шрифта: {self.current_font_size}")
 
     def _extract_and_log_chords(self, text):
-        """Извлекает аккорды из текста и логирует их"""
         chords = extract_chords_from_text(text)
-
         if chords:
             unique_chords = sorted(set(chords))
             chords_str = ', '.join(unique_chords)
             artist_part = f"{self.song_artist} - " if self.song_artist else ""
             name_part = self.song_title if self.song_title else "Песня"
             logger.info(f"🎸 Найдены аккорды в {artist_part}{name_part}: {chords_str}")
-        else:
-            artist_part = f"{self.song_artist} - " if self.song_artist else ""
-            name_part = self.song_title if self.song_title else "Песня"
-            logger.info(f"🎸 В {artist_part}{name_part} аккордов не найдено")
-
         return chords
 
     def _load_current_tab(self):

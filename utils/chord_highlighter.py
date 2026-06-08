@@ -38,8 +38,6 @@ def init_chord_patterns(chords_screen):
     escaped_names = [re.escape(name) for name in sorted_names]
 
     # Паттерн с границами, учитывающими #, b, / и другие символы
-    # Используем lookbehind и lookahead для проверки границ
-    # Аккорд не должен быть частью другого слова
     pattern = r'(?<![A-Za-z0-9#b/])(' + '|'.join(escaped_names) + r')(?![A-Za-z0-9#b/])'
 
     _chord_regex = re.compile(pattern, re.IGNORECASE)
@@ -50,6 +48,7 @@ def init_chord_patterns(chords_screen):
 
 
 def extract_chords_from_text(text):
+    """Извлекает аккорды из текста (сохраняя оригинальный регистр)"""
     if not text or not _chord_regex:
         return []
 
@@ -63,7 +62,7 @@ def extract_chords_from_text(text):
         match_upper = match.upper()
         if match_upper not in seen:
             seen.add(match_upper)
-            unique_matches.append(match_upper)
+            unique_matches.append(match)  # ← сохраняем оригинальный регистр, а не upper
 
     return unique_matches
 
