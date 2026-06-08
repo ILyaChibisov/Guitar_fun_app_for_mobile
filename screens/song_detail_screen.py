@@ -1,4 +1,4 @@
-# screens/song_detail_screen.py - с классом из chords_screen
+# screens/song_detail_screen.py
 """
 Экран просмотра песни с текстом и подборами
 """
@@ -6,8 +6,9 @@ from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton
+from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.dialog import MDDialog
 from kivy.metrics import dp, sp
 from kivy.animation import Animation
 from kivy.uix.progressbar import ProgressBar
@@ -25,6 +26,7 @@ from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
+from screens.chord_renderer import ChordRenderer
 from api.client import api
 from utils.notifications import notify
 from utils.screen_state import screen_state
@@ -168,25 +170,22 @@ class IconImageButton(ButtonBehavior, MDBoxLayout):
             self.on_press_callback(self.icon_name)
 
 
-class FontSizeButton(MDIconButton):
-    """Кнопка изменения размера шрифта (меняет иконку +/ -)"""
+class IconActionButton(MDIconButton):
+    """Кнопка действия в нижней панели"""
 
-    def __init__(self, on_press_callback=None, **kwargs):
+    def __init__(self, icon_name, on_press_callback=None, icon_color=None, **kwargs):
         super().__init__(**kwargs)
         self.on_press_callback = on_press_callback
         self.size_hint = (None, None)
-        self.size = (dp(28), dp(28))
+        self.size = (dp(32), dp(32))
         self.theme_icon_color = "Custom"
-        self.icon_color = [0.46, 0.70, 0.71, 0.9]
+        if icon_color:
+            self.icon_color = icon_color
+        else:
+            self.icon_color = [1, 1, 1, 0.85]
         self.md_bg_color = [0, 0, 0, 0]
-        self.icon = "magnify-plus"
+        self.icon = icon_name
         self.bind(on_release=self._on_press)
-
-    def set_icon_plus(self):
-        self.icon = "magnify-plus"
-
-    def set_icon_minus(self):
-        self.icon = "magnify-minus"
 
     def _on_press(self, instance):
         if self.on_press_callback:
@@ -214,6 +213,12 @@ class SongDetailScreen(BaseScreen):
         self.current_font_size = 14
         self.font_size_levels = [10, 12, 14, 16, 18, 20, 22]
         self.font_size_index = 2  # 14
+
+        # Для меню аккордов
+        self._song_chords = []
+        self._current_chord_index = 0
+        self.chords_dialog = None
+        self.chord_preview_renderer = None
 
         self.init_ui()
         self.load_background()
@@ -261,7 +266,7 @@ class SongDetailScreen(BaseScreen):
         # Получаем единые боковые отступы из layout_config
         content_padding = layout_config.get_content_padding()
 
-        # Карточка с текстом - с едиными боковыми отступами, растянутая до низа
+        # Карточка с текстом - с едиными боковыми отступами
         card_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -280,7 +285,7 @@ class SongDetailScreen(BaseScreen):
             line_width=0.5
         )
 
-        # Верхнее меню (шапка с артистом и песней)
+        # Верхнее меню - только название песни и артист
         self._create_top_menu()
         self.song_card.add_widget(self.top_menu)
 
@@ -323,9 +328,9 @@ class SongDetailScreen(BaseScreen):
         self.content_scroll.add_widget(scroll_content)
         self.song_card.add_widget(self.content_scroll)
 
-        # Панель управления (тональность, подборы) - ПОД ТЕКСТОМ
-        self._create_control_panel()
-        self.song_card.add_widget(self.control_panel)
+        # Нижняя панель управления
+        self._create_bottom_panel()
+        self.song_card.add_widget(self.bottom_panel)
 
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
@@ -341,108 +346,28 @@ class SongDetailScreen(BaseScreen):
         logger.info(f"SongDetailScreen: top_padding = {top_padding}dp, side_padding = {content_padding[0]}dp")
 
     def _create_top_menu(self):
-        """Верхнее меню с информацией об артисте и песне, а также кнопками действий"""
+        """Верхнее меню - только название песни и артист"""
         self.top_menu = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(60),
-            padding=[dp(12), dp(6), dp(12), dp(2)],
+            height=dp(50),
+            padding=[dp(12), dp(8), dp(12), dp(4)],
             spacing=dp(2),
             md_bg_color=[1, 1, 1, 0]
         )
 
-        # Первая строка: артист, действия, кнопка изменения шрифта
-        row1 = MDBoxLayout(
+        row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(28),
-            spacing=dp(6)
+            height=dp(34),
+            spacing=dp(8),
+            pos_hint={'center_y': 0.5}
         )
 
-        # Иконка артиста
-        self.artist_icon = Image(
-            size_hint=(None, None),
-            size=(dp(24), dp(24)),
-            pos_hint={'center_y': 0.5},
-            allow_stretch=True,
-            keep_ratio=True
-        )
-        if HAS_ASSETS:
-            try:
-                icon_data = load_asset_as_bytes('artist_png')
-                if icon_data:
-                    img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.artist_icon.texture = img.texture
-            except:
-                pass
-
-        # Имя артиста (растягивается)
-        self.artist_label = MDLabel(
-            text="",
-            font_size=sp(15),
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.85],
-            bold=True,
-            valign="middle",
-            shorten=False
-        )
-
-        # Кнопка "Избранное"
-        self.favorite_btn = MDIconButton(
-            icon="star-outline",
-            size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            theme_icon_color="Custom",
-            icon_color=[0.9, 0.7, 0.2, 0.9],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.toggle_favorite
-        )
-
-        # Кнопка "Лайк"
-        self.like_btn = MDIconButton(
-            icon="heart-outline",
-            size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            theme_icon_color="Custom",
-            icon_color=[0.8, 0.3, 0.3, 0.9],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.toggle_like
-        )
-
-        # Кнопка изменения размера шрифта (меняет иконку)
-        self.font_btn = FontSizeButton(on_press_callback=self.cycle_font_size)
-
-        row1.add_widget(self.artist_icon)
-        row1.add_widget(self.artist_label)
-
-        # Отступ перед избранным
-        row1.add_widget(Widget(size_hint_x=None, width=dp(12)))
-
-        row1.add_widget(self.favorite_btn)
-
-        # Отступ между избранным и лайком
-        row1.add_widget(Widget(size_hint_x=None, width=dp(4)))
-
-        row1.add_widget(self.like_btn)
-
-        # Отступ между лайком и лупой
-        row1.add_widget(Widget(size_hint_x=None, width=dp(8)))
-
-        row1.add_widget(self.font_btn)
-
-        # Вторая строка: название песни
-        row2 = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(22),
-            spacing=dp(6)
-        )
-
-        # Иконка песни
+        # Смайлик (нота)
         self.song_icon = Image(
             size_hint=(None, None),
-            size=(dp(20), dp(20)),
+            size=(dp(28), dp(28)),
             pos_hint={'center_y': 0.5},
             allow_stretch=True,
             keep_ratio=True
@@ -455,190 +380,497 @@ class SongDetailScreen(BaseScreen):
                     self.song_icon.texture = img.texture
             except:
                 pass
+        if not self.song_icon.texture:
+            self.song_icon.text = "🎵"
 
-        # Название песни
-        self.song_title_label = MDLabel(
+        # Название: артист - песня
+        self.song_info_label = MDLabel(
             text="",
-            font_size=sp(12),
+            font_size=sp(16),
             size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[0.4, 0.4, 0.4, 0.9],
+            text_color=[0, 0, 0, 0.85],
+            bold=True,
             valign="middle",
-            shorten=False,
-            bold=True
+            shorten=True,
+            shorten_from="right"
         )
 
-        # Пустой виджет для баланса (под 3 кнопки)
-        spacer = Widget(size_hint_x=None, width=dp(28 + 28 + 28))
+        row.add_widget(self.song_icon)
+        row.add_widget(self.song_info_label)
 
-        row2.add_widget(self.song_icon)
-        row2.add_widget(self.song_title_label)
-        row2.add_widget(spacer)
+        self.top_menu.add_widget(row)
 
-        self.top_menu.add_widget(row1)
-        self.top_menu.add_widget(row2)
-
-    def _create_control_panel(self):
-        """Создаёт панель управления: Тональность и Подбор - внизу карточки с закруглением"""
-        self.control_panel = MDCard(
+    def _create_bottom_panel(self):
+        """Создаёт нижнюю панель с 6 кнопками"""
+        self.bottom_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(40),
-            padding=[dp(12), dp(6), dp(12), dp(6)],
-            spacing=dp(8),
+            height=dp(52),
+            padding=[dp(8), dp(4), dp(8), dp(4)],
+            spacing=dp(4),
             radius=[0, 0, 18, 18],
             md_bg_color=[0.96, 0.96, 0.96, 0.95],
             elevation=0,
             line_color=[0.8, 0.8, 0.8, 0.2],
-            line_width=0.5
+            line_width=0.5,
+            pos_hint={'center_x': 0.5}
         )
 
-        # Блок 1: Тональность
-        tonality_section = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_x=None,
-            width=dp(180),
+        # 1. Аккорды
+        self.chords_btn = IconActionButton(
+            icon_name="music",
+            on_press_callback=self.on_chords_press,
+            icon_color=[0.46, 0.70, 0.71, 1]
+        )
+
+        # 2. Тональность
+        self.tonality_btn = IconActionButton(
+            icon_name="tune",
+            on_press_callback=self.show_tonality_picker,
+            icon_color=[0.9, 0.7, 0.2, 0.9]
+        )
+
+        # 3. Подбор
+        self.tabs_btn = IconActionButton(
+            icon_name="folder-music",
+            on_press_callback=self.show_tabs_picker,
+            icon_color=[0.46, 0.70, 0.71, 0.9]
+        )
+
+        self.bottom_panel.add_widget(self.chords_btn)
+        self.bottom_panel.add_widget(self.tonality_btn)
+        self.bottom_panel.add_widget(self.tabs_btn)
+
+        spacer = Widget(size_hint_x=1)
+        self.bottom_panel.add_widget(spacer)
+
+        # 4. Избранное
+        self.favorite_btn = IconActionButton(
+            icon_name="star-outline",
+            on_press_callback=self.toggle_favorite,
+            icon_color=[0.9, 0.7, 0.2, 0.9]
+        )
+
+        # 5. Лайк
+        self.like_btn = IconActionButton(
+            icon_name="heart-outline",
+            on_press_callback=self.toggle_like,
+            icon_color=[0.8, 0.3, 0.3, 0.9]
+        )
+
+        # 6. Лупа
+        self.font_btn = IconActionButton(
+            icon_name="magnify",
+            on_press_callback=self.cycle_font_size,
+            icon_color=[0.46, 0.70, 0.71, 0.9]
+        )
+
+        self.bottom_panel.add_widget(self.favorite_btn)
+        self.bottom_panel.add_widget(self.like_btn)
+        self.bottom_panel.add_widget(self.font_btn)
+
+    # ==================== МЕНЮ АККОРДОВ ====================
+
+    def on_chords_press(self):
+        """Показывает всплывающее меню с аккордами песни"""
+        logger.info("🎸 Нажата кнопка аккордов")
+
+        # Получаем аккорды из текста
+        self._extract_and_cache_chords()
+
+        if not self._song_chords:
+            notify.info("Аккорды не найдены в тексте песни")
+            return
+
+        # Создаём содержимое меню
+        content = MDBoxLayout(
+            orientation='vertical',
             spacing=dp(4),
+            padding=[dp(8), dp(4), dp(8), dp(12)],
+            size_hint_y=None,
+            adaptive_height=True
+        )
+
+        # Отдельная строка только для крестика (самый верхний правый угол)
+        close_row = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(28),
+            spacing=dp(0),
+            padding=[dp(0), dp(0), dp(0), dp(0)]
+        )
+
+        # Пустой виджет для отталкивания крестика вправо
+        close_row.add_widget(Widget(size_hint_x=1))
+
+        # Крестик в кружочке - в правом верхнем углу
+        close_btn = MDIconButton(
+            icon="close-circle",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_icon_color="Custom",
+            icon_color=[0.6, 0.6, 0.6, 0.7],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=lambda x: self.chords_dialog.dismiss(),
             pos_hint={'center_y': 0.5}
         )
+        close_row.add_widget(close_btn)
 
-        tonality_label = MDLabel(
-            text="Тональность",
-            font_size=sp(10),
-            size_hint_x=None,
-            width=dp(98),
-            halign="left",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[0.4, 0.4, 0.4, 0.8],
-            bold=False
-        )
+        content.add_widget(close_row)
 
-        # Минус
-        self.tonality_minus_btn = IconImageButton(
-            icon_name='minus_ton_png',
-            on_press_callback=self.decrease_tonality,
-            size=dp(20)
-        )
-
-        self.tonality_value_label = MDLabel(
-            text=str(self.current_tonality),
-            font_size=sp(13),
-            size_hint_x=None,
-            width=dp(24),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[0.9, 0.7, 0.2, 1],
-            bold=True
-        )
-
-        # Плюс
-        self.tonality_plus_btn = IconImageButton(
-            icon_name='plus_ton_png',
-            on_press_callback=self.increase_tonality,
-            size=dp(20)
-        )
-
-        tonality_section.add_widget(tonality_label)
-        tonality_section.add_widget(self.tonality_minus_btn)
-        tonality_section.add_widget(self.tonality_value_label)
-        tonality_section.add_widget(self.tonality_plus_btn)
-
-        # Разделитель
-        divider = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[0.8, 0.8, 0.8, 0.5])
-
-        # Блок 2: Подбор
-        tabs_section = MDBoxLayout(
+        # Строка с пагинацией и названием аккорда
+        header = MDBoxLayout(
             orientation='horizontal',
-            size_hint_x=1,
-            spacing=dp(4),
+            size_hint=(1, None),
+            height=dp(44),
+            spacing=dp(8),
+            padding=[dp(4), dp(0), dp(4), dp(0)],
             pos_hint={'center_y': 0.5}
-        )
-
-        tabs_label = MDLabel(
-            text="Подбор",
-            font_size=sp(10),
-            size_hint_x=None,
-            width=dp(74),
-            halign="left",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[0.4, 0.4, 0.4, 0.8],
-            bold=False
         )
 
         # Стрелка влево
-        self.tabs_prev_btn = IconImageButton(
-            icon_name='left_arrow_png',
-            on_press_callback=self.prev_tab,
-            size=dp(20)
+        self.chord_prev_btn = MDIconButton(
+            icon="chevron-left",
+            size_hint=(None, None),
+            size=(dp(36), dp(36)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0.08],
+            on_release=self._prev_chord_in_menu,
+            pos_hint={'center_y': 0.5}
         )
 
-        self.tabs_value_label = MDLabel(
-            text="1",
-            font_size=sp(13),
-            size_hint_x=None,
-            width=dp(24),
+        # Название аккорда
+        self.chord_name_label = MDLabel(
+            text=self._song_chords[0],
+            font_size=sp(18),
             halign="center",
             valign="middle",
+            size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 1],
+            text_color=[0, 0, 0, 0.85],
             bold=True
         )
 
         # Стрелка вправо
-        self.tabs_next_btn = IconImageButton(
-            icon_name='right_arrow_png',
-            on_press_callback=self.next_tab,
-            size=dp(20)
+        self.chord_next_btn = MDIconButton(
+            icon="chevron-right",
+            size_hint=(None, None),
+            size=(dp(36), dp(36)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0.08],
+            on_release=self._next_chord_in_menu,
+            pos_hint={'center_y': 0.5}
         )
 
-        tabs_section.add_widget(tabs_label)
-        tabs_section.add_widget(self.tabs_prev_btn)
-        tabs_section.add_widget(self.tabs_value_label)
-        tabs_section.add_widget(self.tabs_next_btn)
+        header.add_widget(self.chord_prev_btn)
+        header.add_widget(self.chord_name_label)
+        header.add_widget(self.chord_next_btn)
 
-        self.control_panel.add_widget(tonality_section)
-        self.control_panel.add_widget(divider)
-        self.control_panel.add_widget(tabs_section)
+        content.add_widget(header)
+
+        # Описание аккорда
+        self.chord_desc_label = MDLabel(
+            text="",
+            font_size=sp(10),
+            halign="center",
+            size_hint=(1, None),
+            height=dp(20),
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 0.7],
+            shorten=True,
+            shorten_from="right"
+        )
+        content.add_widget(self.chord_desc_label)
+
+        # Контейнер для грифа
+        griff_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(180),
+            padding=[dp(4), dp(4), dp(4), dp(4)]
+        )
+
+        # Создаём мини-рендерер
+        self.chord_preview_renderer = ChordRenderer()
+        griff_container.add_widget(self.chord_preview_renderer)
+
+        # Загружаем фон грифа
+        try:
+            bg_data = load_asset_as_bytes("griff_png")
+            if bg_data:
+                img = CoreImage(BytesIO(bg_data), ext="png")
+                if img and img.texture:
+                    self.chord_preview_renderer.set_background(img.texture)
+        except Exception as e:
+            logger.error(f"Ошибка загрузки фона грифа: {e}")
+
+        content.add_widget(griff_container)
+
+        # Создаём диалог
+        self.chords_dialog = MDDialog(
+            type="custom",
+            content_cls=content,
+            size_hint=(0.85, None),
+            height=dp(320),
+            radius=[18, 18, 18, 18],
+            buttons=[]
+        )
+
+        # Сохраняем индекс и загружаем первый аккорд
+        self._current_chord_index = 0
+        self._update_chord_display()
+        self._load_chord_for_preview(self._song_chords[0])
+
+        self.chords_dialog.open()
+
+    def _extract_and_cache_chords(self):
+        """Извлекает и кэширует аккорды из песни (с сохранением оригинального регистра)"""
+        chords = set()
+
+        # Собираем аккорды из всех подборов
+        for tab in self.tabs:
+            content = tab.get('content', '')
+            if content:
+                cleaned = clean_text(content)
+                extracted = extract_chords_from_text(cleaned)
+                # Сохраняем оригинальные названия (с учётом регистра)
+                chords.update(extracted)
+
+        # Сортируем по имени
+        self._song_chords = sorted(list(chords))
+        logger.info(f"🎸 Найдено аккордов в песне: {len(self._song_chords)} - {self._song_chords}")
+
+    def _get_chord_description(self, chord_name):
+        """Получает описание аккорда из базы"""
+        if self.manager and self.manager.has_screen('chords'):
+            chords_screen = self.manager.get_screen('chords')
+            chord_normalized = chord_name.replace('B', 'H')
+
+            for chord in chords_screen.all_chords:
+                if chord['short_name'] == chord_normalized or chord['short_name'] == chord_name:
+                    description = chord.get('description', '')
+                    if description:
+                        # Берём первую часть описания
+                        parts = description.replace('!', '|').split('|')
+                        if parts:
+                            return parts[0].strip()
+                    return chord.get('type', 'Аккорд')
+
+                # Поиск по альтернативным названиям
+                name_variants = chord['name'].split('|')
+                for variant in name_variants:
+                    variant_clean = variant.strip().replace('$', '/')
+                    if variant_clean == chord_name:
+                        description = chord.get('description', '')
+                        if description:
+                            parts = description.replace('!', '|').split('|')
+                            if parts:
+                                return parts[0].strip()
+                        return chord.get('type', 'Аккорд')
+        return 'Аккорд'
+
+    def _update_chord_display(self):
+        """Обновляет отображение текущего аккорда в меню"""
+        if not self._song_chords:
+            return
+
+        total = len(self._song_chords)
+        current = self._current_chord_index
+        chord_name = self._song_chords[current]
+
+        # Обновляем название аккорда (сохраняем оригинальный регистр)
+        if hasattr(self, 'chord_name_label'):
+            self.chord_name_label.text = chord_name
+
+        # Обновляем описание
+        if hasattr(self, 'chord_desc_label'):
+            desc = self._get_chord_description(chord_name)
+            self.chord_desc_label.text = desc
+
+        # Обновляем кнопки пагинации
+        if hasattr(self, 'chord_prev_btn'):
+            self.chord_prev_btn.disabled = (current == 0)
+            self.chord_prev_btn.opacity = 1 if current > 0 else 0.3
+
+        if hasattr(self, 'chord_next_btn'):
+            self.chord_next_btn.disabled = (current == total - 1)
+            self.chord_next_btn.opacity = 1 if current < total - 1 else 0.3
+
+    def _prev_chord_in_menu(self, *args):
+        """Предыдущий аккорд в меню"""
+        if self._current_chord_index > 0:
+            self._current_chord_index -= 1
+            chord = self._song_chords[self._current_chord_index]
+            self._update_chord_display()
+            self._load_chord_for_preview(chord)
+
+    def _next_chord_in_menu(self, *args):
+        """Следующий аккорд в меню"""
+        if self._current_chord_index < len(self._song_chords) - 1:
+            self._current_chord_index += 1
+            chord = self._song_chords[self._current_chord_index]
+            self._update_chord_display()
+            self._load_chord_for_preview(chord)
+
+    def _load_chord_for_preview(self, chord_name):
+        """Загружает аккорд для предпросмотра в мини-рендерере"""
+        if not hasattr(self, 'chord_preview_renderer') or not self.chord_preview_renderer:
+            return
+
+        # Нормализуем имя аккорда для поиска (B -> H)
+        chord_normalized = chord_name.replace('B', 'H')
+
+        # Ищем модуль аккорда
+        if self.manager and self.manager.has_screen('chords'):
+            chords_screen = self.manager.get_screen('chords')
+
+            target_chord = None
+            for chord in chords_screen.all_chords:
+                if chord['short_name'] == chord_normalized or chord['short_name'] == chord_name:
+                    target_chord = chord
+                    break
+                # Поиск по альтернативным названиям
+                name_variants = chord['name'].split('|')
+                for variant in name_variants:
+                    variant_clean = variant.strip().replace('$', '/')
+                    if variant_clean == chord_name:
+                        target_chord = chord
+                        break
+                if target_chord:
+                    break
+
+            if target_chord:
+                chord_module = target_chord['module']
+                self.chord_preview_renderer.load_chord(chord_module)
+                self.chord_preview_renderer.set_mode("finger")
+                logger.info(f"✅ Загружен аккорд для превью: {chord_name}")
+            else:
+                logger.warning(f"⚠️ Аккорд {chord_name} не найден в базе")
+                self.chord_preview_renderer.sprite_layer.clear_widgets()
+
+    # ==================== ТОНАЛЬНОСТЬ ====================
+
+    def show_tonality_picker(self):
+        """Показывает диалог выбора тональности"""
+        content = MDBoxLayout(
+            orientation='vertical',
+            spacing=dp(8),
+            padding=dp(16),
+            size_hint_y=None,
+            adaptive_height=True
+        )
+
+        from kivymd.uix.slider import MDSlider
+
+        self.tonality_slider = MDSlider(
+            min=-7,
+            max=7,
+            value=self.current_tonality,
+            step=1,
+            size_hint_y=None,
+            height=dp(40)
+        )
+
+        value_label = MDLabel(
+            text=f"Тональность: {self.current_tonality}",
+            font_size=sp(16),
+            halign="center",
+            size_hint_y=None,
+            height=dp(30),
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 0.7]
+        )
+
+        def on_slider_change(instance, value):
+            value_label.text = f"Тональность: {int(value)}"
+
+        self.tonality_slider.bind(value=on_slider_change)
+
+        content.add_widget(value_label)
+        content.add_widget(self.tonality_slider)
+
+        dialog = MDDialog(
+            title="Транспонирование",
+            type="custom",
+            content_cls=content,
+            buttons=[
+                MDRaisedButton(text="Отмена", on_release=lambda x: dialog.dismiss()),
+                MDRaisedButton(text="Применить", on_release=lambda x: self._apply_tonality(dialog))
+            ]
+        )
+        dialog.open()
+
+    def _apply_tonality(self, dialog):
+        """Применяет выбранную тональность"""
+        new_tonality = int(self.tonality_slider.value)
+        if new_tonality != self.current_tonality:
+            self.current_tonality = new_tonality
+            logger.info(f"Тональность изменена на {self.current_tonality}")
+        dialog.dismiss()
+
+    # ==================== ПОДБОРЫ ====================
+
+    def show_tabs_picker(self):
+        """Показывает диалог выбора подбора"""
+        if not self.tabs or len(self.tabs) <= 1:
+            notify.info("Только один подбор")
+            return
+
+        content = MDBoxLayout(
+            orientation='vertical',
+            spacing=dp(8),
+            padding=dp(16),
+            size_hint_y=None,
+            adaptive_height=True
+        )
+
+        for i, tab in enumerate(self.tabs):
+            btn = MDRaisedButton(
+                text=f"Подбор {i + 1}",
+                size_hint=(1, None),
+                height=dp(48),
+                md_bg_color=[0.46, 0.70, 0.71, 1] if i == self.current_tab_index else [0.2, 0.2, 0.2, 0.8],
+                on_release=lambda x, idx=i: self._select_tab(idx)
+            )
+            content.add_widget(btn)
+
+        dialog = MDDialog(
+            title="Выберите подбор",
+            type="custom",
+            content_cls=content,
+            buttons=[MDRaisedButton(text="Закрыть", on_release=lambda x: dialog.dismiss())]
+        )
+        dialog.open()
+        self.tabs_dialog = dialog
+
+    def _select_tab(self, index):
+        """Выбирает подбор"""
+        if hasattr(self, 'tabs_dialog'):
+            self.tabs_dialog.dismiss()
+        self.current_tab_index = index
+        self._load_current_tab()
+
+    # ==================== ОСНОВНЫЕ МЕТОДЫ ====================
 
     def cycle_font_size(self):
-        """Циклическое изменение размера шрифта при нажатии на кнопку"""
+        """Циклическое изменение размера шрифта при нажатии на лупу"""
         self.font_size_index = (self.font_size_index + 1) % len(self.font_size_levels)
         self.current_font_size = self.font_size_levels[self.font_size_index]
         self.content_label.font_size = self.current_font_size
         self._update_content_height()
 
-        # Меняем иконку в зависимости от положения
         if self.font_size_index == len(self.font_size_levels) - 1:
-            self.font_btn.set_icon_minus()
+            self.font_btn.icon = "magnify-minus"
         else:
-            self.font_btn.set_icon_plus()
+            self.font_btn.icon = "magnify-plus"
 
-        # Визуальная обратная связь
         anim = Animation(opacity=0.5, duration=0.05) + Animation(opacity=1, duration=0.1)
         anim.start(self.font_btn)
 
         logger.info(f"Размер шрифта: {self.current_font_size}")
-
-    def _update_tab_display(self):
-        if self.tabs and len(self.tabs) > 1:
-            self.tabs_value_label.text = str(self.current_tab_index + 1)
-        elif self.tabs and len(self.tabs) == 1:
-            self.tabs_value_label.text = "1"
-        else:
-            self.tabs_value_label.text = "—"
-
-    def prev_tab(self, *args):
-        if self.tabs and len(self.tabs) > 1:
-            self.current_tab_index = (self.current_tab_index - 1) % len(self.tabs)
-            self._load_current_tab()
-
-    def next_tab(self, *args):
-        if self.tabs and len(self.tabs) > 1:
-            self.current_tab_index = (self.current_tab_index + 1) % len(self.tabs)
-            self._load_current_tab()
 
     def _extract_and_log_chords(self, text):
         """Извлекает аккорды из текста и логирует их"""
@@ -664,10 +896,8 @@ class SongDetailScreen(BaseScreen):
             raw_content = tab.get('content', 'Текст не загружен')
             cleaned = clean_text(raw_content)
 
-            # Логируем найденные аккорды
             self._extract_and_log_chords(cleaned)
 
-            # Подсвечиваем аккорды
             if cleaned:
                 highlighted_text = highlight_chords_in_text(cleaned)
                 self.content_label.text = highlighted_text
@@ -677,21 +907,15 @@ class SongDetailScreen(BaseScreen):
                 self.content_label.markup = False
 
             self._update_content_height()
-            self._update_tab_display()
             Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
 
     def on_chord_click(self, chord_name):
         """Обработчик клика по аккорду в тексте"""
         logger.info(f"🎸 Нажат аккорд: {chord_name}")
 
-        from utils.screen_state import screen_state
-
-        # Сохраняем текущий экран как предыдущий (ВАЖНО: именно name текущего экрана)
-        screen_state.set_previous_screen(self.name)  # self.name = 'song_detail'
-        # Сохраняем нажатый аккорд
+        screen_state.set_previous_screen(self.name)
         screen_state.set_pending_chord(chord_name)
 
-        # Переходим на экран аккордов
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('chords'):
                 self.manager.current = 'chords'
@@ -704,16 +928,6 @@ class SongDetailScreen(BaseScreen):
         self.content_label.height = max(dp(50), text_height + dp(8))
         if self.content_label.parent:
             self.content_label.parent.height = text_height + dp(16)
-
-    def increase_tonality(self, *args):
-        if self.current_tonality < 7:
-            self.current_tonality += 1
-            self.tonality_value_label.text = str(self.current_tonality)
-
-    def decrease_tonality(self, *args):
-        if self.current_tonality > -7:
-            self.current_tonality -= 1
-            self.tonality_value_label.text = str(self.current_tonality)
 
     def set_song(self, song_id):
         self.song_id = song_id
@@ -755,10 +969,8 @@ class SongDetailScreen(BaseScreen):
 
         self.current_tab_index = 0
 
-        self.artist_label.text = artist
-        self.song_title_label.text = title
+        self.song_info_label.text = f"{artist} - {title}"
 
-        # Инициализируем паттерны аккордов из экрана chords
         if self.manager and self.manager.has_screen('chords'):
             chords_screen = self.manager.get_screen('chords')
             init_chord_patterns(chords_screen)
@@ -768,10 +980,8 @@ class SongDetailScreen(BaseScreen):
             raw_content = self.tabs[0].get('content', 'Текст не загружен')
             cleaned = clean_text(raw_content)
 
-            # Логируем найденные аккорды
             self._extract_and_log_chords(cleaned)
 
-            # Подсвечиваем аккорды
             if cleaned:
                 highlighted_text = highlight_chords_in_text(cleaned)
                 self.content_label.text = highlighted_text
@@ -788,8 +998,6 @@ class SongDetailScreen(BaseScreen):
         self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
         self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
-        self._update_tab_display()
-
         Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
         self.hide_loading()
         logger.info(f"Песня загружена, подборов: {len(self.tabs)}")
@@ -799,7 +1007,7 @@ class SongDetailScreen(BaseScreen):
         self.content_label.text = "Ошибка загрузки\nПроверьте интернет"
         notify.error("Ошибка загрузки песни")
 
-    def toggle_like(self, instance):
+    def toggle_like(self, *args):
         if not api.is_authenticated():
             notify.warning("Войдите, чтобы ставить лайки")
             return
@@ -814,7 +1022,7 @@ class SongDetailScreen(BaseScreen):
 
         api.toggle_like(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
 
-    def toggle_favorite(self, instance):
+    def toggle_favorite(self, *args):
         if not api.is_authenticated():
             notify.warning("Войдите, чтобы добавлять в избранное")
             return
@@ -853,7 +1061,6 @@ class SongDetailScreen(BaseScreen):
         """Возврат на предыдущий экран"""
         logger.info("🔙 Нажата кнопка возврата")
 
-        # Сразу переходим на song_detail, игнорируя сохранённый экран
         if self.manager and self.manager.has_screen('song_detail'):
             screen_state.clear_pending_chord()
             self.manager.current = 'song_detail'
@@ -864,11 +1071,15 @@ class SongDetailScreen(BaseScreen):
     def on_enter(self):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            app.top_nav.set_custom_title("Подбор песни")
+            app.top_nav.set_custom_title("")
             app.top_nav._show_back_button()
             app.top_nav.back_btn.on_release = self.go_back
+            app.top_nav.hide_search_button(True)
+            app.top_nav.hide_profile_button(True)
 
     def on_leave(self):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.reset_to_default()
+            app.top_nav.hide_search_button(False)
+            app.top_nav.hide_profile_button(False)
