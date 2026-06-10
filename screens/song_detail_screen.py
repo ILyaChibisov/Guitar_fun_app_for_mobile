@@ -20,6 +20,7 @@ from kivy.uix.behaviors import ButtonBehavior
 from io import BytesIO
 import re
 from kivy.clock import Clock
+from kivy.utils import platform
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -113,7 +114,7 @@ class LoadingSpinner(MDBoxLayout):
         self.label = MDLabel(
             text="Загрузка...",
             halign="center",
-            font_size=sp(14),
+            font_size=sp(16),
             theme_text_color="Secondary",
             size_hint_y=None,
             height=dp(30)
@@ -188,7 +189,10 @@ class IconActionButton(MDIconButton):
         super().__init__(**kwargs)
         self.on_press_callback = on_press_callback
         self.size_hint = (None, None)
-        self.size = (dp(32), dp(32))
+        if platform == 'android':
+            self.size = (dp(42), dp(42))
+        else:
+            self.size = (dp(32), dp(32))
         self.theme_icon_color = "Custom"
         if icon_color:
             self.icon_color = icon_color
@@ -220,8 +224,11 @@ class SongDetailScreen(BaseScreen):
         self.tabs = []
         self.current_tab_index = 0
 
-        # Настройки размера шрифта (стандартный 18)
-        self.STANDARD_FONT_SIZE = 18
+        # Настройки размера шрифта в зависимости от платформы
+        if platform == 'android':
+            self.STANDARD_FONT_SIZE = 22
+        else:
+            self.STANDARD_FONT_SIZE = 18
         self.current_font_size = self.STANDARD_FONT_SIZE
 
         # Для меню аккордов
@@ -234,7 +241,7 @@ class SongDetailScreen(BaseScreen):
         self.chord_variant_index = 0
         self.is_chords_mode = False
         self.griff_scale = 1.0
-        self.original_griff_size = (dp(220), dp(110))
+        self.original_griff_size = (dp(200), dp(100))
         self.griff_container = None
 
         # Для кэширования транспонирования
@@ -350,7 +357,7 @@ class SongDetailScreen(BaseScreen):
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.85],
             valign="top",
-            line_height=1.4,
+            line_height=1.5,
             markup=True
         )
         self.content_label.bind(texture_size=self._update_content_height)
@@ -418,7 +425,7 @@ class SongDetailScreen(BaseScreen):
 
         self.song_info_label = MDLabel(
             text="",
-            font_size=sp(16),
+            font_size=sp(20),
             size_hint_x=1,
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.85],
@@ -534,7 +541,7 @@ class SongDetailScreen(BaseScreen):
         )
 
         # Сохраняем оригинальный размер
-        self.original_griff_size = (dp(180), dp(110))
+        self.original_griff_size = (dp(200), dp(100))
         self.griff_scale = 1.0
 
         # Контейнер для грифа
@@ -547,7 +554,7 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(0)
         )
 
-        # Рамка вокруг грифа с зелёной полупрозрачной заливкой
+        # Рамка вокруг грифа с зелёной полупрозрачной заливкой (как в вашем модуле)
         griff_wrapper = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
@@ -658,16 +665,17 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # 4. Название аккорда - увеличиваем приоритет через size_hint_x
+        # 4. Название аккорда
         self.chord_name_label = MDLabel(
             text="",
             halign="center",
             valign="middle",
-            size_hint_x=2,  # В 2 раза больше обычного веса
+            size_hint_x=2,
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.85],
             bold=True,
-            shorten=False
+            shorten=False,
+            font_size=sp(20)
         )
 
         # Привязываем авто-масштабирование
@@ -710,11 +718,11 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # Собираем панель - порядок важен
+        # Собираем панель
         self.chords_control_panel.add_widget(self.variant_btn)
         self.chords_control_panel.add_widget(self.mode_btn)
         self.chords_control_panel.add_widget(self.chord_prev_btn)
-        self.chords_control_panel.add_widget(self.chord_name_label)  # label с size_hint_x=2
+        self.chords_control_panel.add_widget(self.chord_name_label)
         self.chords_control_panel.add_widget(self.chord_next_btn)
         self.chords_control_panel.add_widget(self.griff_zoom_btn)
         self.chords_control_panel.add_widget(self.chords_close_btn)
@@ -736,18 +744,16 @@ class SongDetailScreen(BaseScreen):
         if not text:
             return
 
-        # Получаем реальную ширину лейбла
         available_width = self.chord_name_label.width
 
-        # Если ширина ещё не определена, пробуем позже
         if available_width <= dp(50):
             Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.1)
             return
 
         from kivy.core.text import Label as CoreLabel
 
-        # Пробуем размеры от большого к маленькому
-        for size in range(16, 9, -1):
+        # Увеличенные размеры для Android (от 26 до 13)
+        for size in range(26, 12, -1):
             test_label = CoreLabel(
                 text=text,
                 font_size=sp(size),
@@ -757,27 +763,22 @@ class SongDetailScreen(BaseScreen):
             test_label.refresh()
             text_width = test_label.texture.width
 
-            # Если текст помещается с небольшим запасом
             if text_width <= available_width - dp(10):
                 if self.chord_name_label.font_size != sp(size):
                     self.chord_name_label.font_size = sp(size)
-                    logger.debug(f"Scale: '{text}' -> {size}sp (width: {text_width:.0f}/{available_width:.0f}px)")
                 return
 
-        # Если даже 9sp не влезает - ставим 9sp
-        if self.chord_name_label.font_size != sp(9):
-            self.chord_name_label.font_size = sp(9)
+        if self.chord_name_label.font_size != sp(12):
+            self.chord_name_label.font_size = sp(12)
 
     def _toggle_display_mode(self, *args):
         """Переключает режим отображения"""
         if self.display_mode == "finger":
-            # На грифе пальцы, нажимаем - переключаем на ноты
             self.display_mode = "notes"
             self.mode_btn.icon = "gesture-tap"
             self.mode_btn.icon_color = [1.0, 0.55, 0.0, 1]
             logger.info("Режим отображения: НОТЫ")
         else:
-            # На грифе ноты, нажимаем - переключаем на пальцы
             self.display_mode = "finger"
             self.mode_btn.icon = "music-note"
             self.mode_btn.icon_color = [0.9, 0.2, 0.2, 1]
@@ -789,18 +790,25 @@ class SongDetailScreen(BaseScreen):
                 self.load_current_variant()
 
     def _toggle_griff_zoom(self, *args):
-        """Переключает масштаб грифа (увеличение/уменьшение на 40%)"""
-        if self.griff_scale == 1.0:
-            self.griff_scale = 1.4
-            new_size = (int(self.original_griff_size[0] * 1.4), int(self.original_griff_size[1] * 1.4))
-            self.griff_container.size = new_size
+        """Переключает масштаб грифа (1x -> 1.3x -> 1.6x -> 1x)"""
+        current = self.griff_scale
+
+        if current == 1.0:
+            new_scale = 1.3
             self.griff_zoom_btn.icon = "magnify-minus"
-            logger.info("Гриф увеличен на 40%")
+        elif current == 1.3:
+            new_scale = 1.6
+            self.griff_zoom_btn.icon = "magnify-minus"
         else:
-            self.griff_scale = 1.0
-            self.griff_container.size = self.original_griff_size
+            new_scale = 1.0
             self.griff_zoom_btn.icon = "magnify"
-            logger.info("Гриф уменьшен до обычного размера")
+
+        self.griff_scale = new_scale
+        new_size = (int(self.original_griff_size[0] * new_scale),
+                    int(self.original_griff_size[1] * new_scale))
+        self.griff_container.size = new_size
+
+        logger.info(f"Гриф изменён: {current} -> {new_scale}")
 
         if hasattr(self, '_update_griff_position'):
             self._update_griff_position()
@@ -813,7 +821,6 @@ class SongDetailScreen(BaseScreen):
         chord_name = self._song_chords[self._current_chord_index]
         if hasattr(self, 'chord_name_label'):
             self.chord_name_label.text = chord_name
-            # Масштабирование сработает автоматически через bind
 
         self._load_chord_variants(chord_name)
 
@@ -966,7 +973,7 @@ class SongDetailScreen(BaseScreen):
 
         title_label = MDLabel(
             text="Тональность",
-            font_size=dp(8),
+            font_size=sp(12),
             halign="left",
             valign="middle",
             size_hint_x=None,
@@ -978,11 +985,11 @@ class SongDetailScreen(BaseScreen):
 
         minus_label = MDLabel(
             text="-",
-            font_size=sp(16),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_x=None,
-            width=dp(24),
+            width=dp(28),
             theme_text_color="Custom",
             text_color=[0.8, 0.3, 0.3, 0.9],
             bold=True
@@ -1011,21 +1018,21 @@ class SongDetailScreen(BaseScreen):
 
         self.tonality_slider_value_label = MDLabel(
             text=f"{current_slider_value:+d}" if current_slider_value != 0 else "0",
-            font_size=sp(12),
+            font_size=sp(14),
             halign="center",
             size_hint_x=None,
-            width=dp(28),
+            width=dp(32),
             theme_text_color="Custom",
             bold=True
         )
 
         plus_label = MDLabel(
             text="+",
-            font_size=sp(16),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_x=None,
-            width=dp(24),
+            width=dp(28),
             theme_text_color="Custom",
             text_color=[0.3, 0.7, 0.3, 0.9],
             bold=True
@@ -1124,11 +1131,11 @@ class SongDetailScreen(BaseScreen):
 
         title_label = MDLabel(
             text="Размер",
-            font_size=dp(8),
+            font_size=sp(12),
             halign="left",
             valign="middle",
             size_hint_x=None,
-            width=dp(65),
+            width=dp(70),
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.85],
             bold=True
@@ -1136,11 +1143,11 @@ class SongDetailScreen(BaseScreen):
 
         minus_label = MDLabel(
             text="-",
-            font_size=sp(16),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_x=None,
-            width=dp(24),
+            width=dp(28),
             theme_text_color="Custom",
             text_color=[0.8, 0.3, 0.3, 0.9],
             bold=True
@@ -1158,8 +1165,8 @@ class SongDetailScreen(BaseScreen):
         current_slider_value = self.current_font_size - self.STANDARD_FONT_SIZE
 
         self.font_slider = MDSlider(
-            min=-5,
-            max=5,
+            min=-4,
+            max=8,
             value=current_slider_value,
             step=1,
             size_hint_x=1,
@@ -1169,10 +1176,10 @@ class SongDetailScreen(BaseScreen):
 
         self.font_slider_value_label = MDLabel(
             text=self._get_font_multiplier(self.current_font_size),
-            font_size=sp(12),
+            font_size=sp(14),
             halign="center",
             size_hint_x=None,
-            width=dp(40),
+            width=dp(45),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True
@@ -1180,11 +1187,11 @@ class SongDetailScreen(BaseScreen):
 
         plus_label = MDLabel(
             text="+",
-            font_size=sp(16),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_x=None,
-            width=dp(24),
+            width=dp(28),
             theme_text_color="Custom",
             text_color=[0.3, 0.7, 0.3, 0.9],
             bold=True
@@ -1194,18 +1201,16 @@ class SongDetailScreen(BaseScreen):
             int_value = int(round(value))
             self.font_slider.value = int_value
             new_size = self.STANDARD_FONT_SIZE + int_value
-            new_size = max(11, min(23, new_size))
+            new_size = max(16, min(34, new_size))
             self.font_slider_value_label.text = self._get_font_multiplier(new_size)
             if new_size != self.current_font_size:
                 self.current_font_size = new_size
                 if hasattr(self, 'content_label'):
                     self.content_label.font_size = self.current_font_size
                     self._update_content_height()
-                    # Обновляем размер шрифта аккорда в секции аккордов
                 if hasattr(self, 'chord_name_label') and self.chord_name_label:
                     Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.1)
-                logger.info(
-                    f"🔍 Размер шрифта изменён на: {self.current_font_size} ({self._get_font_multiplier(new_size)})")
+                logger.info(f"🔍 Размер шрифта изменён на: {self.current_font_size}")
 
         self.font_slider.bind(value=on_slider_change)
 
@@ -1281,11 +1286,11 @@ class SongDetailScreen(BaseScreen):
 
         minus_label = MDLabel(
             text="-",
-            font_size=sp(16),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_x=None,
-            width=dp(24),
+            width=dp(28),
             theme_text_color="Custom",
             text_color=[0.8, 0.3, 0.3, 0.9],
             bold=True
@@ -1312,10 +1317,10 @@ class SongDetailScreen(BaseScreen):
 
         self.scroll_speed_label = MDLabel(
             text="0.5x",
-            font_size=sp(12),
+            font_size=sp(14),
             halign="center",
             size_hint_x=None,
-            width=dp(40),
+            width=dp(45),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True
@@ -1323,11 +1328,11 @@ class SongDetailScreen(BaseScreen):
 
         plus_label = MDLabel(
             text="+",
-            font_size=sp(16),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_x=None,
-            width=dp(24),
+            width=dp(28),
             theme_text_color="Custom",
             text_color=[0.3, 0.7, 0.3, 0.9],
             bold=True
