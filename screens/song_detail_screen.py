@@ -220,7 +220,7 @@ class SongDetailScreen(BaseScreen):
         self.tabs = []
         self.current_tab_index = 0
 
-        # Настройки размера шрифта (стандартный 16, от 11 до 21)
+        # Настройки размера шрифта (стандартный 18)
         self.STANDARD_FONT_SIZE = 18
         self.current_font_size = self.STANDARD_FONT_SIZE
 
@@ -246,6 +246,13 @@ class SongDetailScreen(BaseScreen):
         # Для панели шрифта
         self.font_panel = None
         self.is_font_mode = False
+
+        # Для автопрокрутки текста
+        self.scroll_panel = None
+        self.is_scroll_mode = False
+        self.scroll_speed = 1.0
+        self.scroll_animation = None
+        self.is_scrolling = False
 
         self.init_ui()
         self.load_background()
@@ -423,7 +430,7 @@ class SongDetailScreen(BaseScreen):
         self.top_menu.add_widget(row)
 
     def _create_bottom_panel(self):
-        """Создаёт нижнюю панель с 6 кнопками (обычный режим)"""
+        """Создаёт нижнюю панель с 7 кнопками (обычный режим)"""
         self.normal_bottom_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -475,6 +482,13 @@ class SongDetailScreen(BaseScreen):
             icon_color=[0.8, 0.3, 0.3, 0.9]
         )
 
+        # Кнопка для прокрутки текста
+        self.scroll_btn = IconActionButton(
+            icon_name="play-circle",
+            on_press_callback=self.show_scroll_panel,
+            icon_color=[0.46, 0.70, 0.71, 0.9]
+        )
+
         self.font_btn = IconActionButton(
             icon_name="magnify",
             on_press_callback=self.show_font_panel,
@@ -483,6 +497,7 @@ class SongDetailScreen(BaseScreen):
 
         self.normal_bottom_panel.add_widget(self.favorite_btn)
         self.normal_bottom_panel.add_widget(self.like_btn)
+        self.normal_bottom_panel.add_widget(self.scroll_btn)
         self.normal_bottom_panel.add_widget(self.font_btn)
 
     # ==================== ПАНЕЛЬ ТОНАЛЬНОСТИ ====================
@@ -498,6 +513,8 @@ class SongDetailScreen(BaseScreen):
             self._close_tonality_card(self.tonality_card, apply=False)
         if self.is_font_mode:
             self.close_font_panel()
+        if self.is_scroll_mode:
+            self.close_scroll_panel()
 
         # Создаём панель тональности
         self.tonality_panel = MDCard(
@@ -643,6 +660,8 @@ class SongDetailScreen(BaseScreen):
             self._close_tonality_card(self.tonality_card, apply=False)
         if self.is_tonality_mode:
             self.close_tonality_panel()
+        if self.is_scroll_mode:
+            self.close_scroll_panel()
 
         # Создаём панель шрифта
         self.font_panel = MDCard(
@@ -803,17 +822,252 @@ class SongDetailScreen(BaseScreen):
 
         self.close_font_panel()
 
+    # ==================== ПАНЕЛЬ ПРОКРУТКИ ТЕКСТА ====================
+
+    def show_scroll_panel(self):
+        """Показывает панель управления прокруткой текста"""
+        logger.info("▶️ Открытие панели прокрутки текста")
+
+        # Закрываем другие меню если открыты
+        if hasattr(self, 'chords_card') and self.chords_card:
+            self._close_chords_card()
+        if hasattr(self, 'tonality_card') and self.tonality_card:
+            self._close_tonality_card(self.tonality_card, apply=False)
+        if self.is_tonality_mode:
+            self.close_tonality_panel()
+        if self.is_font_mode:
+            self.close_font_panel()
+
+        # Создаём панель прокрутки
+        self.scroll_panel = MDCard(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(52),
+            padding=[dp(8), dp(4), dp(8), dp(4)],
+            spacing=dp(6),
+            radius=[0, 0, 18, 18],
+            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            elevation=0,
+            line_color=[0.8, 0.8, 0.8, 0.2],
+            line_width=0.5,
+            pos_hint={'center_x': 0.5}
+        )
+
+        # Знак минус
+        minus_label = MDLabel(
+            text="-",
+            font_size=sp(16),
+            halign="center",
+            valign="middle",
+            size_hint_x=None,
+            width=dp(24),
+            theme_text_color="Custom",
+            text_color=[0.8, 0.3, 0.3, 0.9],
+            bold=True
+        )
+
+        center_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=1,
+            spacing=dp(6),
+            padding=[dp(2), dp(0), dp(2), dp(0)]
+        )
+
+        from kivymd.uix.slider import MDSlider
+
+        # Слайдер скорости (от 1 до 20, где 1 = самая медленная, 20 = быстрая)
+        self.scroll_speed_slider = MDSlider(
+            min=1,
+            max=20,
+            value=3,  # Начальная скорость 0.5x
+            step=1,
+            size_hint_x=1,
+            height=dp(38),
+            hint=False
+        )
+
+        # Значение скорости
+        self.scroll_speed_label = MDLabel(
+            text="0.5x",
+            font_size=sp(12),
+            halign="center",
+            size_hint_x=None,
+            width=dp(40),
+            theme_text_color="Custom",
+            text_color=[0.46, 0.70, 0.71, 1],
+            bold=True
+        )
+
+        # Знак плюс
+        plus_label = MDLabel(
+            text="+",
+            font_size=sp(16),
+            halign="center",
+            valign="middle",
+            size_hint_x=None,
+            width=dp(24),
+            theme_text_color="Custom",
+            text_color=[0.3, 0.7, 0.3, 0.9],
+            bold=True
+        )
+
+        def get_speed_from_slider(slider_value):
+            """Преобразует значение слайдера (1-20) в скорость прокрутки"""
+            # Диапазон: 0.2x - 1.5x (очень медленно до умеренно)
+            if slider_value <= 10:
+                return 0.2 + (slider_value - 1) * 0.03  # 1->0.2, 10->0.47
+            else:
+                return 0.5 + (slider_value - 10) * 0.1  # 10->0.5, 20->1.5
+
+        # Инициализируем скорость
+        self.scroll_speed = get_speed_from_slider(3)  # 0.5x
+
+        def on_slider_change(instance, value):
+            int_value = int(round(value))
+            self.scroll_speed_slider.value = int_value
+            self.scroll_speed = get_speed_from_slider(int_value)
+            self.scroll_speed_label.text = f"{self.scroll_speed:.1f}x"
+            logger.info(f"🎚️ Скорость прокрутки изменена: {self.scroll_speed:.1f}x")
+
+            # Если прокрутка активна, обновляем скорость
+            if self.is_scrolling:
+                self.stop_scroll()
+                self.start_scroll()
+
+        self.scroll_speed_slider.bind(value=on_slider_change)
+
+        center_container.add_widget(minus_label)
+        center_container.add_widget(self.scroll_speed_slider)
+        center_container.add_widget(plus_label)
+        center_container.add_widget(self.scroll_speed_label)
+
+        # Кнопка Play/Pause
+        self.play_pause_btn = IconActionButton(
+            icon_name="play",
+            on_press_callback=self.toggle_scroll,
+            icon_color=[0.46, 0.70, 0.71, 1]
+        )
+
+        # Кнопка Stop (сброс в начало)
+        self.stop_btn = IconActionButton(
+            icon_name="stop",
+            on_press_callback=self.reset_scroll_position,
+            icon_color=[0.8, 0.3, 0.3, 0.9]
+        )
+
+        # Кнопка закрытия - галочка
+        self.scroll_close_btn = IconActionButton(
+            icon_name="check",
+            on_press_callback=self.close_scroll_panel,
+            icon_color=[0.46, 0.70, 0.71, 1]
+        )
+
+        # Собираем панель
+        self.scroll_panel.add_widget(center_container)
+        self.scroll_panel.add_widget(self.play_pause_btn)
+        self.scroll_panel.add_widget(self.stop_btn)
+        self.scroll_panel.add_widget(self.scroll_close_btn)
+
+        # Заменяем нижнюю панель
+        self.song_card.remove_widget(self.bottom_panel)
+        self.bottom_panel = self.scroll_panel
+        self.song_card.add_widget(self.bottom_panel)
+
+        self.is_scroll_mode = True
+
+    def toggle_scroll(self):
+        """Запускает или останавливает автопрокрутку текста"""
+        logger.info(f"🎬 Переключение прокрутки: {'СТАРТ' if not self.is_scrolling else 'СТОП'}")
+
+        # Если достигли конца текста (scroll_y <= 0.01) и нажимаем play, сначала сбрасываем в начало
+        if not self.is_scrolling and self.content_scroll.scroll_y <= 0.01:
+            self.reset_scroll_position()
+
+        if not self.is_scrolling:
+            self.start_scroll()
+            self.play_pause_btn.icon = "pause"
+        else:
+            self.stop_scroll()
+            self.play_pause_btn.icon = "play"
+
+    def start_scroll(self):
+        """Запускает плавную прокрутку текста вниз"""
+        if self.is_scrolling:
+            return
+
+        self.is_scrolling = True
+
+        def update_scroll(dt):
+            if not self.is_scrolling:
+                return False
+
+            # ОЧЕНЬ МЕДЛЕННАЯ прокрутка
+            # Базовая скорость: 0.0002 (очень медленно)
+            # Максимальная: 0.0015 (умеренно)
+            scroll_step = 0.0002 * self.scroll_speed
+            new_y = self.content_scroll.scroll_y - scroll_step
+
+            if new_y <= 0:
+                # Достигли конца текста, останавливаемся
+                self.content_scroll.scroll_y = 0
+                self.stop_scroll()
+                self.play_pause_btn.icon = "play"
+                logger.info("🏁 Достигнут конец текста, прокрутка остановлена")
+                return False
+            else:
+                self.content_scroll.scroll_y = new_y
+                return True
+
+        # Запускаем анимацию прокрутки (60 FPS)
+        self.scroll_animation = Clock.schedule_interval(update_scroll, 1.0 / 60.0)
+
+    def stop_scroll(self):
+        """Останавливает автопрокрутку"""
+        if self.scroll_animation:
+            self.scroll_animation.cancel()
+            self.scroll_animation = None
+        self.is_scrolling = False
+
+    def reset_scroll_position(self):
+        """Сбрасывает позицию прокрутки в начало (верх)"""
+        logger.info("⏹️ Сброс позиции прокрутки в начало")
+
+        # Останавливаем прокрутку если активна
+        if self.is_scrolling:
+            self.stop_scroll()
+            self.play_pause_btn.icon = "play"
+
+        # Мгновенный сброс в начало
+        self.content_scroll.scroll_y = 1.0
+
+    def close_scroll_panel(self):
+        """Закрывает панель прокрутки и возвращает обычное меню"""
+        logger.info("🔚 Закрытие панели прокрутки")
+
+        # Останавливаем прокрутку если активна
+        if self.is_scrolling:
+            self.stop_scroll()
+
+        if self.normal_bottom_panel:
+            self.song_card.remove_widget(self.bottom_panel)
+            self.bottom_panel = self.normal_bottom_panel
+            self.song_card.add_widget(self.bottom_panel)
+
+        self.is_scroll_mode = False
+
     # ==================== МЕНЮ АККОРДОВ ====================
 
     def on_chords_press(self):
         """Показывает всплывающую карточку с аккордами песни"""
         logger.info("🎸 Нажата кнопка аккордов")
 
-        # Если в режиме тональности или шрифта, сначала выходим из них
+        # Если в режиме тональности, шрифта или прокрутки, сначала выходим
         if self.is_tonality_mode:
             self.cancel_tonality()
         if self.is_font_mode:
             self.cancel_font()
+        if self.is_scroll_mode:
+            self.close_scroll_panel()
 
         if not self._song_chords:
             notify.info("Аккорды не найдены в тексте песни")
@@ -1283,12 +1537,16 @@ class SongDetailScreen(BaseScreen):
             self.cancel_tonality()
         if self.is_font_mode:
             self.cancel_font()
+        if self.is_scroll_mode:
+            self.close_scroll_panel()
 
         self._current_chord_index = 0
         self.reset_font_size()
         self.display_mode = "finger"
         self.chord_variants = []
         self.chord_variant_index = 0
+        self.scroll_speed = 1.0
+        self.is_scrolling = False
 
         logger.info("🔄 Состояние экрана сброшено")
 
@@ -1458,6 +1716,8 @@ class SongDetailScreen(BaseScreen):
             self.cancel_tonality()
         if self.is_font_mode:
             self.cancel_font()
+        if self.is_scroll_mode:
+            self.close_scroll_panel()
 
         if self.manager and self.manager.has_screen('song_detail'):
             screen_state.clear_pending_chord()
@@ -1482,6 +1742,8 @@ class SongDetailScreen(BaseScreen):
             self.cancel_tonality()
         if self.is_font_mode:
             self.cancel_font()
+        if self.is_scroll_mode:
+            self.close_scroll_panel()
 
         if hasattr(self, 'chords_card') and self.chords_card:
             self._close_chords_card()
