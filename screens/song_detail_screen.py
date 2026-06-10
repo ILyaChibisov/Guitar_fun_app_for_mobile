@@ -531,6 +531,7 @@ class SongDetailScreen(BaseScreen):
             pos_hint={'center_x': 0.5}
         )
 
+        # Надпись "Тональность" слева
         title_label = MDLabel(
             text="Тональность",
             font_size=dp(8),
@@ -540,6 +541,19 @@ class SongDetailScreen(BaseScreen):
             width=dp(95),
             theme_text_color="Custom",
             text_color=[0, 0, 0, 0.85],
+            bold=True
+        )
+
+        # Знак минус
+        minus_label = MDLabel(
+            text="-",
+            font_size=sp(16),
+            halign="center",
+            valign="middle",
+            size_hint_x=None,
+            width=dp(24),
+            theme_text_color="Custom",
+            text_color=[0.8, 0.3, 0.3, 0.9],
             bold=True
         )
 
@@ -564,13 +578,27 @@ class SongDetailScreen(BaseScreen):
             hint=False
         )
 
+        # Значение тональности (число) - уменьшаем ширину
         self.tonality_slider_value_label = MDLabel(
             text=f"{current_slider_value:+d}" if current_slider_value != 0 else "0",
-            font_size=sp(13),
+            font_size=sp(12),
             halign="center",
             size_hint_x=None,
             width=dp(28),
             theme_text_color="Custom",
+            bold=True
+        )
+
+        # Знак плюс
+        plus_label = MDLabel(
+            text="+",
+            font_size=sp(16),
+            halign="center",
+            valign="middle",
+            size_hint_x=None,
+            width=dp(24),
+            theme_text_color="Custom",
+            text_color=[0.3, 0.7, 0.3, 0.9],
             bold=True
         )
 
@@ -595,9 +623,13 @@ class SongDetailScreen(BaseScreen):
 
         self.tonality_slider.bind(value=on_slider_change)
 
+        # Собираем центральную часть: минус + слайдер + плюс + значение
+        center_container.add_widget(minus_label)
         center_container.add_widget(self.tonality_slider)
+        center_container.add_widget(plus_label)
         center_container.add_widget(self.tonality_slider_value_label)
 
+        # Кнопка "Применить" (галочка)
         self.tonality_apply_btn = IconActionButton(
             icon_name="check",
             on_press_callback=self.close_tonality_panel,
@@ -608,6 +640,7 @@ class SongDetailScreen(BaseScreen):
         self.tonality_panel.add_widget(center_container)
         self.tonality_panel.add_widget(self.tonality_apply_btn)
 
+        # Заменяем нижнюю панель
         self.song_card.remove_widget(self.bottom_panel)
         self.bottom_panel = self.tonality_panel
         self.song_card.add_widget(self.bottom_panel)
@@ -645,7 +678,7 @@ class SongDetailScreen(BaseScreen):
                 self.apply_tonality(0)
                 logger.info("Тональность сброшена до оригинальной")
 
-        self.close_tonality_panel()
+            self.close_tonality_panel()
 
     # ==================== ПАНЕЛЬ ШРИФТА ====================
 
