@@ -242,6 +242,11 @@ class SongDetailScreen(BaseScreen):
         self.transposed_text_cache = {}
         self.original_cleaned_text = ""
 
+        # Для панели тональности
+        self.normal_bottom_panel = None
+        self.tonality_panel = None
+        self.is_tonality_mode = False
+
         self.init_ui()
         self.load_background()
 
@@ -344,6 +349,7 @@ class SongDetailScreen(BaseScreen):
         self.song_card.add_widget(self.content_scroll)
 
         self._create_bottom_panel()
+        self.bottom_panel = self.normal_bottom_panel
         self.song_card.add_widget(self.bottom_panel)
 
         card_container.add_widget(self.song_card)
@@ -417,8 +423,8 @@ class SongDetailScreen(BaseScreen):
         self.top_menu.add_widget(row)
 
     def _create_bottom_panel(self):
-        """Создаёт нижнюю панель с 6 кнопками"""
-        self.bottom_panel = MDCard(
+        """Создаёт нижнюю панель с 6 кнопками (обычный режим)"""
+        self.normal_bottom_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(52),
@@ -440,7 +446,7 @@ class SongDetailScreen(BaseScreen):
 
         self.tonality_btn = IconActionButton(
             icon_name="tune",
-            on_press_callback=self.show_tonality_picker,
+            on_press_callback=self.show_tonality_panel,
             icon_color=[0.9, 0.7, 0.2, 0.9]
         )
 
@@ -450,12 +456,12 @@ class SongDetailScreen(BaseScreen):
             icon_color=[0.46, 0.70, 0.71, 0.9]
         )
 
-        self.bottom_panel.add_widget(self.chords_btn)
-        self.bottom_panel.add_widget(self.tonality_btn)
-        self.bottom_panel.add_widget(self.tabs_btn)
+        self.normal_bottom_panel.add_widget(self.chords_btn)
+        self.normal_bottom_panel.add_widget(self.tonality_btn)
+        self.normal_bottom_panel.add_widget(self.tabs_btn)
 
         spacer = Widget(size_hint_x=1)
-        self.bottom_panel.add_widget(spacer)
+        self.normal_bottom_panel.add_widget(spacer)
 
         self.favorite_btn = IconActionButton(
             icon_name="star-outline",
@@ -475,9 +481,173 @@ class SongDetailScreen(BaseScreen):
             icon_color=[0.46, 0.70, 0.71, 0.9]
         )
 
-        self.bottom_panel.add_widget(self.favorite_btn)
-        self.bottom_panel.add_widget(self.like_btn)
-        self.bottom_panel.add_widget(self.font_btn)
+        self.normal_bottom_panel.add_widget(self.favorite_btn)
+        self.normal_bottom_panel.add_widget(self.like_btn)
+        self.normal_bottom_panel.add_widget(self.font_btn)
+
+    def show_tonality_panel(self):
+        """Показывает панель выбора тональности вместо обычного меню"""
+        logger.info("🎵 Открытие панели тональности")
+
+        # Закрываем другие меню если открыты
+        if hasattr(self, 'chords_card') and self.chords_card:
+            self._close_chords_card()
+        if hasattr(self, 'tonality_card') and self.tonality_card:
+            self._close_tonality_card(self.tonality_card, apply=False)
+
+        # Создаём панель тональности (полностью заменяет обычное меню)
+        self.tonality_panel = MDCard(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(52),
+            padding=[dp(8), dp(4), dp(8), dp(4)],
+            spacing=dp(6),
+            radius=[0, 0, 18, 18],
+            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            elevation=0,
+            line_color=[0.8, 0.8, 0.8, 0.2],
+            line_width=0.5,
+            pos_hint={'center_x': 0.5}
+        )
+
+        # Надпись "Тональность" слева (ещё меньше шрифт)
+
+        title_label = MDLabel(
+            text="Тональность",
+            font_size=dp(8),  # Используем dp вместо sp
+            halign="left",
+            valign="middle",
+            size_hint_x=None,
+            width=dp(95),
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 0.85],
+            bold=True
+        )
+
+        # Центральная часть с ползунком
+        center_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=1,
+            spacing=dp(6),
+            padding=[dp(2), dp(0), dp(2), dp(0)]
+        )
+
+        # Ползунок
+        from kivymd.uix.slider import MDSlider
+
+        # Преобразуем текущую тональность в значение слайдера (0.5 = 1)
+        current_slider_value = int(round(self.current_tonality * 2))
+
+        self.tonality_slider = MDSlider(
+            min=-6,
+            max=6,
+            value=current_slider_value,
+            step=1,
+            size_hint_x=1,
+            height=dp(38),
+            hint=False
+        )
+
+        # Значение тональности (число)
+        self.tonality_slider_value_label = MDLabel(
+            text=f"{current_slider_value:+d}" if current_slider_value != 0 else "0",
+            font_size=sp(13),
+            halign="center",
+            size_hint_x=None,
+            width=dp(28),
+            theme_text_color="Custom",
+            bold=True
+        )
+
+        # Устанавливаем цвет в зависимости от значения
+        self._update_tonality_label_color(current_slider_value)
+
+        # Функция для обновления значения при движении ползунка
+        def on_slider_change(instance, value):
+            int_value = int(round(value))
+            self.tonality_slider.value = int_value
+
+            # Обновляем текст и цвет
+            if int_value == 0:
+                self.tonality_slider_value_label.text = "0"
+            else:
+                self.tonality_slider_value_label.text = f"{int_value:+d}"
+
+            self._update_tonality_label_color(int_value)
+
+            # Применяем тональность в реальном времени
+            step = int_value / 2
+            if step != self.current_tonality:
+                self.current_tonality = step
+                self.apply_tonality(self.current_tonality)
+                logger.info(f"🎵 Тональность изменена на: {self.current_tonality:.1f}")
+
+        self.tonality_slider.bind(value=on_slider_change)
+
+        center_container.add_widget(self.tonality_slider)
+        center_container.add_widget(self.tonality_slider_value_label)
+
+        # Правая кнопка "Применить" (галочка) - теперь просто закрывает панель
+        self.tonality_apply_btn = IconActionButton(
+            icon_name="check",
+            on_press_callback=self.close_tonality_panel,
+            icon_color=[0.46, 0.70, 0.71, 1]
+        )
+
+        # Собираем панель
+        self.tonality_panel.add_widget(title_label)
+        self.tonality_panel.add_widget(center_container)
+        self.tonality_panel.add_widget(self.tonality_apply_btn)
+
+        # ПОЛНОСТЬЮ ЗАМЕНЯЕМ нижнюю панель
+        self.song_card.remove_widget(self.bottom_panel)
+        self.bottom_panel = self.tonality_panel
+        self.song_card.add_widget(self.bottom_panel)
+
+        self.is_tonality_mode = True
+
+    def _update_tonality_label_color(self, value):
+        """Обновляет цвет метки тональности в зависимости от значения"""
+        if hasattr(self, 'tonality_slider_value_label'):
+            if value < 0:
+                # Отрицательные значения - красный
+                self.tonality_slider_value_label.text_color = [0.8, 0.3, 0.3, 1]
+            elif value > 0:
+                # Положительные значения - зелёный
+                self.tonality_slider_value_label.text_color = [0.3, 0.7, 0.3, 1]
+            else:
+                # Ноль - чёрный
+                self.tonality_slider_value_label.text_color = [0, 0, 0, 0.85]
+
+    def close_tonality_panel(self):
+        """Закрывает панель тональности и возвращает обычное меню"""
+        logger.info("🎵 Закрытие панели тональности")
+
+        # Полностью возвращаем обычное меню
+        if self.normal_bottom_panel:
+            self.song_card.remove_widget(self.bottom_panel)
+            self.bottom_panel = self.normal_bottom_panel
+            self.song_card.add_widget(self.bottom_panel)
+
+        self.is_tonality_mode = False
+
+    def cancel_tonality(self):
+        """Отмена выбора тональности - возврат к обычному меню"""
+        logger.info("🎵 Отмена изменения тональности")
+
+        # Возвращаем исходную тональность (без изменений)
+        if self.is_tonality_mode:
+            # Восстанавливаем исходную тональность (0)
+            if self.current_tonality != 0:
+                self.current_tonality = 0
+                self.apply_tonality(0)
+                logger.info("Тональность сброшена до оригинальной")
+
+        self.close_tonality_panel()
+
+    def apply_tonality_from_panel(self):
+        """Применяет выбранную тональность и возвращает обычное меню (устаревший метод, оставлен для совместимости)"""
+        self.close_tonality_panel()
 
     # ==================== МЕНЮ АККОРДОВ ====================
 
@@ -485,9 +655,9 @@ class SongDetailScreen(BaseScreen):
         """Показывает всплывающую карточку с аккордами песни"""
         logger.info("🎸 Нажата кнопка аккордов")
 
-        # Закрываем карточку тональности если открыта
-        if hasattr(self, 'tonality_card') and self.tonality_card:
-            self._close_tonality_card(self.tonality_card, apply=False)
+        # Если в режиме тональности, сначала выходим из него
+        if self.is_tonality_mode:
+            self.cancel_tonality()
 
         if not self._song_chords:
             notify.info("Аккорды не найдены в тексте песни")
@@ -513,7 +683,7 @@ class SongDetailScreen(BaseScreen):
             size_hint=(None, None),
             size=(dp(320), dp(200)),
             spacing=dp(4),
-            padding=[dp(8), dp(2), dp(8), dp(8)],  # Верхний отступ уменьшен с 8 до 2
+            padding=[dp(8), dp(2), dp(8), dp(8)],
             radius=[20, 20, 20, 20],
             elevation=6,
             pos_hint={'center_x': 0.5},
@@ -934,253 +1104,6 @@ class SongDetailScreen(BaseScreen):
         else:
             logger.warning(f"⚠️ Текст для {step} не найден")
 
-    def show_tonality_picker(self):
-        """Показывает карточку выбора тональности"""
-
-        # Закрываем карточку аккордов если открыта
-        if hasattr(self, 'chords_card') and self.chords_card:
-            self._close_chords_card()
-
-        if hasattr(self, 'tonality_card') and self.tonality_card:
-            self._close_tonality_card(self.tonality_card, apply=False)
-            return
-
-        # Создаём карточку
-        tonality_card = MDCard(
-            orientation='vertical',
-            size_hint=(None, None),
-            size=(dp(280), dp(210)),
-            spacing=dp(2),
-            padding=[dp(8), dp(6), dp(8), dp(6)],
-            radius=[20, 20, 20, 20],
-            elevation=6,
-            pos_hint={'center_x': 0.5},
-            md_bg_color=[0.98, 0.98, 0.98, 0.95]
-        )
-
-        # Функция для обновления позиции карточки
-        def update_card_position(*args):
-            if not tonality_card or not tonality_card.parent:
-                return
-
-            screen_height = self.height
-
-            if hasattr(self, 'bottom_panel'):
-                bottom_panel_y = self.bottom_panel.y if self.bottom_panel.y > 0 else 0
-                bottom_panel_height = self.bottom_panel.height
-                panel_top = bottom_panel_y + bottom_panel_height
-            else:
-                panel_top = dp(60)
-
-            target_y = panel_top + dp(8)
-
-            if screen_height > 0:
-                y_rel = target_y / screen_height
-                tonality_card.pos_hint = {'center_x': 0.5, 'y': y_rel}
-                tonality_card.pos = (tonality_card.pos[0], target_y)
-
-        # Заголовок "Тональность"
-        title_label = MDLabel(
-            text="Тональность",
-            font_size=sp(16),
-            halign="center",
-            size_hint=(1, None),
-            height=dp(28),
-            theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.85],
-            bold=True
-        )
-        tonality_card.add_widget(title_label)
-
-        # Число тональности (по центру)
-        self.tonality_value_label = MDLabel(
-            text=f"{self.current_tonality:+.1f}" if self.current_tonality != 0 else "0",
-            font_size=sp(28),
-            halign="center",
-            size_hint=(1, None),
-            height=dp(40),
-            theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 1],
-            bold=True
-        )
-        tonality_card.add_widget(self.tonality_value_label)
-
-        # Описание (по центру, полная фраза)
-        self.tonality_desc_label = MDLabel(
-            text="",
-            font_size=sp(12),
-            halign="center",
-            size_hint=(1, None),
-            height=dp(28),
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 0.8],
-            shorten=True
-        )
-        tonality_card.add_widget(self.tonality_desc_label)
-
-        from kivymd.uix.slider import MDSlider
-
-        def get_tonality_text(value):
-            if value == 0:
-                return "Оригинальная тональность"
-            elif value > 0:
-                if value == 0.5:
-                    return "На полтона выше"
-                elif value == 1:
-                    return "На один тон выше"
-                elif value == 1.5:
-                    return "На полтора тона выше"
-                elif value == 2:
-                    return "На два тона выше"
-                elif value == 2.5:
-                    return "На два с половиной тона выше"
-                elif value == 3:
-                    return "На три тона выше"
-            else:
-                abs_val = abs(value)
-                if abs_val == 0.5:
-                    return "На полтона ниже"
-                elif abs_val == 1:
-                    return "На один тон ниже"
-                elif abs_val == 1.5:
-                    return "На полтора тона ниже"
-                elif abs_val == 2:
-                    return "На два тона ниже"
-                elif abs_val == 2.5:
-                    return "На два с половиной тона ниже"
-                elif abs_val == 3:
-                    return "На три тона ниже"
-            return ""
-
-        # Локальная переменная для хранения временного значения
-        temp_value = self.current_tonality
-
-        # Обновляем отображение при изменении слайдера
-        def on_slider_change(instance, value):
-            nonlocal temp_value
-            rounded = round(value * 2) / 2
-            temp_value = rounded
-            if rounded == 0:
-                self.tonality_value_label.text = "0"
-            else:
-                self.tonality_value_label.text = f"{rounded:+.1f}"
-            self.tonality_desc_label.text = get_tonality_text(rounded)
-
-        # СОЗДАЁМ СЛАЙДЕР
-        self.tonality_slider = MDSlider(
-            min=-3,
-            max=3,
-            value=self.current_tonality,
-            step=0.5,
-            size_hint=(1, None),
-            height=dp(40),
-            hint=False
-        )
-        self.tonality_slider.bind(value=on_slider_change)
-        tonality_card.add_widget(self.tonality_slider)
-
-        # Отметки под ползунком
-        marks_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(20),
-            spacing=dp(0),
-            padding=[dp(8), dp(0), dp(8), dp(0)]
-        )
-
-        marks = ['-3', '-2', '-1', '0', '+1', '+2', '+3']
-        for mark in marks:
-            mark_label = MDLabel(
-                text=mark,
-                font_size=sp(9),
-                halign="center",
-                size_hint_x=1,
-                theme_text_color="Custom",
-                text_color=[0.5, 0.5, 0.5, 0.6]
-            )
-            marks_container.add_widget(mark_label)
-
-        tonality_card.add_widget(marks_container)
-
-        # Кнопки "Отмена" и "Применить"
-        buttons_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(32),
-            spacing=dp(12),
-            padding=[dp(8), dp(4), dp(8), dp(4)]
-        )
-
-        # Функция для применения
-        def apply_changes(instance, touch):
-            nonlocal temp_value
-            if instance.collide_point(*touch.pos):
-                self.tonality_temp_value = temp_value
-                self._close_tonality_card(tonality_card, apply=True)
-
-        # Функция для отмены
-        def cancel_changes(instance, touch):
-            if instance.collide_point(*touch.pos):
-                self._close_tonality_card(tonality_card, apply=False)
-
-        cancel_label = MDLabel(
-            text="Отмена",
-            font_size=sp(13),
-            halign="center",
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[0.6, 0.6, 0.6, 0.8],
-            bold=False
-        )
-        cancel_label.bind(on_touch_down=cancel_changes)
-
-        apply_label = MDLabel(
-            text="Применить",
-            font_size=sp(13),
-            halign="center",
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 1],
-            bold=True
-        )
-        apply_label.bind(on_touch_down=apply_changes)
-
-        buttons_row.add_widget(cancel_label)
-        buttons_row.add_widget(apply_label)
-        tonality_card.add_widget(buttons_row)
-
-        # Инициализируем текст при открытии
-        self.tonality_desc_label.text = get_tonality_text(self.current_tonality)
-
-        # Добавляем карточку на экран
-        self.add_widget(tonality_card)
-
-        # Обновляем позицию после добавления
-        Clock.schedule_once(lambda dt: update_card_position(), 0.1)
-        self.bind(size=update_card_position)
-
-        self.tonality_card = tonality_card
-
-    def _close_tonality_card(self, card, apply=True):
-        """Закрывает карточку тональности"""
-        if hasattr(self, 'tonality_card') and self.tonality_card:
-            try:
-                self.remove_widget(self.tonality_card)
-            except:
-                pass
-            self.tonality_card = None
-
-            if apply and hasattr(self, 'tonality_temp_value'):
-                new_tonality = self.tonality_temp_value
-                if new_tonality != self.current_tonality:
-                    self.current_tonality = new_tonality
-                    self.apply_tonality(self.current_tonality)
-                    logger.info(f"✅ Тональность применена: {self.current_tonality:.1f}")
-                else:
-                    logger.info(f"Тональность не изменилась: {self.current_tonality:.1f}")
-            else:
-                logger.info("Изменения тональности отменены")
-
     # ==================== ПОДБОРЫ ====================
 
     def show_tabs_picker(self):
@@ -1297,9 +1220,10 @@ class SongDetailScreen(BaseScreen):
         if hasattr(self, 'chords_card') and self.chords_card:
             self._close_chords_card()
 
-        # Закрываем меню тональности если открыто
-        if hasattr(self, 'tonality_card') and self.tonality_card:
-            self._close_tonality_card(self.tonality_card, apply=False)
+        # Возвращаем обычную панель если в режиме тональности
+        if self.is_tonality_mode and self.normal_bottom_panel:
+            self.bottom_panel = self.normal_bottom_panel
+            self.is_tonality_mode = False
 
         # Сбрасываем индекс аккорда
         self._current_chord_index = 0
@@ -1483,6 +1407,10 @@ class SongDetailScreen(BaseScreen):
         """Возврат на предыдущий экран"""
         logger.info("🔙 Нажата кнопка возврата")
 
+        # Если в режиме тональности, выходим из него
+        if self.is_tonality_mode:
+            self.cancel_tonality()
+
         if self.manager and self.manager.has_screen('song_detail'):
             screen_state.clear_pending_chord()
             self.manager.current = 'song_detail'
@@ -1501,6 +1429,10 @@ class SongDetailScreen(BaseScreen):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.reset_to_default()
+
+        # Если в режиме тональности, выходим из него
+        if self.is_tonality_mode:
+            self.cancel_tonality()
 
         # Закрываем меню при выходе с экрана
         if hasattr(self, 'chords_card') and self.chords_card:
