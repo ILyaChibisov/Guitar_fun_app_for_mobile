@@ -227,11 +227,15 @@ class SongDetailScreen(BaseScreen):
         # Для меню аккордов
         self._song_chords = []
         self._current_chord_index = 0
-        self.chords_card = None
+        self.chords_section = None
         self.chord_preview_renderer = None
         self.display_mode = "finger"
         self.chord_variants = []
         self.chord_variant_index = 0
+        self.is_chords_mode = False
+        self.griff_scale = 1.0
+        self.original_griff_size = (dp(220), dp(110))
+        self.griff_container = None
 
         # Для кэширования транспонирования
         self.transposed_chords_cache = {}
@@ -482,7 +486,6 @@ class SongDetailScreen(BaseScreen):
             icon_color=[0.8, 0.3, 0.3, 0.9]
         )
 
-        # Кнопка для прокрутки текста
         self.scroll_btn = IconActionButton(
             icon_name="play-circle",
             on_press_callback=self.show_scroll_panel,
@@ -500,23 +503,453 @@ class SongDetailScreen(BaseScreen):
         self.normal_bottom_panel.add_widget(self.scroll_btn)
         self.normal_bottom_panel.add_widget(self.font_btn)
 
+    # ==================== ВСТРОЕННАЯ СЕКЦИЯ АККОРДОВ ====================
+
+    def show_chords_section(self):
+        """Показывает встроенную секцию аккордов над нижним меню"""
+        logger.info("🎸 Открытие секции аккордов")
+
+        # Закрываем другие режимы если открыты
+        if self.is_tonality_mode:
+            self.cancel_tonality()
+        if self.is_font_mode:
+            self.cancel_font()
+        if self.is_scroll_mode:
+            self.close_scroll_panel()
+
+        if not self._song_chords:
+            notify.info("Аккорды не найдены в тексте песни")
+            return
+
+        if self.is_chords_mode:
+            self.close_chords_section()
+            return
+
+        from kivy.uix.floatlayout import FloatLayout
+
+        # Создаём плавающий слой поверх основного контента
+        self.chords_layer = FloatLayout(
+            size_hint=(1, 1),
+            pos_hint={'x': 0, 'y': 0}
+        )
+
+        # Сохраняем оригинальный размер
+        self.original_griff_size = (dp(180), dp(110))
+        self.griff_scale = 1.0
+
+        # Контейнер для грифа
+        self.griff_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(None, None),
+            size=self.original_griff_size,
+            pos_hint={'center_x': 0.5},
+            y=dp(60),
+            spacing=dp(0)
+        )
+
+        # Рамка вокруг грифа с зелёной полупрозрачной заливкой
+        griff_wrapper = MDCard(
+            orientation='vertical',
+            size_hint=(1, 1),
+            radius=[12, 12, 12, 12],
+            elevation=2,
+            md_bg_color=[0.3, 0.7, 0.3, 0.15],
+            line_color=[0.3, 0.7, 0.3, 0.5],
+            line_width=1,
+            padding=[dp(6), dp(6), dp(6), dp(6)]
+        )
+
+        # Рендерер грифа
+        self.chord_preview_renderer = ChordRenderer()
+        griff_wrapper.add_widget(self.chord_preview_renderer)
+
+        try:
+            griff_data = load_asset_as_bytes("griff_png")
+            if griff_data:
+                griff_img = CoreImage(BytesIO(griff_data), ext="png")
+                if griff_img and griff_img.texture:
+                    self.chord_preview_renderer.set_background(griff_img.texture)
+        except Exception as e:
+            logger.error(f"Ошибка загрузки фона грифа: {e}")
+
+        self.griff_container.add_widget(griff_wrapper)
+        self.chords_layer.add_widget(self.griff_container)
+
+        # Функция для обновления позиции
+        def update_griff_position(*args):
+            if hasattr(self, 'bottom_panel') and self.bottom_panel:
+                panel_y = self.bottom_panel.y
+                panel_height = self.bottom_panel.height
+                self.griff_container.y = panel_y + panel_height + dp(8)
+
+        self._update_griff_position = update_griff_position
+
+        # Обновляем позицию
+        Clock.schedule_once(lambda dt: update_griff_position(), 0.1)
+        self.bind(size=update_griff_position)
+        if hasattr(self, 'bottom_panel'):
+            self.bottom_panel.bind(pos=update_griff_position, size=update_griff_position)
+
+        # Добавляем плавающий слой на экран
+        self.add_widget(self.chords_layer)
+
+        # Заменяем нижнюю панель на панель управления аккордами
+        self.show_chords_control_panel()
+
+        self.is_chords_mode = True
+
+        # Загружаем первый аккорд
+        self._current_chord_index = 0
+        self._load_chord_variants(self._song_chords[0])
+        self._update_chords_display()
+
+    def show_chords_control_panel(self):
+        """Показывает панель управления аккордами вместо обычного меню"""
+        logger.info("🎸 Открытие панели управления аккордами")
+
+        # Создаём панель управления аккордами
+        self.chords_control_panel = MDCard(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(52),
+            padding=[dp(8), dp(4), dp(8), dp(4)],
+            spacing=dp(4),
+            radius=[0, 0, 18, 18],
+            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            elevation=0,
+            line_color=[0.8, 0.8, 0.8, 0.2],
+            line_width=0.5,
+            pos_hint={'center_x': 0.5}
+        )
+
+        # 1. Кнопка варианта аккорда
+        self.variant_btn = MDIconButton(
+            icon="format-list-bulleted-square",
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._next_chord_variant,
+            ripple_scale=0
+        )
+
+        # 2. Кнопка переключения режима
+        self.mode_btn = MDIconButton(
+            icon="music-note",
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            theme_icon_color="Custom",
+            icon_color=[1.0, 0.55, 0.0, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._toggle_display_mode,
+            ripple_scale=0
+        )
+
+        # 3. Кнопка предыдущий аккорд
+        self.chord_prev_btn = MDIconButton(
+            icon="chevron-left",
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._prev_chord_in_section,
+            ripple_scale=0
+        )
+
+        # 4. Название аккорда - увеличиваем приоритет через size_hint_x
+        self.chord_name_label = MDLabel(
+            text="",
+            halign="center",
+            valign="middle",
+            size_hint_x=2,  # В 2 раза больше обычного веса
+            theme_text_color="Custom",
+            text_color=[0, 0, 0, 0.85],
+            bold=True,
+            shorten=False
+        )
+
+        # Привязываем авто-масштабирование
+        self.chord_name_label.bind(width=self._auto_scale_chord_font)
+        self.chord_name_label.bind(text=self._auto_scale_chord_font)
+
+        # 5. Кнопка следующий аккорд
+        self.chord_next_btn = MDIconButton(
+            icon="chevron-right",
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._next_chord_in_section,
+            ripple_scale=0
+        )
+
+        # 6. Кнопка увеличения грифа
+        self.griff_zoom_btn = MDIconButton(
+            icon="magnify",
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._toggle_griff_zoom,
+            ripple_scale=0
+        )
+
+        # 7. Кнопка закрытия
+        self.chords_close_btn = MDIconButton(
+            icon="check",
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self.close_chords_section,
+            ripple_scale=0
+        )
+
+        # Собираем панель - порядок важен
+        self.chords_control_panel.add_widget(self.variant_btn)
+        self.chords_control_panel.add_widget(self.mode_btn)
+        self.chords_control_panel.add_widget(self.chord_prev_btn)
+        self.chords_control_panel.add_widget(self.chord_name_label)  # label с size_hint_x=2
+        self.chords_control_panel.add_widget(self.chord_next_btn)
+        self.chords_control_panel.add_widget(self.griff_zoom_btn)
+        self.chords_control_panel.add_widget(self.chords_close_btn)
+
+        # Заменяем нижнюю панель
+        self.song_card.remove_widget(self.bottom_panel)
+        self.bottom_panel = self.chords_control_panel
+        self.song_card.add_widget(self.bottom_panel)
+
+        # Принудительно обновляем размер шрифта после отрисовки
+        Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.2)
+
+    def _auto_scale_chord_font(self, *args):
+        """Автоматическое масштабирование шрифта с учётом реальной ширины"""
+        if not hasattr(self, 'chord_name_label') or not self.chord_name_label:
+            return
+
+        text = self.chord_name_label.text
+        if not text:
+            return
+
+        # Получаем реальную ширину лейбла
+        available_width = self.chord_name_label.width
+
+        # Если ширина ещё не определена, пробуем позже
+        if available_width <= dp(50):
+            Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.1)
+            return
+
+        from kivy.core.text import Label as CoreLabel
+
+        # Пробуем размеры от большого к маленькому
+        for size in range(16, 9, -1):
+            test_label = CoreLabel(
+                text=text,
+                font_size=sp(size),
+                font_name=self.chord_name_label.font_name,
+                bold=True
+            )
+            test_label.refresh()
+            text_width = test_label.texture.width
+
+            # Если текст помещается с небольшим запасом
+            if text_width <= available_width - dp(10):
+                if self.chord_name_label.font_size != sp(size):
+                    self.chord_name_label.font_size = sp(size)
+                    logger.debug(f"Scale: '{text}' -> {size}sp (width: {text_width:.0f}/{available_width:.0f}px)")
+                return
+
+        # Если даже 9sp не влезает - ставим 9sp
+        if self.chord_name_label.font_size != sp(9):
+            self.chord_name_label.font_size = sp(9)
+
+    def _toggle_display_mode(self, *args):
+        """Переключает режим отображения"""
+        if self.display_mode == "finger":
+            # На грифе пальцы, нажимаем - переключаем на ноты
+            self.display_mode = "notes"
+            self.mode_btn.icon = "gesture-tap"
+            self.mode_btn.icon_color = [1.0, 0.55, 0.0, 1]
+            logger.info("Режим отображения: НОТЫ")
+        else:
+            # На грифе ноты, нажимаем - переключаем на пальцы
+            self.display_mode = "finger"
+            self.mode_btn.icon = "music-note"
+            self.mode_btn.icon_color = [0.9, 0.2, 0.2, 1]
+            logger.info("Режим отображения: ПАЛЬЦЫ")
+
+        if hasattr(self, 'chord_preview_renderer') and self.chord_preview_renderer:
+            self.chord_preview_renderer.set_mode(self.display_mode)
+            if self.chord_variants:
+                self.load_current_variant()
+
+    def _toggle_griff_zoom(self, *args):
+        """Переключает масштаб грифа (увеличение/уменьшение на 40%)"""
+        if self.griff_scale == 1.0:
+            self.griff_scale = 1.4
+            new_size = (int(self.original_griff_size[0] * 1.4), int(self.original_griff_size[1] * 1.4))
+            self.griff_container.size = new_size
+            self.griff_zoom_btn.icon = "magnify-minus"
+            logger.info("Гриф увеличен на 40%")
+        else:
+            self.griff_scale = 1.0
+            self.griff_container.size = self.original_griff_size
+            self.griff_zoom_btn.icon = "magnify"
+            logger.info("Гриф уменьшен до обычного размера")
+
+        if hasattr(self, '_update_griff_position'):
+            self._update_griff_position()
+
+    def _update_chords_display(self):
+        """Обновляет отображение текущего аккорда в секции"""
+        if not self._song_chords:
+            return
+
+        chord_name = self._song_chords[self._current_chord_index]
+        if hasattr(self, 'chord_name_label'):
+            self.chord_name_label.text = chord_name
+            # Масштабирование сработает автоматически через bind
+
+        self._load_chord_variants(chord_name)
+
+    def _prev_chord_in_section(self, *args):
+        """Предыдущий аккорд (циклический переход)"""
+        if not self._song_chords:
+            return
+
+        total = len(self._song_chords)
+        if self._current_chord_index == 0:
+            self._current_chord_index = total - 1
+        else:
+            self._current_chord_index -= 1
+
+        self._update_chords_display()
+
+    def _next_chord_in_section(self, *args):
+        """Следующий аккорд (циклический переход)"""
+        if not self._song_chords:
+            return
+
+        total = len(self._song_chords)
+        if self._current_chord_index == total - 1:
+            self._current_chord_index = 0
+        else:
+            self._current_chord_index += 1
+
+        self._update_chords_display()
+
+    def close_chords_section(self, *args):
+        """Закрывает секцию аккордов и возвращает обычное меню"""
+        logger.info("🔚 Закрытие секции аккордов")
+
+        self.griff_scale = 1.0
+
+        if hasattr(self, 'chords_layer') and self.chords_layer:
+            self.remove_widget(self.chords_layer)
+            self.chords_layer = None
+
+        if self.normal_bottom_panel:
+            self.song_card.remove_widget(self.bottom_panel)
+            self.bottom_panel = self.normal_bottom_panel
+            self.song_card.add_widget(self.bottom_panel)
+
+        self.is_chords_mode = False
+
+    def _extract_and_cache_chords(self):
+        """Извлекает и кэширует аккорды из песни"""
+        chords = set()
+
+        for tab in self.tabs:
+            content = tab.get('content', '')
+            if content:
+                cleaned = clean_text(content)
+                extracted = extract_chords_from_text(cleaned)
+                chords.update(extracted)
+
+        self._song_chords = sorted(list(chords))
+        logger.info(f"🎸 Найдено аккордов в песне: {len(self._song_chords)} - {self._song_chords}")
+
+    def _load_chord_variants(self, chord_name):
+        """Загружает все варианты аппликатур для аккорда"""
+        self.chord_variants = []
+        self.chord_variant_index = 0
+
+        if self.manager and self.manager.has_screen('chords'):
+            chords_screen = self.manager.get_screen('chords')
+            variants = []
+            for chord in chords_screen.all_chords:
+                if chord['short_name'].lower() == chord_name.lower():
+                    variants.append(chord)
+
+            variants.sort(key=lambda x: x['variant'])
+            self.chord_variants = variants
+            logger.info(f"Загружено вариантов для {chord_name}: {len(self.chord_variants)}")
+
+            self._update_variant_icon()
+
+            if self.chord_variants:
+                self.load_current_variant()
+
+    def _update_variant_icon(self):
+        """Обновляет видимость кнопки вариантов"""
+        total = len(self.chord_variants)
+        if hasattr(self, 'variant_btn'):
+            if total <= 1:
+                self.variant_btn.opacity = 0.5
+            else:
+                self.variant_btn.opacity = 1
+
+    def load_current_variant(self):
+        """Загружает текущий вариант аккорда"""
+        if not self.chord_variants:
+            return
+
+        variant = self.chord_variants[self.chord_variant_index]
+        chord_module = None
+        if 'module' in variant:
+            chord_module = variant['module']
+        elif 'module_1' in variant:
+            chord_module = variant['module_1']
+        else:
+            for key, value in variant.items():
+                if 'module' in key.lower() and value:
+                    chord_module = value
+                    break
+
+        if chord_module and hasattr(self, 'chord_preview_renderer') and self.chord_preview_renderer:
+            self.chord_preview_renderer.load_chord(chord_module)
+            self.chord_preview_renderer.set_mode(self.display_mode)
+            logger.info(f"Загружен вариант {self.chord_variant_index + 1}/{len(self.chord_variants)}")
+
+        self._update_variant_icon()
+
+    def _next_chord_variant(self, *args):
+        """Переключает на следующий вариант аккорда"""
+        if not self.chord_variants:
+            return
+
+        total = len(self.chord_variants)
+        self.chord_variant_index = (self.chord_variant_index + 1) % total
+        self.load_current_variant()
+
     # ==================== ПАНЕЛЬ ТОНАЛЬНОСТИ ====================
 
     def show_tonality_panel(self):
         """Показывает панель выбора тональности вместо обычного меню"""
         logger.info("🎵 Открытие панели тональности")
 
-        # Закрываем другие меню если открыты
-        if hasattr(self, 'chords_card') and self.chords_card:
-            self._close_chords_card()
-        if hasattr(self, 'tonality_card') and self.tonality_card:
-            self._close_tonality_card(self.tonality_card, apply=False)
+        if self.is_chords_mode:
+            self.close_chords_section()
         if self.is_font_mode:
             self.close_font_panel()
         if self.is_scroll_mode:
             self.close_scroll_panel()
 
-        # Создаём панель тональности
         self.tonality_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -531,7 +964,6 @@ class SongDetailScreen(BaseScreen):
             pos_hint={'center_x': 0.5}
         )
 
-        # Надпись "Тональность" слева
         title_label = MDLabel(
             text="Тональность",
             font_size=dp(8),
@@ -544,7 +976,6 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # Знак минус
         minus_label = MDLabel(
             text="-",
             font_size=sp(16),
@@ -578,7 +1009,6 @@ class SongDetailScreen(BaseScreen):
             hint=False
         )
 
-        # Значение тональности (число) - уменьшаем ширину
         self.tonality_slider_value_label = MDLabel(
             text=f"{current_slider_value:+d}" if current_slider_value != 0 else "0",
             font_size=sp(12),
@@ -589,7 +1019,6 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # Знак плюс
         plus_label = MDLabel(
             text="+",
             font_size=sp(16),
@@ -607,14 +1036,11 @@ class SongDetailScreen(BaseScreen):
         def on_slider_change(instance, value):
             int_value = int(round(value))
             self.tonality_slider.value = int_value
-
             if int_value == 0:
                 self.tonality_slider_value_label.text = "0"
             else:
                 self.tonality_slider_value_label.text = f"{int_value:+d}"
-
             self._update_tonality_label_color(int_value)
-
             step = int_value / 2
             if step != self.current_tonality:
                 self.current_tonality = step
@@ -623,13 +1049,11 @@ class SongDetailScreen(BaseScreen):
 
         self.tonality_slider.bind(value=on_slider_change)
 
-        # Собираем центральную часть: минус + слайдер + плюс + значение
         center_container.add_widget(minus_label)
         center_container.add_widget(self.tonality_slider)
         center_container.add_widget(plus_label)
         center_container.add_widget(self.tonality_slider_value_label)
 
-        # Кнопка "Применить" (галочка)
         self.tonality_apply_btn = IconActionButton(
             icon_name="check",
             on_press_callback=self.close_tonality_panel,
@@ -640,7 +1064,6 @@ class SongDetailScreen(BaseScreen):
         self.tonality_panel.add_widget(center_container)
         self.tonality_panel.add_widget(self.tonality_apply_btn)
 
-        # Заменяем нижнюю панель
         self.song_card.remove_widget(self.bottom_panel)
         self.bottom_panel = self.tonality_panel
         self.song_card.add_widget(self.bottom_panel)
@@ -648,7 +1071,6 @@ class SongDetailScreen(BaseScreen):
         self.is_tonality_mode = True
 
     def _update_tonality_label_color(self, value):
-        """Обновляет цвет метки тональности"""
         if hasattr(self, 'tonality_slider_value_label'):
             if value < 0:
                 self.tonality_slider_value_label.text_color = [0.8, 0.3, 0.3, 1]
@@ -658,45 +1080,34 @@ class SongDetailScreen(BaseScreen):
                 self.tonality_slider_value_label.text_color = [0, 0, 0, 0.85]
 
     def close_tonality_panel(self):
-        """Закрывает панель тональности"""
         logger.info("🎵 Закрытие панели тональности")
-
         if self.normal_bottom_panel:
             self.song_card.remove_widget(self.bottom_panel)
             self.bottom_panel = self.normal_bottom_panel
             self.song_card.add_widget(self.bottom_panel)
-
         self.is_tonality_mode = False
 
     def cancel_tonality(self):
-        """Отмена выбора тональности"""
         logger.info("🎵 Отмена изменения тональности")
-
         if self.is_tonality_mode:
             if self.current_tonality != 0:
                 self.current_tonality = 0
                 self.apply_tonality(0)
                 logger.info("Тональность сброшена до оригинальной")
-
             self.close_tonality_panel()
 
     # ==================== ПАНЕЛЬ ШРИФТА ====================
 
     def show_font_panel(self):
-        """Показывает панель выбора размера шрифта вместо обычного меню"""
         logger.info("🔍 Открытие панели шрифта")
 
-        # Закрываем другие меню если открыты
-        if hasattr(self, 'chords_card') and self.chords_card:
-            self._close_chords_card()
-        if hasattr(self, 'tonality_card') and self.tonality_card:
-            self._close_tonality_card(self.tonality_card, apply=False)
+        if self.is_chords_mode:
+            self.close_chords_section()
         if self.is_tonality_mode:
             self.close_tonality_panel()
         if self.is_scroll_mode:
             self.close_scroll_panel()
 
-        # Создаём панель шрифта
         self.font_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -723,7 +1134,6 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # Знак минус
         minus_label = MDLabel(
             text="-",
             font_size=sp(16),
@@ -745,7 +1155,6 @@ class SongDetailScreen(BaseScreen):
 
         from kivymd.uix.slider import MDSlider
 
-        # Значение слайдера = текущий размер минус стандартный
         current_slider_value = self.current_font_size - self.STANDARD_FONT_SIZE
 
         self.font_slider = MDSlider(
@@ -758,7 +1167,6 @@ class SongDetailScreen(BaseScreen):
             hint=False
         )
 
-        # Значение увеличения (например, 1.5x)
         self.font_slider_value_label = MDLabel(
             text=self._get_font_multiplier(self.current_font_size),
             font_size=sp(12),
@@ -770,7 +1178,6 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # Знак плюс
         plus_label = MDLabel(
             text="+",
             font_size=sp(16),
@@ -786,18 +1193,17 @@ class SongDetailScreen(BaseScreen):
         def on_slider_change(instance, value):
             int_value = int(round(value))
             self.font_slider.value = int_value
-
             new_size = self.STANDARD_FONT_SIZE + int_value
             new_size = max(11, min(23, new_size))
-
-            # Обновляем отображение множителя
             self.font_slider_value_label.text = self._get_font_multiplier(new_size)
-
             if new_size != self.current_font_size:
                 self.current_font_size = new_size
                 if hasattr(self, 'content_label'):
                     self.content_label.font_size = self.current_font_size
                     self._update_content_height()
+                    # Обновляем размер шрифта аккорда в секции аккордов
+                if hasattr(self, 'chord_name_label') and self.chord_name_label:
+                    Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.1)
                 logger.info(
                     f"🔍 Размер шрифта изменён на: {self.current_font_size} ({self._get_font_multiplier(new_size)})")
 
@@ -825,53 +1231,40 @@ class SongDetailScreen(BaseScreen):
         self.is_font_mode = True
 
     def _get_font_multiplier(self, font_size):
-        """Возвращает множитель увеличения шрифта с шагом 0.1x"""
         ratio = font_size / self.STANDARD_FONT_SIZE
-        # Округляем до одного знака после запятой
         rounded = round(ratio * 10) / 10
         return f"{rounded:.1f}x"
 
     def close_font_panel(self):
-        """Закрывает панель шрифта и возвращает обычное меню"""
         logger.info("🔍 Закрытие панели шрифта")
-
         if self.normal_bottom_panel:
             self.song_card.remove_widget(self.bottom_panel)
             self.bottom_panel = self.normal_bottom_panel
             self.song_card.add_widget(self.bottom_panel)
-
         self.is_font_mode = False
 
     def cancel_font(self):
-        """Отмена выбора размера шрифта"""
         logger.info("🔍 Отмена изменения размера шрифта")
-
         if self.is_font_mode and self.current_font_size != self.STANDARD_FONT_SIZE:
             self.current_font_size = self.STANDARD_FONT_SIZE
             if hasattr(self, 'content_label'):
                 self.content_label.font_size = self.current_font_size
                 self._update_content_height()
             logger.info("Размер шрифта сброшен до стандартного")
-
         self.close_font_panel()
 
     # ==================== ПАНЕЛЬ ПРОКРУТКИ ТЕКСТА ====================
 
     def show_scroll_panel(self):
-        """Показывает панель управления прокруткой текста"""
         logger.info("▶️ Открытие панели прокрутки текста")
 
-        # Закрываем другие меню если открыты
-        if hasattr(self, 'chords_card') and self.chords_card:
-            self._close_chords_card()
-        if hasattr(self, 'tonality_card') and self.tonality_card:
-            self._close_tonality_card(self.tonality_card, apply=False)
+        if self.is_chords_mode:
+            self.close_chords_section()
         if self.is_tonality_mode:
             self.close_tonality_panel()
         if self.is_font_mode:
             self.close_font_panel()
 
-        # Создаём панель прокрутки
         self.scroll_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -886,7 +1279,6 @@ class SongDetailScreen(BaseScreen):
             pos_hint={'center_x': 0.5}
         )
 
-        # Знак минус
         minus_label = MDLabel(
             text="-",
             font_size=sp(16),
@@ -908,18 +1300,16 @@ class SongDetailScreen(BaseScreen):
 
         from kivymd.uix.slider import MDSlider
 
-        # Слайдер скорости (от 1 до 20, где 1 = самая медленная, 20 = быстрая)
         self.scroll_speed_slider = MDSlider(
             min=1,
             max=20,
-            value=3,  # Начальная скорость 0.5x
+            value=3,
             step=1,
             size_hint_x=1,
             height=dp(38),
             hint=False
         )
 
-        # Значение скорости
         self.scroll_speed_label = MDLabel(
             text="0.5x",
             font_size=sp(12),
@@ -931,7 +1321,6 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # Знак плюс
         plus_label = MDLabel(
             text="+",
             font_size=sp(16),
@@ -945,15 +1334,12 @@ class SongDetailScreen(BaseScreen):
         )
 
         def get_speed_from_slider(slider_value):
-            """Преобразует значение слайдера (1-20) в скорость прокрутки"""
-            # Диапазон: 0.2x - 1.5x (очень медленно до умеренно)
             if slider_value <= 10:
-                return 0.2 + (slider_value - 1) * 0.03  # 1->0.2, 10->0.47
+                return 0.2 + (slider_value - 1) * 0.03
             else:
-                return 0.5 + (slider_value - 10) * 0.1  # 10->0.5, 20->1.5
+                return 0.5 + (slider_value - 10) * 0.1
 
-        # Инициализируем скорость
-        self.scroll_speed = get_speed_from_slider(3)  # 0.5x
+        self.scroll_speed = get_speed_from_slider(3)
 
         def on_slider_change(instance, value):
             int_value = int(round(value))
@@ -961,8 +1347,6 @@ class SongDetailScreen(BaseScreen):
             self.scroll_speed = get_speed_from_slider(int_value)
             self.scroll_speed_label.text = f"{self.scroll_speed:.1f}x"
             logger.info(f"🎚️ Скорость прокрутки изменена: {self.scroll_speed:.1f}x")
-
-            # Если прокрутка активна, обновляем скорость
             if self.is_scrolling:
                 self.stop_scroll()
                 self.start_scroll()
@@ -974,34 +1358,29 @@ class SongDetailScreen(BaseScreen):
         center_container.add_widget(plus_label)
         center_container.add_widget(self.scroll_speed_label)
 
-        # Кнопка Play/Pause
         self.play_pause_btn = IconActionButton(
             icon_name="play",
             on_press_callback=self.toggle_scroll,
             icon_color=[0.46, 0.70, 0.71, 1]
         )
 
-        # Кнопка Stop (сброс в начало)
         self.stop_btn = IconActionButton(
             icon_name="stop",
             on_press_callback=self.reset_scroll_position,
             icon_color=[0.8, 0.3, 0.3, 0.9]
         )
 
-        # Кнопка закрытия - галочка
         self.scroll_close_btn = IconActionButton(
             icon_name="check",
             on_press_callback=self.close_scroll_panel,
             icon_color=[0.46, 0.70, 0.71, 1]
         )
 
-        # Собираем панель
         self.scroll_panel.add_widget(center_container)
         self.scroll_panel.add_widget(self.play_pause_btn)
         self.scroll_panel.add_widget(self.stop_btn)
         self.scroll_panel.add_widget(self.scroll_close_btn)
 
-        # Заменяем нижнюю панель
         self.song_card.remove_widget(self.bottom_panel)
         self.bottom_panel = self.scroll_panel
         self.song_card.add_widget(self.bottom_panel)
@@ -1009,13 +1388,9 @@ class SongDetailScreen(BaseScreen):
         self.is_scroll_mode = True
 
     def toggle_scroll(self):
-        """Запускает или останавливает автопрокрутку текста"""
         logger.info(f"🎬 Переключение прокрутки: {'СТАРТ' if not self.is_scrolling else 'СТОП'}")
-
-        # Если достигли конца текста (scroll_y <= 0.01) и нажимаем play, сначала сбрасываем в начало
         if not self.is_scrolling and self.content_scroll.scroll_y <= 0.01:
             self.reset_scroll_position()
-
         if not self.is_scrolling:
             self.start_scroll()
             self.play_pause_btn.icon = "pause"
@@ -1024,24 +1399,16 @@ class SongDetailScreen(BaseScreen):
             self.play_pause_btn.icon = "play"
 
     def start_scroll(self):
-        """Запускает плавную прокрутку текста вниз"""
         if self.is_scrolling:
             return
-
         self.is_scrolling = True
 
         def update_scroll(dt):
             if not self.is_scrolling:
                 return False
-
-            # ОЧЕНЬ МЕДЛЕННАЯ прокрутка
-            # Базовая скорость: 0.0002 (очень медленно)
-            # Максимальная: 0.0015 (умеренно)
             scroll_step = 0.0002 * self.scroll_speed
             new_y = self.content_scroll.scroll_y - scroll_step
-
             if new_y <= 0:
-                # Достигли конца текста, останавливаемся
                 self.content_scroll.scroll_y = 0
                 self.stop_scroll()
                 self.play_pause_btn.icon = "play"
@@ -1051,419 +1418,36 @@ class SongDetailScreen(BaseScreen):
                 self.content_scroll.scroll_y = new_y
                 return True
 
-        # Запускаем анимацию прокрутки (60 FPS)
         self.scroll_animation = Clock.schedule_interval(update_scroll, 1.0 / 60.0)
 
     def stop_scroll(self):
-        """Останавливает автопрокрутку"""
         if self.scroll_animation:
             self.scroll_animation.cancel()
             self.scroll_animation = None
         self.is_scrolling = False
 
     def reset_scroll_position(self):
-        """Сбрасывает позицию прокрутки в начало (верх)"""
         logger.info("⏹️ Сброс позиции прокрутки в начало")
-
-        # Останавливаем прокрутку если активна
         if self.is_scrolling:
             self.stop_scroll()
             self.play_pause_btn.icon = "play"
-
-        # Мгновенный сброс в начало
         self.content_scroll.scroll_y = 1.0
 
     def close_scroll_panel(self):
-        """Закрывает панель прокрутки и возвращает обычное меню"""
         logger.info("🔚 Закрытие панели прокрутки")
-
-        # Останавливаем прокрутку если активна
         if self.is_scrolling:
             self.stop_scroll()
-
         if self.normal_bottom_panel:
             self.song_card.remove_widget(self.bottom_panel)
             self.bottom_panel = self.normal_bottom_panel
             self.song_card.add_widget(self.bottom_panel)
-
         self.is_scroll_mode = False
 
     # ==================== МЕНЮ АККОРДОВ ====================
 
     def on_chords_press(self):
-        """Показывает всплывающую карточку с аккордами песни"""
         logger.info("🎸 Нажата кнопка аккордов")
-
-        # Если в режиме тональности, шрифта или прокрутки, сначала выходим
-        if self.is_tonality_mode:
-            self.cancel_tonality()
-        if self.is_font_mode:
-            self.cancel_font()
-        if self.is_scroll_mode:
-            self.close_scroll_panel()
-
-        if not self._song_chords:
-            notify.info("Аккорды не найдены в тексте песни")
-            return
-
-        if hasattr(self, 'chords_card') and self.chords_card:
-            self._close_chords_card()
-            return
-
-        self._open_chords_card_with_chord(0)
-
-    def _open_chords_card_with_chord(self, chord_index=0):
-        """Открывает карточку аккордов с указанским индексом"""
-        if not self._song_chords:
-            return
-
-        if chord_index >= len(self._song_chords):
-            chord_index = 0
-
-        self.chords_card = MDCard(
-            orientation='vertical',
-            size_hint=(None, None),
-            size=(dp(320), dp(200)),
-            spacing=dp(4),
-            padding=[dp(8), dp(2), dp(8), dp(8)],
-            radius=[20, 20, 20, 20],
-            elevation=6,
-            pos_hint={'center_x': 0.5},
-            md_bg_color=[0.95, 0.95, 0.95, 0.95],
-            adaptive_height=True
-        )
-
-        def update_card_position(*args):
-            if not self.chords_card or not self.chords_card.parent:
-                return
-
-            screen_height = self.height
-
-            if hasattr(self, 'bottom_panel'):
-                bottom_panel_y = self.bottom_panel.y if self.bottom_panel.y > 0 else 0
-                bottom_panel_height = self.bottom_panel.height
-                panel_top = bottom_panel_y + bottom_panel_height
-            else:
-                panel_top = dp(60)
-
-            target_y = panel_top + dp(8)
-
-            if screen_height > 0:
-                y_rel = target_y / screen_height
-                self.chords_card.pos_hint = {'center_x': 0.5, 'y': y_rel}
-                self.chords_card.pos = (self.chords_card.pos[0], target_y)
-
-        # Верхняя строка
-        top_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(32),
-            spacing=dp(0),
-            padding=[dp(0), dp(0), dp(0), dp(0)]
-        )
-
-        left_container = MDBoxLayout(
-            size_hint_x=None,
-            width=dp(56),
-            spacing=dp(6),
-            pos_hint={'center_y': 0.5}
-        )
-
-        self.variant_btn = IconImageButton(
-            icon_name="variant_png",
-            on_press_callback=self._next_chord_variant,
-            size=dp(24),
-            offset_y=0
-        )
-        left_container.add_widget(self.variant_btn)
-
-        self.mode_btn = IconImageButton(
-            icon_name="fingers_png" if self.display_mode == "finger" else "notes_png",
-            on_press_callback=self._toggle_display_mode,
-            size=dp(24),
-            offset_y=0
-        )
-        left_container.add_widget(self.mode_btn)
-        top_row.add_widget(left_container)
-
-        self.chord_name_label = MDLabel(
-            text=self._song_chords[chord_index] if self._song_chords else "",
-            font_size=sp(18),
-            halign="center",
-            valign="middle",
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.85],
-            bold=True
-        )
-        top_row.add_widget(self.chord_name_label)
-
-        right_container = MDBoxLayout(
-            size_hint_x=None,
-            width=dp(56),
-            pos_hint={'center_y': 0.5}
-        )
-
-        close_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_x=1,
-            spacing=dp(0),
-            padding=[dp(0), dp(0), dp(0), dp(0)]
-        )
-        close_container.add_widget(Widget(size_hint_x=1))
-        self.close_btn = IconImageButton(
-            icon_name="close_png",
-            on_press_callback=lambda x: self._close_chords_card(),
-            size=dp(22),
-            offset_y=0,
-            size_hint_x=None,
-            width=dp(22)
-        )
-        close_container.add_widget(self.close_btn)
-        right_container.add_widget(close_container)
-
-        top_row.add_widget(right_container)
-
-        self.chords_card.add_widget(top_row)
-
-        # Основной контейнер для грифа и кнопок пагинации
-        main_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(120),
-            spacing=dp(4),
-            padding=[dp(2), dp(0), dp(2), dp(0)]
-        )
-
-        self.chord_prev_btn = MDIconButton(
-            icon="chevron-left",
-            size_hint=(None, None),
-            size=(dp(34), dp(34)),
-            theme_icon_color="Custom",
-            icon_color=[0.46, 0.70, 0.71, 1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._prev_chord_in_card,
-            ripple_scale=0,
-            pos_hint={'center_y': 0.5}
-        )
-
-        griff_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=1,
-            padding=[dp(1), dp(0), dp(1), dp(0)]
-        )
-
-        self.chord_preview_renderer = ChordRenderer()
-        griff_container.add_widget(self.chord_preview_renderer)
-
-        try:
-            griff_data = load_asset_as_bytes("griff_png")
-            if griff_data:
-                griff_img = CoreImage(BytesIO(griff_data), ext="png")
-                if griff_img and griff_img.texture:
-                    self.chord_preview_renderer.set_background(griff_img.texture)
-        except Exception as e:
-            logger.error(f"Ошибка загрузки фона грифа: {e}")
-
-        self.chord_next_btn = MDIconButton(
-            icon="chevron-right",
-            size_hint=(None, None),
-            size=(dp(34), dp(34)),
-            theme_icon_color="Custom",
-            icon_color=[0.46, 0.70, 0.71, 1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._next_chord_in_card,
-            ripple_scale=0,
-            pos_hint={'center_y': 0.5}
-        )
-
-        main_row.add_widget(self.chord_prev_btn)
-        main_row.add_widget(griff_container)
-        main_row.add_widget(self.chord_next_btn)
-
-        self.chords_card.add_widget(main_row)
-
-        self.chord_desc_label = MDLabel(
-            text="",
-            font_size=sp(10),
-            halign="center",
-            size_hint=(1, None),
-            height=dp(20),
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 0.7],
-            shorten=True,
-            shorten_from="right"
-        )
-        self.chords_card.add_widget(self.chord_desc_label)
-
-        self.add_widget(self.chords_card)
-
-        Clock.schedule_once(lambda dt: update_card_position(), 0.1)
-        self.bind(size=update_card_position)
-
-        self._current_chord_index = chord_index
-        self._update_chord_display()
-
-        self._load_chord_variants(self._song_chords[chord_index])
-
-    def _update_chord_description(self, chord_name):
-        desc = self._get_chord_description(chord_name)
-        if hasattr(self, 'chord_desc_label'):
-            self.chord_desc_label.text = desc
-
-    def _load_chord_variants(self, chord_name):
-        self.chord_variants = []
-        self.chord_variant_index = 0
-
-        if self.manager and self.manager.has_screen('chords'):
-            chords_screen = self.manager.get_screen('chords')
-            variants = []
-            for chord in chords_screen.all_chords:
-                if chord['short_name'].lower() == chord_name.lower():
-                    variants.append(chord)
-
-            variants.sort(key=lambda x: x['variant'])
-            self.chord_variants = variants
-            logger.info(f"Загружено вариантов для {chord_name}: {len(self.chord_variants)}")
-
-            if self.chord_variants:
-                self.load_current_variant()
-
-        if hasattr(self, 'variant_btn'):
-            self.variant_btn.opacity = 1 if len(self.chord_variants) > 1 else 0.5
-
-    def load_current_variant(self):
-        if not self.chord_variants:
-            return
-
-        variant = self.chord_variants[self.chord_variant_index]
-        chord_module = None
-        if 'module' in variant:
-            chord_module = variant['module']
-        elif 'module_1' in variant:
-            chord_module = variant['module_1']
-        else:
-            for key, value in variant.items():
-                if 'module' in key.lower() and value:
-                    chord_module = value
-                    break
-
-        if chord_module and hasattr(self, 'chord_preview_renderer') and self.chord_preview_renderer:
-            self.chord_preview_renderer.load_chord(chord_module)
-            self.chord_preview_renderer.set_mode(self.display_mode)
-            logger.info(f"Загружен вариант {self.chord_variant_index + 1}/{len(self.chord_variants)}")
-
-        if self.chord_variants and self.chord_variant_index < len(self.chord_variants):
-            variant_data = self.chord_variants[self.chord_variant_index]
-            description = variant_data.get('description', '')
-            if description:
-                parts = description.replace('!', '|').split('|')
-                if parts and hasattr(self, 'chord_desc_label'):
-                    self.chord_desc_label.text = parts[0].strip()
-
-    def _next_chord_variant(self, *args):
-        if not self.chord_variants:
-            return
-
-        total = len(self.chord_variants)
-        self.chord_variant_index = (self.chord_variant_index + 1) % total
-        self.load_current_variant()
-
-    def _toggle_display_mode(self, *args):
-        if self.display_mode == "finger":
-            self.display_mode = "notes"
-            if hasattr(self, 'mode_btn'):
-                self.mode_btn.icon_name = "notes_png"
-                self.mode_btn._load_icon()
-        else:
-            self.display_mode = "finger"
-            if hasattr(self, 'mode_btn'):
-                self.mode_btn.icon_name = "fingers_png"
-                self.mode_btn._load_icon()
-
-        if hasattr(self, 'chord_preview_renderer') and self.chord_preview_renderer:
-            self.chord_preview_renderer.set_mode(self.display_mode)
-            if self.chord_variants:
-                self.load_current_variant()
-        logger.info(f"Режим отображения изменён на: {self.display_mode}")
-
-    def _close_chords_card(self):
-        if hasattr(self, 'chords_card') and self.chords_card:
-            self.remove_widget(self.chords_card)
-            self.chords_card = None
-
-    def _extract_and_cache_chords(self):
-        chords = set()
-
-        for tab in self.tabs:
-            content = tab.get('content', '')
-            if content:
-                cleaned = clean_text(content)
-                extracted = extract_chords_from_text(cleaned)
-                chords.update(extracted)
-
-        self._song_chords = sorted(list(chords))
-        logger.info(f"🎸 Найдено аккордов в песне: {len(self._song_chords)} - {self._song_chords}")
-
-    def _get_chord_description(self, chord_name):
-        if self.manager and self.manager.has_screen('chords'):
-            chords_screen = self.manager.get_screen('chords')
-            for chord in chords_screen.all_chords:
-                if chord['short_name'].lower() == chord_name.lower():
-                    description = chord.get('description', '')
-                    if description:
-                        parts = description.replace('!', '|').split('|')
-                        if parts:
-                            return parts[0].strip()
-                    return chord.get('type', 'Аккорд')
-        return 'Аккорд'
-
-    def _update_chord_display(self):
-        if not self._song_chords:
-            return
-
-        chord_name = self._song_chords[self._current_chord_index]
-
-        if hasattr(self, 'chord_name_label'):
-            self.chord_name_label.text = chord_name
-
-        self._update_chord_description(chord_name)
-
-        if hasattr(self, 'chord_prev_btn'):
-            self.chord_prev_btn.disabled = False
-            self.chord_prev_btn.opacity = 1
-
-        if hasattr(self, 'chord_next_btn'):
-            self.chord_next_btn.disabled = False
-            self.chord_next_btn.opacity = 1
-
-    def _prev_chord_in_card(self, *args):
-        if not self._song_chords:
-            return
-
-        total = len(self._song_chords)
-        if self._current_chord_index == 0:
-            self._current_chord_index = total - 1
-        else:
-            self._current_chord_index -= 1
-
-        chord = self._song_chords[self._current_chord_index]
-        self._update_chord_display()
-        self._load_chord_variants(chord)
-
-    def _next_chord_in_card(self, *args):
-        if not self._song_chords:
-            return
-
-        total = len(self._song_chords)
-        if self._current_chord_index == total - 1:
-            self._current_chord_index = 0
-        else:
-            self._current_chord_index += 1
-
-        chord = self._song_chords[self._current_chord_index]
-        self._update_chord_display()
-        self._load_chord_variants(chord)
+        self.show_chords_section()
 
     # ==================== ТРАНСПОНИРОВАНИЕ ====================
 
@@ -1471,7 +1455,6 @@ class SongDetailScreen(BaseScreen):
         from utils.transposer import transpose_text
 
         self.original_cleaned_text = cleaned_text
-
         self.transposed_text_cache[0] = highlight_chords_in_text(cleaned_text)
         self.transposed_chords_cache[0] = self._song_chords.copy()
 
@@ -1487,20 +1470,15 @@ class SongDetailScreen(BaseScreen):
 
     def apply_tonality(self, step):
         transposed_text = self.transposed_text_cache.get(step)
-
         if transposed_text:
             self.content_label.text = transposed_text
             self.content_label.markup = True
-
             self._song_chords = self.transposed_chords_cache.get(step, [])
-
-            if hasattr(self, 'chords_card') and self.chords_card:
+            if self.is_chords_mode and hasattr(self, 'chord_name_label'):
                 if self._song_chords:
                     if self._current_chord_index >= len(self._song_chords):
                         self._current_chord_index = 0
-                    self.chord_name_label.text = self._song_chords[self._current_chord_index]
-                    self._load_chord_variants(self._song_chords[self._current_chord_index])
-
+                    self._update_chords_display()
             logger.info(f"✅ Применена тональность: {step:.1f}")
         else:
             logger.warning(f"⚠️ Текст для {step} не найден")
@@ -1549,23 +1527,19 @@ class SongDetailScreen(BaseScreen):
 
     def reset_font_size(self):
         self.current_font_size = self.STANDARD_FONT_SIZE
-
         if hasattr(self, 'content_label'):
             self.content_label.font_size = self.current_font_size
             self._update_content_height()
-
         logger.info(f"🔍 Размер шрифта сброшен до стандартного: {self.current_font_size}")
 
     def reset_screen_state(self):
         self.current_tonality = 0
-
         self.transposed_chords_cache = {}
         self.transposed_text_cache = {}
         self.original_cleaned_text = ""
 
-        if hasattr(self, 'chords_card') and self.chords_card:
-            self._close_chords_card()
-
+        if self.is_chords_mode:
+            self.close_chords_section()
         if self.is_tonality_mode:
             self.cancel_tonality()
         if self.is_font_mode:
@@ -1598,9 +1572,7 @@ class SongDetailScreen(BaseScreen):
             tab = self.tabs[self.current_tab_index]
             raw_content = tab.get('content', 'Текст не загружен')
             cleaned = clean_text(raw_content)
-
             self._extract_and_log_chords(cleaned)
-
             if cleaned:
                 highlighted_text = highlight_chords_in_text(cleaned)
                 self.content_label.text = highlighted_text
@@ -1608,7 +1580,6 @@ class SongDetailScreen(BaseScreen):
             else:
                 self.content_label.text = "Текст не загружен"
                 self.content_label.markup = False
-
             self._update_content_height()
             Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
 
@@ -1652,37 +1623,26 @@ class SongDetailScreen(BaseScreen):
     def on_song_loaded(self, data):
         artist = data.get('artist') or 'Неизвестный'
         title = data.get('title') or 'Без названия'
-
         self.song_artist = artist
         self.song_title = title
-
         self.tabs = data.get('tabs', [])
         if not self.tabs and data.get('content'):
             self.tabs = [{'content': data.get('content', '')}]
-
         self.current_tab_index = 0
-
         self.song_info_label.text = f"{artist} - {title}"
-
         if self.tabs:
             raw_content = self.tabs[0].get('content', 'Текст не загружен')
             cleaned = clean_text(raw_content)
-
             self._extract_and_cache_chords()
             self.precompute_transpositions(cleaned)
-
             original_text = self.transposed_text_cache.get(0, cleaned)
             self.content_label.text = original_text
             self.content_label.markup = True
-
             self._update_content_height()
-
         self.is_liked = data.get('is_liked', False)
         self.is_favorite = data.get('is_favorite', False)
-
         self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
         self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
-
         Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
         self.hide_loading()
         logger.info(f"Песня загружена, подборов: {len(self.tabs)}")
@@ -1744,14 +1704,14 @@ class SongDetailScreen(BaseScreen):
 
     def go_back(self, instance=None):
         logger.info("🔙 Нажата кнопка возврата")
-
         if self.is_tonality_mode:
             self.cancel_tonality()
         if self.is_font_mode:
             self.cancel_font()
         if self.is_scroll_mode:
             self.close_scroll_panel()
-
+        if self.is_chords_mode:
+            self.close_chords_section()
         if self.manager and self.manager.has_screen('song_detail'):
             screen_state.clear_pending_chord()
             self.manager.current = 'song_detail'
@@ -1770,15 +1730,11 @@ class SongDetailScreen(BaseScreen):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.reset_to_default()
-
         if self.is_tonality_mode:
             self.cancel_tonality()
         if self.is_font_mode:
             self.cancel_font()
         if self.is_scroll_mode:
             self.close_scroll_panel()
-
-        if hasattr(self, 'chords_card') and self.chords_card:
-            self._close_chords_card()
-        if hasattr(self, 'tonality_card') and self.tonality_card:
-            self._close_tonality_card(self.tonality_card, apply=False)
+        if self.is_chords_mode:
+            self.close_chords_section()
