@@ -181,6 +181,7 @@ class GuitarFunsApp(MDApp):
         self.blocking_layer = None
         self.current_auth_modal = None
         self.is_auth_blocking = False
+        self._bottom_nav_visible = False  # Добавьте эту строку
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
@@ -403,6 +404,30 @@ class GuitarFunsApp(MDApp):
     def on_stop(self):
         logger.info('Приложение закрыто')
         network_manager.stop_monitoring()
+
+    def hide_bottom_nav(self):
+        """Временно скрывает нижнюю панель навигации (для экрана песни)"""
+        if hasattr(self, 'bottom_nav') and self.bottom_nav and self.bottom_nav.parent:
+            # Сохраняем состояние
+            self._bottom_nav_visible = True
+            # Удаляем из родителя
+            self.bottom_nav.parent.remove_widget(self.bottom_nav)
+            logger.info("🔻 BottomNav скрыт")
+
+    def show_bottom_nav(self):
+        """Восстанавливает нижнюю панель навигации"""
+        if hasattr(self, 'bottom_nav') and self.bottom_nav:
+            if hasattr(self, '_bottom_nav_visible') and self._bottom_nav_visible:
+                root = self.root
+                if root and self.bottom_nav.parent is None:
+                    # Добавляем BottomNav обратно
+                    root.add_widget(self.bottom_nav)
+                    # Восстанавливаем правильный порядок: TopNav должен быть поверх
+                    if hasattr(self, 'top_nav') and self.top_nav and self.top_nav.parent:
+                        self.top_nav.parent.remove_widget(self.top_nav)
+                        root.add_widget(self.top_nav)
+                    logger.info("🔺 BottomNav восстановлен")
+                self._bottom_nav_visible = False
 
 
 if __name__ == '__main__':

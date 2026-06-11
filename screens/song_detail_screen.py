@@ -226,7 +226,7 @@ class SongDetailScreen(BaseScreen):
 
         # Настройки размера шрифта в зависимости от платформы
         if platform == 'android':
-            self.STANDARD_FONT_SIZE = 36
+            self.STANDARD_FONT_SIZE = 40
         else:
             self.STANDARD_FONT_SIZE = 18
         self.current_font_size = self.STANDARD_FONT_SIZE
@@ -331,12 +331,18 @@ class SongDetailScreen(BaseScreen):
             bar_inactive_color=[0.5, 0.5, 0.5, 0.1]
         )
 
-        # Добавляем отступы здесь - [left, top, right, bottom]
+        # Для Windows: имитация системной навигации, для Android: реальная высота
+        if platform == 'android':
+            nav_bar_height = get_navigation_bar_height()
+            bottom_padding = nav_bar_height + dp(12)
+        else:
+            bottom_padding = dp(48)
+
         scroll_content = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
-            padding=[dp(16), dp(8), dp(16), dp(8)],  # left=16, top=8, right=16, bottom=8
+            padding=[dp(16), dp(8), dp(16), bottom_padding],
             adaptive_height=True
         )
 
@@ -354,19 +360,23 @@ class SongDetailScreen(BaseScreen):
         scroll_content.add_widget(self.content_label)
 
         self.content_scroll.add_widget(scroll_content)
+
+        # Сначала добавляем content_scroll в song_card
         self.song_card.add_widget(self.content_scroll)
 
+        # Создаём и ДОБАВЛЯЕМ нижнюю панель ПОСЛЕ content_scroll (чтобы она была поверх)
         self._create_bottom_panel()
         self.bottom_panel = self.normal_bottom_panel
-        self.song_card.add_widget(self.bottom_panel)
+        self.song_card.add_widget(self.bottom_panel)  # Панель будет внизу поверх скролла
 
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
 
-        bottom_nav_height = dp(60)
-        nav_bar_height = get_navigation_bar_height()
-        total_bottom = bottom_nav_height + nav_bar_height + dp(12)
-        main_container.add_widget(Widget(size_hint_y=None, height=total_bottom))
+        # Дополнительный отступ снизу для имитации системной навигации на Windows
+        if platform != 'android':
+            main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
+        else:
+            main_container.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         self.add_widget(main_container)
 
@@ -1116,13 +1126,16 @@ class SongDetailScreen(BaseScreen):
 
         from kivymd.uix.slider import MDSlider
 
-        # Диапазон значений шрифта: от 24 до 52
-        # Минимум: 24, Максимум: 52
+        # Диапазон значений шрифта: от 28 до 60
+        # Минимум: 28, Максимум: 60
+        MIN_FONT = 28
+        MAX_FONT = 60
+
         def size_to_slider(size):
-            return size - 24  # 24 -> 0, 52 -> 28
+            return size - MIN_FONT  # 28 -> 0, 60 -> 32
 
         def slider_to_size(slider_value):
-            return 24 + slider_value  # 0 -> 24, 28 -> 52
+            return MIN_FONT + slider_value  # 0 -> 28, 32 -> 60
 
         current_slider_value = size_to_slider(self.current_font_size)
 
@@ -1142,7 +1155,7 @@ class SongDetailScreen(BaseScreen):
         # Слайдер с расширенным диапазоном
         self.font_slider = MDSlider(
             min=-0.01,
-            max=28.01,  # 28 шагов (от 24 до 52)
+            max=32.01,  # 32 шага (от 28 до 60)
             value=current_slider_value,
             step=1,
             size_hint_x=1,
@@ -1165,8 +1178,8 @@ class SongDetailScreen(BaseScreen):
             # Ограничиваем значение
             if value < 0:
                 int_value = 0
-            elif value > 28:
-                int_value = 28
+            elif value > 32:
+                int_value = 32
             else:
                 int_value = int(round(value))
 
@@ -1388,7 +1401,7 @@ class SongDetailScreen(BaseScreen):
         def update_scroll(dt):
             if not self.is_scrolling:
                 return False
-            scroll_step = 0.0002 * self.scroll_speed
+            scroll_step = 0.0004 * self.scroll_speed
             new_y = self.content_scroll.scroll_y - scroll_step
             if new_y <= 0:
                 self.content_scroll.scroll_y = 0
@@ -1639,7 +1652,10 @@ class SongDetailScreen(BaseScreen):
 
     def toggle_like(self, *args):
         if not api.is_authenticated():
-            notify.warning("Войдите, чтобы ставить лайки")
+            # Показываем окно авторизации
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'open_profile'):
+                app.open_profile()
             return
 
         def on_success(result):
@@ -1654,7 +1670,10 @@ class SongDetailScreen(BaseScreen):
 
     def toggle_favorite(self, *args):
         if not api.is_authenticated():
-            notify.warning("Войдите, чтобы добавлять в избранное")
+            # Показываем окно авторизации
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'open_profile'):
+                app.open_profile()
             return
 
         if self.is_favorite:
@@ -1707,6 +1726,10 @@ class SongDetailScreen(BaseScreen):
     def on_enter(self):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
+            # Скрываем BottomNav через главное приложение (чистое удаление, без мерцаний)
+            if hasattr(app, 'hide_bottom_nav'):
+                app.hide_bottom_nav()
+
             # Показываем кнопку назад
             app.top_nav._show_back_button()
             app.top_nav.back_btn.on_release = self.go_back
@@ -1715,12 +1738,15 @@ class SongDetailScreen(BaseScreen):
             if self.song_title:
                 self.update_top_nav_title()
             else:
-                # Если данные ещё не загружены, устанавливаем временный заголовок
                 app.top_nav.set_custom_title("Подбор")
 
     def on_leave(self):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
+            # Возвращаем BottomNav обратно
+            if hasattr(app, 'show_bottom_nav'):
+                app.show_bottom_nav()
+
             app.top_nav.reset_to_default()
         if self.is_tonality_mode:
             self.cancel_tonality()
