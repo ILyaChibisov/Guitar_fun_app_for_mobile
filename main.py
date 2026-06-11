@@ -251,7 +251,7 @@ class GuitarFunsApp(MDApp):
 
         # ============ НАСТРОЙКА КЛАВИАТУРЫ (ГЛОБАЛЬНО) ============
         # Режим 'pan' - клавиатура перекрывает интерфейс, не сжимая окно
-        Window.softinput_mode = 'pan'
+        #Window.softinput_mode = 'pan'
 
         # На Android: принудительно устанавливаем SOFT_INPUT_ADJUST_PAN
         if platform == 'android':
