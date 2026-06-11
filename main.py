@@ -68,13 +68,19 @@ if platform == 'android':
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         )
 
-        # Делаем статус-бар ЧЁРНЫМ (непрозрачным)
-        window.setStatusBarColor(0xFF000000)  # Чёрный цвет (0xFF = alpha, 000000 = black)
+        # Чёрный статус-бар
+        window.setStatusBarColor(0xFF000000)
 
-        # Делаем нав-бар прозрачным или тоже чёрным
-        window.setNavigationBarColor(0xFF000000)  # Чёрный цвет для нав-бара
+        # Чёрный нав-бар (системное меню)
+        window.setNavigationBarColor(0xFF000000)
 
-        print("✅ Системные панели настроены: статус-бар ЧЁРНЫЙ")
+        # Убираем флаг LIGHT_NAVIGATION_BAR, чтобы значки были светлыми
+        current_flags = decorView.getSystemUiVisibility()
+        if current_flags & View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:
+            new_flags = current_flags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            decorView.setSystemUiVisibility(new_flags)
+
+        print("✅ Системные панели: статус-бар и нав-бар чёрные, значки светлые")
 
     except Exception as e:
         print(f"Ошибка настройки системных панелей: {e}")
