@@ -249,6 +249,24 @@ class GuitarFunsApp(MDApp):
     def build(self):
         logger.debug('Создание интерфейса...')
 
+        # ============ НАСТРОЙКА КЛАВИАТУРЫ (ГЛОБАЛЬНО) ============
+        # Режим 'pan' - клавиатура перекрывает интерфейс, не сжимая окно
+        Window.softinput_mode = 'pan'
+
+        # На Android: принудительно устанавливаем SOFT_INPUT_ADJUST_PAN
+        if platform == 'android':
+            try:
+                from android import mActivity
+                from jnius import autoclass
+                View = autoclass('android.view.View')
+                window = mActivity.getWindow()
+                # SOFT_INPUT_ADJUST_PAN = 0x00000020
+                window.setSoftInputMode(0x00000020)
+                logger.info("⌨️ Android: клавиатура настроена в режиме PAN (перекрытие)")
+            except Exception as e:
+                logger.error(f"Ошибка настройки клавиатуры: {e}")
+        # ============================================================
+
         # ============ ДИАГНОСТИКА СИСТЕМНЫХ ПАНЕЛЕЙ ============
         logger.info("=" * 70)
         logger.info("🔧 ДИАГНОСТИКА СИСТЕМНЫХ ПАНЕЛЕЙ ПРИ ЗАПУСКЕ")
@@ -428,6 +446,11 @@ class GuitarFunsApp(MDApp):
                         root.add_widget(self.top_nav)
                     logger.info("🔺 BottomNav восстановлен")
                 self._bottom_nav_visible = False
+
+    def _on_keyboard(self, window, key, scancode, codepoint, modifier):
+        """Обработчик клавиатуры - предотвращает сжатие окна"""
+        # Возвращаем False, чтобы событие прошло дальше
+        return False
 
 
 if __name__ == '__main__':
