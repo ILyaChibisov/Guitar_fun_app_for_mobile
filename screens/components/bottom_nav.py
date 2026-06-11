@@ -1,181 +1,113 @@
 # screens/components/bottom_nav.py
 """
-Нижняя панель навигации - увеличенные иконки для Android
+Нижняя панель навигации - с Material Design иконками
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
-from kivy.uix.label import Label
-from kivy.uix.image import Image
 from kivy.animation import Animation
 from kivy.properties import StringProperty, BooleanProperty
 from kivy.metrics import dp, sp
-from kivy.core.image import Image as CoreImage
 from kivy.utils import platform
-from kivy.core.window import Window
-from io import BytesIO
+from kivy.clock import Clock
+
+from kivymd.uix.button import MDIconButton
+from kivymd.uix.label import MDLabel
+from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.app import MDApp
 
 from config.theme import theme
 from config.logger_config import get_logger
-from config.system_bars import get_navigation_bar_height, get_screen_density
-from utils.kivy_imports import MDBoxLayout
+from config.system_bars import get_navigation_bar_height
 
 logger = get_logger('BottomNav')
 
-try:
-    from data import load_asset_as_bytes
-
-    HAS_ASSETS = True
-except ImportError:
-    HAS_ASSETS = False
-    logger.warning("Модуль data не найден")
-
 
 class NavItem(ButtonBehavior, BoxLayout):
-    """Элемент нижней навигации"""
+    """Элемент нижней навигации с Material Design иконками"""
 
-    icon_asset = StringProperty('')
     text = StringProperty('')
     active = BooleanProperty(False)
 
-    def __init__(self, icon_asset, text, screen_name, **kwargs):
+    def __init__(self, icon_name, text, screen_name, **kwargs):
         super().__init__(**kwargs)
-        self.icon_asset = icon_asset
+        self.icon_name = icon_name
         self.text = text
         self.screen_name = screen_name
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
 
+        # Настройки размеров
         if platform == 'android':
-            # ============ УВЕЛИЧЕННЫЕ НАСТРОЙКИ ДЛЯ ANDROID ============
-            self.spacing = dp(8)
-            self.padding = [0, dp(6), 0, dp(6)]
-
-            # УВЕЛИЧЕННЫЙ контейнер иконки (было 48, стало 64)
-            self.icon_container_height = dp(64)
-
-            self.icon_container = MDBoxLayout(
-                size_hint=(1, None),
-                height=self.icon_container_height,
-                orientation='vertical'
-            )
-
-            # УВЕЛИЧЕННЫЕ размеры иконок
-            if screen_name == 'favorites':
-                self.icon_size = dp(48)  # Избранное (было 36)
-                self.font_size = sp(12)
-            else:
-                self.icon_size = dp(54)  # Остальные (было 44)
-                self.font_size = sp(13)
-
-            # Текст
-            self.text_label = Label(
-                text=self.text,
-                font_size=self.font_size,
-                size_hint=(1, None),
-                height=dp(22),
-                color=theme.TEXT_SECONDARY,
-                bold=False,
-                halign='center',
-                valign='middle'
-            )
-        else:
-            # Windows
             self.spacing = dp(6)
+            self.padding = [0, dp(8), 0, dp(8)]
+            icon_size = dp(28)
+            font_size = sp(11)
+        else:
+            self.spacing = dp(4)
             self.padding = [0, dp(6), 0, dp(6)]
+            icon_size = dp(24)
+            font_size = sp(10)
 
-            self.icon_container_height = dp(60)
-            self.icon_container = MDBoxLayout(
-                size_hint=(1, None),
-                height=self.icon_container_height,
-                orientation='vertical'
-            )
+        # Медно-золотой цвет для активного состояния
+        self.copper_gold = [0.85, 0.65, 0.25, 1]
 
-            if screen_name == 'favorites':
-                self.icon_size = dp(46)
-                self.font_size = sp(13)
-            else:
-                self.icon_size = dp(50)
-                self.font_size = sp(15)
+        # Иконка MDIconButton (как в меню песни)
+        self.icon_btn = MDIconButton(
+            icon=icon_name,
+            size_hint=(None, None),
+            size=(icon_size, icon_size),
+            theme_icon_color="Custom",
+            icon_color=theme.TEXT_SECONDARY,
+            md_bg_color=[0, 0, 0, 0],
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            ripple_scale=0
+        )
 
-            self.text_label = Label(
-                text=self.text,
-                font_size=self.font_size,
-                size_hint=(1, None),
-                height=dp(22),
-                color=theme.TEXT_SECONDARY,
-                bold=False,
-                halign='center',
-                valign='middle'
-            )
+        # Текст
+        self.text_label = MDLabel(
+            text=text,
+            font_size=font_size,
+            halign="center",
+            valign="middle",
+            size_hint=(1, None),
+            height=dp(18),
+            theme_text_color="Custom",
+            text_color=theme.TEXT_SECONDARY,
+            bold=False
+        )
 
-        self.custom_image = None
-        self._load_icon()
-
-        self.text_label.bind(size=self.text_label.setter('text_size'))
-
-        self.add_widget(self.icon_container)
+        self.add_widget(self.icon_btn)
         self.add_widget(self.text_label)
 
-        self.update_state(None, self.active)
+        self.update_state(self, self.active)
         self.bind(active=self.update_state)
-        self.bind(icon_asset=self._reload_icon)
-
-        logger.info(f"[NavItem] {screen_name}: icon_size={self.icon_size}dp, font={self.font_size}")
-
-    def _reload_icon(self, *args):
-        self._load_icon()
-
-    def _load_icon(self):
-        self.icon_container.clear_widgets()
-
-        if HAS_ASSETS and self.icon_asset:
-            try:
-                icon_data = load_asset_as_bytes(self.icon_asset)
-                if icon_data:
-                    core_img = CoreImage(BytesIO(icon_data), ext="png")
-
-                    self.custom_image = Image(
-                        texture=core_img.texture,
-                        size_hint=(None, None),
-                        size=(self.icon_size, self.icon_size),
-                        pos_hint={'center_x': 0.5, 'center_y': 0.5},
-                        allow_stretch=True,
-                        keep_ratio=True
-                    )
-                    self.icon_container.add_widget(self.custom_image)
-                    return
-            except Exception as e:
-                logger.error('Ошибка загрузки иконки: ' + str(e))
-
-        fallback_font = sp(28) if platform == 'android' else sp(26)
-        self.custom_image = Label(
-            text="?",
-            font_size=fallback_font,
-            size_hint=(1, 1),
-            color=theme.TEXT_SECONDARY,
-            halign='center',
-            valign='center'
-        )
-        self.icon_container.add_widget(self.custom_image)
 
     def update_state(self, instance, value):
+        """Обновляет состояние иконки при активации"""
         if value:
-            self.text_label.color = theme.PRIMARY
+            self.icon_btn.icon_color = self.copper_gold
+            self.text_label.text_color = self.copper_gold
             self.text_label.bold = True
         else:
-            self.text_label.color = theme.TEXT_SECONDARY
+            self.icon_btn.icon_color = theme.TEXT_SECONDARY
+            self.text_label.text_color = theme.TEXT_SECONDARY
             self.text_label.bold = False
 
-    def on_press(self):
-        anim = Animation(opacity=0.7, duration=0.05)
+    def on_release(self):
+        """Обработчик отпускания кнопки"""
+        # Анимация нажатия
+        anim = Animation(opacity=0.6, duration=0.05)
         anim += Animation(opacity=1, duration=0.1)
         anim.start(self)
 
+        # Переход на нужный экран
+        if hasattr(self.parent, 'switch_to'):
+            self.parent.switch_to(self.screen_name)
+
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации"""
+    """Нижняя панель навигации - 4 раздела"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -186,14 +118,13 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            # Увеличенная высота всей панели
-            self.nav_height = dp(90)  # было 80, стало 90
+            self.nav_height = dp(60)
             bottom_padding = 0
-            button_spacing = dp(8)
+            button_spacing = dp(4)
         else:
-            self.nav_height = dp(80)
+            self.nav_height = dp(56)
             bottom_padding = nav_bar_height + dp(8)
-            button_spacing = dp(6)
+            button_spacing = dp(4)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
@@ -205,24 +136,21 @@ class BottomNav(BoxLayout):
         logger.info("=" * 70)
         logger.info(f"📱 BOTTOM NAV - {platform.upper()}")
         logger.info(f"📱 Высота панели: {self.nav_height}dp")
-        logger.info(f"📱 Системная навигация: {nav_bar_height:.1f}dp")
-        logger.info(f"📱 Размер иконок: 54dp (Избранное 44dp)")
-        logger.info(f"📱 Шрифт: 13sp (Избранное 10sp)")
+        logger.info(f"📱 Разделы: Песни, Аккорды, Тюнер, Избранное")
         logger.info("=" * 70)
 
+        # 4 раздела с Material Design иконками (как в меню песни)
         self.nav_items = [
-            ('home_png', 'Главная', 'home'),
-            ('songs_png', 'Песни', 'songs'),
-            ('chords_png', 'Аккорды', 'chords'),
-            ('tuner_png', 'Тюнер', 'tuner'),
-            ('favorites_png', 'Избранное', 'favorites')
+            ('music-note', 'Песни', 'songs'),
+            ('guitar-pick', 'Аккорды', 'chords'),
+            ('tune', 'Тюнер', 'tuner'),
+            ('heart', 'Избранное', 'favorites'),
         ]
 
         self.items = []
         for icon, text, screen in self.nav_items:
             item = NavItem(icon, text, screen)
-            item.active = (screen == 'home')
-            item.bind(on_press=lambda x, s=screen: self.switch_to(s))
+            item.active = (screen == 'songs')
             self.add_widget(item)
             self.items.append(item)
 
@@ -241,9 +169,11 @@ class BottomNav(BoxLayout):
         if not self.sm or self.sm.current == screen_name:
             return
 
+        # Обновляем активное состояние всех элементов
         for item, (_, _, screen) in zip(self.items, self.nav_items):
             item.active = (screen == screen_name)
 
+        # Определяем направление перехода
         try:
             current_index = next(i for i, (_, _, s) in enumerate(self.nav_items) if s == self.sm.current)
             new_index = next(i for i, (_, _, s) in enumerate(self.nav_items) if s == screen_name)
@@ -261,13 +191,13 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            self.nav_height = dp(90)
+            self.nav_height = dp(60)
             bottom_padding = 0
-            button_spacing = dp(8)
+            button_spacing = dp(4)
         else:
-            self.nav_height = dp(80)
+            self.nav_height = dp(56)
             bottom_padding = nav_bar_height + dp(8)
-            button_spacing = dp(6)
+            button_spacing = dp(4)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height

@@ -255,9 +255,6 @@ class SearchScreen(BaseScreen):
         self.init_ui()
         self.load_background()
 
-        # Отключаем изменение размера окна при появлении клавиатуры
-        Window.softinput_mode = 'pan'
-
         logger.info('✅ Экран поиска создан')
 
     def load_background(self):
