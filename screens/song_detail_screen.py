@@ -334,7 +334,7 @@ class SongDetailScreen(BaseScreen):
         # Для Windows: имитация системной навигации, для Android: реальная высота
         if platform == 'android':
             nav_bar_height = get_navigation_bar_height()
-            bottom_padding = nav_bar_height + dp(12)
+            bottom_padding = nav_bar_height  # Без дополнительного отступа
         else:
             bottom_padding = dp(48)
 
@@ -372,11 +372,10 @@ class SongDetailScreen(BaseScreen):
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
 
-        # Дополнительный отступ снизу для имитации системной навигации на Windows
+        # Дополнительный отступ снизу - убираем на Android
         if platform != 'android':
             main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
-        else:
-            main_container.add_widget(Widget(size_hint_y=None, height=dp(8)))
+        # На Android ничего не добавляем
 
         self.add_widget(main_container)
 

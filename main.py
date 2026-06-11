@@ -207,7 +207,7 @@ class GuitarFunsApp(MDApp):
 
     def _show_auth_modal_on_screen(self, screen):
         """Показывает модальное окно авторизации"""
-        from screens.home_screen import AuthModal
+        from screens.components.auth_modal import AuthModal
 
         self.set_blocking(True)
         self.current_auth_modal = AuthModal(
