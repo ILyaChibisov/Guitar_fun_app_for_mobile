@@ -303,8 +303,9 @@ class SongDetailScreen(BaseScreen):
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
-        top_padding = layout_config.get_top_padding()
-        main_container.add_widget(Widget(size_hint_y=None, height=top_padding))
+        # ============ ОТСТУП ПОД TOPNAV ============
+        system_top_padding = layout_config.get_top_padding()
+        main_container.add_widget(Widget(size_hint_y=None, height=system_top_padding))
 
         card_container = MDBoxLayout(
             orientation='vertical',
@@ -319,10 +320,10 @@ class SongDetailScreen(BaseScreen):
             padding=[0, 0, 0, 0],
             spacing=0,
             radius=[0, 0, 0, 0],
-            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
+            md_bg_color=[0, 0, 0, 0],
             elevation=0,
             line_width=1,
-            line_color=[0, 0, 0, 0]  # Полностью прозрачная линия
+            line_color=[0, 0, 0, 0]
         )
 
         self.content_scroll = MDScrollView(
@@ -337,17 +338,20 @@ class SongDetailScreen(BaseScreen):
         if platform == 'android':
             nav_bar_height = get_navigation_bar_height()
             bottom_padding = nav_bar_height
+            # Убираем top_padding_for_text, так как отступ сверху уже добавлен
+            text_top_padding = dp(8)  # Минимальный отступ сверху
         else:
             bottom_padding = dp(48)
+            text_top_padding = dp(8)
 
-        # Контейнер для текста - прозрачный, без фона
+        # Контейнер для текста
         scroll_content = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
-            padding=[dp(16), dp(8), dp(16), bottom_padding],
+            padding=[dp(16), text_top_padding, dp(16), bottom_padding],
             adaptive_height=True,
-            md_bg_color=[0, 0, 0, 0]  # Полностью прозрачный фон
+            md_bg_color=[0, 0, 0, 0]
         )
 
         self.content_label = ChordTextLabel(
@@ -355,7 +359,7 @@ class SongDetailScreen(BaseScreen):
             font_size=self.current_font_size,
             size_hint_y=None,
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95],  # Белый текст для контраста на фоне
+            text_color=[1, 1, 1, 0.95],
             valign="top",
             line_height=1.5,
             markup=True
@@ -364,11 +368,9 @@ class SongDetailScreen(BaseScreen):
         scroll_content.add_widget(self.content_label)
 
         self.content_scroll.add_widget(scroll_content)
-
-        # Сначала добавляем content_scroll в song_card
         self.song_card.add_widget(self.content_scroll)
 
-        # Создаём и ДОБАВЛЯЕМ нижнюю панель (серую, как было)
+        # Создаём и добавляем нижнюю панель
         self._create_bottom_panel()
         self.bottom_panel = self.normal_bottom_panel
         self.song_card.add_widget(self.bottom_panel)
@@ -376,7 +378,7 @@ class SongDetailScreen(BaseScreen):
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
 
-        # Дополнительный отступ снизу - убираем на Android
+        # Дополнительные отступы снизу (имитация системной навигации на Windows)
         if platform != 'android':
             main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
 
