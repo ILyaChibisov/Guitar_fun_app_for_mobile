@@ -192,12 +192,12 @@ class IconActionButton(MDIconButton):
         if platform == 'android':
             self.size = (dp(42), dp(42))
         else:
-            self.size = (dp(32), dp(32))
+            self.size = (dp(36), dp(36))
         self.theme_icon_color = "Custom"
         if icon_color:
             self.icon_color = icon_color
         else:
-            self.icon_color = [1, 1, 1, 0.85]
+            self.icon_color = [0.5, 0.5, 0.5, 0.9]
         self.md_bg_color = [0, 0, 0, 0]
         self.icon = icon_name
         self.bind(on_release=self._on_press)
@@ -274,6 +274,7 @@ class SongDetailScreen(BaseScreen):
         self.previous_screen = screen_name
 
     def load_background(self):
+        """Загружает фоновое изображение для всего экрана"""
         try:
             if HAS_ASSETS:
                 asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
@@ -311,39 +312,42 @@ class SongDetailScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
+        # Делаем карточку полностью прозрачной, чтобы был виден фон
         self.song_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
             padding=[0, 0, 0, 0],
             spacing=0,
             radius=[0, 0, 0, 0],
-            md_bg_color=[1, 1, 1, 0.98],
+            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
             elevation=0,
-            line_width=0.5,
-            line_color=[0.8, 0.8, 0.8, 0]
+            line_width=1,
+            line_color=[0, 0, 0, 0]  # Полностью прозрачная линия
         )
 
         self.content_scroll = MDScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
             bar_width=3,
-            bar_color=[0.5, 0.5, 0.5, 0.2],
+            bar_color=[0.5, 0.5, 0.5, 0.3],
             bar_inactive_color=[0.5, 0.5, 0.5, 0.1]
         )
 
         # Для Windows: имитация системной навигации, для Android: реальная высота
         if platform == 'android':
             nav_bar_height = get_navigation_bar_height()
-            bottom_padding = nav_bar_height  # Без дополнительного отступа
+            bottom_padding = nav_bar_height
         else:
             bottom_padding = dp(48)
 
+        # Контейнер для текста - прозрачный, без фона
         scroll_content = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
             padding=[dp(16), dp(8), dp(16), bottom_padding],
-            adaptive_height=True
+            adaptive_height=True,
+            md_bg_color=[0, 0, 0, 0]  # Полностью прозрачный фон
         )
 
         self.content_label = ChordTextLabel(
@@ -351,7 +355,7 @@ class SongDetailScreen(BaseScreen):
             font_size=self.current_font_size,
             size_hint_y=None,
             theme_text_color="Custom",
-            text_color=[0, 0, 0, 0.85],
+            text_color=[1, 1, 1, 0.95],  # Белый текст для контраста на фоне
             valign="top",
             line_height=1.5,
             markup=True
@@ -364,10 +368,10 @@ class SongDetailScreen(BaseScreen):
         # Сначала добавляем content_scroll в song_card
         self.song_card.add_widget(self.content_scroll)
 
-        # Создаём и ДОБАВЛЯЕМ нижнюю панель ПОСЛЕ content_scroll (чтобы она была поверх)
+        # Создаём и ДОБАВЛЯЕМ нижнюю панель (серую, как было)
         self._create_bottom_panel()
         self.bottom_panel = self.normal_bottom_panel
-        self.song_card.add_widget(self.bottom_panel)  # Панель будет внизу поверх скролла
+        self.song_card.add_widget(self.bottom_panel)
 
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
@@ -375,14 +379,13 @@ class SongDetailScreen(BaseScreen):
         # Дополнительный отступ снизу - убираем на Android
         if platform != 'android':
             main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
-        # На Android ничего не добавляем
 
         self.add_widget(main_container)
 
         logger.info(f"SongDetailScreen: init_ui completed")
 
     def _create_bottom_panel(self):
-        """Создаёт нижнюю панель с 7 кнопками (обычный режим)"""
+        """Создаёт нижнюю панель с 7 кнопками (серый фон как было)"""
         self.normal_bottom_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -392,9 +395,8 @@ class SongDetailScreen(BaseScreen):
             radius=[0, 0, 0, 0],
             md_bg_color=[0.96, 0.96, 0.96, 0.95],
             elevation=0,
-            line_width=0.5,
-            line_color=[0.8, 0.8, 0.8, 0],
-            pos_hint={'center_x': 0.5}
+            line_width=1,
+            line_color=[0.8, 0.8, 0.8, 0.3]
         )
 
         # 1. Аккорды - бирюзовый
@@ -571,9 +573,8 @@ class SongDetailScreen(BaseScreen):
             radius=[0, 0, 0, 0],
             md_bg_color=[0.96, 0.96, 0.96, 0.95],
             elevation=0,
-            line_width=0.5,
-            line_color=[0.8, 0.8, 0.8, 0],
-            pos_hint={'center_x': 0.5}
+            line_width=1,
+            line_color=[0.8, 0.8, 0.8, 0.3]
         )
 
         self.variant_btn = MDIconButton(
@@ -891,7 +892,7 @@ class SongDetailScreen(BaseScreen):
         if self.is_chords_mode:
             self.close_chords_section()
         if self.is_font_mode:
-            self.close_font_panel()
+            self.cancel_font()
         if self.is_scroll_mode:
             self.close_scroll_panel()
 
@@ -904,9 +905,8 @@ class SongDetailScreen(BaseScreen):
             radius=[0, 0, 0, 0],
             md_bg_color=[0.96, 0.96, 0.96, 0.95],
             elevation=0,
-            line_width=0.5,
-            line_color=[0.8, 0.8, 0.8, 0],
-            pos_hint={'center_x': 0.5}
+            line_width=1,
+            line_color=[0.8, 0.8, 0.8, 0.3]
         )
 
         title_label = MDLabel(
@@ -1111,9 +1111,8 @@ class SongDetailScreen(BaseScreen):
             radius=[0, 0, 0, 0],
             md_bg_color=[0.96, 0.96, 0.96, 0.95],
             elevation=0,
-            line_width=0.5,
-            line_color=[0.8, 0.8, 0.8, 0],
-            pos_hint={'center_x': 0.5}
+            line_width=1,
+            line_color=[0.8, 0.8, 0.8, 0.3]
         )
 
         center_container = MDBoxLayout(
@@ -1126,15 +1125,14 @@ class SongDetailScreen(BaseScreen):
         from kivymd.uix.slider import MDSlider
 
         # Диапазон значений шрифта: от 28 до 60
-        # Минимум: 28, Максимум: 60
         MIN_FONT = 28
         MAX_FONT = 60
 
         def size_to_slider(size):
-            return size - MIN_FONT  # 28 -> 0, 60 -> 32
+            return size - MIN_FONT
 
         def slider_to_size(slider_value):
-            return MIN_FONT + slider_value  # 0 -> 28, 32 -> 60
+            return MIN_FONT + slider_value
 
         current_slider_value = size_to_slider(self.current_font_size)
 
@@ -1154,7 +1152,7 @@ class SongDetailScreen(BaseScreen):
         # Слайдер с расширенным диапазоном
         self.font_slider = MDSlider(
             min=-0.01,
-            max=32.01,  # 32 шага (от 28 до 60)
+            max=32.01,
             value=current_slider_value,
             step=1,
             size_hint_x=1,
@@ -1164,7 +1162,6 @@ class SongDetailScreen(BaseScreen):
         )
         self.font_slider.ripple_scale = 0
 
-        # Цвета для ползунка
         bi_color = [0.46, 0.70, 0.71, 1]
         self.font_slider.thumb_color_active = bi_color
         self.font_slider.thumb_color_inactive = bi_color
@@ -1174,7 +1171,6 @@ class SongDetailScreen(BaseScreen):
         self.font_slider.color = bi_color
 
         def on_slider_change(instance, value):
-            # Ограничиваем значение
             if value < 0:
                 int_value = 0
             elif value > 32:
@@ -1185,19 +1181,14 @@ class SongDetailScreen(BaseScreen):
             if self.font_slider.value != int_value:
                 self.font_slider.value = int_value
 
-            # Получаем новый размер шрифта
             new_size = slider_to_size(int_value)
             self.current_font_size = new_size
-
-            # Обновляем отображение множителя
             self.font_value_label.text = self._get_font_multiplier(new_size)
 
-            # Обновляем основной текст
             if hasattr(self, 'content_label'):
                 self.content_label.font_size = self.current_font_size
                 self._update_content_height()
 
-            # Обновляем название аккорда если секция открыта
             if hasattr(self, 'chord_name_label') and self.chord_name_label:
                 Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.1)
 
@@ -1267,9 +1258,8 @@ class SongDetailScreen(BaseScreen):
             radius=[0, 0, 0, 0],
             md_bg_color=[0.96, 0.96, 0.96, 0.95],
             elevation=0,
-            line_width=0.5,
-            line_color=[0.8, 0.8, 0.8, 0],
-            pos_hint={'center_x': 0.5}
+            line_width=1,
+            line_color=[0.8, 0.8, 0.8, 0.3]
         )
 
         center_container = MDBoxLayout(
@@ -1498,6 +1488,7 @@ class SongDetailScreen(BaseScreen):
                 size_hint=(1, None),
                 height=dp(48),
                 md_bg_color=[0.46, 0.70, 0.71, 1] if i == self.current_tab_index else [0.2, 0.2, 0.2, 0.8],
+                text_color=[1, 1, 1, 1],
                 on_release=lambda x, idx=i: self._select_tab(idx)
             )
             content.add_widget(btn)
@@ -1651,7 +1642,6 @@ class SongDetailScreen(BaseScreen):
 
     def toggle_like(self, *args):
         if not api.is_authenticated():
-            # Показываем окно авторизации
             app = MDApp.get_running_app()
             if app and hasattr(app, 'open_profile'):
                 app.open_profile()
@@ -1669,7 +1659,6 @@ class SongDetailScreen(BaseScreen):
 
     def toggle_favorite(self, *args):
         if not api.is_authenticated():
-            # Показываем окно авторизации
             app = MDApp.get_running_app()
             if app and hasattr(app, 'open_profile'):
                 app.open_profile()
@@ -1725,15 +1714,12 @@ class SongDetailScreen(BaseScreen):
     def on_enter(self):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Скрываем BottomNav через главное приложение (чистое удаление, без мерцаний)
             if hasattr(app, 'hide_bottom_nav'):
                 app.hide_bottom_nav()
 
-            # Показываем кнопку назад
             app.top_nav._show_back_button()
             app.top_nav.back_btn.on_release = self.go_back
 
-            # Обновляем заголовок, если данные уже загружены
             if self.song_title:
                 self.update_top_nav_title()
             else:
@@ -1742,7 +1728,6 @@ class SongDetailScreen(BaseScreen):
     def on_leave(self):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Возвращаем BottomNav обратно
             if hasattr(app, 'show_bottom_nav'):
                 app.show_bottom_nav()
 
