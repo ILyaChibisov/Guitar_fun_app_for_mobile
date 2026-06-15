@@ -303,17 +303,13 @@ class SongDetailScreen(BaseScreen):
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
-        # ============ ОТСТУП ПОД TOPNAV ============
-        system_top_padding = layout_config.get_top_padding()
-        main_container.add_widget(Widget(size_hint_y=None, height=system_top_padding))
-
         card_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             padding=[0, 0, 0, 0]
         )
 
-        # Делаем карточку полностью прозрачной, чтобы был виден фон
+        # Делаем карточку полностью прозрачной
         self.song_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
@@ -322,7 +318,7 @@ class SongDetailScreen(BaseScreen):
             radius=[0, 0, 0, 0],
             md_bg_color=[0, 0, 0, 0],
             elevation=0,
-            line_width=1,
+            line_width=0.5,
             line_color=[0, 0, 0, 0]
         )
 
@@ -334,22 +330,18 @@ class SongDetailScreen(BaseScreen):
             bar_inactive_color=[0.5, 0.5, 0.5, 0.1]
         )
 
-        # Для Windows: имитация системной навигации, для Android: реальная высота
+        # Отступы для текста - только снизу
         if platform == 'android':
             nav_bar_height = get_navigation_bar_height()
-            bottom_padding = nav_bar_height
-            # Убираем top_padding_for_text, так как отступ сверху уже добавлен
-            text_top_padding = dp(16)  # Минимальный отступ сверху
+            bottom_padding = nav_bar_height + dp(8)
         else:
-            bottom_padding = dp(0)
-            text_top_padding = dp(8)
+            bottom_padding = dp(56)  # Имитация системной навигации на Windows
 
-        # Контейнер для текста
         scroll_content = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
-            padding=[dp(16), text_top_padding, dp(16), bottom_padding],
+            padding=[dp(16), dp(0), dp(16), bottom_padding],  # Верхний отступ = 0
             adaptive_height=True,
             md_bg_color=[0, 0, 0, 0]
         )
@@ -378,13 +370,40 @@ class SongDetailScreen(BaseScreen):
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
 
-        # Дополнительные отступы снизу (имитация системной навигации на Windows)
+        # На Windows добавляем отступ снизу (имитация системной навигации)
         if platform != 'android':
             main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
 
         self.add_widget(main_container)
 
+        # Убираем все возможные отступы от BaseScreen
+        # (они не должны применяться, но на всякий случай)
+        if hasattr(self, '_top_spacer') and self._top_spacer:
+            self._top_spacer.height = 0
+        if hasattr(self, '_bottom_spacer') and self._bottom_spacer:
+            self._bottom_spacer.height = 0
+
         logger.info(f"SongDetailScreen: init_ui completed")
+
+    def _adjust_top_spacer(self, dt):
+        """Корректирует высоту верхнего отступа, чтобы текст был под TopNav"""
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav') and app.top_nav:
+            # Получаем реальную высоту TopNav
+            top_nav_height = app.top_nav.height
+            # Отступ должен быть равен высоте TopNav + небольшой зазор
+            spacer_height = top_nav_height + dp(8)
+
+            if hasattr(self, 'top_spacer') and self.top_spacer:
+                self.top_spacer.height = spacer_height
+                logger.info(f"Top spacer adjusted to {spacer_height}dp (TopNav height: {top_nav_height}dp)")
+            else:
+                # Если spacer не найден, пробуем позже
+                Clock.schedule_once(self._adjust_top_spacer, 0.1)
+        else:
+            # Если TopNav ещё не загружен, пробуем позже
+            Clock.schedule_once(self._adjust_top_spacer, 0.1)
+
 
     def _create_bottom_panel(self):
         """Создаёт нижнюю панель с 7 кнопками (серый фон как было)"""
@@ -1727,7 +1746,7 @@ class SongDetailScreen(BaseScreen):
             else:
                 app.top_nav.set_custom_title("Подбор")
 
-        # Корректируем отступ после входа на экран
+        # Добавьте эту строку для корректировки отступа
         Clock.schedule_once(self._adjust_top_padding, 0.2)
 
     def _adjust_top_padding(self, dt):
@@ -1759,7 +1778,6 @@ class SongDetailScreen(BaseScreen):
         if app and hasattr(app, 'top_nav'):
             if hasattr(app, 'show_bottom_nav'):
                 app.show_bottom_nav()
-
             app.top_nav.reset_to_default()
         if self.is_tonality_mode:
             self.cancel_tonality()
