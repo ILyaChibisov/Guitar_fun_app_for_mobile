@@ -339,9 +339,9 @@ class SongDetailScreen(BaseScreen):
             nav_bar_height = get_navigation_bar_height()
             bottom_padding = nav_bar_height
             # Убираем top_padding_for_text, так как отступ сверху уже добавлен
-            text_top_padding = dp(8)  # Минимальный отступ сверху
+            text_top_padding = dp(16)  # Минимальный отступ сверху
         else:
-            bottom_padding = dp(48)
+            bottom_padding = dp(0)
             text_top_padding = dp(8)
 
         # Контейнер для текста
@@ -1726,6 +1726,33 @@ class SongDetailScreen(BaseScreen):
                 self.update_top_nav_title()
             else:
                 app.top_nav.set_custom_title("Подбор")
+
+        # Корректируем отступ после входа на экран
+        Clock.schedule_once(self._adjust_top_padding, 0.2)
+
+    def _adjust_top_padding(self, dt):
+        """Корректирует отступ сверху для текста"""
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav') and app.top_nav:
+            # Получаем нижнюю границу TopNav
+            top_nav_bottom = app.top_nav.y  # y - это нижняя граница (так как привязан к top)
+            # Высота TopNav
+            top_nav_height = app.top_nav.height
+
+            # Верхний отступ должен быть равен высоте TopNav
+            if platform == 'android':
+                top_padding = top_nav_height + dp(4)
+            else:
+                top_padding = top_nav_height + dp(8)
+
+            # Обновляем padding у scroll_content
+            if hasattr(self, 'content_scroll') and self.content_scroll.children:
+                scroll_content = self.content_scroll.children[0]
+                if scroll_content and hasattr(scroll_content, 'padding'):
+                    current_padding = list(scroll_content.padding)
+                    current_padding[1] = top_padding
+                    scroll_content.padding = current_padding
+                    logger.info(f"Top padding set to {top_padding}dp")
 
     def on_leave(self):
         app = MDApp.get_running_app()
