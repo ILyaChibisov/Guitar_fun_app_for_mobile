@@ -416,7 +416,7 @@ class SongDetailScreen(BaseScreen):
             f"SongDetailScreen: init_ui completed, top_padding={top_padding_for_nav}dp, bottom_padding={bottom_padding}dp")
 
     def _create_bottom_panel(self):
-        """Создаёт нижнюю панель с 7 кнопками"""
+        """Создаёт нижнюю панель с 7 кнопками (прозрачный фон)"""
         self.normal_bottom_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -424,10 +424,10 @@ class SongDetailScreen(BaseScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)],
             spacing=dp(4),
             radius=[0, 0, 0, 0],
-            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
             elevation=0,
-            line_width=1,
-            line_color=[0.8, 0.8, 0.8, 0.3]
+            line_width=0.5,
+            line_color=[0, 0, 0, 0]  # Прозрачная обводка
         )
 
         # 1. Аккорды - бирюзовый
@@ -491,13 +491,14 @@ class SongDetailScreen(BaseScreen):
         self.normal_bottom_panel.add_widget(self.favorite_btn)
         self.normal_bottom_panel.add_widget(self.like_btn)
 
+
     def _get_font_multiplier(self, font_size):
         ratio = font_size / self.STANDARD_FONT_SIZE
         rounded = round(ratio * 10) / 10
         return f"{rounded:.1f}x"
 
     def show_font_panel(self):
-        """Показывает панель шрифта с дополнительной кнопкой смены темы"""
+        """Показывает панель шрифта с дополнительной кнопкой смены темы (прозрачный фон)"""
         logger.info("🔍 Открытие панели шрифта")
 
         if self.is_chords_mode:
@@ -514,10 +515,10 @@ class SongDetailScreen(BaseScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)],
             spacing=dp(4),
             radius=[0, 0, 0, 0],
-            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
             elevation=0,
-            line_width=1,
-            line_color=[0.8, 0.8, 0.8, 0.3]
+            line_width=0.5,
+            line_color=[0, 0, 0, 0]
         )
 
         center_container = MDBoxLayout(
@@ -529,7 +530,6 @@ class SongDetailScreen(BaseScreen):
 
         from kivymd.uix.slider import MDSlider
 
-        # Диапазон значений шрифта: от 28 до 60
         MIN_FONT = 28
         MAX_FONT = 60
 
@@ -541,7 +541,6 @@ class SongDetailScreen(BaseScreen):
 
         current_slider_value = size_to_slider(self.current_font_size)
 
-        # Значение размера шрифта над шкалой
         self.font_value_label = MDLabel(
             text=self._get_font_multiplier(self.current_font_size),
             font_size=sp(10),
@@ -554,7 +553,6 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        # Слайдер с расширенным диапазоном
         self.font_slider = MDSlider(
             min=-0.01,
             max=32.01,
@@ -571,8 +569,8 @@ class SongDetailScreen(BaseScreen):
         self.font_slider.thumb_color_active = bi_color
         self.font_slider.thumb_color_inactive = bi_color
         self.font_slider.thumb_color_disabled = bi_color
-        self.font_slider.track_color_active = [0.46, 0.70, 0.71, 0.5]
-        self.font_slider.track_color_inactive = [0.85, 0.85, 0.85, 1]
+        self.font_slider.track_color_active = [0.46, 0.70, 0.71, 0.6]
+        self.font_slider.track_color_inactive = [1, 1, 1, 0.3]
         self.font_slider.color = bi_color
 
         def on_slider_change(instance, value):
@@ -604,7 +602,6 @@ class SongDetailScreen(BaseScreen):
         center_container.add_widget(self.font_value_label)
         center_container.add_widget(self.font_slider)
 
-        # Контейнер для кнопок справа
         right_buttons = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, 1),
@@ -612,14 +609,12 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(4)
         )
 
-        # Кнопка смены темы (день/ночь)
         self.theme_btn = IconActionButton(
             icon_name="weather-night",
             on_press_callback=self._toggle_theme,
             icon_color=[0.46, 0.70, 0.71, 1]
         )
 
-        # Кнопка закрытия (галочка)
         self.font_apply_btn = IconActionButton(
             icon_name="check",
             on_press_callback=self.close_font_panel,
@@ -767,10 +762,10 @@ class SongDetailScreen(BaseScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)],
             spacing=dp(4),
             radius=[0, 0, 0, 0],
-            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
             elevation=0,
-            line_width=1,
-            line_color=[0.8, 0.8, 0.8, 0.3]
+            line_width=0.5,
+            line_color=[0, 0, 0, 0]
         )
 
         self.variant_btn = MDIconButton(
@@ -1099,10 +1094,10 @@ class SongDetailScreen(BaseScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)],
             spacing=dp(4),
             radius=[0, 0, 0, 0],
-            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
             elevation=0,
-            line_width=1,
-            line_color=[0.8, 0.8, 0.8, 0.3]
+            line_width=0.5,
+            line_color=[0, 0, 0, 0]
         )
 
         title_label = MDLabel(
@@ -1305,10 +1300,10 @@ class SongDetailScreen(BaseScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)],
             spacing=dp(4),
             radius=[0, 0, 0, 0],
-            md_bg_color=[0.96, 0.96, 0.96, 0.95],
+            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
             elevation=0,
-            line_width=1,
-            line_color=[0.8, 0.8, 0.8, 0.3]
+            line_width=0.5,
+            line_color=[0, 0, 0, 0]
         )
 
         center_container = MDBoxLayout(
@@ -1362,8 +1357,8 @@ class SongDetailScreen(BaseScreen):
         self.scroll_speed_slider.thumb_color_active = bi_color
         self.scroll_speed_slider.thumb_color_inactive = bi_color
         self.scroll_speed_slider.thumb_color_disabled = bi_color
-        self.scroll_speed_slider.track_color_active = [0.46, 0.70, 0.71, 0.5]
-        self.scroll_speed_slider.track_color_inactive = [0.85, 0.85, 0.85, 1]
+        self.scroll_speed_slider.track_color_active = [0.46, 0.70, 0.71, 0.6]
+        self.scroll_speed_slider.track_color_inactive = [1, 1, 1, 0.3]
         self.scroll_speed_slider.color = bi_color
 
         def on_slider_change(instance, value):
