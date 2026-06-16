@@ -224,9 +224,13 @@ class SongDetailScreen(BaseScreen):
 
         # Настройки размера шрифта в зависимости от платформы
         if platform == 'android':
-            self.STANDARD_FONT_SIZE = 40
+            self.STANDARD_FONT_SIZE = 42
+            self.MIN_FONT_SIZE = 30
+            self.MAX_FONT_SIZE = 60
         else:
-            self.STANDARD_FONT_SIZE = 18
+            self.STANDARD_FONT_SIZE = 20
+            self.MIN_FONT_SIZE = 14
+            self.MAX_FONT_SIZE = 32
         self.current_font_size = self.STANDARD_FONT_SIZE
 
         # Для смены темы текста
@@ -382,7 +386,11 @@ class SongDetailScreen(BaseScreen):
         top_padding_for_nav = layout_config.get_top_padding()
 
         if platform == 'android':
-            top_padding_for_nav = top_padding_for_nav + dp(4)
+            min_top_padding = dp(48)
+            if top_padding_for_nav < min_top_padding:
+                top_padding_for_nav = min_top_padding
+            else:
+                top_padding_for_nav = top_padding_for_nav + dp(8)
 
         self._top_spacer_song = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_song)
@@ -425,15 +433,15 @@ class SongDetailScreen(BaseScreen):
 
         if platform == 'android':
             nav_bar_height = get_navigation_bar_height()
-            bottom_padding = nav_bar_height + dp(12)
+            bottom_padding = nav_bar_height + dp(20)
         else:
-            bottom_padding = dp(48)
+            bottom_padding = dp(64)
 
         self._text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
-            padding=[dp(16), dp(12), dp(16), bottom_padding],
+            padding=[dp(16), dp(20), dp(16), bottom_padding],
             adaptive_height=True,
             md_bg_color=[0, 0, 0, 0]
         )
@@ -447,7 +455,7 @@ class SongDetailScreen(BaseScreen):
             valign="top",
             line_height=1.5,
             markup=True,
-            padding=[0, dp(4), 0, 0]
+            padding=[0, dp(12), 0, 0]
         )
         self.content_label.bind(texture_size=self._update_content_height)
         self._text_container.add_widget(self.content_label)
@@ -456,7 +464,6 @@ class SongDetailScreen(BaseScreen):
         self.song_card.add_widget(self.content_scroll)
 
         # ============ НИЖНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ============
-        # Сохраняем ссылку на divider для изменения цвета при смене темы
         self._bottom_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -483,25 +490,40 @@ class SongDetailScreen(BaseScreen):
         if hasattr(self, '_bottom_spacer') and self._bottom_spacer:
             self._bottom_spacer.height = 0
 
-        # Принудительно обновляем позицию при первом отображении
-        Clock.schedule_once(lambda dt: self._fix_scroll_position(), 0.3)
-        Clock.schedule_once(lambda dt: self._fix_scroll_position(), 0.6)
-
         logger.info(
             f"SongDetailScreen: init_ui completed, top_padding={top_padding_for_nav}dp, bottom_padding={bottom_padding}dp")
 
+    def _wait_for_ready_and_scroll(self, *args):
+        """Ждёт, пока текст полностью отрисуется, и прокручивает вверх"""
+        if not hasattr(self, 'content_scroll'):
+            return
+
+        # Проверяем, что текст загружен и отрисован
+        if hasattr(self, 'content_label') and self.content_label.text:
+            if self.content_label.texture and self.content_label.texture_size[1] > 0:
+                # Текст отрисован, делаем прокрутку вверх
+                self.content_scroll.scroll_y = 1.0
+                logger.info("✅ Текст отрисован, прокрутка вверх")
+                return
+            else:
+                # Текст есть, но ещё не отрисован - ждём
+                logger.info("⏳ Текст загружен, но ещё не отрисован, ждём...")
+                Clock.schedule_once(self._wait_for_ready_and_scroll, 0.15)
+                return
+        else:
+            # Текст ещё не загружен - ждём
+            logger.info("⏳ Текст ещё не загружен, ждём...")
+            Clock.schedule_once(self._wait_for_ready_and_scroll, 0.15)
+
     def _fix_scroll_position(self):
         """Принудительно устанавливает корректную позицию скролла"""
-        if hasattr(self, 'content_scroll'):
-            # Прокручиваем в самый верх
-            self.content_scroll.scroll_y = 1.0
-            # Принудительно обновляем layout через изменение размера
-            if hasattr(self.content_scroll, '_layout'):
-                # У некоторых виджетов есть _layout, но не у всех
-                pass
-            # Альтернативный способ - принудительно обновить позицию
-            self.content_scroll.pos = self.content_scroll.pos
-            logger.info("🔧 Scroll position fixed to top")
+        if not hasattr(self, 'content_scroll'):
+            return
+
+        # Просто прокручиваем вверх
+        self.content_scroll.scroll_y = 1.0
+
+        logger.info("🔧 Scroll position fixed to top")
 
     def _create_bottom_panel(self):
         """Создаёт нижнюю панель с 7 кнопками (равномерное распределение)"""
@@ -509,10 +531,10 @@ class SongDetailScreen(BaseScreen):
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(52),
-            padding=[dp(4), dp(4), dp(4), dp(4)],  # Уменьшили отступы
-            spacing=dp(2),  # Минимальный отступ между иконками
+            padding=[dp(4), dp(4), dp(4), dp(4)],
+            spacing=dp(2),
             radius=[0, 0, 0, 0],
-            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
+            md_bg_color=[0, 0, 0, 0],
             elevation=0,
             line_width=0.5,
             line_color=[0, 0, 0, 0]
@@ -524,7 +546,7 @@ class SongDetailScreen(BaseScreen):
             on_press_callback=self.on_chords_press,
             icon_color=[0.46, 0.70, 0.71, 1]
         )
-        self.chords_btn.size_hint = (1, None)  # Равномерное распределение
+        self.chords_btn.size_hint = (1, None)
         self.chords_btn.size = (dp(36), dp(36))
 
         # 2. Тональность - золотистый/оранжевый
@@ -590,10 +612,14 @@ class SongDetailScreen(BaseScreen):
         self.normal_bottom_panel.add_widget(self.favorite_btn)
         self.normal_bottom_panel.add_widget(self.like_btn)
 
-
     def _get_font_multiplier(self, font_size):
+        """Возвращает строку с множителем размера шрифта"""
         ratio = font_size / self.STANDARD_FONT_SIZE
+        # Округляем до 1 десятичного знака
         rounded = round(ratio * 10) / 10
+        # Если значение целое, показываем без десятичной части
+        if rounded == int(rounded):
+            return f"{int(rounded)}x"
         return f"{rounded:.1f}x"
 
     def show_font_panel(self):
@@ -630,14 +656,28 @@ class SongDetailScreen(BaseScreen):
 
         from kivymd.uix.slider import MDSlider
 
-        MIN_FONT = 28
-        MAX_FONT = 60
+        # ЯВНЫЙ СПИСОК РАЗМЕРОВ для каждой платформы (без дублирования)
+        if platform == 'android':
+            font_sizes = [30, 34, 38, 42, 46, 50, 54, 58, 60]
+        else:
+            font_sizes = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
+
+        total_steps = len(font_sizes) - 1
 
         def size_to_slider(size):
-            return size - MIN_FONT
+            try:
+                return font_sizes.index(size)
+            except ValueError:
+                closest = min(font_sizes, key=lambda x: abs(x - size))
+                return font_sizes.index(closest)
 
         def slider_to_size(slider_value):
-            return MIN_FONT + slider_value
+            idx = int(round(slider_value))
+            if idx < 0:
+                idx = 0
+            elif idx > total_steps:
+                idx = total_steps
+            return font_sizes[idx]
 
         current_slider_value = size_to_slider(self.current_font_size)
 
@@ -684,9 +724,11 @@ class SongDetailScreen(BaseScreen):
             padding=[dp(2), dp(0), dp(2), dp(0)]
         )
 
+        # Слайдер с min = -0.01 и max = total_steps + 0.01 (как в тональности)
+        # Это позволяет избежать серого цвета при достижении 0
         self.font_slider = MDSlider(
-            min=-0.01,
-            max=32.01,
+            min=-0.01,  # ← КАК В ТОНАЛЬНОСТИ
+            max=float(total_steps + 0.01),  # ← КАК В ТОНАЛЬНОСТИ
             value=current_slider_value,
             step=1,
             size_hint_x=1,
@@ -696,7 +738,9 @@ class SongDetailScreen(BaseScreen):
         )
         self.font_slider.ripple_scale = 0
 
+        # ФИКСИРОВАННЫЙ ЦВЕТ (как в тональности)
         bi_color = [0.46, 0.70, 0.71, 1]
+
         self.font_slider.thumb_color_active = bi_color
         self.font_slider.thumb_color_inactive = bi_color
         self.font_slider.thumb_color_disabled = bi_color
@@ -705,28 +749,45 @@ class SongDetailScreen(BaseScreen):
         self.font_slider.color = bi_color
 
         def on_slider_change(instance, value):
-            if value < 0:
-                int_value = 0
-            elif value > 32:
-                int_value = 32
-            else:
-                int_value = int(round(value))
+            # Округляем до ближайшего целого
+            int_value = int(round(value))
 
+            # Ограничиваем диапазон (как в тональности)
+            if int_value < 0:
+                int_value = 0
+            elif int_value > total_steps:
+                int_value = total_steps
+
+            # Обновляем значение слайдера
             if self.font_slider.value != int_value:
                 self.font_slider.value = int_value
 
+            # ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ ЦВЕТ THUMB
+            bi_color = [0.46, 0.70, 0.71, 1]
+            self.font_slider.thumb_color_active = bi_color
+            self.font_slider.thumb_color_inactive = bi_color
+            self.font_slider.thumb_color_disabled = bi_color
+
+            # Преобразуем в размер
             new_size = slider_to_size(int_value)
-            self.current_font_size = new_size
-            self.font_value_label.text = self._get_font_multiplier(new_size)
 
-            if hasattr(self, 'content_label'):
-                self.content_label.font_size = self.current_font_size
-                self._update_content_height()
+            if self.current_font_size != new_size:
+                self.current_font_size = new_size
+                self.font_value_label.text = self._get_font_multiplier(new_size)
 
-            if hasattr(self, 'chord_name_label') and self.chord_name_label:
-                Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.1)
+                if hasattr(self, 'content_label'):
+                    self.content_label.font_size = self.current_font_size
+                    self._update_content_height()
 
-            logger.info(f"🔍 Размер шрифта изменён на: {self.current_font_size}")
+                    # ПРОСТО ПРОКРУЧИВАЕМ ВВЕРХ
+                    delays = [0.0, 0.01, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 0.8]
+                    for delay in delays:
+                        Clock.schedule_once(lambda dt, d=delay: setattr(self.content_scroll, 'scroll_y', 1.0), delay)
+
+                if hasattr(self, 'chord_name_label') and self.chord_name_label:
+                    Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.1)
+
+                logger.info(f"🔍 Размер шрифта изменён на: {self.current_font_size}")
 
         self.font_slider.bind(value=on_slider_change)
 
@@ -766,22 +827,27 @@ class SongDetailScreen(BaseScreen):
 
         self.is_font_mode = True
 
-        # ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СЛАЙДЕР - чтобы появился шарик
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.1)
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.3)
 
     def _fix_slider_thumb(self, slider):
-        """Принудительно обновляет слайдер, чтобы появился thumb (шарик)"""
+        """Принудительно обновляет слайдер, чтобы появился thumb (шарик) и не менял цвет"""
         if slider:
+            # ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ ЦВЕТ THUMB
+            bi_color = [0.46, 0.70, 0.71, 1]
+            slider.thumb_color_active = bi_color
+            slider.thumb_color_inactive = bi_color
+            slider.thumb_color_disabled = bi_color
+
             # Сохраняем текущее значение
             current = slider.value
 
-            # Небольшое изменение значения для перерисовки
+            # Небольшое изменение значения для перерисовки (как в тональности)
             slider.value = current + 0.01
             # Возвращаем через очень короткий промежуток
             Clock.schedule_once(lambda dt: setattr(slider, 'value', current), 0.01)
 
-            logger.info("🔧 Слайдер обновлён, thumb появился")
+            logger.info("🔧 Слайдер обновлён, thumb зафиксирован")
 
     def close_font_panel(self):
         """Закрывает панель шрифта"""
@@ -947,7 +1013,7 @@ class SongDetailScreen(BaseScreen):
             text="",
             halign="center",
             valign="middle",
-            size_hint_x=2,  # В два раза больше места
+            size_hint_x=2,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             bold=True,
@@ -1059,25 +1125,25 @@ class SongDetailScreen(BaseScreen):
                 self.load_current_variant()
 
     def _toggle_griff_zoom(self, *args):
-        """Переключает масштаб грифа (1x -> 1.3x -> 1.6x -> 1.8x -> 1x)"""
+        """Переключает масштаб грифа (1.2x -> 1.5x -> 1.7x -> 2.0x -> 1.2x)"""
         current = self.griff_scale
 
         if current == 1.2:
             new_scale = 1.5
             self.griff_zoom_btn.icon = "magnify-plus"
-            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]  # Белая
+            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
         elif current == 1.5:
             new_scale = 1.7
             self.griff_zoom_btn.icon = "magnify-plus"
-            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]  # Белая
+            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
         elif current == 1.7:
             new_scale = 2.0
             self.griff_zoom_btn.icon = "magnify-minus"
-            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]  # Белая
+            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
         else:
             new_scale = 1.2
             self.griff_zoom_btn.icon = "magnify"
-            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]  # Белая
+            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
 
         self.griff_scale = new_scale
         new_size = (int(self.original_griff_size[0] * new_scale),
@@ -1238,9 +1304,9 @@ class SongDetailScreen(BaseScreen):
             size_hint=(1, None),
             height=dp(52),
             padding=[dp(8), dp(4), dp(8), dp(4)],
-            spacing=dp(8),  # Увеличили отступ между элементами
+            spacing=dp(8),
             radius=[0, 0, 0, 0],
-            md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
+            md_bg_color=[0, 0, 0, 0],
             elevation=0,
             line_width=0.5,
             line_color=[0, 0, 0, 0]
@@ -1253,16 +1319,16 @@ class SongDetailScreen(BaseScreen):
             halign="left",
             valign="middle",
             size_hint_x=None,
-            width=dp(120),  # Немного увеличили для читаемости
+            width=dp(120),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],  # БЕЛЫЙ
+            text_color=[1, 1, 1, 1],
             bold=True
         )
 
         # Центральный контейнер со шкалой - растягивается
         center_container = MDBoxLayout(
             orientation='vertical',
-            size_hint_x=1,  # Растягиваем на всю доступную ширину
+            size_hint_x=1,
             spacing=dp(0),
             padding=[dp(0), dp(0), dp(0), dp(0)]
         )
@@ -1455,7 +1521,7 @@ class SongDetailScreen(BaseScreen):
             size_hint=(1, None),
             height=dp(52),
             padding=[dp(8), dp(4), dp(8), dp(4)],
-            spacing=dp(8),  # Увеличили отступ между элементами
+            spacing=dp(8),
             radius=[0, 0, 0, 0],
             md_bg_color=[0, 0, 0, 0],
             elevation=0,
@@ -1466,7 +1532,7 @@ class SongDetailScreen(BaseScreen):
         # Центральный контейнер со шкалой - увеличиваем
         center_container = MDBoxLayout(
             orientation='vertical',
-            size_hint_x=1,  # Растягиваем на всю доступную ширину
+            size_hint_x=1,
             spacing=dp(0),
             padding=[dp(0), dp(0), dp(0), dp(0)]
         )
@@ -1583,8 +1649,8 @@ class SongDetailScreen(BaseScreen):
         # Контейнер для кнопок - фиксированной ширины, прижат к правому краю
         buttons_container = MDBoxLayout(
             orientation='horizontal',
-            size_hint=(None, 1),  # Не растягивается
-            width=dp(100),  # Фиксированная ширина для двух кнопок
+            size_hint=(None, 1),
+            width=dp(100),
             spacing=dp(4)
         )
 
@@ -1841,6 +1907,9 @@ class SongDetailScreen(BaseScreen):
         if self.content_label.parent:
             self.content_label.parent.height = text_height + dp(16)
 
+        # После обновления высоты контента запускаем проверку готовности
+        Clock.schedule_once(self._wait_for_ready_and_scroll, 0.2)
+
     def set_song(self, song_id):
         self.reset_screen_state()
         self.song_id = song_id
@@ -1892,12 +1961,18 @@ class SongDetailScreen(BaseScreen):
         self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
         self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
-        # Обновляем заголовок в топ нав после загрузки данных
         self.update_top_nav_title()
 
-        Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
         self.hide_loading()
         logger.info(f"Песня загружена, подборов: {len(self.tabs)}")
+
+        # ЗАПУСКАЕМ ПРОВЕРКУ ГОТОВНОСТИ ТЕКСТА С БОЛЬШИМИ ЗАДЕРЖКАМИ
+        for delay in [0.3, 0.5, 0.8, 1.0, 1.5, 2.0, 3.0]:
+            Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
+
+        # ЗАПАСНОЙ ВАРИАНТ - ПРИНУДИТЕЛЬНАЯ ПРОКРУТКА
+        for delay in [0.4, 0.6, 0.9, 1.2, 1.8, 2.5, 3.5]:
+            Clock.schedule_once(lambda dt, d=delay: setattr(self.content_scroll, 'scroll_y', 1.0), delay)
 
     def on_load_failed(self, req, error):
         self.hide_loading()
@@ -1981,11 +2056,12 @@ class SongDetailScreen(BaseScreen):
         if hasattr(self, '_top_spacer_song'):
             top_padding = layout_config.get_top_padding()
             if platform == 'android':
-                top_padding = top_padding + dp(4)
+                top_padding = top_padding + dp(12)
             self._top_spacer_song.height = top_padding
 
-        # Фиксим позицию скролла после изменения размера
-        Clock.schedule_once(lambda dt: self._fix_scroll_position(), 0.1)
+        # Если текст загружен - запускаем проверку готовности
+        if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
+            Clock.schedule_once(self._wait_for_ready_and_scroll, 0.3)
 
     def on_enter(self):
         """При входе на экран"""
@@ -2002,15 +2078,20 @@ class SongDetailScreen(BaseScreen):
             else:
                 app.top_nav.set_custom_title("Подбор")
 
-        # Исправляем позицию скролла при входе
-        Clock.schedule_once(lambda dt: self._fix_scroll_position(), 0.2)
-        Clock.schedule_once(lambda dt: self._fix_scroll_position(), 0.5)
+        # Если песня уже загружена - запускаем проверку готовности
+        if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
+            for delay in [0.2, 0.4, 0.6, 0.9, 1.2, 1.8, 2.5]:
+                Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
+                # Правильный захват переменной для задержки + 0.1
+                scroll_delay = delay + 0.1
+                Clock.schedule_once(lambda dt, d=scroll_delay: setattr(self.content_scroll, 'scroll_y', 1.0),
+                                    scroll_delay)
 
         # Обновляем отступы при входе
         if hasattr(self, '_top_spacer_song'):
             top_padding = layout_config.get_top_padding()
             if platform == 'android':
-                top_padding = top_padding + dp(4)
+                top_padding = top_padding + dp(16)
             self._top_spacer_song.height = top_padding
 
     def on_leave(self):
