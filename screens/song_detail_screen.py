@@ -441,7 +441,7 @@ class SongDetailScreen(BaseScreen):
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
-            padding=[dp(16), dp(20), dp(16), bottom_padding],
+            padding=[dp(16), dp(20), dp(16), bottom_padding],  # ← 40 вместо 20
             adaptive_height=True,
             md_bg_color=[0, 0, 0, 0]
         )
@@ -454,8 +454,7 @@ class SongDetailScreen(BaseScreen):
             text_color=[1, 1, 1, 0.95],
             valign="top",
             line_height=1.5,
-            markup=True,
-            padding=[0, dp(12), 0, 0]
+            markup=True
         )
         self.content_label.bind(texture_size=self._update_content_height)
         self._text_container.add_widget(self.content_label)
@@ -1902,13 +1901,32 @@ class SongDetailScreen(BaseScreen):
         if not self.content_label.texture:
             Clock.schedule_once(lambda dt: self._update_content_height(), 0.05)
             return
+
+        # Вычисляем высоту
         text_height = self.content_label.texture_size[1]
         self.content_label.height = max(dp(50), text_height + dp(8))
-        if self.content_label.parent:
-            self.content_label.parent.height = text_height + dp(16)
 
-        # После обновления высоты контента запускаем проверку готовности
-        Clock.schedule_once(self._wait_for_ready_and_scroll, 0.2)
+        # ОБНОВЛЯЕМ КОНТЕЙНЕР
+        if self.content_label.parent:
+            # Устанавливаем высоту контейнера
+            self.content_label.parent.height = text_height + dp(16)
+            # Принудительно обновляем minimum_height (для adaptive_height)
+            if hasattr(self.content_label.parent, 'minimum_height'):
+                self.content_label.parent.minimum_height = text_height + dp(16)
+
+        # Принудительно прокручиваем вверх
+        self.content_scroll.scroll_y = 1.0
+
+    def _force_scroll_view_update(self, *args):
+        """Принудительно обновляет ScrollView, чтобы он пересчитал размеры"""
+        if hasattr(self, 'content_scroll'):
+            # Принудительно обновляем размер ScrollView
+            w, h = self.content_scroll.size
+            self.content_scroll.size = (w, h + 1)
+            Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'size', (w, h)), 0.01)
+            # Прокручиваем вверх
+            self.content_scroll.scroll_y = 1.0
+            logger.info("🔧 ScrollView обновлён")
 
     def set_song(self, song_id):
         self.reset_screen_state()
