@@ -1,6 +1,6 @@
 # screens/term_detail_screen.py
 """
-Экран определения термина
+Экран определения термина - упрощённый
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle
@@ -8,19 +8,17 @@ from kivy.core.image import Image as CoreImage
 from kivy.clock import Clock
 from io import BytesIO
 
-from kivy.uix.widget import Widget
 from kivymd.uix.label import MDLabel
-from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.app import MDApp
+from kivy.uix.widget import Widget
+from kivy.uix.scrollview import ScrollView
 
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
-from utils.notifications import notify
 
 logger = screen_logger('TermDetail')
 
@@ -34,7 +32,7 @@ except ImportError:
 
 
 class TermDetailScreen(BaseScreen):
-    """Экран определения термина"""
+    """Экран определения термина - упрощённый"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -79,125 +77,93 @@ class TermDetailScreen(BaseScreen):
         """Инициализирует UI"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Верхний отступ
+        # Верхний отступ (под статус-бар и TopNav)
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        # Дополнительный отступ
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(12)))
 
         # Контейнер с отступами
         content_padding = layout_config.get_content_padding()
 
-        # Основной контент
+        # ScrollView для прокрутки текста
+        scroll = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_width=0,
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0],
+            bar_margin=0
+        )
+
+        # Контент
         content = MDBoxLayout(
             orientation='vertical',
-            size_hint=(1, 1),
-            padding=[content_padding[0], dp(8), content_padding[2], get_navigation_bar_height() + dp(76)]
+            size_hint_y=None,
+            adaptive_height=True,
+            padding=[content_padding[0], dp(8), content_padding[2], get_navigation_bar_height() + dp(60)]
         )
 
-        # Карточка с определением
-        self.term_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            padding=[dp(20), dp(20), dp(20), dp(20)],
-            spacing=dp(12),
-            radius=[theme.CORNER_RADIUS_MEDIUM] * 4,
-            md_bg_color=[0, 0, 0, 0.15],
-            elevation=2,
-            line_color=[1, 1, 1, 0.1],
-            line_width=1
-        )
-
-        # Название термина
+        # Название термина - жирное, по центру, с большой буквы
         self.term_name_label = MDLabel(
             text="",
             font_size=sp(28),
             bold=True,
             halign="center",
+            valign="top",
             size_hint_y=None,
-            height=dp(50),
+            height=dp(60),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1]
         )
+        content.add_widget(self.term_name_label)
 
-        # Определение
+        # Разделитель (пустая строка)
+        content.add_widget(Widget(size_hint_y=None, height=dp(16)))
+
+        # Описание термина - белым текстом, обычным шрифтом
         self.term_description_label = MDLabel(
             text="",
             font_size=sp(17),
             halign="left",
+            valign="top",
             size_hint_y=None,
             theme_text_color="Custom",
-            text_color=[0.9, 0.9, 0.9, 0.95],
+            text_color=[1, 1, 1, 0.9],
             line_height=1.6
         )
+        content.add_widget(self.term_description_label)
 
-        # Синонимы
+        # Синонимы (если есть)
         self.synonyms_label = MDLabel(
             text="",
-            font_size=sp(14),
+            font_size=sp(15),
             halign="left",
+            valign="top",
             size_hint_y=None,
-            height=dp(30),
             theme_text_color="Custom",
-            text_color=[0.7, 0.7, 0.7, 0.8]
+            text_color=[1, 1, 1, 0.6],
+            line_height=1.5
         )
+        content.add_widget(self.synonyms_label)
 
-        # Примеры
+        # Примеры (если есть)
         self.examples_label = MDLabel(
             text="",
-            font_size=sp(14),
+            font_size=sp(15),
             halign="left",
+            valign="top",
             size_hint_y=None,
-            height=dp(30),
             theme_text_color="Custom",
-            text_color=[0.7, 0.7, 0.7, 0.8]
+            text_color=[1, 1, 1, 0.6],
+            line_height=1.5
         )
+        content.add_widget(self.examples_label)
 
-        self.term_card.add_widget(self.term_name_label)
-        self.term_card.add_widget(self.term_description_label)
-        self.term_card.add_widget(self.synonyms_label)
-        self.term_card.add_widget(self.examples_label)
+        scroll.add_widget(content)
+        main_layout.add_widget(scroll)
 
-        # Добавляем растягивающийся виджет
-        self.term_card.bind(minimum_height=self.term_card.setter('height'))
-
-        content.add_widget(self.term_card)
-
-        # Кнопка возврата
-        back_layout = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(48),
-            padding=[dp(12), dp(8), dp(12), dp(8)]
-        )
-
-        back_btn = MDIconButton(
-            icon="arrow-left",
-            size_hint=(None, None),
-            size=(dp(48), dp(48)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0.1],
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            on_release=self.go_back
-        )
-
-        back_label = MDLabel(
-            text="Назад к словарю",
-            font_size=sp(14),
-            halign="left",
-            valign="middle",
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7],
-            bold=True
-        )
-
-        back_layout.add_widget(back_btn)
-        back_layout.add_widget(back_label)
-
-        content.add_widget(back_layout)
-        content.add_widget(Widget(size_hint_y=1))
-
-        main_layout.add_widget(content)
         self.add_widget(main_layout)
 
         logger.info("UI определения термина построен")
@@ -210,45 +176,41 @@ class TermDetailScreen(BaseScreen):
 
         logger.info(f"Установлен термин: {term_name}")
 
-        # Обновляем UI
-        self.term_name_label.text = term_name
+        # Название - с большой буквы, жирное
+        self.term_name_label.text = term_name.capitalize()
 
+        # Описание
         description = term_data.get('description', 'Описание отсутствует')
         self.term_description_label.text = description
-        self.term_description_label.height = max(dp(40), len(description) // 20 * dp(24) + dp(24))
 
+        # Вычисляем высоту для описания
+        lines = len(description) // 30 + 1
+        self.term_description_label.height = max(dp(40), lines * dp(28))
+
+        # Синонимы
         synonyms = term_data.get('synonyms', [])
         if synonyms:
             self.synonyms_label.text = "🔗 Синонимы: " + ", ".join(synonyms)
             self.synonyms_label.height = dp(30)
+            self.synonyms_label.opacity = 1
         else:
             self.synonyms_label.text = ""
             self.synonyms_label.height = dp(4)
+            self.synonyms_label.opacity = 0
 
+        # Примеры
         examples = term_data.get('examples', [])
         if examples:
             self.examples_label.text = "🎯 Примеры: " + ", ".join(examples)
             self.examples_label.height = dp(30)
+            self.examples_label.opacity = 1
         else:
             self.examples_label.text = ""
             self.examples_label.height = dp(4)
-
-        # Обновляем высоту карточки
-        Clock.schedule_once(self._update_card_height, 0.1)
+            self.examples_label.opacity = 0
 
         # Обновляем TopNav
         self._update_top_nav(term_name)
-
-    def _update_card_height(self, dt):
-        """Обновляет высоту карточки"""
-        if hasattr(self, 'term_card'):
-            self.term_card.height = (
-                self.term_name_label.height +
-                self.term_description_label.height +
-                self.synonyms_label.height +
-                self.examples_label.height +
-                dp(40)
-            )
 
     def _update_top_nav(self, title):
         """Обновляет заголовок в TopNav"""

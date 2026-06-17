@@ -1,4 +1,4 @@
-# screens/dictionary_screen.py
+# screens/dictionary_screen.py - обновлённый
 """
 Экран словаря терминов - с поиском и алфавитной навигацией
 """
@@ -172,7 +172,7 @@ class AlphabetGrid(MDCard):
             for col_idx in range(items_per_row):
                 if btn_index < total_items:
                     btn = self.buttons[btn_index]
-                    text = items[btn_index]  # ← ИСПРАВЛЕНО: btn_index вместо btn_idx
+                    text = items[btn_index]
                     btn.btn_text = text
                     btn.label.text = text.upper()
                     btn.opacity = 1
@@ -452,8 +452,8 @@ class LanguageSelector(MDBoxLayout):
         self._update_display()
 
 
-class TermCard(MDCard):
-    """Карточка термина - невидимая, только текст жирный"""
+class SearchResultCard(MDCard):
+    """Карточка результата поиска - кликабельная"""
 
     def __init__(self, term_name, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -462,19 +462,19 @@ class TermCard(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(36)
-        self.padding = [dp(8), dp(0), dp(8), dp(0)]
-        self.radius = [0, 0, 0, 0]
+        self.height = dp(44)
+        self.padding = [dp(12), dp(6), dp(12), dp(6)]
+        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
         self.ripple_behavior = True
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [0, 0, 0, 0]
-        self.line_color = [0, 0, 0, 0]
-        self.line_width = 1  # ← ИСПРАВЛЕНО: было 0, стало 1
+        self.md_bg_color = [0, 0, 0, 0.06]
+        self.line_color = [1, 1, 1, 0.05]
+        self.line_width = 1
 
         self.term_label = MDLabel(
             text=term_name.capitalize(),
-            font_size=sp(16),
+            font_size=sp(15),
             halign="left",
             valign="middle",
             size_hint_x=1,
@@ -483,7 +483,19 @@ class TermCard(MDCard):
             bold=True
         )
 
+        self.arrow_label = MDLabel(
+            text="›",
+            font_size=sp(18),
+            size_hint_x=None,
+            width=dp(20),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.3]
+        )
+
         self.add_widget(self.term_label)
+        self.add_widget(self.arrow_label)
         self.bind(on_release=self._on_click)
 
     def _on_click(self, instance):
@@ -565,8 +577,6 @@ class DictionaryScreen(BaseScreen):
             self.terms_by_letter[letter].sort()
 
         logger.info(f"✅ Загружено {len(self.all_terms)} терминов, букв: {len(self.terms_by_letter)}")
-
-        self._update_display()
 
     def _add_test_terms(self):
         """Добавляет тестовые термины для отладки"""
@@ -690,14 +700,27 @@ class DictionaryScreen(BaseScreen):
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
         content.add_widget(self.alphabet_grid)
 
-        self.results_container = MDBoxLayout(
+        # Контейнер для результатов поиска
+        self.search_results_container = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(2),
+            spacing=dp(4),
             size_hint_y=None,
             adaptive_height=True,
             padding=[dp(4), dp(4), dp(4), dp(4)]
         )
-        content.add_widget(self.results_container)
+        content.add_widget(self.search_results_container)
+
+        # Подсказка
+        self.hint_label = MDLabel(
+            text="Нажмите на букву для просмотра терминов",
+            halign="center",
+            font_size=sp(13),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4],
+            size_hint_y=None,
+            height=dp(40)
+        )
+        content.add_widget(self.hint_label)
 
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
@@ -712,33 +735,10 @@ class DictionaryScreen(BaseScreen):
 
         logger.info(f"UI словаря построен, side_padding={content_padding[0]}dp")
 
-    def _update_display(self):
-        """Обновляет отображение терминов"""
-        self.results_container.clear_widgets()
-
-        if self.is_search_mode:
-            self._show_search_results()
-            return
-
-        if self.current_letter and self.current_letter in self.terms_by_letter:
-            terms = self.terms_by_letter[self.current_letter]
-            for term_name in terms:
-                card = TermCard(
-                    term_name=term_name,
-                    on_click=self.on_term_selected
-                )
-                self.results_container.add_widget(card)
-        else:
-            for term_name in sorted(self.all_terms.keys())[:50]:
-                card = TermCard(
-                    term_name=term_name,
-                    on_click=self.on_term_selected
-                )
-                self.results_container.add_widget(card)
-
     def _show_search_results(self):
         """Показывает результаты поиска"""
-        self.results_container.clear_widgets()
+        self.search_results_container.clear_widgets()
+        self.hint_label.opacity = 0
 
         if not self.search_results:
             no_results = MDLabel(
@@ -750,15 +750,20 @@ class DictionaryScreen(BaseScreen):
                 size_hint_y=None,
                 height=dp(60)
             )
-            self.results_container.add_widget(no_results)
+            self.search_results_container.add_widget(no_results)
             return
 
         for term_name in self.search_results:
-            card = TermCard(
+            card = SearchResultCard(
                 term_name=term_name,
                 on_click=self.on_term_selected
             )
-            self.results_container.add_widget(card)
+            self.search_results_container.add_widget(card)
+
+    def _clear_search_results(self):
+        """Очищает результаты поиска"""
+        self.search_results_container.clear_widgets()
+        self.hint_label.opacity = 1
 
     # ============ ОБРАБОТЧИКИ ============
 
@@ -768,17 +773,22 @@ class DictionaryScreen(BaseScreen):
         self.alphabet_grid.clear_selection()
         self.current_letter = None
         self.clear_search()
-        self._update_display()
+        self._clear_search_results()
 
     def on_letter_press(self, letter):
+        """При нажатии на букву - переходим на экран терминов"""
         logger.info(f"Выбрана буква: {letter}")
         self.current_letter = letter
         self.alphabet_grid.clear_selection()
-        self.is_search_mode = False
-        self.search_results = []
-        self.search_bar.clear()
-        self._update_display()
-        self._update_top_nav("Словарь")
+        self.clear_search()
+        self._clear_search_results()
+
+        # Переход на экран терминов по букве
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('terms_by_letter'):
+                terms_screen = self.manager.get_screen('terms_by_letter')
+                terms_screen.set_letter(letter, self)
+                self.manager.current = 'terms_by_letter'
 
     def do_search(self, query):
         """Выполняет поиск терминов - точное совпадение по целому слову"""
@@ -844,17 +854,15 @@ class DictionaryScreen(BaseScreen):
         if not self.search_results:
             notify.info("Ничего не найдено")
 
-        self._update_top_nav("Словарь")
-
     def clear_search(self):
         """Очищает поиск"""
         self.is_search_mode = False
         self.search_results = []
         self.search_bar.clear()
-        self._update_display()
+        self._clear_search_results()
 
     def on_term_selected(self, term_name):
-        """Обработчик выбора термина"""
+        """Обработчик выбора термина из результатов поиска"""
         logger.info(f"Выбран термин: {term_name}")
 
         term_data = self.all_terms.get(term_name)
@@ -867,6 +875,11 @@ class DictionaryScreen(BaseScreen):
                 term_detail = self.manager.get_screen('term_detail')
                 term_detail.set_term(term_name, term_data, self.name)
                 self.manager.current = 'term_detail'
+
+    def on_enter(self):
+        """При входе на экран"""
+        logger.info("Вход в словарь")
+        self._update_top_nav("Словарь")
 
     def _update_top_nav(self, title):
         """Обновляет заголовок в TopNav"""
@@ -884,11 +897,6 @@ class DictionaryScreen(BaseScreen):
         logger.info("🔙 go_back: возврат на home")
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
-
-    def on_enter(self):
-        """При входе на экран"""
-        logger.info("Вход в словарь")
-        self._update_top_nav("Словарь")
 
     def on_leave(self):
         """При выходе с экрана"""

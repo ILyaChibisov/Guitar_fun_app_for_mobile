@@ -25,6 +25,7 @@ from .parsers_screens.fivelad_parser_screen import FiveLadParserScreen
 from .parsers_screens.akkordbard_parser_screen import AkkordBardParserScreen
 from .parsers_screens.domhve_parser_screen import DomhveParserScreen
 from .parsers_screens.rushsound_parser_screen import RushSoundParserScreen
+from .terms_by_letter_screen import TermsByLetterScreen
 from .term_detail_screen import TermDetailScreen
 
 logger = get_logger('ScreenManager')
@@ -48,6 +49,7 @@ def setup_screen_manager():
     sm.add_widget(SearchResultsScreen(name='search_results'))
     sm.add_widget(SearchScreen(name='search'))
     sm.add_widget(DictionaryScreen(name='dictionary'))
+    sm.add_widget(TermsByLetterScreen(name='terms_by_letter'))
     sm.add_widget(TermDetailScreen(name='term_detail'))
 
     # Парсеры

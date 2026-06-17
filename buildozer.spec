@@ -17,7 +17,7 @@ version = 1.0.2
 version.code = 2
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ (МИНИМАЛЬНЫЕ ДЛЯ РАБОТЫ) ---
+# --- ЗАВИСИМОСТИ (МИНИМАЛЬНЫЕ) ---
 requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,pyjnius
 
 # --- ПРАВА ---
@@ -35,6 +35,10 @@ log_level = 1
 p4a.branch = develop
 android.gradle_repository_threads = 4
 android.ndk = 25b
+
+# --- ОТКЛЮЧАЕМ НЕНУЖНЫЕ РЕЦЕПТЫ (libthorvg не нужен) ---
+# p4a.local_recipes = ./recipes
+# p4a.whitelist =
 
 # --- ПОДПИСЬ (РАСКОММЕНТИРУЙ ЕСЛИ ЕСТЬ КЛЮЧ) ---
 # android.keystore = guitarfuns_keystore.jks
