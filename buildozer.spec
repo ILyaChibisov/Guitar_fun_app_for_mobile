@@ -31,18 +31,10 @@ android.accept_sdk_license = True
 
 # --- НАСТРОЙКИ СБОРКИ ---
 fullscreen = 0
-log_level = 2
-
-# 🔥 ВАЖНО: develop ветка для поддержки AAB
+log_level = 1
 p4a.branch = develop
-
 android.gradle_repository_threads = 4
-
-# 🔥 ИСПРАВЛЕНО: используем актуальную версию NDK 25b (минимальная поддерживаемая)
 android.ndk = 25b
-
-# --- android.sdk НЕ ИСПОЛЬЗОВАТЬ (устарел) ---
-# android.sdk = 33
 
 # --- ПОДПИСЬ (РАСКОММЕНТИРУЙ ЕСЛИ ЕСТЬ КЛЮЧ) ---
 # android.keystore = guitarfuns_keystore.jks
@@ -50,7 +42,7 @@ android.ndk = 25b
 # android.keystore_key_password = lexx311285
 
 [buildozer]
-log_level = 2
+log_level = 1
 warn_on_root = 1
 
 [gradle]

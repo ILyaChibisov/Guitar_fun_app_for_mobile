@@ -4,7 +4,6 @@
 """
 import importlib
 import pkgutil
-import re
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
@@ -13,13 +12,15 @@ from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.behaviors import ButtonBehavior
+from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton, MDRaisedButton
+from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.textfield import MDTextField
+from kivymd.app import MDApp
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -126,8 +127,6 @@ class AlphabetGrid(MDCard):
         self._update_height()
 
     def _create_all_buttons(self):
-        # Русский алфавит: 4 ряда
-        # Английский: 3 ряда
         max_rows = 4
         for i in range(max_rows):
             row = MDBoxLayout(
@@ -173,7 +172,7 @@ class AlphabetGrid(MDCard):
             for col_idx in range(items_per_row):
                 if btn_index < total_items:
                     btn = self.buttons[btn_index]
-                    text = items[btn_index]
+                    text = items[btn_index]  # ← ИСПРАВЛЕНО: btn_index вместо btn_idx
                     btn.btn_text = text
                     btn.label.text = text.upper()
                     btn.opacity = 1
@@ -218,14 +217,13 @@ class AlphabetGrid(MDCard):
             btn.set_active(False)
 
 
-class SearchBar(MDCard):
-    """Поисковая строка для словаря"""
+class GoogleSearchBar(MDCard):
+    """Поисковая строка как в Songs"""
 
-    def __init__(self, on_search=None, on_clear=None, on_text_change=None, **kwargs):
+    def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
         self.on_clear = on_clear
-        self.on_text_change = on_text_change
         self.current_query = ""
         self._search_timer = None
 
@@ -238,8 +236,11 @@ class SearchBar(MDCard):
         self.padding = [dp(16), dp(6), dp(12), dp(6)]
         self.spacing = dp(8)
 
+        self.line_color = [0.46, 0.70, 0.71, 0.4]
+        self.line_width = 1.0
+
         self.search_field = MDTextField(
-            hint_text="Поиск термина...",
+            hint_text="Поиск обозначений",
             size_hint_x=1,
             font_size=sp(15),
             height=dp(36),
@@ -296,9 +297,6 @@ class SearchBar(MDCard):
         else:
             self._search_timer = Clock.schedule_once(lambda dt: self._do_search(), 0.3)
 
-        if self.on_text_change:
-            self.on_text_change(text)
-
     def _do_search(self):
         if self.on_search and self.current_query:
             text = self.current_query.strip()
@@ -338,14 +336,14 @@ class SearchBar(MDCard):
 
 
 class LanguageSelector(MDBoxLayout):
-    """Выбор языка для словаря - Русский/English"""
+    """Выбор языка - стрелки из ассетов, текст по центру (как в Songs)"""
 
     def __init__(self, on_language_change=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = dp(44)
-        self.padding = [dp(8), dp(4), dp(8), dp(4)]
+        self.height = dp(48)
+        self.padding = [dp(16), dp(4), dp(16), dp(4)]
 
         self.on_language_change = on_language_change
         self.current_language = 'ru'
@@ -355,137 +353,137 @@ class LanguageSelector(MDBoxLayout):
             {'code': 'en', 'name': 'English'}
         ]
 
-        # Кнопка "Русский"
-        self.ru_btn = MDRaisedButton(
+        self.prev_btn = self._create_arrow_button('left_arrow_png', '◀')
+        self.prev_btn.bind(on_release=self.prev_language)
+
+        self.language_label = MDLabel(
             text="Русский",
-            size_hint=(0.5, 1),
-            md_bg_color=[0.46, 0.70, 0.71, 1] if self.current_language == 'ru' else [0.2, 0.2, 0.2, 0.6],
+            font_size=sp(18),
+            halign="center",
+            valign="middle",
+            size_hint_x=None,
+            width=dp(120),
+            theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
-            on_release=lambda x: self._select_language('ru')
+            bold=True,
+            pos_hint={'center_y': 0.5}
         )
 
-        # Кнопка "English"
-        self.en_btn = MDRaisedButton(
-            text="English",
-            size_hint=(0.5, 1),
-            md_bg_color=[0.46, 0.70, 0.71, 1] if self.current_language == 'en' else [0.2, 0.2, 0.2, 0.6],
-            text_color=[1, 1, 1, 1],
-            on_release=lambda x: self._select_language('en')
+        self.next_btn = self._create_arrow_button('right_arrow_png', '▶')
+        self.next_btn.bind(on_release=self.next_language)
+
+        self.center_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            width=dp(200),
+            height=dp(48),
+            spacing=dp(12),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
 
-        self.add_widget(self.ru_btn)
-        self.add_widget(self.en_btn)
+        self.center_container.add_widget(self.prev_btn)
+        self.center_container.add_widget(self.language_label)
+        self.center_container.add_widget(self.next_btn)
 
-    def _select_language(self, lang_code):
-        if lang_code == self.current_language:
-            return
+        self.add_widget(MDBoxLayout(size_hint_x=1))
+        self.add_widget(self.center_container)
+        self.add_widget(MDBoxLayout(size_hint_x=1))
 
-        self.current_language = lang_code
-        self.ru_btn.md_bg_color = [0.46, 0.70, 0.71, 1] if lang_code == 'ru' else [0.2, 0.2, 0.2, 0.6]
-        self.en_btn.md_bg_color = [0.46, 0.70, 0.71, 1] if lang_code == 'en' else [0.2, 0.2, 0.2, 0.6]
+        self._update_display()
 
-        if self.on_language_change:
-            self.on_language_change(lang_code)
+    def _create_arrow_button(self, icon_name, fallback_text):
+        from kivy.uix.behaviors import ButtonBehavior
+        from kivy.uix.image import Image
+
+        class ArrowButton(ButtonBehavior, Image):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                self.allow_stretch = True
+                self.keep_ratio = True
+
+        btn = ArrowButton(
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            pos_hint={'center_y': 0.5}
+        )
+
+        if HAS_ASSETS:
+            try:
+                icon_data = load_asset_as_bytes(icon_name)
+                if icon_data:
+                    img = CoreImage(BytesIO(icon_data), ext="png")
+                    btn.texture = img.texture
+                    return btn
+            except Exception as e:
+                logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
+
+        btn.text = fallback_text
+        return btn
+
+    def _update_display(self):
+        for lang in self.languages:
+            if lang['code'] == self.current_language:
+                self.language_label.text = lang['name']
+                break
 
     def get_current_language(self):
         return self.current_language
 
-    def set_language(self, lang_code):
-        if lang_code in ['ru', 'en']:
-            self.current_language = lang_code
-            self.ru_btn.md_bg_color = [0.46, 0.70, 0.71, 1] if lang_code == 'ru' else [0.2, 0.2, 0.2, 0.6]
-            self.en_btn.md_bg_color = [0.46, 0.70, 0.71, 1] if lang_code == 'en' else [0.2, 0.2, 0.2, 0.6]
+    def prev_language(self, instance):
+        current_index = 0 if self.current_language == 'ru' else 1
+        new_index = (current_index - 1) % len(self.languages)
+        self.current_language = self.languages[new_index]['code']
+        self._update_display()
+        if self.on_language_change:
+            self.on_language_change(self.current_language)
+
+    def next_language(self, instance):
+        current_index = 0 if self.current_language == 'ru' else 1
+        new_index = (current_index + 1) % len(self.languages)
+        self.current_language = self.languages[new_index]['code']
+        self._update_display()
+        if self.on_language_change:
+            self.on_language_change(self.current_language)
+
+    def set_language(self, language):
+        if self.current_language == language:
+            return
+        self.current_language = language
+        self._update_display()
 
 
-class TermResultCard(MDCard):
-    """Карточка результата поиска или термина"""
+class TermCard(MDCard):
+    """Карточка термина - невидимая, только текст жирный"""
 
-    def __init__(self, term_name, term_data, on_click=None, **kwargs):
+    def __init__(self, term_name, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.term_name = term_name
-        self.term_data = term_data
         self.on_click_callback = on_click
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(56)
-        self.padding = [dp(16), dp(8), dp(16), dp(8)]
-        self.spacing = dp(12)
-        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.height = dp(36)
+        self.padding = [dp(8), dp(0), dp(8), dp(0)]
+        self.radius = [0, 0, 0, 0]
         self.elevation = 0
         self.ripple_behavior = True
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [0, 0, 0, 0.08]
-        self.line_color = [1, 1, 1, 0.08]
-        self.line_width = 0.5
+        self.md_bg_color = [0, 0, 0, 0]
+        self.line_color = [0, 0, 0, 0]
+        self.line_width = 1  # ← ИСПРАВЛЕНО: было 0, стало 1
 
-        self._build_ui()
-
-    def _build_ui(self):
-        # Иконка термина
-        self.icon_label = MDLabel(
-            text="📖",
-            font_size=sp(20),
-            size_hint=(None, None),
-            width=dp(32),
-            halign="center",
+        self.term_label = MDLabel(
+            text=term_name.capitalize(),
+            font_size=sp(16),
+            halign="left",
             valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7]
-        )
-
-        text_layout = MDBoxLayout(
-            orientation='vertical',
             size_hint_x=1,
-            spacing=dp(2),
-            pos_hint={'center_y': 0.5}
-        )
-
-        self.title_label = MDLabel(
-            text=self.term_name,
-            font_size=sp(15),
-            size_hint_y=None,
-            height=dp(24),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95],
-            bold=True,
-            valign="middle",
-            shorten=True,
-            shorten_from="right"
+            text_color=[1, 1, 1, 0.9],
+            bold=True
         )
 
-        description = self.term_data.get('description', '')
-        if len(description) > 60:
-            description = description[:57] + "..."
-        self.subtitle_label = MDLabel(
-            text=description,
-            font_size=sp(11),
-            size_hint_y=None,
-            height=dp(18),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5],
-            valign="middle",
-            shorten=True,
-            shorten_from="right"
-        )
-
-        text_layout.add_widget(self.title_label)
-        text_layout.add_widget(self.subtitle_label)
-
-        arrow = MDLabel(
-            text="›",
-            font_size=sp(24),
-            size_hint_x=None,
-            width=dp(28),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5]
-        )
-
-        self.add_widget(self.icon_label)
-        self.add_widget(text_layout)
-        self.add_widget(arrow)
-
+        self.add_widget(self.term_label)
         self.bind(on_release=self._on_click)
 
     def _on_click(self, instance):
@@ -500,8 +498,8 @@ class DictionaryScreen(BaseScreen):
         super().__init__(**kwargs)
         self.name = 'dictionary'
         self.bg_image = None
-        self.all_terms = {}  # {term_name: term_data}
-        self.terms_by_letter = {}  # {letter: [term_names]}
+        self.all_terms = {}
+        self.terms_by_letter = {}
         self.current_letter = None
         self.is_search_mode = False
         self.search_results = []
@@ -549,16 +547,13 @@ class DictionaryScreen(BaseScreen):
             self._scan_module_recursive(dicts, 'dicts')
         except ImportError as e:
             logger.error(f"❌ Пакет dicts не найден: {e}")
-            # Добавляем тестовые термины для отладки
             self._add_test_terms()
         except Exception as e:
             logger.error(f"❌ Ошибка сканирования: {e}")
             self._add_test_terms()
 
-        # Сортируем термины
         self.all_terms = dict(sorted(self.all_terms.items()))
 
-        # Группируем по буквам
         for term_name in self.all_terms:
             first_letter = self._get_first_letter(term_name)
             if first_letter:
@@ -566,35 +561,41 @@ class DictionaryScreen(BaseScreen):
                     self.terms_by_letter[first_letter] = []
                 self.terms_by_letter[first_letter].append(term_name)
 
-        # Сортируем списки терминов по буквам
         for letter in self.terms_by_letter:
             self.terms_by_letter[letter].sort()
 
-        logger.info(f"✅ Загружено {len(self.all_terms)} терминов, "
-                   f"букв: {len(self.terms_by_letter)}")
+        logger.info(f"✅ Загружено {len(self.all_terms)} терминов, букв: {len(self.terms_by_letter)}")
 
-        # Обновляем отображение
         self._update_display()
 
     def _add_test_terms(self):
         """Добавляет тестовые термины для отладки"""
         test_terms = {
-            "аккорд": {"description": "Одновременное звучание трёх и более звуков"},
-            "арпеджио": {"description": "Разложенный аккорд, звуки извлекаются последовательно"},
-            "баре": {"description": "Приём игры на гитаре, прижим струн одним пальцем"},
-            "гамма": {"description": "Последовательность звуков в восходящем порядке"},
-            "гриф": {"description": "Часть гитары с ладами"},
-            "мелодия": {"description": "Одноголосная музыкальная мысль"},
-            "минор": {"description": "Лад с мягким, грустным звучанием"},
-            "мажор": {"description": "Лад с ярким, весёлым звучанием"},
-            "ритм": {"description": "Организация звуков во времени"},
-            "темп": {"description": "Скорость исполнения музыки"},
-            "транспонирование": {"description": "Перенос в другую тональность"},
-            "вступление": {"description": "Начальная часть произведения"},
-            "бенд": {"description": "Изменение высоты звука натяжением струны"},
-            "вибрато": {"description": "Периодическое изменение высоты звука"},
-            "глиссандо": {"description": "Плавный переход между звуками"},
-            "легато": {"description": "Плавное, связное исполнение звуков"},
+            "аккорд": {"description": "Одновременное звучание трёх и более звуков, образующих гармоническое созвучие."},
+            "арпеджио": {"description": "Способ исполнения аккорда, при котором звуки извлекаются последовательно."},
+            "баре": {"description": "Приём игры на гитаре, при котором указательный палец прижимает все струны на одном ладу."},
+            "бенд": {"description": "Приём изменения высоты звука путём натяжения струны вверх или вниз."},
+            "гамма": {"description": "Последовательность звуков в восходящем или нисходящем порядке."},
+            "гриф": {"description": "Длинная часть струнного инструмента, на которой расположены лады."},
+            "мелодия": {"description": "Одноголосная музыкальная мысль, выразительная последовательность звуков."},
+            "минор": {"description": "Лад, характеризующийся мягким, грустным, задумчивым звучанием."},
+            "мажор": {"description": "Лад, характеризующийся ярким, весёлым, светлым звучанием."},
+            "ритм": {"description": "Организация музыкальных звуков во времени, последовательность длительностей."},
+            "темп": {"description": "Скорость исполнения музыкального произведения."},
+            "транспонирование": {"description": "Перенос музыкального произведения в другую тональность."},
+            "вступление": {"description": "Начальная часть музыкального произведения, предшествующая основной теме."},
+            "вибрато": {"description": "Периодическое изменение высоты звука."},
+            "глиссандо": {"description": "Плавный переход между звуками."},
+            "легато": {"description": "Плавное, связное исполнение звуков."},
+            "акцент": {"description": "Выделение звука или аккорда более сильным звучанием."},
+            "альтерация": {"description": "Изменение ступеней лада путём повышения или понижения."},
+            "атака": {"description": "Начало звука или фразы, способ извлечения звука."},
+            "бас": {"description": "Нижний голос в многоголосной музыке, низкий регистр."},
+            "блюз": {"description": "Музыкальный стиль, характеризующийся определённой гармонией и ритмом."},
+            "гитара": {"description": "Струнный щипковый музыкальный инструмент."},
+            "динамика": {"description": "Сила звучания, громкость музыкального исполнения."},
+            "диез": {"description": "Знак повышения звука на полтона."},
+            "бемоль": {"description": "Знак понижения звука на полтона."},
         }
         for name, data in test_terms.items():
             self.all_terms[name] = data
@@ -634,28 +635,22 @@ class DictionaryScreen(BaseScreen):
         """Возвращает первую букву термина для группировки"""
         if not term_name:
             return None
-        # Пропускаем служебные символы в начале
         clean_name = term_name.lstrip('«»"\'')
         if not clean_name:
             return None
         first_char = clean_name[0].lower()
-        # Проверяем, является ли буквой
         if ('а' <= first_char <= 'я') or ('a' <= first_char <= 'z'):
             return first_char
         return None
 
     def init_ui(self):
-        """Инициализирует UI"""
+        """Инициализирует UI как в Songs"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Верхний отступ
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
-
-        # Дополнительный отступ
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
-        # Контейнер с отступами
         content_padding = layout_config.get_content_padding()
 
         content_wrapper = MDBoxLayout(
@@ -667,60 +662,43 @@ class DictionaryScreen(BaseScreen):
         scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
-            bar_width=dp(3),
-            bar_color=[1, 1, 1, 0.2]
+            bar_width=0,
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0],
+            bar_margin=0
         )
 
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(12),
+            spacing=dp(20),
             size_hint_y=None,
             adaptive_height=True
         )
         content.bind(minimum_height=content.setter('height'))
 
-        # Поисковая строка
-        self.search_bar = SearchBar(
+        self.search_bar = GoogleSearchBar(
             on_search=self.do_search,
-            on_clear=self.clear_search,
-            on_text_change=self.on_search_text_change
+            on_clear=self.clear_search
         )
         content.add_widget(self.search_bar)
 
-        # Выбор языка
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
         content.add_widget(self.language_selector)
 
-        # Сетка букв
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
         content.add_widget(self.alphabet_grid)
 
-        # Счётчик терминов
-        self.count_label = MDLabel(
-            text="",
-            font_size=sp(13),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            size_hint_y=None,
-            height=dp(28),
-            padding=[0, dp(4), 0, dp(4)]
-        )
-        content.add_widget(self.count_label)
-
-        # Контейнер для результатов
         self.results_container = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(6),
+            spacing=dp(2),
             size_hint_y=None,
-            adaptive_height=True
+            adaptive_height=True,
+            padding=[dp(4), dp(4), dp(4), dp(4)]
         )
         content.add_widget(self.results_container)
 
-        # Нижний отступ
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
@@ -738,49 +716,25 @@ class DictionaryScreen(BaseScreen):
         """Обновляет отображение терминов"""
         self.results_container.clear_widgets()
 
-        # Если поиск активен, показываем результаты поиска
         if self.is_search_mode:
             self._show_search_results()
             return
 
-        # Показываем термины по выбранной букве
         if self.current_letter and self.current_letter in self.terms_by_letter:
             terms = self.terms_by_letter[self.current_letter]
-            self._update_count_label(len(terms))
             for term_name in terms:
-                term_data = self.all_terms.get(term_name, {})
-                card = TermResultCard(
+                card = TermCard(
                     term_name=term_name,
-                    term_data=term_data,
                     on_click=self.on_term_selected
                 )
                 self.results_container.add_widget(card)
         else:
-            # Показываем общее количество
-            self._update_count_label(len(self.all_terms))
-            # Показываем все термины (если нет выбранной буквы)
-            for term_name in sorted(self.all_terms.keys())[:30]:  # Ограничиваем для производительности
-                term_data = self.all_terms.get(term_name, {})
-                card = TermResultCard(
+            for term_name in sorted(self.all_terms.keys())[:50]:
+                card = TermCard(
                     term_name=term_name,
-                    term_data=term_data,
                     on_click=self.on_term_selected
                 )
                 self.results_container.add_widget(card)
-
-    def _update_count_label(self, count):
-        """Обновляет счётчик терминов"""
-        if count == 0:
-            text = "Нет терминов"
-        elif count == 1:
-            text = "Найден 1 термин"
-        elif 2 <= count <= 4:
-            text = f"Найдено {count} термина"
-        else:
-            text = f"Найдено {count} терминов"
-
-        if self.count_label:
-            self.count_label.text = text
 
     def _show_search_results(self):
         """Показывает результаты поиска"""
@@ -797,21 +751,16 @@ class DictionaryScreen(BaseScreen):
                 height=dp(60)
             )
             self.results_container.add_widget(no_results)
-            self._update_count_label(0)
             return
 
-        self._update_count_label(len(self.search_results))
-
         for term_name in self.search_results:
-            term_data = self.all_terms.get(term_name, {})
-            card = TermResultCard(
+            card = TermCard(
                 term_name=term_name,
-                term_data=term_data,
                 on_click=self.on_term_selected
             )
             self.results_container.add_widget(card)
 
-    # ============ ОБРАБОТЧИКИ СОБЫТИЙ ============
+    # ============ ОБРАБОТЧИКИ ============
 
     def on_language_changed(self, language):
         logger.info(f"🔤 Язык изменён на: {language}")
@@ -828,21 +777,11 @@ class DictionaryScreen(BaseScreen):
         self.is_search_mode = False
         self.search_results = []
         self.search_bar.clear()
-
-        # Обновляем отображение
         self._update_display()
-
-        # Обновляем TopNav
-        self._update_top_nav(f"Буква {letter.upper()}")
-
-    def on_search_text_change(self, text):
-        """При изменении текста поиска"""
-        if not text.strip():
-            if self.is_search_mode:
-                self.clear_search()
+        self._update_top_nav("Словарь")
 
     def do_search(self, query):
-        """Выполняет поиск терминов"""
+        """Выполняет поиск терминов - точное совпадение по целому слову"""
         logger.info(f"🔍 Поиск: {query}")
         query_lower = query.strip().lower()
 
@@ -854,146 +793,84 @@ class DictionaryScreen(BaseScreen):
         self.current_letter = None
         self.alphabet_grid.clear_selection()
 
-        # Поиск по терминам
+        query_words = query_lower.split()
+        query_phrases = []
+        for i in range(len(query_words)):
+            for j in range(i + 1, len(query_words) + 1):
+                query_phrases.append(' '.join(query_words[i:j]))
+
         results = []
         for term_name, term_data in self.all_terms.items():
-            # Поиск по названию
-            if query_lower in term_name.lower():
+            term_lower = term_name.lower()
+
+            if term_lower == query_lower:
                 results.append(term_name)
                 continue
 
-            # Поиск по описанию
-            description = term_data.get('description', '')
-            if query_lower in description.lower():
-                results.append(term_name)
-                continue
-
-            # Поиск по синонимам
-            synonyms = term_data.get('synonyms', [])
-            for syn in synonyms:
-                if query_lower in syn.lower():
+            for phrase in query_phrases:
+                if phrase == term_lower:
+                    results.append(term_name)
+                    break
+                if phrase in term_lower:
                     results.append(term_name)
                     break
 
-        # Убираем дубликаты
-        self.search_results = list(dict.fromkeys(results))
+            description = term_data.get('description', '').lower()
+            for word in query_words:
+                if word in description:
+                    results.append(term_name)
+                    break
 
-        # Обновляем отображение
+            synonyms = term_data.get('synonyms', [])
+            for syn in synonyms:
+                syn_lower = syn.lower()
+                for word in query_words:
+                    if word in syn_lower:
+                        results.append(term_name)
+                        break
+                if term_name in results:
+                    break
+
+        seen = set()
+        unique_results = []
+        for r in results:
+            if r not in seen:
+                seen.add(r)
+                unique_results.append(r)
+        self.search_results = unique_results
+
         self._show_search_results()
-
-        # Обновляем TopNav
-        self._update_top_nav(f"Поиск: {query}")
 
         if not self.search_results:
             notify.info("Ничего не найдено")
+
+        self._update_top_nav("Словарь")
 
     def clear_search(self):
         """Очищает поиск"""
         self.is_search_mode = False
         self.search_results = []
         self.search_bar.clear()
-
-        # Восстанавливаем отображение по букве
         self._update_display()
-
-        # Восстанавливаем TopNav
-        if self.current_letter:
-            self._update_top_nav(f"Буква {self.current_letter.upper()}")
-        else:
-            self._update_top_nav("Словарь")
 
     def on_term_selected(self, term_name):
         """Обработчик выбора термина"""
         logger.info(f"Выбран термин: {term_name}")
 
-        # Проверяем, есть ли термин в базе
         term_data = self.all_terms.get(term_name)
         if not term_data:
             notify.error("Термин не найден")
             return
 
-        # Переходим на экран определения термина
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('term_detail'):
                 term_detail = self.manager.get_screen('term_detail')
                 term_detail.set_term(term_name, term_data, self.name)
                 self.manager.current = 'term_detail'
-            else:
-                # Если экран не найден, показываем диалог
-                self._show_term_dialog(term_name, term_data)
-
-    def _show_term_dialog(self, term_name, term_data):
-        """Показывает диалог с определением термина (временное решение)"""
-        from kivymd.uix.dialog import MDDialog
-
-        description = term_data.get('description', 'Описание отсутствует')
-        synonyms = term_data.get('synonyms', [])
-        examples = term_data.get('examples', [])
-
-        content = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(8),
-            padding=dp(16),
-            size_hint_y=None,
-            adaptive_height=True
-        )
-
-        content.add_widget(MDLabel(
-            text=term_name,
-            font_size=sp(24),
-            bold=True,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            size_hint_y=None,
-            height=dp(40)
-        ))
-
-        content.add_widget(MDLabel(
-            text=description,
-            font_size=sp(16),
-            theme_text_color="Custom",
-            text_color=[0.9, 0.9, 0.9, 1],
-            size_hint_y=None,
-            height=dp(len(description) // 20 * 24 + 24)
-        ))
-
-        if synonyms:
-            syn_text = "Синонимы: " + ", ".join(synonyms)
-            content.add_widget(MDLabel(
-                text=syn_text,
-                font_size=sp(13),
-                theme_text_color="Custom",
-                text_color=[0.7, 0.7, 0.7, 1],
-                size_hint_y=None,
-                height=dp(28)
-            ))
-
-        if examples:
-            ex_text = "Примеры: " + ", ".join(examples)
-            content.add_widget(MDLabel(
-                text=ex_text,
-                font_size=sp(13),
-                theme_text_color="Custom",
-                text_color=[0.7, 0.7, 0.7, 1],
-                size_hint_y=None,
-                height=dp(28)
-            ))
-
-        dialog = MDDialog(
-            title="Определение",
-            type="custom",
-            content_cls=content,
-            buttons=[MDRaisedButton(
-                text="Закрыть",
-                on_release=lambda x: dialog.dismiss()
-            )]
-        )
-        dialog.open()
 
     def _update_top_nav(self, title):
         """Обновляет заголовок в TopNav"""
         try:
-            from kivymd.app import MDApp
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
                 app.top_nav.set_custom_title(title)
@@ -1011,13 +888,11 @@ class DictionaryScreen(BaseScreen):
     def on_enter(self):
         """При входе на экран"""
         logger.info("Вход в словарь")
-        # Показываем кнопку возврата
         self._update_top_nav("Словарь")
 
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из словаря")
-        # Сбрасываем состояние
         self.clear_search()
         self.current_letter = None
         self.alphabet_grid.clear_selection()

@@ -54,7 +54,7 @@ jobs:
         run: |
           rm -rf .buildozer || true
           rm -rf ~/.buildozer/android/platform/python-for-android || true
-          rm -rf ~/.buildozer/android/platform/android-ndk-r23c || true
+          rm -rf ~/.buildozer/android/platform/android-ndk-* || true
 
       - name: Install dependencies
         run: |
@@ -89,9 +89,34 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          yes | buildozer -v android debug
+          echo "::group::🔨 Building APK..."
+          yes | buildozer -v android debug 2>&1 | while IFS= read -r line; do
+            if echo "$line" | grep -qi -E "(error|failed|fatal|traceback|exception|crash|fail)"; then
+              echo "::error::🔴 $line"
+            elif echo "$line" | grep -qi -E "(warning|warn|deprecated)"; then
+              echo "::warning::🟡 $line"
+            else
+              echo "$line"
+            fi
+          done
+          echo "::endgroup::"
+
+      - name: Check build status
+        run: |
+          echo "::group::📊 Build Status"
+          if [ -d "bin" ] && [ "$(ls -A bin/*.apk 2>/dev/null)" ]; then
+            echo "✅ APK created successfully!"
+            echo "::notice::✅ APK создан успешно!"
+            ls -la bin/
+          else
+            echo "❌ APK not found!"
+            echo "::error::❌ APK не найден!"
+            exit 1
+          fi
+          echo "::endgroup::"
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: GuitarFuns-APK-${{ github.run_number }}
