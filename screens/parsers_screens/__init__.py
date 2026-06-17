@@ -11,6 +11,7 @@ from .akkordbard_parser_screen import AkkordBardParserScreen
 from .domhve_parser_screen import DomhveParserScreen
 from .rushsound_parser_screen import RushSoundParserScreen
 
+
 __all__ = [
     'BaseParserScreen',
     'AMDMParserScreen',

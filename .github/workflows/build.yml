@@ -50,10 +50,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-android-ndk-
 
-      - name: Clean buildozer cache (fix for p4a)
+      - name: Clean buildozer cache
         run: |
           rm -rf .buildozer || true
           rm -rf ~/.buildozer/android/platform/python-for-android || true
+          rm -rf ~/.buildozer/android/platform/android-ndk-r23c || true
 
       - name: Install dependencies
         run: |

@@ -37,7 +37,9 @@ log_level = 2
 p4a.branch = develop
 
 android.gradle_repository_threads = 4
-android.ndk = 23c
+
+# 🔥 ИСПРАВЛЕНО: используем актуальную версию NDK 25b (минимальная поддерживаемая)
+android.ndk = 25b
 
 # --- android.sdk НЕ ИСПОЛЬЗОВАТЬ (устарел) ---
 # android.sdk = 33
