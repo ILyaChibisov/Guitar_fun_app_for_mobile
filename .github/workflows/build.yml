@@ -87,21 +87,40 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.37
 
-      - name: Build with Buildozer
+      - name: Build with Buildozer (debug full output)
         run: |
           echo "::group::🔨 Building APK..."
-          yes | buildozer -v android debug 2>&1 | while IFS= read -r line; do
-            if echo "$line" | grep -qi -E "(error|failed|fatal|traceback|exception|crash|fail)"; then
-              echo "::error::🔴 $line"
-            elif echo "$line" | grep -qi -E "(warning|warn|deprecated)"; then
-              echo "::warning::🟡 $line"
-            else
-              echo "$line"
-            fi
-          done
+          yes | buildozer -v android debug 2>&1 | tee build.log
+          echo "::endgroup::"
+
+      - name: Show build errors
+        if: always()
+        run: |
+          echo "::group::🔍 Searching for errors in build.log..."
+          if [ -f build.log ]; then
+            echo "=== ERRORS ==="
+            grep -i -E "(error|failed|fatal|traceback|exception|crash|fail)" build.log || echo "No errors found in grep"
+            echo ""
+            echo "=== LAST 50 LINES ==="
+            tail -50 build.log
+          else
+            echo "build.log not found!"
+          fi
+          echo "::endgroup::"
+
+      - name: Show bin directory content
+        if: always()
+        run: |
+          echo "::group::📂 bin directory content"
+          if [ -d "bin" ]; then
+            ls -la bin/ || echo "bin directory is empty"
+          else
+            echo "bin directory does not exist!"
+          fi
           echo "::endgroup::"
 
       - name: Check build status
+        if: always()
         run: |
           echo "::group::📊 Build Status"
           if [ -d "bin" ] && [ "$(ls -A bin/*.apk 2>/dev/null)" ]; then
@@ -111,9 +130,17 @@ jobs:
           else
             echo "❌ APK not found!"
             echo "::error::❌ APK не найден!"
+            echo "Check build.log for details"
             exit 1
           fi
           echo "::endgroup::"
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ github.run_number }}
+          path: build.log
 
       - name: Upload APK artifact
         if: success()
