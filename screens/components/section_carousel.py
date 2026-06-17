@@ -11,6 +11,7 @@ from kivy.uix.widget import Widget
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from io import BytesIO
+from kivy.properties import NumericProperty
 
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
@@ -35,12 +36,17 @@ except ImportError:
 class SectionCard(CircularRippleBehavior, MDCard):
     """Карточка раздела с иконкой из ассетов"""
 
+    # 🔥 Добавляем свойство scale для анимации
+    scale = NumericProperty(1.0)
+
+    # 🔥 УНИКАЛЬНЫЕ ЯРКИЕ ЦВЕТА ДЛЯ КАЖДОГО РАЗДЕЛА
     SECTION_COLORS = {
-        'songs': ('#E53935', '#C62828'),
-        'chords': ('#43A047', '#2E7D32'),
-        'tuner': ('#1E88E5', '#1565C0'),
-        'dictionary': ('#FB8C00', '#EF6C00'),
-        'favorites': ('#8E24AA', '#6A1B9A'),
+        'songs': ('#E53935', '#C62828'),           # Красный
+        'chords': ('#43A047', '#2E7D32'),          # Зелёный
+        'tuner': ('#1E88E5', '#1565C0'),           # Синий
+        'metronome': ('#FF6F00', '#E65100'),       # Яркий оранжево-золотой 🔥
+        'dictionary': ('#8E24AA', '#6A1B9A'),      # Фиолетовый
+        'favorites': ('#E91E63', '#AD1457'),       # Розовый
     }
 
     def __init__(self, section_id, title, icon_asset, on_click=None, **kwargs):
@@ -66,7 +72,7 @@ class SectionCard(CircularRippleBehavior, MDCard):
 
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(8),
+            spacing=dp(6),
             padding=[dp(10), dp(12), dp(10), dp(12)],
             size_hint=(1, 1),
             md_bg_color=[0, 0, 0, 0]
@@ -81,9 +87,17 @@ class SectionCard(CircularRippleBehavior, MDCard):
         )
         self._load_icon()
 
+        # 🔥 УМЕНЬШАЕМ ШРИФТ ДЛЯ ДЛИННЫХ НАЗВАНИЙ
+        if len(title) > 8:
+            font_size = sp(10)
+        elif len(title) > 6:
+            font_size = sp(11)
+        else:
+            font_size = sp(12)
+
         self.title_label = MDLabel(
             text=title,
-            font_size=sp(12),
+            font_size=font_size,
             halign="center",
             bold=True,
             size_hint_y=None,
@@ -100,6 +114,16 @@ class SectionCard(CircularRippleBehavior, MDCard):
         self.add_widget(content)
         self.bind(on_release=self._on_click)
         self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
+
+        # 🔥 Привязываем свойство scale к визуальному размеру
+        self.bind(scale=self._update_scale)
+
+    def _update_scale(self, instance, value):
+        """Обновляет визуальный размер при изменении scale"""
+        self.width = dp(100) * value
+        self.height = dp(120) * value
+        # Центрируем карточку
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
     def _load_icon(self):
         if HAS_ASSETS and self.icon_asset:
@@ -119,12 +143,16 @@ class SectionCard(CircularRippleBehavior, MDCard):
         return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)] + [alpha]
 
     def _on_enter(self, *args):
-        self.elevation = 0
-        self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.92)
+        """При наведении - ярче и поднимаем"""
+        Animation(elevation=6, duration=0.15).start(self)
+        self.md_bg_color = self._hex_to_rgba(self.bg_color, 1.0)
+        Animation(scale=1.05, duration=0.15).start(self)
 
     def _on_leave(self, *args):
-        self.elevation = 2
+        """При убирании курсора"""
+        Animation(elevation=2, duration=0.15).start(self)
         self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.85)
+        Animation(scale=1.0, duration=0.15).start(self)
 
     def _on_click(self, instance):
         if self.on_click_callback:
@@ -142,6 +170,7 @@ class SectionCarousel(MDBoxLayout):
     CARD_HEIGHT = dp(120)
     CARD_SPACING = dp(12)
     LEFT_PADDING = dp(8)
+    RIGHT_PADDING = dp(8)  # 🔥 ДОБАВЛЯЕМ ПРАВЫЙ ОТСТУП
 
     def __init__(self, screen_manager, on_section_selected=None, **kwargs):
         super().__init__(**kwargs)
@@ -208,15 +237,16 @@ class SectionCarousel(MDBoxLayout):
             size_hint=(None, None),
             height=dp(128),
             spacing=self.CARD_SPACING,
-            padding=[self.LEFT_PADDING, dp(4), 0, dp(4)],
+            padding=[self.LEFT_PADDING, dp(4), self.RIGHT_PADDING, dp(4)],  # 🔥 ДОБАВЛЯЕМ ПРАВЫЙ ОТСТУП
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Создаем карточки
+        # 🔥 ПОРЯДОК РАЗДЕЛОВ
         sections = [
             ('songs', 'Песни', 'songs_png'),
             ('chords', 'Аккорды', 'chords_png'),
             ('tuner', 'Тюнер', 'tuner_png'),
+            ('metronome', 'Метроном', 'metronome_png'),
             ('dictionary', 'Словарь', 'dictionary_png'),
             ('favorites', 'Избранное', 'favorites_png'),
         ]
@@ -230,16 +260,18 @@ class SectionCarousel(MDBoxLayout):
             )
             self.cards_box.add_widget(card)
 
-        # Рассчитываем ширину контейнера
+        # 🔥 РАССЧИТЫВАЕМ ШИРИНУ С УЧЁТОМ ПРАВОГО ОТСТУПА
         total_cards = len(sections)
         cards_width = (
             total_cards * self.CARD_WIDTH
             + (total_cards - 1) * self.CARD_SPACING
             + self.LEFT_PADDING
+            + self.RIGHT_PADDING  # 🔥 ДОБАВЛЯЕМ ПРАВЫЙ ОТСТУП
         )
         self.cards_box.width = cards_width
 
         logger.info(f'📏 Ширина cards_box: {cards_width}dp, карточек: {total_cards}')
+        logger.info(f'📏 Левый отступ: {self.LEFT_PADDING}dp, Правый отступ: {self.RIGHT_PADDING}dp')
 
         self.cards_scroll.add_widget(self.cards_box)
         self.add_widget(self.cards_scroll)
@@ -252,6 +284,7 @@ class SectionCarousel(MDBoxLayout):
             'songs': 'songs',
             'chords': 'chords',
             'tuner': 'tuner',
+            'metronome': 'metronome',
             'dictionary': 'dictionary',
             'favorites': 'favorites',
         }

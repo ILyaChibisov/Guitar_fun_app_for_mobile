@@ -18,6 +18,9 @@ import kivy
 
 kivy.require('2.3.0')
 
+# ============ ПРИНУДИТЕЛЬНОЕ ИСПОЛЬЗОВАНИЕ SDL2 ДЛЯ ЗВУКА ============
+os.environ['KIVY_AUDIO'] = 'sdl2'
+
 
 # ============ ОБРАБОТКА НЕПЕРЕХВАЧЕННЫХ ОШИБОК ============
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -31,7 +34,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 
 sys.excepthook = handle_exception
-# =========================================================
 
 # ============ ОТКЛЮЧАЕМ SSL ПРОВЕРКУ ============
 warnings.filterwarnings("ignore", category=Warning)
@@ -47,41 +49,39 @@ except AttributeError:
     pass
 os.environ['SSL_CERT_FILE'] = ''
 os.environ['REQUESTS_CA_BUNDLE'] = ''
-# ================================================================
 
 # ============ НАСТРОЙКА ОКНА ============
 if platform == 'android':
-    # Android: настройка системных панелей
+    # Android: настройка системных панелей и запрос разрешений
     try:
         from android import mActivity
         from jnius import autoclass
+        from android.permissions import request_permissions, Permission
+
+        # Запрашиваем все необходимые разрешения
+        request_permissions([
+            Permission.INTERNET,
+            Permission.ACCESS_NETWORK_STATE,
+            Permission.ACCESS_WIFI_STATE,
+            Permission.MODIFY_AUDIO_SETTINGS
+        ])
+        print("✅ Разрешения запрошены")
 
         Window.clearcolor = (0, 0, 0, 0)
-
         View = autoclass('android.view.View')
         window = mActivity.getWindow()
         decorView = window.getDecorView()
-
-        # Флаги для стабильной раскладки
         decorView.setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         )
-
-        # Чёрный статус-бар
         window.setStatusBarColor(0xFF000000)
-
-        # Чёрный нав-бар (системное меню)
         window.setNavigationBarColor(0xFF000000)
-
-        # Убираем флаг LIGHT_NAVIGATION_BAR, чтобы значки были светлыми
         current_flags = decorView.getSystemUiVisibility()
         if current_flags & View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:
             new_flags = current_flags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
             decorView.setSystemUiVisibility(new_flags)
-
         print("✅ Системные панели: статус-бар и нав-бар чёрные, значки светлые")
-
     except Exception as e:
         print(f"Ошибка настройки системных панелей: {e}")
         Window.clearcolor = (0, 0, 0, 0)
@@ -111,9 +111,9 @@ from config.system_bars import get_navigation_bar_height, get_status_bar_height,
 
 # ============ ОТКЛЮЧЕНИЕ RIPPLE ЭФФЕКТА ГЛОБАЛЬНО ============
 from kivymd.uix.button import MDIconButton
+
 MDIconButton.ripple_scale = 0
 MDIconButton.ripple_alpha = 0
-# ============================================================
 
 # Импортируем ассеты
 try:
@@ -128,17 +128,27 @@ except ImportError as e:
 logger = app_logger()
 
 
+def check_audio_support():
+    """Проверяет поддержку звука на устройстве"""
+    try:
+        from kivy.core.audio import SoundLoader
+        sound = SoundLoader.load(None)
+        if sound:
+            logger.info("✅ Звук поддерживается")
+            return True
+    except Exception as e:
+        logger.warning(f"⚠️ Звук может не работать: {e}")
+    return False
+
+
 class RootWidget(MDFloatLayout):
-    """
-    Корневой виджет с фоновым изображением
-    """
+    """Корневой виджет с фоновым изображением"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.bg_image = None
         self.size_hint = (1, 1)
         self.padding = [0, 0, 0, 0]
-
         self.load_background()
         logger.info("RootWidget создан")
 
@@ -153,7 +163,6 @@ class RootWidget(MDFloatLayout):
                     if bg_data:
                         logger.info(f"Фон загружен из ассета: {name}")
                         break
-
                 if bg_data:
                     img = CoreImage(BytesIO(bg_data), ext="jpg")
                     with self.canvas.before:
@@ -163,7 +172,6 @@ class RootWidget(MDFloatLayout):
                     return
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
-
         with self.canvas.before:
             Color(0.46, 0.70, 0.71, 1)
             self.bg_image = Rectangle(pos=self.pos, size=self.size)
@@ -187,8 +195,7 @@ class GuitarFunsApp(MDApp):
         self.blocking_layer = None
         self.current_auth_modal = None
         self.is_auth_blocking = False
-        self._bottom_nav_visible = False  # Добавьте эту строку
-
+        self._bottom_nav_visible = False
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
@@ -214,7 +221,6 @@ class GuitarFunsApp(MDApp):
     def _show_auth_modal_on_screen(self, screen):
         """Показывает модальное окно авторизации"""
         from screens.components.auth_modal import AuthModal
-
         self.set_blocking(True)
         self.current_auth_modal = AuthModal(
             parent_screen=screen,
@@ -240,13 +246,11 @@ class GuitarFunsApp(MDApp):
             self.blocking_layer.clear_modal_widget()
         self.current_auth_modal = None
         self.set_blocking(False)
-
         if api.access_token:
             api.get_current_user(
                 on_success=lambda user: setattr(api, 'user_data', user),
                 on_failure=lambda req, err: None
             )
-
         if self.screen_manager:
             current_screen = self.screen_manager.current_screen
             if hasattr(current_screen, 'on_login_success'):
@@ -255,43 +259,17 @@ class GuitarFunsApp(MDApp):
     def build(self):
         logger.debug('Создание интерфейса...')
 
-        # ============ НАСТРОЙКА КЛАВИАТУРЫ (ГЛОБАЛЬНО) ============
-        # Режим 'pan' - клавиатура перекрывает интерфейс, не сжимая окно
-        #Window.softinput_mode = 'pan'
-
-        # На Android: принудительно устанавливаем SOFT_INPUT_ADJUST_PAN
+        # ============ НАСТРОЙКА КЛАВИАТУРЫ ============
         if platform == 'android':
             try:
                 from android import mActivity
                 from jnius import autoclass
                 View = autoclass('android.view.View')
                 window = mActivity.getWindow()
-                # SOFT_INPUT_ADJUST_PAN = 0x00000020
                 window.setSoftInputMode(0x00000020)
-                logger.info("⌨️ Android: клавиатура настроена в режиме PAN (перекрытие)")
+                logger.info("⌨️ Android: клавиатура настроена в режиме PAN")
             except Exception as e:
                 logger.error(f"Ошибка настройки клавиатуры: {e}")
-        # ============================================================
-
-        # ============ ДИАГНОСТИКА СИСТЕМНЫХ ПАНЕЛЕЙ ============
-        logger.info("=" * 70)
-        logger.info("🔧 ДИАГНОСТИКА СИСТЕМНЫХ ПАНЕЛЕЙ ПРИ ЗАПУСКЕ")
-        logger.info("=" * 70)
-        logger.info(f"📱 Платформа: {platform}")
-        logger.info(f"📱 Размер окна: {Window.width} x {Window.height} px")
-        logger.info(f"📱 DPI: {Window.dpi}")
-
-        # Получаем плотность экрана
-        density = get_screen_density()
-        logger.info(f"📱 Плотность экрана: {density:.3f}")
-
-        # Получаем высоты системных панелей
-        status_h = get_status_bar_height()
-        nav_h = get_navigation_bar_height()
-
-        logger.info(f"📊 СТАТУС-БАР: {status_h:.1f}dp = {status_h * density:.0f}px")
-        logger.info(f"📊 НАВИГАЦИОННАЯ ПАНЕЛЬ: {nav_h:.1f}dp = {nav_h * density:.0f}px")
-        logger.info("=" * 70)
 
         self.theme_cls.primary_palette = "Teal"
         self.theme_cls.primary_hue = "300"
@@ -306,7 +284,7 @@ class GuitarFunsApp(MDApp):
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
 
-        # ============ ПРЕДЗАГРУЗКА ИКОНОК В ФОНЕ ============
+        # ============ ПРЕДЗАГРУЗКА ИКОНОК ============
         try:
             from utils.icon_cache import preload_icons
             preload_icons()
@@ -318,9 +296,7 @@ class GuitarFunsApp(MDApp):
         def on_prefetch_complete(total_artists, total_songs):
             logger.info(f"🎉 Предзагрузка завершена! Артистов: {total_artists}, Песен: {total_songs}")
 
-        # Запускаем предзагрузку (не блокирует UI)
         api.prefetch_all_artists(on_complete=on_prefetch_complete, force_refresh=False)
-        # ===================================================
 
         # Создаём верхнюю панель
         self.top_nav = TopNav(self.screen_manager)
@@ -332,38 +308,18 @@ class GuitarFunsApp(MDApp):
         self.bottom_nav = BottomNav(self.screen_manager)
         self.bottom_nav.pos_hint = {'y': 0}
 
-        # ============ ДИАГНОСТИКА НИЖНЕЙ ПАНЕЛИ (ПОСЛЕ СОЗДАНИЯ) ============
-        logger.info("=" * 70)
-        logger.info("📱 ДИАГНОСТИКА НИЖНЕЙ ПАНЕЛИ")
-        logger.info("=" * 70)
-        if self.bottom_nav:
-            logger.info(f"🔹 bottom_nav.height: {self.bottom_nav.height}dp")
-            logger.info(f"🔹 bottom_nav.padding: {self.bottom_nav.padding}")
-            logger.info(f"🔹 bottom_nav.pos_hint: {self.bottom_nav.pos_hint}")
-            if hasattr(self.bottom_nav, 'nav_height'):
-                logger.info(f"🔹 bottom_nav.nav_height: {self.bottom_nav.nav_height}dp")
-        else:
-            logger.error("❌ bottom_nav не создан!")
-        logger.info("=" * 70)
-
         # Создаём блокирующий слой
         self.blocking_layer = BlockingLayer()
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
         # ============ ПРАВИЛЬНЫЙ ПОРЯДОК ДОБАВЛЕНИЯ ============
-        # 1. Сначала менеджер экранов
         root.add_widget(self.screen_manager)
-        # 2. Затем нижняя панель
         root.add_widget(self.bottom_nav)
-        # 3. Затем верхняя панель
         root.add_widget(self.top_nav)
-        # 4. Блокирующий слой (самый верхний)
         root.add_widget(self.blocking_layer)
 
         network_manager.start_monitoring()
-
-        # Подписываемся на изменение размера окна (поворот экрана)
         Window.bind(on_resize=self.on_window_resize)
 
         logger.info('Интерфейс успешно создан')
@@ -373,13 +329,8 @@ class GuitarFunsApp(MDApp):
         """Обработчик изменения размера окна (в т.ч. поворота экрана)"""
         from config.layout_config import layout_config
         from kivy.clock import Clock
-
         logger.info(f"🔄 Поворот экрана: {width}x{height}")
-
-        # Обновляем layout_config
         layout_config.force_update()
-
-        # Перезагружаем панели навигации
         Clock.schedule_once(lambda dt: self._reload_nav_bars(), 0.1)
         Clock.schedule_once(lambda dt: self._reload_content_screens(), 0.2)
 
@@ -387,11 +338,9 @@ class GuitarFunsApp(MDApp):
         """Перезагружает конфигурацию панелей навигации"""
         if hasattr(self, 'bottom_nav') and self.bottom_nav:
             self.bottom_nav.reload_config()
-
         if hasattr(self, 'top_nav') and self.top_nav:
             if hasattr(self.top_nav, 'reload_config'):
                 self.top_nav.reload_config()
-
         logger.info("✅ Панели навигации обновлены после поворота")
 
     def _reload_content_screens(self):
@@ -410,6 +359,7 @@ class GuitarFunsApp(MDApp):
 
     def on_start(self):
         logger.info('Приложение GuitarFuns запущено')
+        check_audio_support()
         if HAS_ASSETS:
             try:
                 from data import Assets
@@ -432,9 +382,7 @@ class GuitarFunsApp(MDApp):
     def hide_bottom_nav(self):
         """Временно скрывает нижнюю панель навигации (для экрана песни)"""
         if hasattr(self, 'bottom_nav') and self.bottom_nav and self.bottom_nav.parent:
-            # Сохраняем состояние
             self._bottom_nav_visible = True
-            # Удаляем из родителя
             self.bottom_nav.parent.remove_widget(self.bottom_nav)
             logger.info("🔻 BottomNav скрыт")
 
@@ -444,9 +392,7 @@ class GuitarFunsApp(MDApp):
             if hasattr(self, '_bottom_nav_visible') and self._bottom_nav_visible:
                 root = self.root
                 if root and self.bottom_nav.parent is None:
-                    # Добавляем BottomNav обратно
                     root.add_widget(self.bottom_nav)
-                    # Восстанавливаем правильный порядок: TopNav должен быть поверх
                     if hasattr(self, 'top_nav') and self.top_nav and self.top_nav.parent:
                         self.top_nav.parent.remove_widget(self.top_nav)
                         root.add_widget(self.top_nav)
@@ -454,8 +400,6 @@ class GuitarFunsApp(MDApp):
                 self._bottom_nav_visible = False
 
     def _on_keyboard(self, window, key, scancode, codepoint, modifier):
-        """Обработчик клавиатуры - предотвращает сжатие окна"""
-        # Возвращаем False, чтобы событие прошло дальше
         return False
 
 

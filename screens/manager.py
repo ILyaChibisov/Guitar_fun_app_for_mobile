@@ -1,4 +1,4 @@
-# screens/manager.py (без изменений в логике, просто импорты те же)
+# screens/manager.py (обновлённый)
 from kivy.uix.screenmanager import ScreenManager
 from config.logger_config import get_logger
 from .home_screen import HomeScreen
@@ -8,6 +8,7 @@ from .artist_songs_screen import ArtistSongsScreen
 from .chords_screen import ChordsScreen
 from .dictionary_screen import DictionaryScreen
 from .tuner_screen import TunerScreen
+from .metronome_screen import MetronomeScreen  # ← ДОБАВЛЯЕМ
 from .favorites_screen import FavoritesScreen
 from .profile_screen import ProfileScreen
 from .song_detail_screen import SongDetailScreen
@@ -38,6 +39,7 @@ def setup_screen_manager():
     sm.add_widget(ChordsScreen(name='chords'))
     sm.add_widget(DictionaryScreen(name='dictionary'))
     sm.add_widget(TunerScreen(name='tuner'))
+    sm.add_widget(MetronomeScreen(name='metronome'))
     sm.add_widget(FavoritesScreen(name='favorites'))
     sm.add_widget(ProfileScreen(name='profile'))
     sm.add_widget(SongDetailScreen(name='song_detail'))
@@ -57,5 +59,5 @@ def setup_screen_manager():
     sm.add_widget(DomhveParserScreen(name='domhve_parser'))
     sm.add_widget(RushSoundParserScreen(name='rushsound_parser'))
 
-    logger.info('ScreenManager настроен, добавлено 22 экрана')
+    logger.info('ScreenManager настроен, добавлено 23 экрана (включая Метроном)')
     return sm

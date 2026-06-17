@@ -192,6 +192,7 @@ class TopNav(MDCard):
             'songs': 'Песни',
             'chords': 'Аккорды',
             'tuner': 'Тюнер',
+            'metronome': 'Метроном',  # ← ДОБАВЛЯЕМ
             'favorites': 'Избранное',
             'profile': 'Профиль',
             'artists_by_letter': 'Исполнители',
@@ -203,6 +204,7 @@ class TopNav(MDCard):
             'search': 'Быстрый поиск'
         }
         return titles.get(screen_name, screen_name.capitalize())
+
 
     def update_title(self, screen_name: str):
         self.screen_title.text = self._get_screen_title(screen_name)
