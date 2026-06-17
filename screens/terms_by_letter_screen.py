@@ -3,7 +3,7 @@
 Экран списка терминов по выбранной букве
 """
 from kivymd.uix.label import MDLabel
-from kivymd.uix.card import MDCard  # ← ДОБАВЛЯЕМ
+from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.app import MDApp
 from kivy.metrics import dp, sp
@@ -13,7 +13,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.recycleboxlayout import RecycleBoxLayout
-from kivy.properties import StringProperty, NumericProperty, ObjectProperty
+from kivy.properties import StringProperty, ObjectProperty
 from kivy.graphics import Color, Rectangle
 from io import BytesIO
 
@@ -242,12 +242,12 @@ class TermsByLetterScreen(BaseScreen):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             if self.current_letter:
-                display = "0-9" if self.current_letter in ("digits", "0-9") else self.current_letter.upper()
+                display = self.current_letter.upper()
                 app.top_nav.set_custom_title(f"Буква {display}")
                 app.top_nav._show_back_button()
                 app.top_nav.back_btn.on_release = self.go_back
             elif self._pending_letter:
-                display = "0-9" if self._pending_letter in ("digits", "0-9") else self._pending_letter.upper()
+                display = self._pending_letter.upper()
                 app.top_nav.set_custom_title(f"Буква {display}")
                 app.top_nav._show_back_button()
                 app.top_nav.back_btn.on_release = self.go_back
@@ -315,9 +315,10 @@ class TermsByLetterScreen(BaseScreen):
         self._update_count_label(len(terms))
 
         if not terms:
-            self._show_empty()
+            # Очищаем recycle view и показываем сообщение через count_label
             if self.recycle_view:
                 self.recycle_view.clear()
+            self.count_label.text = "Нет терминов на эту букву"
             return
 
         if self.recycle_view:
@@ -336,22 +337,6 @@ class TermsByLetterScreen(BaseScreen):
 
         if self.count_label:
             self.count_label.text = text
-
-    def _show_empty(self, text="Нет терминов на эту букву"):
-        """Показывает сообщение о пустом списке"""
-        if self.empty_label:
-            return
-        self.empty_label = MDLabel(
-            text=text,
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.4],
-            size_hint_y=None,
-            height=dp(60)
-        )
-        if hasattr(self, 'recycle_view') and self.recycle_view:
-            self.recycle_view.add_widget(self.empty_label)
 
     def on_term_selected(self, term_name):
         """Обработчик выбора термина"""

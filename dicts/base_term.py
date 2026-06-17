@@ -1,19 +1,15 @@
 # dicts/base_term.py
 """
-Базовый класс для термина
+Базовый класс для термина (упрощённая версия)
 """
 
 class Term:
-    def __init__(self, name, description, synonyms=None, examples=None):
+    def __init__(self, name, description):
         self.name = name
         self.description = description
-        self.synonyms = synonyms or []
-        self.examples = examples or []
 
     def to_dict(self):
         return {
             'name': self.name,
-            'description': self.description,
-            'synonyms': self.synonyms,
-            'examples': self.examples
+            'description': self.description
         }

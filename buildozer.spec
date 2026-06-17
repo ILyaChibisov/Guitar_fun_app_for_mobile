@@ -7,7 +7,7 @@ package.domain = com.guitarfuns
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json,wav,mp3,ogg
 
-# Включаем все файлы рекурсивно
+# Включаем все файлы аккордов рекурсивно
 source.include_patterns = chords/**, **/*.py, **/*.png, **/*.jpg, **/*.json
 
 # Исключаем ненужные файлы
@@ -17,11 +17,11 @@ version = 1.0.2
 version.code = 2
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ (МИНИМАЛЬНЫЕ) ---
-requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,pyjnius
+# --- ЗАВИСИМОСТИ (ДОБАВЛЯЕМ ТОЛЬКО НЕОБХОДИМОЕ ДЛЯ ЗВУКА) ---
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,pyjnius
 
-# --- ПРАВА ---
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
+# --- ПРАВА (ДОБАВЛЯЕМ MODIFY_AUDIO_SETTINGS ДЛЯ ЗВУКА) ---
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,MODIFY_AUDIO_SETTINGS
 android.api = 33
 android.minapi = 24
 android.enable_androidx = True
@@ -29,24 +29,22 @@ android.add_network_security_config = True
 android.archs = arm64-v8a, armeabi-v7a
 android.accept_sdk_license = True
 
-# --- НАСТРОЙКИ СБОРКИ ---
+# --- ОТЛАДКА ---
 fullscreen = 0
-log_level = 1
+log_level = 2
 p4a.branch = develop
+
+# --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
 android.gradle_repository_threads = 4
 android.ndk = 25b
 
-# --- ОТКЛЮЧАЕМ НЕНУЖНЫЕ РЕЦЕПТЫ (libthorvg не нужен) ---
-# p4a.local_recipes = ./recipes
-# p4a.whitelist =
-
-# --- ПОДПИСЬ (РАСКОММЕНТИРУЙ ЕСЛИ ЕСТЬ КЛЮЧ) ---
-# android.keystore = guitarfuns_keystore.jks
-# android.keystore_alias = guitarfuns
-# android.keystore_key_password = lexx311285
+# --- ПОДПИСЬ ---
+android.keystore = guitarfuns_keystore.jks
+android.keystore_alias = guitarfuns
+android.keystore_key_password = lexx311285
 
 [buildozer]
-log_level = 1
+log_level = 2
 warn_on_root = 1
 
 [gradle]

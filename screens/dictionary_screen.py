@@ -1,4 +1,4 @@
-# screens/dictionary_screen.py - обновлённый
+# screens/dictionary_screen.py
 """
 Экран словаря терминов - с поиском и алфавитной навигацией
 """
@@ -33,9 +33,12 @@ logger = screen_logger('Dictionary')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -549,97 +552,78 @@ class DictionaryScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def scan_terms(self):
-        """Сканирует все модули словаря"""
+        """Сканирует все модули словаря из папок ru/ и en/"""
         logger.info("📚 Сканирование терминов...")
         self.all_terms.clear()
         self.terms_by_letter.clear()
 
         try:
             import dicts
-            self._scan_module_recursive(dicts, 'dicts')
+
+            # Загружаем русские термины
+            try:
+                from dicts.ru import RU_TERMS_BY_LETTER, get_all_ru_terms
+                ru_terms = get_all_ru_terms()
+                for term_name, term_data in ru_terms.items():
+                    if hasattr(term_data, 'to_dict'):
+                        self.all_terms[term_name] = term_data.to_dict()
+                    else:
+                        self.all_terms[term_name] = term_data
+
+                # Сохраняем термины по буквам
+                for letter, terms in RU_TERMS_BY_LETTER.items():
+                    if terms:
+                        for term_name in terms:
+                            first_letter = self._get_first_letter(term_name)
+                            if first_letter:
+                                if first_letter not in self.terms_by_letter:
+                                    self.terms_by_letter[first_letter] = []
+                                if term_name not in self.terms_by_letter[first_letter]:
+                                    self.terms_by_letter[first_letter].append(term_name)
+
+                logger.info(f"✅ Загружено русских терминов: {len(ru_terms)}")
+            except ImportError as e:
+                logger.error(f"❌ Ошибка загрузки русских терминов: {e}")
+
+            # Загружаем английские термины
+            try:
+                from dicts.en import EN_TERMS_BY_LETTER, get_all_en_terms
+                en_terms = get_all_en_terms()
+                for term_name, term_data in en_terms.items():
+                    if hasattr(term_data, 'to_dict'):
+                        self.all_terms[term_name] = term_data.to_dict()
+                    else:
+                        self.all_terms[term_name] = term_data
+
+                # Сохраняем термины по буквам
+                for letter, terms in EN_TERMS_BY_LETTER.items():
+                    if terms:
+                        for term_name in terms:
+                            first_letter = self._get_first_letter(term_name)
+                            if first_letter:
+                                if first_letter not in self.terms_by_letter:
+                                    self.terms_by_letter[first_letter] = []
+                                if term_name not in self.terms_by_letter[first_letter]:
+                                    self.terms_by_letter[first_letter].append(term_name)
+
+                logger.info(f"✅ Загружено английских терминов: {len(en_terms)}")
+            except ImportError as e:
+                logger.error(f"❌ Ошибка загрузки английских терминов: {e}")
+
         except ImportError as e:
             logger.error(f"❌ Пакет dicts не найден: {e}")
-            self._add_test_terms()
+            # Не добавляем тестовые термины, просто показываем пустой словарь
         except Exception as e:
             logger.error(f"❌ Ошибка сканирования: {e}")
-            self._add_test_terms()
 
+        # Сортируем термины
         self.all_terms = dict(sorted(self.all_terms.items()))
 
-        for term_name in self.all_terms:
-            first_letter = self._get_first_letter(term_name)
-            if first_letter:
-                if first_letter not in self.terms_by_letter:
-                    self.terms_by_letter[first_letter] = []
-                self.terms_by_letter[first_letter].append(term_name)
-
+        # Сортируем списки по буквам
         for letter in self.terms_by_letter:
             self.terms_by_letter[letter].sort()
 
-        logger.info(f"✅ Загружено {len(self.all_terms)} терминов, букв: {len(self.terms_by_letter)}")
-
-    def _add_test_terms(self):
-        """Добавляет тестовые термины для отладки"""
-        test_terms = {
-            "аккорд": {"description": "Одновременное звучание трёх и более звуков, образующих гармоническое созвучие."},
-            "арпеджио": {"description": "Способ исполнения аккорда, при котором звуки извлекаются последовательно."},
-            "баре": {"description": "Приём игры на гитаре, при котором указательный палец прижимает все струны на одном ладу."},
-            "бенд": {"description": "Приём изменения высоты звука путём натяжения струны вверх или вниз."},
-            "гамма": {"description": "Последовательность звуков в восходящем или нисходящем порядке."},
-            "гриф": {"description": "Длинная часть струнного инструмента, на которой расположены лады."},
-            "мелодия": {"description": "Одноголосная музыкальная мысль, выразительная последовательность звуков."},
-            "минор": {"description": "Лад, характеризующийся мягким, грустным, задумчивым звучанием."},
-            "мажор": {"description": "Лад, характеризующийся ярким, весёлым, светлым звучанием."},
-            "ритм": {"description": "Организация музыкальных звуков во времени, последовательность длительностей."},
-            "темп": {"description": "Скорость исполнения музыкального произведения."},
-            "транспонирование": {"description": "Перенос музыкального произведения в другую тональность."},
-            "вступление": {"description": "Начальная часть музыкального произведения, предшествующая основной теме."},
-            "вибрато": {"description": "Периодическое изменение высоты звука."},
-            "глиссандо": {"description": "Плавный переход между звуками."},
-            "легато": {"description": "Плавное, связное исполнение звуков."},
-            "акцент": {"description": "Выделение звука или аккорда более сильным звучанием."},
-            "альтерация": {"description": "Изменение ступеней лада путём повышения или понижения."},
-            "атака": {"description": "Начало звука или фразы, способ извлечения звука."},
-            "бас": {"description": "Нижний голос в многоголосной музыке, низкий регистр."},
-            "блюз": {"description": "Музыкальный стиль, характеризующийся определённой гармонией и ритмом."},
-            "гитара": {"description": "Струнный щипковый музыкальный инструмент."},
-            "динамика": {"description": "Сила звучания, громкость музыкального исполнения."},
-            "диез": {"description": "Знак повышения звука на полтона."},
-            "бемоль": {"description": "Знак понижения звука на полтона."},
-        }
-        for name, data in test_terms.items():
-            self.all_terms[name] = data
-
-    def _scan_module_recursive(self, module, module_path):
-        """Рекурсивно сканирует модули"""
-        try:
-            if hasattr(module, '__path__'):
-                for module_info in pkgutil.iter_modules(module.__path__, f"{module_path}."):
-                    try:
-                        sub_module = importlib.import_module(module_info.name)
-                        if hasattr(sub_module, '__path__'):
-                            self._scan_module_recursive(sub_module, module_info.name)
-                        else:
-                            self._load_term_module(sub_module)
-                    except Exception as e:
-                        logger.error(f"Ошибка импорта {module_info.name}: {e}")
-        except Exception as e:
-            logger.error(f"Ошибка сканирования {module_path}: {e}")
-
-    def _load_term_module(self, module):
-        """Загружает термины из модуля"""
-        try:
-            if hasattr(module, 'TERMS'):
-                terms = module.TERMS
-                if isinstance(terms, dict):
-                    for term_name, term_data in terms.items():
-                        if hasattr(term_data, 'to_dict'):
-                            self.all_terms[term_name] = term_data.to_dict()
-                        else:
-                            self.all_terms[term_name] = term_data
-                logger.debug(f"Загружено {len(terms)} терминов из {module.__name__}")
-        except Exception as e:
-            logger.error(f"Ошибка загрузки модуля {module.__name__}: {e}")
+        logger.info(f"✅ Всего загружено {len(self.all_terms)} терминов, букв: {len(self.terms_by_letter)}")
 
     def _get_first_letter(self, term_name):
         """Возвращает первую букву термина для группировки"""
@@ -813,10 +797,12 @@ class DictionaryScreen(BaseScreen):
         for term_name, term_data in self.all_terms.items():
             term_lower = term_name.lower()
 
+            # Точное совпадение
             if term_lower == query_lower:
                 results.append(term_name)
                 continue
 
+            # Совпадение с фразой
             for phrase in query_phrases:
                 if phrase == term_lower:
                     results.append(term_name)
@@ -825,22 +811,14 @@ class DictionaryScreen(BaseScreen):
                     results.append(term_name)
                     break
 
+            # Поиск по описанию
             description = term_data.get('description', '').lower()
             for word in query_words:
                 if word in description:
                     results.append(term_name)
                     break
 
-            synonyms = term_data.get('synonyms', [])
-            for syn in synonyms:
-                syn_lower = syn.lower()
-                for word in query_words:
-                    if word in syn_lower:
-                        results.append(term_name)
-                        break
-                if term_name in results:
-                    break
-
+        # Убираем дубликаты
         seen = set()
         unique_results = []
         for r in results:

@@ -135,32 +135,6 @@ class TermDetailScreen(BaseScreen):
         )
         content.add_widget(self.term_description_label)
 
-        # Синонимы (если есть)
-        self.synonyms_label = MDLabel(
-            text="",
-            font_size=sp(15),
-            halign="left",
-            valign="top",
-            size_hint_y=None,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            line_height=1.5
-        )
-        content.add_widget(self.synonyms_label)
-
-        # Примеры (если есть)
-        self.examples_label = MDLabel(
-            text="",
-            font_size=sp(15),
-            halign="left",
-            valign="top",
-            size_hint_y=None,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            line_height=1.5
-        )
-        content.add_widget(self.examples_label)
-
         scroll.add_widget(content)
         main_layout.add_widget(scroll)
 
@@ -186,28 +160,6 @@ class TermDetailScreen(BaseScreen):
         # Вычисляем высоту для описания
         lines = len(description) // 30 + 1
         self.term_description_label.height = max(dp(40), lines * dp(28))
-
-        # Синонимы
-        synonyms = term_data.get('synonyms', [])
-        if synonyms:
-            self.synonyms_label.text = "🔗 Синонимы: " + ", ".join(synonyms)
-            self.synonyms_label.height = dp(30)
-            self.synonyms_label.opacity = 1
-        else:
-            self.synonyms_label.text = ""
-            self.synonyms_label.height = dp(4)
-            self.synonyms_label.opacity = 0
-
-        # Примеры
-        examples = term_data.get('examples', [])
-        if examples:
-            self.examples_label.text = "🎯 Примеры: " + ", ".join(examples)
-            self.examples_label.height = dp(30)
-            self.examples_label.opacity = 1
-        else:
-            self.examples_label.text = ""
-            self.examples_label.height = dp(4)
-            self.examples_label.opacity = 0
 
         # Обновляем TopNav
         self._update_top_nav(term_name)
