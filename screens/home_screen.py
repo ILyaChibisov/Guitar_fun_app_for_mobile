@@ -39,6 +39,7 @@ class HomeScreen(BaseScreen):
         self.section_carousel = None
         self.welcome_line1 = None
         self.welcome_line2 = None
+        self.welcome_container = None
 
         self.init_ui()
         Clock.schedule_once(self._check_auth, 0.5)
@@ -63,8 +64,8 @@ class HomeScreen(BaseScreen):
         )
         main_layout.add_widget(self.section_carousel)
 
-        # Приветствие под карточками
-        welcome_container = MDBoxLayout(
+        # Приветствие под карточками (будет скрыто через 1 секунду)
+        self.welcome_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
             height=dp(80),
@@ -97,9 +98,9 @@ class HomeScreen(BaseScreen):
             bold=True
         )
 
-        welcome_container.add_widget(self.welcome_line1)
-        welcome_container.add_widget(self.welcome_line2)
-        main_layout.add_widget(welcome_container)
+        self.welcome_container.add_widget(self.welcome_line1)
+        self.welcome_container.add_widget(self.welcome_line2)
+        main_layout.add_widget(self.welcome_container)
 
         # Растягивающийся виджет
         main_layout.add_widget(Widget(size_hint_y=1))
@@ -118,12 +119,31 @@ class HomeScreen(BaseScreen):
                 logger.warning(f"Экран {screen_name} не найден")
 
     def _update_welcome(self, username):
-        """Обновляет приветствие с именем пользователя"""
+        """Обновляет приветствие с именем пользователя и показывает его на 1 секунду"""
         if self.welcome_line1:
             self.welcome_line1.text = "Добро пожаловать,"
         if self.welcome_line2:
             self.welcome_line2.text = username
+
+        # Показываем приветствие
+        if self.welcome_container:
+            self.welcome_container.opacity = 1
+            self.welcome_container.height = dp(80)
+
+        # Через 1 секунду скрываем
+        Clock.schedule_once(self._hide_welcome, 1.0)
+
         logger.info(f"Приветствие обновлено для: {username}")
+
+    def _hide_welcome(self, dt):
+        """Скрывает приветствие с анимацией"""
+        if self.welcome_container:
+            # Анимируем исчезновение
+            anim = Animation(opacity=0, duration=0.5)
+            anim.start(self.welcome_container)
+            # Уменьшаем высоту после анимации
+            Clock.schedule_once(lambda x: setattr(self.welcome_container, 'height', dp(0)), 0.5)
+            logger.info("Приветствие скрыто")
 
     def _check_auth(self, dt):
         """Проверяет авторизацию"""

@@ -1,7 +1,6 @@
 # screens/components/section_carousel.py
 """
-Карусель разделов с пагинацией по 3 карточки
-Плавный скролл с привязкой к карточкам
+Карусель разделов с горизонтальным скроллом
 """
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
@@ -26,12 +25,9 @@ logger = get_logger('UI')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -137,129 +133,15 @@ class SectionCard(CircularRippleBehavior, MDCard):
             self.on_click_callback(self.section_id)
 
 
-class SectionCardsContainer(MDBoxLayout):
+class SectionCarousel(MDBoxLayout):
     """
-    Контейнер с карточками разделов для пагинации с шагом 1 карточка
+    Карусель разделов с горизонтальным скроллом
     """
 
-    CARDS_PER_PAGE = 3
     CARD_WIDTH = dp(100)
     CARD_HEIGHT = dp(120)
     CARD_SPACING = dp(12)
-
-    def __init__(self, screen_manager, on_section_selected=None, **kwargs):
-        super().__init__(**kwargs)
-        self.sm = screen_manager
-        self.on_section_selected = on_section_selected
-
-        self.orientation = 'horizontal'
-        self.size_hint = (None, None)
-        self.spacing = self.CARD_SPACING
-        self.padding = [0, dp(4), 0, dp(4)]
-
-        # Все карточки
-        self.all_cards = []
-        self.current_start_index = 0
-        self.total_cards = 0
-
-        # Вычисляем фиксированную ширину для 3 карточек
-        self.fixed_width = self.CARDS_PER_PAGE * self.CARD_WIDTH + (self.CARDS_PER_PAGE - 1) * self.CARD_SPACING
-        self.width = self.fixed_width
-        self.height = self.CARD_HEIGHT + dp(8)
-
-        self._create_sections()
-
-        logger.info(f'SectionCardsContainer создан, ширина={self.fixed_width}dp')
-
-    def _create_sections(self):
-        sections = [
-            ('songs', 'Песни', 'songs_png'),
-            ('chords', 'Аккорды', 'chords_png'),
-            ('tuner', 'Тюнер', 'tuner_png'),
-            ('dictionary', 'Словарь', 'dictionary_png'),
-            ('favorites', 'Избранное', 'favorites_png'),
-        ]
-
-        for section_id, title, icon_asset in sections:
-            card = SectionCard(
-                section_id=section_id,
-                title=title,
-                icon_asset=icon_asset,
-                on_click=self._on_card_click
-            )
-            self.all_cards.append(card)
-
-        self.total_cards = len(self.all_cards)
-        self.current_start_index = 0
-        self._update_display(animated=False)
-
-    def _update_display(self, animated=True):
-        self.clear_widgets()
-
-        end_index = min(self.current_start_index + self.CARDS_PER_PAGE, self.total_cards)
-
-        for i in range(self.current_start_index, end_index):
-            self.add_widget(self.all_cards[i])
-
-        visible_count = end_index - self.current_start_index
-        for i in range(visible_count, self.CARDS_PER_PAGE):
-            spacer = MDBoxLayout(
-                size_hint=(None, None),
-                width=self.CARD_WIDTH,
-                height=self.CARD_HEIGHT,
-                md_bg_color=[0, 0, 0, 0]
-            )
-            self.add_widget(spacer)
-
-        logger.info(f"📏 Показаны карточки {self.current_start_index}-{end_index - 1} из {self.total_cards}")
-
-    def _on_card_click(self, section_id):
-        logger.info(f'Выбран раздел: {section_id}')
-
-        screen_map = {
-            'songs': 'songs',
-            'chords': 'chords',
-            'tuner': 'tuner',
-            'dictionary': 'dictionary',
-            'favorites': 'favorites',
-        }
-
-        screen_name = screen_map.get(section_id)
-
-        if self.on_section_selected:
-            self.on_section_selected(screen_name)
-        elif self.sm and screen_name:
-            if self.sm.has_screen(screen_name):
-                self.sm.current = screen_name
-
-    def next_page(self):
-        if self.current_start_index + self.CARDS_PER_PAGE < self.total_cards:
-            self.current_start_index += 1
-            self._update_display(animated=True)
-            return True
-        return False
-
-    def prev_page(self):
-        if self.current_start_index > 0:
-            self.current_start_index -= 1
-            self._update_display(animated=True)
-            return True
-        return False
-
-    def has_next(self):
-        return self.current_start_index + self.CARDS_PER_PAGE < self.total_cards
-
-    def has_prev(self):
-        return self.current_start_index > 0
-
-    def get_current_start(self):
-        return self.current_start_index
-
-
-class SectionCarousel(MDBoxLayout):
-    """
-    Карусель разделов с плавным скроллом
-    """
+    LEFT_PADDING = dp(8)
 
     def __init__(self, screen_manager, on_section_selected=None, **kwargs):
         super().__init__(**kwargs)
@@ -272,17 +154,15 @@ class SectionCarousel(MDBoxLayout):
         self.spacing = dp(4)
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
 
-        self.cards_container = None
-        self._snap_timer = None
-        self._is_snapping = False
+        self.cards_scroll = None
+        self.cards_box = None
 
         self._build_ui()
-        self._setup_scroll()
 
         logger.info('SectionCarousel создан')
 
     def _build_ui(self):
-        """Строит UI"""
+        """Строит UI с горизонтальным ScrollView"""
 
         # ============ ЗАГОЛОВОК ============
         self.header = MDBoxLayout(
@@ -308,86 +188,83 @@ class SectionCarousel(MDBoxLayout):
         self.header.add_widget(self.title_label)
         self.add_widget(self.header)
 
-        # ============ КАРТОЧКИ ============
-        self.cards_wrapper = MDBoxLayout(
-            orientation='horizontal',
+        # ============ ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ ============
+        self.cards_scroll = ScrollView(
             size_hint=(1, None),
             height=dp(140),
-            md_bg_color=[0, 0, 0, 0],
-            padding=[0, dp(4), 0, dp(4)]
+            bar_width=0,
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0],
+            scroll_type=['content'],
+            effect_cls='ScrollEffect',
+            do_scroll_x=True,
+            do_scroll_y=False,
+            always_overscroll=False,
         )
 
-        # Контейнер с фиксированной шириной для 3 карточек
-        self.cards_container = SectionCardsContainer(
-            screen_manager=self.sm,
-            on_section_selected=self.on_section_selected
+        # Контейнер с карточками
+        self.cards_box = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            height=dp(128),
+            spacing=self.CARD_SPACING,
+            padding=[self.LEFT_PADDING, dp(4), 0, dp(4)],
+            md_bg_color=[0, 0, 0, 0]
         )
 
-        # Пустые места для центрирования
-        self.left_spacer = Widget(size_hint_x=1)
-        self.right_spacer = Widget(size_hint_x=1)
+        # Создаем карточки
+        sections = [
+            ('songs', 'Песни', 'songs_png'),
+            ('chords', 'Аккорды', 'chords_png'),
+            ('tuner', 'Тюнер', 'tuner_png'),
+            ('dictionary', 'Словарь', 'dictionary_png'),
+            ('favorites', 'Избранное', 'favorites_png'),
+        ]
 
-        self.cards_wrapper.add_widget(self.left_spacer)
-        self.cards_wrapper.add_widget(self.cards_container)
-        self.cards_wrapper.add_widget(self.right_spacer)
+        for section_id, title, icon_asset in sections:
+            card = SectionCard(
+                section_id=section_id,
+                title=title,
+                icon_asset=icon_asset,
+                on_click=self._on_card_click
+            )
+            self.cards_box.add_widget(card)
 
-        self.add_widget(self.cards_wrapper)
+        # Рассчитываем ширину контейнера
+        total_cards = len(sections)
+        cards_width = (
+            total_cards * self.CARD_WIDTH
+            + (total_cards - 1) * self.CARD_SPACING
+            + self.LEFT_PADDING
+        )
+        self.cards_box.width = cards_width
 
-        # Обновляем состояние
-        Clock.schedule_once(self._update_state, 0.3)
+        logger.info(f'📏 Ширина cards_box: {cards_width}dp, карточек: {total_cards}')
 
-    def _setup_scroll(self):
-        """Настраивает обработку скролла"""
-        self.bind(size=self._on_size)
+        self.cards_scroll.add_widget(self.cards_box)
+        self.add_widget(self.cards_scroll)
 
-    def _on_size(self, *args):
-        """Обновляет при изменении размера"""
-        Clock.schedule_once(self._update_state, 0.1)
+    def _on_card_click(self, section_id):
+        """Обработчик клика по карточке"""
+        logger.info(f'Выбран раздел: {section_id}')
 
-    def _update_state(self, *args):
-        """Обновляет состояние"""
-        if self.cards_container:
-            self._update_arrows()
+        screen_map = {
+            'songs': 'songs',
+            'chords': 'chords',
+            'tuner': 'tuner',
+            'dictionary': 'dictionary',
+            'favorites': 'favorites',
+        }
 
-    def _on_scroll_stop(self, instance, touch=None):
-        """При остановке скролла - привязываем к ближайшей карточке"""
-        if not self.cards_container:
-            return
+        screen_name = screen_map.get(section_id)
 
-        if self._is_snapping:
-            return
-
-        if self._snap_timer:
-            self._snap_timer.cancel()
-            self._snap_timer = None
-
-        self._snap_timer = Clock.schedule_once(self._snap_to_nearest, 0.1)
-
-    def _snap_to_nearest(self, dt):
-        """Привязывает к ближайшей карточке"""
-        if not self.cards_container:
-            return
-
-        if self._is_snapping:
-            return
-
-        # Получаем текущий индекс
-        current_index = self.cards_container.get_current_start()
-        total_cards = self.cards_container.total_cards
-        cards_per_page = self.cards_container.CARDS_PER_PAGE
-
-        if total_cards <= cards_per_page:
-            self._snap_timer = None
-            return
-
-        # Проверяем, нужно ли привязаться
-        # Этот метод будет вызван извне при остановке скролла
-        self._snap_timer = None
-
-    def _update_arrows(self, *args):
-        """Обновляет состояние - заглушка для совместимости"""
-        pass
+        if self.on_section_selected:
+            self.on_section_selected(screen_name)
+        elif self.sm and screen_name:
+            if self.sm.has_screen(screen_name):
+                self.sm.current = screen_name
 
     def on_size(self, *args):
-        """Обновляет при изменении размера"""
-        Clock.schedule_once(self._update_state, 0.1)
+        """При изменении размера обновляем скролл"""
+        if hasattr(self, 'cards_scroll') and self.cards_scroll:
+            self.cards_scroll._update_effect_bounds()
