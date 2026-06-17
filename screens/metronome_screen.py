@@ -1,7 +1,7 @@
 # screens/metronome_screen.py
 """
-Экран гитарного метронома с полным набором настроек
-Работает на Android через SDL2 Audio
+Экран гитарного метронома с иконками управления
+4 вертикальные шкалы + иконки-кнопки + индикаторы
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle
@@ -11,7 +11,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
 from kivy.animation import Animation
-from kivy.properties import NumericProperty
+from kivy.properties import NumericProperty, BooleanProperty
 from kivy.core.audio import SoundLoader
 from kivy.utils import platform
 from io import BytesIO
@@ -25,9 +25,10 @@ import random
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.button import MDIconButton
 from kivymd.uix.slider import MDSlider
 from kivymd.uix.dialog import MDDialog
+from kivymd.uix.selectioncontrol import MDCheckbox
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -61,7 +62,6 @@ def get_temp_path():
 
 # ============ ГЕНЕРАТОРЫ ЗВУКА ============
 def generate_click_sound(frequency=1200, duration=0.05, sample_rate=44100, volume=0.8, waveform='sine'):
-    """Генерирует звук с разными формами волны"""
     num_samples = int(sample_rate * duration)
 
     audio_data = array.array('h')
@@ -114,7 +114,6 @@ def generate_click_sound(frequency=1200, duration=0.05, sample_rate=44100, volum
 
 
 def generate_accent_sound(frequency=1800, duration=0.08, sample_rate=44100, volume=1.0, waveform='sine'):
-    """Генерирует акцентный звук с разными формами волны"""
     num_samples = int(sample_rate * duration)
 
     audio_data = array.array('h')
@@ -167,7 +166,6 @@ def generate_accent_sound(frequency=1800, duration=0.08, sample_rate=44100, volu
 
 
 def generate_subdivision_sound(frequency=800, duration=0.03, sample_rate=44100, volume=0.5, waveform='sine'):
-    """Генерирует звук для деления длительностей"""
     num_samples = int(sample_rate * duration)
 
     audio_data = array.array('h')
@@ -219,7 +217,6 @@ def generate_subdivision_sound(frequency=800, duration=0.03, sample_rate=44100, 
     return sound
 
 
-# ============ РЕАЛИСТИЧНЫЙ МЕХАНИЧЕСКИЙ ЗВУК ============
 def generate_mechanical_click(is_accent=False, sample_rate=44100, volume=0.8):
     """Генерирует реалистичный звук механического метронома"""
     if is_accent:
@@ -324,24 +321,24 @@ class VerticalSlider(MDBoxLayout):
 
         self.orientation = 'vertical'
         self.size_hint = (None, None)
-        self.width = dp(80)
+        self.width = dp(70)
         self.height = dp(280)
-        self.spacing = dp(8)
-        self.padding = [dp(8), dp(8), dp(8), dp(8)]
+        self.spacing = dp(4)
+        self.padding = [dp(4), dp(4), dp(4), dp(4)]
 
         slider_container = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(20), dp(8), dp(20), dp(8)]
+            padding=[dp(16), dp(6), dp(16), dp(6)]
         )
 
         self.value_label = MDLabel(
             text=str(int(initial)),
-            font_size=sp(24),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(40),
+            height=dp(34),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True
@@ -353,7 +350,7 @@ class VerticalSlider(MDBoxLayout):
             value=initial,
             step=step,
             size_hint=(None, 1),
-            width=dp(20),
+            width=dp(18),
             orientation='vertical',
             pos_hint={'center_x': 0.5},
             hint=False
@@ -367,13 +364,25 @@ class VerticalSlider(MDBoxLayout):
 
         self.slider.bind(value=self._on_value_change)
 
-        self.label = MDLabel(
-            text=label_text,
-            font_size=sp(11),
+        self.value_below = MDLabel(
+            text=str(int(initial)),
+            font_size=sp(16),
             halign="center",
             valign="middle",
             size_hint_y=None,
             height=dp(24),
+            theme_text_color="Custom",
+            text_color=[0.46, 0.70, 0.71, 1],
+            bold=True
+        )
+
+        self.label = MDLabel(
+            text=label_text,
+            font_size=sp(10),
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=dp(20),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.6]
         )
@@ -382,6 +391,7 @@ class VerticalSlider(MDBoxLayout):
         slider_container.add_widget(self.slider)
 
         self.add_widget(slider_container)
+        self.add_widget(self.value_below)
         self.add_widget(self.label)
 
     def _on_value_change(self, instance, value):
@@ -391,157 +401,38 @@ class VerticalSlider(MDBoxLayout):
             return
         self.value = rounded
         self.value_label.text = str(int(rounded))
+        self.value_below.text = str(int(rounded))
 
     def get_value(self):
         return self.value
 
 
-# ============ ГОРИЗОНТАЛЬНЫЙ СЛАЙДЕР ============
-class HorizontalSlider(MDBoxLayout):
-    value = NumericProperty(50)
-    min_value = NumericProperty(0)
-    max_value = NumericProperty(100)
-    step = NumericProperty(1)
+# ============ ИКОНКА-КНОПКА ============
+class IconActionButton(MDIconButton):
+    """Кнопка-иконка как в song_detail_screen.py"""
 
-    def __init__(self, label_text="", min_value=0, max_value=100, initial=50, step=1, **kwargs):
+    def __init__(self, icon_name, on_press_callback=None, icon_color=None, **kwargs):
         super().__init__(**kwargs)
-        self.label_text = label_text
-        self.min_value = min_value
-        self.max_value = max_value
-        self.step = step
-
-        self.orientation = 'horizontal'
+        self.on_press_callback = on_press_callback
         self.size_hint = (1, None)
-        self.height = dp(40)
-        self.spacing = dp(12)
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
-
-        self.label = MDLabel(
-            text=label_text,
-            font_size=sp(12),
-            halign="left",
-            valign="middle",
-            size_hint_x=None,
-            width=dp(60),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8]
-        )
-
-        self.value_label = MDLabel(
-            text=str(initial),
-            font_size=sp(12),
-            halign="center",
-            valign="middle",
-            size_hint_x=None,
-            width=dp(36),
-            theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 1],
-            bold=True
-        )
-
-        self.slider = MDSlider(
-            min=min_value,
-            max=max_value,
-            value=initial,
-            step=step,
-            size_hint_x=1,
-            height=dp(20),
-            hint=False
-        )
-
-        bi_color = [0.46, 0.70, 0.71, 1]
-        self.slider.thumb_color_active = bi_color
-        self.slider.thumb_color_inactive = bi_color
-        self.slider.track_color_active = [0.46, 0.70, 0.71, 0.6]
-        self.slider.track_color_inactive = [1, 1, 1, 0.2]
-
-        self.slider.bind(value=self._on_slider_change)
-
-        self.add_widget(self.label)
-        self.add_widget(self.slider)
-        self.add_widget(self.value_label)
-
-        self.value = initial
-
-    def _on_slider_change(self, instance, value):
-        rounded = round(value / self.step) * self.step
-        if rounded != value:
-            self.slider.value = rounded
-            return
-        self.value = rounded
-        self.value_label.text = str(int(rounded))
-        self.on_value(self, self.value)
-
-    def get_value(self):
-        return self.value
-
-    def on_value(self, instance, value):
-        """Событие изменения значения - переопределяется в потомках"""
-        pass
-
-
-# ============ КАСТОМНЫЙ ПЕРЕКЛЮЧАТЕЛЬ ============
-class CustomSwitch(MDBoxLayout):
-    active = NumericProperty(0)
-
-    def __init__(self, active=True, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'horizontal'
-        self.size_hint = (None, None)
-        self.size = (dp(50), dp(30))
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
-        self.spacing = dp(0)
-
-        self.bg = MDCard(
-            size_hint=(1, 1),
-            radius=[dp(15)] * 4,
-            md_bg_color=[0.3, 0.3, 0.3, 0.6],
-            elevation=0
-        )
-
-        self.thumb = MDCard(
-            size_hint=(None, None),
-            size=(dp(24), dp(24)),
-            radius=[dp(12)] * 4,
-            md_bg_color=[0.8, 0.8, 0.8, 0.9],
-            elevation=1,
-            pos_hint={'center_y': 0.5},
-            x=dp(2)
-        )
-
-        self.bg.add_widget(self.thumb)
-        self.add_widget(self.bg)
-
-        self.active = 1 if active else 0
-        self._update_state()
-
-        self.bg.bind(on_release=self.toggle)
-
-    def toggle(self, instance=None):
-        self.active = 1 - self.active
-        self._update_state()
-        self.on_active(self, self.active)
-
-    def _update_state(self):
-        if self.active:
-            self.bg.md_bg_color = [0.46, 0.70, 0.71, 0.8]
-            self.thumb.md_bg_color = [0.46, 0.70, 0.71, 1]
-            anim = Animation(x=dp(24), duration=0.15, t='out_quad')
-            anim.start(self.thumb)
+        self.height = dp(44)
+        self.theme_icon_color = "Custom"
+        if icon_color:
+            self.icon_color = icon_color
         else:
-            self.bg.md_bg_color = [0.3, 0.3, 0.3, 0.6]
-            self.thumb.md_bg_color = [0.8, 0.8, 0.8, 0.9]
-            anim = Animation(x=dp(2), duration=0.15, t='out_quad')
-            anim.start(self.thumb)
+            self.icon_color = [0.5, 0.5, 0.5, 0.9]
+        self.md_bg_color = [0, 0, 0, 0]
+        self.icon = icon_name
+        self.bind(on_release=self._on_press)
+        self.ripple_scale = 0
 
-    def on_active(self, instance, value):
-        """Событие изменения состояния - переопределяется в потомках"""
-        pass
+    def _on_press(self, instance):
+        if self.on_press_callback:
+            self.on_press_callback()
 
 
 # ============ ОСНОВНОЙ ЭКРАН МЕТРОНОМА ============
 class MetronomeScreen(BaseScreen):
-    # 5 ТЕМБРОВ: механический + 4 синтезированных
     SOUND_TONES = {
         'mechanical': {
             'name': '🔧 Механический',
@@ -592,10 +483,9 @@ class MetronomeScreen(BaseScreen):
         self.subdivision = 'none'
         self.sound_tone = 'mechanical'
         self.volume = 0.8
-        self.accent_volume = 1.0
         self.is_accent_enabled = True
-
         self.is_running = False
+
         self.tick_count = 0
         self.subdivision_count = 0
 
@@ -638,9 +528,9 @@ class MetronomeScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def load_sounds(self):
-        """Загружает звуки с учётом выбранного тембра"""
         try:
             tone = self.SOUND_TONES.get(self.sound_tone, self.SOUND_TONES['mechanical'])
+            accent_volume = 1.0 if self.is_accent_enabled else 0.0
 
             if self.sound_tone == 'mechanical':
                 self.click_sound = generate_mechanical_click(
@@ -649,7 +539,7 @@ class MetronomeScreen(BaseScreen):
                 )
                 self.accent_sound = generate_mechanical_click(
                     is_accent=True,
-                    volume=self.accent_volume
+                    volume=accent_volume
                 )
                 self.subdivision_sound = generate_mechanical_click(
                     is_accent=False,
@@ -664,7 +554,7 @@ class MetronomeScreen(BaseScreen):
                 )
                 self.accent_sound = generate_accent_sound(
                     frequency=tone['accent_freq'],
-                    volume=self.accent_volume,
+                    volume=accent_volume,
                     waveform=waveform
                 )
                 self.subdivision_sound = generate_subdivision_sound(
@@ -673,7 +563,8 @@ class MetronomeScreen(BaseScreen):
                     waveform=waveform
                 )
 
-            logger.info(f"✅ Все звуки метронома загружены (тембр: {tone['name']})")
+            logger.info(
+                f"✅ Звуки загружены (тембр: {tone['name']}, акцент: {'ВКЛ' if self.is_accent_enabled else 'ВЫКЛ'})")
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки звуков: {e}")
 
@@ -685,18 +576,25 @@ class MetronomeScreen(BaseScreen):
             adaptive_height=True
         )
 
-        # ============ BPM и РАЗМЕР ============
+        # ============ КАРТОЧКА С 4 ШКАЛАМИ + ИНФОРМАЦИЯ ============
         settings_card = MDCard(
-            orientation='horizontal',
+            orientation='vertical',
             size_hint=(1, None),
-            height=dp(300),
-            padding=[dp(8), dp(4), dp(8), dp(4)],
+            height=dp(340),
+            padding=[dp(4), dp(4), dp(4), dp(4)],
             radius=[dp(16), dp(16), dp(16), dp(16)],
             md_bg_color=[0, 0, 0, 0.1],
             elevation=0,
             line_color=[1, 1, 1, 0.05],
-            line_width=1,
-            spacing=dp(4)
+            line_width=1
+        )
+
+        # Верхняя часть - шкалы
+        sliders_layout = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(310),
+            spacing=dp(2)
         )
 
         self.bpm_slider = VerticalSlider(
@@ -727,118 +625,108 @@ class MetronomeScreen(BaseScreen):
         self.subdivision_slider.bind(value=self._on_subdivision_change)
         self._update_subdivision_label(0)
 
-        settings_card.add_widget(Widget(size_hint_x=0.2))
-        settings_card.add_widget(self.bpm_slider)
-        settings_card.add_widget(Widget(size_hint_x=0.1))
-        settings_card.add_widget(self.beat_slider)
-        settings_card.add_widget(Widget(size_hint_x=0.1))
-        settings_card.add_widget(self.subdivision_slider)
-        settings_card.add_widget(Widget(size_hint_x=0.2))
-
-        content.add_widget(settings_card)
-
-        # ============ ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ ============
-        extras_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(250),
-            padding=[dp(12), dp(8), dp(12), dp(8)],
-            radius=[dp(16), dp(16), dp(16), dp(16)],
-            md_bg_color=[0, 0, 0, 0.08],
-            elevation=0,
-            line_color=[1, 1, 1, 0.05],
-            line_width=1,
-            spacing=dp(4)
-        )
-
-        self.volume_slider = HorizontalSlider(
+        self.volume_slider = VerticalSlider(
             label_text="Громкость",
             min_value=0,
             max_value=100,
             initial=80,
             step=5
         )
-        self.volume_slider.on_value = self._on_volume_change
+        self.volume_slider.bind(value=self._on_volume_change)
 
-        self.accent_volume_slider = HorizontalSlider(
-            label_text="Акцент",
-            min_value=0,
-            max_value=100,
-            initial=100,
-            step=5
-        )
-        self.accent_volume_slider.on_value = self._on_accent_volume_change
+        sliders_layout.add_widget(Widget(size_hint_x=0.05))
+        sliders_layout.add_widget(self.bpm_slider)
+        sliders_layout.add_widget(Widget(size_hint_x=0.02))
+        sliders_layout.add_widget(self.beat_slider)
+        sliders_layout.add_widget(Widget(size_hint_x=0.02))
+        sliders_layout.add_widget(self.subdivision_slider)
+        sliders_layout.add_widget(Widget(size_hint_x=0.02))
+        sliders_layout.add_widget(self.volume_slider)
+        sliders_layout.add_widget(Widget(size_hint_x=0.05))
 
-        accent_row = MDBoxLayout(
+        settings_card.add_widget(sliders_layout)
+
+        # Нижняя часть - только информация о настройках (без статуса)
+        info_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(36),
-            spacing=dp(12),
-            padding=[dp(4), dp(2), dp(4), dp(2)]
+            height=dp(30),
+            padding=[dp(12), dp(2), dp(12), dp(2)],
+            spacing=dp(8)
         )
 
-        accent_label = MDLabel(
-            text="Акцент на сильную долю",
+        # Только настройки (по центру)
+        self.bpm_display = MDLabel(
+            text="120 BPM | 4/4 | Нет деления",
             font_size=sp(12),
-            halign="left",
+            halign="center",
             valign="middle",
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8],
+            text_color=[0.5, 0.5, 0.5, 0.6],
             size_hint_x=1
         )
 
-        self.accent_switch = CustomSwitch(active=True)
-        self.accent_switch.on_active = self._on_accent_toggle
+        info_row.add_widget(self.bpm_display)
 
-        accent_row.add_widget(accent_label)
-        accent_row.add_widget(self.accent_switch)
+        settings_card.add_widget(info_row)
 
-        # ВЫБОР ТЕМБРА
-        tone_row = MDBoxLayout(
+        content.add_widget(settings_card)
+
+        # ============ ИКОНКИ УПРАВЛЕНИЯ (ПЕРВЫЕ) ============
+        icons_card = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(40),
-            spacing=dp(12),
-            padding=[dp(4), dp(2), dp(4), dp(2)]
+            height=dp(52),
+            padding=[dp(8), dp(4), dp(8), dp(4)],
+            spacing=dp(6),
+            radius=[dp(16), dp(16), dp(16), dp(16)],
+            md_bg_color=[0, 0, 0, 0.08],
+            elevation=0,
+            line_color=[1, 1, 1, 0.05],
+            line_width=1
         )
 
-        tone_label = MDLabel(
-            text="Тембр",
-            font_size=sp(12),
-            halign="left",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8],
-            size_hint_x=None,
-            width=dp(60)
+        # 1. Play/Pause
+        self.play_btn = IconActionButton(
+            icon_name="play",
+            on_press_callback=self.toggle_metronome,
+            icon_color=[0.46, 0.70, 0.71, 1]
         )
 
-        current_tone = self.SOUND_TONES.get(self.sound_tone, self.SOUND_TONES['mechanical'])
-        self.tone_button = MDRaisedButton(
-            text=current_tone['name'],
-            size_hint=(1, 1),
-            md_bg_color=[0.3, 0.3, 0.3, 0.5],
-            text_color=[1, 1, 1, 0.9],
-            on_release=self.show_tone_dialog,
-            font_size=sp(11)
+        # 2. Сброс
+        self.reset_btn = IconActionButton(
+            icon_name="refresh",
+            on_press_callback=self.reset_metronome,
+            icon_color=[0.9, 0.7, 0.2, 0.9]
         )
 
-        tone_row.add_widget(tone_label)
-        tone_row.add_widget(self.tone_button)
+        # 3. Акцент
+        self.accent_btn = IconActionButton(
+            icon_name="music-note",
+            on_press_callback=self.toggle_accent,
+            icon_color=[0.46, 0.70, 0.71, 1]
+        )
 
-        extras_card.add_widget(self.volume_slider)
-        extras_card.add_widget(self.accent_volume_slider)
-        extras_card.add_widget(accent_row)
-        extras_card.add_widget(tone_row)
+        # 4. Тембр
+        self.tone_btn = IconActionButton(
+            icon_name="speaker",
+            on_press_callback=self.cycle_tone,
+            icon_color=[0.8, 0.4, 0.8, 1]
+        )
 
-        content.add_widget(extras_card)
+        icons_card.add_widget(self.play_btn)
+        icons_card.add_widget(self.reset_btn)
+        icons_card.add_widget(self.accent_btn)
+        icons_card.add_widget(self.tone_btn)
 
-        # ============ ВИЗУАЛЬНЫЙ ИНДИКАТОР ============
+        content.add_widget(icons_card)
+
+        # ============ ВИЗУАЛЬНЫЙ ИНДИКАТОР (КРУЖОЧКИ - ВТОРЫЕ) ============
         self.indicator_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(56),
-            padding=[dp(8), dp(4), dp(8), dp(4)],
+            height=dp(48),
+            padding=[dp(6), dp(4), dp(6), dp(4)],
             radius=[dp(12), dp(12), dp(12), dp(12)],
             md_bg_color=[0, 0, 0, 0.08],
             elevation=0,
@@ -849,16 +737,17 @@ class MetronomeScreen(BaseScreen):
         self.indicator_layout = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
-            spacing=dp(6),
+            spacing=dp(4),
             padding=[dp(4), dp(4), dp(4), dp(4)]
         )
 
+        # УМЕНЬШЕННЫЕ КРУЖОЧКИ (22dp вместо 24dp - ещё меньше)
         self.beat_indicators = []
         for i in range(12):
             indicator = MDCard(
                 size_hint=(None, None),
-                size=(dp(26), dp(26)),
-                radius=[dp(13)] * 4,
+                size=(dp(22), dp(22)),
+                radius=[dp(11)] * 4,
                 md_bg_color=[0.3, 0.3, 0.3, 0.5],
                 elevation=0
             )
@@ -871,91 +760,18 @@ class MetronomeScreen(BaseScreen):
         self.indicator_card.add_widget(self.indicator_layout)
         content.add_widget(self.indicator_card)
 
-        # ============ КНОПКИ УПРАВЛЕНИЯ ============
-        controls_card = MDCard(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(56),
-            padding=[dp(12), dp(4), dp(12), dp(4)],
-            radius=[dp(16), dp(16), dp(16), dp(16)],
-            md_bg_color=[0, 0, 0, 0.08],
-            elevation=0,
-            line_color=[1, 1, 1, 0.05],
-            line_width=1,
-            spacing=dp(12)
-        )
-
-        self.play_btn = MDRaisedButton(
-            text="▶ ВКЛ",
-            size_hint=(0.5, 1),
-            md_bg_color=[0.46, 0.70, 0.71, 1],
-            text_color=[1, 1, 1, 1],
-            on_release=self.toggle_metronome,
-            font_size=sp(16)
-        )
-
-        reset_btn = MDRaisedButton(
-            text="↺ Сброс",
-            size_hint=(0.5, 1),
-            md_bg_color=[0.3, 0.3, 0.3, 0.5],
-            text_color=[1, 1, 1, 0.8],
-            on_release=self.reset_metronome,
-            font_size=sp(14)
-        )
-
-        controls_card.add_widget(self.play_btn)
-        controls_card.add_widget(reset_btn)
-
-        content.add_widget(controls_card)
-
-        # ============ ИНФОРМАЦИЯ ============
-        info_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(56),
-            padding=[dp(12), dp(4), dp(12), dp(4)],
-            radius=[dp(12), dp(12), dp(12), dp(12)],
-            md_bg_color=[0, 0, 0, 0.06],
-            elevation=0,
-            line_color=[1, 1, 1, 0.05],
-            line_width=1
-        )
-
-        self.status_label = MDLabel(
-            text="⏸ Остановлен",
-            font_size=sp(14),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[0.7, 0.7, 0.7, 0.8],
-            size_hint_y=None,
-            height=dp(26)
-        )
-
-        self.bpm_display = MDLabel(
-            text="120 BPM | 4/4 | Нет деления",
-            font_size=sp(11),
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 0.6],
-            size_hint_y=None,
-            height=dp(20)
-        )
-
-        info_card.add_widget(self.status_label)
-        info_card.add_widget(self.bpm_display)
-
-        content.add_widget(info_card)
-
-        # Дополнительный отступ снизу
+        # ============ ОТСТУП СНИЗУ ============
         content.add_widget(Widget(size_hint_y=None, height=dp(16)))
 
         self.build_ui(content_widget=content, use_scroll=True)
         self._update_indicators(4)
+        self._update_accent_icon()
 
     def _update_subdivision_label(self, value):
         subdivision_names = ['Нет', '1/8', '1/8T', '1/16']
         if 0 <= int(value) <= 3:
             self.subdivision_slider.value_label.text = subdivision_names[int(value)]
+            self.subdivision_slider.value_below.text = subdivision_names[int(value)]
 
     def _on_bpm_change(self, instance, value):
         self.bpm = int(value)
@@ -979,63 +795,121 @@ class MetronomeScreen(BaseScreen):
         self.volume = float(value) / 100.0
         self.load_sounds()
 
-    def _on_accent_volume_change(self, instance, value):
-        self.accent_volume = float(value) / 100.0
+    # ============ УПРАВЛЕНИЕ ИКОНКАМИ ============
+
+    def toggle_accent(self):
+        self.is_accent_enabled = not self.is_accent_enabled
+        self._update_accent_icon()
         self.load_sounds()
+        if self.is_running:
+            self.stop_metronome()
+            self.start_metronome()
+        logger.info(f"🎵 Акцент: {'ВКЛ' if self.is_accent_enabled else 'ВЫКЛ'}")
 
-    def _on_accent_toggle(self, instance, value):
-        self.is_accent_enabled = bool(value)
+    def _update_accent_icon(self):
+        if self.is_accent_enabled:
+            self.accent_btn.icon = "music-note"
+            self.accent_btn.icon_color = [0.46, 0.70, 0.71, 1]
+        else:
+            self.accent_btn.icon = "music-note-off"
+            self.accent_btn.icon_color = [0.6, 0.6, 0.6, 0.5]
 
-    # ============ ВЫБОР ТЕМБРА ============
-    def show_tone_dialog(self, instance):
-        content = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(8),
-            padding=dp(16),
-            size_hint_y=None,
-            adaptive_height=True
-        )
+    def cycle_tone(self):
+        tone_ids = list(self.SOUND_TONES.keys())
+        current_index = tone_ids.index(self.sound_tone)
+        next_index = (current_index + 1) % len(tone_ids)
+        self.sound_tone = tone_ids[next_index]
 
-        for tone_id, tone_data in self.SOUND_TONES.items():
-            btn_text = tone_data['name']
-            if 'description' in tone_data:
-                btn_text += f"\n{tone_data['description']}"
-
-            btn = MDRaisedButton(
-                text=btn_text,
-                size_hint=(1, None),
-                height=dp(50),
-                md_bg_color=[0.46, 0.70, 0.71, 1] if tone_id == self.sound_tone else [0.2, 0.2, 0.2, 0.8],
-                text_color=[1, 1, 1, 1],
-                font_size=sp(12),
-                on_release=lambda x, tid=tone_id: self._select_tone(tid)
-            )
-            content.add_widget(btn)
-
-        dialog = MDDialog(
-            title="Выберите тембр звука",
-            type="custom",
-            content_cls=content,
-            buttons=[MDRaisedButton(text="Закрыть", on_release=lambda x: dialog.dismiss())]
-        )
-        dialog.open()
-        self.tone_dialog = dialog
-
-    def _select_tone(self, tone_id):
-        self.sound_tone = tone_id
-        tone_data = self.SOUND_TONES.get(tone_id, self.SOUND_TONES['mechanical'])
-        self.tone_button.text = tone_data['name']
-
-        if hasattr(self, 'tone_dialog'):
-            self.tone_dialog.dismiss()
+        colors = {
+            'mechanical': [0.8, 0.6, 0.2, 1],
+            'electronic': [0.46, 0.70, 0.71, 1],
+            'wood': [0.6, 0.4, 0.2, 1],
+            'click': [0.8, 0.8, 0.8, 1],
+            'beep': [0.9, 0.2, 0.9, 1],
+        }
+        self.tone_btn.icon_color = colors.get(self.sound_tone, [0.8, 0.4, 0.8, 1])
 
         self.load_sounds()
-
         if self.is_running:
             self.stop_metronome()
             self.start_metronome()
 
+        tone_data = self.SOUND_TONES.get(self.sound_tone, self.SOUND_TONES['mechanical'])
         logger.info(f"🎵 Выбран тембр: {tone_data['name']}")
+
+    def toggle_metronome(self):
+        if self.is_running:
+            self.stop_metronome()
+        else:
+            self.start_metronome()
+
+    def start_metronome(self):
+        if self.is_running:
+            return
+
+        if not self.click_sound or not self.accent_sound:
+            self.load_sounds()
+            if not self.click_sound or not self.accent_sound:
+                # Просто показываем ошибку в настройках
+                self.bpm_display.text = "❌ Ошибка звука"
+                return
+
+        self.is_running = True
+        self.tick_count = 0
+        self.subdivision_count = 0
+        self.play_btn.icon = "stop"
+        self.play_btn.icon_color = [0.8, 0.3, 0.3, 1]
+
+        interval = 60.0 / self.bpm
+        self._tick()
+        self.tick_event = Clock.schedule_interval(self._tick, interval)
+        logger.info(f"✅ Метроном запущен: {self.bpm} BPM, {self.beats_per_measure}/4")
+
+    def stop_metronome(self):
+        if self.tick_event:
+            self.tick_event.cancel()
+            self.tick_event = None
+
+        self.is_running = False
+        self.play_btn.icon = "play"
+        self.play_btn.icon_color = [0.46, 0.70, 0.71, 1]
+
+        self._update_beat_indicators()
+        self.tick_count = 0
+        self.subdivision_count = 0
+        logger.info("⏹ Метроном остановлен")
+
+    def reset_metronome(self):
+        if self.is_running:
+            self.stop_metronome()
+
+        self.tick_count = 0
+        self.subdivision_count = 0
+
+        self.bpm_slider.value = 120
+        self.beat_slider.value = 4
+        self.subdivision_slider.value = 0
+        self.volume_slider.value = 80
+
+        self.bpm = 120
+        self.beats_per_measure = 4
+        self.subdivision = 'none'
+        self.volume = 0.8
+
+        if not self.is_accent_enabled:
+            self.is_accent_enabled = True
+            self._update_accent_icon()
+            self.load_sounds()
+
+        self.sound_tone = 'mechanical'
+        self.tone_btn.icon_color = [0.8, 0.6, 0.2, 1]
+        self.load_sounds()
+
+        self._update_beat_indicators()
+        self._update_display()
+        self.bpm_display.text = "↺ Сброшено"
+        Clock.schedule_once(lambda dt: self._update_display(), 1)
+        logger.info("🔄 Метроном сброшен")
 
     def _update_display(self):
         subdivision_names = {
@@ -1044,7 +918,10 @@ class MetronomeScreen(BaseScreen):
             'triplet': 'Триоли',
             'sixteenth': 'Шестнадцатые',
         }
-        self.bpm_display.text = f"{self.bpm} BPM | {self.beats_per_measure}/4 | {subdivision_names.get(self.subdivision, 'Нет деления')}"
+        sub_text = subdivision_names.get(self.subdivision, 'Нет деления')
+        if len(sub_text) > 8:
+            sub_text = sub_text[:8] + '…'
+        self.bpm_display.text = f"{self.bpm} BPM | {self.beats_per_measure}/4 | {sub_text}"
 
     def _update_indicators(self, count):
         for i in range(12):
@@ -1071,68 +948,6 @@ class MetronomeScreen(BaseScreen):
 
         if beat_index < len(self.beat_indicators):
             self.beat_indicators[beat_index].md_bg_color = color
-
-    def toggle_metronome(self, instance=None):
-        if self.is_running:
-            self.stop_metronome()
-        else:
-            self.start_metronome()
-
-    def start_metronome(self):
-        if self.is_running:
-            return
-
-        if not self.click_sound or not self.accent_sound:
-            self.load_sounds()
-            if not self.click_sound or not self.accent_sound:
-                self.status_label.text = "❌ Ошибка звука"
-                return
-
-        self.is_running = True
-        self.tick_count = 0
-        self.subdivision_count = 0
-        self.play_btn.text = "⏹ СТОП"
-        self.play_btn.md_bg_color = [0.8, 0.3, 0.3, 1]
-        self.status_label.text = "▶ Работает"
-        self.status_label.text_color = [0.46, 0.70, 0.71, 1]
-
-        interval = 60.0 / self.bpm
-        self._tick()
-        self.tick_event = Clock.schedule_interval(self._tick, interval)
-        logger.info(f"✅ Метроном запущен: {self.bpm} BPM, {self.beats_per_measure}/4")
-
-    def stop_metronome(self):
-        if self.tick_event:
-            self.tick_event.cancel()
-            self.tick_event = None
-
-        self.is_running = False
-        self.play_btn.text = "▶ ВКЛ"
-        self.play_btn.md_bg_color = [0.46, 0.70, 0.71, 1]
-        self.status_label.text = "⏸ Остановлен"
-        self.status_label.text_color = [0.7, 0.7, 0.7, 0.8]
-
-        self._update_beat_indicators()
-        self.tick_count = 0
-        self.subdivision_count = 0
-        logger.info("⏹ Метроном остановлен")
-
-    def reset_metronome(self, instance=None):
-        if self.is_running:
-            self.stop_metronome()
-
-        self.tick_count = 0
-        self.subdivision_count = 0
-        self._update_beat_indicators()
-        self.bpm_slider.value = 120
-        self.beat_slider.value = 4
-        self.subdivision_slider.value = 0
-        self.bpm = 120
-        self.beats_per_measure = 4
-        self.subdivision = 'none'
-        self._update_display()
-        self.status_label.text = "↺ Сброшен"
-        Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', '⏸ Остановлен'), 1)
 
     def _tick(self, dt=None):
         if not self.is_running:
@@ -1164,20 +979,6 @@ class MetronomeScreen(BaseScreen):
                 anim.start(indicator)
 
             self.tick_count = (self.tick_count + 1) % self.beats_per_measure
-
-            if is_accent:
-                self.status_label.text = f"▶ {self.tick_count + 1}/{self.beats_per_measure} (акцент)"
-            else:
-                self.status_label.text = f"▶ {self.tick_count + 1}/{self.beats_per_measure}"
-
-        if self.subdivision == 'none':
-            self.subdivision_count = 0
-        elif self.subdivision == 'eighth':
-            self.subdivision_count = (self.subdivision_count + 1) % 2
-        elif self.subdivision == 'triplet':
-            self.subdivision_count = (self.subdivision_count + 1) % 3
-        elif self.subdivision == 'sixteenth':
-            self.subdivision_count = (self.subdivision_count + 1) % 4
 
     def on_enter(self):
         logger.info("Вход в экран метронома")

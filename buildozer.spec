@@ -17,7 +17,7 @@ version = 1.0.2
 version.code = 2
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ (добавляем только необходимое) ---
+# --- ЗАВИСИМОСТИ (УБИРАЕМ android ИЗ REQUIREMENTS) ---
 requirements = python3,\
     kivy==2.3.1,\
     kivymd==1.2.0,\
@@ -29,10 +29,9 @@ requirements = python3,\
     asynckivy,\
     asyncgui,\
     pyjnius,\
-    android,\
     ffmpeg
 
-# --- ПРАВА (добавляем для звука) ---
+# --- ПРАВА ---
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,MODIFY_AUDIO_SETTINGS
 android.api = 33
 android.minapi = 24
