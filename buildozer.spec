@@ -17,19 +17,8 @@ version = 1.0.2
 version.code = 2
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ (УБИРАЕМ android ИЗ REQUIREMENTS) ---
-requirements = python3,\
-    kivy==2.3.1,\
-    kivymd==1.2.0,\
-    requests,\
-    pillow,\
-    plyer,\
-    openssl,\
-    pyopenssl,\
-    asynckivy,\
-    asyncgui,\
-    pyjnius,\
-    ffmpeg
+# --- ЗАВИСИМОСТИ (ОДНА СТРОКА - БЕЗ \n) ---
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,pyjnius,ffmpeg
 
 # --- ПРАВА ---
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,MODIFY_AUDIO_SETTINGS
@@ -49,7 +38,9 @@ log_level = 2
 p4a.branch = develop
 android.gradle_repository_threads = 4
 android.ndk = 25b
-android.sdk = 33
+
+# --- УБИРАЕМ android.sdk (он устарел) ---
+# android.sdk = 33  <-- УДАЛИТЬ!
 
 # --- ПОДПИСЬ (РАСКОММЕНТИРУЙ ЕСЛИ ЕСТЬ КЛЮЧ) ---
 # android.keystore = guitarfuns_keystore.jks
