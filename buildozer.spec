@@ -17,7 +17,7 @@ version = 1.0.3
 version.code = 3
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ (УБИРАЕМ openssl И pyopenssl) ---
+# --- ЗАВИСИМОСТИ (УБИРАЕМ ffpyplayer) ---
 requirements = python3,\
     kivy==2.3.1,\
     kivymd==1.2.0,\
@@ -26,8 +26,7 @@ requirements = python3,\
     plyer,\
     asynckivy,\
     asyncgui,\
-    pyjnius,\
-    ffpyplayer
+    pyjnius
 
 # --- ПРАВА ---
 android.permissions = INTERNET,\
@@ -49,8 +48,8 @@ fullscreen = 0
 log_level = 2
 p4a.branch = develop
 
-# --- ОТКЛЮЧАЕМ libthorvg ---
-p4a.recipes = sdl2,python3,kivy,kivymd,requests,pillow,plyer,pyjnius,ffpyplayer
+# --- ОТКЛЮЧАЕМ libthorvg (она не нужна) ---
+p4a.recipes = sdl2,python3,kivy,kivymd,requests,pillow,plyer,pyjnius
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
 android.gradle_repository_threads = 4
