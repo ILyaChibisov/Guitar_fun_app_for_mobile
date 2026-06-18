@@ -17,25 +17,11 @@ version = 1.0.3
 version.code = 3
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ (УБИРАЕМ ffpyplayer - ОН ЛОМАЕТ СБОРКУ) ---
-requirements = python3,\
-    kivy==2.3.1,\
-    kivymd==1.2.0,\
-    requests,\
-    pillow,\
-    plyer,\
-    asynckivy,\
-    asyncgui,\
-    pyjnius
+# --- МИНИМАЛЬНЫЕ ЗАВИСИМОСТИ ---
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,pyjnius
 
 # --- ПРАВА ---
-android.permissions = INTERNET,\
-    ACCESS_NETWORK_STATE,\
-    ACCESS_WIFI_STATE,\
-    MODIFY_AUDIO_SETTINGS,\
-    WRITE_EXTERNAL_STORAGE,\
-    READ_EXTERNAL_STORAGE
-
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,MODIFY_AUDIO_SETTINGS
 android.api = 33
 android.minapi = 24
 android.enable_androidx = True
@@ -48,7 +34,7 @@ fullscreen = 0
 log_level = 2
 p4a.branch = develop
 
-# --- ОТКЛЮЧАЕМ libthorvg (она не нужна) ---
+# --- ОТКЛЮЧАЕМ libthorvg ---
 p4a.recipes = sdl2,python3,kivy,kivymd,requests,pillow,plyer,pyjnius
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
