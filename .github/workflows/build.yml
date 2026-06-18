@@ -107,15 +107,12 @@ jobs:
         run: |
           yes | buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Show full build result
+      - name: Show build result
         if: always()
         run: |
           echo "========================================="
           echo "=== CHECKING BUILD RESULT ==="
           echo "========================================="
-          echo ""
-          echo "=== CURRENT DIRECTORY ==="
-          pwd
           echo ""
           echo "=== CONTENT OF bin/ DIRECTORY ==="
           ls -la bin/ || echo "bin/ directory does not exist!"
@@ -144,7 +141,8 @@ jobs:
           echo "=== KIVY BUILD SPECIFIC ERRORS ==="
           echo "========================================="
           grep -A 20 -B 5 "Failed to build kivy" build.log || echo "No kivy build errors found"
-          grep -A 20 -B 5 "error: command" build.log || echo "No command errors found"
+          echo ""
+          echo "=== FATAL ERRORS ==="
           grep -A 10 -B 5 "fatal error:" build.log || echo "No fatal errors found"
 
       - name: Upload APK artifact
@@ -166,5 +164,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: errors-only-${{ github.run_number }}
-          run: |
-            grep -i -E "(error|failed|fatal|traceback)" build.log > errors.log || echo "No errors found" > errors.log
+          path: build.log
