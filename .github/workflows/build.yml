@@ -50,11 +50,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-android-ndk-
 
+      # 🔥 Добавляем очистку проблемного libthorvg
       - name: Clean problematic libthorvg
         run: |
           rm -rf ~/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/libthorvg* || true
           rm -rf .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/libthorvg* || true
-          rm -rf ~/.buildozer/android/platform/python-for-android || true
 
       - name: Install dependencies
         run: |
@@ -86,7 +86,7 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.37
 
-      - name: Build with Buildozer (APK only)
+      - name: Build with Buildozer
         run: |
           yes | buildozer -v android debug
 
