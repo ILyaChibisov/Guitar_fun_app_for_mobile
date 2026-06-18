@@ -304,7 +304,7 @@ def generate_mechanical_click(is_accent=False, sample_rate=44100, volume=0.8):
     return sound
 
 
-# ============ ВЕРТИКАЛЬНЫЙ СЛАЙДЕР ============
+# ============ ВЕРТИКАЛЬНЫЙ СЛАЙДЕР (ИСПРАВЛЕННЫЙ) ============
 class VerticalSlider(MDBoxLayout):
     value = NumericProperty(60)
     min_value = NumericProperty(30)
@@ -344,9 +344,10 @@ class VerticalSlider(MDBoxLayout):
             bold=True
         )
 
+        # 🔥 ИСПРАВЛЯЕМ СЛАЙДЕР - ДОБАВЛЯЕМ 0.01 К КРАЙНИМ ЗНАЧЕНИЯМ
         self.slider = MDSlider(
-            min=min_value,
-            max=max_value,
+            min=min_value - 0.01,
+            max=max_value + 0.01,
             value=initial,
             step=step,
             size_hint=(None, 1),
@@ -355,6 +356,7 @@ class VerticalSlider(MDBoxLayout):
             pos_hint={'center_x': 0.5},
             hint=False
         )
+        self.slider.ripple_scale = 0
 
         bi_color = [0.46, 0.70, 0.71, 1]
         self.slider.thumb_color_active = bi_color
@@ -395,6 +397,13 @@ class VerticalSlider(MDBoxLayout):
         self.add_widget(self.label)
 
     def _on_value_change(self, instance, value):
+        if value < self.min_value:
+            self.slider.value = self.min_value
+            return
+        elif value > self.max_value:
+            self.slider.value = self.max_value
+            return
+
         rounded = round(value / self.step) * self.step
         if rounded != value:
             self.slider.value = rounded
