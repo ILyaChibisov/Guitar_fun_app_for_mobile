@@ -96,24 +96,23 @@ jobs:
         run: |
           yes | buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Upload full build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log-${{ github.run_number }}
-          path: build.log
-
-      - name: Show last 100 lines of build log
+      - name: Show build result
         if: always()
         run: |
-          echo "=== LAST 100 LINES OF BUILD LOG ==="
-          tail -100 build.log || true
-
-      - name: Show errors from build log
-        if: always()
-        run: |
-          echo "=== ERRORS IN BUILD LOG ==="
-          grep -i -E "(error|failed|fatal|traceback|exception)" build.log || echo "No errors found"
+          echo "=== CHECKING BUILD RESULT ==="
+          echo "Current directory: $(pwd)"
+          echo ""
+          echo "=== CONTENT OF bin/ DIRECTORY ==="
+          ls -la bin/ || echo "bin/ directory does not exist!"
+          echo ""
+          echo "=== SEARCHING FOR APK FILES ==="
+          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found!"
+          echo ""
+          echo "=== SEARCHING FOR AAB FILES ==="
+          find . -name "*.aab" -type f 2>/dev/null || echo "No AAB files found!"
+          echo ""
+          echo "=== CHECKING BUILD LOG FOR APK CREATION ==="
+          grep -i "apk" build.log | tail -20 || echo "No APK mentioned in log"
 
       - name: Upload APK artifact
         if: success()
@@ -121,3 +120,10 @@ jobs:
         with:
           name: GuitarFuns-APK-${{ github.run_number }}
           path: bin/*.apk
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ github.run_number }}
+          path: build.log
