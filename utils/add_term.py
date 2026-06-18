@@ -1,33 +1,18 @@
-# utils/add_term.py
+# utils/add_term_gui.py
 """
-Интерактивный скрипт для добавления терминов в словарь
+GUI-приложение для добавления терминов в словарь
+Запуск: python -m utils.add_term_gui
 
-Запуск через PyCharm: просто нажмите Run (зелёная стрелка)
-Или через терминал: python -m utils.add_term
-
-Как работает:
-    1. Вы вводите название термина
-    2. Затем вводите описание (можно многострочное, для завершения введите пустую строку)
-    3. Скрипт автоматически определяет первую букву и язык (RU/EN)
-    4. Добавляет термин в соответствующий модуль
-    5. Если модуль не существует - создаёт его
-
-Пример:
-    Название: аккорд
-    Описание: Одновременное звучание трёх и более звуков...
-    (пустая строка для завершения)
-
-    Термин "аккорд" добавлен в dicts/ru/ru_01_a.py
+Никаких дополнительных библиотек не требуется (используется встроенный tkinter)
 """
 
-import os
+import tkinter as tk
+from tkinter import scrolledtext, messagebox, ttk
 import re
 from pathlib import Path
-from datetime import datetime
 
-# ============ НАСТРОЙКИ ============
+# ============ НАСТРОЙКИ (скопированы из add_term.py) ============
 
-# Русские буквы с индексами (для определения модуля)
 RU_LETTERS = {
     'а': '01', 'б': '02', 'в': '03', 'г': '04', 'д': '05',
     'е': '06', 'ё': '07', 'ж': '08', 'з': '09', 'и': '10',
@@ -38,7 +23,6 @@ RU_LETTERS = {
     'э': '31', 'ю': '32', 'я': '33'
 }
 
-# Английские буквы с индексами
 EN_LETTERS = {
     'a': '01', 'b': '02', 'c': '03', 'd': '04', 'e': '05',
     'f': '06', 'g': '07', 'h': '08', 'i': '09', 'j': '10',
@@ -47,7 +31,6 @@ EN_LETTERS = {
     'u': '21', 'v': '22', 'w': '23', 'x': '24', 'y': '25', 'z': '26'
 }
 
-# Имена файлов для букв (для генерации имени модуля)
 RU_FILE_NAMES = {
     'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
     'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i',
@@ -68,31 +51,27 @@ EN_FILE_NAMES = {
 
 
 def get_project_root():
-    """Находит корневую папку проекта"""
     current = Path(__file__).resolve()
     return current.parent.parent
 
 
+def clean_term_name(raw_name):
+    """Очищает название от эмодзи и лишних символов"""
+    cleaned = re.sub(r'^[🎼🎸📝🔹📌📊✅❌⚠️📁]+\s*', '', raw_name)
+    cleaned = ' '.join(cleaned.split())
+    return cleaned.strip()
+
+
 def detect_language_and_letter(term_name):
-    """
-    Определяет язык и первую букву термина
-    Возвращает: (language, letter, index, file_name)
-    """
+    """Определяет язык и первую букву термина"""
     if not term_name:
         return None, None, None, None
 
-    # Очищаем от лишних символов в начале
-    clean_name = term_name.lstrip('«»"\'')
-    if not clean_name:
-        return None, None, None, None
+    first_char = term_name[0].lower()
 
-    first_char = clean_name[0].lower()
-
-    # Проверяем русскую букву
     if first_char in RU_LETTERS:
         return 'ru', first_char, RU_LETTERS[first_char], RU_FILE_NAMES[first_char]
 
-    # Проверяем английскую букву
     if first_char in EN_LETTERS:
         return 'en', first_char, EN_LETTERS[first_char], EN_FILE_NAMES[first_char]
 
@@ -100,68 +79,22 @@ def detect_language_and_letter(term_name):
 
 
 def get_module_path(language, letter, index, file_name):
-    """Возвращает путь к модулю для буквы"""
     root = get_project_root()
-
     if language == 'ru':
         return root / 'dicts' / 'ru' / f'ru_{index}_{file_name}.py'
     else:
         return root / 'dicts' / 'en' / f'en_{index}_{file_name}.py'
 
 
-def read_term_from_user():
-    """Читает термин от пользователя"""
-    print("\n" + "=" * 60)
-    print("📝 ДОБАВЛЕНИЕ НОВОГО ТЕРМИНА")
-    print("=" * 60)
-
-    # Ввод названия
-    print("\nВведите название термина (или 'q' для выхода):")
-    name = input("> ").strip()
-
-    if name.lower() == 'q':
-        return None, None
-
-    if not name:
-        print("⚠️ Название не может быть пустым!")
-        return None, None
-
-    # Ввод описания
-    print(f"\nВведите описание для '{name}' (введите пустую строку для завершения):")
-    print("   (Поддерживаются переносы строк и пустые строки)")
-
-    lines = []
-    while True:
-        line = input()
-        if line == '' and len(lines) > 0:
-            break
-        lines.append(line)
-
-    description = '\n'.join(lines).strip()
-
-    if not description:
-        print("⚠️ Описание не может быть пустым!")
-        return None, None
-
-    return name, description
-
-
 def format_description_for_module(description):
-    """
-    Форматирует описание для вставки в модуль
-    Сохраняет все переносы строк
-    """
-    # Если описание содержит переносы строк - используем тройные кавычки
+    """Форматирует описание для вставки в модуль"""
     if '\n' in description:
-        # Убираем лишние пробелы в начале и конце
         desc_lines = description.split('\n')
-        # Убираем пустые строки в начале и конце
         while desc_lines and not desc_lines[0].strip():
             desc_lines.pop(0)
         while desc_lines and not desc_lines[-1].strip():
             desc_lines.pop()
 
-        # Если осталось больше одной строки - используем тройные кавычки
         if len(desc_lines) > 1:
             return '"""\n' + '\n'.join(desc_lines) + '\n"""'
         else:
@@ -170,62 +103,11 @@ def format_description_for_module(description):
         return f'"{description}"'
 
 
-def add_term_to_module(module_path, term_name, description):
-    """
-    Добавляет термин в модуль
-    Если модуль не существует - создаёт его
-    """
-    # Проверяем существование модуля
-    if not module_path.exists():
-        print(f"📁 Модуль не найден, создаю: {module_path.name}")
-        create_module(module_path)
-
-    # Читаем содержимое модуля
-    with open(module_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    # Проверяем, существует ли уже такой термин
-    if f'"{term_name}":' in content or f"'{term_name}':" in content:
-        print(f"⚠️ Термин '{term_name}' уже существует в этом модуле!")
-        return False
-
-    # Формируем запись для термина
-    formatted_desc = format_description_for_module(description)
-    term_entry = f'\n    "{term_name}": Term(\n        name="{term_name.capitalize()}",\n        description={formatted_desc}\n    ),'
-
-    # Находим место для вставки
-    # Ищем конец словаря TERMS
-    if 'TERMS = {' in content:
-        # Находим позицию после открывающей скобки
-        start_pos = content.find('TERMS = {') + len('TERMS = {')
-        # Ищем закрывающую скобку с конца
-        end_pos = content.rfind('}')
-
-        if start_pos > 0 and end_pos > start_pos:
-            # Вставляем перед закрывающей скобкой
-            new_content = (
-                    content[:end_pos] +
-                    term_entry +
-                    '\n' +
-                    content[end_pos:]
-            )
-
-            with open(module_path, 'w', encoding='utf-8') as f:
-                f.write(new_content)
-
-            return True
-
-    print("⚠️ Не удалось найти словарь TERMS в модуле!")
-    return False
-
-
 def create_module(module_path):
     """Создаёт новый модуль для буквы"""
     module_name = module_path.stem
 
-    # Определяем язык из имени файла
     if module_name.startswith('ru_'):
-        language = 'ru'
         letter_upper = module_name.split('_')[2].upper()
         if letter_upper == 'YO':
             letter_upper = 'Ё'
@@ -234,16 +116,13 @@ def create_module(module_path):
         elif letter_upper == 'SOFT':
             letter_upper = 'Ь'
         else:
-            # Пытаемся найти букву по имени файла
             for letter, file_name in RU_FILE_NAMES.items():
                 if file_name == module_name.split('_')[2]:
                     letter_upper = letter.upper()
                     break
     else:
-        language = 'en'
         letter_upper = module_name.split('_')[2].upper()
 
-    # Создаём содержимое модуля
     content = f'''# {module_path.relative_to(get_project_root())}
 """
 Термины на букву {letter_upper}
@@ -257,73 +136,343 @@ TERMS = {{
 
     with open(module_path, 'w', encoding='utf-8') as f:
         f.write(content)
-
     return True
 
 
-def main():
-    """Главная функция"""
-    print("\n" + "=" * 60)
-    print("🔧 ИНТЕРАКТИВНОЕ ДОБАВЛЕНИЕ ТЕРМИНОВ")
-    print("=" * 60)
-    print("\nИнструкция:")
-    print("  1. Введите название термина")
-    print("  2. Введите описание (можно многострочное)")
-    print("  3. Для завершения ввода описания введите пустую строку")
-    print("  4. Скрипт автоматически определит букву и язык")
-    print("  5. Термин будет добавлен в нужный модуль")
-    print("\nДля выхода введите 'q' в поле названия")
-    print("=" * 60)
+def add_term_to_module(module_path, term_name, description):
+    """Добавляет термин в модуль"""
+    if not module_path.exists():
+        create_module(module_path)
 
-    added_count = 0
+    with open(module_path, 'r', encoding='utf-8') as f:
+        content = f.read()
 
-    while True:
-        # Читаем термин от пользователя
-        name, description = read_term_from_user()
+    if f'"{term_name}":' in content or f"'{term_name}':" in content:
+        return False, "Термин уже существует!"
 
-        if name is None and description is None:
-            break
+    formatted_desc = format_description_for_module(description)
+    term_entry = f'\n    "{term_name}": Term(\n        name="{term_name.capitalize()}",\n        description={formatted_desc}\n    ),'
 
-        if not name or not description:
-            continue
+    if 'TERMS = {' in content:
+        start_pos = content.find('TERMS = {') + len('TERMS = {')
+        end_pos = content.rfind('}')
+
+        if start_pos > 0 and end_pos > start_pos:
+            new_content = (
+                content[:end_pos] +
+                term_entry +
+                '\n' +
+                content[end_pos:]
+            )
+
+            with open(module_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            return True, "Термин успешно добавлен!"
+
+    return False, "Не удалось найти словарь TERMS!"
+
+
+class TermAdderApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Добавление терминов в словарь 🎸")
+        self.root.geometry("950x750")
+        self.root.resizable(True, True)
+
+        # Настройка стиля
+        style = ttk.Style()
+        style.theme_use('clam')
+
+        # Главный контейнер с отступами
+        main_frame = ttk.Frame(root, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Заголовок
+        title_label = ttk.Label(
+            main_frame,
+            text="🎼 ДОБАВЛЕНИЕ ТЕРМИНА В СЛОВАРЬ",
+            font=('Arial', 16, 'bold')
+        )
+        title_label.pack(pady=(0, 20))
+
+        # Информационная панель
+        info_frame = ttk.LabelFrame(main_frame, text="📋 Информация", padding="10")
+        info_frame.pack(fill=tk.X, pady=(0, 15))
+
+        self.info_label = ttk.Label(
+            info_frame,
+            text="Вставьте название и описание термина, затем нажмите 'Добавить'",
+            font=('Arial', 10)
+        )
+        self.info_label.pack(anchor=tk.W)
+
+        # Поле для названия
+        name_frame = ttk.LabelFrame(main_frame, text="📝 Название термина", padding="10")
+        name_frame.pack(fill=tk.X, pady=(0, 15))
+
+        # Верхняя панель с полем и кнопкой вставки
+        name_top_frame = ttk.Frame(name_frame)
+        name_top_frame.pack(fill=tk.X)
+
+        self.name_text = tk.Text(name_top_frame, height=2, font=('Arial', 11), wrap=tk.WORD)
+        self.name_text.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # Кнопка вставки для названия
+        name_paste_btn = ttk.Button(
+            name_top_frame,
+            text="📋 Вставить",
+            command=lambda: self.paste_to_widget(self.name_text),
+            width=10
+        )
+        name_paste_btn.pack(side=tk.RIGHT, padx=(10, 0))
+
+        # Подсказка для названия
+        name_hint = ttk.Label(
+            name_frame,
+            text="💡 Вставьте название (можно с эмодзи) или введите вручную. Используйте кнопку 'Вставить' или Ctrl+V",
+            font=('Arial', 9),
+            foreground='gray'
+        )
+        name_hint.pack(anchor=tk.W, pady=(5, 0))
+
+        # Поле для описания
+        desc_frame = ttk.LabelFrame(main_frame, text="📄 Описание термина", padding="10")
+        desc_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+
+        # Верхняя панель с полем и кнопкой вставки
+        desc_top_frame = ttk.Frame(desc_frame)
+        desc_top_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.desc_text = scrolledtext.ScrolledText(
+            desc_top_frame,
+            height=12,
+            font=('Arial', 10),
+            wrap=tk.WORD
+        )
+        self.desc_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Кнопка вставки для описания
+        desc_paste_btn = ttk.Button(
+            desc_top_frame,
+            text="📋 Вставить",
+            command=lambda: self.paste_to_widget(self.desc_text),
+            width=10
+        )
+        desc_paste_btn.pack(side=tk.RIGHT, padx=(10, 0), fill=tk.Y)
+
+        # Подсказка для описания
+        desc_hint = ttk.Label(
+            desc_frame,
+            text="💡 Вставьте описание (можно многострочное). Используйте кнопку 'Вставить' или Ctrl+V",
+            font=('Arial', 9),
+            foreground='gray'
+        )
+        desc_hint.pack(anchor=tk.W, pady=(5, 0))
+
+        # Панель кнопок
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=(10, 0))
+
+        # Кнопка "Очистить"
+        clear_btn = ttk.Button(
+            button_frame,
+            text="🗑️ Очистить",
+            command=self.clear_fields,
+            width=15
+        )
+        clear_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        # Кнопка "Добавить"
+        add_btn = ttk.Button(
+            button_frame,
+            text="✅ Добавить термин (Ctrl+Enter)",
+            command=self.add_term,
+            width=25
+        )
+        add_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        # Кнопка "Выход"
+        exit_btn = ttk.Button(
+            button_frame,
+            text="🚪 Выход",
+            command=self.root.quit,
+            width=15
+        )
+        exit_btn.pack(side=tk.RIGHT)
+
+        # Статусная строка
+        self.status_label = ttk.Label(
+            main_frame,
+            text="Готов к работе",
+            font=('Arial', 10),
+            foreground='gray'
+        )
+        self.status_label.pack(pady=(15, 0), anchor=tk.W)
+
+        # Быстрые кнопки для вставки примеров
+        quick_frame = ttk.LabelFrame(main_frame, text="⚡ Быстрая вставка", padding="5")
+        quick_frame.pack(fill=tk.X, pady=(10, 0))
+
+        ttk.Button(
+            quick_frame,
+            text="Вставить название (А БАТТУТА)",
+            command=self.insert_example_name,
+            width=25
+        ).pack(side=tk.LEFT, padx=(0, 5))
+
+        ttk.Button(
+            quick_frame,
+            text="Вставить описание (А БАТТУТА)",
+            command=self.insert_example_desc,
+            width=25
+        ).pack(side=tk.LEFT)
+
+        # Привязываем горячие клавиши
+        self.name_text.bind('<Control-v>', self.paste_to_widget_event)
+        self.name_text.bind('<Control-V>', self.paste_to_widget_event)
+        self.desc_text.bind('<Control-v>', self.paste_to_widget_event)
+        self.desc_text.bind('<Control-V>', self.paste_to_widget_event)
+        self.root.bind('<Control-Return>', lambda e: self.add_term())
+
+    def paste_to_widget(self, widget):
+        """Вставляет текст из буфера обмена в указанный виджет"""
+        try:
+            # Получаем текст из системного буфера обмена
+            text = self.root.clipboard_get()
+            if text:
+                # Вставляем в позицию курсора
+                widget.insert(tk.INSERT, text)
+                # Обновляем статус для поля названия
+                if widget == self.name_text:
+                    self.root.after(100, self.update_status_after_paste)
+        except tk.TclError:
+            # Буфер обмена пуст или недоступен
+            messagebox.showinfo("Информация", "Буфер обмена пуст!")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось вставить текст: {e}")
+
+    def paste_to_widget_event(self, event):
+        """Обработчик события вставки"""
+        widget = event.widget
+        self.paste_to_widget(widget)
+        return "break"  # Отменяем стандартную обработку
+
+    def update_status_after_paste(self):
+        """Обновление статуса после вставки"""
+        name = self.name_text.get("1.0", "end-1c").strip()
+        if name:
+            clean = clean_term_name(name)
+            lang, letter, index, file_name = detect_language_and_letter(clean)
+            if lang:
+                lang_text = "Русский" if lang == 'ru' else "English"
+                self.status_label.config(
+                    text=f"✅ Определено: {lang_text}, буква '{letter.upper()}'",
+                    foreground='green'
+                )
+            else:
+                self.status_label.config(
+                    text="⚠️ Не удалось определить язык (первая буква должна быть русской или английской)",
+                    foreground='orange'
+                )
+
+    def clear_fields(self):
+        """Очищает все поля"""
+        self.name_text.delete("1.0", tk.END)
+        self.desc_text.delete("1.0", tk.END)
+        self.status_label.config(text="Поля очищены", foreground='gray')
+
+    def insert_example_name(self):
+        """Вставляет пример названия"""
+        self.name_text.delete("1.0", tk.END)
+        self.name_text.insert("1.0", "🎼 А БАТТУТА (итал. «по ударению», «по такту»)")
+        self.update_status_after_paste()
+
+    def insert_example_desc(self):
+        """Вставляет пример описания"""
+        example_desc = """Команда вернуться к строгому метрическому пульсу и ясной тактовой доле после периода ритмической свободы. Это не просто «сыграть в темп», а именно подчиниться жесткой сетке размера, часто с акцентированием сильных долей.
+
+Где встречается:
+После выразительного Rubato (свободное ведение мелодии).
+После длительной Ферматы (задержанная нота) или паузы.
+После постепенного замедления (Ritardando / Rallentando).
+В конце сольной Каденции (виртуозной вставки).
+
+Специфика для гитариста:
+Первое — смена атаки. Гитаристы часто переключаются на апояндо (опертый удар).
+Второе — работа правой руки. В испанской или фламенко-музыке это сигнал включить режим метронома.
+Третье — баррэ и смена позиций. Гитаристы упрощают аппликатуру.
+Четвертое — работа в ансамбле. Ритм-гитарист становится барабанщиком.
+
+Пример из практики:
+Вступление к балладе играется свободно. На аккорде перед припевом стоит фермата. После нее A battuta — припев нужно врубить ровно, с мощным downstroke."""
+        self.desc_text.delete("1.0", tk.END)
+        self.desc_text.insert("1.0", example_desc)
+
+    def add_term(self):
+        """Добавляет термин в словарь"""
+        # Получаем данные
+        name = self.name_text.get("1.0", "end-1c").strip()
+        description = self.desc_text.get("1.0", "end-1c").strip()
+
+        # Проверки
+        if not name:
+            messagebox.showwarning("Ошибка", "Введите название термина!")
+            self.name_text.focus()
+            return
+
+        if not description:
+            messagebox.showwarning("Ошибка", "Введите описание термина!")
+            self.desc_text.focus()
+            return
+
+        # Очищаем название
+        clean_name = clean_term_name(name)
+
+        if not clean_name:
+            messagebox.showwarning("Ошибка", "Название не может быть пустым!")
+            return
 
         # Определяем язык и букву
-        lang, letter, index, file_name = detect_language_and_letter(name)
+        lang, letter, index, file_name = detect_language_and_letter(clean_name)
 
         if not lang:
-            print(f"⚠️ Не удалось определить язык для '{name}'")
-            print("   Первая буква должна быть русской или английской")
-            continue
+            messagebox.showwarning(
+                "Ошибка",
+                f"Не удалось определить язык для '{clean_name}'\n"
+                "Первая буква должна быть русской или английской"
+            )
+            return
 
         # Получаем путь к модулю
         module_path = get_module_path(lang, letter, index, file_name)
 
-        print(f"\n📊 Определено:")
-        print(f"   Язык: {'Русский' if lang == 'ru' else 'English'}")
-        print(f"   Буква: {letter.upper()}")
-        print(f"   Модуль: {module_path.name}")
-
-        # Подтверждение
-        print(f"\n📝 Термин: {name}")
-        print(f"📄 Описание: {description[:100]}..." if len(description) > 100 else f"📄 Описание: {description}")
-
-        confirm = input("\nДобавить термин? (y/n): ").strip().lower()
-        if confirm != 'y':
-            print("❌ Отменено")
-            continue
-
         # Добавляем термин
-        if add_term_to_module(module_path, name, description):
-            print(f"✅ Термин '{name}' добавлен в {module_path.relative_to(get_project_root())}")
-            added_count += 1
+        success, message = add_term_to_module(module_path, clean_name, description)
+
+        if success:
+            lang_text = "Русский" if lang == 'ru' else "English"
+            status_msg = (
+                f"✅ Термин '{clean_name}' добавлен!\n"
+                f"   📁 Модуль: {module_path.relative_to(get_project_root())}\n"
+                f"   🌐 Язык: {lang_text}\n"
+                f"   🔤 Буква: {letter.upper()}"
+            )
+
+            self.status_label.config(text=status_msg, foreground='green')
+            messagebox.showinfo("Успешно!", status_msg)
+
+            # Очищаем поля для следующего термина
+            self.clear_fields()
+
         else:
-            print(f"❌ Ошибка при добавлении '{name}'")
+            self.status_label.config(text=f"❌ {message}", foreground='red')
+            messagebox.showerror("Ошибка", message)
 
-        print("-" * 40)
 
-    print("\n" + "=" * 60)
-    print(f"✅ Готово! Добавлено терминов: {added_count}")
-    print("=" * 60)
+def main():
+    root = tk.Tk()
+    app = TermAdderApp(root)
+    root.mainloop()
 
 
 if __name__ == '__main__':

@@ -82,18 +82,41 @@ jobs:
             libxxf86vm-dev \
             mesa-common-dev
 
-      # 🔥 ПОЛНАЯ ОЧИСТКА КЭША python-for-android
-      - name: Full cleanup of python-for-android cache
+      - name: Setup custom libthorvg recipe
         run: |
-          echo "🧹 Полная очистка python-for-android..."
-          rm -rf ~/.buildozer/android/platform/python-for-android || true
-          rm -rf .buildozer/android/platform/python-for-android || true
+          echo "📁 Создаём кастомный рецепт для libthorvg..."
+          mkdir -p ~/.buildozer/android/platform/python-for-android/pythonforandroid/recipes/libthorvg
+          cat > ~/.buildozer/android/platform/python-for-android/pythonforandroid/recipes/libthorvg/__init__.py << 'EOF'
+          """
+          Пустой рецепт для libthorvg (отключает сборку)
+          """
+          from pythonforandroid.recipe import Recipe
+
+
+          class LibThorvgRecipe(Recipe):
+              """Пустой рецепт для libthorvg - ничего не делает"""
+              version = '0.0.0'
+              url = 'none'
+              depends = []
+
+              def should_build(self, arch):
+                  return False
+
+              def build_arch(self, arch):
+                  pass
+
+
+          recipe = LibThorvgRecipe()
+          EOF
+          echo "✅ Кастомный рецепт libthorvg создан"
+
+      - name: Aggressive cleanup of libthorvg cache
+        run: |
+          echo "🧹 Удаляем старый кэш libthorvg..."
           rm -rf ~/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/libthorvg* || true
-          rm -rf ~/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/bootstrap_builds/sdl2/jni/SDL2_image/external/libthorvg* || true
-          rm -rf ~/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/hostpython3/desktop/hostpython3/native-build/root/usr/local/lib/python3.14/site-packages/libthorvg* || true
-          find ~/.buildozer -name "libthorvg" -type d -exec rm -rf {} \; 2>/dev/null || true
-          find ~/.buildozer -name "*libthorvg*" -type d -exec rm -rf {} \; 2>/dev/null || true
-          echo "✅ Кэш python-for-android полностью очищен"
+          rm -rf .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/libthorvg* || true
+          rm -rf ~/.buildozer/android/platform/python-for-android/recipes/libthorvg* || true
+          echo "✅ Кэш libthorvg очищен"
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -128,9 +151,6 @@ jobs:
           echo "=== SEARCHING FOR APK FILES ==="
           find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found!"
           echo ""
-          echo "=== SEARCHING FOR AAB FILES ==="
-          find . -name "*.aab" -type f 2>/dev/null || echo "No AAB files found!"
-          echo ""
 
       - name: Show errors from build log
         if: always()
@@ -140,21 +160,11 @@ jobs:
           echo "========================================="
           grep -i -E "(error|failed|fatal|traceback)" build.log | head -100 || echo "No errors found"
           echo ""
-          echo "========================================="
-          echo "=== LAST 200 LINES OF BUILD LOG ==="
-          echo "========================================="
-          tail -200 build.log || echo "Log file not found"
-          echo ""
-          echo "========================================="
-          echo "=== KIVY BUILD SPECIFIC ERRORS ==="
-          echo "========================================="
-          grep -A 20 -B 5 "Failed to build kivy" build.log || echo "No kivy build errors found"
-          echo ""
-          echo "=== FATAL ERRORS ==="
-          grep -A 10 -B 5 "fatal error:" build.log || echo "No fatal errors found"
-          echo ""
           echo "=== libthorvg ERRORS ==="
-          grep -A 10 -B 5 "libthorvg" build.log || echo "No libthorvg errors found"
+          grep -A 5 -B 5 "libthorvg" build.log || echo "No libthorvg errors found"
+          echo ""
+          echo "=== LAST 100 LINES ==="
+          tail -100 build.log || echo "Log file not found"
 
       - name: Upload APK artifact
         if: success()

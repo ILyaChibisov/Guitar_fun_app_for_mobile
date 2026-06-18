@@ -13,7 +13,7 @@ source.include_patterns = chords/**, dicts/**, **/*.py, **/*.png, **/*.jpg, **/*
 # Исключаем ненужные файлы
 source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, **/buildozer.spec
 
-version = 1.0.4
+version = 1.0.3
 version.code = 3
 orientation = portrait
 
@@ -32,12 +32,7 @@ android.accept_sdk_license = True
 # --- ОТЛАДКА ---
 fullscreen = 0
 log_level = 2
-
-# 🔥 ВОЗВРАЩАЕМ develop (НУЖЕН ДЛЯ AAB)
 p4a.branch = develop
-
-# 🔥 ЯВНО УКАЗЫВАЕМ РЕЦЕПТЫ (БЕЗ libthorvg)
-p4a.recipes = sdl2,python3,kivy,kivymd,requests,pillow,plyer,pyjnius
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
 android.gradle_repository_threads = 4
