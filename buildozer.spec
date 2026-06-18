@@ -7,21 +7,35 @@ package.domain = com.guitarfuns
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json,wav,mp3,ogg
 
-# Включаем все файлы рекурсивно
+# Включаем все файлы аккордов рекурсивно
 source.include_patterns = chords/**, dicts/**, **/*.py, **/*.png, **/*.jpg, **/*.json
 
 # Исключаем ненужные файлы
-source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, **/buildozer.spec
+source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py
 
 version = 1.0.3
 version.code = 3
 orientation = portrait
 
-# --- МИНИМАЛЬНЫЕ ЗАВИСИМОСТИ ---
-requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,pyjnius
+# --- ЗАВИСИМОСТИ (ДОБАВЛЯЕМ ТОЛЬКО pyjnius ДЛЯ ЗВУКА) ---
+requirements = python3,\
+    kivy==2.3.1,\
+    kivymd==1.2.0,\
+    requests,\
+    pillow,\
+    plyer,\
+    openssl,\
+    pyopenssl,\
+    asynckivy,\
+    asyncgui,\
+    pyjnius
 
-# --- ПРАВА ---
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,MODIFY_AUDIO_SETTINGS
+# --- ПРАВА (ДОБАВЛЯЕМ MODIFY_AUDIO_SETTINGS ДЛЯ ЗВУКА) ---
+android.permissions = INTERNET,\
+    ACCESS_NETWORK_STATE,\
+    ACCESS_WIFI_STATE,\
+    MODIFY_AUDIO_SETTINGS
+
 android.api = 33
 android.minapi = 24
 android.enable_androidx = True
@@ -32,9 +46,7 @@ android.accept_sdk_license = True
 # --- ОТЛАДКА ---
 fullscreen = 0
 log_level = 2
-
-# 🔥 ПРОБУЕМ STABLE ВЕТКУ (она может не иметь libthorvg)
-p4a.branch = stable
+p4a.branch = develop
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
 android.gradle_repository_threads = 4
