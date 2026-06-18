@@ -58,8 +58,9 @@ jobs:
             autoconf libtool pkg-config zlib1g-dev \
             libncurses5-dev libncursesw5-dev libtinfo5 \
             cmake libffi-dev libssl-dev \
-            build-essential ffmpeg libsdl2-dev libsdl2-image-dev \
-            libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev \
+            build-essential ffmpeg \
+            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev \
             libswscale-dev libavformat-dev libavcodec-dev \
             libunwind-dev autoconf-archive libsqlite3-dev \
             sqlite3 bzip2 libbz2-dev libgdbm-dev \
@@ -106,11 +107,15 @@ jobs:
         run: |
           yes | buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Show build result
+      - name: Show full build result
         if: always()
         run: |
+          echo "========================================="
           echo "=== CHECKING BUILD RESULT ==="
-          echo "Current directory: $(pwd)"
+          echo "========================================="
+          echo ""
+          echo "=== CURRENT DIRECTORY ==="
+          pwd
           echo ""
           echo "=== CONTENT OF bin/ DIRECTORY ==="
           ls -la bin/ || echo "bin/ directory does not exist!"
@@ -121,8 +126,26 @@ jobs:
           echo "=== SEARCHING FOR AAB FILES ==="
           find . -name "*.aab" -type f 2>/dev/null || echo "No AAB files found!"
           echo ""
-          echo "=== CHECKING BUILD LOG FOR APK CREATION ==="
-          grep -i "apk" build.log | tail -20 || echo "No APK mentioned in log"
+
+      - name: Show errors from build log
+        if: always()
+        run: |
+          echo "========================================="
+          echo "=== ALL ERRORS FROM BUILD LOG ==="
+          echo "========================================="
+          grep -i -E "(error|failed|fatal|traceback)" build.log | head -100 || echo "No errors found"
+          echo ""
+          echo "========================================="
+          echo "=== LAST 200 LINES OF BUILD LOG ==="
+          echo "========================================="
+          tail -200 build.log || echo "Log file not found"
+          echo ""
+          echo "========================================="
+          echo "=== KIVY BUILD SPECIFIC ERRORS ==="
+          echo "========================================="
+          grep -A 20 -B 5 "Failed to build kivy" build.log || echo "No kivy build errors found"
+          grep -A 20 -B 5 "error: command" build.log || echo "No command errors found"
+          grep -A 10 -B 5 "fatal error:" build.log || echo "No fatal errors found"
 
       - name: Upload APK artifact
         if: success()
@@ -131,9 +154,17 @@ jobs:
           name: GuitarFuns-APK-${{ github.run_number }}
           path: bin/*.apk
 
-      - name: Upload build log
+      - name: Upload full build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-log-${{ github.run_number }}
           path: build.log
+
+      - name: Upload errors only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: errors-only-${{ github.run_number }}
+          run: |
+            grep -i -E "(error|failed|fatal|traceback)" build.log > errors.log || echo "No errors found" > errors.log
