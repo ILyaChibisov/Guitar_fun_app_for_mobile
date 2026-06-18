@@ -8,8 +8,7 @@ TERMS = {
 
     "A BATTUTA": Term(
         name="A battuta",
-        description="""
-An instruction to return to a strict, precise metric pulse and clear downbeats after a period of rhythmic freedom. It implies not just "playing in tempo," but rigidly obeying the time signature, often with a strong accent on the strong beats.
+        description="""An instruction to return to a strict, precise metric pulse and clear downbeats after a period of rhythmic freedom. It implies not just "playing in tempo," but rigidly obeying the time signature, often with a strong accent on the strong beats.
 
 Where it appears:
 After an expressive Rubato (free melodic flow).

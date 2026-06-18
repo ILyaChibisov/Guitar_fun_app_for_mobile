@@ -17,7 +17,7 @@ version = 1.0.3
 version.code = 3
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ (МИНИМАЛЬНЫЕ) ---
+# --- МИНИМАЛЬНЫЕ ЗАВИСИМОСТИ ---
 requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,pyjnius
 
 # --- ПРАВА ---
@@ -32,7 +32,9 @@ android.accept_sdk_license = True
 # --- ОТЛАДКА ---
 fullscreen = 0
 log_level = 2
-p4a.branch = develop
+
+# 🔥 ПРОБУЕМ STABLE ВЕТКУ (она может не иметь libthorvg)
+p4a.branch = stable
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
 android.gradle_repository_threads = 4
