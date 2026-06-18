@@ -17,7 +17,7 @@ version = 1.0.3
 version.code = 3
 orientation = portrait
 
-# --- МИНИМАЛЬНЫЕ ЗАВИСИМОСТИ ---
+# --- ЗАВИСИМОСТИ (МИНИМАЛЬНЫЕ) ---
 requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,pyjnius
 
 # --- ПРАВА ---
@@ -34,7 +34,7 @@ fullscreen = 0
 log_level = 2
 p4a.branch = develop
 
-# --- ОТКЛЮЧАЕМ libthorvg ---
+# 🔥 ВАЖНО: ЯВНО УКАЗЫВАЕМ ТОЛЬКО НУЖНЫЕ РЕЦЕПТЫ
 p4a.recipes = sdl2,python3,kivy,kivymd,requests,pillow,plyer,pyjnius
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
