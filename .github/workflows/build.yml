@@ -73,12 +73,61 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.37
 
-      - name: Build with Buildozer
+      # 🔥 СОБИРАЕМ С ФИЛЬТРАЦИЕЙ ОШИБОК
+      - name: Build with Buildozer (filtered)
         run: |
-          yes | buildozer -v android debug
+          echo "::group::🔨 Building APK..."
+          buildozer -v android debug 2>&1 | tee build.log | grep -i -E "(error|failed|fatal|traceback|exception|indexerror|keyerror)" || true
+          echo "::endgroup::"
+
+      # 🔥 ПОКАЗЫВАЕМ ТОЛЬКО ОШИБКИ
+      - name: Show errors only
+        if: always()
+        run: |
+          echo "========================================="
+          echo "=== 🔴 ERRORS ONLY ==="
+          echo "========================================="
+          echo ""
+          grep -i -E "(error|failed|fatal|traceback|exception|indexerror|keyerror)" build.log | head -100 || echo "✅ No errors found!"
+          echo ""
+          echo "========================================="
+          echo "=== 📋 LAST 20 LINES WITH CONTEXT ==="
+          echo "========================================="
+          tail -20 build.log || echo "Log file not found"
+
+      # 🔥 ПОКАЗЫВАЕМ ТОЛЬКО libthorvg ОШИБКИ
+      - name: Show libthorvg errors
+        if: always()
+        run: |
+          echo "========================================="
+          echo "=== 📦 libthorvg ERRORS ==="
+          echo "========================================="
+          grep -A 10 -B 5 "libthorvg" build.log || echo "No libthorvg errors found"
+
+      - name: Check if APK exists
+        if: always()
+        run: |
+          echo "========================================="
+          echo "=== 📱 CHECKING APK ==="
+          echo "========================================="
+          if [ -d "bin" ] && [ "$(ls -A bin/*.apk 2>/dev/null)" ]; then
+            echo "✅ APK FOUND!"
+            ls -la bin/
+          else
+            echo "❌ APK NOT FOUND!"
+            echo "::error:: APK не найден! Проверьте ошибки выше."
+          fi
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: GuitarFuns-APK-${{ github.run_number }}
           path: bin/*.apk
+
+      - name: Upload full build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ github.run_number }}
+          path: build.log
