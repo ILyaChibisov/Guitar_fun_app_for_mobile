@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04  # 🔥 ФИКСИРУЕМ ВЕРСИЮ (не latest)
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -64,8 +64,12 @@ jobs:
             libunwind-dev autoconf-archive libsqlite3-dev \
             sqlite3 bzip2 libbz2-dev libgdbm-dev \
             libgdbm-compat-dev liblzma-dev libreadline-dev \
-            uuid-dev libgstreamer1.0 gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good libgstreamer-plugins-base1.0-dev
+            uuid-dev \
+            libgstreamer1.0-dev \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            libgstreamer-plugins-base1.0-dev \
+            ccache
 
       - name: Clean problematic libthorvg
         run: |
@@ -86,7 +90,6 @@ jobs:
       - name: Install pip dependencies
         run: |
           pip install --upgrade pip
-          # 🔥 ФИКСИРУЕМ ВЕРСИЮ CYTHON
           pip install Cython==0.29.33 buildozer
 
       - name: Build with Buildozer

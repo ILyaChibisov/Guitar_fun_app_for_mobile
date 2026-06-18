@@ -38,14 +38,24 @@ logger = screen_logger('Metronome')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
+
+
+# ============ ИМПОРТ ФУНКЦИИ ДЛЯ ПУТЕЙ ИЗ main.py ============
+try:
+    from main import get_sound_path
+except ImportError:
+    # Если не удалось импортировать - создаём локальную версию
+    def get_sound_path(filename):
+        """Возвращает путь к звуковому файлу"""
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        if platform == 'android':
+            return os.path.join(base_dir, filename)
+        return os.path.join(base_dir, 'sounds', filename)
 
 
 # ============ ФУНКЦИИ ДЛЯ РАБОТЫ НА ANDROID ============
@@ -60,8 +70,9 @@ def get_temp_path():
     return tempfile.gettempdir()
 
 
-# ============ ГЕНЕРАТОРЫ ЗВУКА ============
+# ============ ГЕНЕРАТОРЫ ЗВУКА (СОЗДАЮТ .wav ФАЙЛЫ) ============
 def generate_click_sound(frequency=1200, duration=0.05, sample_rate=44100, volume=0.8, waveform='sine'):
+    """Генерирует звук в формате .wav"""
     num_samples = int(sample_rate * duration)
 
     audio_data = array.array('h')
@@ -87,6 +98,7 @@ def generate_click_sound(frequency=1200, duration=0.05, sample_rate=44100, volum
         audio_data.append(value)
 
     temp_dir = get_temp_path()
+    # Используем .wav расширение
     with tempfile.NamedTemporaryFile(delete=False, suffix='.wav', dir=temp_dir) as tmp_file:
         tmp_path = tmp_file.name
         with open(tmp_path, 'wb') as f:
@@ -114,6 +126,7 @@ def generate_click_sound(frequency=1200, duration=0.05, sample_rate=44100, volum
 
 
 def generate_accent_sound(frequency=1800, duration=0.08, sample_rate=44100, volume=1.0, waveform='sine'):
+    """Генерирует акцентный звук в формате .wav"""
     num_samples = int(sample_rate * duration)
 
     audio_data = array.array('h')
@@ -166,6 +179,7 @@ def generate_accent_sound(frequency=1800, duration=0.08, sample_rate=44100, volu
 
 
 def generate_subdivision_sound(frequency=800, duration=0.03, sample_rate=44100, volume=0.5, waveform='sine'):
+    """Генерирует звук для деления длительностей в формате .wav"""
     num_samples = int(sample_rate * duration)
 
     audio_data = array.array('h')
@@ -218,7 +232,7 @@ def generate_subdivision_sound(frequency=800, duration=0.03, sample_rate=44100, 
 
 
 def generate_mechanical_click(is_accent=False, sample_rate=44100, volume=0.8):
-    """Генерирует реалистичный звук механического метронома"""
+    """Генерирует реалистичный звук механического метронома в формате .wav"""
     if is_accent:
         duration = 0.055
         vol = volume * 1.0
@@ -304,7 +318,7 @@ def generate_mechanical_click(is_accent=False, sample_rate=44100, volume=0.8):
     return sound
 
 
-# ============ ВЕРТИКАЛЬНЫЙ СЛАЙДЕР (ИСПРАВЛЕННЫЙ) ============
+# ============ ВЕРТИКАЛЬНЫЙ СЛАЙДЕР ============
 class VerticalSlider(MDBoxLayout):
     value = NumericProperty(60)
     min_value = NumericProperty(30)
@@ -344,7 +358,7 @@ class VerticalSlider(MDBoxLayout):
             bold=True
         )
 
-        # 🔥 ИСПРАВЛЯЕМ СЛАЙДЕР - ДОБАВЛЯЕМ 0.01 К КРАЙНИМ ЗНАЧЕНИЯМ
+        # Слайдер с отступом для предотвращения серого цвета
         self.slider = MDSlider(
             min=min_value - 0.01,
             max=max_value + 0.01,
@@ -750,7 +764,7 @@ class MetronomeScreen(BaseScreen):
             padding=[dp(4), dp(4), dp(4), dp(4)]
         )
 
-        # УМЕНЬШЕННЫЕ КРУЖОЧКИ (22dp вместо 24dp - ещё меньше)
+        # УМЕНЬШЕННЫЕ КРУЖОЧКИ (22dp)
         self.beat_indicators = []
         for i in range(12):
             indicator = MDCard(
@@ -859,7 +873,6 @@ class MetronomeScreen(BaseScreen):
         if not self.click_sound or not self.accent_sound:
             self.load_sounds()
             if not self.click_sound or not self.accent_sound:
-                # Просто показываем ошибку в настройках
                 self.bpm_display.text = "❌ Ошибка звука"
                 return
 

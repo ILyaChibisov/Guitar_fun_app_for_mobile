@@ -22,6 +22,41 @@ kivy.require('2.3.0')
 os.environ['KIVY_AUDIO'] = 'sdl2'
 
 
+# ============ ФУНКЦИЯ ДЛЯ ПУТЕЙ К ЗВУКАМ (ANDROID/ПК) ============
+def get_sound_path(filename):
+    """
+    Возвращает абсолютный путь к звуковому файлу на Android и ПК
+
+    Args:
+        filename: Имя файла (например, 'click.wav')
+
+    Returns:
+        str: Абсолютный путь к файлу
+    """
+    # Получаем путь к папке с main.py
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # На Android пробуем разные варианты
+    if platform == 'android':
+        possible_paths = [
+            os.path.join(base_dir, 'sounds', filename),
+            os.path.join(base_dir, 'assets', 'sounds', filename),
+            os.path.join(base_dir, filename),
+            os.path.join('/sdcard', 'sounds', filename),
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+        # Если не нашли - возвращаем путь в папке приложения
+        return os.path.join(base_dir, filename)
+    else:
+        # На ПК сначала проверяем папку sounds
+        pc_path = os.path.join(base_dir, 'sounds', filename)
+        if os.path.exists(pc_path):
+            return pc_path
+        return os.path.join(base_dir, filename)
+
+
 # ============ ОБРАБОТКА НЕПЕРЕХВАЧЕННЫХ ОШИБОК ============
 def handle_exception(exc_type, exc_value, exc_traceback):
     error_msg = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
@@ -39,6 +74,7 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -60,7 +96,9 @@ if platform == 'android':
             Permission.INTERNET,
             Permission.ACCESS_NETWORK_STATE,
             Permission.ACCESS_WIFI_STATE,
-            Permission.MODIFY_AUDIO_SETTINGS
+            Permission.MODIFY_AUDIO_SETTINGS,
+            Permission.READ_EXTERNAL_STORAGE,
+            Permission.WRITE_EXTERNAL_STORAGE
         ])
         print("✅ Разрешения запрошены")
 
@@ -90,6 +128,7 @@ else:
     Window.clearcolor = (0, 0, 0, 0)
 
 from config.logger_config import setup_logging, app_logger
+
 setup_logging(level='debug')
 
 from kivymd.app import MDApp
@@ -106,12 +145,14 @@ from config.system_bars import get_navigation_bar_height, get_status_bar_height,
 
 # ============ ОТКЛЮЧЕНИЕ RIPPLE ЭФФЕКТА ============
 from kivymd.uix.button import MDIconButton
+
 MDIconButton.ripple_scale = 0
 MDIconButton.ripple_alpha = 0
 
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
     print("✅ Модуль ассетов загружен")
 except ImportError as e:
@@ -125,7 +166,6 @@ def check_audio_support():
     """Проверяет поддержку звука на устройстве"""
     try:
         from kivy.core.audio import SoundLoader
-        # 🔥 НЕ загружаем None, просто проверяем наличие
         logger.info("✅ SoundLoader доступен")
         return True
     except Exception as e:
@@ -271,6 +311,7 @@ class GuitarFunsApp(MDApp):
 
         def on_prefetch_complete(total_artists, total_songs):
             logger.info(f"🎉 Предзагрузка завершена! Артистов: {total_artists}, Песен: {total_songs}")
+
         api.prefetch_all_artists(on_complete=on_prefetch_complete, force_refresh=False)
 
         self.top_nav = TopNav(self.screen_manager)
