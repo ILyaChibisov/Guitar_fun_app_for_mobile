@@ -17,7 +17,7 @@ version = 1.0.3
 version.code = 3
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ (УБИРАЕМ ffpyplayer) ---
+# --- ЗАВИСИМОСТИ (УБИРАЕМ ffpyplayer - ОН ЛОМАЕТ СБОРКУ) ---
 requirements = python3,\
     kivy==2.3.1,\
     kivymd==1.2.0,\
