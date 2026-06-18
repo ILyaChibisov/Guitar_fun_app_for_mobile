@@ -32,10 +32,9 @@ android.accept_sdk_license = True
 # --- ОТЛАДКА ---
 fullscreen = 0
 log_level = 2
-p4a.branch = develop
 
-# 🔥 ВАЖНО: ЯВНО УКАЗЫВАЕМ ТОЛЬКО НУЖНЫЕ РЕЦЕПТЫ
-p4a.recipes = sdl2,python3,kivy,kivymd,requests,pillow,plyer,pyjnius
+# 🔥 ИСПОЛЬЗУЕМ STABLE ВЕТКУ (БЕЗ libthorvg)
+p4a.branch = stable
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
 android.gradle_repository_threads = 4
