@@ -71,27 +71,28 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Левая часть (бутерброд и кнопка назад)
+        # Левая часть - одна иконка
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, 1),
-            width=dp(96),
+            width=dp(48),
             spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
 
+        # Кнопка меню (настройки) - только для home
         self.menu_btn = MDIconButton(
-            icon="menu",
+            icon="tune",
             size_hint=(None, None),
             size=(dp(44), dp(44)),
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_menu_press,
             pos_hint={'center_y': 0.5}
         )
 
+        # Кнопка назад
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -99,16 +100,13 @@ class TopNav(MDCard):
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_back_press,
-            pos_hint={'center_y': 0.5},
-            opacity=0,
-            disabled=True
+            pos_hint={'center_y': 0.5}
         )
 
+        # Изначально добавляем только меню (home)
         self.left_container.add_widget(self.menu_btn)
-        self.left_container.add_widget(self.back_btn)
 
-        # Заголовок (растягивается)
+        # Заголовок
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
             font_size=sp(20),
@@ -122,7 +120,7 @@ class TopNav(MDCard):
             shorten_from="right"
         )
 
-        # Правая часть
+        # Правая часть - две иконки
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, 1),
@@ -132,7 +130,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Иконка "Дом"
         self.home_btn = MDIconButton(
             icon="home",
             size_hint=(None, None),
@@ -144,7 +141,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Иконка "Лупа" (для поиска, только на home)
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
@@ -156,7 +152,6 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Иконка "Профиль"
         self.profile_btn = MDIconButton(
             icon="account-circle",
             size_hint=(None, None),
@@ -168,7 +163,7 @@ class TopNav(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Начинаем с home экрана: лупа + профиль
+        # Начинаем с home: лупа + профиль
         self.right_container.add_widget(self.search_btn)
         self.right_container.add_widget(self.profile_btn)
 
@@ -195,15 +190,15 @@ class TopNav(MDCard):
             'metronome': 'Метроном',
             'favorites': 'Избранное',
             'profile': 'Профиль',
-            'artists_by_letter': 'Исполнители',
+            'artists_by_letter': '',  # кастомный виджет
             'artist_songs': 'Песни',
-            'song_detail': 'Текст песни',
+            'song_detail': '',  # кастомный виджет
             'search_results': 'Результаты поиска',
             'dictionary': 'Словарь',
             'admin': 'Админ панель',
             'search': 'Быстрый поиск',
-            'terms_by_letter': '',  # пусто, т.к. используется кастомный виджет
-            'term_detail': '',  # пусто, т.к. используется кастомный виджет
+            'terms_by_letter': '',  # кастомный виджет
+            'term_detail': '',  # кастомный виджет
         }
         return titles.get(screen_name, screen_name.capitalize())
 
@@ -215,21 +210,17 @@ class TopNav(MDCard):
 
     def set_custom_title_widget(self, widget):
         """Устанавливает кастомный виджет в качестве заголовка"""
-        # Сохраняем старый виджет если его нет
         if not hasattr(self, '_old_title_widget') or self._old_title_widget is None:
             self._old_title_widget = self.screen_title
 
-        # Удаляем старый кастомный виджет если есть
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
             self.custom_title_widget = None
 
-        # Удаляем стандартный заголовок из контейнера
         if self.screen_title in self.container.children:
             self.container.remove_widget(self.screen_title)
 
-        # Добавляем новый кастомный виджет
         self.container.add_widget(widget, index=1)
         self.custom_title_widget = widget
 
@@ -243,7 +234,6 @@ class TopNav(MDCard):
             self.custom_title_widget = None
             logger.info("✅ Кастомный виджет заголовка удалён")
 
-        # Восстанавливаем стандартный заголовок
         if hasattr(self, '_old_title_widget') and self._old_title_widget:
             if self._old_title_widget not in self.container.children:
                 self.container.add_widget(self._old_title_widget, index=1)
@@ -254,6 +244,101 @@ class TopNav(MDCard):
 
     def clear_custom_back_callback(self):
         self._custom_back_callback = None
+
+    def _update_left_button(self, screen_name):
+        """Обновляет левую кнопку в зависимости от экрана"""
+        self.left_container.clear_widgets()
+
+        logger.info(f"🔧 _update_left_button для экрана: {screen_name}")
+
+        if screen_name == 'home':
+            # Home: настройки (tune)
+            self.left_container.add_widget(self.menu_btn)
+            self.menu_btn.icon = "tune"
+            self.menu_btn.on_release = self._on_menu_press
+            logger.info("   → Установлена иконка настроек (tune)")
+
+        elif screen_name == 'songs':
+            # Песни: стрелка назад на Home
+            self.left_container.add_widget(self.back_btn)
+            self.back_btn.on_release = self._on_songs_back_press
+            logger.info("   → Установлена стрелка назад → Home")
+
+        elif screen_name == 'artists_by_letter':
+            # Исполнители по букве: стрелка назад на Songs
+            self.left_container.add_widget(self.back_btn)
+            self.back_btn.on_release = self._on_artists_by_letter_back_press
+            logger.info("   → Установлена стрелка назад → Songs")
+
+        elif screen_name == 'song_detail':
+            # Для экрана песни - возврат на предыдущий экран
+            self.left_container.add_widget(self.back_btn)
+            self.back_btn.on_release = self._on_song_detail_back_press
+            logger.info("   → Установлена стрелка назад → предыдущий экран")
+
+        elif screen_name == 'favorites':
+            # Избранное: стрелка назад на Home
+            self.left_container.add_widget(self.back_btn)
+            self.back_btn.on_release = self._on_favorites_back_press
+            logger.info("   → Установлена стрелка назад → Home")
+
+        else:
+            # Все остальные экраны - стрелка назад с картой переходов
+            self.left_container.add_widget(self.back_btn)
+            self.back_btn.on_release = self._on_back_press
+            logger.info(f"   → Установлена стрелка назад (стандартная)")
+
+    def _on_song_detail_back_press(self, *args):
+        """Возврат на предыдущий экран из песни"""
+        logger.info("🎵 Возврат из песни на предыдущий экран")
+
+        if not self.sm:
+            return
+
+        if self.sm.has_screen('song_detail'):
+            song_detail = self.sm.get_screen('song_detail')
+            previous = song_detail.previous_screen
+            logger.info(f"   → Предыдущий экран: {previous}")
+
+            if previous and self.sm.has_screen(previous):
+                self.sm.current = previous
+                return
+
+        if self.sm.has_screen('artist_songs'):
+            self.sm.current = 'artist_songs'
+        elif self.sm.has_screen('songs'):
+            self.sm.current = 'songs'
+        else:
+            self.sm.current = 'home'
+
+    def _on_favorites_back_press(self, *args):
+        """Переход на Home из Избранного"""
+        logger.info("🏠 Переход на Home из Избранного")
+        if self.sm and self.sm.has_screen('home'):
+            self.sm.current = 'home'
+
+    def _on_songs_back_press(self, *args):
+        """Переход на Home из Песен"""
+        logger.info("🏠 Переход на Home из Песен")
+        if self.sm and self.sm.has_screen('home'):
+            self.sm.current = 'home'
+
+    def _on_artists_by_letter_back_press(self, *args):
+        """Переход на Songs из Исполнителей по букве"""
+        logger.info("🎵 Переход на Songs из Исполнителей по букве")
+        if self.sm and self.sm.has_screen('songs'):
+            self.sm.current = 'songs'
+
+    def _on_menu_press(self, *args):
+        """Обработчик нажатия на настройки (home)"""
+        logger.info("⚙️ Нажата настройки")
+        app = MDApp.get_running_app()
+        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
+            return
+        if self.sm and self.sm.has_screen('profile'):
+            self.sm.current = 'profile'
+        elif self.app and hasattr(self.app, 'open_profile'):
+            self.app.open_profile()
 
     def _update_right_buttons(self, screen_name):
         """Обновляет правые кнопки: на home показываем лупу, на остальных - дом"""
@@ -269,42 +354,24 @@ class TopNav(MDCard):
     def _on_screen_changed(self, instance, screen_name):
         old = self.current_screen_name
         self.current_screen_name = screen_name
+        logger.info(f"🔄 _on_screen_changed: {old} → {screen_name}")
+
         if old and old != screen_name:
             self._previous_screen = old
 
-        # Сбрасываем кастомный заголовок для экранов, где он не нужен
-        # Экран terms_by_letter использует кастомный виджет (буква + количество)
-        # Экран term_detail использует кастомный заголовок (название термина)
-        # Song_detail использует кастомный виджет (название песни + артист)
-        screens_with_custom_title = ['song_detail', 'terms_by_letter', 'term_detail']
+        screens_with_custom_title = ['song_detail', 'terms_by_letter', 'term_detail', 'artists_by_letter']
 
-        # Если текущий экран НЕ использует кастомный заголовок - очищаем
         if screen_name not in screens_with_custom_title:
             if self.custom_title_widget:
                 self.clear_custom_title_widget()
                 self.update_title(screen_name)
 
-        # Обработка кнопки назад
-        if screen_name not in ['artists_by_letter', 'artist_songs', 'song_detail', 'search_results', 'chords',
-                               'terms_by_letter', 'term_detail']:
-            self._hide_back_button()
+        self._update_left_button(screen_name)
+
+        if screen_name not in screens_with_custom_title:
             if not hasattr(self, 'custom_title_widget') or not self.custom_title_widget:
                 self.update_title(screen_name)
-        else:
-            self._show_back_button()
-            if screen_name == 'chords':
-                self.screen_title.text = "Аккорды"
-            elif screen_name == 'song_detail':
-                pass  # заголовок устанавливается в set_custom_title_widget
-            elif screen_name == 'terms_by_letter':
-                pass  # заголовок устанавливается в set_custom_title_widget
-            elif screen_name == 'term_detail':
-                pass  # заголовок устанавливается в set_custom_title_widget
-            else:
-                if not hasattr(self, 'custom_title_widget') or not self.custom_title_widget:
-                    self.update_title(screen_name)
 
-        # Специальный случай: при выходе с terms_by_letter или term_detail очищаем кастомный виджет
         if old == 'terms_by_letter' and screen_name != 'terms_by_letter':
             self.clear_custom_title_widget()
             self.update_title(screen_name)
@@ -317,19 +384,19 @@ class TopNav(MDCard):
             self.clear_custom_title_widget()
             self.update_title(screen_name)
 
+        if old == 'artists_by_letter' and screen_name != 'artists_by_letter':
+            self.clear_custom_title_widget()
+            self.update_title(screen_name)
+
         if screen_name != 'chords':
             self.clear_custom_back_callback()
 
         self._update_right_buttons(screen_name)
 
-    def _on_menu_press(self, btn):
-        app = MDApp.get_running_app()
-        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
-            return
-        if self.app and hasattr(self.app, 'open_drawer'):
-            self.app.open_drawer(btn)
+    def _on_back_press(self, *args):
+        """Обработчик нажатия на стрелку назад (для всех экранов кроме home, songs, artists_by_letter, song_detail, favorites)"""
+        logger.info(f"🔙 _on_back_press для экрана: {self.current_screen_name}")
 
-    def _on_back_press(self, btn):
         if self._custom_back_callback:
             self._custom_back_callback()
             return
@@ -351,9 +418,7 @@ class TopNav(MDCard):
             self._previous_screen = None
         else:
             back_map = {
-                'artists_by_letter': 'songs',
                 'artist_songs': 'artists_by_letter',
-                'song_detail': 'artist_songs',
                 'search_results': 'songs',
                 'profile': 'home',
                 'admin': 'profile',
@@ -363,13 +428,11 @@ class TopNav(MDCard):
             target = back_map.get(current, 'songs')
             self.sm.current = target
 
-    def _on_home_press(self, btn):
-        """Переход на главную страницу"""
+    def _on_home_press(self, *args):
         if self.sm and self.sm.has_screen('home'):
             self.sm.current = 'home'
 
-    def _on_search_press(self, btn):
-        """Поиск (только на главном экране)"""
+    def _on_search_press(self, *args):
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             return
@@ -383,8 +446,7 @@ class TopNav(MDCard):
             else:
                 self.sm.current = 'search'
 
-    def _on_profile_press(self, btn):
-        """Переход на страницу профиля через единую логику приложения"""
+    def _on_profile_press(self, *args):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'open_profile'):
             app.open_profile()
@@ -398,27 +460,15 @@ class TopNav(MDCard):
     def set_app(self, app):
         self.app = app
 
-    def update_for_artists_screen(self, letter: str, show_back_button: bool = True):
-        if show_back_button:
-            self._show_back_button()
-        else:
-            self._hide_back_button()
-        display = "0-9" if letter in ("digits", "0-9") else letter.upper()
-        self.screen_title.text = f"Буква {display}"
-
     def reset_to_default(self):
-        """Сбрасывает заголовок на стандартный"""
         self.clear_custom_title_widget()
-        self._hide_back_button()
-        self.clear_custom_back_callback()
         if self.sm:
             self.update_title(self.sm.current)
             self._update_right_buttons(self.sm.current)
+            self._update_left_button(self.sm.current)
 
     def _show_back_button(self):
-        self.back_btn.opacity = 1
-        self.back_btn.disabled = False
+        pass
 
     def _hide_back_button(self):
-        self.back_btn.opacity = 0
-        self.back_btn.disabled = True
+        pass

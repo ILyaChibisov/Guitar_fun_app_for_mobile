@@ -1,4 +1,4 @@
-# screens/artists_by_letter_screen.py
+# screens/artists_by_letter_screen.py - полностью исправленный
 """
 Экран списка исполнителей по выбранной букве - исправлены отступы
 """
@@ -155,17 +155,19 @@ class ArtistsByLetterScreen(BaseScreen):
 
         self.add_widget(main_layout)
 
+    # screens/artists_by_letter_screen.py - исправленный on_enter
+
     def on_enter(self):
         """Вызывается когда экран становится видимым"""
         logger.info(f"on_enter: current_letter={self.current_letter}, pending={self._pending_letter}")
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Создаём двухстрочный заголовок как в SongDetail
+            # Только устанавливаем кастомный заголовок
             title_container = self._create_top_nav_title()
             app.top_nav.set_custom_title_widget(title_container)
-            app.top_nav._show_back_button()
-            app.top_nav.back_btn.on_release = self.go_back
+            # НЕ вызываем update_for_artists_screen
+            # НЕ переопределяем back_btn.on_release
 
         if self._pending_letter:
             letter = self._pending_letter

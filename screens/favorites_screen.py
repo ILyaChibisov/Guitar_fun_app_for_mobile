@@ -481,7 +481,6 @@ class FavoritesScreen(BaseScreen):
             notify.error("Ошибка загрузки избранного")
 
     def on_song_selected(self, song_id, song_title):
-        """Обработчик выбора песни"""
         if not song_id:
             notify.error("Ошибка: не удалось загрузить песню")
             return

@@ -29,4 +29,38 @@ Third — choosing comfortable fingering speeds up learning.
 Fourth — fingering for left hand (1-4 fingers) and right hand (p, i, m, a).
 """
     ),
+
+    "FRETLESS GUITAR": Term(
+        name="Fretless guitar",
+        description="""
+A guitar without metal frets on the fingerboard, where fingers press strings directly against the neck. Allows playing micro-intervals and glissando.
+
+Where it appears:
+In Indian music — sitar.
+In experimental music — contemporary guitar.
+In jazz — as an instrument for free improvisation.
+
+Guitarist-Specific Tips:
+First — requires precision in intonation.
+Second — opens possibilities for microtonality.
+Third — more challenging to master.
+"""
+    ),
+
+    "FLAT": Term(
+        name="Flat",
+        description="""
+An accidental sign that lowers a note by a semitone. Denoted by the symbol ♭.
+
+Where it appears:
+In musical notation — before notes requiring lowering.
+In keys — as a key signature.
+In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips:
+First — flats change fingering.
+Second — important to know the location of flat notes on the fretboard.
+Third — used in minor keys.
+"""
+    ),
 }

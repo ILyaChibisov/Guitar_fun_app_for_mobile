@@ -812,7 +812,6 @@ class SongsScreen(BaseScreen):
         self._clear_search_results()
 
     def on_song_selected(self, song_id, title):
-        """Обработчик выбора песни"""
         logger.info(f"Выбрана песня: {title}, id: {song_id}")
         if not song_id:
             notify.error("Ошибка: не удалось загрузить песню")

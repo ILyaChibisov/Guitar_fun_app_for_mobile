@@ -2088,8 +2088,9 @@ class SongDetailScreen(BaseScreen):
             if hasattr(app, 'hide_bottom_nav'):
                 app.hide_bottom_nav()
 
+            # Показываем кнопку назад
             app.top_nav._show_back_button()
-            app.top_nav.back_btn.on_release = self.go_back
+            # НЕ переопределяем back_btn.on_release!
 
             if self.song_title:
                 self.update_top_nav_title()
@@ -2100,7 +2101,6 @@ class SongDetailScreen(BaseScreen):
         if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
             for delay in [0.2, 0.4, 0.6, 0.9, 1.2, 1.8, 2.5]:
                 Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
-                # Правильный захват переменной для задержки + 0.1
                 scroll_delay = delay + 0.1
                 Clock.schedule_once(lambda dt, d=scroll_delay: setattr(self.content_scroll, 'scroll_y', 1.0),
                                     scroll_delay)

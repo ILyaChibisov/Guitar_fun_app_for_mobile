@@ -749,7 +749,6 @@ class SearchScreen(BaseScreen):
             self.manager.current = 'chords'
 
     def select_song(self, song_id):
-        """Выбор песни"""
         logger.info(f"🎵 Выбрана песня: {song_id}")
         if self.manager and self.manager.has_screen('song_detail'):
             song_detail = self.manager.get_screen('song_detail')

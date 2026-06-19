@@ -28,4 +28,21 @@ Second — barre chords are also based on thirds.
 Third — knowledge of tertian structure helps build any chord.
 """
     ),
+
+    "TAMBOURINE": Term(
+        name="Tambourine",
+        description="""
+A percussion instrument with a membrane and metal jingles (zils) around the edge. Used in folk, popular, and orchestral music.
+
+Where it appears:
+In folk music — as a rhythmic instrument.
+In orchestra — for creating color.
+In contemporary music — as a percussive element.
+
+Guitarist-Specific Tips:
+First — tambourine can be used in ensemble with guitar.
+Second — creates an additional rhythmic layer.
+Third — in some styles, a guitarist can play tambourine with the foot.
+"""
+    ),
 }
