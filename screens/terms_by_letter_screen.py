@@ -9,6 +9,7 @@ from kivymd.app import MDApp
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
+from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
@@ -27,15 +28,39 @@ logger = screen_logger('TermsByLetter')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
+# ============ ГЛОБАЛЬНАЯ ИКОНКА ============
+_shared_dict_icon_texture = None
+
+
+def init_shared_dict_icon():
+    global _shared_dict_icon_texture
+    if _shared_dict_icon_texture is not None:
+        return _shared_dict_icon_texture
+
+    if HAS_ASSETS:
+        try:
+            icon_data = load_asset_as_bytes('dictionary2_png')
+            if icon_data:
+                img = CoreImage(BytesIO(icon_data), ext="png")
+                _shared_dict_icon_texture = img.texture
+                logger.info("✅ Общая иконка словаря загружена")
+                return _shared_dict_icon_texture
+        except Exception as e:
+            logger.error(f"Ошибка загрузки иконки dictionary2_png: {e}")
+    return None
+
 
 class RecycleTermCard(RecycleDataViewBehavior, MDCard):
-    """Переиспользуемая карточка термина"""
+    """Переиспользуемая карточка термина с иконкой из ассета"""
 
     term_name = StringProperty('')
     on_click = ObjectProperty(None)
@@ -44,55 +69,57 @@ class RecycleTermCard(RecycleDataViewBehavior, MDCard):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(48)
-        self.padding = [dp(16), dp(8), dp(16), dp(8)]
-        self.spacing = dp(10)
+        self.height = dp(56)
+        self.padding = [dp(16), dp(10), dp(12), dp(10)]
+        self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
         self.ripple_behavior = True
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.06]
         self.line_color = [1, 1, 1, 0.05]
-        self.line_width = 1
+        self.line_width = 0.5
+        self.clip = True  # ← обрезаем содержимое карточки
         self._build_ui()
 
     def _build_ui(self):
-        # Иконка
-        self.icon_label = MDLabel(
-            text="📖",
-            font_size=sp(18),
-            size_hint_x=None,
-            width=dp(32),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6]
+        # Иконка из ассета
+        self.icon = Image(
+            size_hint=(None, 1),
+            width=dp(30),
+            allow_stretch=True,
+            keep_ratio=True
         )
+        if _shared_dict_icon_texture:
+            self.icon.texture = _shared_dict_icon_texture
+        else:
+            self.icon.text = "📖"
 
         # Термин - жирный
         self.term_label = MDLabel(
             font_size=sp(16),
-            size_hint_x=1,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
-            valign="middle",
             shorten=True,
-            shorten_from="right"
+            shorten_from="right",
+            valign="middle",
+            size_hint_x=1
         )
 
         # Стрелка
         arrow = MDLabel(
             text="›",
-            font_size=sp(20),
+            font_size=sp(24),
             size_hint_x=None,
-            width=dp(24),
+            width=dp(28),
             halign="center",
+            valign="middle",
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.3]
         )
 
-        self.add_widget(self.icon_label)
+        self.add_widget(self.icon)
         self.add_widget(self.term_label)
         self.add_widget(arrow)
 
@@ -120,12 +147,13 @@ class TermRecycleView(RecycleView):
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
+        self.clip = True  # ← обрезаем содержимое RecycleView
 
         self.layout_manager = RecycleBoxLayout(
-            default_size=(None, dp(48)),
+            default_size=(None, dp(56)),
             default_size_hint=(1, None),
             size_hint_y=None,
-            height=dp(48) * 10,
+            height=dp(56) * 10,
             orientation='vertical',
             spacing=dp(4)
         )
@@ -144,6 +172,7 @@ class TermRecycleView(RecycleView):
         self.refresh_from_data()
 
     def clear(self):
+        """Очищает список"""
         self.data = []
         self.refresh_from_data()
 
@@ -161,10 +190,12 @@ class TermsByLetterScreen(BaseScreen):
         self.bg_image = None
         self.recycle_view = None
         self.count_label = None
-        self.empty_label = None
 
         self.init_ui()
         self.load_background()
+
+        Clock.schedule_once(lambda dt: init_shared_dict_icon(), 0.1)
+
         logger.info('Экран терминов по букве создан')
 
     def load_background(self):
@@ -200,21 +231,7 @@ class TermsByLetterScreen(BaseScreen):
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # Счётчик терминов
-        self.count_label = MDLabel(
-            text="",
-            font_size=sp(13),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7],
-            size_hint_y=None,
-            height=dp(32),
-            padding=[0, dp(4), 0, dp(4)]
-        )
-        main_layout.add_widget(self.count_label)
-
-        # Контейнер для карточек
+        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
@@ -224,6 +241,7 @@ class TermsByLetterScreen(BaseScreen):
             size_hint=(1, 1),
             padding=[dp(12), dp(4), dp(12), total_bottom]
         )
+        cards_container.clip = True  # ← обрезаем содержимое контейнера
 
         self.recycle_view = TermRecycleView(on_term_click=self.on_term_selected)
         self.recycle_view.bar_width = 0
@@ -241,16 +259,11 @@ class TermsByLetterScreen(BaseScreen):
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            if self.current_letter:
-                display = self.current_letter.upper()
-                app.top_nav.set_custom_title(f"Буква {display}")
-                app.top_nav._show_back_button()
-                app.top_nav.back_btn.on_release = self.go_back
-            elif self._pending_letter:
-                display = self._pending_letter.upper()
-                app.top_nav.set_custom_title(f"Буква {display}")
-                app.top_nav._show_back_button()
-                app.top_nav.back_btn.on_release = self.go_back
+            # Создаём двухстрочный заголовок как в SongDetail
+            title_container = self._create_top_nav_title()
+            app.top_nav.set_custom_title_widget(title_container)
+            app.top_nav._show_back_button()
+            app.top_nav.back_btn.on_release = self.go_back
 
         if self._pending_letter:
             letter = self._pending_letter
@@ -258,6 +271,62 @@ class TermsByLetterScreen(BaseScreen):
             self._do_load_letter(letter)
         elif self.current_letter:
             self._do_load_letter(self.current_letter)
+
+    def _create_top_nav_title(self):
+        """Создаёт двухстрочный заголовок для TopNav (буква и количество)"""
+        from kivymd.uix.boxlayout import MDBoxLayout
+        from kivymd.uix.label import MDLabel
+        from kivy.metrics import sp, dp
+
+        title_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            spacing=dp(2),
+            padding=[dp(8), dp(4), dp(8), dp(4)]
+        )
+
+        # Буква - большая, жирная
+        letter_display = self.current_letter.upper() if self.current_letter else ""
+        letter_label = MDLabel(
+            text=letter_display,
+            font_size=sp(22),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            bold=True,
+            shorten=True,
+            shorten_from="right"
+        )
+
+        # Количество терминов - маленький шрифт
+        count_text = self._get_count_text(len(self.terms))
+        count_label = MDLabel(
+            text=count_text,
+            font_size=sp(12),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.9, 0.9, 0.9, 0.8],
+            shorten=True,
+            shorten_from="right"
+        )
+
+        title_container.add_widget(letter_label)
+        title_container.add_widget(count_label)
+
+        return title_container
+
+    def _get_count_text(self, total):
+        """Возвращает текст с количеством терминов с правильным склонением"""
+        if total == 0:
+            return "Нет терминов"
+        elif total == 1:
+            return "1 термин"
+        elif 2 <= total <= 4:
+            return f"{total} термина"
+        else:
+            return f"{total} терминов"
 
     def set_letter(self, letter, dictionary_screen=None):
         """Устанавливает букву для загрузки"""
@@ -286,13 +355,11 @@ class TermsByLetterScreen(BaseScreen):
         if self.recycle_view:
             self.recycle_view.clear()
 
-        # Получаем термины из словаря
         if self._dictionary_screen:
             terms = self._dictionary_screen.terms_by_letter.get(letter, [])
             self.terms = terms
             self._display_terms(terms)
         else:
-            # Пытаемся получить через менеджер
             app = MDApp.get_running_app()
             if app and hasattr(app, 'screen_manager'):
                 for screen in app.screen_manager.screens:
@@ -305,6 +372,12 @@ class TermsByLetterScreen(BaseScreen):
             self.terms = []
             self._display_terms([])
 
+        # Обновляем TopNav с новыми данными
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            title_container = self._create_top_nav_title()
+            app.top_nav.set_custom_title_widget(title_container)
+
     def _display_terms(self, terms):
         """Отображает список терминов"""
         if terms is None:
@@ -312,31 +385,13 @@ class TermsByLetterScreen(BaseScreen):
 
         logger.info(f"_display_terms: {len(terms)} терминов")
 
-        self._update_count_label(len(terms))
-
         if not terms:
-            # Очищаем recycle view и показываем сообщение через count_label
             if self.recycle_view:
                 self.recycle_view.clear()
-            self.count_label.text = "Нет терминов на эту букву"
             return
 
         if self.recycle_view:
             self.recycle_view.set_terms(terms, self.on_term_selected)
-
-    def _update_count_label(self, total):
-        """Обновляет счётчик"""
-        if total == 0:
-            text = "Нет терминов на эту букву"
-        elif total == 1:
-            text = "Найден 1 термин"
-        elif 2 <= total <= 4:
-            text = f"Найдено {total} термина"
-        else:
-            text = f"Найдено {total} терминов"
-
-        if self.count_label:
-            self.count_label.text = text
 
     def on_term_selected(self, term_name):
         """Обработчик выбора термина"""

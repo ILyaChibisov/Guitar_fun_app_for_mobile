@@ -1,6 +1,6 @@
 # screens/songs_screen.py
 """
-Экран песен с алфавитной навигацией и современным поиском - единые отступы
+Экран песен с алфавитной навигацией и современным поиском - результаты на том же экране
 """
 import time
 
@@ -15,6 +15,10 @@ from kivy.core.image import Image as CoreImage
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
+from kivy.uix.recycleview import RecycleView
+from kivy.uix.recycleview.views import RecycleDataViewBehavior
+from kivy.uix.recycleboxlayout import RecycleBoxLayout
+from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 from kivy.clock import Clock
 from io import BytesIO
 
@@ -38,6 +42,28 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
+
+
+# ============ ГЛОБАЛЬНАЯ ИКОНКА ДЛЯ КАРТОЧЕК ============
+_shared_song_icon_texture = None
+
+
+def init_shared_song_icon():
+    global _shared_song_icon_texture
+    if _shared_song_icon_texture is not None:
+        return _shared_song_icon_texture
+
+    if HAS_ASSETS:
+        try:
+            icon_data = load_asset_as_bytes('song_png')
+            if icon_data:
+                img = CoreImage(BytesIO(icon_data), ext="png")
+                _shared_song_icon_texture = img.texture
+                logger.info("✅ Общая иконка песни загружена")
+                return _shared_song_icon_texture
+        except Exception as e:
+            logger.error(f"Ошибка загрузки иконки song_png: {e}")
+    return None
 
 
 class LetterButton(ButtonBehavior, MDBoxLayout):
@@ -101,7 +127,7 @@ class LetterButton(ButtonBehavior, MDBoxLayout):
 
 
 class GoogleSearchBar(MDCard):
-    """Современная поисковая строка"""
+    """Поисковая строка - поиск ТОЛЬКО по нажатию на лупу или Enter"""
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
@@ -309,7 +335,7 @@ class LanguageSelector(MDBoxLayout):
         if self.current_language == language:
             return
         self.current_language = language
-        self._redistribute_buttons()
+        self._update_display()
 
 
 class AlphabetGrid(MDCard):
@@ -439,15 +465,165 @@ class AlphabetGrid(MDCard):
             btn.set_active(False)
 
 
+# ============ RECYCLEVIEW ДЛЯ РЕЗУЛЬТАТОВ ПОИСКА ============
+
+class SearchSongCard(RecycleDataViewBehavior, MDCard):
+    """Карточка песни для RecycleView (результаты поиска)"""
+
+    title = StringProperty('')
+    artist = StringProperty('')
+    song_id = NumericProperty(0)
+    on_click = ObjectProperty(None)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(56)
+        self.padding = [dp(16), dp(10), dp(12), dp(10)]
+        self.spacing = dp(12)
+        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.elevation = 0
+        self.ripple_behavior = True
+        self.theme_bg_color = "Custom"
+        self.md_bg_color = [0, 0, 0, 0.06]
+        self.line_color = [1, 1, 1, 0.05]
+        self.line_width = 0.5
+        self.clip = True
+        self._build_ui()
+
+    def _build_ui(self):
+        # Иконка
+        self.icon = Image(
+            size_hint=(None, 1),
+            width=dp(30),
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        if _shared_song_icon_texture:
+            self.icon.texture = _shared_song_icon_texture
+        else:
+            self.icon.text = "🎵"
+
+        # Текстовая часть
+        text_layout = MDBoxLayout(
+            orientation='vertical',
+            size_hint_x=1,
+            spacing=dp(2),
+            pos_hint={'center_y': 0.5}
+        )
+
+        self.artist_label = MDLabel(
+            font_size=sp(16),
+            size_hint_y=None,
+            height=dp(24),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95],
+            bold=True,
+            shorten=True,
+            shorten_from="right",
+            valign="middle"
+        )
+
+        self.title_label = MDLabel(
+            font_size=sp(12),
+            size_hint_y=None,
+            height=dp(18),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.5],
+            valign="middle"
+        )
+
+        text_layout.add_widget(self.artist_label)
+        text_layout.add_widget(self.title_label)
+
+        # Стрелка
+        arrow = MDLabel(
+            text="›",
+            font_size=sp(24),
+            size_hint_x=None,
+            width=dp(28),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.3]
+        )
+
+        self.add_widget(self.icon)
+        self.add_widget(text_layout)
+        self.add_widget(arrow)
+
+    def refresh_view_attrs(self, rv, index, data):
+        self.title = data.get('title', '')
+        self.artist = data.get('artist', '')
+        self.song_id = data.get('song_id', 0)
+        self.on_click = data.get('on_click')
+        self.artist_label.text = self.artist
+        self.title_label.text = self.title
+        return super().refresh_view_attrs(rv, index, data)
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            if self.on_click:
+                self.on_click(self.song_id, self.title)
+            return True
+        return super().on_touch_down(touch)
+
+
+class SongRecycleView(RecycleView):
+    """Виртуализированный список песен для поиска"""
+
+    def __init__(self, on_song_click=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_song_click = on_song_click
+        self.animate_scroll = False
+        self.bar_width = 0
+        self.bar_color = [0, 0, 0, 0]
+        self.bar_inactive_color = [0, 0, 0, 0]
+        self.clip = True
+
+        self.layout_manager = RecycleBoxLayout(
+            default_size=(None, dp(56)),
+            default_size_hint=(1, None),
+            size_hint_y=None,
+            height=dp(56) * 10,
+            orientation='vertical',
+            spacing=dp(6)
+        )
+        self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
+        self.viewclass = 'SearchSongCard'
+        self.add_widget(self.layout_manager)
+
+    def set_songs(self, songs, on_click):
+        data = []
+        for song in songs:
+            data.append({
+                'song_id': song.get('song_id', 0),
+                'title': song.get('title', ''),
+                'artist': song.get('artist', ''),
+                'on_click': on_click
+            })
+        self.data = data
+        self.refresh_from_data()
+
+    def clear(self):
+        """Очищает список"""
+        self.data = []
+        self.refresh_from_data()
+
+
 class SongsScreen(BaseScreen):
-    """Экран песен с алфавитной навигацией - единые отступы"""
+    """Экран песен с алфавитной навигацией - результаты поиска на том же экране"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'songs'
         self.current_letter = None
+        self.is_search_mode = False
+        self.search_results = []
 
         self.init_ui()
+        Clock.schedule_once(lambda dt: init_shared_song_icon(), 0.1)
 
         logger.info('Экран песен создан')
 
@@ -466,62 +642,86 @@ class SongsScreen(BaseScreen):
 
         # Получаем стандартные боковые отступы из layout_config
         content_padding = layout_config.get_content_padding()
-        # content_padding = [left, top, right, bottom]
 
-        # Контейнер с едиными отступами
-        content_wrapper = MDBoxLayout(
+        # ============ КОНТЕЙНЕР ДЛЯ ВЕРХНЕЙ ЧАСТИ ============
+        top_container = MDBoxLayout(
             orientation='vertical',
-            size_hint=(1, 1),
-            padding=[content_padding[0], 0, content_padding[2], 0]  # left и right из layout_config
+            size_hint=(1, None),
+            adaptive_height=True,
+            padding=[content_padding[0], 0, content_padding[2], 0]
         )
-
-        from kivy.uix.scrollview import ScrollView
-        scroll = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_width=dp(3),
-            bar_color=[1, 1, 1, 0.2]
-        )
-
-        # Контент
-        content = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(20),
-            size_hint_y=None,
-            adaptive_height=True
-        )
-        content.bind(minimum_height=content.setter('height'))
 
         # Поисковая строка
         self.search_bar = GoogleSearchBar(
             on_search=self.do_search,
             on_clear=self.clear_search
         )
-        content.add_widget(self.search_bar)
+        top_container.add_widget(self.search_bar)
 
         # Выбор языка
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
-        content.add_widget(self.language_selector)
+        top_container.add_widget(self.language_selector)
 
         # Сетка букв
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
-        content.add_widget(self.alphabet_grid)
+        top_container.add_widget(self.alphabet_grid)
 
-        # Нижний отступ для BottomNav
+        # Подсказка - будет скрыта при поиске
+        self.hint_label = MDLabel(
+            text="Нажмите на букву для просмотра исполнителей",
+            halign="center",
+            font_size=sp(13),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4],
+            size_hint_y=None,
+            height=dp(32)
+        )
+        top_container.add_widget(self.hint_label)
+
+        main_layout.add_widget(top_container)
+
+        # ============ КОНТЕЙНЕР ДЛЯ РЕЗУЛЬТАТОВ ============
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
-        content.add_widget(Widget(size_hint_y=None, height=total_bottom))
 
-        scroll.add_widget(content)
-        content_wrapper.add_widget(scroll)
-        main_layout.add_widget(content_wrapper)
+        cards_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[content_padding[0], dp(4), content_padding[2], total_bottom]
+        )
+        cards_container.clip = True
+
+        self.search_recycle_view = SongRecycleView(on_song_click=self.on_song_selected)
+        self.search_recycle_view.bar_width = 0
+        self.search_recycle_view.bar_color = [0, 0, 0, 0]
+        self.search_recycle_view.bar_inactive_color = [0, 0, 0, 0]
+        self.search_recycle_view.clip = True
+
+        cards_container.add_widget(self.search_recycle_view)
+        main_layout.add_widget(cards_container)
 
         self.add_widget(main_layout)
 
         logger.info(f"SongsScreen: top_padding = {top_padding}dp, side_padding = {content_padding[0]}dp")
+
+    def _show_search_results(self):
+        """Показывает результаты поиска в RecycleView"""
+        self.hint_label.opacity = 0
+
+        if not self.search_results:
+            self.search_recycle_view.clear()
+            return
+
+        self.search_recycle_view.set_songs(self.search_results, self.on_song_selected)
+
+    def _clear_search_results(self):
+        """Очищает результаты поиска"""
+        self.search_recycle_view.clear()
+        self.hint_label.text = "Нажмите на букву для просмотра исполнителей"
+        self.hint_label.opacity = 1
 
     def on_language_changed(self, language):
         start = time.time()
@@ -529,13 +729,16 @@ class SongsScreen(BaseScreen):
         self.alphabet_grid.set_language(language)
         self.alphabet_grid.clear_selection()
         self.current_letter = None
+        self.clear_search()
+        self._clear_search_results()
         logger.info(f"  ⏱ ВСЕГО: {(time.time() - start) * 1000:.2f}мс")
 
     def on_letter_press(self, letter):
         logger.info(f"Выбрана буква/группа: {letter}")
         self.current_letter = letter
         self.alphabet_grid.clear_selection()
-        self.search_bar.clear()
+        self.clear_search()
+        self._clear_search_results()
 
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('artists_by_letter'):
@@ -547,27 +750,79 @@ class SongsScreen(BaseScreen):
                 notify.error("Ошибка навигации")
 
     def do_search(self, query):
+        """Выполняет поиск песен"""
         if len(query) < 2:
             notify.warning("Введите минимум 2 символа для поиска")
             return
 
         logger.info(f"🔍 Поиск: {query}")
 
-        self.alphabet_grid.clear_selection()
+        self.is_search_mode = True
         self.current_letter = None
+        self.alphabet_grid.clear_selection()
+        self.hint_label.opacity = 0
 
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('search_results'):
-                search_results_screen = self.manager.get_screen('search_results')
-                search_results_screen.do_search(query)
-                self.manager.current = 'search_results'
-            else:
-                logger.error("Экран search_results не найден")
-                notify.error("Ошибка навигации")
+        # Очищаем список перед поиском
+        self.search_recycle_view.clear()
+
+        api.search_songs(
+            query=query,
+            limit=50,
+            on_success=self._on_search_success,
+            on_failure=self._on_search_failed
+        )
+
+    def _on_search_success(self, results):
+        """Обработчик успешного поиска"""
+        if isinstance(results, dict):
+            raw_results = results.get('results', [])
+        elif isinstance(results, list):
+            raw_results = results
+        else:
+            raw_results = []
+
+        formatted_results = []
+        for item in raw_results:
+            if isinstance(item, dict):
+                formatted_results.append({
+                    'song_id': item.get('song_id', 0),
+                    'artist': item.get('artist', ''),
+                    'title': item.get('title', '')
+                })
+
+        self.search_results = formatted_results
+        self._show_search_results()
+        logger.info(f"Найдено {len(self.search_results)} результатов")
+
+        if not self.search_results:
+            notify.info("Ничего не найдено")
+
+    def _on_search_failed(self, req, error):
+        """Обработчик ошибки поиска"""
+        self.search_results = []
+        self._show_search_results()
+        notify.error(f"Ошибка поиска: {error}")
+        logger.error(f"Ошибка поиска: {error}")
 
     def clear_search(self):
-        self.alphabet_grid.clear_selection()
-        self.current_letter = None
+        """Очищает поиск"""
+        self.is_search_mode = False
+        self.search_results = []
+        self.search_bar.clear()
+        self._clear_search_results()
+
+    def on_song_selected(self, song_id, title):
+        """Обработчик выбора песни"""
+        logger.info(f"Выбрана песня: {title}, id: {song_id}")
+        if not song_id:
+            notify.error("Ошибка: не удалось загрузить песню")
+            return
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('song_detail'):
+                song_detail_screen = self.manager.get_screen('song_detail')
+                song_detail_screen.set_previous_screen('songs')
+                song_detail_screen.set_song(song_id)
+                self.manager.current = 'song_detail'
 
     def on_enter(self):
         """При входе на экран"""
@@ -576,3 +831,6 @@ class SongsScreen(BaseScreen):
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из экрана песен")
+        self.clear_search()
+        self.current_letter = None
+        self.alphabet_grid.clear_selection()

@@ -1,6 +1,6 @@
 # screens/term_detail_screen.py
 """
-Экран определения термина - упрощённый
+Экран определения термина - в стиле song_detail_screen
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle
@@ -10,9 +10,12 @@ from io import BytesIO
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.card import MDCard
+from kivymd.uix.button import MDIconButton
 from kivymd.app import MDApp
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
+from kivy.utils import platform
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -31,8 +34,30 @@ except ImportError:
         return None
 
 
+class IconActionButton(MDIconButton):
+    """Кнопка действия в нижней панели"""
+
+    def __init__(self, icon_name, on_press_callback=None, icon_color=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_press_callback = on_press_callback
+        self.size_hint = (1, None)
+        self.height = dp(36)
+        self.theme_icon_color = "Custom"
+        if icon_color:
+            self.icon_color = icon_color
+        else:
+            self.icon_color = [0.5, 0.5, 0.5, 0.9]
+        self.md_bg_color = [0, 0, 0, 0]
+        self.icon = icon_name
+        self.bind(on_release=self._on_press)
+
+    def _on_press(self, instance):
+        if self.on_press_callback:
+            self.on_press_callback()
+
+
 class TermDetailScreen(BaseScreen):
-    """Экран определения термина - упрощённый"""
+    """Экран определения термина - в стиле song_detail_screen"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -42,10 +67,47 @@ class TermDetailScreen(BaseScreen):
         self.term_data = None
         self.previous_screen = 'dictionary'
 
+        # Настройки размера шрифта (как в song_detail_screen)
+        if platform == 'android':
+            self.STANDARD_FONT_SIZE = 42
+            self.MIN_FONT_SIZE = 30
+            self.MAX_FONT_SIZE = 60
+        else:
+            self.STANDARD_FONT_SIZE = 20
+            self.MIN_FONT_SIZE = 14
+            self.MAX_FONT_SIZE = 32
+        self.current_font_size = self.STANDARD_FONT_SIZE
+
+        # Размеры шрифта для слайдера
+        if platform == 'android':
+            self._font_sizes = [30, 34, 38, 42, 46, 50, 54, 58, 60]
+        else:
+            self._font_sizes = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
+
+        # Для смены темы текста
+        self.is_light_theme = False
+
         self.init_ui()
         self.load_background()
 
         logger.info('Экран определения термина создан')
+
+    def _size_to_slider(self, size):
+        """Преобразует размер шрифта в значение слайдера"""
+        try:
+            return self._font_sizes.index(size)
+        except ValueError:
+            closest = min(self._font_sizes, key=lambda x: abs(x - size))
+            return self._font_sizes.index(closest)
+
+    def _slider_to_size(self, slider_value):
+        """Преобразует значение слайдера в размер шрифта"""
+        idx = int(round(slider_value))
+        if idx < 0:
+            idx = 0
+        elif idx > len(self._font_sizes) - 1:
+            idx = len(self._font_sizes) - 1
+        return self._font_sizes[idx]
 
     def load_background(self):
         try:
@@ -73,88 +135,398 @@ class TermDetailScreen(BaseScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
+    def _toggle_theme(self, *args):
+        """Переключает темы: зелёная -> светлая -> тёмная -> зелёная"""
+        if not hasattr(self, '_current_theme'):
+            self._current_theme = 'green'
+
+        if self._current_theme == 'green':
+            self._set_light_theme()
+            self._current_theme = 'light'
+        elif self._current_theme == 'light':
+            self._set_dark_theme()
+            self._current_theme = 'dark'
+        else:
+            self._set_green_theme()
+            self._current_theme = 'green'
+
+        logger.info(f"🔄 Тема изменена на: {self._current_theme}")
+
+    def _set_green_theme(self):
+        """Зелёная тема - фон из ассета, текст белый"""
+        self.is_light_theme = False
+        self.term_description_label.text_color = [1, 1, 1, 0.95]
+        if hasattr(self, '_text_container') and self._text_container:
+            self._text_container.md_bg_color = [0, 0, 0, 0]
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.icon = "weather-sunny"
+            self.theme_btn.icon_color = [0.46, 0.70, 0.71, 1]
+        if hasattr(self, '_bottom_divider'):
+            self._bottom_divider.md_bg_color = [0.5, 0.5, 0.5, 0.3]
+
+    def _set_light_theme(self):
+        """Светлая тема - фон белый, текст чёрный"""
+        self.is_light_theme = True
+        self.term_description_label.text_color = [0, 0, 0, 0.95]
+        if hasattr(self, '_text_container') and self._text_container:
+            self._text_container.md_bg_color = [1, 1, 1, 1]
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.icon = "white-balance-sunny"
+            self.theme_btn.icon_color = [1, 1, 1, 1]
+        if hasattr(self, '_bottom_divider'):
+            self._bottom_divider.md_bg_color = [0, 0, 0, 0.15]
+
+    def _set_dark_theme(self):
+        """Тёмная тема - фон чёрный, текст белый"""
+        self.is_light_theme = False
+        self.term_description_label.text_color = [1, 1, 1, 0.95]
+        if hasattr(self, '_text_container') and self._text_container:
+            self._text_container.md_bg_color = [0.05, 0.05, 0.05, 1]
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.icon = "weather-night"
+            self.theme_btn.icon_color = [0.3, 0.3, 0.3, 1]
+        if hasattr(self, '_bottom_divider'):
+            self._bottom_divider.md_bg_color = [0.5, 0.5, 0.5, 0.3]
+
     def init_ui(self):
-        """Инициализирует UI"""
-        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+        """Инициализирует UI как в song_detail_screen"""
+        main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
-        # Верхний отступ (под статус-бар и TopNav)
-        top_padding = layout_config.get_top_padding()
-        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+        # ============ ОТСТУП ПОД TOPNAV ============
+        top_padding_for_nav = layout_config.get_top_padding()
+        if platform == 'android':
+            min_top_padding = dp(48)
+            if top_padding_for_nav < min_top_padding:
+                top_padding_for_nav = min_top_padding
+            else:
+                top_padding_for_nav = top_padding_for_nav + dp(8)
 
-        # Дополнительный отступ
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(12)))
+        self._top_spacer_term = Widget(size_hint_y=None, height=top_padding_for_nav)
+        main_container.add_widget(self._top_spacer_term)
 
-        # Контейнер с отступами
-        content_padding = layout_config.get_content_padding()
+        card_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[0, 0, 0, 0]
+        )
 
-        # ScrollView для прокрутки текста
-        scroll = ScrollView(
+        self.term_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[0, 0, 0, 0],
+            spacing=0,
+            radius=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],
+            elevation=0,
+            line_width=0.5,
+            line_color=[0, 0, 0, 0]
+        )
+
+        # ============ ВЕРХНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ============
+        top_divider = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(2),
+            md_bg_color=[0.5, 0.5, 0.5, 0.3],
+            padding=[0, 0, 0, 0]
+        )
+        self.term_card.add_widget(top_divider)
+
+        self.content_scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
-            bar_width=0,
-            bar_color=[0, 0, 0, 0],
-            bar_inactive_color=[0, 0, 0, 0],
-            bar_margin=0
+            bar_width=3,
+            bar_color=[0.5, 0.5, 0.5, 0.3],
+            bar_inactive_color=[0.5, 0.5, 0.5, 0.1]
         )
+        self.content_scroll.clip = True
 
-        # Контент
-        content = MDBoxLayout(
+        # ============ НИЖНИЙ ОТСТУП (как в song_detail_screen) ============
+        if platform == 'android':
+            nav_bar_height = get_navigation_bar_height()
+            bottom_padding = nav_bar_height + dp(20)
+        else:
+            bottom_padding = dp(64)
+
+        # ============ КОНТЕЙНЕР ДЛЯ ТЕКСТА ============
+        self._text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
+            spacing=4,
+            padding=[dp(16), dp(20), dp(16), bottom_padding],
             adaptive_height=True,
-            padding=[content_padding[0], dp(8), content_padding[2], get_navigation_bar_height() + dp(60)]
+            md_bg_color=[0, 0, 0, 0]
         )
 
-        # Название термина - жирное, по центру, с большой буквы
-        self.term_name_label = MDLabel(
-            text="",
-            font_size=sp(28),
-            bold=True,
-            halign="center",
-            valign="top",
-            size_hint_y=None,
-            height=dp(60),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1]
-        )
-        content.add_widget(self.term_name_label)
-
-        # Разделитель (пустая строка)
-        content.add_widget(Widget(size_hint_y=None, height=dp(16)))
-
-        # Описание термина - белым текстом, обычным шрифтом
+        # ============ ОПИСАНИЕ ТЕРМИНА ============
         self.term_description_label = MDLabel(
             text="",
-            font_size=sp(17),
-            halign="left",
-            valign="top",
+            font_size=self.current_font_size,
             size_hint_y=None,
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
+            text_color=[1, 1, 1, 0.95],
+            valign="top",
             line_height=1.6
         )
-        content.add_widget(self.term_description_label)
+        self.term_description_label.bind(texture_size=self._update_content_height)
+        self._text_container.add_widget(self.term_description_label)
 
-        scroll.add_widget(content)
-        main_layout.add_widget(scroll)
+        self.content_scroll.add_widget(self._text_container)
+        self.term_card.add_widget(self.content_scroll)
 
-        self.add_widget(main_layout)
+        # ============ НИЖНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ============
+        self._bottom_divider = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(2),
+            md_bg_color=[0.5, 0.5, 0.5, 0.3],
+            padding=[0, 0, 0, 0]
+        )
+        self.term_card.add_widget(self._bottom_divider)
 
-        logger.info("UI определения термина построен")
+        # ============ НИЖНЯЯ ПАНЕЛЬ (только кнопка настроек) ============
+        self._create_bottom_panel()
+        self.term_card.add_widget(self.bottom_panel)
+
+        card_container.add_widget(self.term_card)
+        main_container.add_widget(card_container)
+
+        # Добавляем дополнительный отступ снизу для Windows (как в song_detail_screen)
+        if platform != 'android':
+            main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
+
+        self.add_widget(main_container)
+
+        logger.info(f"TermDetailScreen: init_ui completed, top_padding={top_padding_for_nav}dp, bottom_padding={bottom_padding}dp")
+
+    def _create_bottom_panel(self):
+        """Создаёт нижнюю панель с меню настроек (слайдер + смена темы)"""
+        self.bottom_panel = MDCard(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(52),
+            padding=[dp(8), dp(4), dp(8), dp(4)],
+            spacing=dp(4),
+            radius=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],
+            elevation=0,
+            line_width=0.5,
+            line_color=[0, 0, 0, 0]
+        )
+
+        center_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint_x=1,
+            spacing=dp(0),
+            padding=[dp(0), dp(0), dp(0), dp(0)]
+        )
+
+        from kivymd.uix.slider import MDSlider
+
+        total_steps = len(self._font_sizes) - 1
+        current_slider_value = self._size_to_slider(self.current_font_size)
+
+        # Верхний ряд со значением размера
+        top_row = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(14),
+            spacing=dp(0)
+        )
+
+        left_spacer = MDLabel(
+            text="",
+            size_hint_x=None,
+            width=dp(2)
+        )
+
+        self.font_value_label = MDLabel(
+            text=self._get_font_multiplier(self.current_font_size),
+            font_size=sp(10),
+            halign="center",
+            valign="bottom",
+            size_hint_x=1,
+            theme_text_color="Custom",
+            text_color=[0.46, 0.70, 0.71, 1],
+            bold=True
+        )
+
+        right_spacer = MDLabel(
+            text="",
+            size_hint_x=None,
+            width=dp(2)
+        )
+
+        top_row.add_widget(left_spacer)
+        top_row.add_widget(self.font_value_label)
+        top_row.add_widget(right_spacer)
+
+        # Слайдер
+        slider_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=1,
+            size_hint_y=None,
+            height=dp(28),
+            padding=[dp(2), dp(0), dp(2), dp(0)]
+        )
+
+        self.font_slider = MDSlider(
+            min=-0.01,
+            max=float(total_steps + 0.01),
+            value=current_slider_value,
+            step=1,
+            size_hint_x=1,
+            size_hint_y=None,
+            height=dp(28),
+            hint=False
+        )
+        self.font_slider.ripple_scale = 0
+
+        bi_color = [0.46, 0.70, 0.71, 1]
+
+        self.font_slider.thumb_color_active = bi_color
+        self.font_slider.thumb_color_inactive = bi_color
+        self.font_slider.thumb_color_disabled = bi_color
+        self.font_slider.track_color_active = [0.46, 0.70, 0.71, 0.6]
+        self.font_slider.track_color_inactive = [1, 1, 1, 0.3]
+        self.font_slider.color = bi_color
+
+        def on_slider_change(instance, value):
+            int_value = int(round(value))
+            if int_value < 0:
+                int_value = 0
+            elif int_value > total_steps:
+                int_value = total_steps
+
+            if self.font_slider.value != int_value:
+                self.font_slider.value = int_value
+
+            bi_color = [0.46, 0.70, 0.71, 1]
+            self.font_slider.thumb_color_active = bi_color
+            self.font_slider.thumb_color_inactive = bi_color
+            self.font_slider.thumb_color_disabled = bi_color
+
+            new_size = self._slider_to_size(int_value)
+
+            if self.current_font_size != new_size:
+                self.current_font_size = new_size
+                self.font_value_label.text = self._get_font_multiplier(new_size)
+
+                if hasattr(self, 'term_description_label'):
+                    self.term_description_label.font_size = self.current_font_size
+                    self._update_content_height()
+
+                    delays = [0.0, 0.01, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 0.8]
+                    for delay in delays:
+                        Clock.schedule_once(lambda dt, d=delay: setattr(self.content_scroll, 'scroll_y', 1.0), delay)
+
+                logger.info(f"🔍 Размер шрифта изменён на: {self.current_font_size}")
+
+        self.font_slider.bind(value=on_slider_change)
+
+        slider_container.add_widget(self.font_slider)
+
+        center_container.add_widget(top_row)
+        center_container.add_widget(slider_container)
+
+        # Кнопка смены темы
+        self.theme_btn = IconActionButton(
+            icon_name="weather-sunny",
+            on_press_callback=self._toggle_theme,
+            icon_color=[0.46, 0.70, 0.71, 1]
+        )
+        self.theme_btn.size_hint = (None, None)
+        self.theme_btn.size = (dp(36), dp(36))
+
+        self.bottom_panel.add_widget(center_container)
+        self.bottom_panel.add_widget(self.theme_btn)
+
+        Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.1)
+        Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.3)
+
+    def _fix_slider_thumb(self, slider):
+        """Принудительно обновляет слайдер"""
+        if slider:
+            bi_color = [0.46, 0.70, 0.71, 1]
+            slider.thumb_color_active = bi_color
+            slider.thumb_color_inactive = bi_color
+            slider.thumb_color_disabled = bi_color
+
+            current = slider.value
+            slider.value = current + 0.01
+            Clock.schedule_once(lambda dt: setattr(slider, 'value', current), 0.01)
+
+    def _get_font_multiplier(self, font_size):
+        """Возвращает строку с множителем размера шрифта"""
+        ratio = font_size / self.STANDARD_FONT_SIZE
+        rounded = round(ratio * 10) / 10
+        if rounded == int(rounded):
+            return f"{int(rounded)}x"
+        return f"{rounded:.1f}x"
+
+    def _update_content_height(self, *args):
+        """Обновляет высоту контейнера с текстом"""
+        if not self.term_description_label.texture:
+            Clock.schedule_once(lambda dt: self._update_content_height(), 0.05)
+            return
+
+        text_height = self.term_description_label.texture_size[1]
+        self.term_description_label.height = max(dp(50), text_height + dp(8))
+
+        if self.term_description_label.parent:
+            self.term_description_label.parent.height = text_height + dp(16)
+            if hasattr(self.term_description_label.parent, 'minimum_height'):
+                self.term_description_label.parent.minimum_height = text_height + dp(16)
+
+        self.content_scroll.scroll_y = 1.0
+
+    def _reset_to_defaults(self):
+        """Сбрасывает настройки к стандартным"""
+        # Сброс шрифта
+        self.current_font_size = self.STANDARD_FONT_SIZE
+        if hasattr(self, 'term_description_label'):
+            self.term_description_label.font_size = self.current_font_size
+            self._update_content_height()
+        if hasattr(self, 'font_value_label'):
+            self.font_value_label.text = self._get_font_multiplier(self.current_font_size)
+        if hasattr(self, 'font_slider'):
+            self.font_slider.value = self._size_to_slider(self.current_font_size)
+
+        # Сброс темы на зелёную
+        if hasattr(self, '_current_theme') and self._current_theme != 'green':
+            self._set_green_theme()
+            self._current_theme = 'green'
+        elif not hasattr(self, '_current_theme'):
+            self._current_theme = 'green'
+            self._set_green_theme()
+
+        logger.info("🔄 Настройки сброшены к стандартным")
+
+    def _clean_description(self, text):
+        """Убирает пустые строки в начале и конце текста"""
+        if not text:
+            return ""
+        lines = text.split('\n')
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        while lines and not lines[-1].strip():
+            lines.pop()
+        return '\n'.join(lines)
 
     def set_term(self, term_name, term_data, previous_screen='dictionary'):
         """Устанавливает термин для отображения"""
+        # Сбрасываем настройки при каждом новом термине
+        self._reset_to_defaults()
+
         self.term_name = term_name
         self.term_data = term_data
         self.previous_screen = previous_screen
 
         logger.info(f"Установлен термин: {term_name}")
 
-        # Название - с большой буквы, жирное
-        self.term_name_label.text = term_name.capitalize()
-
-        # Описание
+        # Описание - очищаем от пустых строк в начале/конце
         description = term_data.get('description', 'Описание отсутствует')
+        description = self._clean_description(description)
         self.term_description_label.text = description
 
         # Вычисляем высоту для описания
@@ -163,6 +535,14 @@ class TermDetailScreen(BaseScreen):
 
         # Обновляем TopNav
         self._update_top_nav(term_name)
+
+        # Прокручиваем вверх после загрузки
+        Clock.schedule_once(self._scroll_to_top, 0.1)
+
+    def _scroll_to_top(self, dt):
+        """Прокручивает вверх"""
+        if hasattr(self, 'content_scroll'):
+            self.content_scroll.scroll_y = 1.0
 
     def _update_top_nav(self, title):
         """Обновляет заголовок в TopNav"""
@@ -187,9 +567,31 @@ class TermDetailScreen(BaseScreen):
     def on_enter(self):
         """При входе на экран"""
         logger.info("Вход в экран определения термина")
+
+        # Скрываем BottomNav как в song_detail_screen
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'hide_bottom_nav'):
+            app.hide_bottom_nav()
+
+        # Обновляем отступы при входе
+        if hasattr(self, '_top_spacer_term'):
+            top_padding = layout_config.get_top_padding()
+            if platform == 'android':
+                top_padding = top_padding + dp(16)
+            self._top_spacer_term.height = top_padding
+
         if self.term_name:
             self._update_top_nav(self.term_name)
+            Clock.schedule_once(self._scroll_to_top, 0.2)
 
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из экрана определения термина")
+
+        # Показываем BottomNav как в song_detail_screen
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'show_bottom_nav'):
+            app.show_bottom_nav()
+
+        # Сбрасываем настройки при выходе
+        self._reset_to_defaults()

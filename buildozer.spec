@@ -11,7 +11,7 @@ source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 source.include_patterns = chords/**, **/*.py
 
 # Исключаем ненужные файлы
-source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py
+source.include_patterns = chords/**, dicts/**, screens/**, utils/**, api/**, config/**, data/**, **/*.py
 
 # ПОВЫШАЕМ ВЕРСИЮ ДЛЯ ОБНОВЛЕНИЯ
 version = 1.0.2
@@ -19,10 +19,10 @@ version.code = 2
 orientation = portrait
 
 # --- ЗАВИСИМОСТИ ---
-requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,pyjnius
 
 # --- ПРАВА ---
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,MODIFY_AUDIO_SETTINGS,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 android.api = 33
 android.minapi = 24
 android.enable_androidx = True

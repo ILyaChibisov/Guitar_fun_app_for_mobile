@@ -11,6 +11,7 @@ from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
 from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle
+from kivy.uix.scrollview import ScrollView
 from io import BytesIO
 
 from config.theme import theme
@@ -129,20 +130,6 @@ class ArtistsByLetterScreen(BaseScreen):
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # ============ СЧЁТЧИК ИСПОЛНИТЕЛЕЙ ============
-        self.count_label = MDLabel(
-            text="",
-            font_size=sp(13),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7],
-            size_hint_y=None,
-            height=dp(32),
-            padding=[0, dp(4), 0, dp(4)]
-        )
-        main_layout.add_widget(self.count_label)
-
         # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
@@ -153,12 +140,15 @@ class ArtistsByLetterScreen(BaseScreen):
             size_hint=(1, 1),
             padding=[dp(12), dp(4), dp(12), total_bottom]
         )
+        cards_container.clip = True
+        cards_container.adaptive_height = False
 
         # RecycleView для карточек
         self.recycle_view = ArtistRecycleView(on_artist_click=self.on_artist_selected)
         self.recycle_view.bar_width = 0
         self.recycle_view.bar_color = [0, 0, 0, 0]
         self.recycle_view.bar_inactive_color = [0, 0, 0, 0]
+        self.recycle_view.clip = True
 
         cards_container.add_widget(self.recycle_view)
         main_layout.add_widget(cards_container)
@@ -171,10 +161,11 @@ class ArtistsByLetterScreen(BaseScreen):
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            if self.current_letter:
-                app.top_nav.update_for_artists_screen(self.current_letter, show_back_button=True)
-            elif self._pending_letter:
-                app.top_nav.update_for_artists_screen(self._pending_letter, show_back_button=True)
+            # Создаём двухстрочный заголовок как в SongDetail
+            title_container = self._create_top_nav_title()
+            app.top_nav.set_custom_title_widget(title_container)
+            app.top_nav._show_back_button()
+            app.top_nav.back_btn.on_release = self.go_back
 
         if self._pending_letter:
             letter = self._pending_letter
@@ -182,6 +173,64 @@ class ArtistsByLetterScreen(BaseScreen):
             self._do_load_letter(letter)
         elif self.current_letter:
             self._do_load_letter(self.current_letter)
+
+    def _create_top_nav_title(self):
+        """Создаёт двухстрочный заголовок для TopNav (буква и количество)"""
+        from kivymd.uix.boxlayout import MDBoxLayout
+        from kivymd.uix.label import MDLabel
+        from kivy.metrics import sp, dp
+
+        title_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            spacing=dp(2),
+            padding=[dp(8), dp(4), dp(8), dp(4)]
+        )
+
+        # Буква - большая, жирная
+        letter_display = self.current_letter.upper() if self.current_letter else ""
+        if letter_display == '0-9':
+            letter_display = '0-9'
+        letter_label = MDLabel(
+            text=letter_display,
+            font_size=sp(22),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            bold=True,
+            shorten=True,
+            shorten_from="right"
+        )
+
+        # Количество исполнителей - маленький шрифт
+        count_text = self._get_count_text(len(self._cache.get(self.current_letter, {}).get('artists', [])) if self.current_letter else 0)
+        count_label = MDLabel(
+            text=count_text,
+            font_size=sp(12),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.9, 0.9, 0.9, 0.8],
+            shorten=True,
+            shorten_from="right"
+        )
+
+        title_container.add_widget(letter_label)
+        title_container.add_widget(count_label)
+
+        return title_container
+
+    def _get_count_text(self, total):
+        """Возвращает текст с количеством исполнителей с правильным склонением"""
+        if total == 0:
+            return "Нет исполнителей"
+        elif total == 1:
+            return "1 исполнитель"
+        elif 2 <= total <= 4:
+            return f"{total} исполнителя"
+        else:
+            return f"{total} исполнителей"
 
     def set_letter(self, letter):
         logger.info(f"set_letter: {letter}")
@@ -199,21 +248,17 @@ class ArtistsByLetterScreen(BaseScreen):
 
         self.current_letter = letter
 
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.update_for_artists_screen(letter, show_back_button=True)
-
         if self.recycle_view:
             self.recycle_view.clear()
 
         self._hide_loading()
         self._hide_empty()
-        self._update_count_label(0)
 
         if letter in self._cache:
             artists = self._cache[letter].get('artists', [])
             total = self._cache[letter].get('total', 0)
             self._display_artists(artists, total)
+            self._update_top_nav_count(total)
             return
 
         cached = api.get_artists_by_letter_from_cache(letter)
@@ -222,6 +267,7 @@ class ArtistsByLetterScreen(BaseScreen):
             total = cached.get('total', 0)
             self._cache[letter] = {'artists': artists, 'total': total}
             self._display_artists(artists, total)
+            self._update_top_nav_count(total)
             return
 
         self._show_loading()
@@ -235,6 +281,13 @@ class ArtistsByLetterScreen(BaseScreen):
                                       on_success=self._on_artists_loaded,
                                       on_failure=self._on_load_failed)
 
+    def _update_top_nav_count(self, total):
+        """Обновляет количество в TopNav"""
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            title_container = self._create_top_nav_title()
+            app.top_nav.set_custom_title_widget(title_container)
+
     def _show_loading(self):
         if self.loading_label:
             return
@@ -242,7 +295,6 @@ class ArtistsByLetterScreen(BaseScreen):
             self.recycle_view.clear()
         self.loading_label = SimpleLoadingLabel()
         if self._main_layout:
-            # Добавляем после контейнера с карточками
             self._main_layout.add_widget(self.loading_label)
 
     def _hide_loading(self):
@@ -280,7 +332,6 @@ class ArtistsByLetterScreen(BaseScreen):
 
         self._hide_loading()
         self._hide_empty()
-        self._update_count_label(total)
 
         if not artists:
             self._show_empty()
@@ -301,19 +352,6 @@ class ArtistsByLetterScreen(BaseScreen):
 
         logger.info(f"Отображено {len(data)} исполнителей для {self.current_letter}")
 
-    def _update_count_label(self, total):
-        if total == 0:
-            text = "Не найдено исполнителей"
-        elif total == 1:
-            text = "Найден 1 исполнитель"
-        elif 2 <= total <= 4:
-            text = f"Найдено {total} исполнителя"
-        else:
-            text = f"Найдено {total} исполнителей"
-
-        if self.count_label:
-            self.count_label.text = text
-
     def _on_artists_loaded(self, data):
         logger.info(f"_on_artists_loaded для буквы {self.current_letter}")
 
@@ -331,6 +369,7 @@ class ArtistsByLetterScreen(BaseScreen):
 
         self._cache[self.current_letter] = {'artists': artists, 'total': total}
         self._display_artists(artists, total)
+        self._update_top_nav_count(total)
 
     def _on_load_failed(self, req, error):
         self._hide_loading()
@@ -341,8 +380,8 @@ class ArtistsByLetterScreen(BaseScreen):
         if self.recycle_view:
             self.recycle_view.clear()
 
-        self._update_count_label(0)
         self._show_empty("Ошибка загрузки\nПроверьте интернет")
+        self._update_top_nav_count(0)
 
     def on_artist_selected(self, artist, songs_count):
         logger.info(f"Выбран исполнитель: {artist}")
@@ -352,6 +391,6 @@ class ArtistsByLetterScreen(BaseScreen):
                 screen.set_artist(artist)
                 self.manager.current = 'artist_songs'
 
-    def go_back(self, instance):
+    def go_back(self, instance=None):
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'songs'

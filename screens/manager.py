@@ -1,4 +1,4 @@
-# screens/manager.py (обновлённый)
+# screens/manager.py (обновлённый - без SearchResultsScreen)
 from kivy.uix.screenmanager import ScreenManager
 from config.logger_config import get_logger
 from .home_screen import HomeScreen
@@ -8,12 +8,11 @@ from .artist_songs_screen import ArtistSongsScreen
 from .chords_screen import ChordsScreen
 from .dictionary_screen import DictionaryScreen
 from .tuner_screen import TunerScreen
-from .metronome_screen import MetronomeScreen  # ← ДОБАВЛЯЕМ
+from .metronome_screen import MetronomeScreen
 from .favorites_screen import FavoritesScreen
 from .profile_screen import ProfileScreen
 from .song_detail_screen import SongDetailScreen
 from .admin_screen import AdminScreen
-from .search_results_screen import SearchResultsScreen
 from .search_screen import SearchScreen
 from .parsers_screens.amdm_parser_screen import AMDMParserScreen
 from .parsers_screens.mytabs_parser_screen import MyTabsParserScreen
@@ -46,7 +45,6 @@ def setup_screen_manager():
     sm.add_widget(ProfileScreen(name='profile'))
     sm.add_widget(SongDetailScreen(name='song_detail'))
     sm.add_widget(AdminScreen(name='admin'))
-    sm.add_widget(SearchResultsScreen(name='search_results'))
     sm.add_widget(SearchScreen(name='search'))
     sm.add_widget(DictionaryScreen(name='dictionary'))
     sm.add_widget(TermsByLetterScreen(name='terms_by_letter'))
@@ -64,5 +62,5 @@ def setup_screen_manager():
     sm.add_widget(DomhveParserScreen(name='domhve_parser'))
     sm.add_widget(RushSoundParserScreen(name='rushsound_parser'))
 
-    logger.info('ScreenManager настроен, добавлено 23 экрана (включая Метроном)')
+    logger.info('ScreenManager настроен, добавлено 22 экрана (SearchResultsScreen удалён)')
     return sm

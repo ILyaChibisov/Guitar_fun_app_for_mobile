@@ -192,7 +192,7 @@ class TopNav(MDCard):
             'songs': 'Песни',
             'chords': 'Аккорды',
             'tuner': 'Тюнер',
-            'metronome': 'Метроном',  # ← ДОБАВЛЯЕМ
+            'metronome': 'Метроном',
             'favorites': 'Избранное',
             'profile': 'Профиль',
             'artists_by_letter': 'Исполнители',
@@ -201,10 +201,11 @@ class TopNav(MDCard):
             'search_results': 'Результаты поиска',
             'dictionary': 'Словарь',
             'admin': 'Админ панель',
-            'search': 'Быстрый поиск'
+            'search': 'Быстрый поиск',
+            'terms_by_letter': '',  # пусто, т.к. используется кастомный виджет
+            'term_detail': '',  # пусто, т.к. используется кастомный виджет
         }
         return titles.get(screen_name, screen_name.capitalize())
-
 
     def update_title(self, screen_name: str):
         self.screen_title.text = self._get_screen_title(screen_name)
@@ -213,19 +214,26 @@ class TopNav(MDCard):
         self.screen_title.text = title
 
     def set_custom_title_widget(self, widget):
-        """Устанавливает кастомный виджет в качестве заголовка (для экрана песни)"""
+        """Устанавливает кастомный виджет в качестве заголовка"""
+        # Сохраняем старый виджет если его нет
         if not hasattr(self, '_old_title_widget') or self._old_title_widget is None:
             self._old_title_widget = self.screen_title
 
-        if self.screen_title in self.container.children:
-            self.container.remove_widget(self.screen_title)
-
+        # Удаляем старый кастомный виджет если есть
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
+            self.custom_title_widget = None
 
+        # Удаляем стандартный заголовок из контейнера
+        if self.screen_title in self.container.children:
+            self.container.remove_widget(self.screen_title)
+
+        # Добавляем новый кастомный виджет
         self.container.add_widget(widget, index=1)
         self.custom_title_widget = widget
+
+        logger.info(f"✅ Установлен кастомный виджет заголовка")
 
     def clear_custom_title_widget(self):
         """Очищает кастомный виджет и возвращает стандартный заголовок"""
@@ -233,10 +241,13 @@ class TopNav(MDCard):
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
             self.custom_title_widget = None
+            logger.info("✅ Кастомный виджет заголовка удалён")
 
+        # Восстанавливаем стандартный заголовок
         if hasattr(self, '_old_title_widget') and self._old_title_widget:
             if self._old_title_widget not in self.container.children:
                 self.container.add_widget(self._old_title_widget, index=1)
+                logger.info("✅ Стандартный заголовок восстановлен")
 
     def set_custom_back_callback(self, callback):
         self._custom_back_callback = callback
@@ -261,15 +272,21 @@ class TopNav(MDCard):
         if old and old != screen_name:
             self._previous_screen = old
 
-        if screen_name != 'chords':
-            self.clear_custom_back_callback()
+        # Сбрасываем кастомный заголовок для экранов, где он не нужен
+        # Экран terms_by_letter использует кастомный виджет (буква + количество)
+        # Экран term_detail использует кастомный заголовок (название термина)
+        # Song_detail использует кастомный виджет (название песни + артист)
+        screens_with_custom_title = ['song_detail', 'terms_by_letter', 'term_detail']
 
-        if old == 'song_detail' and screen_name != 'song_detail':
-            self.clear_custom_title_widget()
+        # Если текущий экран НЕ использует кастомный заголовок - очищаем
+        if screen_name not in screens_with_custom_title:
+            if self.custom_title_widget:
+                self.clear_custom_title_widget()
+                self.update_title(screen_name)
 
-        self._update_right_buttons(screen_name)
-
-        if screen_name not in ['artists_by_letter', 'artist_songs', 'song_detail', 'search_results', 'chords']:
+        # Обработка кнопки назад
+        if screen_name not in ['artists_by_letter', 'artist_songs', 'song_detail', 'search_results', 'chords',
+                               'terms_by_letter', 'term_detail']:
             self._hide_back_button()
             if not hasattr(self, 'custom_title_widget') or not self.custom_title_widget:
                 self.update_title(screen_name)
@@ -278,10 +295,32 @@ class TopNav(MDCard):
             if screen_name == 'chords':
                 self.screen_title.text = "Аккорды"
             elif screen_name == 'song_detail':
-                pass
+                pass  # заголовок устанавливается в set_custom_title_widget
+            elif screen_name == 'terms_by_letter':
+                pass  # заголовок устанавливается в set_custom_title_widget
+            elif screen_name == 'term_detail':
+                pass  # заголовок устанавливается в set_custom_title_widget
             else:
                 if not hasattr(self, 'custom_title_widget') or not self.custom_title_widget:
                     self.update_title(screen_name)
+
+        # Специальный случай: при выходе с terms_by_letter или term_detail очищаем кастомный виджет
+        if old == 'terms_by_letter' and screen_name != 'terms_by_letter':
+            self.clear_custom_title_widget()
+            self.update_title(screen_name)
+
+        if old == 'term_detail' and screen_name != 'term_detail':
+            self.clear_custom_title_widget()
+            self.update_title(screen_name)
+
+        if old == 'song_detail' and screen_name != 'song_detail':
+            self.clear_custom_title_widget()
+            self.update_title(screen_name)
+
+        if screen_name != 'chords':
+            self.clear_custom_back_callback()
+
+        self._update_right_buttons(screen_name)
 
     def _on_menu_press(self, btn):
         app = MDApp.get_running_app()
@@ -318,6 +357,8 @@ class TopNav(MDCard):
                 'search_results': 'songs',
                 'profile': 'home',
                 'admin': 'profile',
+                'terms_by_letter': 'dictionary',
+                'term_detail': 'terms_by_letter',
             }
             target = back_map.get(current, 'songs')
             self.sm.current = target
@@ -346,10 +387,8 @@ class TopNav(MDCard):
         """Переход на страницу профиля через единую логику приложения"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'open_profile'):
-            # Используем метод из main.py для единой логики авторизации
             app.open_profile()
         else:
-            # Запасной вариант
             if self.sm and self.sm.has_screen('profile'):
                 self.sm.current = 'profile'
                 logger.info("Переход на экран профиля (прямой)")

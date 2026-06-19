@@ -1,4 +1,4 @@
-# screens/recycle_artist_card.py - РАБОЧАЯ ВЕРСИЯ (без изменений)
+# screens/recycle_artist_card.py
 """
 Переиспользуемая карточка исполнителя для RecycleView
 """
@@ -11,6 +11,7 @@ from kivy.metrics import dp, sp
 from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
 from kivy.uix.image import Image
+from kivy.graphics import Color, Rectangle
 
 # Предзагруженная текстура иконки (ОДНА на все карточки)
 _shared_icon_texture = None
@@ -33,25 +34,27 @@ class RecycleArtistCard(RecycleDataViewBehavior, MDCard):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(64)
+        self.height = dp(56)
         self.padding = [dp(16), dp(10), dp(12), dp(10)]
-        self.spacing = dp(14)
-        self.radius = [dp(20), dp(20), dp(20), dp(20)]
+        self.spacing = dp(12)
+        self.radius = [dp(10), dp(10), dp(10), dp(10)]
         self.elevation = 0
         self.ripple_behavior = True
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [1, 1, 1, 0.08]
+        self.md_bg_color = [0, 0, 0, 0.06]
+        self.line_color = [1, 1, 1, 0.05]
+        self.line_width = 0.5
+        self.clip = True
 
         self._build_ui()
 
     def _build_ui(self):
         from kivy.uix.image import Image
 
-        # Иконка - ОДНА на все карточки (ссылка на текстуру)
+        # Иконка - как в словаре (растягиваем по высоте)
         self.icon = Image(
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            pos_hint={'center_y': 0.5},
+            size_hint=(None, 1),
+            width=dp(30),
             allow_stretch=True,
             keep_ratio=True
         )
@@ -69,20 +72,22 @@ class RecycleArtistCard(RecycleDataViewBehavior, MDCard):
         self.artist_label = MDLabel(
             font_size=sp(16),
             size_hint_y=None,
-            height=dp(26),
+            height=dp(24),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
             shorten=True,
-            shorten_from="right"
+            shorten_from="right",
+            valign="middle"
         )
 
         self.songs_label = MDLabel(
-            font_size=sp(11),
+            font_size=sp(12),
             size_hint_y=None,
-            height=dp(22),
+            height=dp(18),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5]
+            text_color=[1, 1, 1, 0.5],
+            valign="middle"
         )
 
         text_layout.add_widget(self.artist_label)
@@ -91,10 +96,11 @@ class RecycleArtistCard(RecycleDataViewBehavior, MDCard):
         # Стрелка
         arrow = MDLabel(
             text="›",
-            font_size=sp(28),
+            font_size=sp(24),
             size_hint_x=None,
             width=dp(28),
             halign="center",
+            valign="middle",
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 0.5]
         )
@@ -139,17 +145,19 @@ class ArtistRecycleView(RecycleView):
 
         # Отключаем анимацию прокрутки для скорости
         self.animate_scroll = False
-        self.bar_color = [1, 1, 1, 0.2]
-        self.bar_width = dp(3)
+        self.bar_width = 0
+        self.bar_color = [0, 0, 0, 0]
+        self.bar_inactive_color = [0, 0, 0, 0]
+        self.clip = True
 
-        # Создаём layout ПРАВИЛЬНО
+        # Создаём layout
         self.layout_manager = RecycleBoxLayout(
-            default_size=(None, dp(64)),
+            default_size=(None, dp(56)),
             default_size_hint=(1, None),
             size_hint_y=None,
-            height=dp(64) * 10,
+            height=dp(56) * 10,
             orientation='vertical',
-            spacing=dp(8)
+            spacing=dp(6)
         )
 
         # Привязываем обновление высоты

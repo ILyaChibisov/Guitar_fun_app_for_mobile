@@ -10,7 +10,6 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
-from kivy.uix.scrollview import ScrollView
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
@@ -21,6 +20,11 @@ from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.textfield import MDTextField
 from kivymd.app import MDApp
+
+from kivy.uix.recycleview import RecycleView
+from kivy.uix.recycleview.views import RecycleDataViewBehavior
+from kivy.uix.recycleboxlayout import RecycleBoxLayout
+from kivy.properties import StringProperty, ObjectProperty
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -42,6 +46,29 @@ except ImportError:
     def load_asset_as_bytes(name):
         return None
 
+# ============ ГЛОБАЛЬНАЯ ИКОНКА ============
+_shared_dict_icon_texture = None
+
+
+def init_shared_dict_icon():
+    global _shared_dict_icon_texture
+    if _shared_dict_icon_texture is not None:
+        return _shared_dict_icon_texture
+
+    if HAS_ASSETS:
+        try:
+            icon_data = load_asset_as_bytes('dictionary2_png')
+            if icon_data:
+                img = CoreImage(BytesIO(icon_data), ext="png")
+                _shared_dict_icon_texture = img.texture
+                logger.info("✅ Общая иконка словаря загружена")
+                return _shared_dict_icon_texture
+        except Exception as e:
+            logger.error(f"Ошибка загрузки иконки dictionary2_png: {e}")
+    return None
+
+
+# ============ КЛАССЫ ============
 
 class LetterButton(ButtonBehavior, MDBoxLayout):
     """Кнопка буквы для сетки"""
@@ -221,14 +248,13 @@ class AlphabetGrid(MDCard):
 
 
 class GoogleSearchBar(MDCard):
-    """Поисковая строка как в Songs"""
+    """Поисковая строка - поиск ТОЛЬКО по нажатию на лупу или Enter"""
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
         self.on_clear = on_clear
         self.current_query = ""
-        self._search_timer = None
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
@@ -258,8 +284,6 @@ class GoogleSearchBar(MDCard):
         self.search_field.hint_text_color = [0.7, 0.7, 0.7, 1]
         self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
 
-        self.search_field.bind(text=self._on_text_change)
-
         self.clear_btn = MDIconButton(
             icon="close-circle",
             size_hint=(None, None),
@@ -286,31 +310,17 @@ class GoogleSearchBar(MDCard):
         self.add_widget(self.clear_btn)
         self.add_widget(self.search_icon)
 
+        self.search_field.bind(text=self._on_text_change)
+
     def _on_text_change(self, instance, text):
         self.clear_btn.opacity = 1 if text else 0
         self.current_query = text
 
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
         if not text.strip():
             if self.on_clear:
                 self.on_clear()
-        else:
-            self._search_timer = Clock.schedule_once(lambda dt: self._do_search(), 0.3)
-
-    def _do_search(self):
-        if self.on_search and self.current_query:
-            text = self.current_query.strip()
-            if text:
-                self.on_search(text)
 
     def _on_search(self, instance):
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
         if self.on_search:
             text = self.search_field.text.strip()
             if text:
@@ -322,13 +332,6 @@ class GoogleSearchBar(MDCard):
         self.clear_btn.opacity = 0
         if self.on_clear:
             self.on_clear()
-
-    def get_text(self):
-        return self.search_field.text.strip()
-
-    def set_text(self, text):
-        self.search_field.text = text
-        self.clear_btn.opacity = 1 if text else 0
 
     def clear(self):
         self.search_field.text = ""
@@ -455,56 +458,126 @@ class LanguageSelector(MDBoxLayout):
         self._update_display()
 
 
-class SearchResultCard(MDCard):
-    """Карточка результата поиска - кликабельная"""
+# ============ RECYCLEVIEW ДЛЯ РЕЗУЛЬТАТОВ ПОИСКА ============
 
-    def __init__(self, term_name, on_click=None, **kwargs):
+class SearchTermCard(RecycleDataViewBehavior, MDCard):
+    """Карточка термина для RecycleView (результаты поиска)"""
+
+    term_name = StringProperty('')
+    on_click = ObjectProperty(None)
+
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.term_name = term_name
-        self.on_click_callback = on_click
-
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)
-        self.padding = [dp(12), dp(6), dp(12), dp(6)]
+        self.height = dp(56)
+        self.padding = [dp(16), dp(10), dp(12), dp(10)]  # ← вертикальные отступы 10
+        self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
         self.ripple_behavior = True
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.06]
         self.line_color = [1, 1, 1, 0.05]
-        self.line_width = 1
+        self.line_width = 0.5
+        self.clip = True
+        self._build_ui()
 
+    def _build_ui(self):
+        # Иконка
+        self.icon = Image(
+            size_hint=(None, 1),  # ← растягиваем по высоте
+            width=dp(30),
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        if _shared_dict_icon_texture:
+            self.icon.texture = _shared_dict_icon_texture
+        else:
+            self.icon.text = "📖"
+
+        # Текст
         self.term_label = MDLabel(
-            text=term_name.capitalize(),
-            font_size=sp(15),
-            halign="left",
-            valign="middle",
-            size_hint_x=1,
+            font_size=sp(16),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
-            bold=True
+            text_color=[1, 1, 1, 0.95],
+            bold=True,
+            shorten=True,
+            shorten_from="right",
+            valign="middle",
+            size_hint_x=1
         )
 
-        self.arrow_label = MDLabel(
+        # Стрелка
+        arrow = MDLabel(
             text="›",
-            font_size=sp(18),
+            font_size=sp(24),
             size_hint_x=None,
-            width=dp(20),
+            width=dp(28),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.3]
         )
 
+        self.add_widget(self.icon)
         self.add_widget(self.term_label)
-        self.add_widget(self.arrow_label)
-        self.bind(on_release=self._on_click)
+        self.add_widget(arrow)
 
-    def _on_click(self, instance):
-        if self.on_click_callback:
-            self.on_click_callback(self.term_name)
+    def refresh_view_attrs(self, rv, index, data):
+        self.term_name = data.get('term_name', '')
+        self.on_click = data.get('on_click')
+        self.term_label.text = self.term_name.capitalize()
+        return super().refresh_view_attrs(rv, index, data)
 
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            if self.on_click:
+                self.on_click(self.term_name)
+            return True
+        return super().on_touch_down(touch)
+
+
+class TermRecycleView(RecycleView):
+    """Виртуализированный список терминов для поиска"""
+
+    def __init__(self, on_term_click=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_term_click = on_term_click
+        self.animate_scroll = False
+        self.bar_width = 0
+        self.bar_color = [0, 0, 0, 0]
+        self.bar_inactive_color = [0, 0, 0, 0]
+
+        self.layout_manager = RecycleBoxLayout(
+            default_size=(None, dp(60)),
+            default_size_hint=(1, None),
+            size_hint_y=None,
+            height=dp(60) * 10,
+            orientation='vertical',
+            spacing=dp(6)
+        )
+        self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
+        self.viewclass = 'SearchTermCard'
+        self.add_widget(self.layout_manager)
+        self.clip = True
+
+    def set_terms(self, terms, on_click):
+        data = []
+        for term in terms:
+            data.append({
+                'term_name': term,
+                'on_click': on_click
+            })
+        self.data = data
+        self.refresh_from_data()
+
+    def clear(self):
+        self.data = []
+        self.refresh_from_data()
+
+
+# ============ ОСНОВНОЙ ЭКРАН ============
 
 class DictionaryScreen(BaseScreen):
     """Экран словаря с поиском и алфавитной навигацией"""
@@ -513,15 +586,27 @@ class DictionaryScreen(BaseScreen):
         super().__init__(**kwargs)
         self.name = 'dictionary'
         self.bg_image = None
-        self.all_terms = {}
-        self.terms_by_letter = {}
-        self.current_letter = None
-        self.is_search_mode = False
-        self.search_results = []
+
+        # Данные терминов
+        self.all_terms: dict = {}
+        self.terms_by_letter: dict = {}
+        self.current_letter: str = None
+        self.is_search_mode: bool = False
+        self.search_results: list = []
+
+        # UI элементы
+        self.search_bar = None
+        self.language_selector = None
+        self.alphabet_grid = None
+        self.hint_label = None
+        self.search_recycle_view = None
+        self._main_layout = None
 
         self.init_ui()
         self.load_background()
         self.scan_terms()
+
+        Clock.schedule_once(lambda dt: init_shared_dict_icon(), 0.1)
 
         logger.info('Экран словаря создан')
 
@@ -560,7 +645,6 @@ class DictionaryScreen(BaseScreen):
         try:
             import dicts
 
-            # Загружаем русские термины
             try:
                 from dicts.ru import RU_TERMS_BY_LETTER, get_all_ru_terms
                 ru_terms = get_all_ru_terms()
@@ -570,7 +654,6 @@ class DictionaryScreen(BaseScreen):
                     else:
                         self.all_terms[term_name] = term_data
 
-                # Сохраняем термины по буквам
                 for letter, terms in RU_TERMS_BY_LETTER.items():
                     if terms:
                         for term_name in terms:
@@ -585,7 +668,6 @@ class DictionaryScreen(BaseScreen):
             except ImportError as e:
                 logger.error(f"❌ Ошибка загрузки русских терминов: {e}")
 
-            # Загружаем английские термины
             try:
                 from dicts.en import EN_TERMS_BY_LETTER, get_all_en_terms
                 en_terms = get_all_en_terms()
@@ -595,7 +677,6 @@ class DictionaryScreen(BaseScreen):
                     else:
                         self.all_terms[term_name] = term_data
 
-                # Сохраняем термины по буквам
                 for letter, terms in EN_TERMS_BY_LETTER.items():
                     if terms:
                         for term_name in terms:
@@ -612,21 +693,17 @@ class DictionaryScreen(BaseScreen):
 
         except ImportError as e:
             logger.error(f"❌ Пакет dicts не найден: {e}")
-            # Не добавляем тестовые термины, просто показываем пустой словарь
         except Exception as e:
             logger.error(f"❌ Ошибка сканирования: {e}")
 
-        # Сортируем термины
         self.all_terms = dict(sorted(self.all_terms.items()))
 
-        # Сортируем списки по буквам
         for letter in self.terms_by_letter:
             self.terms_by_letter[letter].sort()
 
         logger.info(f"✅ Всего загружено {len(self.all_terms)} терминов, букв: {len(self.terms_by_letter)}")
 
     def _get_first_letter(self, term_name):
-        """Возвращает первую букву термина для группировки"""
         if not term_name:
             return None
         clean_name = term_name.lstrip('«»"\'')
@@ -638,61 +715,46 @@ class DictionaryScreen(BaseScreen):
         return None
 
     def init_ui(self):
-        """Инициализирует UI как в Songs"""
-        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+        """Инициализирует UI как в artist_songs_screen.py с правильными отступами"""
 
+        # Основной контейнер
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
+        self._main_layout = main_layout
+
+        # Верхний отступ
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        # Дополнительный отступ
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
+        # Получаем боковые отступы
         content_padding = layout_config.get_content_padding()
 
-        content_wrapper = MDBoxLayout(
+        # ============ КОНТЕЙНЕР ДЛЯ ВЕРХНЕЙ ЧАСТИ ============
+        top_container = MDBoxLayout(
             orientation='vertical',
-            size_hint=(1, 1),
+            size_hint=(1, None),
+            adaptive_height=True,
             padding=[content_padding[0], 0, content_padding[2], 0]
         )
 
-        scroll = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_width=0,
-            bar_color=[0, 0, 0, 0],
-            bar_inactive_color=[0, 0, 0, 0],
-            bar_margin=0
-        )
-
-        content = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(20),
-            size_hint_y=None,
-            adaptive_height=True
-        )
-        content.bind(minimum_height=content.setter('height'))
-
+        # Поисковая строка
         self.search_bar = GoogleSearchBar(
             on_search=self.do_search,
             on_clear=self.clear_search
         )
-        content.add_widget(self.search_bar)
+        top_container.add_widget(self.search_bar)
 
+        # Выбор языка
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
-        content.add_widget(self.language_selector)
+        top_container.add_widget(self.language_selector)
 
+        # Сетка букв
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
-        content.add_widget(self.alphabet_grid)
-
-        # Контейнер для результатов поиска
-        self.search_results_container = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(4),
-            size_hint_y=None,
-            adaptive_height=True,
-            padding=[dp(4), dp(4), dp(4), dp(4)]
-        )
-        content.add_widget(self.search_results_container)
+        top_container.add_widget(self.alphabet_grid)
 
         # Подсказка
         self.hint_label = MDLabel(
@@ -702,51 +764,50 @@ class DictionaryScreen(BaseScreen):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.4],
             size_hint_y=None,
-            height=dp(40)
+            height=dp(32)
         )
-        content.add_widget(self.hint_label)
+        top_container.add_widget(self.hint_label)
 
+        main_layout.add_widget(top_container)
+
+        # ============ КОНТЕЙНЕР ДЛЯ РЕЗУЛЬТАТОВ ============
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
-        content.add_widget(Widget(size_hint_y=None, height=total_bottom))
 
-        scroll.add_widget(content)
-        content_wrapper.add_widget(scroll)
-        main_layout.add_widget(content_wrapper)
+        cards_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[content_padding[0], dp(4), content_padding[2], total_bottom]
+        )
+        cards_container.clip = True
+
+        self.search_recycle_view = TermRecycleView(on_term_click=self.on_term_selected)
+        self.search_recycle_view.bar_width = 0
+        self.search_recycle_view.bar_color = [0, 0, 0, 0]
+        self.search_recycle_view.bar_inactive_color = [0, 0, 0, 0]
+        self.search_recycle_view.clip = True
+
+        cards_container.add_widget(self.search_recycle_view)
+        main_layout.add_widget(cards_container)
 
         self.add_widget(main_layout)
-
         logger.info(f"UI словаря построен, side_padding={content_padding[0]}dp")
 
     def _show_search_results(self):
-        """Показывает результаты поиска"""
-        self.search_results_container.clear_widgets()
+        """Показывает результаты поиска в RecycleView"""
         self.hint_label.opacity = 0
 
         if not self.search_results:
-            no_results = MDLabel(
-                text="Ничего не найдено",
-                halign="center",
-                font_size=sp(14),
-                theme_text_color="Custom",
-                text_color=[1, 1, 1, 0.4],
-                size_hint_y=None,
-                height=dp(60)
-            )
-            self.search_results_container.add_widget(no_results)
+            self.search_recycle_view.clear()
             return
 
-        for term_name in self.search_results:
-            card = SearchResultCard(
-                term_name=term_name,
-                on_click=self.on_term_selected
-            )
-            self.search_results_container.add_widget(card)
+        self.search_recycle_view.set_terms(self.search_results, self.on_term_selected)
 
     def _clear_search_results(self):
         """Очищает результаты поиска"""
-        self.search_results_container.clear_widgets()
+        self.search_recycle_view.clear()
+        self.hint_label.text = "Нажмите на букву для просмотра терминов"
         self.hint_label.opacity = 1
 
     # ============ ОБРАБОТЧИКИ ============
@@ -760,14 +821,12 @@ class DictionaryScreen(BaseScreen):
         self._clear_search_results()
 
     def on_letter_press(self, letter):
-        """При нажатии на букву - переходим на экран терминов"""
         logger.info(f"Выбрана буква: {letter}")
         self.current_letter = letter
         self.alphabet_grid.clear_selection()
         self.clear_search()
         self._clear_search_results()
 
-        # Переход на экран терминов по букве
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('terms_by_letter'):
                 terms_screen = self.manager.get_screen('terms_by_letter')
@@ -775,7 +834,7 @@ class DictionaryScreen(BaseScreen):
                 self.manager.current = 'terms_by_letter'
 
     def do_search(self, query):
-        """Выполняет поиск терминов - точное совпадение по целому слову"""
+        """Выполняет поиск терминов с приоритетами"""
         logger.info(f"🔍 Поиск: {query}")
         query_lower = query.strip().lower()
 
@@ -787,45 +846,67 @@ class DictionaryScreen(BaseScreen):
         self.current_letter = None
         self.alphabet_grid.clear_selection()
 
+        # Разбиваем запрос на слова
         query_words = query_lower.split()
-        query_phrases = []
-        for i in range(len(query_words)):
-            for j in range(i + 1, len(query_words) + 1):
-                query_phrases.append(' '.join(query_words[i:j]))
 
-        results = []
+        # Результаты с приоритетами
+        exact_matches = []  # Точное совпадение
+        prefix_matches = []  # Начинается с запроса
+        contains_matches = []  # Содержит запрос
+        word_matches = []  # Содержит любое слово из запроса
+
         for term_name, term_data in self.all_terms.items():
             term_lower = term_name.lower()
 
-            # Точное совпадение
+            # 1. Точное совпадение (высший приоритет)
             if term_lower == query_lower:
-                results.append(term_name)
+                if term_name not in exact_matches:
+                    exact_matches.append(term_name)
                 continue
 
-            # Совпадение с фразой
-            for phrase in query_phrases:
-                if phrase == term_lower:
-                    results.append(term_name)
-                    break
-                if phrase in term_lower:
-                    results.append(term_name)
-                    break
+            # 2. Начинается с запроса (второй приоритет)
+            if term_lower.startswith(query_lower):
+                if term_name not in prefix_matches:
+                    prefix_matches.append(term_name)
+                continue
 
-            # Поиск по описанию
-            description = term_data.get('description', '').lower()
+            # 3. Содержит запрос как часть слова
+            if query_lower in term_lower:
+                if term_name not in contains_matches:
+                    contains_matches.append(term_name)
+                continue
+
+            # 4. Содержит любое слово из запроса
             for word in query_words:
-                if word in description:
-                    results.append(term_name)
+                if len(word) >= 2 and word in term_lower:
+                    if term_name not in word_matches:
+                        word_matches.append(term_name)
                     break
 
-        # Убираем дубликаты
-        seen = set()
-        unique_results = []
-        for r in results:
-            if r not in seen:
-                seen.add(r)
-                unique_results.append(r)
-        self.search_results = unique_results
+        # Объединяем результаты с приоритетами
+        results = []
+
+        # Сначала точные совпадения
+        for r in exact_matches:
+            if r not in results:
+                results.append(r)
+
+        # Потом начинающиеся с запроса
+        for r in prefix_matches:
+            if r not in results:
+                results.append(r)
+
+        # Потом содержащие запрос
+        for r in contains_matches:
+            if r not in results:
+                results.append(r)
+
+        # Потом содержащие любое слово
+        for r in word_matches:
+            if r not in results:
+                results.append(r)
+
+        self.search_results = results
 
         self._show_search_results()
 
@@ -833,14 +914,12 @@ class DictionaryScreen(BaseScreen):
             notify.info("Ничего не найдено")
 
     def clear_search(self):
-        """Очищает поиск"""
         self.is_search_mode = False
         self.search_results = []
         self.search_bar.clear()
         self._clear_search_results()
 
     def on_term_selected(self, term_name):
-        """Обработчик выбора термина из результатов поиска"""
         logger.info(f"Выбран термин: {term_name}")
 
         term_data = self.all_terms.get(term_name)
@@ -855,12 +934,10 @@ class DictionaryScreen(BaseScreen):
                 self.manager.current = 'term_detail'
 
     def on_enter(self):
-        """При входе на экран"""
         logger.info("Вход в словарь")
         self._update_top_nav("Словарь")
 
     def _update_top_nav(self, title):
-        """Обновляет заголовок в TopNav"""
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
@@ -871,13 +948,11 @@ class DictionaryScreen(BaseScreen):
             logger.error(f"Ошибка обновления TopNav: {e}")
 
     def go_back(self, instance=None):
-        """Возврат на предыдущий экран"""
         logger.info("🔙 go_back: возврат на home")
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
 
     def on_leave(self):
-        """При выходе с экрана"""
         logger.info("Выход из словаря")
         self.clear_search()
         self.current_letter = None

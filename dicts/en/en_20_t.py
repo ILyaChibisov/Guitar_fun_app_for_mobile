@@ -11,4 +11,21 @@ TERMS = {
     #     name="Term",
     #     description="Detailed description of the term."
     # ),
+
+    "TERTIAN CHORDS": Term(
+        name="Tertian chords",
+        description="""
+Chords built in thirds (minor or major thirds). Form the basis of classical and traditional harmony, including triads, seventh chords, ninth chords.
+
+Where it appears:
+In classical music — all of Bach, Mozart, Beethoven's harmony.
+In popular music — most chords are built in thirds.
+In jazz — extended tertian chords (13th chords).
+
+Guitarist-Specific Tips:
+First — all standard chords (Am, C, G, E) are tertian.
+Second — barre chords are also based on thirds.
+Third — knowledge of tertian structure helps build any chord.
+"""
+    ),
 }
