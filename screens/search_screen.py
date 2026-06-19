@@ -232,7 +232,7 @@ class ResultCard(MDCard):
         if self.result_type == 'chord':
             icon_name = 'chord_png'
         elif self.result_type == 'term':
-            icon_name = 'dictionary2_png'
+            icon_name = 'dictionary_png'
         else:
             icon_name = 'song_png'
 

@@ -48,14 +48,14 @@ def init_shared_dict_icon():
 
     if HAS_ASSETS:
         try:
-            icon_data = load_asset_as_bytes('dictionary2_png')
+            icon_data = load_asset_as_bytes('dictionary_png')
             if icon_data:
                 img = CoreImage(BytesIO(icon_data), ext="png")
                 _shared_dict_icon_texture = img.texture
                 logger.info("✅ Общая иконка словаря загружена")
                 return _shared_dict_icon_texture
         except Exception as e:
-            logger.error(f"Ошибка загрузки иконки dictionary2_png: {e}")
+            logger.error(f"Ошибка загрузки иконки dictionary_png: {e}")
     return None
 
 
