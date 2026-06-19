@@ -18,8 +18,8 @@ version = 1.0.2
 version.code = 2
 orientation = portrait
 
-# --- ЗАВИСИМОСТИ ---
-requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,pyjnius
+# --- ЗАВИСИМОСТИ --- позже добавим pyjnius
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui
 
 # --- ПРАВА ---
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,MODIFY_AUDIO_SETTINGS,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE

@@ -40,17 +40,23 @@ class NavItem(ButtonBehavior, BoxLayout):
         # Центрируем содержимое по вертикали и горизонтали
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
-        # Настройки размеров
+        # Настройки размеров - УМЕНЬШАЕМ ВСЁ
         if platform == 'android':
-            self.spacing = dp(4)  # Уменьшили с 6 до 4
-            self.padding = [0, dp(4), 0, dp(4)]  # Уменьшили с 8 до 4
-            icon_size = dp(26)  # Уменьшили с 28 до 26
-            font_size = sp(10)  # Уменьшили с 11 до 10
+            self.spacing = dp(4)
+            self.padding = [0, dp(4), 0, dp(4)]
+            icon_size = dp(24)
+            # Для Android используем sp
+            font_size = sp(10)
+            label_height = dp(16)
         else:
             self.spacing = dp(2)
-            self.padding = [0, dp(4), 0, dp(4)]
-            icon_size = dp(22)  # Уменьшили с 24 до 22
-            font_size = sp(9)
+            self.padding = [0, dp(2), 0, dp(2)]  # уменьшили padding
+            icon_size = dp(22)  # уменьшили иконку
+
+            # Для Windows используем фиксированный размер в пикселях
+            # Все пункты одинакового размера, чтобы не было разницы
+            font_size = 8  # фиксированный размер в пикселях
+            label_height = dp(14)
 
         # Медно-золотой цвет для активного состояния
         self.copper_gold = [0.85, 0.65, 0.25, 1]
@@ -68,17 +74,18 @@ class NavItem(ButtonBehavior, BoxLayout):
         )
         self.icon_btn.bind(on_release=self._on_child_click)
 
-        # Текст
+        # Текст - с уменьшенным шрифтом
         self.text_label = MDLabel(
             text=text,
             font_size=font_size,
             halign="center",
             valign="middle",
             size_hint=(1, None),
-            height=dp(16),  # Уменьшили с 18 до 16
+            height=label_height,
             theme_text_color="Custom",
             text_color=theme.TEXT_SECONDARY,
-            bold=False
+            bold=False,
+            shorten=False
         )
         self.text_label.bind(on_touch_down=self._on_child_touch)
 
@@ -128,7 +135,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - 4 раздела"""
+    """Нижняя панель навигации - 5 разделов (с Метрономом)"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -139,32 +146,34 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            self.nav_height = dp(56)  # Уменьшили с 60 до 56
+            self.nav_height = dp(56)
             bottom_padding = 0
-            button_spacing = dp(2)  # Уменьшили отступ между кнопками
+            button_spacing = dp(2)
         else:
-            self.nav_height = dp(52)  # Уменьшили с 56 до 52
-            bottom_padding = nav_bar_height + dp(4)  # Уменьшили с 8 до 4
+            # Для Windows увеличиваем высоту панели
+            self.nav_height = dp(58)
+            bottom_padding = nav_bar_height + dp(4)
             button_spacing = dp(2)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
-        self.padding = [dp(4), dp(4), dp(4), bottom_padding]  # Уменьшили отступы
+        self.padding = [dp(4), dp(2), dp(4), bottom_padding]  # уменьшили padding
         self.spacing = button_spacing
         self.md_bg_color = [0, 0, 0, 0]
 
         logger.info("=" * 70)
         logger.info(f"📱 BOTTOM NAV - {platform.upper()}")
         logger.info(f"📱 Высота панели: {self.nav_height}dp")
-        logger.info(f"📱 Разделы: Песни, Аккорды, Тюнер, Избранное")
+        logger.info(f"📱 Разделы: Песни, Аккорды, Тюнер, Метроном, Избранное")
         logger.info("=" * 70)
 
-        # 4 раздела с Material Design иконками
+        # 5 разделов с Material Design иконками
         self.nav_items = [
             ('music-note', 'Песни', 'songs'),
             ('guitar-pick', 'Аккорды', 'chords'),
             ('tune', 'Тюнер', 'tuner'),
+            ('metronome', 'Метроном', 'metronome'),
             ('heart', 'Избранное', 'favorites'),
         ]
 
@@ -172,7 +181,6 @@ class BottomNav(BoxLayout):
         for icon, text, screen in self.nav_items:
             item = NavItem(icon, text, screen)
             item.active = (screen == 'songs')
-            # Устанавливаем размеры для равномерного распределения
             item.size_hint = (1, 1)
             self.add_widget(item)
             self.items.append(item)
@@ -218,11 +226,11 @@ class BottomNav(BoxLayout):
             bottom_padding = 0
             button_spacing = dp(2)
         else:
-            self.nav_height = dp(52)
+            self.nav_height = dp(58)
             bottom_padding = nav_bar_height + dp(4)
             button_spacing = dp(2)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
-        self.padding = [dp(4), dp(4), dp(4), bottom_padding]
+        self.padding = [dp(4), dp(2), dp(4), bottom_padding]
         self.spacing = button_spacing
