@@ -46,4 +46,21 @@ Second — important to distinguish major and minor thirds.
 Third — the foundation of the major scale.
 """
     ),
+
+    "MASTERY / HIGH FLYING": Term(
+        name="Mastery / high flying",
+        description="""
+The maximum level of a performer's skill, including virtuosic technique, deep interpretation, and the ability to perform the most complex works with ease.
+
+Where it appears:
+In performance — as the highest level.
+In guitar music — as a goal.
+In pedagogy — as a benchmark.
+
+Guitarist-Specific Tips:
+First — mastery requires years of training.
+Second — includes command of all techniques and styles.
+Third — achieved through a combination of technique and musicianship.
+"""
+    ),
 }

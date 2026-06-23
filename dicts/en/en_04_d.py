@@ -45,4 +45,21 @@ Second — rhythm guitar synchronizes with the bass drum.
 Third — important to understand rhythmic patterns.
 """
     ),
+
+    "DOWN": Term(
+        name="Down",
+        description="""
+Direction of movement down the fretboard (toward the body) or down the staff (toward lower pitches). Also — downward pick movement (downstroke).
+
+Where it appears:
+In guitar technique — as direction of stroke.
+In notes — as direction of melody.
+In the fretboard system — as movement toward the bass.
+
+Guitarist-Specific Tips:
+First — downward pick movement (downstroke).
+Second — transition to lower positions on the fretboard.
+Third — important to control downward movement.
+"""
+    ),
 }

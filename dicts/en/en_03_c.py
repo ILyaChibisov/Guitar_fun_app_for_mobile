@@ -115,4 +115,55 @@ Second — guitarists often emphasize specific chord tones (bass, melody).
 Third — important to hear each tone within a chord.
 """
     ),
+
+    "CELLO": Term(
+        name="Cello",
+        description="""
+A stringed bowed instrument of the bass-tenor register, one of the main instruments in the orchestra. Has a rich, singing, deep timbre.
+
+Where it appears:
+In symphony orchestra — as the foundation of the string group.
+In chamber music — in string quartets.
+In guitar music — in ensembles with guitar.
+
+Guitarist-Specific Tips:
+First — cello and guitar often sound together in duets.
+Second — guitar can imitate the cello timbre.
+Third — arrangements of cello music for guitar.
+"""
+    ),
+
+    "CHOICE": Term(
+        name="Choice",
+        description="""
+A decision made by a musician during interpretation: choice of tempo, fingering, dynamics, phrasing. In jazz and rock music — choice of key and chords.
+
+Where it appears:
+In performance — as interpretation.
+In education — as decision-making.
+In composition — as choice of means.
+
+Guitarist-Specific Tips:
+First — choice of fingering affects technique.
+Second — choice of guitar and equipment matters for sound.
+Third — choice of style determines playing manner.
+"""
+    ),
+
+    "CLEF": Term(
+        name="Clef",
+        description="""
+A musical symbol that determines the pitch position of notes on the staff. The main ones are treble (G), bass (F), and alto (C) clefs.
+
+Where it appears:
+In musical notation — as the basis of reading.
+In education — as the first step.
+In guitar music — the treble clef is most often used.
+
+Guitarist-Specific Tips:
+First — guitar is written in treble clef with octave transposition.
+Second — knowledge of clefs helps sight-read.
+Third — bass clef is used for bass guitar.
+"""
+    ),
 }

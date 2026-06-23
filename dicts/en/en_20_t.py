@@ -45,4 +45,72 @@ Second — creates an additional rhythmic layer.
 Third — in some styles, a guitarist can play tambourine with the foot.
 """
     ),
+
+    "TYPE / MODE": Term(
+        name="Type / mode",
+        description="""
+A musical genre, form, or type of work (e.g., sonata, symphony, opera). Also — a mode in music theory.
+
+Where it appears:
+In music classification — as a category.
+In theory — as a formal structure.
+In guitar repertoire — different types of pieces.
+
+Guitarist-Specific Tips:
+First — knowledge of types helps navigate the repertoire.
+Second — important to understand the structure and character of each type.
+Third — in pedagogy — different types for learning.
+"""
+    ),
+
+    "TOGETHER": Term(
+        name="Together",
+        description="""
+Performing in ensemble, synchronized playing or singing of several musicians. Implies coordination, mutual understanding, and a unified musical pulse.
+
+Where it appears:
+In ensemble music — as the foundation of performance.
+In orchestra — as collective playing.
+In duets — as interaction between two musicians.
+
+Guitarist-Specific Tips:
+First — important to listen and hear other musicians.
+Second — synchronization with the rhythm section.
+Third — playing "together" creates a unified whole.
+"""
+    ),
+
+    "TEMPORARY DEVIATION": Term(
+        name="Temporary deviation",
+        description="""
+A deviation from the main tempo (agogics, rubato) toward acceleration or deceleration. Used for expressiveness and naturalness of musical speech.
+
+Where it appears:
+In Romantic music — as a technique.
+In jazz — as swing.
+In guitar music — as phrasing.
+
+Guitarist-Specific Tips:
+First — important to be able to make temporary deviations.
+Second — should be organic and musical.
+Third — helps create "breathing" phrasing.
+"""
+    ),
+
+    "TIME": Term(
+        name="Time",
+        description="""
+Musical time — the rhythmic organization of sounds, tempo, and meter. Time determines the movement and pulsation of music.
+
+Where it appears:
+In music theory — as the basis of rhythm.
+In performance — as tempo and pulse.
+In guitar playing — as rhythmic accuracy.
+
+Guitarist-Specific Tips:
+First — guitarist must feel time.
+Second — important to play evenly in pulse.
+Third — time creates the foundation for music.
+"""
+    ),
 }

@@ -880,4 +880,89 @@ Third — arrangements for guitar and winds.
 Fourth — combined sound with flute, clarinet.
 """
     ),
+
+    "AGITATO": Term(
+        name="Agitato",
+        description="""
+A performance indication (agitato) requiring an agitated, excited, restless character. Often used in dramatic episodes.
+
+Where it appears:
+In classical music — in dramatic episodes.
+In Romantic music — in Chopin, Liszt.
+In guitar music — in virtuosic passages.
+
+Guitarist-Specific Tips:
+First — requires fast tempo and bright dynamics.
+Second — important to convey emotional tension.
+Third — tremolo and fast passages are used.
+"""
+    ),
+
+    "ATTENTION": Term(
+        name="Attention",
+        description="""
+The musician's concentration on the performance process, perception of music, and coordination of movements. An important element of successful playing and interaction in ensemble.
+
+Where it appears:
+In education — as the basis of concentration.
+In performance — as control over playing.
+In ensemble — as listening to others.
+
+Guitarist-Specific Tips:
+First — attention helps avoid mistakes.
+Second — important to distribute attention between hands.
+Third — when playing in ensemble — attention to partners.
+"""
+    ),
+
+    "ASCENDING": Term(
+        name="Ascending",
+        description="""
+Movement of a melody or voice from lower to higher pitches. Creates a feeling of rising, development, and increasing energy.
+
+Where it appears:
+In melody — as development.
+In harmony — as voice leading.
+In guitar music — in passages and scales.
+
+Guitarist-Specific Tips:
+First — ascending passages develop technique.
+Second — often used in solos for build-up.
+Third — requires even dynamics.
+"""
+    ),
+
+    "ALL": Term(
+        name="All",
+        description="""
+A performance indication (tutti) meaning that all musicians play together. In guitar notation — playing all strings simultaneously.
+
+Where it appears:
+In orchestra — as a tutti sign.
+In guitar playing — as a strum on all strings.
+In accompaniment — as a rich texture.
+
+Guitarist-Specific Tips:
+First — strumming all strings creates a powerful sound.
+Second — important to control balance.
+Third — used in climactic moments.
+"""
+    ),
+
+    "AUXILIARY NOTES": Term(
+        name="Auxiliary notes",
+        description="""
+Notes that do not belong to the chord but add melodic embellishment or create movement. Include passing tones, auxiliary notes, and suspensions.
+
+Where it appears:
+In harmony — as non-chord tones.
+In melody — as embellishment.
+In guitar music — as part of phrasing.
+
+Guitarist-Specific Tips:
+First — auxiliary notes enliven the melody.
+Second — important to distinguish between chord tones and non-chord tones.
+Third — used in improvisation and composition.
+"""
+    ),
 }

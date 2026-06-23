@@ -826,4 +826,38 @@ Second — interaction with other musicians is important.
 Third — ability to work in a collective.
 """
     ),
+
+    "BYZANTINE CHANT": Term(
+        name="Byzantine chant",
+        description="""
+Traditional church singing of the Byzantine Empire, based on the system of eight modes and neumatic notation. Characterized by a specific modal structure and melismatics.
+
+Where it appears:
+In Orthodox churches — as tradition.
+In the Greek Church — as the foundation of worship.
+In guitar music — as inspiration for compositions.
+
+Guitarist-Specific Tips:
+First — guitar can imitate Byzantine chant.
+Second — uses special modes and intervals.
+Third — creating meditative guitar works.
+"""
+    ),
+
+    "BAGPIPES": Term(
+        name="Bagpipes",
+        description="""
+A folk reed instrument consisting of a leather bag and several pipes. Has a characteristic drone sound, used in Scottish, Irish, and other cultures.
+
+Where it appears:
+In Scottish folk music — as a symbol of Scotland.
+In Irish and Breton music — as a folk instrument.
+In guitar music — as a timbre to imitate.
+
+Guitarist-Specific Tips:
+First — guitar can imitate the drone sound of bagpipes.
+Second — use of ostinato basses and drones.
+Third — often used in folk music.
+"""
+    ),
 }

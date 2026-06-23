@@ -45,4 +45,21 @@ Second — guitar technique (arpeggios) often imitates harp sound.
 Third — arrangements of harp music for guitar.
 """
     ),
+
+    "HIGH": Term(
+        name="High",
+        description="""
+An indication to play in the high register or in a high position. Also — a designation of pitch height.
+
+Where it appears:
+In guitar playing — as upper positions.
+In vocals — as head register.
+In musical notation — as high notes.
+
+Guitarist-Specific Tips:
+First — playing high requires accuracy of intonation.
+Second — the sound becomes brighter.
+Third — often used in solos and climaxes.
+"""
+    ),
 }
