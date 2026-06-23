@@ -1,6 +1,7 @@
 # screens/components/top_nav.py
 """
 Верхняя панель навигации - заголовок по левому краю
+с правильной навигацией назад через screen_state
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -191,7 +192,7 @@ class TopNav(MDCard):
             'favorites': 'Избранное',
             'profile': 'Профиль',
             'artists_by_letter': '',  # кастомный виджет
-            'artist_songs': 'Песни',
+            'artist_songs': '',  # кастомный виджет
             'song_detail': '',  # кастомный виджет
             'search_results': 'Результаты поиска',
             'dictionary': 'Словарь',
@@ -257,88 +258,11 @@ class TopNav(MDCard):
             self.menu_btn.icon = "tune"
             self.menu_btn.on_release = self._on_menu_press
             logger.info("   → Установлена иконка настроек (tune)")
-
-        elif screen_name == 'songs':
-            # Песни: стрелка назад на Home
-            self.left_container.add_widget(self.back_btn)
-            self.back_btn.on_release = self._on_songs_back_press
-            logger.info("   → Установлена стрелка назад → Home")
-
-        elif screen_name == 'artists_by_letter':
-            # Исполнители по букве: стрелка назад на Songs
-            self.left_container.add_widget(self.back_btn)
-            self.back_btn.on_release = self._on_artists_by_letter_back_press
-            logger.info("   → Установлена стрелка назад → Songs")
-
-        elif screen_name == 'song_detail':
-            # Для экрана песни - возврат на предыдущий экран
-            self.left_container.add_widget(self.back_btn)
-            self.back_btn.on_release = self._on_song_detail_back_press
-            logger.info("   → Установлена стрелка назад → предыдущий экран")
-
-        elif screen_name == 'favorites':
-            # Избранное: стрелка назад на Home
-            self.left_container.add_widget(self.back_btn)
-            self.back_btn.on_release = self._on_favorites_back_press
-            logger.info("   → Установлена стрелка назад → Home")
-
         else:
-            # Все остальные экраны - стрелка назад с картой переходов
+            # Все остальные экраны - стрелка назад
             self.left_container.add_widget(self.back_btn)
             self.back_btn.on_release = self._on_back_press
-            logger.info(f"   → Установлена стрелка назад (стандартная)")
-
-    def _on_song_detail_back_press(self, *args):
-        """Возврат на предыдущий экран из песни"""
-        logger.info("🎵 Возврат из песни на предыдущий экран")
-
-        if not self.sm:
-            return
-
-        if self.sm.has_screen('song_detail'):
-            song_detail = self.sm.get_screen('song_detail')
-            previous = song_detail.previous_screen
-            logger.info(f"   → Предыдущий экран: {previous}")
-
-            if previous and self.sm.has_screen(previous):
-                self.sm.current = previous
-                return
-
-        if self.sm.has_screen('artist_songs'):
-            self.sm.current = 'artist_songs'
-        elif self.sm.has_screen('songs'):
-            self.sm.current = 'songs'
-        else:
-            self.sm.current = 'home'
-
-    def _on_favorites_back_press(self, *args):
-        """Переход на Home из Избранного"""
-        logger.info("🏠 Переход на Home из Избранного")
-        if self.sm and self.sm.has_screen('home'):
-            self.sm.current = 'home'
-
-    def _on_songs_back_press(self, *args):
-        """Переход на Home из Песен"""
-        logger.info("🏠 Переход на Home из Песен")
-        if self.sm and self.sm.has_screen('home'):
-            self.sm.current = 'home'
-
-    def _on_artists_by_letter_back_press(self, *args):
-        """Переход на Songs из Исполнителей по букве"""
-        logger.info("🎵 Переход на Songs из Исполнителей по букве")
-        if self.sm and self.sm.has_screen('songs'):
-            self.sm.current = 'songs'
-
-    def _on_menu_press(self, *args):
-        """Обработчик нажатия на настройки (home)"""
-        logger.info("⚙️ Нажата настройки")
-        app = MDApp.get_running_app()
-        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
-            return
-        if self.sm and self.sm.has_screen('profile'):
-            self.sm.current = 'profile'
-        elif self.app and hasattr(self.app, 'open_profile'):
-            self.app.open_profile()
+            logger.info(f"   → Установлена стрелка назад")
 
     def _update_right_buttons(self, screen_name):
         """Обновляет правые кнопки: на home показываем лупу, на остальных - дом"""
@@ -356,10 +280,16 @@ class TopNav(MDCard):
         self.current_screen_name = screen_name
         logger.info(f"🔄 _on_screen_changed: {old} → {screen_name}")
 
+        # Сохраняем предыдущий экран в screen_state
+        if old and old != screen_name:
+            screen_state.set_previous_screen(old)
+            logger.info(f"   ✅ Сохранён предыдущий экран: {old}")
+
         if old and old != screen_name:
             self._previous_screen = old
 
-        screens_with_custom_title = ['song_detail', 'terms_by_letter', 'term_detail', 'artists_by_letter']
+        screens_with_custom_title = ['song_detail', 'terms_by_letter', 'term_detail', 'artists_by_letter',
+                                     'artist_songs', 'favorites']
 
         if screen_name not in screens_with_custom_title:
             if self.custom_title_widget:
@@ -372,19 +302,13 @@ class TopNav(MDCard):
             if not hasattr(self, 'custom_title_widget') or not self.custom_title_widget:
                 self.update_title(screen_name)
 
-        if old == 'terms_by_letter' and screen_name != 'terms_by_letter':
-            self.clear_custom_title_widget()
-            self.update_title(screen_name)
-
-        if old == 'term_detail' and screen_name != 'term_detail':
+        # Очищаем кастомные заголовки при выходе с экранов
+        if old in ['terms_by_letter', 'term_detail', 'artist_songs', 'artists_by_letter',
+                   'favorites'] and screen_name != old:
             self.clear_custom_title_widget()
             self.update_title(screen_name)
 
         if old == 'song_detail' and screen_name != 'song_detail':
-            self.clear_custom_title_widget()
-            self.update_title(screen_name)
-
-        if old == 'artists_by_letter' and screen_name != 'artists_by_letter':
             self.clear_custom_title_widget()
             self.update_title(screen_name)
 
@@ -394,10 +318,15 @@ class TopNav(MDCard):
         self._update_right_buttons(screen_name)
 
     def _on_back_press(self, *args):
-        """Обработчик нажатия на стрелку назад (для всех экранов кроме home, songs, artists_by_letter, song_detail, favorites)"""
+        """
+        Обработчик нажатия на стрелку назад.
+        Использует screen_state для правильной навигации.
+        """
         logger.info(f"🔙 _on_back_press для экрана: {self.current_screen_name}")
+        logger.info(f"   📌 screen_state.previous_screen = {screen_state.get_previous_screen()}")
 
         if self._custom_back_callback:
+            logger.info("   → Используем кастомный callback")
             self._custom_back_callback()
             return
 
@@ -406,27 +335,94 @@ class TopNav(MDCard):
 
         current = self.sm.current
 
-        if current == 'chords':
-            previous_screen = screen_state.get_previous_screen()
-            if previous_screen and self.sm.has_screen(previous_screen):
-                self.sm.current = previous_screen
+        # ============ ИСПОЛЬЗУЕМ screen_state ДЛЯ НАВИГАЦИИ ============
+
+        # 1. Сначала проверяем screen_state.get_previous_screen()
+        prev_from_state = screen_state.get_previous_screen()
+
+        # 2. Для SongDetail - особая логика
+        if current == 'song_detail':
+            # Пытаемся получить предыдущий экран из screen_state
+            if prev_from_state and self.sm.has_screen(prev_from_state):
+                logger.info(f"   → SongDetail возврат на {prev_from_state} (из screen_state)")
+                self.sm.current = prev_from_state
                 return
 
-        if hasattr(self, '_previous_screen') and self._previous_screen:
-            target = self._previous_screen
-            self.sm.current = target
-            self._previous_screen = None
-        else:
-            back_map = {
-                'artist_songs': 'artists_by_letter',
-                'search_results': 'songs',
-                'profile': 'home',
-                'admin': 'profile',
-                'terms_by_letter': 'dictionary',
-                'term_detail': 'terms_by_letter',
-            }
-            target = back_map.get(current, 'songs')
-            self.sm.current = target
+            # Проверяем favourites
+            if self.sm.has_screen('favorites'):
+                # Проверяем, был ли favourites активен до этого
+                if self._previous_screen == 'favorites':
+                    logger.info("   → SongDetail возврат на favorites (из _previous_screen)")
+                    self.sm.current = 'favorites'
+                    return
+
+            # Проверяем artist_songs
+            if self.sm.has_screen('artist_songs'):
+                if self._previous_screen == 'artist_songs':
+                    logger.info("   → SongDetail возврат на artist_songs (из _previous_screen)")
+                    self.sm.current = 'artist_songs'
+                    return
+
+            # По умолчанию - artists_by_letter
+            if self.sm.has_screen('artists_by_letter'):
+                logger.info("   → SongDetail возврат на artists_by_letter (по умолчанию)")
+                self.sm.current = 'artists_by_letter'
+                return
+
+            # Последняя надежда - home
+            if self.sm.has_screen('home'):
+                logger.info("   → SongDetail возврат на home")
+                self.sm.current = 'home'
+                return
+
+        # 3. Для остальных экранов - используем карту переходов
+        back_map = {
+            'artist_songs': 'artists_by_letter',
+            'artists_by_letter': 'songs',
+            'songs': 'home',
+            'favorites': 'home',
+            'profile': 'home',
+            'admin': 'profile',
+            'dictionary': 'home',
+            'terms_by_letter': 'dictionary',
+            'term_detail': 'terms_by_letter',
+            'search': 'home',
+            'tuner': 'home',
+            'metronome': 'home',
+            'chords': self._get_previous_screen_for_chords,
+        }
+
+        if current in back_map:
+            target = back_map[current]
+            if callable(target):
+                target = target()
+            if target and self.sm.has_screen(target):
+                logger.info(f"   → Переход на {target}")
+                self.sm.current = target
+                return
+
+        # Если ничего не подошло - идём на home
+        if self.sm.has_screen('home'):
+            logger.info("   → Переход на home (по умолчанию)")
+            self.sm.current = 'home'
+
+    def _get_previous_screen_for_chords(self):
+        """Возвращает экран для возврата из Chords"""
+        prev = screen_state.get_previous_screen()
+        if prev and self.sm.has_screen(prev):
+            return prev
+        return 'home'
+
+    def _on_menu_press(self, *args):
+        """Обработчик нажатия на настройки (home)"""
+        logger.info("⚙️ Нажата настройки")
+        app = MDApp.get_running_app()
+        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
+            return
+        if self.sm and self.sm.has_screen('profile'):
+            self.sm.current = 'profile'
+        elif self.app and hasattr(self.app, 'open_profile'):
+            self.app.open_profile()
 
     def _on_home_press(self, *args):
         if self.sm and self.sm.has_screen('home'):

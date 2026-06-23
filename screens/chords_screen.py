@@ -2,7 +2,7 @@
 """
 Экран гитарных аккордов - с 4 карточками селекторами
 ТОН, ТИП, АККОРД, ПОЗИЦИЯ в стиле админки
-С поиском аккордов
+С поиском аккордов (поиск вверху)
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -38,12 +38,9 @@ logger = screen_logger('Chords')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -365,7 +362,7 @@ class ChordActionButton(ButtonBehavior, MDBoxLayout):
 class ChordsScreen(BaseScreen):
     TONALITIES = TONALITIES
     CHORD_TYPES = CHORD_TYPES
-    """Экран аккордов с 4 карточками-селекторами и поиском"""
+    """Экран аккордов с 4 карточками-селекторами и поиском вверху"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -411,7 +408,7 @@ class ChordsScreen(BaseScreen):
         self.load_background()
         self.scan_chords()
 
-        logger.info('Экран аккордов создан с поиском')
+        logger.info('Экран аккордов создан с поиском вверху')
 
     def load_background(self):
         try:
@@ -447,7 +444,14 @@ class ChordsScreen(BaseScreen):
             adaptive_height=True
         )
 
-        # Верхняя карточка с названием аккорда
+        # ============ 1. ПОИСК (наверх) ============
+        self.search_bar = SearchBar(
+            on_search=self.do_search,
+            on_clear=self.clear_search
+        )
+        content.add_widget(self.search_bar)
+
+        # ============ 2. КАРТОЧКА С НАЗВАНИЕМ АККОРДА ============
         name_card_wrapper = MDCard(
             orientation='vertical',
             size_hint=(1, None),
@@ -529,7 +533,7 @@ class ChordsScreen(BaseScreen):
         name_card_wrapper.add_widget(name_container)
         content.add_widget(name_card_wrapper)
 
-        # Гриф
+        # ============ 3. ГРИФ ============
         griff_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -541,7 +545,7 @@ class ChordsScreen(BaseScreen):
         griff_container.add_widget(self.chord_renderer)
         content.add_widget(griff_container)
 
-        # Иконки действий
+        # ============ 4. ИКОНКИ ДЕЙСТВИЙ ============
         icons_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -574,13 +578,7 @@ class ChordsScreen(BaseScreen):
 
         content.add_widget(icons_row)
 
-        # Поиск
-        self.search_bar = SearchBar(
-            on_search=self.do_search,
-            on_clear=self.clear_search
-        )
-        content.add_widget(self.search_bar)
-
+        # ============ 5. СЕЛЕКТОРЫ ============
         # Ряд 1: ТОН и ТИП
         row1 = MDBoxLayout(
             orientation='horizontal',
@@ -1349,8 +1347,7 @@ class ChordsScreen(BaseScreen):
                     variant_clean = variant.strip().replace('$', '/')
                     if variant_clean == chord_name:
                         target_chord = chord
-                        logger.info(
-                            f"   Найден по альтернативному названию: {chord['short_name']} (ориг: {chord['name']})")
+                        logger.info(f"   Найден по альтернативному названию: {chord['short_name']} (ориг: {chord['name']})")
                         break
                 if target_chord:
                     break
@@ -1447,8 +1444,6 @@ class ChordsScreen(BaseScreen):
 
     # ============ МЕТОДЫ ДЛЯ ВОЗВРАТА НА ПРЕДЫДУЩИЙ ЭКРАН ============
 
-    # В chords_screen.py замени метод on_enter:
-
     def on_enter(self):
         """При входе на экран аккордов"""
         logger.info("🚪 Вход в экран аккордов")
@@ -1460,17 +1455,16 @@ class ChordsScreen(BaseScreen):
             Clock.schedule_once(lambda dt: self.select_chord_by_name(pending_chord), 0.1)
             screen_state.clear_pending_chord()
 
-        # Показываем кнопку возврата с задержкой (даём время top_nav на обработку)
+        # Показываем кнопку возврата с задержкой
         previous_screen = screen_state.get_previous_screen()
         if previous_screen:
-            Clock.schedule_once(lambda dt: self._show_back_button(), 0.3)  # Задержка 0.3 сек
+            Clock.schedule_once(lambda dt: self._show_back_button(), 0.3)
 
     def _show_back_button(self):
         """Показывает кнопку возврата в верхней навигации"""
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
-                # Принудительно устанавливаем свойства
                 app.top_nav.back_btn.opacity = 1
                 app.top_nav.back_btn.disabled = False
                 app.top_nav._custom_back_callback = self.go_back
@@ -1482,7 +1476,6 @@ class ChordsScreen(BaseScreen):
     def on_leave(self):
         """При выходе с экрана аккордов - восстанавливаем заголовок"""
         logger.info("🚪 Выход из экрана аккордов")
-        # Не скрываем кнопку здесь, она скроется сама при смене экрана
 
     def go_back(self, instance=None):
         """Возврат на предыдущий экран"""
@@ -1492,15 +1485,11 @@ class ChordsScreen(BaseScreen):
         logger.info(f"   Сохранённый предыдущий экран: {previous_screen}")
 
         if previous_screen and self.manager and self.manager.has_screen(previous_screen):
-            # Очищаем ожидающий аккорд
             screen_state.clear_pending_chord()
-            # Переходим обратно
             self.manager.current = previous_screen
             logger.info(f"✅ Возврат на экран: {previous_screen}")
         else:
-            # Если нет предыдущего экрана, идём на тот, откуда пришли через стек
             logger.warning(f"Нет сохранённого предыдущего экрана или он не существует: {previous_screen}")
-            # Пытаемся вернуться на song_detail, если есть
             if self.manager and self.manager.has_screen('song_detail'):
                 self.manager.current = 'song_detail'
             elif self.manager and self.manager.has_screen('home'):

@@ -1,6 +1,7 @@
 # screens/favorites_screen.py
 """
 Экран избранного - список любимых песен пользователя
+с двухстрочным заголовком в TopNav
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -30,12 +31,9 @@ logger = screen_logger('Favorites')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -88,24 +86,23 @@ class FavoriteSongCard(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(60)
+        self.height = dp(56)
         self.padding = [dp(12), dp(8), dp(12), dp(8)]
         self.spacing = dp(10)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
         self.ripple_behavior = True
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [0, 0, 0, 0.08]
-        self.line_color = [1, 1, 1, 0.08]
-        self.line_width = 1
+        self.md_bg_color = [0, 0, 0, 0.06]
+        self.line_color = [1, 1, 1, 0.05]
+        self.line_width = 0.5
 
         self._build_ui()
 
     def _build_ui(self):
         self.icon_image = Image(
-            size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            pos_hint={'center_y': 0.5},
+            size_hint=(None, 1),
+            width=dp(28),
             allow_stretch=True,
             keep_ratio=True
         )
@@ -156,7 +153,7 @@ class FavoriteSongCard(MDCard):
             width=dp(28),
             halign="center",
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5]
+            text_color=[1, 1, 1, 0.3]
         )
 
         self.add_widget(self.icon_image)
@@ -171,36 +168,34 @@ class FavoriteSongCard(MDCard):
 
 
 class AuthMessageCard(MDCard):
-    """Карточка сообщения для неавторизованных пользователей (в стиле аккордов)"""
+    """Карточка сообщения для неавторизованных пользователей"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
-        self.height = dp(150)
-        self.padding = [dp(20), dp(24), dp(20), dp(24)]
+        self.height = dp(140)
+        self.padding = [dp(20), dp(20), dp(20), dp(20)]
         self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
         self.ripple_behavior = False
         self.theme_bg_color = "Custom"
-        self.md_bg_color = [0, 0, 0, 0.08]
-        self.line_color = [1, 1, 1, 0.25]
-        self.line_width = 1
+        self.md_bg_color = [0, 0, 0, 0.06]
+        self.line_color = [1, 1, 1, 0.15]
+        self.line_width = 0.5
 
-        # Иконка
         self.icon_label = MDLabel(
             text="🔒",
             font_size=sp(48),
             halign="center",
             size_hint_y=None,
-            height=dp(60),
+            height=dp(56),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.7]
         )
 
-        # Заголовок
         self.title_label = MDLabel(
             text="Требуется авторизация",
             font_size=sp(16),
@@ -212,7 +207,6 @@ class AuthMessageCard(MDCard):
             bold=True
         )
 
-        # Текст сообщения
         self.message_label = MDLabel(
             text="Чтобы увидеть ваши избранные треки,\nнеобходимо войти в аккаунт",
             font_size=sp(12),
@@ -239,9 +233,9 @@ class FavoritesScreen(BaseScreen):
         self.is_loading = False
         self.bg_image = None
         self.cards_container = None
-        self.count_label = None
         self._main_layout = None
         self.loading_label = None
+        self._top_spacer = None
 
         self.init_ui()
         self.load_background()
@@ -276,34 +270,30 @@ class FavoritesScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        """Инициализирует UI вручную"""
+        """Инициализирует UI с уменьшенным верхним отступом"""
 
         # Основной контейнер
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
         self._main_layout = main_layout
 
-        # Верхний отступ
+        # ============ ВЕРХНИЙ ОТСТУП (УМЕНЬШЕННЫЙ) ============
+        # Убираем лишний отступ, оставляем только под TopNav + небольшой зазор
         top_padding = layout_config.get_top_padding()
-        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+        # Уменьшаем отступ на 8dp, чтобы карточки были ближе к TopNav
+        top_padding = top_padding - dp(8)
+        if top_padding < dp(20):
+            top_padding = dp(20)
 
-        # Счётчик песен (будет скрыт для неавторизованных)
-        self.count_label = MDLabel(
-            text="",
-            font_size=sp(13),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7],
-            size_hint_y=None,
-            height=dp(32),
-            padding=[0, dp(4), 0, dp(4)]
-        )
-        main_layout.add_widget(self.count_label)
+        self._top_spacer = Widget(size_hint_y=None, height=top_padding)
+        main_layout.add_widget(self._top_spacer)
 
-        # Контейнер для карточек с отступами снизу
+        # ============ УБИРАЕМ СЧЁТЧИК ============
+        # Счётчик теперь будет в TopNav, на экране его нет
+
+        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
-        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+        total_bottom = bottom_nav_height + nav_bar_height + dp(12)
 
         cards_container = MDBoxLayout(
             orientation='vertical',
@@ -335,19 +325,83 @@ class FavoritesScreen(BaseScreen):
         self.add_widget(main_layout)
         logger.info("UI избранного построен")
 
+    def _create_top_nav_title(self, total):
+        """Создаёт двухстрочный заголовок для TopNav (название + количество)"""
+        from kivymd.uix.boxlayout import MDBoxLayout
+        from kivymd.uix.label import MDLabel
+        from kivy.metrics import sp, dp
+
+        title_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            spacing=dp(2),
+            padding=[dp(8), dp(4), dp(8), dp(4)]
+        )
+
+        # Заголовок "Избранное"
+        title_label = MDLabel(
+            text="Избранное",
+            font_size=sp(20),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            bold=True,
+            shorten=True,
+            shorten_from="right"
+        )
+
+        # Количество песен с правильным склонением
+        count_text = self._get_count_text(total)
+        count_label = MDLabel(
+            text=count_text,
+            font_size=sp(12),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.9, 0.9, 0.9, 0.8],
+            shorten=True,
+            shorten_from="right"
+        )
+
+        title_container.add_widget(title_label)
+        title_container.add_widget(count_label)
+
+        return title_container
+
+    def _get_count_text(self, total):
+        """Возвращает текст с количеством песен с правильным склонением"""
+        if total == 0:
+            return "Нет песен"
+        elif total == 1:
+            return "1 песня"
+        elif 2 <= total <= 4:
+            return f"{total} песни"
+        else:
+            return f"{total} песен"
+
+    def _update_top_nav(self, total):
+        """Обновляет TopNav с двухстрочным заголовком"""
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            title_container = self._create_top_nav_title(total)
+            app.top_nav.set_custom_title_widget(title_container)
+            app.top_nav._show_back_button()
+            app.top_nav.back_btn.on_release = self.go_back
+
     def _show_auth_message(self):
         """Показывает сообщение о необходимости авторизации"""
         self.cards_container.clear_widgets()
-        self.count_label.opacity = 0  # Скрываем счётчик
         auth_card = AuthMessageCard()
         self.cards_container.add_widget(auth_card)
+        # Обновляем TopNav с 0
+        self._update_top_nav(0)
 
     def _show_loading(self):
         """Показывает состояние загрузки"""
         if self.loading_label:
             return
         self.cards_container.clear_widgets()
-        self.count_label.opacity = 1
         self.loading_label = MDLabel(
             text="Загрузка избранного...",
             halign="center",
@@ -362,8 +416,7 @@ class FavoritesScreen(BaseScreen):
     def _show_empty(self):
         """Показывает пустое состояние (нет избранных, но пользователь авторизован)"""
         self.cards_container.clear_widgets()
-        self.count_label.opacity = 1
-        self._update_count_label(0)
+        self._update_top_nav(0)
 
         empty_card = MDCard(
             orientation='vertical',
@@ -371,10 +424,10 @@ class FavoritesScreen(BaseScreen):
             height=dp(120),
             padding=[dp(20), dp(20), dp(20), dp(20)],
             radius=[theme.CORNER_RADIUS_SMALL] * 4,
-            md_bg_color=[0, 0, 0, 0.08],
+            md_bg_color=[0, 0, 0, 0.06],
             elevation=0,
-            line_color=[1, 1, 1, 0.25],
-            line_width=1
+            line_color=[1, 1, 1, 0.15],
+            line_width=0.5
         )
 
         icon_label = MDLabel(
@@ -382,7 +435,7 @@ class FavoritesScreen(BaseScreen):
             font_size=sp(48),
             halign="center",
             size_hint_y=None,
-            height=dp(60),
+            height=dp(56),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.7]
         )
@@ -408,24 +461,10 @@ class FavoritesScreen(BaseScreen):
             self.cards_container.remove_widget(self.loading_label)
         self.loading_label = None
 
-    def _update_count_label(self, total):
-        """Обновляет счётчик с правильным склонением"""
-        if total == 0:
-            text = "Нет избранных песен"
-        elif total == 1:
-            text = "1 избранная песня"
-        elif 2 <= total <= 4:
-            text = f"{total} избранные песни"
-        else:
-            text = f"{total} избранных песен"
-
-        if self.count_label:
-            self.count_label.text = text
-
     def load_favorites(self):
         """Загружает избранные песни"""
         self._show_loading()
-        self._update_count_label(0)
+        self._update_top_nav(0)  # Показываем 0 во время загрузки
 
         api.get_favorites(
             on_success=self.on_favorites_loaded,
@@ -436,7 +475,6 @@ class FavoritesScreen(BaseScreen):
         """Обработчик успешной загрузки избранного"""
         self._clear_loading()
         self.cards_container.clear_widgets()
-        self.count_label.opacity = 1
 
         formatted_favorites = []
         for item in favorites:
@@ -455,13 +493,14 @@ class FavoritesScreen(BaseScreen):
             self._show_empty()
             return
 
-        self._update_count_label(len(self.favorites))
+        # Обновляем TopNav с количеством
+        self._update_top_nav(len(self.favorites))
 
         for song_data in self.favorites:
             card = FavoriteSongCard(song=song_data, on_click=self.on_song_selected)
             self.cards_container.add_widget(card)
 
-        bottom_spacer = Widget(size_hint_y=None, height=dp(20))
+        bottom_spacer = Widget(size_hint_y=None, height=dp(12))
         self.cards_container.add_widget(bottom_spacer)
 
         logger.info(f"Загружено {len(self.favorites)} избранных песен")
@@ -472,9 +511,7 @@ class FavoritesScreen(BaseScreen):
         self.cards_container.clear_widgets()
 
         if "401" in str(error) or "Unauthorized" in str(error):
-            # Не авторизован - показываем красивое сообщение
             self._show_auth_message()
-            self.count_label.opacity = 0  # Скрываем счётчик
         else:
             logger.error(f"Ошибка загрузки избранного: {error}")
             self._show_empty()
@@ -492,14 +529,23 @@ class FavoritesScreen(BaseScreen):
                 song_detail_screen.set_song(song_id)
                 self.manager.current = 'song_detail'
 
+    def go_back(self, instance=None):
+        """Возврат на главный экран"""
+        logger.info("🔙 go_back: возврат на home")
+        if hasattr(self, 'manager') and self.manager:
+            # Очищаем кастомный заголовок
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'top_nav'):
+                app.top_nav.clear_custom_title_widget()
+                app.top_nav.update_title('home')
+            self.manager.current = 'home'
+
     def on_pre_enter(self):
         """Вызывается перед входом на экран"""
         if not api.is_authenticated():
             self._show_auth_message()
-            self.count_label.opacity = 0  # Скрываем счётчик
             return
 
-        self.count_label.opacity = 1
         self.load_favorites()
 
     def on_enter(self):

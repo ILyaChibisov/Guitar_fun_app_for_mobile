@@ -1,6 +1,7 @@
 # screens/components/bottom_nav.py
 """
 Нижняя панель навигации - с Material Design иконками
+Адаптивный шрифт без переносов
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -36,32 +37,22 @@ class NavItem(ButtonBehavior, BoxLayout):
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-
-        # Центрируем содержимое по вертикали и горизонтали
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
-        # Настройки размеров - УМЕНЬШАЕМ ВСЁ
+        # ============ АДАПТИВНЫЕ РАЗМЕРЫ ============
         if platform == 'android':
-            self.spacing = dp(4)
-            self.padding = [0, dp(4), 0, dp(4)]
-            icon_size = dp(24)
-            # Для Android используем sp
-            font_size = sp(10)
-            label_height = dp(16)
-        else:
             self.spacing = dp(2)
-            self.padding = [0, dp(2), 0, dp(2)]  # уменьшили padding
-            icon_size = dp(22)  # уменьшили иконку
-
-            # Для Windows используем фиксированный размер в пикселях
-            # Все пункты одинакового размера, чтобы не было разницы
-            font_size = 8  # фиксированный размер в пикселях
-            label_height = dp(14)
+            self.padding = [0, dp(2), 0, dp(2)]
+            icon_size = dp(24)
+        else:
+            self.spacing = dp(1)
+            self.padding = [0, dp(1), 0, dp(1)]
+            icon_size = dp(22)
 
         # Медно-золотой цвет для активного состояния
         self.copper_gold = [0.85, 0.65, 0.25, 1]
 
-        # Иконка MDIconButton
+        # Иконка
         self.icon_btn = MDIconButton(
             icon=icon_name,
             size_hint=(None, None),
@@ -74,27 +65,76 @@ class NavItem(ButtonBehavior, BoxLayout):
         )
         self.icon_btn.bind(on_release=self._on_child_click)
 
-        # Текст - с уменьшенным шрифтом
+        # ============ ТЕКСТ С АДАПТИВНЫМ ШРИФТОМ ============
         self.text_label = MDLabel(
             text=text,
-            font_size=font_size,
             halign="center",
             valign="middle",
             size_hint=(1, None),
-            height=label_height,
+            height=dp(16),
             theme_text_color="Custom",
             text_color=theme.TEXT_SECONDARY,
             bold=False,
-            shorten=False
+            shorten=True,
+            shorten_from="right",
+            # Шрифт будет установлен в _adjust_font_size
+            font_size=sp(9)
         )
+
+        # Подписываемся на изменение размера для адаптации шрифта
+        self.text_label.bind(width=self._adjust_font_size)
+        self.text_label.bind(text=self._adjust_font_size)
+
         self.text_label.bind(on_touch_down=self._on_child_touch)
 
-        # Контейнер для вертикального центрирования
         self.add_widget(self.icon_btn)
         self.add_widget(self.text_label)
 
         self.update_state(self, self.active)
         self.bind(active=self.update_state)
+
+        # Отложенная настройка размера
+        Clock.schedule_once(lambda dt: self._adjust_font_size(), 0.1)
+
+    def _adjust_font_size(self, *args):
+        """Адаптивно подбирает размер шрифта, чтобы текст помещался в одну строку"""
+        if not hasattr(self, 'text_label') or not self.text_label:
+            return
+
+        text = self.text_label.text
+        if not text:
+            return
+
+        # Доступная ширина для текста (ширина элемента минус отступы)
+        available_width = self.text_label.width - dp(4)
+
+        # Если ширина слишком мала, используем минимальный размер
+        if available_width < dp(20):
+            self.text_label.font_size = sp(7)
+            return
+
+        # Пробуем размеры от большего к меньшему
+        test_sizes = [12, 11, 10, 9, 8, 7]
+        for size in test_sizes:
+            # Создаём временную метку для проверки
+            from kivy.core.text import Label as CoreLabel
+            test_label = CoreLabel(
+                text=text,
+                font_size=sp(size),
+                font_name=self.text_label.font_name,
+                bold=False
+            )
+            test_label.refresh()
+            text_width = test_label.texture.width
+
+            if text_width <= available_width:
+                self.text_label.font_size = sp(size)
+                # Устанавливаем точную высоту для избежания обрезания
+                self.text_label.text_size = (available_width, None)
+                return
+
+        # Если ни один размер не подошёл - используем минимальный
+        self.text_label.font_size = sp(7)
 
     def _on_child_click(self, instance):
         """Обработчик клика по иконке - передаём родителю"""
@@ -146,11 +186,10 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            self.nav_height = dp(56)
+            self.nav_height = dp(58)
             bottom_padding = 0
             button_spacing = dp(2)
         else:
-            # Для Windows увеличиваем высоту панели
             self.nav_height = dp(58)
             bottom_padding = nav_bar_height + dp(4)
             button_spacing = dp(2)
@@ -158,7 +197,7 @@ class BottomNav(BoxLayout):
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
-        self.padding = [dp(4), dp(2), dp(4), bottom_padding]  # уменьшили padding
+        self.padding = [dp(2), dp(2), dp(2), bottom_padding]
         self.spacing = button_spacing
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -170,9 +209,9 @@ class BottomNav(BoxLayout):
 
         # 5 разделов с Material Design иконками
         self.nav_items = [
-            ('music-note', 'Песни', 'songs'),
-            ('guitar-pick', 'Аккорды', 'chords'),
-            ('tune', 'Тюнер', 'tuner'),
+            ('guitar-electric', 'Песни', 'songs'),
+            ('music-note', 'Аккорды', 'chords'),
+            ('waveform', 'Тюнер', 'tuner'),
             ('metronome', 'Метроном', 'metronome'),
             ('heart', 'Избранное', 'favorites'),
         ]
@@ -200,11 +239,9 @@ class BottomNav(BoxLayout):
         if not self.sm or self.sm.current == screen_name:
             return
 
-        # Обновляем активное состояние всех элементов
         for item, (_, _, screen) in zip(self.items, self.nav_items):
             item.active = (screen == screen_name)
 
-        # Определяем направление перехода
         try:
             current_index = next(i for i, (_, _, s) in enumerate(self.nav_items) if s == self.sm.current)
             new_index = next(i for i, (_, _, s) in enumerate(self.nav_items) if s == screen_name)
@@ -222,7 +259,7 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            self.nav_height = dp(56)
+            self.nav_height = dp(58)
             bottom_padding = 0
             button_spacing = dp(2)
         else:
@@ -232,5 +269,5 @@ class BottomNav(BoxLayout):
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
-        self.padding = [dp(4), dp(2), dp(4), bottom_padding]
+        self.padding = [dp(2), dp(2), dp(2), bottom_padding]
         self.spacing = button_spacing
