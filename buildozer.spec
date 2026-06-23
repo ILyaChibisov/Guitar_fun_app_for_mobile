@@ -11,12 +11,15 @@ source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 source.include_patterns = chords/**, **/*.py
 
 # Исключаем ненужные файлы
-source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py
+source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, resize_icons.py
 
-# ПОВЫШАЕМ ВЕРСИЮ ДЛЯ ОБНОВЛЕНИЯ
 version = 1.0.2
 version.code = 2
 orientation = portrait
+
+# --- ИКОНКА ПРИЛОЖЕНИЯ ---
+# Путь к папке с иконками
+icon.filename = icon/%s.png
 
 # --- ЗАВИСИМОСТИ ---
 requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui
@@ -39,7 +42,6 @@ p4a.branch = develop
 android.gradle_repository_threads = 4
 
 # --- ПОДПИСЬ (для релиза) ---
-# Убедитесь, что файл guitarfuns_keystore.jks существует в корне проекта
 android.keystore = guitarfuns_keystore.jks
 android.keystore_alias = guitarfuns
 android.keystore_key_password = lexx311285
