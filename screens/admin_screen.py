@@ -1,4 +1,4 @@
-# screens/admin_screen.py (обновленный)
+# screens/admin_screen.py
 """
 Экран администратора - горизонтальный скролл парсеров
 Иконки из ассетов, все парсеры в один ряд
@@ -18,7 +18,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.behaviors import CircularRippleBehavior
-
+from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
@@ -158,8 +158,14 @@ class ParserCard(CircularRippleBehavior, MDCard):
 
 class ActionCard(CircularRippleBehavior, MDCard):
     """
-    Карточка действия (очистка кэша, статистика)
+    Карточка действия (очистка кэша, статистика) - цветные иконки
     """
+
+    # Цвета для действий
+    ACTION_COLORS = {
+        'clear_cache': ('#FF6B35', '#E55A2B'),  # Оранжевый
+        'statistics': ('#4CAF50', '#388E3C'),   # Зелёный
+    }
 
     def __init__(self, action_id, title, icon, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -168,15 +174,17 @@ class ActionCard(CircularRippleBehavior, MDCard):
         self.icon_name = icon
         self.on_click_callback = on_click
 
+        colors = self.ACTION_COLORS.get(action_id, ('#757575', '#616161'))
+        self.bg_color = colors[0]
+
         self.orientation = 'vertical'
         self.size_hint = (None, None)
         self.width = dp(120)
         self.height = dp(110)
         self.radius = [dp(16)]
         self.elevation = 2
-        self.md_bg_color = [0.2, 0.2, 0.2, 0.85]
-        self.line_color = [1, 1, 1, 0.1]
-        self.line_width = 1
+        self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.85)
+        self.ripple_scale = 0.95
 
         content = MDBoxLayout(
             orientation='vertical',
@@ -186,14 +194,14 @@ class ActionCard(CircularRippleBehavior, MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Иконка
+        # Иконка (цветная)
         self.icon = MDIconButton(
             icon=icon,
             size_hint=(None, None),
             size=(dp(44), dp(44)),
             pos_hint={'center_x': 0.5},
             theme_icon_color="Custom",
-            icon_color=[0.9, 0.9, 0.9, 1],
+            icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0.2],
             disabled=True
         )
@@ -216,6 +224,19 @@ class ActionCard(CircularRippleBehavior, MDCard):
 
         self.add_widget(content)
         self.bind(on_release=self._on_click)
+        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
+
+    def _hex_to_rgba(self, hex_color, alpha=1.0):
+        hex_color = hex_color.lstrip('#')
+        return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)] + [alpha]
+
+    def _on_enter(self, *args):
+        Animation(elevation=6, duration=0.2).start(self)
+        self.md_bg_color = self._hex_to_rgba(self.bg_color, 1.0)
+
+    def _on_leave(self, *args):
+        Animation(elevation=2, duration=0.2).start(self)
+        self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.85)
 
     def _on_click(self, instance):
         if self.on_click_callback:
@@ -265,36 +286,13 @@ class AdminScreen(BaseScreen):
         # Вертикальный контейнер для всего контента
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(16),
+            spacing=dp(12),
             size_hint_y=None,
             adaptive_height=True,
             padding=[dp(12), dp(8), dp(12), dp(16)]
         )
 
-        # ============ ЗАГОЛОВОК ============
-        header_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(60),
-            padding=[dp(16), dp(8), dp(16), dp(8)],
-            radius=[dp(16), dp(16), dp(16), dp(16)],
-            md_bg_color=[0, 0, 0, 0.15],
-            elevation=0,
-            line_color=[1, 1, 1, 0.05],
-            line_width=1
-        )
-
-        title_label = MDLabel(
-            text="Админ панель",
-            font_size=sp(22),
-            halign="center",
-            bold=True,
-            size_hint_y=1,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1]
-        )
-        header_card.add_widget(title_label)
-        content.add_widget(header_card)
+        # ============ ЗАГОЛОВОК УБРАН (будет в TopNav) ============
 
         # ============ ВСЕ ПАРСЕРЫ ============
         section_title = MDLabel(
@@ -308,15 +306,16 @@ class AdminScreen(BaseScreen):
         )
         content.add_widget(section_title)
 
-        # Горизонтальный скролл для парсеров
+        # Горизонтальный скролл для парсеров (скрываем полосу прокрутки)
         scroll_parsers = ScrollView(
             size_hint=(1, None),
             height=dp(130),
             do_scroll_x=True,
             do_scroll_y=False,
-            bar_width=dp(4),
-            bar_color=[1, 1, 1, 0.3],
-            bar_inactive_color=[1, 1, 1, 0.1]
+            bar_width=0,  # ← СКРЫВАЕМ ПОЛОСУ ПРОКРУТКИ
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0],
+            bar_margin=0
         )
 
         parsers_layout = MDBoxLayout(
@@ -366,15 +365,16 @@ class AdminScreen(BaseScreen):
         )
         content.add_widget(actions_title)
 
-        # Горизонтальный скролл для действий
+        # Горизонтальный скролл для действий (скрываем полосу прокрутки)
         scroll_actions = ScrollView(
             size_hint=(1, None),
             height=dp(130),
             do_scroll_x=True,
             do_scroll_y=False,
-            bar_width=dp(4),
-            bar_color=[1, 1, 1, 0.3],
-            bar_inactive_color=[1, 1, 1, 0.1]
+            bar_width=0,  # ← СКРЫВАЕМ ПОЛОСУ ПРОКРУТКИ
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0],
+            bar_margin=0
         )
 
         actions_layout = MDBoxLayout(
@@ -385,7 +385,7 @@ class AdminScreen(BaseScreen):
         )
         actions_layout.bind(minimum_width=actions_layout.setter('width'))
 
-        # Очистка кэша
+        # Очистка кэша (оранжевый)
         clear_cache_card = ActionCard(
             action_id='clear_cache',
             title='Очистить кэш',
@@ -394,7 +394,7 @@ class AdminScreen(BaseScreen):
         )
         actions_layout.add_widget(clear_cache_card)
 
-        # Статистика (заглушка)
+        # Статистика (зелёный)
         stats_card = ActionCard(
             action_id='statistics',
             title='Статистика',
@@ -464,7 +464,22 @@ class AdminScreen(BaseScreen):
     def on_enter(self):
         """При входе на экран"""
         logger.info("Вход в админ панель")
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.set_custom_title("Админ панель")
+            app.top_nav._show_back_button()
+            app.top_nav.back_btn.on_release = self.go_back
+
+    def go_back(self, instance=None):
+        """Возврат на профиль"""
+        logger.info("🔙 Возврат на профиль")
+        if hasattr(self, 'manager') and self.manager:
+            self.manager.current = 'profile'
 
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из админ панели")
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.clear_custom_title_widget()
+            app.top_nav.update_title('profile')

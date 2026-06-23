@@ -750,16 +750,6 @@ class ChordsScreen(BaseScreen):
         self.search_bar.search_field.hint_text = "Поиск аккордов..."
         self.update_available_chords()
 
-    # ============ МЕТОДЫ ДЛЯ ТОНАЛЬНОСТИ (удалены диалоги) ============
-    # prev_tonality и next_tonality больше не нужны, используется _next_tonality
-
-    # ============ МЕТОДЫ ДЛЯ ТИПА (удалены диалоги) ============
-    # prev_type и next_type больше не нужны, используется _next_type
-
-    # ============ МЕТОДЫ ДЛЯ АККОРДА (удалены диалоги) ============
-    # prev_chord и next_chord больше не нужны, используется _next_chord
-
-    # show_tonality_picker, show_type_picker, show_chord_picker удалены
 
     def _load_variants_for_chord(self, chord_name):
         variants = []
