@@ -3,6 +3,7 @@
 Экран гитарных аккордов - с единым меню 5 в 1 под грифом
 ТОН | ТИП | АККОРД | ВАРИАНТЫ | ПАЛЬЦЫ/НОТЫ
 С меню выбора тональности, типа и аккорда
+СТАТИЧНЫЙ ЭКРАН - БЕЗ ПРОКРУТКИ
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -294,7 +295,6 @@ class ChordSelectorMenu(MDCard):
         self._build_ui()
 
     def _build_ui(self):
-        # Создаём ScrollView для горизонтального скролла
         scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=True,
@@ -305,7 +305,6 @@ class ChordSelectorMenu(MDCard):
             bar_margin=0
         )
 
-        # Контейнер для кнопок аккордов
         self.chords_container = MDBoxLayout(
             orientation='horizontal',
             size_hint_x=None,
@@ -314,14 +313,13 @@ class ChordSelectorMenu(MDCard):
         )
         self.chords_container.bind(minimum_width=self.chords_container.setter('width'))
 
-        # Создаём кнопки для каждого аккорда
         self.chord_btns = []
         for chord in self.available_chords:
             btn = MDRaisedButton(
                 text=chord,
                 size_hint=(None, 1),
                 width=self._get_button_width(chord),
-                md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
+                md_bg_color=[0, 0, 0, 0],
                 text_color=[1, 1, 1, 0.7],
                 font_size=sp(14),
                 elevation=0,
@@ -330,14 +328,12 @@ class ChordSelectorMenu(MDCard):
             self.chord_btns.append(btn)
             self.chords_container.add_widget(btn)
 
-        # Подсвечиваем текущий аккорд
         self._highlight_current()
 
         scroll.add_widget(self.chords_container)
         self.add_widget(scroll)
 
     def _get_button_width(self, text):
-        """Вычисляет ширину кнопки в зависимости от длины текста"""
         base_width = dp(30)
         char_width = dp(7)
         padding = dp(12)
@@ -349,17 +345,15 @@ class ChordSelectorMenu(MDCard):
         return width
 
     def _highlight_current(self):
-        """Подсвечивает текущий выбранный аккорд"""
         for btn in self.chord_btns:
             if btn.text == self.current_chord:
-                btn.md_bg_color = [1.0, 0.7, 0.0, 1]  # Золотой
+                btn.md_bg_color = [1.0, 0.7, 0.0, 1]
                 btn.text_color = [1, 1, 1, 1]
             else:
                 btn.md_bg_color = [0, 0, 0, 0]
                 btn.text_color = [1, 1, 1, 0.7]
 
     def _on_chord_press(self, chord):
-        """Выбор аккорда - сразу подтверждаем и закрываем"""
         self.current_chord = chord
         self._highlight_current()
         if self.on_confirm:
@@ -444,7 +438,7 @@ class TypeSelectorMenu(MDCard):
     def _highlight_current(self):
         for btn in self.type_btns:
             if btn.text == self.current_type:
-                btn.md_bg_color = [0.0, 0.74, 0.83, 1]  # Бирюзовый
+                btn.md_bg_color = [0.0, 0.74, 0.83, 1]
                 btn.text_color = [1, 1, 1, 1]
             else:
                 btn.md_bg_color = [0, 0, 0, 0]
@@ -524,7 +518,7 @@ class TonalitySelectorMenu(MDCard):
     def _highlight_current(self):
         for btn in self.tonality_btns:
             if btn.text == self.current_tonality:
-                btn.md_bg_color = [0.61, 0.15, 0.69, 1]  # Фиолетовый
+                btn.md_bg_color = [0.61, 0.15, 0.69, 1]
                 btn.text_color = [1, 1, 1, 1]
             else:
                 btn.md_bg_color = [0, 0, 0, 0]
@@ -561,7 +555,7 @@ class UnifiedMenu(MDCard):
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
         self.spacing = dp(0)
 
-        # 1. ТОН (иконка music-note-eighth) - ФИОЛЕТОВЫЙ (всегда активен)
+        # 1. ТОН (иконка music-note-eighth) - ФИОЛЕТОВЫЙ
         self.tonality_item = IconMenuItem(
             icon_name="music-note-eighth",
             on_press=on_tonality_press,
@@ -570,7 +564,7 @@ class UnifiedMenu(MDCard):
             fixed_color=True
         )
 
-        # 2. ТИП (иконка tag) - БИРЮЗОВЫЙ (всегда активен)
+        # 2. ТИП (иконка tag) - БИРЮЗОВЫЙ
         self.type_item = IconMenuItem(
             icon_name="tag",
             on_press=on_type_press,
@@ -619,7 +613,6 @@ class UnifiedMenu(MDCard):
         self.add_widget(self.mode_item)
 
     def _create_divider(self):
-        """Создаёт вертикальный разделитель"""
         return MDBoxLayout(
             size_hint_x=None,
             width=dp(1),
@@ -627,45 +620,42 @@ class UnifiedMenu(MDCard):
         )
 
     def update_chord(self, chord_count):
-        """Обновляет состояние иконки аккорда"""
         has_chords = chord_count > 1
         self.chord_item.is_active = has_chords
         self.chord_item.on_press_callback = self.chord_item.on_press_callback if has_chords else None
         if has_chords:
-            self.chord_item.set_color([1.0, 0.7, 0.0, 1])  # Золотой
+            self.chord_item.set_color([1.0, 0.7, 0.0, 1])
             self.chord_item.icon_btn.opacity = 1
         else:
-            self.chord_item.set_color([1, 1, 1, 0.3])  # Полупрозрачный
+            self.chord_item.set_color([1, 1, 1, 0.3])
             self.chord_item.icon_btn.opacity = 0.6
         self.chord_item.update_state()
 
     def update_variants(self, count):
-        """Обновляет состояние иконки вариантов"""
         has_variants = count > 1
         self.variants_item.is_active = has_variants
         if has_variants:
-            self.variants_item.set_color([0.13, 0.59, 0.95, 1])  # Синий
+            self.variants_item.set_color([0.13, 0.59, 0.95, 1])
             self.variants_item.icon_btn.opacity = 1
         else:
-            self.variants_item.set_color([1, 1, 1, 0.3])  # Полупрозрачный
+            self.variants_item.set_color([1, 1, 1, 0.3])
             self.variants_item.icon_btn.opacity = 0.6
         self.variants_item.update_state()
 
     def update_mode(self, mode):
-        """Обновляет режим отображения (finger/notes)"""
         is_finger = (mode == "finger")
         if is_finger:
             self.mode_item.set_icon("gesture-tap")
-            self.mode_item.set_color([0.9, 0.55, 0.0, 1])  # Оранжевый
+            self.mode_item.set_color([0.9, 0.55, 0.0, 1])
         else:
             self.mode_item.set_icon("music-note")
-            self.mode_item.set_color([0.8, 0.3, 0.3, 1])  # Красный
+            self.mode_item.set_color([0.8, 0.3, 0.3, 1])
 
 
 class ChordsScreen(BaseScreen):
     TONALITIES = TONALITIES
     CHORD_TYPES = CHORD_TYPES
-    """Экран аккордов с единым меню 5 в 1 под грифом"""
+    """Экран аккордов с единым меню 5 в 1 под грифом - СТАТИЧНЫЙ, БЕЗ ПРОКРУТКИ"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -701,8 +691,8 @@ class ChordsScreen(BaseScreen):
         self.type_selector = None
         self.chord_selector = None
         self._menu_container = None
-        self._hint_label = None  # Подсказка под меню
-        self._hint_timer = None  # Таймер для скрытия подсказки
+        self._hint_label = None
+        self._hint_timer = None
 
         self.bg_image = None
 
@@ -710,7 +700,7 @@ class ChordsScreen(BaseScreen):
         self.load_background()
         self.scan_chords()
 
-        logger.info('Экран аккордов создан с единым меню 5 в 1 под грифом')
+        logger.info('Экран аккордов создан (статичный, без прокрутки)')
 
     def load_background(self):
         try:
@@ -739,11 +729,12 @@ class ChordsScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
+        # Создаём контент БЕЗ ScrollView
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(12),
-            size_hint_y=None,
-            adaptive_height=True
+            spacing=dp(10),
+            size_hint=(1, 1),  # Растягиваем на весь экран
+            padding=[dp(12), dp(8), dp(12), dp(16)]
         )
 
         # ============ 1. ПОИСК ============
@@ -756,11 +747,11 @@ class ChordsScreen(BaseScreen):
         # ============ 2. НАЗВАНИЕ АККОРДА И ОПИСАНИЕ ============
         self.chord_name_label = MDLabel(
             text="A | Amaj",
-            font_size=sp(24),
+            font_size=sp(22),
             halign="center",
             bold=True,
             size_hint_y=None,
-            height=dp(36),
+            height=dp(32),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95]
         )
@@ -768,10 +759,10 @@ class ChordsScreen(BaseScreen):
 
         self.chord_desc_label = MDLabel(
             text="",
-            font_size=sp(13),
+            font_size=sp(12),
             halign="center",
             size_hint_y=None,
-            height=dp(22),
+            height=dp(20),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
             shorten=True,
@@ -823,16 +814,18 @@ class ChordsScreen(BaseScreen):
             font_size=sp(12),
             halign="center",
             size_hint_y=None,
-            height=dp(24),
+            height=dp(20),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
             opacity=0
         )
         content.add_widget(self._hint_label)
 
-        content.add_widget(Widget(size_hint_y=None, height=dp(20)))
+        # Добавляем растягивающийся виджет внизу
+        content.add_widget(Widget(size_hint_y=1))
 
-        self.build_ui(content_widget=content, use_scroll=True)
+        # Строим UI БЕЗ скролла (use_scroll=False)
+        self.build_ui(content_widget=content, use_scroll=False)
 
         try:
             bg_data = load_asset_as_bytes("griff_png")
@@ -844,9 +837,7 @@ class ChordsScreen(BaseScreen):
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
     def _show_hint(self, text):
-        """Показывает постоянную подсказку под меню (для меню выбора)"""
         if self._hint_label:
-            # Отменяем таймер если был
             if hasattr(self, '_hint_timer') and self._hint_timer:
                 Clock.unschedule(self._hint_timer)
                 self._hint_timer = None
@@ -854,18 +845,14 @@ class ChordsScreen(BaseScreen):
             self._hint_label.opacity = 1
 
     def _show_temporary_hint(self, text, duration=1.5):
-        """Показывает временную подсказку под меню"""
         if self._hint_label:
             self._hint_label.text = text
             self._hint_label.opacity = 1
-            # Отменяем предыдущий таймер если есть
             if hasattr(self, '_hint_timer') and self._hint_timer:
                 Clock.unschedule(self._hint_timer)
-            # Запускаем таймер на скрытие
             self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), duration)
 
     def _hide_hint(self):
-        """Скрывает подсказку"""
         if self._hint_label:
             self._hint_label.text = ""
             self._hint_label.opacity = 0
@@ -873,7 +860,6 @@ class ChordsScreen(BaseScreen):
                 self._hint_timer = None
 
     def _open_tonality_selector(self):
-        """Открывает меню выбора тональности"""
         logger.info("Открытие меню выбора тональности")
 
         if self.unified_menu and self.unified_menu.parent:
@@ -885,22 +871,16 @@ class ChordsScreen(BaseScreen):
             on_cancel=self._close_tonality_selector
         )
         self._menu_container.add_widget(self.tonality_selector)
-
-        # Показываем подсказку
         self._show_hint("Выберите тональность")
 
     def _on_tonality_confirmed(self, selected_tonality):
-        """Подтверждение выбора тональности"""
         logger.info(f"Выбрана тональность: {selected_tonality}")
-
         self.current_tonality = selected_tonality
         self.current_tonality_index = TONALITIES.index(selected_tonality)
         self.update_available_chords()
-
         self._close_tonality_selector()
 
     def _close_tonality_selector(self):
-        """Закрывает селектор и возвращает основное меню"""
         logger.info("Закрытие меню выбора тональности")
 
         if self.tonality_selector and self.tonality_selector.parent:
@@ -909,12 +889,9 @@ class ChordsScreen(BaseScreen):
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
-
-        # Скрываем подсказку
         self._hide_hint()
 
     def _open_type_selector(self):
-        """Открывает меню выбора типа аккорда"""
         logger.info("Открытие меню выбора типа аккорда")
 
         if self.unified_menu and self.unified_menu.parent:
@@ -926,22 +903,16 @@ class ChordsScreen(BaseScreen):
             on_cancel=self._close_type_selector
         )
         self._menu_container.add_widget(self.type_selector)
-
-        # Показываем подсказку
         self._show_hint("Выберите тип аккорда")
 
     def _on_type_confirmed(self, selected_type):
-        """Подтверждение выбора типа аккорда"""
         logger.info(f"Выбран тип: {selected_type}")
-
         self.current_type = selected_type
         self.current_type_index = CHORD_TYPES.index(selected_type)
         self.update_available_chords()
-
         self._close_type_selector()
 
     def _close_type_selector(self):
-        """Закрывает селектор типа и возвращает основное меню"""
         logger.info("Закрытие меню выбора типа аккорда")
 
         if self.type_selector and self.type_selector.parent:
@@ -950,12 +921,9 @@ class ChordsScreen(BaseScreen):
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
-
-        # Скрываем подсказку
         self._hide_hint()
 
     def _open_chord_selector(self):
-        """Открывает меню выбора аккорда"""
         if len(self.available_chords) <= 1:
             return
 
@@ -971,23 +939,18 @@ class ChordsScreen(BaseScreen):
             on_cancel=self._close_chord_selector
         )
         self._menu_container.add_widget(self.chord_selector)
-
-        # Показываем подсказку
         self._show_hint("Выберите вид данного аккорда")
 
     def _on_chord_confirmed(self, selected_chord):
-        """Подтверждение выбора аккорда"""
         logger.info(f"Выбран аккорд: {selected_chord}")
 
         self.current_chord_name = selected_chord
         self.current_chord_index = self.available_chords.index(selected_chord)
         self._load_variants_for_chord(self.current_chord_name)
         self.load_current_variant()
-
         self._close_chord_selector()
 
     def _close_chord_selector(self):
-        """Закрывает селектор аккорда и возвращает основное меню"""
         logger.info("Закрытие меню выбора аккорда")
 
         if self.chord_selector and self.chord_selector.parent:
@@ -996,12 +959,9 @@ class ChordsScreen(BaseScreen):
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
-
-        # Скрываем подсказку
         self._hide_hint()
 
     def _toggle_mode(self):
-        """Переключает режим отображения (пальцы/ноты)"""
         if self.current_mode == "finger":
             self.current_mode = "notes"
             self._show_temporary_hint("Выбран режим показа нот", 1.2)
@@ -1017,7 +977,6 @@ class ChordsScreen(BaseScreen):
         logger.info(f"Режим отображения: {self.current_mode}")
 
     def _next_variant(self):
-        """Переключает на следующий вариант аккорда"""
         if not self.current_variants or len(self.current_variants) <= 1:
             notify.info("Нет других вариантов")
             return
@@ -1026,10 +985,7 @@ class ChordsScreen(BaseScreen):
         self.current_variant_index = (self.current_variant_index + 1) % total
         self.current_position = self.current_variant_index + 1
         self.load_current_variant()
-
-        # Показываем временную подсказку
         self._show_temporary_hint(f"Изменена позиция аккорда: {self.current_position}", 1.2)
-
         logger.info(f"Вариант {self.current_position}/{total}")
 
     def do_search(self, query):
