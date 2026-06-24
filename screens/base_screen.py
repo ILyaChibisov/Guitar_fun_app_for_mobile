@@ -13,6 +13,7 @@ from kivy.core.window import Window
 
 from config.layout_config import layout_config
 from config.logger_config import screen_logger
+from config.system_bars import get_navigation_bar_height
 
 logger = screen_logger('BaseScreen')
 
@@ -22,6 +23,11 @@ class BaseScreen(MDScreen):
     Базовый экран с автоматическими отступами для контента.
     Все экраны должны наследоваться от этого класса.
     """
+
+    # Текущая высота BottomNav (должна совпадать с bottom_nav.py)
+    BOTTOM_NAV_HEIGHT = dp(44)
+    # Отступ между контентом и BottomNav
+    BOTTOM_NAV_GAP = dp(8)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -52,7 +58,7 @@ class BaseScreen(MDScreen):
 
         # Обновляем отступы
         top_padding = layout_config.get_top_padding()
-        bottom_padding = layout_config.get_bottom_padding()
+        bottom_padding = self._get_bottom_padding()
 
         if self._top_spacer:
             self._top_spacer.height = top_padding
@@ -62,8 +68,8 @@ class BaseScreen(MDScreen):
 
         # Обновляем отступ в ScrollView
         if self._scroll_view and self._use_scroll and self._scroll_content:
-            nav_bar_height = layout_config.get_bottom_nav_height()
-            extra_bottom = dp(nav_bar_height + 16)
+            nav_bar_height = get_navigation_bar_height()
+            extra_bottom = self.BOTTOM_NAV_HEIGHT + nav_bar_height + self.BOTTOM_NAV_GAP
             self._scroll_content.padding = [0, 0, 0, extra_bottom]
 
         # Обновляем padding контента
@@ -72,6 +78,11 @@ class BaseScreen(MDScreen):
             self._content_container.padding = padding
 
         logger.debug(f"{self.name}: layout обновлён, top={top_padding}dp, bottom={bottom_padding}dp")
+
+    def _get_bottom_padding(self):
+        """Возвращает правильный нижний отступ с учётом BottomNav"""
+        nav_bar_height = get_navigation_bar_height()
+        return self.BOTTOM_NAV_HEIGHT + nav_bar_height + self.BOTTOM_NAV_GAP
 
     def on_enter(self):
         """Вызывается при входе на экран - можно переопределить в дочерних классах"""
@@ -82,7 +93,7 @@ class BaseScreen(MDScreen):
         pass
 
     def build_ui(self, content_widget=None, top_widget=None, bottom_widget=None,
-                 use_scroll=False, custom_padding=None):
+                 use_scroll=False, custom_padding=None, bottom_offset=0):
         """
         Строит UI с правильными отступами.
 
@@ -92,6 +103,7 @@ class BaseScreen(MDScreen):
             bottom_widget: Дополнительный виджет под контентом
             use_scroll: Использовать ли ScrollView для контента
             custom_padding: Свои отступы [left, top, right, bottom] (в dp)
+            bottom_offset: Дополнительный отступ снизу (для экранов с панелью настроек)
         """
         self._use_scroll = use_scroll
         self._custom_padding = custom_padding
@@ -123,18 +135,18 @@ class BaseScreen(MDScreen):
 
         # Добавляем основной контент (с ScrollView или без)
         if use_scroll:
-            # Получаем высоту нижней панели для отступа
-            nav_bar_height = layout_config.get_bottom_nav_height()
-            extra_bottom = dp(nav_bar_height + 16)
+            # Получаем правильный нижний отступ
+            nav_bar_height = get_navigation_bar_height()
+            extra_bottom = self.BOTTOM_NAV_HEIGHT + nav_bar_height + self.BOTTOM_NAV_GAP + dp(bottom_offset)
 
             # Создаём ScrollView со СКРЫТЫМ скроллбаром
             self._scroll_view = ScrollView(
                 size_hint=(1, 1),
                 do_scroll_x=False,
-                bar_width=0,  # ← скрываем ширину скроллбара
-                bar_color=[0, 0, 0, 0],  # ← прозрачный цвет
-                bar_inactive_color=[0, 0, 0, 0],  # ← прозрачный цвет
-                bar_margin=0  # ← убираем отступ
+                bar_width=0,
+                bar_color=[0, 0, 0, 0],
+                bar_inactive_color=[0, 0, 0, 0],
+                bar_margin=0
             )
 
             # Создаём внутренний контейнер для отступов
@@ -146,7 +158,6 @@ class BaseScreen(MDScreen):
             )
 
             if content_widget:
-                # Если content_widget имеет adaptive_height, привязываем его
                 if hasattr(content_widget, 'minimum_height'):
                     content_widget.size_hint_y = None
                     content_widget.bind(minimum_height=content_widget.setter('height'))
@@ -165,7 +176,7 @@ class BaseScreen(MDScreen):
             self._main_layout.add_widget(bottom_widget)
 
         # Нижний отступ (зазор перед BottomNav)
-        bottom_padding = layout_config.get_bottom_padding()
+        bottom_padding = self._get_bottom_padding()
         self._bottom_spacer = Widget(size_hint_y=None, height=bottom_padding)
         self._main_layout.add_widget(self._bottom_spacer)
 

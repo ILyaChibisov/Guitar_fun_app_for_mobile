@@ -1,6 +1,7 @@
 # screens/term_detail_screen.py
 """
 Экран определения термина - в стиле song_detail_screen
+BottomNav всегда виден, панель настроек строго над ним
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle
@@ -27,9 +28,12 @@ logger = screen_logger('TermDetail')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -150,6 +154,18 @@ class TermDetailScreen(BaseScreen):
             self._set_green_theme()
             self._current_theme = 'green'
 
+        # Обновляем иконку темы
+        if hasattr(self, 'theme_btn'):
+            if self._current_theme == 'green':
+                self.theme_btn.icon = "weather-sunny"
+                self.theme_btn.icon_color = [0.46, 0.70, 0.71, 1]
+            elif self._current_theme == 'light':
+                self.theme_btn.icon = "white-balance-sunny"
+                self.theme_btn.icon_color = [1, 1, 1, 1]
+            else:
+                self.theme_btn.icon = "weather-night"
+                self.theme_btn.icon_color = [0.3, 0.3, 0.3, 1]
+
         logger.info(f"🔄 Тема изменена на: {self._current_theme}")
 
     def _set_green_theme(self):
@@ -158,11 +174,6 @@ class TermDetailScreen(BaseScreen):
         self.term_description_label.text_color = [1, 1, 1, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [0, 0, 0, 0]
-        if hasattr(self, 'theme_btn'):
-            self.theme_btn.icon = "weather-sunny"
-            self.theme_btn.icon_color = [0.46, 0.70, 0.71, 1]
-        if hasattr(self, '_bottom_divider'):
-            self._bottom_divider.md_bg_color = [0.5, 0.5, 0.5, 0.3]
 
     def _set_light_theme(self):
         """Светлая тема - фон белый, текст чёрный"""
@@ -170,11 +181,6 @@ class TermDetailScreen(BaseScreen):
         self.term_description_label.text_color = [0, 0, 0, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [1, 1, 1, 1]
-        if hasattr(self, 'theme_btn'):
-            self.theme_btn.icon = "white-balance-sunny"
-            self.theme_btn.icon_color = [1, 1, 1, 1]
-        if hasattr(self, '_bottom_divider'):
-            self._bottom_divider.md_bg_color = [0, 0, 0, 0.15]
 
     def _set_dark_theme(self):
         """Тёмная тема - фон чёрный, текст белый"""
@@ -182,14 +188,10 @@ class TermDetailScreen(BaseScreen):
         self.term_description_label.text_color = [1, 1, 1, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [0.05, 0.05, 0.05, 1]
-        if hasattr(self, 'theme_btn'):
-            self.theme_btn.icon = "weather-night"
-            self.theme_btn.icon_color = [0.3, 0.3, 0.3, 1]
-        if hasattr(self, '_bottom_divider'):
-            self._bottom_divider.md_bg_color = [0.5, 0.5, 0.5, 0.3]
 
     def init_ui(self):
-        """Инициализирует UI как в song_detail_screen"""
+        """Инициализирует UI как в song_detail_screen с учётом BottomNav"""
+
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
         # ============ ОТСТУП ПОД TOPNAV ============
@@ -204,12 +206,7 @@ class TermDetailScreen(BaseScreen):
         self._top_spacer_term = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_term)
 
-        card_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=[0, 0, 0, 0]
-        )
-
+        # ============ ОСНОВНАЯ КАРТОЧКА ============
         self.term_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
@@ -232,6 +229,7 @@ class TermDetailScreen(BaseScreen):
         )
         self.term_card.add_widget(top_divider)
 
+        # ============ СКРОЛЛ ДЛЯ ТЕКСТА ============
         self.content_scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
@@ -241,12 +239,14 @@ class TermDetailScreen(BaseScreen):
         )
         self.content_scroll.clip = True
 
-        # ============ НИЖНИЙ ОТСТУП (как в song_detail_screen) ============
-        if platform == 'android':
-            nav_bar_height = get_navigation_bar_height()
-            bottom_padding = nav_bar_height + dp(20)
-        else:
-            bottom_padding = dp(64)
+        # ============ НИЖНИЙ ОТСТУП ============
+        # Используем layout_config для правильного расчёта отступа
+        # get_bottom_padding() уже учитывает высоту BottomNav и системную навигацию
+        bottom_nav_with_gap = layout_config.get_bottom_padding()
+        bottom_panel_height = dp(52)  # Высота панели настроек
+
+        # Отступ для текста = отступ под BottomNav + панель настроек + небольшой зазор
+        bottom_padding = bottom_nav_with_gap + bottom_panel_height + dp(4)
 
         # ============ КОНТЕЙНЕР ДЛЯ ТЕКСТА ============
         self._text_container = MDBoxLayout(
@@ -284,20 +284,20 @@ class TermDetailScreen(BaseScreen):
         )
         self.term_card.add_widget(self._bottom_divider)
 
-        # ============ НИЖНЯЯ ПАНЕЛЬ (только кнопка настроек) ============
+        # ============ НИЖНЯЯ ПАНЕЛЬ (слайдер + смена темы) ============
         self._create_bottom_panel()
         self.term_card.add_widget(self.bottom_panel)
 
-        card_container.add_widget(self.term_card)
-        main_container.add_widget(card_container)
+        main_container.add_widget(self.term_card)
 
-        # Добавляем дополнительный отступ снизу для Windows (как в song_detail_screen)
+        # Добавляем дополнительный отступ снизу для Windows
         if platform != 'android':
             main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
 
         self.add_widget(main_container)
 
-        logger.info(f"TermDetailScreen: init_ui completed, top_padding={top_padding_for_nav}dp, bottom_padding={bottom_padding}dp")
+        logger.info(
+            f"TermDetailScreen: init_ui completed, top_padding={top_padding_for_nav}dp, bottom_padding={bottom_padding}dp")
 
     def _create_bottom_panel(self):
         """Создаёт нижнюю панель с меню настроек (слайдер + смена темы)"""
@@ -308,10 +308,10 @@ class TermDetailScreen(BaseScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)],
             spacing=dp(4),
             radius=[0, 0, 0, 0],
-            md_bg_color=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0.06],
             elevation=0,
-            line_width=0.5,
-            line_color=[0, 0, 0, 0]
+            line_color=[1, 1, 1, 0.08],
+            line_width=0.5
         )
 
         center_container = MDBoxLayout(
@@ -500,6 +500,11 @@ class TermDetailScreen(BaseScreen):
             self._current_theme = 'green'
             self._set_green_theme()
 
+        # Обновляем иконку темы
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.icon = "weather-sunny"
+            self.theme_btn.icon_color = [0.46, 0.70, 0.71, 1]
+
         logger.info("🔄 Настройки сброшены к стандартным")
 
     def _clean_description(self, text):
@@ -538,6 +543,7 @@ class TermDetailScreen(BaseScreen):
 
         # Прокручиваем вверх после загрузки
         Clock.schedule_once(self._scroll_to_top, 0.1)
+        Clock.schedule_once(self._scroll_to_top, 0.3)
 
     def _scroll_to_top(self, dt):
         """Прокручивает вверх"""
@@ -568,10 +574,7 @@ class TermDetailScreen(BaseScreen):
         """При входе на экран"""
         logger.info("Вход в экран определения термина")
 
-        # Скрываем BottomNav как в song_detail_screen
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'hide_bottom_nav'):
-            app.hide_bottom_nav()
+        # НЕ СКРЫВАЕМ BottomNav - он всегда виден
 
         # Обновляем отступы при входе
         if hasattr(self, '_top_spacer_term'):
@@ -587,11 +590,6 @@ class TermDetailScreen(BaseScreen):
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из экрана определения термина")
-
-        # Показываем BottomNav как в song_detail_screen
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'show_bottom_nav'):
-            app.show_bottom_nav()
 
         # Сбрасываем настройки при выходе
         self._reset_to_defaults()

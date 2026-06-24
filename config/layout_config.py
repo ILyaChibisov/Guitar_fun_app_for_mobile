@@ -16,17 +16,16 @@ class LayoutConfig:
 
     # ========== БАЗОВЫЕ РАЗМЕРЫ (просто числа, НЕ dp!) ==========
     TOP_NAV_HEIGHT = 64  # высота верхней панели
-    BOTTOM_NAV_HEIGHT = 56
+    BOTTOM_NAV_HEIGHT = 44  # ← ИЗМЕНЕНО: с 56 на 44 (актуальная высота BottomNav)
     TOP_NAV_HEIGHT_TABLET = 72
-    BOTTOM_NAV_HEIGHT_TABLET = 64
+    BOTTOM_NAV_HEIGHT_TABLET = 52  # ← ИЗМЕНЕНО: с 64 на 52
 
     # Отступы
     SIDE_PADDING = 16
     GAP_BETWEEN_CONTENT_AND_NAV = 8
 
     # ДОПОЛНИТЕЛЬНЫЙ ОТСТУП СВЕРХУ (после TopNav)
-    # Увеличь это значение, чтобы увеличить отступ на всех экранах
-    EXTRA_TOP_PADDING = 12  # ← добавь эту строку (было 0, стало 12)
+    EXTRA_TOP_PADDING = 12
 
     CONTENT_TOP_PADDING = 8
     CONTENT_BOTTOM_PADDING = 8
@@ -62,14 +61,15 @@ class LayoutConfig:
         total = status_h
         if include_top_nav:
             total += cls.get_top_nav_height()
-        # Добавляем дополнительный отступ сверху
-        total += dp(cls.EXTRA_TOP_PADDING)  # ← добавлено
+        total += dp(cls.EXTRA_TOP_PADDING)
         return total
 
     @classmethod
     def get_bottom_padding(cls):
         """Возвращает отступ снизу для контента в dp"""
-        return dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
+        # Отступ перед BottomNav с учётом его актуальной высоты
+        nav_bar_height = get_navigation_bar_height()
+        return cls.get_bottom_nav_height() + nav_bar_height + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
 
     @classmethod
     def get_content_padding(cls):
