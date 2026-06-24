@@ -11,22 +11,15 @@ source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 source.include_patterns = chords/**, **/*.py
 
 # Исключаем ненужные файлы
-source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, prepare_icons.py
+source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, create_icons.py, prepare_icons.py
 
 version = 1.0.2
 version.code = 2
 orientation = portrait
 
 # --- ИКОНКА ПРИЛОЖЕНИЯ ---
-# Указываем путь к папке с ресурсами Android
-android.res_dir = android_res
-
-# Иконка приложения (используется как основная)
-android.icon = android_res/drawable/icon.png
-
-# Адаптивная иконка (Android 8+)
-android.adaptive.icon.foreground = android_res/drawable/icon_rounded.png
-android.adaptive.icon.background = android_res/drawable/icon_rounded.png
+# Указываем путь к PNG иконке (Buildozer сам масштабирует)
+icon.filename = android_res/drawable/icon.png
 
 # --- ЗАВИСИМОСТИ ---
 requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui
