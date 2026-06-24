@@ -2,6 +2,7 @@
 """
 Экран гитарных аккордов - с единым меню 5 в 1 под грифом
 ТОН | ТИП | АККОРД | ВАРИАНТЫ | ПАЛЬЦЫ/НОТЫ
+С меню выбора тональности
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -37,9 +38,12 @@ logger = screen_logger('Chords')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -188,7 +192,7 @@ class SearchBar(MDCard):
 
 
 class TextMenuItem(ButtonBehavior, MDBoxLayout):
-    """Пункт меню с текстом (ТОН, ТИП)"""
+    """Пункт меню с текстом (ТИП)"""
 
     def __init__(self, label, value, on_press=None, **kwargs):
         super().__init__(**kwargs)
@@ -202,7 +206,7 @@ class TextMenuItem(ButtonBehavior, MDBoxLayout):
         self.spacing = dp(2)
         self.md_bg_color = [0, 0, 0, 0]
 
-        # Метка (ТОН, ТИП)
+        # Метка (ТИП)
         self.label = MDLabel(
             text=label,
             font_size=sp(9),
@@ -252,7 +256,7 @@ class TextMenuItem(ButtonBehavior, MDBoxLayout):
 
 
 class IconMenuItem(ButtonBehavior, MDBoxLayout):
-    """Пункт меню с иконкой (АККОРД, ВАРИАНТЫ или ПАЛЬЦЫ/НОТЫ) - без подписи"""
+    """Пункт меню с иконкой (ТОН, АККОРД, ВАРИАНТЫ или ПАЛЬЦЫ/НОТЫ) - без подписи"""
 
     def __init__(self, icon_name, on_press=None, is_active=False, icon_color=None, fixed_color=False, **kwargs):
         super().__init__(**kwargs)
@@ -323,6 +327,188 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.icon_btn.icon_color = color
 
 
+class TonalitySelectorMenu(MDCard):
+    """
+    Временное меню выбора тональности
+    ◀ | A | A# | B | ▶ | ✓
+    """
+    TONS_PER_PAGE = 3
+
+    def __init__(self, current_tonality, on_confirm, on_cancel, **kwargs):
+        super().__init__(**kwargs)
+        self.current_tonality = current_tonality
+        self.on_confirm = on_confirm
+        self.on_cancel = on_cancel
+        self._selected_tonality = current_tonality
+        self._current_page = 0
+        self._total_pages = (len(TONALITIES) + self.TONS_PER_PAGE - 1) // self.TONS_PER_PAGE
+
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(60)
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
+        self.md_bg_color = [0, 0, 0, 0.08]
+        self.elevation = 0
+        self.line_color = [1, 1, 1, 0.15]
+        self.line_width = 0.8
+        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.spacing = dp(0)
+
+        # Находим страницу с текущим тоном
+        self._find_current_page()
+
+        # Создаём UI
+        self._build_ui()
+
+    def _find_current_page(self):
+        """Находит страницу, на которой находится текущий тон"""
+        try:
+            index = TONALITIES.index(self.current_tonality)
+            self._current_page = index // self.TONS_PER_PAGE
+        except ValueError:
+            self._current_page = 0
+
+    def _build_ui(self):
+        # Очищаем виджеты
+        self.clear_widgets()
+
+        # 1. Стрелка влево (пагинация назад) - без фона
+        self.prev_btn = MDIconButton(
+            icon="chevron-left",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 0.7],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            pos_hint={'center_y': 0.5}
+        )
+        self.prev_btn.bind(on_release=self._on_prev)
+        self.add_widget(self.prev_btn)
+
+        # Разделитель
+        self.add_widget(self._create_divider())
+
+        # 2. Три тональности
+        self.tonality_btns = []
+        for i in range(self.TONS_PER_PAGE):
+            btn = MDRaisedButton(
+                text="",
+                size_hint=(1, 1),
+                md_bg_color=[0, 0, 0, 0],  # Прозрачный фон
+                text_color=[1, 1, 1, 0.7],
+                font_size=sp(18),
+                elevation=0,
+                on_release=lambda x, idx=i: self._on_tonality_press(idx)
+            )
+            self.tonality_btns.append(btn)
+            self.add_widget(btn)
+
+        # Разделитель
+        self.add_widget(self._create_divider())
+
+        # 3. Стрелка вправо (пагинация вперёд) - без фона
+        self.next_btn = MDIconButton(
+            icon="chevron-right",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 0.7],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            pos_hint={'center_y': 0.5}
+        )
+        self.next_btn.bind(on_release=self._on_next)
+        self.add_widget(self.next_btn)
+
+        # Разделитель
+        self.add_widget(self._create_divider())
+
+        # 4. Галочка (подтвердить)
+        self.confirm_btn = MDIconButton(
+            icon="check",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            pos_hint={'center_y': 0.5}
+        )
+        self.confirm_btn.bind(on_release=self._on_confirm)
+        self.add_widget(self.confirm_btn)
+
+        # Обновляем отображение
+        self._update_page()
+
+    def _create_divider(self):
+        """Создаёт вертикальный разделитель"""
+        return MDBoxLayout(
+            size_hint_x=None,
+            width=dp(1),
+            md_bg_color=[1, 1, 1, 0.1]
+        )
+
+    def _update_page(self):
+        """Обновляет отображение текущей страницы"""
+        start = self._current_page * self.TONS_PER_PAGE
+        end = start + self.TONS_PER_PAGE
+        page_tones = TONALITIES[start:end]
+
+        # Обновляем кнопки
+        for i, btn in enumerate(self.tonality_btns):
+            if i < len(page_tones):
+                ton = page_tones[i]
+                btn.text = ton
+                btn.opacity = 1
+                btn.disabled = False
+                # Подсвечиваем выбранный тон
+                if ton == self._selected_tonality:
+                    btn.md_bg_color = [0.46, 0.70, 0.71, 1]
+                    btn.text_color = [1, 1, 1, 1]
+                else:
+                    btn.md_bg_color = [0, 0, 0, 0]  # Прозрачный
+                    btn.text_color = [1, 1, 1, 0.7]
+            else:
+                btn.text = ""
+                btn.opacity = 0
+                btn.disabled = True
+
+        # Стрелки всегда активны (бесконечная пагинация)
+        self.prev_btn.icon_color = [1, 1, 1, 0.7]
+        self.prev_btn.disabled = False
+        self.next_btn.icon_color = [1, 1, 1, 0.7]
+        self.next_btn.disabled = False
+
+    def _on_prev(self, instance):
+        """Предыдущая страница (бесконечная пагинация)"""
+        self._current_page = (self._current_page - 1) % self._total_pages
+        self._update_page()
+
+    def _on_next(self, instance):
+        """Следующая страница (бесконечная пагинация)"""
+        self._current_page = (self._current_page + 1) % self._total_pages
+        self._update_page()
+
+    def _on_tonality_press(self, index):
+        """Выбор тональности"""
+        start = self._current_page * self.TONS_PER_PAGE
+        actual_index = start + index
+        if actual_index < len(TONALITIES):
+            self._selected_tonality = TONALITIES[actual_index]
+            self._update_page()
+
+    def _on_confirm(self, instance):
+        """Подтверждение выбора"""
+        if self.on_confirm:
+            self.on_confirm(self._selected_tonality)
+
+    def _on_cancel(self, instance):
+        """Отмена (закрыть без сохранения)"""
+        if self.on_cancel:
+            self.on_cancel()
+
+
 class UnifiedMenu(MDCard):
     """Единое меню 5 в 1: ТОН | ТИП | АККОРД | ВАРИАНТЫ | ПАЛЬЦЫ/НОТЫ"""
 
@@ -347,11 +533,13 @@ class UnifiedMenu(MDCard):
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
         self.spacing = dp(0)
 
-        # 1. ТОН (текст)
-        self.tonality_item = TextMenuItem(
-            label="ТОН",
-            value=tonality_value,
-            on_press=on_tonality_press
+        # 1. ТОН (иконка, без подписи)
+        self.tonality_item = IconMenuItem(
+            icon_name="music-note-eighth",
+            on_press=on_tonality_press,
+            is_active=True,
+            icon_color=[0.46, 0.70, 0.71, 1],
+            fixed_color=True
         )
 
         # 2. ТИП (текст)
@@ -361,7 +549,7 @@ class UnifiedMenu(MDCard):
             on_press=on_type_press
         )
 
-        # 3. АККОРД (иконка chevron-right, без подписи)
+        # 3. АККОРД (иконка music-circle, без подписи)
         has_chords = chord_count > 1
         self.chord_item = IconMenuItem(
             icon_name="music-circle",
@@ -407,9 +595,6 @@ class UnifiedMenu(MDCard):
             width=dp(1),
             md_bg_color=[1, 1, 1, 0.1]
         )
-
-    def update_tonality(self, value):
-        self.tonality_item.update_value(value)
 
     def update_type(self, value):
         self.type_item.update_value(value)
@@ -478,6 +663,8 @@ class ChordsScreen(BaseScreen):
         self.chord_name_label = None
         self.chord_desc_label = None
         self.chord_renderer = None
+        self.tonality_selector = None
+        self._menu_container = None
 
         self.bg_image = None
 
@@ -566,12 +753,22 @@ class ChordsScreen(BaseScreen):
         griff_container.add_widget(self.chord_renderer)
         content.add_widget(griff_container)
 
-        # ============ 4. ЕДИНОЕ МЕНЮ 5 В 1 (ПОД ГРИФОМ) ============
+        # ============ 4. КОНТЕЙНЕР ДЛЯ МЕНЮ ============
+        self._menu_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(60),
+            md_bg_color=[0, 0, 0, 0],
+            padding=[0, 0, 0, 0]
+        )
+        content.add_widget(self._menu_container)
+
+        # Добавляем основное меню в контейнер
         self.unified_menu = UnifiedMenu(
             tonality_value=self.current_tonality,
             type_value=self.current_type,
             chord_value=self.current_chord_name,
-            on_tonality_press=self._next_tonality,
+            on_tonality_press=self._open_tonality_selector,
             on_type_press=self._next_type,
             on_chord_press=self._next_chord,
             on_variants_press=self._next_variant,
@@ -580,7 +777,7 @@ class ChordsScreen(BaseScreen):
             current_mode=self.current_mode,
             chord_count=len(self.available_chords)
         )
-        content.add_widget(self.unified_menu)
+        self._menu_container.add_widget(self.unified_menu)
 
         content.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
@@ -594,6 +791,41 @@ class ChordsScreen(BaseScreen):
                     self.chord_renderer.set_background(img.texture)
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
+
+    def _open_tonality_selector(self):
+        """Открывает меню выбора тональности"""
+        logger.info("Открытие меню выбора тональности")
+
+        if self.unified_menu and self.unified_menu.parent:
+            self._menu_container.remove_widget(self.unified_menu)
+
+        self.tonality_selector = TonalitySelectorMenu(
+            current_tonality=self.current_tonality,
+            on_confirm=self._on_tonality_confirmed,
+            on_cancel=self._close_tonality_selector
+        )
+        self._menu_container.add_widget(self.tonality_selector)
+
+    def _on_tonality_confirmed(self, selected_tonality):
+        """Подтверждение выбора тональности"""
+        logger.info(f"Выбрана тональность: {selected_tonality}")
+
+        self.current_tonality = selected_tonality
+        self.current_tonality_index = TONALITIES.index(selected_tonality)
+        self.update_available_chords()
+
+        self._close_tonality_selector()
+
+    def _close_tonality_selector(self):
+        """Закрывает селектор и возвращает основное меню"""
+        logger.info("Закрытие меню выбора тональности")
+
+        if self.tonality_selector and self.tonality_selector.parent:
+            self._menu_container.remove_widget(self.tonality_selector)
+            self.tonality_selector = None
+
+        if self.unified_menu and not self.unified_menu.parent:
+            self._menu_container.add_widget(self.unified_menu)
 
     def _toggle_mode(self):
         """Переключает режим отображения (пальцы/ноты)"""
@@ -621,14 +853,6 @@ class ChordsScreen(BaseScreen):
         self.load_current_variant()
         logger.info(f"Вариант {self.current_position}/{total}")
 
-    def _next_tonality(self):
-        """Переключает на следующую тональность"""
-        self.current_tonality_index = (self.current_tonality_index + 1) % len(TONALITIES)
-        self.current_tonality = TONALITIES[self.current_tonality_index]
-        self.unified_menu.update_tonality(self.current_tonality)
-        self.update_available_chords()
-        logger.info(f"Тональность: {self.current_tonality}")
-
     def _next_type(self):
         """Переключает на следующий тип аккорда"""
         self.current_type_index = (self.current_type_index + 1) % len(CHORD_TYPES)
@@ -646,7 +870,6 @@ class ChordsScreen(BaseScreen):
             return
         self.current_chord_index = (self.current_chord_index + 1) % len(self.available_chords)
         self.current_chord_name = self.available_chords[self.current_chord_index]
-        # Обновляем иконку аккорда
         self.unified_menu.update_chord(len(self.available_chords))
         self._load_variants_for_chord(self.current_chord_name)
         logger.info(f"Аккорд: {self.current_chord_name}")
@@ -838,7 +1061,6 @@ class ChordsScreen(BaseScreen):
 
         self.available_chords = sorted(chords_by_name.keys())
 
-        # Обновляем иконку аккорда
         self.unified_menu.update_chord(len(self.available_chords))
 
         if self.available_chords:
@@ -975,7 +1197,6 @@ class ChordsScreen(BaseScreen):
                 if tonality in TONALITIES:
                     self.current_tonality = tonality
                     self.current_tonality_index = TONALITIES.index(tonality)
-                    self.unified_menu.update_tonality(self.current_tonality)
                     self.update_available_chords()
 
                     if self.current_chord_name != chord_name:
@@ -1022,12 +1243,10 @@ class ChordsScreen(BaseScreen):
             if tonality in self.TONALITIES:
                 self.current_tonality = tonality
                 self.current_tonality_index = self.TONALITIES.index(tonality)
-                self.unified_menu.update_tonality(self.current_tonality)
 
             if chord_type in self.CHORD_TYPES:
                 self.current_type = chord_type
                 self.current_type_index = self.CHORD_TYPES.index(chord_type)
-                self.unified_menu.update_type(self.current_type)
 
             self.update_available_chords()
 
@@ -1100,6 +1319,9 @@ class ChordsScreen(BaseScreen):
         if previous_screen:
             Clock.schedule_once(lambda dt: self._show_back_button(), 0.3)
 
+        if self.tonality_selector:
+            self._close_tonality_selector()
+
     def _show_back_button(self):
         try:
             app = MDApp.get_running_app()
@@ -1114,6 +1336,8 @@ class ChordsScreen(BaseScreen):
 
     def on_leave(self):
         logger.info("🚪 Выход из экрана аккордов")
+        if self.tonality_selector:
+            self._close_tonality_selector()
 
     def go_back(self, instance=None):
         logger.info("🔙 Нажата кнопка возврата")
