@@ -1,7 +1,7 @@
 # screens/term_detail_screen.py
 """
 Экран определения термина - в стиле song_detail_screen
-BottomNav всегда виден, панель настроек строго над ним
+BottomNav всегда виден, панель настроек строго над ним и всегда видна
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle
@@ -190,8 +190,9 @@ class TermDetailScreen(BaseScreen):
             self._text_container.md_bg_color = [0.05, 0.05, 0.05, 1]
 
     def init_ui(self):
-        """Инициализирует UI как в song_detail_screen с учётом BottomNav"""
+        """Инициализирует UI с BottomNav всегда видимым и панелью настроек под текстом"""
 
+        # Основной вертикальный контейнер
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
         # ============ ОТСТУП ПОД TOPNAV ============
@@ -206,11 +207,15 @@ class TermDetailScreen(BaseScreen):
         self._top_spacer_term = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_term)
 
-        # ============ ОСНОВНАЯ КАРТОЧКА ============
+        # ============ КАРТОЧКА С КОНТЕНТОМ ============
+        # Добавляем нижний отступ для карточки, чтобы она не наезжала на BottomNav
+        # Используем layout_config.get_bottom_padding() для правильного расчёта
+        bottom_padding_for_card = layout_config.get_bottom_padding()
+
         self.term_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[0, 0, 0, 0],
+            padding=[0, 0, 0, bottom_padding_for_card],  # ← ВАЖНО: отступ снизу
             spacing=0,
             radius=[0, 0, 0, 0],
             md_bg_color=[0, 0, 0, 0],
@@ -239,16 +244,11 @@ class TermDetailScreen(BaseScreen):
         )
         self.content_scroll.clip = True
 
-        # ============ НИЖНИЙ ОТСТУП ============
-        # Используем layout_config для правильного расчёта отступа
-        # get_bottom_padding() уже учитывает высоту BottomNav и системную навигацию
-        bottom_nav_with_gap = layout_config.get_bottom_padding()
-        bottom_panel_height = dp(52)  # Высота панели настроек
-
-        # Отступ для текста = отступ под BottomNav + панель настроек + небольшой зазор
-        bottom_padding = bottom_nav_with_gap + bottom_panel_height + dp(4)
-
         # ============ КОНТЕЙНЕР ДЛЯ ТЕКСТА ============
+        # Отступ снизу только под панель настроек
+        bottom_panel_height = dp(52)  # Высота панели настроек
+        bottom_padding = bottom_panel_height + dp(8)  # Небольшой зазор между текстом и панелью
+
         self._text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
@@ -290,17 +290,12 @@ class TermDetailScreen(BaseScreen):
 
         main_container.add_widget(self.term_card)
 
-        # Добавляем дополнительный отступ снизу для Windows
-        if platform != 'android':
-            main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
-
         self.add_widget(main_container)
 
-        logger.info(
-            f"TermDetailScreen: init_ui completed, top_padding={top_padding_for_nav}dp, bottom_padding={bottom_padding}dp")
+        logger.info(f"TermDetailScreen: init_ui completed, card bottom_padding={bottom_padding_for_card}dp")
 
     def _create_bottom_panel(self):
-        """Создаёт нижнюю панель с меню настроек (слайдер + смена темы)"""
+        """Создаёт нижнюю панель с меню настроек (слайдер + смена темы) - всегда видна"""
         self.bottom_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -415,10 +410,6 @@ class TermDetailScreen(BaseScreen):
                 if hasattr(self, 'term_description_label'):
                     self.term_description_label.font_size = self.current_font_size
                     self._update_content_height()
-
-                    delays = [0.0, 0.01, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 0.8]
-                    for delay in delays:
-                        Clock.schedule_once(lambda dt, d=delay: setattr(self.content_scroll, 'scroll_y', 1.0), delay)
 
                 logger.info(f"🔍 Размер шрифта изменён на: {self.current_font_size}")
 
@@ -575,13 +566,6 @@ class TermDetailScreen(BaseScreen):
         logger.info("Вход в экран определения термина")
 
         # НЕ СКРЫВАЕМ BottomNav - он всегда виден
-
-        # Обновляем отступы при входе
-        if hasattr(self, '_top_spacer_term'):
-            top_padding = layout_config.get_top_padding()
-            if platform == 'android':
-                top_padding = top_padding + dp(16)
-            self._top_spacer_term.height = top_padding
 
         if self.term_name:
             self._update_top_nav(self.term_name)
