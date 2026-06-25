@@ -208,14 +208,14 @@ class TermDetailScreen(BaseScreen):
         main_container.add_widget(self._top_spacer_term)
 
         # ============ КАРТОЧКА С КОНТЕНТОМ ============
-        # Добавляем нижний отступ для карточки, чтобы она не наезжала на BottomNav
-        # Используем layout_config.get_bottom_padding() для правильного расчёта
-        bottom_padding_for_card = layout_config.get_bottom_padding()
+        nav_bar_height = get_navigation_bar_height()
+        panel_height = dp(52)
+        bottom_padding_for_card = panel_height + nav_bar_height
 
         self.term_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[0, 0, 0, bottom_padding_for_card],  # ← ВАЖНО: отступ снизу
+            padding=[0, 0, 0, bottom_padding_for_card],
             spacing=0,
             radius=[0, 0, 0, 0],
             md_bg_color=[0, 0, 0, 0],
@@ -224,7 +224,7 @@ class TermDetailScreen(BaseScreen):
             line_color=[0, 0, 0, 0]
         )
 
-        # ============ ВЕРХНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ============
+        # ============ ВЕРХНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА (как в song_detail) ============
         top_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -245,9 +245,8 @@ class TermDetailScreen(BaseScreen):
         self.content_scroll.clip = True
 
         # ============ КОНТЕЙНЕР ДЛЯ ТЕКСТА ============
-        # Отступ снизу только под панель настроек
-        bottom_panel_height = dp(52)  # Высота панели настроек
-        bottom_padding = bottom_panel_height + dp(8)  # Небольшой зазор между текстом и панелью
+        # Отступ снизу: только небольшой зазор до нижней полоски
+        bottom_padding = dp(8)
 
         self._text_container = MDBoxLayout(
             orientation='vertical',
@@ -274,15 +273,15 @@ class TermDetailScreen(BaseScreen):
         self.content_scroll.add_widget(self._text_container)
         self.term_card.add_widget(self.content_scroll)
 
-        # ============ НИЖНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ============
-        self._bottom_divider = MDBoxLayout(
+        # ============ НИЖНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА (как в song_detail) ============
+        bottom_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(2),
             md_bg_color=[0.5, 0.5, 0.5, 0.3],
             padding=[0, 0, 0, 0]
         )
-        self.term_card.add_widget(self._bottom_divider)
+        self.term_card.add_widget(bottom_divider)
 
         # ============ НИЖНЯЯ ПАНЕЛЬ (слайдер + смена темы) ============
         self._create_bottom_panel()
@@ -292,10 +291,13 @@ class TermDetailScreen(BaseScreen):
 
         self.add_widget(main_container)
 
-        logger.info(f"TermDetailScreen: init_ui completed, card bottom_padding={bottom_padding_for_card}dp")
+        logger.info(f"TermDetailScreen: init_ui completed")
+        logger.info(f"  bottom_padding_for_card = {bottom_padding_for_card}dp")
+        logger.info(f"  nav_bar_height = {nav_bar_height}dp")
+        logger.info(f"  panel_height = {panel_height}dp")
 
     def _create_bottom_panel(self):
-        """Создаёт нижнюю панель с меню настроек (слайдер + смена темы) - всегда видна"""
+        """Создаёт нижнюю панель с меню настроек (слайдер + смена темы)"""
         self.bottom_panel = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -305,8 +307,8 @@ class TermDetailScreen(BaseScreen):
             radius=[0, 0, 0, 0],
             md_bg_color=[0, 0, 0, 0.06],
             elevation=0,
-            line_color=[1, 1, 1, 0.08],
-            line_width=0.5
+            line_width=0.5,
+            line_color=[0.5, 0.5, 0.5, 0.3]  # ← ТАКАЯ ЖЕ ПОЛОСКА, КАК В SONG_DETAIL
         )
 
         center_container = MDBoxLayout(
