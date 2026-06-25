@@ -41,20 +41,25 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.size_hint = (1, 1)
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
-        # ============ АДАПТИВНЫЕ РАЗМЕРЫ ============
+        # ============ РАЗМЕРЫ ============
         if platform == 'android':
-            icon_size = dp(24)
-            label_height = dp(14)  # Увеличена с 13
-            font_size = sp(9)  # Увеличена с 8
+            icon_size = dp(28)
+            label_height = dp(16)
+            font_size = sp(11)
         else:
-            icon_size = dp(22)
-            label_height = dp(13)  # Увеличена с 12
-            font_size = sp(8)  # Увеличена с 7
+            icon_size = dp(26)
+            label_height = dp(15)
+            font_size = sp(10)
 
         # Медно-золотой цвет для активного состояния
         self.copper_gold = [0.85, 0.65, 0.25, 1]
 
-        # Иконка - только допустимые параметры
+        # ============ ИСПОЛЬЗУЕМ FLOATLAYOUT С ТОЧНЫМИ КООРДИНАТАМИ ============
+        from kivy.uix.floatlayout import FloatLayout
+        self.inner_layout = FloatLayout(size_hint=(1, 1))
+
+        # Иконка - по центру по X, чуть выше середины
+        # center_y = 0.58 означает, что иконка выше центра
         self.icon_btn = MDIconButton(
             icon=icon_name,
             size_hint=(None, None),
@@ -62,12 +67,13 @@ class NavItem(ButtonBehavior, BoxLayout):
             theme_icon_color="Custom",
             icon_color=theme.TEXT_SECONDARY,
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_x': 0.5, 'center_y': 0.58},
+            pos_hint={'center_x': 0.5, 'center_y': 0.62},  # немного выше
             ripple_scale=0
         )
         self.icon_btn.bind(on_release=self._on_child_click)
 
-        # ============ ТЕКСТ С АДАПТИВНЫМ ШРИФТОМ ============
+        # Текст - под иконкой с отступом
+        # y = 0.08 означает, что текст ближе к нижней части
         self.text_label = MDLabel(
             text=text,
             halign="center",
@@ -79,23 +85,13 @@ class NavItem(ButtonBehavior, BoxLayout):
             bold=False,
             shorten=True,
             shorten_from="right",
-            font_size=font_size
+            font_size=font_size,
+            pos_hint={'center_x': 0.5, 'y': 0.06}  # ← ОТСТУП ОТ НИЗА
         )
 
         self.text_label.bind(width=self._adjust_font_size)
         self.text_label.bind(text=self._adjust_font_size)
         self.text_label.bind(on_touch_down=self._on_child_touch)
-
-        # Используем FloatLayout для точного позиционирования
-        from kivy.uix.floatlayout import FloatLayout
-        self.inner_layout = FloatLayout(size_hint=(1, 1))
-
-        # Иконка по центру по X, чуть выше центра по Y
-        self.icon_btn.pos_hint = {'center_x': 0.5, 'center_y': 0.58}
-
-        # Текст под иконкой
-        self.text_label.pos_hint = {'center_x': 0.5, 'y': 0.02}
-        self.text_label.size_hint = (1, None)
 
         self.inner_layout.add_widget(self.icon_btn)
         self.inner_layout.add_widget(self.text_label)
@@ -118,10 +114,10 @@ class NavItem(ButtonBehavior, BoxLayout):
         available_width = self.text_label.width - dp(2)
 
         if available_width < dp(14):
-            self.text_label.font_size = sp(7)
+            self.text_label.font_size = sp(8)
             return
 
-        test_sizes = [10, 9, 8, 7, 6]  # Увеличены размеры
+        test_sizes = [12, 11, 10, 9, 8, 7]
         for size in test_sizes:
             from kivy.core.text import Label as CoreLabel
             test_label = CoreLabel(
@@ -138,7 +134,7 @@ class NavItem(ButtonBehavior, BoxLayout):
                 self.text_label.text_size = (available_width, None)
                 return
 
-        self.text_label.font_size = sp(6)
+        self.text_label.font_size = sp(7)
 
     def _on_child_click(self, instance):
         self.on_release()
@@ -184,25 +180,25 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            self.nav_height = dp(44)
+            self.nav_height = dp(52)
             bottom_padding = 0
             button_spacing = dp(0)
         else:
-            self.nav_height = dp(44)
+            self.nav_height = dp(52)
             bottom_padding = nav_bar_height + dp(2)
             button_spacing = dp(0)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
-        side_padding = dp(2)
-        self.padding = [side_padding, dp(1), side_padding, bottom_padding]
+        side_padding = dp(4)
+        self.padding = [side_padding, dp(2), side_padding, bottom_padding]
         self.spacing = button_spacing
         self.md_bg_color = [0, 0, 0, 0]
 
         # ============ РИСУЕМ РАЗДЕЛИТЕЛЬНУЮ ЛИНИЮ ВВЕРХУ ============
         with self.canvas.before:
-            Color(1, 1, 1, 0.08)  # Полупрозрачная белая линия
+            Color(1, 1, 1, 0.08)
             self.line = Rectangle(pos=(self.x, self.y + self.height - dp(1)),
                                   size=(self.width, dp(1)))
 
@@ -272,20 +268,19 @@ class BottomNav(BoxLayout):
         nav_bar_height = get_navigation_bar_height()
 
         if platform == 'android':
-            self.nav_height = dp(44)
+            self.nav_height = dp(52)
             bottom_padding = 0
             button_spacing = dp(0)
         else:
-            self.nav_height = dp(44)
+            self.nav_height = dp(52)
             bottom_padding = nav_bar_height + dp(2)
             button_spacing = dp(0)
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
-        side_padding = dp(2)
-        self.padding = [side_padding, dp(1), side_padding, bottom_padding]
+        side_padding = dp(4)
+        self.padding = [side_padding, dp(2), side_padding, bottom_padding]
         self.spacing = button_spacing
 
-        # Обновляем линию
         self._update_line()
