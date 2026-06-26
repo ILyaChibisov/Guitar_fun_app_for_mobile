@@ -238,16 +238,17 @@ class SongDetailScreen(BaseScreen):
         # Для меню аккордов
         self._song_chords = []
         self._current_chord_index = 0
-        self.chords_section = None
-        self.chord_preview_renderer = None
+        self.chord_renderers = []
+        self.chord_slides = []
+        self.chords_carousel = None
         self.display_mode = "finger"
         self.chord_variants = []
         self.chord_variant_index = 0
         self.is_chords_mode = False
         self.griff_scale = 1.0
-        self.original_griff_size = (dp(200), dp(110))
         self.griff_container = None
         self._griff_added = False
+        self.griff_divider = None
 
         # Для кэширования транспонирования
         self.transposed_chords_cache = {}
@@ -421,6 +422,10 @@ class SongDetailScreen(BaseScreen):
         )
         self.song_card.add_widget(self.panel_divider)
 
+        # ============ КОНТЕЙНЕР ДЛЯ ГРИФА (БУДЕТ ДОБАВЛЕН ПОЗЖЕ) ============
+        self.griff_container = None
+        self.griff_divider = None
+
         # ============ СКРОЛЛ ДЛЯ ТЕКСТА ============
         self.content_scroll = MDScrollView(
             size_hint=(1, 1),
@@ -574,6 +579,7 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(1)
         )
 
+        # Кнопка вариантов аккорда (разные аппликатуры)
         self.variant_btn = MDIconButton(
             icon="format-list-bulleted-square",
             size_hint=(1, None),
@@ -585,6 +591,7 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
+        # Кнопка режима (пальцы/ноты)
         self.mode_btn = MDIconButton(
             icon="music-note",
             size_hint=(1, None),
@@ -596,6 +603,7 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
+        # Левая стрелка
         self.chord_prev_btn = MDIconButton(
             icon="chevron-left",
             size_hint=(1, None),
@@ -607,6 +615,7 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
+        # Название аккорда
         self.chord_name_label = MDLabel(
             text="",
             halign="center",
@@ -622,6 +631,7 @@ class SongDetailScreen(BaseScreen):
         self.chord_name_label.bind(width=self._auto_scale_chord_font)
         self.chord_name_label.bind(text=self._auto_scale_chord_font)
 
+        # Правая стрелка
         self.chord_next_btn = MDIconButton(
             icon="chevron-right",
             size_hint=(1, None),
@@ -633,6 +643,7 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
+        # Кнопка увеличения грифа
         self.griff_zoom_btn = MDIconButton(
             icon="magnify",
             size_hint=(1, None),
@@ -644,6 +655,7 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
+        # Кнопка закрытия
         self.chords_close_btn = MDIconButton(
             icon="check",
             size_hint=(1, None),
@@ -1223,59 +1235,91 @@ class SongDetailScreen(BaseScreen):
         self._create_chords_panel()
         self.is_chords_mode = True
 
-        # Показываем гриф
+        # Показываем гриф (карусель)
         self._show_chords_layer()
 
     def _show_chords_layer(self):
-        """Показывает слой с грифом аккордов - над нижней полоской"""
+        """Показывает слой с грифом аккордов - как бесконечная карусель"""
         if hasattr(self, '_griff_added') and self._griff_added:
             return
 
-        # Создаём контейнер для грифа
+        from kivy.uix.carousel import Carousel
+
+        # Создаём контейнер для грифа с прозрачным фоном
         griff_height = dp(120)
         self.griff_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
             height=griff_height,
-            padding=[dp(20), dp(4), dp(20), dp(4)],
+            padding=[dp(10), dp(4), dp(10), dp(4)],
             md_bg_color=[0, 0, 0, 0]
         )
 
-        griff_wrapper = MDCard(
-            orientation='vertical',
+        # ============ КАРУСЕЛЬ С БЕСКОНЕЧНЫМ ЛИСТАНИЕМ ============
+        self.chords_carousel = Carousel(
+            direction='right',
+            loop=True,  # ← БЕСКОНЕЧНАЯ КАРУСЕЛЬ
             size_hint=(1, 1),
-            radius=[12, 12, 12, 12],
-            elevation=2,
-            md_bg_color=[0.3, 0.7, 0.3, 0.15],
-            line_color=[0.3, 0.7, 0.3, 0.5],
-            line_width=0.5,
-            padding=[dp(6), dp(6), dp(6), dp(6)]
+            anim_move_duration=0.3
         )
+        # Привязываем событие смены слайда
+        self.chords_carousel.bind(current_slide=self._on_carousel_slide)
 
-        self.chord_preview_renderer = ChordRenderer()
-        griff_wrapper.add_widget(self.chord_preview_renderer)
+        # Создаём слайд для КАЖДОГО аккорда
+        self.chord_renderers = []
+        self.chord_slides = []
 
-        try:
-            griff_data = load_asset_as_bytes("griff_png")
-            if griff_data:
-                griff_img = CoreImage(BytesIO(griff_data), ext="png")
-                if griff_img and griff_img.texture:
-                    self.chord_preview_renderer.set_background(griff_img.texture)
-        except Exception as e:
-            logger.error(f"Ошибка загрузки фона грифа: {e}")
+        for i, chord_name in enumerate(self._song_chords):
+            # Слайд — простой контейнер
+            slide = MDBoxLayout(
+                orientation='vertical',
+                size_hint=(1, 1),
+                md_bg_color=[0, 0, 0, 0]
+            )
 
-        self.griff_container.add_widget(griff_wrapper)
+            renderer = ChordRenderer()
+            renderer.size_hint = (1, 1)
+            renderer.chord_name = chord_name
+            renderer.index = i
 
-        # Находим индекс bottom_divider в song_card и вставляем перед ним
-        if hasattr(self, 'bottom_divider') and self.bottom_divider:
-            bottom_divider_index = self.song_card.children.index(self.bottom_divider)
-            # Добавляем гриф перед нижней полоской
-            self.song_card.add_widget(self.griff_container, index=bottom_divider_index)
-            logger.info(f"✅ Гриф добавлен в song_card перед bottom_divider (индекс {bottom_divider_index})")
-        else:
-            # Если нет bottom_divider, добавляем в конец
-            self.song_card.add_widget(self.griff_container)
-            logger.info("✅ Гриф добавлен в song_card")
+            try:
+                griff_data = load_asset_as_bytes("griff_png")
+                if griff_data:
+                    griff_img = CoreImage(BytesIO(griff_data), ext="png")
+                    if griff_img and griff_img.texture:
+                        renderer.set_background(griff_img.texture)
+            except Exception as e:
+                logger.error(f"Ошибка загрузки фона грифа: {e}")
+
+            slide.add_widget(renderer)
+            self.chords_carousel.add_widget(slide)
+            self.chord_renderers.append(renderer)
+            self.chord_slides.append(slide)
+
+        self.griff_container.add_widget(self.chords_carousel)
+
+        # ============ ВСТАВЛЯЕМ ГРИФ ПОСЛЕ ПАНЕЛИ, ПЕРЕД ТЕКСТОМ ============
+        content_scroll = self.content_scroll
+        bottom_divider = self.bottom_divider
+
+        if content_scroll in self.song_card.children:
+            self.song_card.remove_widget(content_scroll)
+        if bottom_divider in self.song_card.children:
+            self.song_card.remove_widget(bottom_divider)
+
+        self.song_card.add_widget(self.griff_container)
+
+        self.griff_divider = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(2),
+            md_bg_color=[0.5, 0.5, 0.5, 0.3],
+            padding=[0, 0, 0, 0]
+        )
+        self.song_card.add_widget(self.griff_divider)
+
+        self.song_card.add_widget(content_scroll)
+        self.song_card.add_widget(bottom_divider)
 
         self._griff_added = True
 
@@ -1284,20 +1328,67 @@ class SongDetailScreen(BaseScreen):
         if self._song_chords:
             self._load_chord_variants(self._song_chords[0])
             self._update_chords_display()
+            # Переключаем карусель на первый слайд
+            if self.chords_carousel and self.chord_slides:
+                self.chords_carousel.load_slide(self.chord_slides[0])
 
-        logger.info("✅ Гриф добавлен над нижней полоской")
+        logger.info("✅ Гриф добавлен как бесконечная карусель")
+
+    def _on_carousel_slide(self, instance, slide):
+        """Обработчик смены слайда в карусели"""
+        if not self.chord_slides:
+            return
+
+        try:
+            index = self.chord_slides.index(slide)
+            if index != self._current_chord_index:
+                self._current_chord_index = index
+                self._update_chords_display()
+                logger.info(
+                    f"🔄 Карусель переключена на аккорд {index}: {self._song_chords[index] if self._song_chords else '?'}")
+        except ValueError:
+            pass
+
+    def _sync_carousel_index(self):
+        """Синхронизирует индекс с каруселью"""
+        if not self.chords_carousel or not self.chord_slides:
+            return
+
+        current_slide = self.chords_carousel.current_slide
+        if current_slide in self.chord_slides:
+            index = self.chord_slides.index(current_slide)
+            if index != self._current_chord_index:
+                self._current_chord_index = index
+                self._update_chords_display()
 
     def _hide_chords_layer(self):
         """Скрывает слой с грифом аккордов"""
         logger.info("🔚 Скрытие грифа аккордов")
 
         if hasattr(self, '_griff_added') and self._griff_added:
+            content_scroll = self.content_scroll
+            bottom_divider = self.bottom_divider
+
             if hasattr(self, 'griff_container') and self.griff_container:
                 if self.griff_container in self.song_card.children:
                     self.song_card.remove_widget(self.griff_container)
                     self.griff_container = None
-                    self._griff_added = False
-                    logger.info("✅ Гриф удалён из song_card")
+
+            if hasattr(self, 'griff_divider') and self.griff_divider:
+                if self.griff_divider in self.song_card.children:
+                    self.song_card.remove_widget(self.griff_divider)
+                    self.griff_divider = None
+
+            if content_scroll not in self.song_card.children:
+                self.song_card.add_widget(content_scroll)
+            if bottom_divider not in self.song_card.children:
+                self.song_card.add_widget(bottom_divider)
+
+            self.chords_carousel = None
+            self.chord_renderers = []
+            self.chord_slides = []
+            self._griff_added = False
+            logger.info("✅ Гриф и разделитель удалены")
 
     def close_chords_section(self, *args):
         """Закрывает секцию аккордов"""
@@ -1436,7 +1527,7 @@ class SongDetailScreen(BaseScreen):
             self.chord_name_label.font_size = sp(11)
 
     def _toggle_display_mode(self, *args):
-        """Переключает режим отображения"""
+        """Переключает режим отображения (пальцы/ноты) для ТЕКУЩЕГО рендерера"""
         if self.display_mode == "finger":
             self.display_mode = "notes"
             self.mode_btn.icon = "gesture-tap"
@@ -1448,43 +1539,50 @@ class SongDetailScreen(BaseScreen):
             self.mode_btn.icon_color = [0.9, 0.2, 0.2, 1]
             logger.info("Режим отображения: ПАЛЬЦЫ")
 
-        if hasattr(self, 'chord_preview_renderer') and self.chord_preview_renderer:
-            self.chord_preview_renderer.set_mode(self.display_mode)
-            if self.chord_variants:
-                self.load_current_variant()
+        # Применяем режим к текущему рендереру
+        if self._current_chord_index < len(self.chord_renderers):
+            self.chord_renderers[self._current_chord_index].set_mode(self.display_mode)
 
     def _toggle_griff_zoom(self, *args):
-        """Переключает масштаб грифа"""
+        """Переключает масштаб грифа по кругу: 1.0 -> 1.3 -> 1.6 -> 1.0"""
         if not hasattr(self, 'griff_container') or not self.griff_container:
             return
 
-        current = self.griff_scale
+        # Три уровня масштаба
+        zoom_levels = [1.0, 1.3, 1.6]
 
-        if current == 1.2:
-            new_scale = 1.5
-            self.griff_zoom_btn.icon = "magnify-plus"
-            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
-        elif current == 1.5:
-            new_scale = 1.7
-            self.griff_zoom_btn.icon = "magnify-plus"
-            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
-        elif current == 1.7:
-            new_scale = 2.0
-            self.griff_zoom_btn.icon = "magnify-minus"
-            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
+        # Находим текущий индекс
+        current = self.griff_scale
+        if current in zoom_levels:
+            current_index = zoom_levels.index(current)
+            next_index = (current_index + 1) % len(zoom_levels)
+            new_scale = zoom_levels[next_index]
         else:
-            new_scale = 1.2
-            self.griff_zoom_btn.icon = "magnify"
-            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
+            # Если по какой-то причине значение не из списка — сбрасываем на 1.0
+            new_scale = 1.0
 
         self.griff_scale = new_scale
-        new_height = int(120 * new_scale)
-        self.griff_container.height = dp(new_height)
 
-        logger.info(f"Гриф изменён: {current} -> {new_scale}")
+        # Меняем размер контейнера
+        base_height = dp(120)
+        new_height = int(base_height * new_scale)
+        self.griff_container.height = new_height
+
+        # Обновляем иконку лупы в зависимости от уровня
+        if new_scale == 1.0:
+            self.griff_zoom_btn.icon = "magnify"
+            self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
+        elif new_scale == 1.3:
+            self.griff_zoom_btn.icon = "magnify-plus"
+            self.griff_zoom_btn.icon_color = [0.46, 0.70, 0.71, 1]
+        else:  # 1.6
+            self.griff_zoom_btn.icon = "magnify-plus"
+            self.griff_zoom_btn.icon_color = [0.9, 0.7, 0.2, 1]
+
+        logger.info(f"🔍 Гриф изменён: {self.griff_scale:.1f}x")
 
     def _update_chords_display(self):
-        """Обновляет отображение текущего аккорда в секции"""
+        """Обновляет отображение текущего аккорда"""
         if not self._song_chords:
             return
 
@@ -1493,46 +1591,6 @@ class SongDetailScreen(BaseScreen):
             self.chord_name_label.text = chord_name
 
         self._load_chord_variants(chord_name)
-
-    def _prev_chord_in_section(self, *args):
-        """Предыдущий аккорд (циклический переход)"""
-        if not self._song_chords:
-            return
-
-        total = len(self._song_chords)
-        if self._current_chord_index == 0:
-            self._current_chord_index = total - 1
-        else:
-            self._current_chord_index -= 1
-
-        self._update_chords_display()
-
-    def _next_chord_in_section(self, *args):
-        """Следующий аккорд (циклический переход)"""
-        if not self._song_chords:
-            return
-
-        total = len(self._song_chords)
-        if self._current_chord_index == total - 1:
-            self._current_chord_index = 0
-        else:
-            self._current_chord_index += 1
-
-        self._update_chords_display()
-
-    def _extract_and_cache_chords(self):
-        """Извлекает и кэширует аккорды из песни"""
-        chords = set()
-
-        for tab in self.tabs:
-            content = tab.get('content', '')
-            if content:
-                cleaned = clean_text(content)
-                extracted = extract_chords_from_text(cleaned)
-                chords.update(extracted)
-
-        self._song_chords = sorted(list(chords))
-        logger.info(f"🎸 Найдено аккордов в песне: {len(self._song_chords)} - {self._song_chords}")
 
     def _load_chord_variants(self, chord_name):
         """Загружает все варианты аппликатур для аккорда"""
@@ -1565,7 +1623,7 @@ class SongDetailScreen(BaseScreen):
                 self.variant_btn.opacity = 1
 
     def load_current_variant(self):
-        """Загружает текущий вариант аккорда"""
+        """Загружает текущий вариант аккорда в ТЕКУЩИЙ рендерер"""
         if not self.chord_variants:
             return
 
@@ -1581,10 +1639,12 @@ class SongDetailScreen(BaseScreen):
                     chord_module = value
                     break
 
-        if chord_module and hasattr(self, 'chord_preview_renderer') and self.chord_preview_renderer:
-            self.chord_preview_renderer.load_chord(chord_module)
-            self.chord_preview_renderer.set_mode(self.display_mode)
-            logger.info(f"Загружен вариант {self.chord_variant_index + 1}/{len(self.chord_variants)}")
+        if chord_module:
+            if self._current_chord_index < len(self.chord_renderers):
+                renderer = self.chord_renderers[self._current_chord_index]
+                renderer.load_chord(chord_module)
+                renderer.set_mode(self.display_mode)
+                logger.info(f"Загружен вариант {self.chord_variant_index + 1}/{len(self.chord_variants)}")
 
         self._update_variant_icon()
 
@@ -1596,6 +1656,36 @@ class SongDetailScreen(BaseScreen):
         total = len(self.chord_variants)
         self.chord_variant_index = (self.chord_variant_index + 1) % total
         self.load_current_variant()
+
+    def _prev_chord_in_section(self, *args):
+        """Предыдущий аккорд (карусель)"""
+        if not self._song_chords or not self.chords_carousel:
+            return
+
+        self.chords_carousel.load_previous()
+        Clock.schedule_once(lambda dt: self._sync_carousel_index(), 0.1)
+
+    def _next_chord_in_section(self, *args):
+        """Следующий аккорд (карусель)"""
+        if not self._song_chords or not self.chords_carousel:
+            return
+
+        self.chords_carousel.load_next()
+        Clock.schedule_once(lambda dt: self._sync_carousel_index(), 0.1)
+
+    def _extract_and_cache_chords(self):
+        """Извлекает и кэширует аккорды из песни"""
+        chords = set()
+
+        for tab in self.tabs:
+            content = tab.get('content', '')
+            if content:
+                cleaned = clean_text(content)
+                extracted = extract_chords_from_text(cleaned)
+                chords.update(extracted)
+
+        self._song_chords = sorted(list(chords))
+        logger.info(f"🎸 Найдено аккордов в песне: {len(self._song_chords)} - {self._song_chords}")
 
     # ==================== ТРАНСПОНИРОВАНИЕ ====================
 
