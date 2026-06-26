@@ -249,6 +249,8 @@ class SongDetailScreen(BaseScreen):
         self.griff_container = None
         self._griff_added = False
         self.griff_divider = None
+        self.eye_active = False
+        self.eye_btn = None
 
         # Для кэширования транспонирования
         self.transposed_chords_cache = {}
@@ -375,9 +377,14 @@ class SongDetailScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
-        # Отступ в карточке снизу = высота навбара + небольшой зазор
+        # Отступ в карточке снизу = высота навбара + зазор
         nav_bar_height = get_navigation_bar_height()
-        bottom_padding_for_card = nav_bar_height + dp(4)
+
+        # ============ ДЛЯ ANDROID УВЕЛИЧИВАЕМ ОТСТУП ============
+        if platform == 'android':
+            bottom_padding_for_card = nav_bar_height + dp(24)
+        else:
+            bottom_padding_for_card = nav_bar_height + dp(4)
 
         self.song_card = MDCard(
             orientation='vertical',
@@ -569,7 +576,7 @@ class SongDetailScreen(BaseScreen):
         logger.info("✅ Создана основная панель")
 
     def _create_chords_panel(self):
-        """Создаёт панель управления аккордами"""
+        """Создаёт панель управления аккордами (с глазом)"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -579,7 +586,7 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(1)
         )
 
-        # Кнопка вариантов аккорда (разные аппликатуры)
+        # Кнопка вариантов аккорда
         self.variant_btn = MDIconButton(
             icon="format-list-bulleted-square",
             size_hint=(1, None),
@@ -603,6 +610,18 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
+        # ============ ГЛАЗ (НОВЫЙ) ============
+        self.eye_btn = MDIconButton(
+            icon="eye",
+            size_hint=(1, None),
+            height=dp(40),
+            theme_icon_color="Custom",
+            icon_color=[0.6, 0.6, 0.6, 0.8],  # Серый
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._toggle_eye,
+            ripple_scale=0
+        )
+
         # Левая стрелка
         self.chord_prev_btn = MDIconButton(
             icon="chevron-left",
@@ -615,12 +634,12 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # Название аккорда
+        # Название аккорда (уменьшаем, чтобы стрелки были ближе)
         self.chord_name_label = MDLabel(
             text="",
             halign="center",
             valign="middle",
-            size_hint_x=2,
+            size_hint_x=2.5,
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             bold=True,
@@ -667,8 +686,10 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
+        # Новый порядок: вариант | режим | ГЛАЗ | стрелка← | НАЗВАНИЕ | стрелка→ | лупа | галочка
         panel.add_widget(self.variant_btn)
         panel.add_widget(self.mode_btn)
+        panel.add_widget(self.eye_btn)  # ← ГЛАЗ ДОБАВЛЕН
         panel.add_widget(self.chord_prev_btn)
         panel.add_widget(self.chord_name_label)
         panel.add_widget(self.chord_next_btn)
@@ -677,7 +698,7 @@ class SongDetailScreen(BaseScreen):
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'chords'
-        logger.info("✅ Создана панель аккордов")
+        logger.info("✅ Создана панель аккордов с глазом")
 
         Clock.schedule_once(lambda dt: self._auto_scale_chord_font(), 0.2)
 
@@ -1393,9 +1414,28 @@ class SongDetailScreen(BaseScreen):
     def close_chords_section(self, *args):
         """Закрывает секцию аккордов"""
         logger.info("🔚 Закрытие секции аккордов")
+
+        # Если глаз активен — оставляем гриф
+        if hasattr(self, 'eye_active') and self.eye_active:
+            logger.info("👁️ Глаз активен — гриф остаётся")
+            self._create_main_panel()
+            self.is_chords_mode = False
+            return
+
         self._create_main_panel()
         self.is_chords_mode = False
         self._hide_chords_layer()
+
+    def _toggle_eye(self, *args):
+        """Переключает состояние глаза (серый/красный)"""
+        self.eye_active = not self.eye_active
+
+        if self.eye_active:
+            self.eye_btn.icon_color = [0.8, 0.2, 0.2, 1]  # Красный
+            logger.info("👁️ Глаз активирован (аккорды останутся видны)")
+        else:
+            self.eye_btn.icon_color = [0.6, 0.6, 0.6, 0.8]  # Серый
+            logger.info("👁️ Глаз деактивирован (аккорды скроются)")
 
     def show_tonality_panel(self):
         """Показывает панель тональности"""
@@ -1809,6 +1849,7 @@ class SongDetailScreen(BaseScreen):
         self.chord_variant_index = 0
         self.scroll_speed = 1.0
         self.is_scrolling = False
+        self.eye_active = False
 
         logger.info("🔄 Состояние экрана сброшено")
 

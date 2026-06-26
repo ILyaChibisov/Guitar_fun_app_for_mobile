@@ -321,13 +321,13 @@ class VerticalSlider(MDBoxLayout):
         self.size_hint = (None, None)
         self.width = dp(70)
         self.height = dp(280)
-        self.spacing = dp(4)
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.spacing = dp(2)
+        self.padding = [dp(2), dp(2), dp(2), dp(2)]
 
         slider_container = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(16), dp(6), dp(16), dp(6)]
+            padding=[dp(16), dp(2), dp(16), dp(2)]
         )
 
         self.value_label = MDLabel(
@@ -336,7 +336,7 @@ class VerticalSlider(MDBoxLayout):
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(34),
+            height=dp(30),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True
@@ -365,11 +365,11 @@ class VerticalSlider(MDBoxLayout):
 
         self.value_below = MDLabel(
             text=str(int(initial)),
-            font_size=sp(16),
+            font_size=sp(14),
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(24),
+            height=dp(20),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True
@@ -381,7 +381,7 @@ class VerticalSlider(MDBoxLayout):
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(20),
+            height=dp(18),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.6],
             bold=True
@@ -499,11 +499,9 @@ class MetronomeMenu(MDCard):
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(60)
-        self.radius = [dp(16), dp(16), dp(16), dp(16)]
-        self.md_bg_color = [0, 0, 0, 0.08]
+        self.radius = [0, 0, 0, 0]
+        self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
-        self.line_color = [1, 1, 1, 0.15]
-        self.line_width = 0.8
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
         self.spacing = dp(0)
 
@@ -616,12 +614,12 @@ class MetronomeScreen(BaseScreen):
 
     SOUND_TONES = {
         'mechanical': {
-            'name': '🔧 Механический',
+            'name': 'Механический',
             'type': 'mechanical',
             'description': 'Реалистичный звук механического метронома'
         },
         'electronic': {
-            'name': '⚡ Электронный',
+            'name': 'Электронный',
             'type': 'synthetic',
             'waveform': 'sine',
             'freq': 1200,
@@ -629,7 +627,7 @@ class MetronomeScreen(BaseScreen):
             'description': 'Чистый синтезированный звук'
         },
         'wood': {
-            'name': '🪵 Деревянный',
+            'name': 'Деревянный',
             'type': 'synthetic',
             'waveform': 'triangle',
             'freq': 800,
@@ -637,7 +635,7 @@ class MetronomeScreen(BaseScreen):
             'description': 'Мягкий деревянный стук'
         },
         'click': {
-            'name': '👆 Щелчок',
+            'name': 'Щелчок',
             'type': 'synthetic',
             'waveform': 'square',
             'freq': 600,
@@ -645,7 +643,7 @@ class MetronomeScreen(BaseScreen):
             'description': 'Резкий щелчок'
         },
         'beep': {
-            'name': '📢 Пищалка',
+            'name': 'Пищалка',
             'type': 'synthetic',
             'waveform': 'sawtooth',
             'freq': 1500,
@@ -833,23 +831,25 @@ class MetronomeScreen(BaseScreen):
             adaptive_height=True
         )
 
-        # ============ КАРТОЧКА С 4 ШКАЛАМИ ============
-        settings_card = MDCard(
+        # ============ ЕДИНАЯ КАРТОЧКА: ШКАЛЫ + МЕНЮ ============
+        unified_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(340),
-            padding=[dp(4), dp(4), dp(4), dp(4)],
+            height=dp(360),
+            padding=[dp(2), dp(2), dp(2), dp(2)],
             radius=[dp(16), dp(16), dp(16), dp(16)],
             md_bg_color=[0, 0, 0, 0.1],
             elevation=0,
-            line_color=[1, 1, 1, 0.05],
-            line_width=1
+            line_color=[1, 1, 1, 0.15],
+            line_width=0.8,
+            spacing=0
         )
 
+        # ============ ВЕРХНЯЯ ЧАСТЬ: ШКАЛЫ ============
         sliders_layout = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(310),
+            height=dp(270),
             spacing=dp(2)
         )
 
@@ -899,14 +899,19 @@ class MetronomeScreen(BaseScreen):
         sliders_layout.add_widget(self.volume_slider)
         sliders_layout.add_widget(Widget(size_hint_x=0.05))
 
-        settings_card.add_widget(sliders_layout)
+        unified_card.add_widget(sliders_layout)
 
-        # ============ УБИРАЕМ ИНФОРМАЦИЮ ИЗ КАРТОЧКИ ============
-        # info_row и bpm_display удалены
+        # ============ РАЗДЕЛИТЕЛЬНАЯ ЛИНИЯ ============
+        divider = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(1),
+            md_bg_color=[1, 1, 1, 0.15],
+            padding=[dp(12), 0, dp(12), 0]
+        )
+        unified_card.add_widget(divider)
 
-        content.add_widget(settings_card)
-
-        # ============ МЕНЮ МЕТРОНОМА ============
+        # ============ НИЖНЯЯ ЧАСТЬ: МЕНЮ ============
         self.metronome_menu = MetronomeMenu(
             on_play_press=self.toggle_metronome,
             on_reset_press=self._reset_to_defaults,
@@ -915,7 +920,9 @@ class MetronomeScreen(BaseScreen):
             is_running=self.is_running,
             is_accent_enabled=self.is_accent_enabled
         )
-        content.add_widget(self.metronome_menu)
+        unified_card.add_widget(self.metronome_menu)
+
+        content.add_widget(unified_card)
 
         # ============ ПОДСКАЗКА ПОД МЕНЮ ============
         self._hint_label = MDLabel(
@@ -930,13 +937,27 @@ class MetronomeScreen(BaseScreen):
         )
         content.add_widget(self._hint_label)
 
-        # ============ ИНДИКАТОРЫ ============
+        # ============ ИНДИКАТОРЫ (КРУЖОЧКИ) ============
         self.indicator_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(48),
-            padding=[dp(6), dp(4), dp(6), dp(4)],
+            height=dp(52),
+            padding=[dp(6), dp(2), dp(6), dp(2)],
             md_bg_color=[0, 0, 0, 0]
+        )
+
+        # КАРТОЧКА ДЛЯ ИНДИКАТОРОВ
+        self.indicator_card = MDCard(
+            orientation='horizontal',
+            size_hint=(1, 1),
+            padding=[dp(4), dp(4), dp(4), dp(4)],
+            radius=[dp(12), dp(12), dp(12), dp(12)],
+            md_bg_color=[0, 0, 0, 0.06],
+            elevation=0,
+            line_color=[1, 1, 1, 0.12],
+            line_width=0.5,
+            spacing=dp(4),
+            opacity=0
         )
 
         self.indicator_layout = MDBoxLayout(
@@ -946,21 +967,25 @@ class MetronomeScreen(BaseScreen):
             padding=[dp(4), dp(4), dp(4), dp(4)]
         )
 
-        # Создаём 12 индикаторов
+        # Создаём 12 индикаторов с начальным размером 36dp
         self.beat_indicators = []
+        initial_size = dp(36)
         for i in range(12):
             indicator = MDCard(
                 size_hint=(None, None),
-                size=(dp(22), dp(22)),
-                radius=[dp(11)] * 4,
+                size=(initial_size, initial_size),
+                radius=[initial_size / 2] * 4,
                 md_bg_color=[0.3, 0.3, 0.3, 0.3],
                 elevation=0,
-                opacity=0
+                opacity=0,
+                line_color=[1, 1, 1, 0.1],
+                line_width=0.3
             )
             self.beat_indicators.append(indicator)
             self.indicator_layout.add_widget(indicator)
 
-        self.indicator_container.add_widget(self.indicator_layout)
+        self.indicator_card.add_widget(self.indicator_layout)
+        self.indicator_container.add_widget(self.indicator_card)
         content.add_widget(self.indicator_container)
 
         # ============ ДОБАВЛЯЕМ КОНТЕНТ ============
@@ -977,43 +1002,68 @@ class MetronomeScreen(BaseScreen):
         self._update_display()
 
     def _update_indicators(self, count):
-        """Обновляет количество и размер индикаторов в зависимости от размера экрана"""
+        """Обновляет количество и размер индикаторов в зависимости от количества"""
         if count < 2:
             count = 2
         if count > 12:
             count = 12
 
         from kivy.core.window import Window
-        available_width = Window.width - dp(32) - dp(16)
+
+        # Доступная ширина для индикаторов (с учётом отступов карточки)
+        available_width = Window.width - dp(32) - dp(16) - dp(16) - dp(8)
 
         if available_width < dp(100):
             available_width = dp(100)
 
         spacing = dp(4)
         total_spacing = (count - 1) * spacing
-        indicator_size = (available_width - total_spacing) / count
 
-        min_size = dp(16)
-        max_size = dp(36)
-        if indicator_size < min_size:
-            indicator_size = min_size
-        elif indicator_size > max_size:
-            indicator_size = max_size
+        # Вычисляем размер с учётом количества
+        calculated_size = (available_width - total_spacing) / count
 
-        if count <= 4:
-            indicator_size = min(max_size, indicator_size * 1.2)
-        elif count <= 6:
-            indicator_size = min(max_size * 0.9, indicator_size * 1.1)
+        # Ограничиваем размер в зависимости от количества
+        if count <= 6:
+            # Для 2-6 шариков - максимальный размер 36dp
+            max_size = dp(36)
+            min_size = dp(20)
+        elif count <= 8:
+            # Для 7-8 шариков - чуть меньше
+            max_size = dp(32)
+            min_size = dp(18)
+        elif count <= 10:
+            # Для 9-10 шариков - ещё меньше
+            max_size = dp(28)
+            min_size = dp(16)
+        else:
+            # Для 11-12 шариков - самые маленькие
+            max_size = dp(24)
+            min_size = dp(14)
 
+        # Применяем ограничения
+        if calculated_size > max_size:
+            final_size = max_size
+        elif calculated_size < min_size:
+            final_size = min_size
+        else:
+            final_size = calculated_size
+
+        # Для всех индикаторов используем одинаковый размер
         for i in range(12):
             if i < count:
-                self.beat_indicators[i].size = (indicator_size, indicator_size)
-                self.beat_indicators[i].radius = [indicator_size / 2] * 4
+                self.beat_indicators[i].size = (final_size, final_size)
+                self.beat_indicators[i].radius = [final_size / 2] * 4
                 self.beat_indicators[i].opacity = 1 if self.is_running else 0
                 self.beat_indicators[i].disabled = False
             else:
                 self.beat_indicators[i].opacity = 0
                 self.beat_indicators[i].disabled = True
+
+        # Показываем/скрываем карточку в зависимости от состояния
+        if self.is_running and count > 0:
+            self.indicator_card.opacity = 1
+        else:
+            self.indicator_card.opacity = 0
 
         self._update_beat_indicators()
 
@@ -1021,7 +1071,7 @@ class MetronomeScreen(BaseScreen):
         """Обновляет цвета индикаторов"""
         for i in range(self.beats_per_measure):
             if i == 0 and self.is_accent_enabled:
-                self.beat_indicators[i].md_bg_color = [0.46, 0.70, 0.71, 0.6]
+                self.beat_indicators[i].md_bg_color = [0.46, 0.70, 0.71, 0.7]
             else:
                 self.beat_indicators[i].md_bg_color = [0.3, 0.3, 0.3, 0.3]
 
@@ -1045,10 +1095,11 @@ class MetronomeScreen(BaseScreen):
         self._update_indicators(self.beats_per_measure)
 
     def _hide_indicators(self):
-        """Скрывает все индикаторы"""
+        """Скрывает все индикаторы и карточку"""
         for indicator in self.beat_indicators:
             indicator.opacity = 0
             indicator.md_bg_color = [0.3, 0.3, 0.3, 0.3]
+        self.indicator_card.opacity = 0
 
     def _update_subdivision_label(self, value):
         subdivision_names = ['Нет', '1/8', '1/8T', '1/16']
@@ -1101,7 +1152,6 @@ class MetronomeScreen(BaseScreen):
         if self.is_running:
             self.stop_metronome()
             self.start_metronome()
-        # Показываем подсказку об акценте
         self._show_temporary_hint(f"Акцент: {'ВКЛ' if self.is_accent_enabled else 'ВЫКЛ'}", 1.2)
         logger.info(f"🎵 Акцент: {'ВКЛ' if self.is_accent_enabled else 'ВЫКЛ'}")
 
@@ -1126,7 +1176,6 @@ class MetronomeScreen(BaseScreen):
             self.start_metronome()
 
         tone_data = self.SOUND_TONES.get(self.sound_tone, self.SOUND_TONES['mechanical'])
-        # Показываем подсказку о тембре
         self._show_temporary_hint(tone_data['name'], 1.2)
         logger.info(f"🎵 Выбран тембр: {tone_data['name']}")
 
@@ -1143,7 +1192,7 @@ class MetronomeScreen(BaseScreen):
         if not self.click_sound or not self.accent_sound:
             self.load_sounds()
             if not self.click_sound or not self.accent_sound:
-                self._show_temporary_hint("❌ Ошибка звука", 1.5)
+                self._show_temporary_hint("Ошибка звука", 1.5)
                 return
 
         self.is_running = True
@@ -1157,8 +1206,7 @@ class MetronomeScreen(BaseScreen):
         self._tick()
         self.tick_event = Clock.schedule_interval(self._tick, interval)
 
-        # Показываем подсказку о запуске
-        self._show_temporary_hint(f"▶ Запущен: {self.bpm} BPM", 1.2)
+        self._show_temporary_hint(f"Запущен: {self.bpm} BPM", 1.2)
         logger.info(f"✅ Метроном запущен: {self.bpm} BPM, {self.beats_per_measure}/4")
 
     def stop_metronome(self):
@@ -1173,8 +1221,7 @@ class MetronomeScreen(BaseScreen):
         self.tick_count = 0
         self.subdivision_count = 0
 
-        # Показываем подсказку об остановке
-        self._show_temporary_hint("⏹ Остановлен", 1.2)
+        self._show_temporary_hint("Остановлен", 1.2)
         logger.info("⏹ Метроном остановлен")
 
     def _tick(self, dt=None):

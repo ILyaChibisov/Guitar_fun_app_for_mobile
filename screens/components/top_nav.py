@@ -1,6 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - заголовок по левому краю
+Верхняя панель навигации - заголовок по центру
 с правильной навигацией назад через screen_state
 """
 from kivy.metrics import dp, sp
@@ -11,8 +11,9 @@ from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
+from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.app import MDApp
-
+from kivy.clock import Clock
 from config.theme import theme
 from config.logger_config import get_logger
 from config.system_bars import get_status_bar_height, get_screen_density
@@ -63,23 +64,20 @@ class TopNav(MDCard):
         logger.info(f"📱 Высота панели: {self.height}dp")
         logger.info("=" * 70)
 
-        # Основной контейнер
-        self.container = MDBoxLayout(
-            orientation='horizontal',
+        # ============ ИСПОЛЬЗУЕМ FLOATLAYOUT ДЛЯ ТОЧНОГО ЦЕНТРИРОВАНИЯ ============
+        self.container = MDFloatLayout(
             size_hint=(1, 1),
-            padding=[dp(12), 0, dp(12), 0],
-            spacing=dp(8),
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Левая часть - одна иконка
+        # Левая часть - плавает слева
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, 1),
             width=dp(48),
             spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
+            pos_hint={'x': 0, 'center_y': 0.5}
         )
 
         # Кнопка меню (настройки) - только для home
@@ -107,7 +105,7 @@ class TopNav(MDCard):
         # Изначально добавляем только меню (home)
         self.left_container.add_widget(self.menu_btn)
 
-        # Заголовок
+        # ============ ЗАГОЛОВОК - ПО ЦЕНТРУ ============
         self.screen_title = MDLabel(
             text=self._get_screen_title('home'),
             font_size=sp(20),
@@ -116,19 +114,21 @@ class TopNav(MDCard):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             bold=True,
-            size_hint_x=1,
+            size_hint=(None, None),
+            width=dp(250),  # Фиксированная ширина для центрирования
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
             shorten=True,
             shorten_from="right"
         )
 
-        # Правая часть - две иконки
+        # Правая часть - плавает справа
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, 1),
             width=dp(100),
             spacing=dp(8),
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
+            pos_hint={'right': 1, 'center_y': 0.5}
         )
 
         self.home_btn = MDIconButton(
@@ -168,6 +168,7 @@ class TopNav(MDCard):
         self.right_container.add_widget(self.search_btn)
         self.right_container.add_widget(self.profile_btn)
 
+        # Добавляем всё во FloatLayout
         self.container.add_widget(self.left_container)
         self.container.add_widget(self.screen_title)
         self.container.add_widget(self.right_container)
@@ -191,29 +192,48 @@ class TopNav(MDCard):
             'metronome': 'Метроном',
             'favorites': 'Избранное',
             'profile': 'Профиль',
-            'artists_by_letter': '',  # кастомный виджет
-            'artist_songs': '',  # кастомный виджет
-            'song_detail': '',  # кастомный виджет
+            'artists_by_letter': '',
+            'artist_songs': '',
+            'song_detail': '',
             'search_results': 'Результаты поиска',
             'dictionary': 'Словарь',
             'admin': 'Админ панель',
             'search': 'Быстрый поиск',
-            'terms_by_letter': '',  # кастомный виджет
-            'term_detail': '',  # кастомный виджет
+            'terms_by_letter': '',
+            'term_detail': '',
         }
         return titles.get(screen_name, screen_name.capitalize())
 
     def update_title(self, screen_name: str):
         self.screen_title.text = self._get_screen_title(screen_name)
+        # Обновляем ширину для длинных заголовков
+        self._adjust_title_width()
 
     def set_custom_title(self, title: str):
         self.screen_title.text = title
+        self._adjust_title_width()
+
+    def _adjust_title_width(self):
+        """Адаптирует ширину заголовка под длину текста"""
+        text = self.screen_title.text
+        if not text:
+            return
+
+        # Примерный расчёт ширины текста
+        char_width = sp(12)  # Примерная ширина символа
+        text_width = len(text) * char_width + dp(16)
+
+        # Ограничиваем максимальную ширину
+        max_width = Window.width - dp(120)  # Учитываем кнопки по бокам
+        if text_width > max_width:
+            text_width = max_width
+        if text_width < dp(80):
+            text_width = dp(80)
+
+        self.screen_title.width = text_width
 
     def set_custom_title_widget(self, widget):
         """Устанавливает кастомный виджет в качестве заголовка"""
-        if not hasattr(self, '_old_title_widget') or self._old_title_widget is None:
-            self._old_title_widget = self.screen_title
-
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
@@ -222,7 +242,11 @@ class TopNav(MDCard):
         if self.screen_title in self.container.children:
             self.container.remove_widget(self.screen_title)
 
-        self.container.add_widget(widget, index=1)
+        # Кастомный виджет тоже центрируем
+        widget.size_hint = (None, None)
+        widget.width = dp(250)
+        widget.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.container.add_widget(widget)
         self.custom_title_widget = widget
 
         logger.info(f"✅ Установлен кастомный виджет заголовка")
@@ -235,10 +259,10 @@ class TopNav(MDCard):
             self.custom_title_widget = None
             logger.info("✅ Кастомный виджет заголовка удалён")
 
-        if hasattr(self, '_old_title_widget') and self._old_title_widget:
-            if self._old_title_widget not in self.container.children:
-                self.container.add_widget(self._old_title_widget, index=1)
-                logger.info("✅ Стандартный заголовок восстановлен")
+        if self.screen_title not in self.container.children:
+            self.container.add_widget(self.screen_title)
+            self._adjust_title_width()
+            logger.info("✅ Стандартный заголовок восстановлен")
 
     def set_custom_back_callback(self, callback):
         self._custom_back_callback = callback
@@ -253,13 +277,11 @@ class TopNav(MDCard):
         logger.info(f"🔧 _update_left_button для экрана: {screen_name}")
 
         if screen_name == 'home':
-            # Home: настройки (tune)
             self.left_container.add_widget(self.menu_btn)
             self.menu_btn.icon = "tune"
             self.menu_btn.on_release = self._on_menu_press
             logger.info("   → Установлена иконка настроек (tune)")
         else:
-            # Все остальные экраны - стрелка назад
             self.left_container.add_widget(self.back_btn)
             self.back_btn.on_release = self._on_back_press
             logger.info(f"   → Установлена стрелка назад")
@@ -280,7 +302,6 @@ class TopNav(MDCard):
         self.current_screen_name = screen_name
         logger.info(f"🔄 _on_screen_changed: {old} → {screen_name}")
 
-        # Сохраняем предыдущий экран в screen_state
         if old and old != screen_name:
             screen_state.set_previous_screen(old)
             logger.info(f"   ✅ Сохранён предыдущий экран: {old}")
@@ -295,6 +316,8 @@ class TopNav(MDCard):
             if self.custom_title_widget:
                 self.clear_custom_title_widget()
                 self.update_title(screen_name)
+            else:
+                self.update_title(screen_name)
 
         self._update_left_button(screen_name)
 
@@ -302,7 +325,6 @@ class TopNav(MDCard):
             if not hasattr(self, 'custom_title_widget') or not self.custom_title_widget:
                 self.update_title(screen_name)
 
-        # Очищаем кастомные заголовки при выходе с экранов
         if old in ['terms_by_letter', 'term_detail', 'artist_songs', 'artists_by_letter',
                    'favorites'] and screen_name != old:
             self.clear_custom_title_widget()
@@ -318,10 +340,7 @@ class TopNav(MDCard):
         self._update_right_buttons(screen_name)
 
     def _on_back_press(self, *args):
-        """
-        Обработчик нажатия на стрелку назад.
-        Использует screen_state для правильной навигации.
-        """
+        """Обработчик нажатия на стрелку назад."""
         logger.info(f"🔙 _on_back_press для экрана: {self.current_screen_name}")
         logger.info(f"   📌 screen_state.previous_screen = {screen_state.get_previous_screen()}")
 
@@ -334,48 +353,36 @@ class TopNav(MDCard):
             return
 
         current = self.sm.current
-
-        # ============ ИСПОЛЬЗУЕМ screen_state ДЛЯ НАВИГАЦИИ ============
-
-        # 1. Сначала проверяем screen_state.get_previous_screen()
         prev_from_state = screen_state.get_previous_screen()
 
-        # 2. Для SongDetail - особая логика
         if current == 'song_detail':
-            # Пытаемся получить предыдущий экран из screen_state
             if prev_from_state and self.sm.has_screen(prev_from_state):
                 logger.info(f"   → SongDetail возврат на {prev_from_state} (из screen_state)")
                 self.sm.current = prev_from_state
                 return
 
-            # Проверяем favourites
             if self.sm.has_screen('favorites'):
-                # Проверяем, был ли favourites активен до этого
                 if self._previous_screen == 'favorites':
                     logger.info("   → SongDetail возврат на favorites (из _previous_screen)")
                     self.sm.current = 'favorites'
                     return
 
-            # Проверяем artist_songs
             if self.sm.has_screen('artist_songs'):
                 if self._previous_screen == 'artist_songs':
                     logger.info("   → SongDetail возврат на artist_songs (из _previous_screen)")
                     self.sm.current = 'artist_songs'
                     return
 
-            # По умолчанию - artists_by_letter
             if self.sm.has_screen('artists_by_letter'):
                 logger.info("   → SongDetail возврат на artists_by_letter (по умолчанию)")
                 self.sm.current = 'artists_by_letter'
                 return
 
-            # Последняя надежда - home
             if self.sm.has_screen('home'):
                 logger.info("   → SongDetail возврат на home")
                 self.sm.current = 'home'
                 return
 
-        # 3. Для остальных экранов - используем карту переходов
         back_map = {
             'artist_songs': 'artists_by_letter',
             'artists_by_letter': 'songs',
@@ -401,20 +408,17 @@ class TopNav(MDCard):
                 self.sm.current = target
                 return
 
-        # Если ничего не подошло - идём на home
         if self.sm.has_screen('home'):
             logger.info("   → Переход на home (по умолчанию)")
             self.sm.current = 'home'
 
     def _get_previous_screen_for_chords(self):
-        """Возвращает экран для возврата из Chords"""
         prev = screen_state.get_previous_screen()
         if prev and self.sm.has_screen(prev):
             return prev
         return 'home'
 
     def _on_menu_press(self, *args):
-        """Обработчик нажатия на настройки (home)"""
         logger.info("⚙️ Нажата настройки")
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
@@ -468,3 +472,7 @@ class TopNav(MDCard):
 
     def _hide_back_button(self):
         pass
+
+    def on_size(self, *args):
+        """При изменении размера обновляем ширину заголовка"""
+        Clock.schedule_once(lambda dt: self._adjust_title_width(), 0.1)

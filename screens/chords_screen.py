@@ -691,7 +691,7 @@ class ChordsScreen(BaseScreen):
         self.type_selector = None
         self.chord_selector = None
         self._menu_container = None
-        self._hint_label = None
+        self._info_label = None  # Единый лейбл для описания и подсказок
         self._hint_timer = None
 
         self.bg_image = None
@@ -728,6 +728,14 @@ class ChordsScreen(BaseScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
+    def _update_desc_height(self, instance, texture_size):
+        """Обновляет высоту лейбла в зависимости от размера текстуры."""
+        if texture_size:
+            # Добавляем небольшой отступ
+            new_height = texture_size[1] + dp(8)
+            if self._info_label.height != new_height:
+                self._info_label.height = new_height
+
     def init_ui(self):
         # Создаём контент БЕЗ ScrollView
         content = MDBoxLayout(
@@ -744,7 +752,7 @@ class ChordsScreen(BaseScreen):
         )
         content.add_widget(self.search_bar)
 
-        # ============ 2. НАЗВАНИЕ АККОРДА И ОПИСАНИЕ ============
+        # ============ 2. НАЗВАНИЕ АККОРДА ============
         self.chord_name_label = MDLabel(
             text="A | Amaj",
             font_size=sp(22),
@@ -756,19 +764,6 @@ class ChordsScreen(BaseScreen):
             text_color=[1, 1, 1, 0.95]
         )
         content.add_widget(self.chord_name_label)
-
-        self.chord_desc_label = MDLabel(
-            text="",
-            font_size=sp(12),
-            halign="center",
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5],
-            shorten=True,
-            shorten_from="right"
-        )
-        content.add_widget(self.chord_desc_label)
 
         # ============ 3. ГРИФ ============
         griff_container = MDBoxLayout(
@@ -808,18 +803,21 @@ class ChordsScreen(BaseScreen):
         )
         self._menu_container.add_widget(self.unified_menu)
 
-        # ============ 5. ПОДСКАЗКА ПОД МЕНЮ ============
-        self._hint_label = MDLabel(
+        # ============ 5. ИНФОРМАЦИОННЫЙ ЛЕЙБЛ (ОПИСАНИЕ/ПОДСКАЗКИ) ============
+        # Единый лейбл для отображения ИЛИ описания аккорда, ИЛИ подсказок
+        self._info_label = MDLabel(
             text="",
             font_size=sp(12),
             halign="center",
             size_hint_y=None,
-            height=dp(20),
+            height=dp(30),  # Начальная высота
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
-            opacity=0
         )
-        content.add_widget(self._hint_label)
+        # Позволяем тексту занимать несколько строк
+        self._info_label.text_size = (None, None)
+        self._info_label.bind(texture_size=self._update_desc_height)
+        content.add_widget(self._info_label)
 
         # Добавляем растягивающийся виджет внизу
         content.add_widget(Widget(size_hint_y=1))
@@ -836,28 +834,65 @@ class ChordsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
+        # Загружаем начальный аккорд
+        self.load_current_variant()
+
+    def _show_description(self):
+        """Показывает описание аккорда в информационном лейбле."""
+        if not self.current_variants:
+            return
+
+        variant = self.current_variants[self.current_variant_index]
+        description = variant.get('description', '')
+
+        if description:
+            desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
+
+            # Убираем дубликаты
+            unique_parts = []
+            for part in desc_parts:
+                if part not in unique_parts:
+                    unique_parts.append(part)
+
+            # Формируем описание
+            if unique_parts:
+                chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
+                name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
+                main_name = name_parts[0] if name_parts else ""
+
+                formatted_desc = unique_parts[0]
+                if main_name and main_name in formatted_desc:
+                    formatted_desc = formatted_desc.replace(main_name, '').strip(' |')
+                formatted_desc = re.sub(r'\s*\|\s*', ' | ', formatted_desc).strip(' |')
+                formatted_desc = re.sub(r'\s+', ' ', formatted_desc)
+
+                self._info_label.text = formatted_desc
+            else:
+                self._info_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
+        else:
+            self._info_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
+
     def _show_hint(self, text):
-        if self._hint_label:
-            if hasattr(self, '_hint_timer') and self._hint_timer:
-                Clock.unschedule(self._hint_timer)
-                self._hint_timer = None
-            self._hint_label.text = text
-            self._hint_label.opacity = 1
+        """Показывает подсказку в информационном лейбле (временная замена описания)."""
+        if hasattr(self, '_hint_timer') and self._hint_timer:
+            Clock.unschedule(self._hint_timer)
+            self._hint_timer = None
+
+        self._info_label.text = text
 
     def _show_temporary_hint(self, text, duration=1.5):
-        if self._hint_label:
-            self._hint_label.text = text
-            self._hint_label.opacity = 1
+        """Показывает временную подсказку, заменяя описание."""
+        if self._info_label:
+            self._info_label.text = text
             if hasattr(self, '_hint_timer') and self._hint_timer:
                 Clock.unschedule(self._hint_timer)
-            self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), duration)
+            self._hint_timer = Clock.schedule_once(lambda dt: self._restore_description(), duration)
 
-    def _hide_hint(self):
-        if self._hint_label:
-            self._hint_label.text = ""
-            self._hint_label.opacity = 0
-            if hasattr(self, '_hint_timer'):
-                self._hint_timer = None
+    def _restore_description(self):
+        """Восстанавливает описание аккорда после подсказки."""
+        if hasattr(self, '_hint_timer'):
+            self._hint_timer = None
+        self._show_description()
 
     def _open_tonality_selector(self):
         logger.info("Открытие меню выбора тональности")
@@ -889,7 +924,9 @@ class ChordsScreen(BaseScreen):
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
-        self._hide_hint()
+
+        # Восстанавливаем описание
+        self._restore_description()
 
     def _open_type_selector(self):
         logger.info("Открытие меню выбора типа аккорда")
@@ -921,7 +958,9 @@ class ChordsScreen(BaseScreen):
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
-        self._hide_hint()
+
+        # Восстанавливаем описание
+        self._restore_description()
 
     def _open_chord_selector(self):
         if len(self.available_chords) <= 1:
@@ -959,7 +998,9 @@ class ChordsScreen(BaseScreen):
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
-        self._hide_hint()
+
+        # Восстанавливаем описание
+        self._restore_description()
 
     def _toggle_mode(self):
         if self.current_mode == "finger":
@@ -1213,6 +1254,7 @@ class ChordsScreen(BaseScreen):
         self.load_current_variant()
 
     def load_current_variant(self):
+        """Загружает текущий вариант аккорда и обновляет UI."""
         if not self.current_variants:
             return
         variant = self.current_variants[self.current_variant_index]
@@ -1237,33 +1279,8 @@ class ChordsScreen(BaseScreen):
 
         self.chord_name_label.text = display_name
 
-        description = variant.get('description', '')
-        if description:
-            desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
-
-            unique_parts = []
-            for part in desc_parts:
-                if part not in unique_parts:
-                    unique_parts.append(part)
-
-            if len(unique_parts) > 1:
-                formatted_desc = self._compact_description(unique_parts)
-            else:
-                formatted_desc = unique_parts[0] if unique_parts else ""
-
-            main_name = name_parts[0] if name_parts else ""
-            if main_name and main_name in formatted_desc:
-                formatted_desc = formatted_desc.replace(main_name, '').strip(' |')
-
-            formatted_desc = re.sub(r'\s*\|\s*', ' | ', formatted_desc).strip(' |')
-            formatted_desc = re.sub(r'\s+', ' ', formatted_desc)
-
-            if len(formatted_desc) > 50:
-                formatted_desc = formatted_desc[:47] + "..."
-
-            self.chord_desc_label.text = formatted_desc
-        else:
-            self.chord_desc_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
+        # Показываем описание
+        self._show_description()
 
         if self.chord_renderer:
             self.chord_renderer.load_chord(self.current_chord_module)
@@ -1466,7 +1483,9 @@ class ChordsScreen(BaseScreen):
             self._close_type_selector()
         if self.chord_selector:
             self._close_chord_selector()
-        self._hide_hint()
+        if hasattr(self, '_hint_timer') and self._hint_timer:
+            Clock.unschedule(self._hint_timer)
+            self._hint_timer = None
 
     def go_back(self, instance=None):
         logger.info("🔙 Нажата кнопка возврата")
