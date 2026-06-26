@@ -13,6 +13,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
+from kivy.uix.floatlayout import FloatLayout
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -342,14 +343,15 @@ class GoogleSearchBar(MDCard):
 
 
 class LanguageSelector(MDBoxLayout):
-    """Выбор языка - стрелки из ассетов, текст по центру (как в Songs)"""
+    """Выбор языка - системные иконки стрелок, текст по центру (как в Songs)"""
 
     def __init__(self, on_language_change=None, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'horizontal'
+        self.orientation = 'vertical'
         self.size_hint_y = None
+        self.size_hint_x = 1
         self.height = dp(48)
-        self.padding = [dp(16), dp(4), dp(16), dp(4)]
+        self.padding = [0, 0, 0, 0]
 
         self.on_language_change = on_language_change
         self.current_language = 'ru'
@@ -359,72 +361,53 @@ class LanguageSelector(MDBoxLayout):
             {'code': 'en', 'name': 'English'}
         ]
 
-        self.prev_btn = self._create_arrow_button('left_arrow_png', '◀')
-        self.prev_btn.bind(on_release=self.prev_language)
+        # Используем FloatLayout для точного центрирования
+        self.float_layout = FloatLayout(size_hint=(1, 1))
+
+        # --- СИСТЕМНЫЕ ИКОНКИ СТРЕЛОК ---
+        self.prev_btn = MDIconButton(
+            icon="chevron-left",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 0.9],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self.prev_language,
+            pos_hint={'center_x': 0.35, 'center_y': 0.5}
+        )
 
         self.language_label = MDLabel(
             text="Русский",
             font_size=sp(18),
             halign="center",
             valign="middle",
-            size_hint_x=None,
+            size_hint=(None, None),
             width=dp(120),
+            height=dp(48),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1],
             bold=True,
-            pos_hint={'center_y': 0.5}
-        )
-
-        self.next_btn = self._create_arrow_button('right_arrow_png', '▶')
-        self.next_btn.bind(on_release=self.next_language)
-
-        self.center_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(None, None),
-            width=dp(200),
-            height=dp(48),
-            spacing=dp(12),
             pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
 
-        self.center_container.add_widget(self.prev_btn)
-        self.center_container.add_widget(self.language_label)
-        self.center_container.add_widget(self.next_btn)
-
-        self.add_widget(MDBoxLayout(size_hint_x=1))
-        self.add_widget(self.center_container)
-        self.add_widget(MDBoxLayout(size_hint_x=1))
-
-        self._update_display()
-
-    def _create_arrow_button(self, icon_name, fallback_text):
-        from kivy.uix.behaviors import ButtonBehavior
-        from kivy.uix.image import Image
-
-        class ArrowButton(ButtonBehavior, Image):
-            def __init__(self, **kwargs):
-                super().__init__(**kwargs)
-                self.allow_stretch = True
-                self.keep_ratio = True
-
-        btn = ArrowButton(
+        self.next_btn = MDIconButton(
+            icon="chevron-right",
             size_hint=(None, None),
             size=(dp(32), dp(32)),
-            pos_hint={'center_y': 0.5}
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 0.9],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self.next_language,
+            pos_hint={'center_x': 0.65, 'center_y': 0.5}
         )
 
-        if HAS_ASSETS:
-            try:
-                icon_data = load_asset_as_bytes(icon_name)
-                if icon_data:
-                    img = CoreImage(BytesIO(icon_data), ext="png")
-                    btn.texture = img.texture
-                    return btn
-            except Exception as e:
-                logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
+        self.float_layout.add_widget(self.prev_btn)
+        self.float_layout.add_widget(self.language_label)
+        self.float_layout.add_widget(self.next_btn)
 
-        btn.text = fallback_text
-        return btn
+        self.add_widget(self.float_layout)
+
+        self._update_display()
 
     def _update_display(self):
         for lang in self.languages:
@@ -471,7 +454,7 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(56)
-        self.padding = [dp(16), dp(10), dp(12), dp(10)]  # ← вертикальные отступы 10
+        self.padding = [dp(16), dp(10), dp(12), dp(10)]
         self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
@@ -486,7 +469,7 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
     def _build_ui(self):
         # Иконка
         self.icon = Image(
-            size_hint=(None, 1),  # ← растягиваем по высоте
+            size_hint=(None, 1),
             width=dp(30),
             allow_stretch=True,
             keep_ratio=True
@@ -601,6 +584,10 @@ class DictionaryScreen(BaseScreen):
         self.hint_label = None
         self.search_recycle_view = None
         self._main_layout = None
+        self.top_container = None
+        self.keyboard_container = None
+        self._keyboard_height = 0
+        self.cards_container = None
 
         self.init_ui()
         self.load_background()
@@ -715,7 +702,7 @@ class DictionaryScreen(BaseScreen):
         return None
 
     def init_ui(self):
-        """Инициализирует UI как в artist_songs_screen.py с правильными отступами"""
+        """Инициализирует UI с правильными отступами и схлопыванием клавиатуры"""
 
         # Основной контейнер
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
@@ -731,8 +718,8 @@ class DictionaryScreen(BaseScreen):
         # Получаем боковые отступы
         content_padding = layout_config.get_content_padding()
 
-        # ============ КОНТЕЙНЕР ДЛЯ ВЕРХНЕЙ ЧАСТИ ============
-        top_container = MDBoxLayout(
+        # ============ КОНТЕЙНЕР ДЛЯ ВЕРХНЕЙ ЧАСТИ (поиск + клавиатура) ============
+        self.top_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
             adaptive_height=True,
@@ -742,19 +729,30 @@ class DictionaryScreen(BaseScreen):
         # Поисковая строка
         self.search_bar = GoogleSearchBar(
             on_search=self.do_search,
-            on_clear=self.clear_search
+            on_clear=self._on_clear_search
         )
-        top_container.add_widget(self.search_bar)
+        self.top_container.add_widget(self.search_bar)
 
-        # Выбор языка
+        # Отступ после поиска
+        self.top_container.add_widget(Widget(size_hint_y=None, height=dp(16)))
+
+        # ============ КЛАВИАТУРА (выбор языка + сетка букв) ============
+        self.keyboard_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            adaptive_height=True,
+            spacing=dp(8)
+        )
+
+        # Выбор языка (с центрированием через FloatLayout)
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
-        top_container.add_widget(self.language_selector)
+        self.keyboard_container.add_widget(self.language_selector)
 
         # Сетка букв
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
-        top_container.add_widget(self.alphabet_grid)
+        self.keyboard_container.add_widget(self.alphabet_grid)
 
         # Подсказка
         self.hint_label = MDLabel(
@@ -766,21 +764,23 @@ class DictionaryScreen(BaseScreen):
             size_hint_y=None,
             height=dp(32)
         )
-        top_container.add_widget(self.hint_label)
+        self.keyboard_container.add_widget(self.hint_label)
 
-        main_layout.add_widget(top_container)
+        self.top_container.add_widget(self.keyboard_container)
+
+        main_layout.add_widget(self.top_container)
 
         # ============ КОНТЕЙНЕР ДЛЯ РЕЗУЛЬТАТОВ ============
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
 
-        cards_container = MDBoxLayout(
+        self.cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             padding=[content_padding[0], dp(4), content_padding[2], total_bottom]
         )
-        cards_container.clip = True
+        self.cards_container.clip = True
 
         self.search_recycle_view = TermRecycleView(on_term_click=self.on_term_selected)
         self.search_recycle_view.bar_width = 0
@@ -788,11 +788,35 @@ class DictionaryScreen(BaseScreen):
         self.search_recycle_view.bar_inactive_color = [0, 0, 0, 0]
         self.search_recycle_view.clip = True
 
-        cards_container.add_widget(self.search_recycle_view)
-        main_layout.add_widget(cards_container)
+        self.cards_container.add_widget(self.search_recycle_view)
+        main_layout.add_widget(self.cards_container)
 
         self.add_widget(main_layout)
+
+        # Сохраняем высоту клавиатуры для анимации
+        Clock.schedule_once(self._save_keyboard_height, 0.5)
+
         logger.info(f"UI словаря построен, side_padding={content_padding[0]}dp")
+
+    def _save_keyboard_height(self, dt):
+        """Сохраняет высоту клавиатуры для последующего использования"""
+        if self.keyboard_container:
+            self._keyboard_height = self.keyboard_container.height
+            logger.info(f"📏 Высота клавиатуры: {self._keyboard_height}dp")
+
+    def _show_keyboard(self):
+        """Показывает клавиатуру (выбор языка + сетка букв)"""
+        if self.keyboard_container:
+            self.keyboard_container.opacity = 1
+            self.keyboard_container.disabled = False
+            self.keyboard_container.height = self._keyboard_height
+
+    def _hide_keyboard(self):
+        """Скрывает клавиатуру (выбор языка + сетка букв) - схлопывает контейнер"""
+        if self.keyboard_container:
+            self.keyboard_container.opacity = 0
+            self.keyboard_container.disabled = True
+            self.keyboard_container.height = 0
 
     def _show_search_results(self):
         """Показывает результаты поиска в RecycleView"""
@@ -810,6 +834,13 @@ class DictionaryScreen(BaseScreen):
         self.hint_label.text = "Нажмите на букву для просмотра терминов"
         self.hint_label.opacity = 1
 
+    def _on_clear_search(self):
+        """Обработчик нажатия на крестик в поиске"""
+        logger.info("🧹 Очистка поиска (крестик)")
+        self.clear_search()
+        # Показываем клавиатуру обратно
+        self._show_keyboard()
+
     # ============ ОБРАБОТЧИКИ ============
 
     def on_language_changed(self, language):
@@ -819,6 +850,8 @@ class DictionaryScreen(BaseScreen):
         self.current_letter = None
         self.clear_search()
         self._clear_search_results()
+        # Показываем клавиатуру после смены языка
+        self._show_keyboard()
 
     def on_letter_press(self, letter):
         logger.info(f"Выбрана буква: {letter}")
@@ -845,6 +878,9 @@ class DictionaryScreen(BaseScreen):
         self.is_search_mode = True
         self.current_letter = None
         self.alphabet_grid.clear_selection()
+
+        # Скрываем клавиатуру при поиске
+        self._hide_keyboard()
 
         # Разбиваем запрос на слова
         query_words = query_lower.split()
@@ -912,6 +948,8 @@ class DictionaryScreen(BaseScreen):
 
         if not self.search_results:
             notify.info("Ничего не найдено")
+            # Если ничего не найдено, показываем клавиатуру обратно
+            self._show_keyboard()
 
     def clear_search(self):
         self.is_search_mode = False
@@ -936,6 +974,8 @@ class DictionaryScreen(BaseScreen):
     def on_enter(self):
         logger.info("Вход в словарь")
         self._update_top_nav("Словарь")
+        # Показываем клавиатуру при входе
+        self._show_keyboard()
 
     def _update_top_nav(self, title):
         try:
