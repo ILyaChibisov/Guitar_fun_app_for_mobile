@@ -14,18 +14,16 @@ logger = get_logger('LayoutConfig')
 class LayoutConfig:
     """Централизованная конфигурация"""
 
-    # ========== БАЗОВЫЕ РАЗМЕРЫ (просто числа, НЕ dp!) ==========
-    TOP_NAV_HEIGHT = 64  # высота верхней панели
-    BOTTOM_NAV_HEIGHT = 44  # ← ИЗМЕНЕНО: с 56 на 44 (актуальная высота BottomNav)
+    # ========== БАЗОВЫЕ РАЗМЕРЫ ==========
+    TOP_NAV_HEIGHT = 64
     TOP_NAV_HEIGHT_TABLET = 72
-    BOTTOM_NAV_HEIGHT_TABLET = 52  # ← ИЗМЕНЕНО: с 64 на 52
 
-    # Отступы
-    SIDE_PADDING = 16
-    GAP_BETWEEN_CONTENT_AND_NAV = 8
-
-    # ДОПОЛНИТЕЛЬНЫЙ ОТСТУП СВЕРХУ (после TopNav)
+    # ========== ДОПОЛНИТЕЛЬНЫЙ ОТСТУП СВЕРХУ ==========
     EXTRA_TOP_PADDING = 12
+
+    # ========== ОТСТУПЫ ==========
+    SIDE_PADDING = 16
+    GAP_BETWEEN_CONTENT_AND_NAV = 0  # ПЛОТНОЕ ПРИЛЕГАНИЕ
 
     CONTENT_TOP_PADDING = 8
     CONTENT_BOTTOM_PADDING = 8
@@ -49,10 +47,27 @@ class LayoutConfig:
 
     @classmethod
     def get_bottom_nav_height(cls):
-        """Возвращает высоту нижней панели в dp"""
-        if cls.is_tablet():
-            return dp(cls.BOTTOM_NAV_HEIGHT_TABLET)
-        return dp(cls.BOTTOM_NAV_HEIGHT)
+        """
+        Возвращает высоту BottomNav в dp (только видимая часть с иконками).
+        На всех платформах = 52dp.
+        """
+        return dp(52)
+
+    @classmethod
+    def get_bottom_nav_total_height(cls):
+        """
+        Возвращает ПОЛНУЮ высоту BottomNav с учётом системной навигации.
+        На Android: только высота панели (системная навигация не входит)
+        На Windows: высота панели + эмуляция системной навигации
+        """
+        nav_bar_height = get_navigation_bar_height()
+
+        if platform == 'android':
+            # На Android системная навигация не входит в BottomNav
+            return cls.get_bottom_nav_height()
+        else:
+            # На Windows эмулируем системную навигацию
+            return cls.get_bottom_nav_height() + nav_bar_height
 
     @classmethod
     def get_top_padding(cls, include_top_nav=True):
@@ -66,10 +81,12 @@ class LayoutConfig:
 
     @classmethod
     def get_bottom_padding(cls):
-        """Возвращает отступ снизу для контента в dp"""
-        # Отступ перед BottomNav с учётом его актуальной высоты
-        nav_bar_height = get_navigation_bar_height()
-        return cls.get_bottom_nav_height() + nav_bar_height + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
+        """
+        Возвращает отступ снизу для контента в dp.
+        Отступ должен быть равен ПОЛНОЙ высоте BottomNav,
+        чтобы контент прилегал к верхней границе панели.
+        """
+        return cls.get_bottom_nav_total_height() + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
 
     @classmethod
     def get_content_padding(cls):
@@ -89,8 +106,16 @@ class LayoutConfig:
 
     @classmethod
     def update_for_platform(cls):
-        logger.info(f"LayoutConfig: TOP_NAV_HEIGHT={cls.TOP_NAV_HEIGHT}dp, BOTTOM_NAV_HEIGHT={cls.BOTTOM_NAV_HEIGHT}dp")
-        logger.info(f"LayoutConfig: EXTRA_TOP_PADDING={cls.EXTRA_TOP_PADDING}dp")
+        logger.info("=" * 70)
+        logger.info("📐 LAYOUT CONFIG")
+        logger.info(f"📱 Платформа: {platform}")
+        logger.info(f"📱 TOP_NAV_HEIGHT: {cls.TOP_NAV_HEIGHT}dp")
+        logger.info(f"📱 BOTTOM_NAV_HEIGHT: {cls.get_bottom_nav_height()}dp")
+        logger.info(f"📱 BOTTOM_NAV_TOTAL: {cls.get_bottom_nav_total_height()}dp")
+        logger.info(f"📱 EXTRA_TOP_PADDING: {cls.EXTRA_TOP_PADDING}dp")
+        logger.info(f"📱 GAP_BETWEEN_CONTENT_AND_NAV: {cls.GAP_BETWEEN_CONTENT_AND_NAV}dp")
+        logger.info(f"📱 get_bottom_padding(): {cls.get_bottom_padding()}dp")
+        logger.info("=" * 70)
 
 
 layout_config = LayoutConfig()

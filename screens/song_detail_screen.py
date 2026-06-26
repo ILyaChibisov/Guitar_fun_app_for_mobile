@@ -24,7 +24,7 @@ from kivy.utils import platform
 
 from config.theme import theme
 from config.logger_config import screen_logger
-from config.layout_config import layout_config
+from config.layout_config import layout_config  # ← ИСПОЛЬЗУЕМ layout_config
 from config.system_bars import get_navigation_bar_height, get_status_bar_height
 from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
@@ -249,7 +249,7 @@ class SongDetailScreen(BaseScreen):
         self.griff_container = None
         self._griff_added = False
         self.griff_divider = None
-        self.eye_active = False  # Состояние глаза (сохраняется внутри песни)
+        self.eye_active = False
         self.eye_btn = None
 
         # Секция с названием аккорда
@@ -383,17 +383,15 @@ class SongDetailScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
-        # Отступ в карточке снизу = высота навбара + небольшой зазор
-        nav_bar_height = get_navigation_bar_height()
-        if platform == 'android':
-            bottom_padding_for_card = nav_bar_height + dp(20)
-        else:
-            bottom_padding_for_card = nav_bar_height + dp(4)
+        # ============ ОТСТУП СНИЗУ - ИСПОЛЬЗУЕМ СПЕЦИАЛЬНЫЙ ВИДЖЕТ ============
+        # Вместо того чтобы пихать отступ в карточку,
+        # добавляем отдельный виджет-спейсер снизу
+        # Это гарантирует, что контент прилегает к BottomNav
 
         self.song_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[0, 0, 0, bottom_padding_for_card],
+            padding=[0, 0, 0, 0],  # ← НОЛЬ ОТСТУПОВ!
             spacing=0,
             radius=[0, 0, 0, 0],
             md_bg_color=[0, 0, 0, 0],
@@ -433,15 +431,15 @@ class SongDetailScreen(BaseScreen):
         )
         self.song_card.add_widget(self.panel_divider)
 
-        # ============ КОНТЕЙНЕР ДЛЯ ГРИФА (БУДЕТ ДОБАВЛЕН ПОЗЖЕ) ============
-        self.griff_container = None
-        self.griff_divider = None
-
-        # ============ СЕКЦИЯ НАЗВАНИЯ АККОРДА (БУДЕТ ДОБАВЛЕНА ПОЗЖЕ) ============
+        # ============ СЕКЦИЯ НАЗВАНИЯ АККОРДА ============
         self.chord_name_section = None
         self.chord_name_label = None
         self.chord_pag_prev = None
         self.chord_pag_next = None
+
+        # ============ КОНТЕЙНЕР ДЛЯ ГРИФА ============
+        self.griff_container = None
+        self.griff_divider = None
 
         # ============ СКРОЛЛ ДЛЯ ТЕКСТА ============
         self.content_scroll = MDScrollView(
@@ -453,13 +451,11 @@ class SongDetailScreen(BaseScreen):
         )
 
         # ============ КОНТЕЙНЕР ДЛЯ ТЕКСТА ============
-        bottom_padding = dp(4)
-
         self._text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
-            padding=[dp(16), dp(16), dp(16), bottom_padding],
+            padding=[dp(16), dp(16), dp(16), dp(4)],
             adaptive_height=True,
             md_bg_color=[0, 0, 0, 0]
         )
@@ -491,6 +487,14 @@ class SongDetailScreen(BaseScreen):
         self.song_card.add_widget(self.bottom_divider)
 
         card_container.add_widget(self.song_card)
+
+        # ============ НИЖНИЙ ОТСТУП (СПЕЙСЕР) ============
+        # Этот спейсер обеспечивает отступ до BottomNav
+        # Его высота = полная высота BottomNav
+        bottom_spacer_height = layout_config.get_bottom_padding()
+        self._bottom_spacer_song = Widget(size_hint_y=None, height=bottom_spacer_height)
+        card_container.add_widget(self._bottom_spacer_song)
+
         main_container.add_widget(card_container)
 
         if platform != 'android':
@@ -508,7 +512,7 @@ class SongDetailScreen(BaseScreen):
 
         logger.info(f"SongDetailScreen: init_ui completed")
         logger.info(f"  top_padding={top_padding_for_nav}dp")
-        logger.info(f"  bottom_padding_for_card={bottom_padding_for_card}dp")
+        logger.info(f"  bottom_spacer={bottom_spacer_height}dp")
 
     # ==================== МЕТОДЫ СОЗДАНИЯ ПАНЕЛЕЙ ====================
 
@@ -619,7 +623,7 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # ============ ГЛАЗ (СОХРАНЯЕТ СОСТОЯНИЕ) ============
+        # ============ ГЛАЗ ============
         self.eye_btn = MDIconButton(
             icon="eye",
             size_hint=(1, None),
@@ -1326,12 +1330,12 @@ class SongDetailScreen(BaseScreen):
 
         self.griff_container.add_widget(self.chords_carousel)
 
-        # ============ РАЗДЕЛИТЕЛЬ ПОД ГРИФОМ (ВИДИМЫЙ) ============
+        # ============ РАЗДЕЛИТЕЛЬ ПОД ГРИФОМ ============
         self.griff_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(2),
-            md_bg_color=[0.5, 0.5, 0.5, 0.3],  # ВИДИМЫЙ
+            md_bg_color=[0.5, 0.5, 0.5, 0.3],
             padding=[0, 0, 0, 0]
         )
 
@@ -1346,7 +1350,7 @@ class SongDetailScreen(BaseScreen):
 
         self.song_card.add_widget(self.chord_name_section)
         self.song_card.add_widget(self.griff_container)
-        self.song_card.add_widget(self.griff_divider)  # ← ВИДИМЫЙ
+        self.song_card.add_widget(self.griff_divider)
 
         self.song_card.add_widget(content_scroll)
         self.song_card.add_widget(bottom_divider)
@@ -1361,7 +1365,7 @@ class SongDetailScreen(BaseScreen):
             if self.chords_carousel and self.chord_slides:
                 self.chords_carousel.load_slide(self.chord_slides[0])
 
-        logger.info("✅ Гриф и секция названия добавлены (разделитель видимый)")
+        logger.info("✅ Гриф и секция названия добавлены")
 
     def _on_carousel_slide(self, instance, slide):
         """Обработчик смены слайда в карусели"""
@@ -1445,7 +1449,7 @@ class SongDetailScreen(BaseScreen):
         self._hide_chords_layer()
 
     def _toggle_eye(self, *args):
-        """Переключает состояние глаза (серый/красный) - СОХРАНЯЕТСЯ ВНУТРИ ПЕСНИ"""
+        """Переключает состояние глаза (серый/красный)"""
         self.eye_active = not self.eye_active
 
         if self.eye_active:
@@ -1789,7 +1793,6 @@ class SongDetailScreen(BaseScreen):
         self.transposed_text_cache = {}
         self.original_cleaned_text = ""
 
-        # Закрываем все панели
         if self.is_chords_mode:
             self.close_chords_section()
         if self.is_tonality_mode:
@@ -1799,7 +1802,7 @@ class SongDetailScreen(BaseScreen):
         if self.is_scroll_mode:
             self.close_scroll_panel()
 
-        # СБРАСЫВАЕМ СОСТОЯНИЕ ГЛАЗА при загрузке новой песни
+        # СБРАСЫВАЕМ СОСТОЯНИЕ ГЛАЗА
         self.eye_active = False
 
         if hasattr(self, '_current_theme') and self._current_theme != 'green':
@@ -1870,7 +1873,7 @@ class SongDetailScreen(BaseScreen):
             logger.info("🔧 ScrollView обновлён")
 
     def set_song(self, song_id):
-        self.reset_screen_state()  # ← ЗДЕСЬ СБРАСЫВАЕТСЯ ГЛАЗ ПРИ ЗАГРУЗКЕ НОВОЙ ПЕСНИ
+        self.reset_screen_state()
         self.song_id = song_id
         self.load_song_data()
 

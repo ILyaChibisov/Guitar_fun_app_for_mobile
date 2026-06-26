@@ -59,7 +59,6 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.inner_layout = FloatLayout(size_hint=(1, 1))
 
         # Иконка - по центру по X, чуть выше середины
-        # center_y = 0.58 означает, что иконка выше центра
         self.icon_btn = MDIconButton(
             icon=icon_name,
             size_hint=(None, None),
@@ -67,13 +66,12 @@ class NavItem(ButtonBehavior, BoxLayout):
             theme_icon_color="Custom",
             icon_color=theme.TEXT_SECONDARY,
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_x': 0.5, 'center_y': 0.62},  # немного выше
+            pos_hint={'center_x': 0.5, 'center_y': 0.62},
             ripple_scale=0
         )
         self.icon_btn.bind(on_release=self._on_child_click)
 
         # Текст - под иконкой с отступом
-        # y = 0.08 означает, что текст ближе к нижней части
         self.text_label = MDLabel(
             text=text,
             halign="center",
@@ -86,7 +84,7 @@ class NavItem(ButtonBehavior, BoxLayout):
             shorten=True,
             shorten_from="right",
             font_size=font_size,
-            pos_hint={'center_x': 0.5, 'y': 0.06}  # ← ОТСТУП ОТ НИЗА
+            pos_hint={'center_x': 0.5, 'y': 0.06}
         )
 
         self.text_label.bind(width=self._adjust_font_size)
@@ -179,21 +177,23 @@ class BottomNav(BoxLayout):
 
         nav_bar_height = get_navigation_bar_height()
 
+        # ============ ВЫСОТА ПАНЕЛИ ============
+        self.nav_height = dp(52)  # Высота самой панели с иконками
+
+        # ============ ЭМУЛЯЦИЯ СИСТЕМНОЙ НАВИГАЦИИ НА WINDOWS ============
         if platform == 'android':
-            self.nav_height = dp(52)
+            # На Android системная навигация не добавляется в BottomNav
             bottom_padding = 0
-            button_spacing = dp(0)
         else:
-            self.nav_height = dp(52)
-            bottom_padding = nav_bar_height + dp(2)
-            button_spacing = dp(0)
+            # На Windows эмулируем системную навигацию Android
+            bottom_padding = nav_bar_height
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
         side_padding = dp(4)
         self.padding = [side_padding, dp(2), side_padding, bottom_padding]
-        self.spacing = button_spacing
+        self.spacing = 0
         self.md_bg_color = [0, 0, 0, 0]
 
         # ============ РИСУЕМ РАЗДЕЛИТЕЛЬНУЮ ЛИНИЮ ВВЕРХУ ============
@@ -207,8 +207,8 @@ class BottomNav(BoxLayout):
         logger.info("=" * 70)
         logger.info(f"📱 BOTTOM NAV - {platform.upper()}")
         logger.info(f"📱 Высота панели: {self.nav_height}dp")
-        logger.info(f"📱 Боковые отступы: {side_padding}dp")
-        logger.info(f"📱 Отступ снизу: {bottom_padding}dp")
+        logger.info(f"📱 Отступ снизу (сист. навигация): {bottom_padding}dp")
+        logger.info(f"📱 Общая высота: {self.total_height}dp")
         logger.info("=" * 70)
 
         self.nav_items = [
@@ -265,22 +265,21 @@ class BottomNav(BoxLayout):
         self.switch_to(screen_name)
 
     def reload_config(self):
+        """Перезагружает конфигурацию (для динамических изменений)"""
         nav_bar_height = get_navigation_bar_height()
 
+        self.nav_height = dp(52)
+
         if platform == 'android':
-            self.nav_height = dp(52)
             bottom_padding = 0
-            button_spacing = dp(0)
         else:
-            self.nav_height = dp(52)
-            bottom_padding = nav_bar_height + dp(2)
-            button_spacing = dp(0)
+            bottom_padding = nav_bar_height
 
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
         side_padding = dp(4)
         self.padding = [side_padding, dp(2), side_padding, bottom_padding]
-        self.spacing = button_spacing
+        self.spacing = 0
 
         self._update_line()
