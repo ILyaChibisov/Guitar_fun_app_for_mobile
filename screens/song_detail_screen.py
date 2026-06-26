@@ -249,7 +249,7 @@ class SongDetailScreen(BaseScreen):
         self.griff_container = None
         self._griff_added = False
         self.griff_divider = None
-        self.eye_active = False
+        self.eye_active = False  # Состояние глаза (сохраняется внутри песни)
         self.eye_btn = None
 
         # Секция с названием аккорда
@@ -423,7 +423,7 @@ class SongDetailScreen(BaseScreen):
         )
         self.song_card.add_widget(self.panel_container)
 
-        # ============ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ПОД ПАНЕЛЬЮ (ТАКАЯ ЖЕ КАК ВЕРХНЯЯ) ============
+        # ============ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ПОД ПАНЕЛЬЮ ============
         self.panel_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -619,7 +619,7 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # ============ ГЛАЗ ============
+        # ============ ГЛАЗ (СОХРАНЯЕТ СОСТОЯНИЕ) ============
         self.eye_btn = MDIconButton(
             icon="eye",
             size_hint=(1, None),
@@ -656,7 +656,6 @@ class SongDetailScreen(BaseScreen):
         )
 
         # Порядок: вариант | режим | ГЛАЗ | лупа | галочка
-        # (Убраны иконки пагинации из меню)
         panel.add_widget(self.variant_btn)
         panel.add_widget(self.mode_btn)
         panel.add_widget(self.eye_btn)
@@ -665,7 +664,7 @@ class SongDetailScreen(BaseScreen):
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'chords'
-        logger.info("✅ Создана панель аккордов (без иконок пагинации в меню)")
+        logger.info("✅ Создана панель аккордов (с глазом)")
 
     def _create_font_panel(self):
         """Создаёт панель шрифта с дополнительной кнопкой смены темы"""
@@ -1228,7 +1227,7 @@ class SongDetailScreen(BaseScreen):
 
         from kivy.uix.carousel import Carousel
 
-        # ============ СЕКЦИЯ С НАЗВАНИЕМ АККОРДА (С ДЕКОРАТИВНЫМИ ИКОНКАМИ) ============
+        # ============ СЕКЦИЯ С НАЗВАНИЕМ АККОРДА ============
         self.chord_name_section = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -1238,7 +1237,7 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(4)
         )
 
-        # Декоративная иконка влево (неактивная, просто для вида)
+        # Декоративная иконка влево (неактивная)
         self.chord_pag_prev = MDIconButton(
             icon="chevron-left",
             size_hint=(None, 1),
@@ -1261,7 +1260,7 @@ class SongDetailScreen(BaseScreen):
             font_size=sp(18)
         )
 
-        # Декоративная иконка вправо (неактивная, просто для вида)
+        # Декоративная иконка вправо (неактивная)
         self.chord_pag_next = MDIconButton(
             icon="chevron-right",
             size_hint=(None, 1),
@@ -1286,7 +1285,7 @@ class SongDetailScreen(BaseScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # ============ КАРУСЕЛЬ С БЕСКОНЕЧНЫМ ЛИСТАНИЕМ ============
+        # ============ КАРУСЕЛЬ ============
         self.chords_carousel = Carousel(
             direction='right',
             loop=True,
@@ -1327,12 +1326,12 @@ class SongDetailScreen(BaseScreen):
 
         self.griff_container.add_widget(self.chords_carousel)
 
-        # ============ РАЗДЕЛИТЕЛЬ ПОД ГРИФОМ (НЕВИДИМЫЙ) ============
+        # ============ РАЗДЕЛИТЕЛЬ ПОД ГРИФОМ (ВИДИМЫЙ) ============
         self.griff_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(2),
-            md_bg_color=[0.5, 0.5, 0.5, 0.0],  # ПОЛНОСТЬЮ НЕВИДИМЫЙ
+            md_bg_color=[0.5, 0.5, 0.5, 0.3],  # ВИДИМЫЙ
             padding=[0, 0, 0, 0]
         )
 
@@ -1345,12 +1344,9 @@ class SongDetailScreen(BaseScreen):
         if bottom_divider in self.song_card.children:
             self.song_card.remove_widget(bottom_divider)
 
-        # Секция с названием (прямо под панелью)
         self.song_card.add_widget(self.chord_name_section)
-        # Гриф
         self.song_card.add_widget(self.griff_container)
-        # Невидимый разделитель под грифом
-        self.song_card.add_widget(self.griff_divider)
+        self.song_card.add_widget(self.griff_divider)  # ← ВИДИМЫЙ
 
         self.song_card.add_widget(content_scroll)
         self.song_card.add_widget(bottom_divider)
@@ -1365,7 +1361,7 @@ class SongDetailScreen(BaseScreen):
             if self.chords_carousel and self.chord_slides:
                 self.chords_carousel.load_slide(self.chord_slides[0])
 
-        logger.info("✅ Гриф и секция названия добавлены (с декоративными иконками)")
+        logger.info("✅ Гриф и секция названия добавлены (разделитель видимый)")
 
     def _on_carousel_slide(self, instance, slide):
         """Обработчик смены слайда в карусели"""
@@ -1416,7 +1412,7 @@ class SongDetailScreen(BaseScreen):
                     self.song_card.remove_widget(self.griff_container)
                     self.griff_container = None
 
-            # Удаляем невидимый разделитель
+            # Удаляем разделитель
             if hasattr(self, 'griff_divider') and self.griff_divider:
                 if self.griff_divider in self.song_card.children:
                     self.song_card.remove_widget(self.griff_divider)
@@ -1449,7 +1445,7 @@ class SongDetailScreen(BaseScreen):
         self._hide_chords_layer()
 
     def _toggle_eye(self, *args):
-        """Переключает состояние глаза (серый/красный)"""
+        """Переключает состояние глаза (серый/красный) - СОХРАНЯЕТСЯ ВНУТРИ ПЕСНИ"""
         self.eye_active = not self.eye_active
 
         if self.eye_active:
@@ -1590,8 +1586,6 @@ class SongDetailScreen(BaseScreen):
         new_height = int(base_height * new_scale)
         self.griff_container.height = new_height
 
-        # Название аккорда НЕ МЕНЯЕТ РАЗМЕР — остаётся sp(18)
-        # Обновляем иконку лупы
         if new_scale == 1.0:
             self.griff_zoom_btn.icon = "magnify"
             self.griff_zoom_btn.icon_color = [1, 1, 1, 1]
@@ -1611,7 +1605,6 @@ class SongDetailScreen(BaseScreen):
 
         chord_name = self._song_chords[self._current_chord_index]
 
-        # Обновляем название в отдельной секции
         if hasattr(self, 'chord_name_label') and self.chord_name_label:
             self.chord_name_label.text = chord_name
 
@@ -1681,22 +1674,6 @@ class SongDetailScreen(BaseScreen):
         total = len(self.chord_variants)
         self.chord_variant_index = (self.chord_variant_index + 1) % total
         self.load_current_variant()
-
-    def _prev_chord_in_section(self, *args):
-        """Предыдущий аккорд (карусель) - НЕ ИСПОЛЬЗУЕТСЯ, т.к. иконки убраны, но оставляем для совместимости"""
-        if not self._song_chords or not self.chords_carousel:
-            return
-
-        self.chords_carousel.load_previous()
-        Clock.schedule_once(lambda dt: self._sync_carousel_index(), 0.1)
-
-    def _next_chord_in_section(self, *args):
-        """Следующий аккорд (карусель) - НЕ ИСПОЛЬЗУЕТСЯ, т.к. иконки убраны, но оставляем для совместимости"""
-        if not self._song_chords or not self.chords_carousel:
-            return
-
-        self.chords_carousel.load_next()
-        Clock.schedule_once(lambda dt: self._sync_carousel_index(), 0.1)
 
     def _extract_and_cache_chords(self):
         """Извлекает и кэширует аккорды из песни"""
@@ -1806,11 +1783,13 @@ class SongDetailScreen(BaseScreen):
         logger.info(f"🔍 Размер шрифта сброшен до стандартного: {self.current_font_size}")
 
     def reset_screen_state(self):
+        """Сбрасывает состояние экрана при загрузке новой песни"""
         self.current_tonality = 0
         self.transposed_chords_cache = {}
         self.transposed_text_cache = {}
         self.original_cleaned_text = ""
 
+        # Закрываем все панели
         if self.is_chords_mode:
             self.close_chords_section()
         if self.is_tonality_mode:
@@ -1819,6 +1798,9 @@ class SongDetailScreen(BaseScreen):
             self.close_font_panel()
         if self.is_scroll_mode:
             self.close_scroll_panel()
+
+        # СБРАСЫВАЕМ СОСТОЯНИЕ ГЛАЗА при загрузке новой песни
+        self.eye_active = False
 
         if hasattr(self, '_current_theme') and self._current_theme != 'green':
             self._set_green_theme()
@@ -1834,9 +1816,8 @@ class SongDetailScreen(BaseScreen):
         self.chord_variant_index = 0
         self.scroll_speed = 1.0
         self.is_scrolling = False
-        self.eye_active = False
 
-        logger.info("🔄 Состояние экрана сброшено")
+        logger.info("🔄 Состояние экрана сброшено (глаз деактивирован)")
 
     def _extract_and_log_chords(self, text):
         chords = extract_chords_from_text(text)
@@ -1889,7 +1870,7 @@ class SongDetailScreen(BaseScreen):
             logger.info("🔧 ScrollView обновлён")
 
     def set_song(self, song_id):
-        self.reset_screen_state()
+        self.reset_screen_state()  # ← ЗДЕСЬ СБРАСЫВАЕТСЯ ГЛАЗ ПРИ ЗАГРУЗКЕ НОВОЙ ПЕСНИ
         self.song_id = song_id
         self.load_song_data()
 
