@@ -364,6 +364,15 @@ class SongDetailScreen(BaseScreen):
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
+        # ============ ДИАГНОСТИКА ============
+        nav_bar_height = get_navigation_bar_height()
+        logger.info("=" * 70)
+        logger.info("🔍 ДИАГНОСТИКА ОТСТУПОВ SongDetailScreen")
+        logger.info(f"📱 Платформа: {platform}")
+        logger.info(f"📊 nav_bar_height: {nav_bar_height}dp")
+        logger.info(f"📊 layout_config.get_bottom_padding(): {layout_config.get_bottom_padding()}dp")
+        logger.info("=" * 70)
+
         # ============ ОТСТУП ПОД TOPNAV ============
         top_padding_for_nav = layout_config.get_top_padding()
         if platform == 'android':
@@ -376,6 +385,16 @@ class SongDetailScreen(BaseScreen):
         self._top_spacer_song = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_song)
 
+        # ============ РАСЧЁТ ДОСТУПНОЙ ВЫСОТЫ ДЛЯ КОНТЕНТА ============
+        # Получаем высоту BottomNav из layout_config
+        bottom_nav_total = layout_config.get_bottom_nav_total_height()
+
+        # Отступ снизу = полная высота BottomNav (чтобы контент прилегал к верхней границе)
+        bottom_padding_for_card = bottom_nav_total
+
+        logger.info(f"🔧 bottom_nav_total: {bottom_nav_total}dp")
+        logger.info(f"🔧 bottom_padding_for_card: {bottom_padding_for_card}dp")
+
         # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧКИ ============
         card_container = MDBoxLayout(
             orientation='vertical',
@@ -383,15 +402,11 @@ class SongDetailScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
-        # ============ ОТСТУП СНИЗУ - ИСПОЛЬЗУЕМ СПЕЦИАЛЬНЫЙ ВИДЖЕТ ============
-        # Вместо того чтобы пихать отступ в карточку,
-        # добавляем отдельный виджет-спейсер снизу
-        # Это гарантирует, что контент прилегает к BottomNav
-
+        # ============ КАРТОЧКА ============
         self.song_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[0, 0, 0, 0],  # ← НОЛЬ ОТСТУПОВ!
+            padding=[0, 0, 0, bottom_padding_for_card],
             spacing=0,
             radius=[0, 0, 0, 0],
             md_bg_color=[0, 0, 0, 0],
@@ -431,13 +446,11 @@ class SongDetailScreen(BaseScreen):
         )
         self.song_card.add_widget(self.panel_divider)
 
-        # ============ СЕКЦИЯ НАЗВАНИЯ АККОРДА ============
+        # ============ КОНТЕЙНЕРЫ (заглушки) ============
         self.chord_name_section = None
         self.chord_name_label = None
         self.chord_pag_prev = None
         self.chord_pag_next = None
-
-        # ============ КОНТЕЙНЕР ДЛЯ ГРИФА ============
         self.griff_container = None
         self.griff_divider = None
 
@@ -486,19 +499,11 @@ class SongDetailScreen(BaseScreen):
         )
         self.song_card.add_widget(self.bottom_divider)
 
+        # ============ ДОБАВЛЯЕМ ВСЁ В КОНТЕЙНЕРЫ ============
         card_container.add_widget(self.song_card)
-
-        # ============ НИЖНИЙ ОТСТУП (СПЕЙСЕР) ============
-        # Этот спейсер обеспечивает отступ до BottomNav
-        # Его высота = полная высота BottomNav
-        bottom_spacer_height = layout_config.get_bottom_padding()
-        self._bottom_spacer_song = Widget(size_hint_y=None, height=bottom_spacer_height)
-        card_container.add_widget(self._bottom_spacer_song)
-
         main_container.add_widget(card_container)
 
-        if platform != 'android':
-            main_container.add_widget(Widget(size_hint_y=None, height=dp(48)))
+        # ============ НЕТ ДОПОЛНИТЕЛЬНЫХ СПЕЙСЕРОВ! ============
 
         self.add_widget(main_container)
 
@@ -510,9 +515,23 @@ class SongDetailScreen(BaseScreen):
         # ============ СОЗДАЁМ НАЧАЛЬНУЮ ПАНЕЛЬ ============
         self._create_main_panel()
 
+        # ============ ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ РАЗМЕРОВ ============
+        Clock.schedule_once(lambda dt: self._update_card_size(), 0.1)
+        Clock.schedule_once(lambda dt: self._update_card_size(), 0.3)
+
         logger.info(f"SongDetailScreen: init_ui completed")
         logger.info(f"  top_padding={top_padding_for_nav}dp")
-        logger.info(f"  bottom_spacer={bottom_spacer_height}dp")
+        logger.info(f"  bottom_padding_for_card={bottom_padding_for_card}dp")
+        logger.info("=" * 70)
+
+    def _update_card_size(self, *args):
+        """Принудительно обновляет размеры карточки"""
+        if hasattr(self, 'song_card') and self.song_card:
+            # Принудительно пересчитываем layout
+            self.song_card.size_hint = (1, 1)
+            self.song_card.height = self.height - self._top_spacer_song.height
+            self.song_card.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+            logger.info(f"🔧 _update_card_size: song_card.height={self.song_card.height}dp")
 
     # ==================== МЕТОДЫ СОЗДАНИЯ ПАНЕЛЕЙ ====================
 
