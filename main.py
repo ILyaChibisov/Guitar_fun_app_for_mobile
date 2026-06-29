@@ -74,7 +74,6 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
-
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -152,7 +151,6 @@ MDIconButton.ripple_alpha = 0
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
     print("✅ Модуль ассетов загружен")
 except ImportError as e:
@@ -309,10 +307,9 @@ class GuitarFunsApp(MDApp):
         except ImportError:
             logger.warning("⚠️ Модуль icon_cache не найден")
 
-        def on_prefetch_complete(total_artists, total_songs):
-            logger.info(f"🎉 Предзагрузка завершена! Артистов: {total_artists}, Песен: {total_songs}")
-
-        api.prefetch_all_artists(on_complete=on_prefetch_complete, force_refresh=False)
+        # ============ УБРАНА ПРЕДЗАГРУЗКА ВСЕХ АРТИСТОВ ============
+        # Теперь данные загружаются только по запросу пользователя
+        logger.info("📡 Режим работы: все данные загружаются с сервера по запросу")
 
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)

@@ -77,7 +77,6 @@ class ArtistsByLetterScreen(BaseScreen):
         super().__init__(**kwargs)
         self.name = 'artists_by_letter'
         self.current_letter = None
-        self._cache = {}
         self.recycle_view = None
         self.empty_label = None
         self.loading_label = None
@@ -198,10 +197,6 @@ class ArtistsByLetterScreen(BaseScreen):
     def _restore_top_nav(self, *args):
         """Принудительное восстановление заголовка с задержкой"""
         if self.current_letter:
-            # Обновляем количество из кэша
-            if self.current_letter in self._cache:
-                artists = self._cache[self.current_letter].get('artists', [])
-                self._total_artists = len(artists) if artists else 0
             self._update_top_nav()
             logger.info(f"   ✅ Принудительно восстановлен заголовок: {self.current_letter} ({self._total_artists} исполнителей)")
 
@@ -284,6 +279,7 @@ class ArtistsByLetterScreen(BaseScreen):
         self._do_load_letter(letter)
 
     def _do_load_letter(self, letter):
+        """Загружает исполнителей для буквы с сервера"""
         logger.info(f"_do_load_letter: {letter}")
 
         self.current_letter = letter
@@ -294,20 +290,7 @@ class ArtistsByLetterScreen(BaseScreen):
         self._hide_loading()
         self._hide_empty()
 
-        if letter in self._cache:
-            artists = self._cache[letter].get('artists', [])
-            total = self._cache[letter].get('total', 0)
-            self._display_artists(artists, total)
-            return
-
-        cached = api.get_artists_by_letter_from_cache(letter)
-        if cached:
-            artists = cached.get('artists', [])
-            total = cached.get('total', 0)
-            self._cache[letter] = {'artists': artists, 'total': total}
-            self._display_artists(artists, total)
-            return
-
+        # Всегда идем на сервер — кэш убран
         self._show_loading()
 
         if letter in ("digits", "0-9"):
@@ -402,14 +385,12 @@ class ArtistsByLetterScreen(BaseScreen):
             artists = []
             total = 0
 
-        self._cache[self.current_letter] = {'artists': artists, 'total': total}
         self._display_artists(artists, total)
 
     def _on_load_failed(self, req, error):
         self._hide_loading()
         logger.error(f"Ошибка загрузки для буквы {self.current_letter}: {error}")
 
-        self._cache[self.current_letter] = {'artists': [], 'total': 0}
         self._total_artists = 0
 
         if self.recycle_view:

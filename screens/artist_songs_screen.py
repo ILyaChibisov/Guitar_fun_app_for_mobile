@@ -217,7 +217,6 @@ class ArtistSongsScreen(BaseScreen):
         super().__init__(**kwargs)
         self.name = 'artist_songs'
         self.current_artist = None
-        self._cache = {}
         self.recycle_view = None
         self.empty_label = None
         self.loading_label = None
@@ -339,14 +338,8 @@ class ArtistSongsScreen(BaseScreen):
     def _restore_top_nav(self, *args):
         """Принудительное восстановление заголовка с задержкой"""
         if self.current_artist:
-            total = self._cache.get(self.current_artist, {}).get('total', self._total_songs)
-            # Если total == 0, но есть песни в кэше - считаем их
-            if total == 0 and self.current_artist in self._cache:
-                songs = self._cache[self.current_artist].get('songs', [])
-                total = len(songs) if songs else 0
-
-            if total > 0 or self._total_songs > 0:
-                total = max(total, self._total_songs)
+            total = self._total_songs
+            if total > 0:
                 self._update_top_nav(self.current_artist, total)
                 logger.info(f"   ✅ Принудительно восстановлен заголовок: {self.current_artist} ({total} песен)")
             else:
@@ -399,7 +392,6 @@ class ArtistSongsScreen(BaseScreen):
         logger.info(f"on_enter: current_artist={self.current_artist}, pending={self._pending_artist}")
 
         # ============ ПРИНУДИТЕЛЬНО ВОССТАНАВЛИВАЕМ ЗАГОЛОВОК ============
-        # Сразу восстанавливаем из кэша
         if self.current_artist:
             self._restore_top_nav()
 
@@ -443,6 +435,7 @@ class ArtistSongsScreen(BaseScreen):
             self.manager.current = 'artists_by_letter'
 
     def _do_load_artist(self, artist):
+        """Загружает песни исполнителя с сервера"""
         logger.info(f"_do_load_artist: {artist}")
         self.current_artist = artist
         self._is_loading = True
@@ -453,24 +446,7 @@ class ArtistSongsScreen(BaseScreen):
         self._hide_loading()
         self._hide_empty()
 
-        # Проверяем кэш
-        if artist in self._cache:
-            songs = self._cache[artist].get('songs', [])
-            total = self._cache[artist].get('total', 0)
-            self._is_loading = False
-            self._display_songs(songs, total)
-            return
-
-        # Проверяем глобальный кэш API
-        cached = api.get_songs_by_artist_from_cache(artist)
-        if cached:
-            songs = cached.get('songs', [])
-            total = cached.get('total', 0)
-            self._cache[artist] = {'songs': songs, 'total': total}
-            self._is_loading = False
-            self._display_songs(songs, total)
-            return
-
+        # Всегда идем на сервер — кэш убран
         self._show_loading()
 
         api.get_songs_by_artist(
@@ -572,14 +548,12 @@ class ArtistSongsScreen(BaseScreen):
             data = {"songs": [], "total": 0}
         songs = data.get('songs', [])
         total = data.get('total', 0)
-        self._cache[self.current_artist] = {'songs': songs, 'total': total}
         self._display_songs(songs, total)
 
     def _on_load_failed(self, req, error):
         self._hide_loading()
         self._is_loading = False
         logger.error(f"Ошибка загрузки для {self.current_artist}: {error}")
-        self._cache[self.current_artist] = {'songs': [], 'total': 0}
         if self.recycle_view:
             self.recycle_view.clear()
         self._update_top_nav(self.current_artist, 0)
