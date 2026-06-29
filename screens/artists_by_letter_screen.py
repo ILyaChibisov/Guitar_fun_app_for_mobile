@@ -135,7 +135,6 @@ class ArtistsByLetterScreen(BaseScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
-        # Буква - большая, жирная
         letter_display = self.current_letter.upper() if self.current_letter else ""
         if letter_display == '0-9':
             letter_display = '0-9'
@@ -151,7 +150,6 @@ class ArtistsByLetterScreen(BaseScreen):
             shorten_from="right"
         )
 
-        # Количество исполнителей
         total = self._total_artists
         count_text = self._get_count_text(total)
         count_label = MDLabel(
@@ -201,15 +199,12 @@ class ArtistsByLetterScreen(BaseScreen):
             logger.info(f"   ✅ Принудительно восстановлен заголовок: {self.current_letter} ({self._total_artists} исполнителей)")
 
     def init_ui(self):
-        """Инициализирует UI с уменьшенным верхним отступом"""
-
-        # Создаём вертикальный контейнер
+        """Инициализирует UI с правильными отступами"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
         self._main_layout = main_layout
 
-        # ============ ВЕРХНИЙ ОТСТУП (УМЕНЬШЕННЫЙ) ============
+        # ============ ВЕРХНИЙ ОТСТУП ============
         top_padding = layout_config.get_top_padding()
-        # Уменьшаем отступ на 8dp, чтобы карточки были ближе к TopNav
         top_padding = top_padding - dp(8)
         if top_padding < dp(20):
             top_padding = dp(20)
@@ -217,40 +212,36 @@ class ArtistsByLetterScreen(BaseScreen):
         self._top_spacer = Widget(size_hint_y=None, height=top_padding)
         main_layout.add_widget(self._top_spacer)
 
-        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
-        nav_bar_height = get_navigation_bar_height()
-        bottom_nav_height = dp(60)
-        total_bottom = bottom_nav_height + nav_bar_height + dp(12)
+        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК (используем layout_config) ============
+        bottom_padding = layout_config.get_bottom_padding()
 
         cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(4), dp(12), total_bottom]
+            padding=[dp(12), dp(4), dp(12), bottom_padding]
         )
         cards_container.clip = True
-        cards_container.adaptive_height = False
 
-        # RecycleView для карточек
+        # RecycleView с оптимизациями
         self.recycle_view = ArtistRecycleView(on_artist_click=self.on_artist_selected)
         self.recycle_view.bar_width = 0
         self.recycle_view.bar_color = [0, 0, 0, 0]
         self.recycle_view.bar_inactive_color = [0, 0, 0, 0]
         self.recycle_view.clip = True
+        self.recycle_view.animate_scroll = False
 
         cards_container.add_widget(self.recycle_view)
         main_layout.add_widget(cards_container)
 
         self.add_widget(main_layout)
+        logger.info(f"UI построен, bottom_padding={bottom_padding}dp")
 
     def on_enter(self):
         """Вызывается когда экран становится видимым"""
         logger.info(f"on_enter: current_letter={self.current_letter}, pending={self._pending_letter}")
 
-        # ============ ПРИНУДИТЕЛЬНО ВОССТАНАВЛИВАЕМ ЗАГОЛОВОК ============
         if self.current_letter:
-            # Сразу восстанавливаем
             self._restore_top_nav()
-            # Дополнительные задержки для гарантии
             Clock.schedule_once(self._restore_top_nav, 0.1)
             Clock.schedule_once(self._restore_top_nav, 0.3)
             Clock.schedule_once(self._restore_top_nav, 0.5)
@@ -268,7 +259,6 @@ class ArtistsByLetterScreen(BaseScreen):
         self.current_letter = letter
         self._total_artists = 0
 
-        # Обновляем TopNav с заглушкой
         self._update_top_nav()
 
         if not self.manager or self.manager.current != self.name:
@@ -289,8 +279,6 @@ class ArtistsByLetterScreen(BaseScreen):
 
         self._hide_loading()
         self._hide_empty()
-
-        # Всегда идем на сервер — кэш убран
         self._show_loading()
 
         if letter in ("digits", "0-9"):
@@ -348,7 +336,6 @@ class ArtistsByLetterScreen(BaseScreen):
         self._hide_loading()
         self._hide_empty()
 
-        # Обновляем TopNav с реальным количеством
         self._update_top_nav()
 
         if not artists:
@@ -410,7 +397,6 @@ class ArtistsByLetterScreen(BaseScreen):
     def go_back(self, instance=None):
         """Возврат на экран песен (songs)"""
         logger.info("🔙 go_back: возврат на songs")
-        # Очищаем кастомный заголовок
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.clear_custom_title_widget()
@@ -421,7 +407,6 @@ class ArtistsByLetterScreen(BaseScreen):
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из экрана исполнителей")
-        # Не очищаем заголовок при выходе, если переходим на artist_songs
         if self.manager and self.manager.current not in ['artist_songs', 'song_detail']:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):

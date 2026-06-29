@@ -458,7 +458,7 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
         self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
-        self.ripple_behavior = True
+        self.ripple_behavior = False  # Отключаем для производительности
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.06]
         self.line_color = [1, 1, 1, 0.05]
@@ -531,6 +531,7 @@ class TermRecycleView(RecycleView):
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
+        self.clip = True
 
         self.layout_manager = RecycleBoxLayout(
             default_size=(None, dp(60)),
@@ -543,7 +544,6 @@ class TermRecycleView(RecycleView):
         self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
         self.viewclass = 'SearchTermCard'
         self.add_widget(self.layout_manager)
-        self.clip = True
 
     def set_terms(self, terms, on_click):
         data = []
@@ -576,6 +576,7 @@ class DictionaryScreen(BaseScreen):
         self.current_letter: str = None
         self.is_search_mode: bool = False
         self.search_results: list = []
+        self._last_query: str = ""
 
         # UI элементы
         self.search_bar = None
@@ -588,6 +589,7 @@ class DictionaryScreen(BaseScreen):
         self.keyboard_container = None
         self._keyboard_height = 0
         self.cards_container = None
+        self.no_results_label = None
 
         self.init_ui()
         self.load_background()
@@ -702,23 +704,18 @@ class DictionaryScreen(BaseScreen):
         return None
 
     def init_ui(self):
-        """Инициализирует UI с правильными отступами и схлопыванием клавиатуры"""
-
-        # Основной контейнер
+        """Инициализирует UI с правильными отступами"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
         self._main_layout = main_layout
 
         # Верхний отступ
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
-
-        # Дополнительный отступ
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
-        # Получаем боковые отступы
         content_padding = layout_config.get_content_padding()
 
-        # ============ КОНТЕЙНЕР ДЛЯ ВЕРХНЕЙ ЧАСТИ (поиск + клавиатура) ============
+        # ============ ВЕРХНЯЯ ЧАСТЬ (поиск + клавиатура) ============
         self.top_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -726,17 +723,14 @@ class DictionaryScreen(BaseScreen):
             padding=[content_padding[0], 0, content_padding[2], 0]
         )
 
-        # Поисковая строка
         self.search_bar = GoogleSearchBar(
             on_search=self.do_search,
             on_clear=self._on_clear_search
         )
         self.top_container.add_widget(self.search_bar)
-
-        # Отступ после поиска
         self.top_container.add_widget(Widget(size_hint_y=None, height=dp(16)))
 
-        # ============ КЛАВИАТУРА (выбор языка + сетка букв) ============
+        # ============ КЛАВИАТУРА ============
         self.keyboard_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -744,17 +738,14 @@ class DictionaryScreen(BaseScreen):
             spacing=dp(8)
         )
 
-        # Выбор языка (с центрированием через FloatLayout)
         self.language_selector = LanguageSelector(
             on_language_change=self.on_language_changed
         )
         self.keyboard_container.add_widget(self.language_selector)
 
-        # Сетка букв
         self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
         self.keyboard_container.add_widget(self.alphabet_grid)
 
-        # Подсказка
         self.hint_label = MDLabel(
             text="Нажмите на букву для просмотра терминов",
             halign="center",
@@ -767,20 +758,35 @@ class DictionaryScreen(BaseScreen):
         self.keyboard_container.add_widget(self.hint_label)
 
         self.top_container.add_widget(self.keyboard_container)
-
         main_layout.add_widget(self.top_container)
 
         # ============ КОНТЕЙНЕР ДЛЯ РЕЗУЛЬТАТОВ ============
-        nav_bar_height = get_navigation_bar_height()
-        bottom_nav_height = dp(60)
-        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+        bottom_padding = layout_config.get_bottom_padding()
 
         self.cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[content_padding[0], dp(4), content_padding[2], total_bottom]
+            padding=[content_padding[0], dp(4), content_padding[2], bottom_padding]
         )
         self.cards_container.clip = True
+
+        # Контейнер для сообщения "ничего не найдено"
+        self.no_results_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[dp(16), dp(16), dp(16), dp(16)]
+        )
+        self.no_results_label = MDLabel(
+            text="",
+            halign="center",
+            font_size=sp(16),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4],
+            size_hint_y=None,
+            height=dp(60),
+            opacity=0
+        )
+        self.no_results_container.add_widget(self.no_results_label)
 
         self.search_recycle_view = TermRecycleView(on_term_click=self.on_term_selected)
         self.search_recycle_view.bar_width = 0
@@ -793,34 +799,41 @@ class DictionaryScreen(BaseScreen):
 
         self.add_widget(main_layout)
 
-        # Сохраняем высоту клавиатуры для анимации
         Clock.schedule_once(self._save_keyboard_height, 0.5)
 
-        logger.info(f"UI словаря построен, side_padding={content_padding[0]}dp")
+        logger.info(f"UI словаря построен, bottom_padding={bottom_padding}dp")
 
     def _save_keyboard_height(self, dt):
-        """Сохраняет высоту клавиатуры для последующего использования"""
         if self.keyboard_container:
             self._keyboard_height = self.keyboard_container.height
             logger.info(f"📏 Высота клавиатуры: {self._keyboard_height}dp")
 
     def _show_keyboard(self):
-        """Показывает клавиатуру (выбор языка + сетка букв)"""
         if self.keyboard_container:
             self.keyboard_container.opacity = 1
             self.keyboard_container.disabled = False
             self.keyboard_container.height = self._keyboard_height
 
     def _hide_keyboard(self):
-        """Скрывает клавиатуру (выбор языка + сетка букв) - схлопывает контейнер"""
         if self.keyboard_container:
             self.keyboard_container.opacity = 0
             self.keyboard_container.disabled = True
             self.keyboard_container.height = 0
 
+    def _show_no_results(self, query):
+        """Показывает сообщение 'По вашему запросу ничего не найдено'"""
+        self.no_results_label.text = f'По вашему запросу "{query}"\nничего не найдено'
+        self.no_results_label.opacity = 1
+        self.search_recycle_view.clear()
+
+    def _hide_no_results(self):
+        self.no_results_label.opacity = 0
+        self.no_results_label.text = ""
+
     def _show_search_results(self):
         """Показывает результаты поиска в RecycleView"""
         self.hint_label.opacity = 0
+        self._hide_no_results()
 
         if not self.search_results:
             self.search_recycle_view.clear()
@@ -829,16 +842,14 @@ class DictionaryScreen(BaseScreen):
         self.search_recycle_view.set_terms(self.search_results, self.on_term_selected)
 
     def _clear_search_results(self):
-        """Очищает результаты поиска"""
         self.search_recycle_view.clear()
+        self._hide_no_results()
         self.hint_label.text = "Нажмите на букву для просмотра терминов"
         self.hint_label.opacity = 1
 
     def _on_clear_search(self):
-        """Обработчик нажатия на крестик в поиске"""
         logger.info("🧹 Очистка поиска (крестик)")
         self.clear_search()
-        # Показываем клавиатуру обратно
         self._show_keyboard()
 
     # ============ ОБРАБОТЧИКИ ============
@@ -850,7 +861,6 @@ class DictionaryScreen(BaseScreen):
         self.current_letter = None
         self.clear_search()
         self._clear_search_results()
-        # Показываем клавиатуру после смены языка
         self._show_keyboard()
 
     def on_letter_press(self, letter):
@@ -870,6 +880,7 @@ class DictionaryScreen(BaseScreen):
         """Выполняет поиск терминов с приоритетами"""
         logger.info(f"🔍 Поиск: {query}")
         query_lower = query.strip().lower()
+        self._last_query = query
 
         if len(query_lower) < 2:
             notify.warning("Введите минимум 2 символа для поиска")
@@ -879,17 +890,16 @@ class DictionaryScreen(BaseScreen):
         self.current_letter = None
         self.alphabet_grid.clear_selection()
 
-        # Скрываем клавиатуру при поиске
         self._hide_keyboard()
 
         # Разбиваем запрос на слова
         query_words = query_lower.split()
 
         # Результаты с приоритетами
-        exact_matches = []  # Точное совпадение
-        prefix_matches = []  # Начинается с запроса
-        contains_matches = []  # Содержит запрос
-        word_matches = []  # Содержит любое слово из запроса
+        exact_matches = []
+        prefix_matches = []
+        contains_matches = []
+        word_matches = []
 
         for term_name, term_data in self.all_terms.items():
             term_lower = term_name.lower()
@@ -900,7 +910,7 @@ class DictionaryScreen(BaseScreen):
                     exact_matches.append(term_name)
                 continue
 
-            # 2. Начинается с запроса (второй приоритет)
+            # 2. Начинается с запроса
             if term_lower.startswith(query_lower):
                 if term_name not in prefix_matches:
                     prefix_matches.append(term_name)
@@ -921,41 +931,33 @@ class DictionaryScreen(BaseScreen):
 
         # Объединяем результаты с приоритетами
         results = []
-
-        # Сначала точные совпадения
         for r in exact_matches:
             if r not in results:
                 results.append(r)
-
-        # Потом начинающиеся с запроса
         for r in prefix_matches:
             if r not in results:
                 results.append(r)
-
-        # Потом содержащие запрос
         for r in contains_matches:
             if r not in results:
                 results.append(r)
-
-        # Потом содержащие любое слово
         for r in word_matches:
             if r not in results:
                 results.append(r)
 
         self.search_results = results
 
-        self._show_search_results()
-
         if not self.search_results:
-            notify.info("Ничего не найдено")
-            # Если ничего не найдено, показываем клавиатуру обратно
-            self._show_keyboard()
+            self._show_no_results(query)
+            self.hint_label.opacity = 0
+        else:
+            self._show_search_results()
 
     def clear_search(self):
         self.is_search_mode = False
         self.search_results = []
         self.search_bar.clear()
         self._clear_search_results()
+        self._hide_no_results()
 
     def on_term_selected(self, term_name):
         logger.info(f"Выбран термин: {term_name}")
@@ -974,8 +976,10 @@ class DictionaryScreen(BaseScreen):
     def on_enter(self):
         logger.info("Вход в словарь")
         self._update_top_nav("Словарь")
-        # Показываем клавиатуру при входе
         self._show_keyboard()
+        # Если был поиск и ничего не найдено - показываем сообщение
+        if self.is_search_mode and not self.search_results and self._last_query:
+            self._show_no_results(self._last_query)
 
     def _update_top_nav(self, title):
         try:

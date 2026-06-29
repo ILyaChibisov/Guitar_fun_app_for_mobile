@@ -157,11 +157,12 @@ class ResultCard(MDCard):
         self.spacing = dp(10)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
-        self.ripple_behavior = True
+        self.ripple_behavior = False  # Отключаем для производительности
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.08]
         self.line_color = [1, 1, 1, 0.08]
         self.line_width = 0.5
+        self.clip = True
 
         self._build_ui()
 
@@ -315,9 +316,7 @@ class SearchScreen(BaseScreen):
         logger.info("📚 Установлен dictionary_screen")
 
     def init_ui(self):
-        """Инициализирует UI с правильным расположением элементов"""
-
-        # Основной вертикальный контейнер
+        """Инициализирует UI с правильными отступами"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
         # Верхний отступ (под статус-бар и TopNav)
@@ -355,15 +354,14 @@ class SearchScreen(BaseScreen):
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         # Контейнер для результатов с правильными отступами снизу
-        nav_bar_height = get_navigation_bar_height()
-        bottom_nav_height = dp(60)
-        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+        bottom_padding = layout_config.get_bottom_padding()
 
         cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(8), dp(12), total_bottom]
+            padding=[dp(12), dp(8), dp(12), bottom_padding]
         )
+        cards_container.clip = True
 
         # ScrollView для результатов (скрываем скроллбар)
         scroll = ScrollView(
@@ -373,6 +371,7 @@ class SearchScreen(BaseScreen):
             bar_color=[0, 0, 0, 0],
             bar_inactive_color=[0, 0, 0, 0]
         )
+        scroll.clip = True
 
         self.results_list = MDBoxLayout(
             orientation='vertical',
@@ -388,14 +387,13 @@ class SearchScreen(BaseScreen):
 
         self.add_widget(main_layout)
 
-        logger.info("✅ UI поиска построен")
+        logger.info(f"✅ UI поиска построен, bottom_padding={bottom_padding}dp")
 
     def on_enter(self):
         logger.info("🚪 on_enter вызван")
         self.clear_search()
         self.search_bar.focus()
 
-        # Получаем экран словаря если ещё нет
         if not self.dictionary_screen:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'screen_manager'):
@@ -443,7 +441,6 @@ class SearchScreen(BaseScreen):
         self.title_label.opacity = 0
         self.results_list.clear_widgets()
 
-        # Показываем индикатор загрузки
         loading_label = MDLabel(
             text="Поиск...",
             halign="center",
@@ -472,28 +469,18 @@ class SearchScreen(BaseScreen):
             Clock.schedule_once(lambda dt: self._search_error(str(e)), 0)
 
     def _search_chords(self, query):
-        """Поиск аккордов - точное совпадение и по альтернативным названиям (как в chords_screen)"""
+        """Поиск аккордов - точное совпадение и по альтернативным названиям"""
         if not self.chords_screen or not hasattr(self.chords_screen, 'all_chords'):
             return []
 
         results = []
         query_lower = query.lower().strip()
-
-        # Разбиваем запрос на слова для поиска по альтернативным названиям
         query_words = query_lower.split()
 
-        # Карта соответствий для b и # (альтернативные названия)
         alt_map = {
-            'bb': 'a#',
-            'a#': 'bb',
-            'db': 'c#',
-            'c#': 'db',
-            'eb': 'd#',
-            'd#': 'eb',
-            'gb': 'f#',
-            'f#': 'gb',
-            'ab': 'g#',
-            'g#': 'ab'
+            'bb': 'a#', 'a#': 'bb', 'db': 'c#', 'c#': 'db',
+            'eb': 'd#', 'd#': 'eb', 'gb': 'f#', 'f#': 'gb',
+            'ab': 'g#', 'g#': 'ab'
         }
         alt_query = alt_map.get(query_lower, None)
 
@@ -501,31 +488,24 @@ class SearchScreen(BaseScreen):
             short_name_lower = chord['short_name'].lower()
             full_name_lower = chord['name'].lower()
 
-            # 1. ТОЧНОЕ совпадение с short_name (например "Am" не найдёт "Am7")
             if short_name_lower == query_lower:
                 if chord not in results:
                     results.append(chord)
                 continue
 
-            # 2. Альтернативное совпадение (A# и Bb)
             if alt_query and short_name_lower == alt_query:
                 if chord not in results:
                     results.append(chord)
                 continue
 
-            # 3. Поиск по альтернативным названиям в поле name (разделённым |)
-            # Например "до мажор" найдёт "C|C major"
             name_parts = full_name_lower.split('|')
             for part in name_parts:
                 part_clean = part.strip().replace('$', '/')
-
-                # Точное совпадение с частью названия
                 if part_clean == query_lower:
                     if chord not in results:
                         results.append(chord)
                     break
 
-                # Проверяем, содержит ли часть названия все слова из запроса
                 if len(query_words) > 1:
                     all_words_found = True
                     for word in query_words:
@@ -537,7 +517,6 @@ class SearchScreen(BaseScreen):
                             results.append(chord)
                         break
 
-        # Убираем дубликаты по short_name
         unique = []
         seen = set()
         for chord in results:
@@ -549,7 +528,7 @@ class SearchScreen(BaseScreen):
         return unique[:15]
 
     def _search_songs(self, query):
-        """Поиск песен через API - без изменений"""
+        """Поиск песен через API"""
         if len(query) < 2:
             return []
         try:
@@ -584,19 +563,16 @@ class SearchScreen(BaseScreen):
             term_lower = term_name.lower()
             description = term_data.get('description', '').lower()
 
-            # 1. Точное совпадение
             if term_lower == query_lower:
                 if term_name not in results:
                     results.append(term_name)
                 continue
 
-            # 2. Начинается с запроса
             if term_lower.startswith(query_lower):
                 if term_name not in results:
                     results.append(term_name)
                 continue
 
-            # 3. Содержит запрос в названии
             if query_lower in term_lower:
                 if term_name not in results:
                     results.append(term_name)
@@ -610,8 +586,7 @@ class SearchScreen(BaseScreen):
         return match.group(1) if match else (chord_name[0] if chord_name else "")
 
     def _show_results(self, query, chord_results, song_results, term_results):
-        logger.info(
-            f"📊 _show_results: chords={len(chord_results)}, songs={len(song_results)}, terms={len(term_results)}")
+        logger.info(f"📊 _show_results: chords={len(chord_results)}, songs={len(song_results)}, terms={len(term_results)}")
 
         self.results_list.clear_widgets()
         self._is_searching = False
@@ -629,7 +604,6 @@ class SearchScreen(BaseScreen):
             self.results_list.add_widget(no_results)
             return
 
-        # ============ АККОРДЫ (как было) ============
         if chord_results:
             chords_header = MDLabel(
                 text="Найденные аккорды",
@@ -654,7 +628,6 @@ class SearchScreen(BaseScreen):
                 )
                 self.results_list.add_widget(card)
 
-        # ============ ПЕСНИ (как было) ============
         if song_results:
             songs_header = MDLabel(
                 text="Найденные песни",
@@ -678,7 +651,6 @@ class SearchScreen(BaseScreen):
                 )
                 self.results_list.add_widget(card)
 
-        # ============ ТЕРМИНЫ (добавлены в конец) ============
         if term_results:
             terms_header = MDLabel(
                 text="Найденные термины",

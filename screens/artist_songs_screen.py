@@ -63,7 +63,7 @@ def init_shared_song_icon():
 
 
 class RecycleSongCard(RecycleDataViewBehavior, MDCard):
-    """Переиспользуемая карточка песни"""
+    """Переиспользуемая карточка песни - оптимизированная"""
 
     title = StringProperty('')
     tabs_count = NumericProperty(0)
@@ -79,11 +79,12 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
         self.spacing = dp(10)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
-        self.ripple_behavior = True
+        self.ripple_behavior = False  # Отключаем для производительности
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.06]
         self.line_color = [1, 1, 1, 0.05]
         self.line_width = 0.5
+        self.clip = True  # Обрезка по границам
         self._build_ui()
 
     def _build_ui(self):
@@ -171,7 +172,7 @@ class RecycleSongCard(RecycleDataViewBehavior, MDCard):
 
 
 class SongRecycleView(RecycleView):
-    """Виртуализированный список песен"""
+    """Виртуализированный список песен - оптимизированный"""
 
     def __init__(self, on_song_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -180,6 +181,7 @@ class SongRecycleView(RecycleView):
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
+        self.clip = True  # Обрезка по границам
 
         self.layout_manager = RecycleBoxLayout(
             default_size=(None, dp(56)),
@@ -321,7 +323,6 @@ class ArtistSongsScreen(BaseScreen):
         """Обновляет TopNav с двухстрочным заголовком"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Используем переданные значения или текущие
             artist_name = artist if artist is not None else self.current_artist
             total_count = total if total is not None else self._total_songs
 
@@ -343,20 +344,16 @@ class ArtistSongsScreen(BaseScreen):
                 self._update_top_nav(self.current_artist, total)
                 logger.info(f"   ✅ Принудительно восстановлен заголовок: {self.current_artist} ({total} песен)")
             else:
-                # Если данных нет - показываем заглушку
                 self._update_top_nav(self.current_artist, 0)
                 logger.info(f"   ⏳ Заглушка для {self.current_artist}")
 
     def init_ui(self):
-        """Инициализирует UI с уменьшенным верхним отступом"""
-
-        # Основной контейнер
+        """Инициализирует UI с правильными отступами"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
         self._main_layout = main_layout
 
-        # ============ ВЕРХНИЙ ОТСТУП (УМЕНЬШЕННЫЙ) ============
+        # ============ ВЕРХНИЙ ОТСТУП ============
         top_padding = layout_config.get_top_padding()
-        # Уменьшаем отступ на 8dp, чтобы карточки были ближе к TopNav
         top_padding = top_padding - dp(8)
         if top_padding < dp(20):
             top_padding = dp(20)
@@ -364,41 +361,32 @@ class ArtistSongsScreen(BaseScreen):
         self._top_spacer = Widget(size_hint_y=None, height=top_padding)
         main_layout.add_widget(self._top_spacer)
 
-        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
-        nav_bar_height = get_navigation_bar_height()
-        bottom_nav_height = dp(60)
-        total_bottom = bottom_nav_height + nav_bar_height + dp(12)
+        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК (используем layout_config) ============
+        bottom_padding = layout_config.get_bottom_padding()
 
         cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(4), dp(12), total_bottom]
+            padding=[dp(12), dp(4), dp(12), bottom_padding]
         )
 
-        # RecycleView для песен
         self.recycle_view = SongRecycleView(on_song_click=self.on_song_selected)
-        self.recycle_view.bar_width = 0
-        self.recycle_view.bar_color = [0, 0, 0, 0]
-        self.recycle_view.bar_inactive_color = [0, 0, 0, 0]
 
         cards_container.add_widget(self.recycle_view)
         main_layout.add_widget(cards_container)
 
         self.add_widget(main_layout)
-        logger.info("UI построен")
+        logger.info(f"UI построен, bottom_padding={bottom_padding}dp")
 
     def on_enter(self):
         """Вызывается когда экран становится видимым"""
         logger.info(f"on_enter: current_artist={self.current_artist}, pending={self._pending_artist}")
 
-        # ============ ПРИНУДИТЕЛЬНО ВОССТАНАВЛИВАЕМ ЗАГОЛОВОК ============
         if self.current_artist:
             self._restore_top_nav()
-
-        # Дополнительные задержки для гарантии
-        Clock.schedule_once(self._restore_top_nav, 0.1)
-        Clock.schedule_once(self._restore_top_nav, 0.3)
-        Clock.schedule_once(self._restore_top_nav, 0.5)
+            Clock.schedule_once(self._restore_top_nav, 0.1)
+            Clock.schedule_once(self._restore_top_nav, 0.3)
+            Clock.schedule_once(self._restore_top_nav, 0.5)
 
         if self._pending_artist:
             artist = self._pending_artist
@@ -413,7 +401,6 @@ class ArtistSongsScreen(BaseScreen):
         self._total_songs = 0
         self._title_restored = False
 
-        # Показываем заглушку
         self._update_top_nav(artist, 0)
 
         if not self.manager or self.manager.current != self.name:
@@ -426,7 +413,6 @@ class ArtistSongsScreen(BaseScreen):
     def go_back(self, instance=None):
         """Возврат на экран списка исполнителей (по буквам)"""
         logger.info("🔙 go_back: возврат на artists_by_letter")
-        # Очищаем кастомный заголовок
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.clear_custom_title_widget()
@@ -445,8 +431,6 @@ class ArtistSongsScreen(BaseScreen):
 
         self._hide_loading()
         self._hide_empty()
-
-        # Всегда идем на сервер — кэш убран
         self._show_loading()
 
         api.get_songs_by_artist(
@@ -509,7 +493,6 @@ class ArtistSongsScreen(BaseScreen):
         self._total_songs = total
         self._is_loading = False
 
-        # Обновляем TopNav с реальным количеством
         self._update_top_nav(self.current_artist, total)
 
         self._hide_loading()
@@ -521,22 +504,11 @@ class ArtistSongsScreen(BaseScreen):
                 self.recycle_view.clear()
             return
 
-        data = []
-        for song in songs:
-            if isinstance(song, dict):
-                data.append({
-                    'song_id': song.get('song_id', 0),
-                    'title': song.get('title', ''),
-                    'tabs_count': song.get('tabs_count', 1),
-                    'on_click': self.on_song_selected
-                })
-
         if self.recycle_view:
-            self.recycle_view.data = data
-            self.recycle_view.refresh_from_data()
+            self.recycle_view.set_songs(songs, self.on_song_selected)
             logger.info(f"RecycleView обновлён, данных: {len(self.recycle_view.data)}")
 
-        logger.info(f"Отображено {len(data)} песен для {self.current_artist}")
+        logger.info(f"Отображено {len(songs)} песен для {self.current_artist}")
 
     def _on_songs_loaded(self, data):
         logger.info(f"_on_songs_loaded для {self.current_artist}")
@@ -565,7 +537,6 @@ class ArtistSongsScreen(BaseScreen):
             notify.error("Ошибка: не удалось загрузить песню")
             return
 
-        # Сохраняем текущий экран как предыдущий для возврата
         screen_state.set_previous_screen('artist_songs')
 
         if hasattr(self, 'manager') and self.manager:
@@ -579,7 +550,6 @@ class ArtistSongsScreen(BaseScreen):
         """При выходе с экрана"""
         logger.info("Выход из экрана песен исполнителя")
         self._is_loading = False
-        # Не очищаем заголовок при выходе, если переходим на song_detail
         if self.manager and self.manager.current != 'song_detail':
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):

@@ -74,12 +74,12 @@ class RecycleTermCard(RecycleDataViewBehavior, MDCard):
         self.spacing = dp(12)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
-        self.ripple_behavior = True
+        self.ripple_behavior = False  # Отключаем для производительности
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.06]
         self.line_color = [1, 1, 1, 0.05]
         self.line_width = 0.5
-        self.clip = True  # ← обрезаем содержимое карточки
+        self.clip = True
         self._build_ui()
 
     def _build_ui(self):
@@ -147,7 +147,7 @@ class TermRecycleView(RecycleView):
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
-        self.clip = True  # ← обрезаем содержимое RecycleView
+        self.clip = True
 
         self.layout_manager = RecycleBoxLayout(
             default_size=(None, dp(56)),
@@ -232,16 +232,14 @@ class TermsByLetterScreen(BaseScreen):
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
         # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
-        nav_bar_height = get_navigation_bar_height()
-        bottom_nav_height = dp(60)
-        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+        bottom_padding = layout_config.get_bottom_padding()
 
         cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(4), dp(12), total_bottom]
+            padding=[dp(12), dp(4), dp(12), bottom_padding]
         )
-        cards_container.clip = True  # ← обрезаем содержимое контейнера
+        cards_container.clip = True
 
         self.recycle_view = TermRecycleView(on_term_click=self.on_term_selected)
         self.recycle_view.bar_width = 0
@@ -252,6 +250,7 @@ class TermsByLetterScreen(BaseScreen):
         main_layout.add_widget(cards_container)
 
         self.add_widget(main_layout)
+        logger.info(f"UI терминов по букве построен, bottom_padding={bottom_padding}dp")
 
     def on_enter(self):
         """При входе на экран"""
@@ -259,7 +258,6 @@ class TermsByLetterScreen(BaseScreen):
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Создаём двухстрочный заголовок как в SongDetail
             title_container = self._create_top_nav_title()
             app.top_nav.set_custom_title_widget(title_container)
             app.top_nav._show_back_button()
@@ -285,7 +283,6 @@ class TermsByLetterScreen(BaseScreen):
             padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
-        # Буква - большая, жирная
         letter_display = self.current_letter.upper() if self.current_letter else ""
         letter_label = MDLabel(
             text=letter_display,
@@ -299,7 +296,6 @@ class TermsByLetterScreen(BaseScreen):
             shorten_from="right"
         )
 
-        # Количество терминов - маленький шрифт
         count_text = self._get_count_text(len(self.terms))
         count_label = MDLabel(
             text=count_text,
@@ -372,7 +368,6 @@ class TermsByLetterScreen(BaseScreen):
             self.terms = []
             self._display_terms([])
 
-        # Обновляем TopNav с новыми данными
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             title_container = self._create_top_nav_title()

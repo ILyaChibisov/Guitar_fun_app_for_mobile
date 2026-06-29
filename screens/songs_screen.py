@@ -10,7 +10,6 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp, sp
-from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.image import Image
@@ -471,6 +470,7 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
         self.md_bg_color = [0, 0, 0, 0.06]
         self.line_color = [1, 1, 1, 0.05]
         self.line_width = 0.5
+        self.clip = True
         self._build_ui()
 
     def _build_ui(self):
@@ -535,8 +535,9 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
         self.add_widget(arrow)
 
     def refresh_view_attrs(self, rv, index, data):
-        self.title = data.get('title', '')
+        """Обновляет атрибуты"""
         self.artist = data.get('artist', '')
+        self.title = data.get('title', '')
         self.song_id = data.get('song_id', 0)
         self.on_click = data.get('on_click')
         self.artist_label.text = self.artist
@@ -561,6 +562,7 @@ class SongRecycleView(RecycleView):
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
+        self.clip = True
 
         self.layout_manager = RecycleBoxLayout(
             default_size=(None, dp(56)),
@@ -575,6 +577,7 @@ class SongRecycleView(RecycleView):
         self.add_widget(self.layout_manager)
 
     def set_songs(self, songs, on_click):
+        """Устанавливает песни"""
         data = []
         for song in songs:
             data.append({
@@ -684,20 +687,15 @@ class SongsScreen(BaseScreen):
         main_layout.add_widget(self.top_container)
 
         # ============ КОНТЕЙНЕР ДЛЯ РЕЗУЛЬТАТОВ ============
-        nav_bar_height = get_navigation_bar_height()
-        bottom_nav_height = dp(60)
-        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
+        bottom_padding = layout_config.get_bottom_padding()
 
         self.cards_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[content_padding[0], dp(4), content_padding[2], total_bottom]
+            padding=[content_padding[0], dp(4), content_padding[2], bottom_padding]
         )
 
         self.search_recycle_view = SongRecycleView(on_song_click=self.on_song_selected)
-        self.search_recycle_view.bar_width = 0
-        self.search_recycle_view.bar_color = [0, 0, 0, 0]
-        self.search_recycle_view.bar_inactive_color = [0, 0, 0, 0]
 
         self.cards_container.add_widget(self.search_recycle_view)
         main_layout.add_widget(self.cards_container)
@@ -708,6 +706,7 @@ class SongsScreen(BaseScreen):
         Clock.schedule_once(self._save_keyboard_height, 0.5)
 
         logger.info(f"SongsScreen: top_padding = {top_padding}dp, side_padding = {content_padding[0]}dp")
+        logger.info(f"SongsScreen: bottom_padding = {bottom_padding}dp")
 
     def _save_keyboard_height(self, dt):
         """Сохраняет высоту клавиатуры для последующего использования"""
