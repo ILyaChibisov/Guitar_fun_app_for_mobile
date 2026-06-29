@@ -4,6 +4,7 @@
 ТОН | ТИП | АККОРД | ВАРИАНТЫ | ПАЛЬЦЫ/НОТЫ
 С меню выбора тональности, типа и аккорда
 СТАТИЧНЫЙ ЭКРАН - БЕЗ ПРОКРУТКИ
+С КЭШИРОВАНИЕМ МЕНЮ ДЛЯ БЫСТРОЙ РАБОТЫ НА ANDROID
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -202,7 +203,6 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.is_active = is_active
         self.fixed_color = fixed_color
 
-        # Цвет иконки (если не указан - используем стандартный)
         if icon_color is None:
             self.icon_color = [1, 1, 1, 0.7]
         else:
@@ -214,7 +214,6 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.spacing = dp(0)
         self.md_bg_color = [0, 0, 0, 0]
 
-        # Только иконка, без подписи
         self.icon_btn = MDIconButton(
             icon=icon_name,
             size_hint=(None, None),
@@ -251,11 +250,9 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
             return
 
         if self.is_active:
-            # Активный цвет (яркий)
             self.icon_btn.icon_color = [0.46, 0.70, 0.71, 1]
             self.icon_btn.opacity = 1
         else:
-            # Неактивный цвет (полупрозрачный)
             self.icon_btn.icon_color = [1, 1, 1, 0.3]
             self.icon_btn.opacity = 0.6
 
@@ -268,18 +265,14 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.icon_btn.icon_color = color
 
 
-class ChordSelectorMenu(MDCard):
-    """
-    Временное меню выбора аккорда с горизонтальным скроллом
-    Аккорды можно листать пальцем и нажимать для выбора
-    """
+class BaseSelectorMenu(MDCard):
+    """Базовый класс для всех меню-селекторов с кэшированием"""
 
-    def __init__(self, available_chords, current_chord, on_confirm, on_cancel, **kwargs):
+    def __init__(self, on_confirm, on_cancel, **kwargs):
         super().__init__(**kwargs)
-        self.available_chords = available_chords
-        self.current_chord = current_chord
         self.on_confirm = on_confirm
         self.on_cancel = on_cancel
+        self.is_visible = False
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
@@ -292,10 +285,16 @@ class ChordSelectorMenu(MDCard):
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
         self.spacing = dp(0)
 
+        self.scroll = None
+        self.container = None
+        self.buttons = []
+        self.current_selection = None
+
         self._build_ui()
 
     def _build_ui(self):
-        scroll = ScrollView(
+        """Создаёт UI меню"""
+        self.scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=True,
             do_scroll_y=False,
@@ -305,33 +304,22 @@ class ChordSelectorMenu(MDCard):
             bar_margin=0
         )
 
-        self.chords_container = MDBoxLayout(
+        self.container = MDBoxLayout(
             orientation='horizontal',
             size_hint_x=None,
             spacing=dp(8),
             padding=[dp(8), dp(8), dp(8), dp(8)]
         )
-        self.chords_container.bind(minimum_width=self.chords_container.setter('width'))
+        self.container.bind(minimum_width=self.container.setter('width'))
 
-        self.chord_btns = []
-        for chord in self.available_chords:
-            btn = MDRaisedButton(
-                text=chord,
-                size_hint=(None, 1),
-                width=self._get_button_width(chord),
-                md_bg_color=[0, 0, 0, 0],
-                text_color=[1, 1, 1, 0.7],
-                font_size=sp(14),
-                elevation=0,
-                on_release=lambda x, c=chord: self._on_chord_press(c)
-            )
-            self.chord_btns.append(btn)
-            self.chords_container.add_widget(btn)
+        self._populate_items()
 
-        self._highlight_current()
+        self.scroll.add_widget(self.container)
+        self.add_widget(self.scroll)
 
-        scroll.add_widget(self.chords_container)
-        self.add_widget(scroll)
+    def _populate_items(self):
+        """Переопределяется в дочерних классах"""
+        pass
 
     def _get_button_width(self, text):
         base_width = dp(30)
@@ -345,157 +333,44 @@ class ChordSelectorMenu(MDCard):
         return width
 
     def _highlight_current(self):
-        for btn in self.chord_btns:
-            if btn.text == self.current_chord:
-                btn.md_bg_color = [1.0, 0.7, 0.0, 1]
-                btn.text_color = [1, 1, 1, 1]
-            else:
-                btn.md_bg_color = [0, 0, 0, 0]
-                btn.text_color = [1, 1, 1, 0.7]
-
-    def _on_chord_press(self, chord):
-        self.current_chord = chord
-        self._highlight_current()
-        if self.on_confirm:
-            self.on_confirm(chord)
-
-
-class TypeSelectorMenu(MDCard):
-    """
-    Временное меню выбора типа аккорда с горизонтальным скроллом
-    Типы можно листать пальцем и нажимать для выбора
-    """
-
-    def __init__(self, current_type, on_confirm, on_cancel, **kwargs):
-        super().__init__(**kwargs)
-        self.current_type = current_type
-        self.on_confirm = on_confirm
-        self.on_cancel = on_cancel
-
-        self.orientation = 'horizontal'
-        self.size_hint = (1, None)
-        self.height = dp(60)
-        self.radius = [dp(16), dp(16), dp(16), dp(16)]
-        self.md_bg_color = [0, 0, 0, 0.08]
-        self.elevation = 0
-        self.line_color = [1, 1, 1, 0.15]
-        self.line_width = 0.8
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
-        self.spacing = dp(0)
-
-        self._build_ui()
-
-    def _build_ui(self):
-        scroll = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=True,
-            do_scroll_y=False,
-            bar_width=0,
-            bar_color=[0, 0, 0, 0],
-            bar_inactive_color=[0, 0, 0, 0],
-            bar_margin=0
-        )
-
-        self.types_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_x=None,
-            spacing=dp(8),
-            padding=[dp(8), dp(8), dp(8), dp(8)]
-        )
-        self.types_container.bind(minimum_width=self.types_container.setter('width'))
-
-        self.type_btns = []
-        for chord_type in CHORD_TYPES:
-            btn = MDRaisedButton(
-                text=chord_type,
-                size_hint=(None, 1),
-                width=self._get_button_width(chord_type),
-                md_bg_color=[0, 0, 0, 0],
-                text_color=[1, 1, 1, 0.7],
-                font_size=sp(13),
-                elevation=0,
-                on_release=lambda x, t=chord_type: self._on_type_press(t)
-            )
-            self.type_btns.append(btn)
-            self.types_container.add_widget(btn)
-
-        self._highlight_current()
-
-        scroll.add_widget(self.types_container)
-        self.add_widget(scroll)
-
-    def _get_button_width(self, text):
-        base_width = dp(40)
-        char_width = dp(8)
-        padding = dp(16)
-        min_width = dp(44)
-        max_width = dp(100)
-
-        width = base_width + len(text) * char_width + padding
-        width = max(min_width, min(width, max_width))
-        return width
-
-    def _highlight_current(self):
-        for btn in self.type_btns:
-            if btn.text == self.current_type:
+        for btn in self.buttons:
+            is_selected = (btn.text == self.current_selection)
+            if is_selected:
                 btn.md_bg_color = [0.0, 0.74, 0.83, 1]
                 btn.text_color = [1, 1, 1, 1]
             else:
                 btn.md_bg_color = [0, 0, 0, 0]
                 btn.text_color = [1, 1, 1, 0.7]
 
-    def _on_type_press(self, chord_type):
-        self.current_type = chord_type
+    def _on_item_press(self, value):
+        self.current_selection = value
         self._highlight_current()
         if self.on_confirm:
-            self.on_confirm(chord_type)
+            self.on_confirm(value)
+
+    def show(self):
+        """Показывает меню"""
+        self.is_visible = True
+        self.opacity = 1
+        self.disabled = False
+        self._highlight_current()
+
+    def hide(self):
+        """Скрывает меню"""
+        self.is_visible = False
+        self.opacity = 0
+        self.disabled = True
 
 
-class TonalitySelectorMenu(MDCard):
-    """
-    Временное меню выбора тональности с горизонтальным скроллом
-    Тона можно листать пальцем и нажимать для выбора
-    """
+class TonalitySelectorMenu(BaseSelectorMenu):
+    """Меню выбора тональности - кэшируется"""
 
     def __init__(self, current_tonality, on_confirm, on_cancel, **kwargs):
-        super().__init__(**kwargs)
         self.current_tonality = current_tonality
-        self.on_confirm = on_confirm
-        self.on_cancel = on_cancel
+        super().__init__(on_confirm, on_cancel, **kwargs)
 
-        self.orientation = 'horizontal'
-        self.size_hint = (1, None)
-        self.height = dp(60)
-        self.radius = [dp(16), dp(16), dp(16), dp(16)]
-        self.md_bg_color = [0, 0, 0, 0.08]
-        self.elevation = 0
-        self.line_color = [1, 1, 1, 0.15]
-        self.line_width = 0.8
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
-        self.spacing = dp(0)
-
-        self._build_ui()
-
-    def _build_ui(self):
-        scroll = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=True,
-            do_scroll_y=False,
-            bar_width=0,
-            bar_color=[0, 0, 0, 0],
-            bar_inactive_color=[0, 0, 0, 0],
-            bar_margin=0
-        )
-
-        self.tones_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_x=None,
-            spacing=dp(8),
-            padding=[dp(8), dp(8), dp(8), dp(8)]
-        )
-        self.tones_container.bind(minimum_width=self.tones_container.setter('width'))
-
-        self.tonality_btns = []
+    def _populate_items(self):
+        self.buttons = []
         for ton in TONALITIES:
             btn = MDRaisedButton(
                 text=ton,
@@ -505,30 +380,105 @@ class TonalitySelectorMenu(MDCard):
                 text_color=[1, 1, 1, 0.7],
                 font_size=sp(16),
                 elevation=0,
-                on_release=lambda x, t=ton: self._on_tonality_press(t)
+                on_release=lambda x, t=ton: self._on_item_press(t)
             )
-            self.tonality_btns.append(btn)
-            self.tones_container.add_widget(btn)
+            self.buttons.append(btn)
+            self.container.add_widget(btn)
 
+        self.current_selection = self.current_tonality
+
+    def set_current(self, tonality):
+        """Обновляет текущую тональность без пересоздания"""
+        self.current_selection = tonality
         self._highlight_current()
 
-        scroll.add_widget(self.tones_container)
-        self.add_widget(scroll)
 
-    def _highlight_current(self):
-        for btn in self.tonality_btns:
-            if btn.text == self.current_tonality:
-                btn.md_bg_color = [0.61, 0.15, 0.69, 1]
-                btn.text_color = [1, 1, 1, 1]
-            else:
-                btn.md_bg_color = [0, 0, 0, 0]
-                btn.text_color = [1, 1, 1, 0.7]
+class TypeSelectorMenu(BaseSelectorMenu):
+    """Меню выбора типа аккорда - кэшируется"""
 
-    def _on_tonality_press(self, tonality):
-        self.current_tonality = tonality
+    def __init__(self, current_type, on_confirm, on_cancel, **kwargs):
+        self.current_type = current_type
+        super().__init__(on_confirm, on_cancel, **kwargs)
+
+    def _populate_items(self):
+        self.buttons = []
+        for chord_type in CHORD_TYPES:
+            btn = MDRaisedButton(
+                text=chord_type,
+                size_hint=(None, 1),
+                width=self._get_button_width(chord_type),
+                md_bg_color=[0, 0, 0, 0],
+                text_color=[1, 1, 1, 0.7],
+                font_size=sp(13),
+                elevation=0,
+                on_release=lambda x, t=chord_type: self._on_item_press(t)
+            )
+            self.buttons.append(btn)
+            self.container.add_widget(btn)
+
+        self.current_selection = self.current_type
+
+    def set_current(self, chord_type):
+        """Обновляет текущий тип без пересоздания"""
+        self.current_selection = chord_type
         self._highlight_current()
-        if self.on_confirm:
-            self.on_confirm(tonality)
+
+
+class ChordSelectorMenu(BaseSelectorMenu):
+    """Меню выбора аккорда - кэшируется"""
+
+    def __init__(self, available_chords, current_chord, on_confirm, on_cancel, **kwargs):
+        self.available_chords = available_chords or ["A"]
+        self.current_chord = current_chord
+        super().__init__(on_confirm, on_cancel, **kwargs)
+
+    def _populate_items(self):
+        self.buttons = []
+        for chord in self.available_chords:
+            btn = MDRaisedButton(
+                text=chord,
+                size_hint=(None, 1),
+                width=self._get_button_width(chord),
+                md_bg_color=[0, 0, 0, 0],
+                text_color=[1, 1, 1, 0.7],
+                font_size=sp(14),
+                elevation=0,
+                on_release=lambda x, c=chord: self._on_item_press(c)
+            )
+            self.buttons.append(btn)
+            self.container.add_widget(btn)
+
+        self.current_selection = self.current_chord
+
+    def update_chords(self, available_chords, current_chord):
+        """Обновляет список аккордов без пересоздания всего меню"""
+        self.available_chords = available_chords or ["A"]
+        self.current_chord = current_chord
+
+        # Очищаем контейнер
+        self.container.clear_widgets()
+        self.buttons = []
+
+        # Пересоздаём кнопки
+        for chord in self.available_chords:
+            btn = MDRaisedButton(
+                text=chord,
+                size_hint=(None, 1),
+                width=self._get_button_width(chord),
+                md_bg_color=[0, 0, 0, 0],
+                text_color=[1, 1, 1, 0.7],
+                font_size=sp(14),
+                elevation=0,
+                on_release=lambda x, c=chord: self._on_item_press(c)
+            )
+            self.buttons.append(btn)
+            self.container.add_widget(btn)
+
+        self.current_selection = self.current_chord
+        self._highlight_current()
+
+        # Обновляем ширину контейнера
+        self.container.width = sum(btn.width + dp(8) for btn in self.buttons) + dp(16)
 
 
 class UnifiedMenu(MDCard):
@@ -601,7 +551,6 @@ class UnifiedMenu(MDCard):
             fixed_color=True
         )
 
-        # Добавляем разделители между пунктами
         self.add_widget(self.tonality_item)
         self.add_widget(self._create_divider())
         self.add_widget(self.type_item)
@@ -687,20 +636,67 @@ class ChordsScreen(BaseScreen):
         self.chord_name_label = None
         self.chord_desc_label = None
         self.chord_renderer = None
-        self.tonality_selector = None
-        self.type_selector = None
-        self.chord_selector = None
         self._menu_container = None
-        self._info_label = None  # Единый лейбл для описания и подсказок
+        self._info_label = None
         self._hint_timer = None
 
         self.bg_image = None
+
+        # ============ КЭШИРОВАННЫЕ МЕНЮ ============
+        self.tonality_selector = None
+        self.type_selector = None
+        self.chord_selector = None
+        self._menu_cache_initialized = False
 
         self.init_ui()
         self.load_background()
         self.scan_chords()
 
-        logger.info('Экран аккордов создан (статичный, без прокрутки)')
+        # Инициализируем кэшированные меню после загрузки аккордов
+        Clock.schedule_once(self._init_cached_menus, 0.3)
+
+        logger.info('Экран аккордов создан (статичный, с кэшированием меню)')
+
+    def _init_cached_menus(self, dt):
+        """Создаёт кэшированные меню один раз"""
+        if self._menu_cache_initialized:
+            return
+
+        logger.info("🔧 Инициализация кэшированных меню...")
+
+        # Меню тональности
+        self.tonality_selector = TonalitySelectorMenu(
+            current_tonality=self.current_tonality,
+            on_confirm=self._on_tonality_confirmed,
+            on_cancel=self._close_tonality_selector
+        )
+        self.tonality_selector.opacity = 0
+        self.tonality_selector.disabled = True
+        self._menu_container.add_widget(self.tonality_selector)
+
+        # Меню типов
+        self.type_selector = TypeSelectorMenu(
+            current_type=self.current_type,
+            on_confirm=self._on_type_confirmed,
+            on_cancel=self._close_type_selector
+        )
+        self.type_selector.opacity = 0
+        self.type_selector.disabled = True
+        self._menu_container.add_widget(self.type_selector)
+
+        # Меню аккордов
+        self.chord_selector = ChordSelectorMenu(
+            available_chords=self.available_chords or ["A"],
+            current_chord=self.current_chord_name,
+            on_confirm=self._on_chord_confirmed,
+            on_cancel=self._close_chord_selector
+        )
+        self.chord_selector.opacity = 0
+        self.chord_selector.disabled = True
+        self._menu_container.add_widget(self.chord_selector)
+
+        self._menu_cache_initialized = True
+        logger.info("✅ Кэшированные меню инициализированы")
 
     def load_background(self):
         try:
@@ -731,7 +727,6 @@ class ChordsScreen(BaseScreen):
     def _update_desc_height(self, instance, texture_size):
         """Обновляет высоту лейбла в зависимости от размера текстуры."""
         if texture_size:
-            # Добавляем небольшой отступ
             new_height = texture_size[1] + dp(8)
             if self._info_label.height != new_height:
                 self._info_label.height = new_height
@@ -741,7 +736,7 @@ class ChordsScreen(BaseScreen):
         content = MDBoxLayout(
             orientation='vertical',
             spacing=dp(10),
-            size_hint=(1, 1),  # Растягиваем на весь экран
+            size_hint=(1, 1),
             padding=[dp(12), dp(8), dp(12), dp(16)]
         )
 
@@ -803,18 +798,16 @@ class ChordsScreen(BaseScreen):
         )
         self._menu_container.add_widget(self.unified_menu)
 
-        # ============ 5. ИНФОРМАЦИОННЫЙ ЛЕЙБЛ (ОПИСАНИЕ/ПОДСКАЗКИ) ============
-        # Единый лейбл для отображения ИЛИ описания аккорда, ИЛИ подсказок
+        # ============ 5. ИНФОРМАЦИОННЫЙ ЛЕЙБЛ ============
         self._info_label = MDLabel(
             text="",
             font_size=sp(12),
             halign="center",
             size_hint_y=None,
-            height=dp(30),  # Начальная высота
+            height=dp(30),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
         )
-        # Позволяем тексту занимать несколько строк
         self._info_label.text_size = (None, None)
         self._info_label.bind(texture_size=self._update_desc_height)
         content.add_widget(self._info_label)
@@ -822,7 +815,7 @@ class ChordsScreen(BaseScreen):
         # Добавляем растягивающийся виджет внизу
         content.add_widget(Widget(size_hint_y=1))
 
-        # Строим UI БЕЗ скролла (use_scroll=False)
+        # Строим UI БЕЗ скролла
         self.build_ui(content_widget=content, use_scroll=False)
 
         try:
@@ -834,7 +827,6 @@ class ChordsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
-        # Загружаем начальный аккорд
         self.load_current_variant()
 
     def _show_description(self):
@@ -847,14 +839,11 @@ class ChordsScreen(BaseScreen):
 
         if description:
             desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
-
-            # Убираем дубликаты
             unique_parts = []
             for part in desc_parts:
                 if part not in unique_parts:
                     unique_parts.append(part)
 
-            # Формируем описание
             if unique_parts:
                 chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
                 name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
@@ -873,15 +862,14 @@ class ChordsScreen(BaseScreen):
             self._info_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
 
     def _show_hint(self, text):
-        """Показывает подсказку в информационном лейбле (временная замена описания)."""
+        """Показывает подсказку в информационном лейбле."""
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
-
         self._info_label.text = text
 
     def _show_temporary_hint(self, text, duration=1.5):
-        """Показывает временную подсказку, заменяя описание."""
+        """Показывает временную подсказку."""
         if self._info_label:
             self._info_label.text = text
             if hasattr(self, '_hint_timer') and self._hint_timer:
@@ -894,17 +882,31 @@ class ChordsScreen(BaseScreen):
             self._hint_timer = None
         self._show_description()
 
-    def _open_tonality_selector(self):
-        logger.info("Открытие меню выбора тональности")
+    # ============ МЕТОДЫ ОТКРЫТИЯ/ЗАКРЫТИЯ МЕНЮ (С КЭШИРОВАНИЕМ) ============
 
+    def _open_tonality_selector(self):
+        logger.info("Открытие меню выбора тональности (кешированное)")
+
+        # Убеждаемся, что меню создано
+        if not self.tonality_selector:
+            self.tonality_selector = TonalitySelectorMenu(
+                current_tonality=self.current_tonality,
+                on_confirm=self._on_tonality_confirmed,
+                on_cancel=self._close_tonality_selector
+            )
+            self.tonality_selector.opacity = 0
+            self.tonality_selector.disabled = True
+            self._menu_container.add_widget(self.tonality_selector)
+
+        # Обновляем текущее значение
+        self.tonality_selector.set_current(self.current_tonality)
+
+        # Скрываем основное меню
         if self.unified_menu and self.unified_menu.parent:
             self._menu_container.remove_widget(self.unified_menu)
 
-        self.tonality_selector = TonalitySelectorMenu(
-            current_tonality=self.current_tonality,
-            on_confirm=self._on_tonality_confirmed,
-            on_cancel=self._close_tonality_selector
-        )
+        # Показываем меню выбора
+        self.tonality_selector.show()
         self._menu_container.add_widget(self.tonality_selector)
         self._show_hint("Выберите тональность")
 
@@ -918,27 +920,35 @@ class ChordsScreen(BaseScreen):
     def _close_tonality_selector(self):
         logger.info("Закрытие меню выбора тональности")
 
-        if self.tonality_selector and self.tonality_selector.parent:
-            self._menu_container.remove_widget(self.tonality_selector)
-            self.tonality_selector = None
+        if self.tonality_selector:
+            self.tonality_selector.hide()
+            if self.tonality_selector.parent:
+                self._menu_container.remove_widget(self.tonality_selector)
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
 
-        # Восстанавливаем описание
         self._restore_description()
 
     def _open_type_selector(self):
-        logger.info("Открытие меню выбора типа аккорда")
+        logger.info("Открытие меню выбора типа аккорда (кешированное)")
+
+        if not self.type_selector:
+            self.type_selector = TypeSelectorMenu(
+                current_type=self.current_type,
+                on_confirm=self._on_type_confirmed,
+                on_cancel=self._close_type_selector
+            )
+            self.type_selector.opacity = 0
+            self.type_selector.disabled = True
+            self._menu_container.add_widget(self.type_selector)
+
+        self.type_selector.set_current(self.current_type)
 
         if self.unified_menu and self.unified_menu.parent:
             self._menu_container.remove_widget(self.unified_menu)
 
-        self.type_selector = TypeSelectorMenu(
-            current_type=self.current_type,
-            on_confirm=self._on_type_confirmed,
-            on_cancel=self._close_type_selector
-        )
+        self.type_selector.show()
         self._menu_container.add_widget(self.type_selector)
         self._show_hint("Выберите тип аккорда")
 
@@ -952,31 +962,39 @@ class ChordsScreen(BaseScreen):
     def _close_type_selector(self):
         logger.info("Закрытие меню выбора типа аккорда")
 
-        if self.type_selector and self.type_selector.parent:
-            self._menu_container.remove_widget(self.type_selector)
-            self.type_selector = None
+        if self.type_selector:
+            self.type_selector.hide()
+            if self.type_selector.parent:
+                self._menu_container.remove_widget(self.type_selector)
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
 
-        # Восстанавливаем описание
         self._restore_description()
 
     def _open_chord_selector(self):
         if len(self.available_chords) <= 1:
             return
 
-        logger.info("Открытие меню выбора аккорда")
+        logger.info("Открытие меню выбора аккорда (кешированное)")
+
+        if not self.chord_selector:
+            self.chord_selector = ChordSelectorMenu(
+                available_chords=self.available_chords,
+                current_chord=self.current_chord_name,
+                on_confirm=self._on_chord_confirmed,
+                on_cancel=self._close_chord_selector
+            )
+            self.chord_selector.opacity = 0
+            self.chord_selector.disabled = True
+            self._menu_container.add_widget(self.chord_selector)
+        else:
+            self.chord_selector.update_chords(self.available_chords, self.current_chord_name)
 
         if self.unified_menu and self.unified_menu.parent:
             self._menu_container.remove_widget(self.unified_menu)
 
-        self.chord_selector = ChordSelectorMenu(
-            available_chords=self.available_chords,
-            current_chord=self.current_chord_name,
-            on_confirm=self._on_chord_confirmed,
-            on_cancel=self._close_chord_selector
-        )
+        self.chord_selector.show()
         self._menu_container.add_widget(self.chord_selector)
         self._show_hint("Выберите вид данного аккорда")
 
@@ -992,14 +1010,14 @@ class ChordsScreen(BaseScreen):
     def _close_chord_selector(self):
         logger.info("Закрытие меню выбора аккорда")
 
-        if self.chord_selector and self.chord_selector.parent:
-            self._menu_container.remove_widget(self.chord_selector)
-            self.chord_selector = None
+        if self.chord_selector:
+            self.chord_selector.hide()
+            if self.chord_selector.parent:
+                self._menu_container.remove_widget(self.chord_selector)
 
         if self.unified_menu and not self.unified_menu.parent:
             self._menu_container.add_widget(self.unified_menu)
 
-        # Восстанавливаем описание
         self._restore_description()
 
     def _toggle_mode(self):
@@ -1028,6 +1046,8 @@ class ChordsScreen(BaseScreen):
         self.load_current_variant()
         self._show_temporary_hint(f"Изменена позиция аккорда: {self.current_position}", 1.2)
         logger.info(f"Вариант {self.current_position}/{total}")
+
+    # ============ ПОИСК ============
 
     def do_search(self, query):
         """Поиск аккордов по точному совпадению названия или описания"""
@@ -1114,30 +1134,8 @@ class ChordsScreen(BaseScreen):
         self.search_bar.search_field.hint_text = "Поиск аккордов..."
         self.update_available_chords()
 
-    def _load_variants_for_chord(self, chord_name):
-        variants = []
-        for chord in self.all_chords:
-            if chord['short_name'] == chord_name:
-                tonality = self.extract_tonality(chord['name'])
-                if tonality == self.current_tonality:
-                    chord_types = chord['type'].split('|') if chord['type'] else []
-                    if self.current_type in chord_types or self.current_type == chord.get('type', ''):
-                        variants.append(chord)
-
-        if variants:
-            variants.sort(key=lambda x: x['variant'])
-            self.current_variants = variants
-            self.current_variant_index = 0
-            self.current_position = 1
-            self.unified_menu.update_variants(len(variants))
-            self.load_current_variant()
-        else:
-            self.current_variants = []
-            self.current_variant_index = 0
-            self.current_position = 1
-            self.unified_menu.update_variants(0)
-
     # ============ ЗАГРУЗКА АККОРДОВ ============
+
     def scan_chords(self):
         print("\n" + "=" * 60)
         print("SCAN_CHORDS: Начинаю сканирование аккордов")
@@ -1216,9 +1214,7 @@ class ChordsScreen(BaseScreen):
 
         self.available_chords = sorted(chords_by_name.keys())
 
-        # Обновляем состояние иконки аккорда
         self.unified_menu.update_chord(len(self.available_chords))
-        # Обновляем колбэк для иконки аккорда
         if len(self.available_chords) > 1:
             self.unified_menu.chord_item.on_press_callback = self._open_chord_selector
         else:
@@ -1279,7 +1275,6 @@ class ChordsScreen(BaseScreen):
 
         self.chord_name_label.text = display_name
 
-        # Показываем описание
         self._show_description()
 
         if self.chord_renderer:
@@ -1342,6 +1337,29 @@ class ChordsScreen(BaseScreen):
                             self.current_chord_index = self.available_chords.index(chord_name)
                             self._load_variants_for_chord(self.current_chord_name)
                 break
+
+    def _load_variants_for_chord(self, chord_name):
+        variants = []
+        for chord in self.all_chords:
+            if chord['short_name'] == chord_name:
+                tonality = self.extract_tonality(chord['name'])
+                if tonality == self.current_tonality:
+                    chord_types = chord['type'].split('|') if chord['type'] else []
+                    if self.current_type in chord_types or self.current_type == chord.get('type', ''):
+                        variants.append(chord)
+
+        if variants:
+            variants.sort(key=lambda x: x['variant'])
+            self.current_variants = variants
+            self.current_variant_index = 0
+            self.current_position = 1
+            self.unified_menu.update_variants(len(variants))
+            self.load_current_variant()
+        else:
+            self.current_variants = []
+            self.current_variant_index = 0
+            self.current_position = 1
+            self.unified_menu.update_variants(0)
 
     def select_chord_by_name(self, chord_name):
         logger.info(f"🎸 select_chord_by_name: ищем аккорд '{chord_name}'")
@@ -1456,12 +1474,10 @@ class ChordsScreen(BaseScreen):
         if previous_screen:
             Clock.schedule_once(lambda dt: self._show_back_button(), 0.3)
 
-        if self.tonality_selector:
-            self._close_tonality_selector()
-        if self.type_selector:
-            self._close_type_selector()
-        if self.chord_selector:
-            self._close_chord_selector()
+        # Закрываем меню, если они открыты
+        self._close_tonality_selector()
+        self._close_type_selector()
+        self._close_chord_selector()
 
     def _show_back_button(self):
         try:
@@ -1477,12 +1493,9 @@ class ChordsScreen(BaseScreen):
 
     def on_leave(self):
         logger.info("🚪 Выход из экрана аккордов")
-        if self.tonality_selector:
-            self._close_tonality_selector()
-        if self.type_selector:
-            self._close_type_selector()
-        if self.chord_selector:
-            self._close_chord_selector()
+        self._close_tonality_selector()
+        self._close_type_selector()
+        self._close_chord_selector()
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
