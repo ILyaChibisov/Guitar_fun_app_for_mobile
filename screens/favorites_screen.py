@@ -462,48 +462,32 @@ class FavoritesScreen(BaseScreen):
         self.loading_label = None
 
     def load_favorites(self):
-        """Загружает избранные песни"""
+        """Загружает избранные песни (с кэшем)"""
         self._show_loading()
-        self._update_top_nav(0)  # Показываем 0 во время загрузки
+        self._update_top_nav(0)
+
+        # Используем кэш, если он есть (не старше 60 секунд)
+        api.get_favorites(
+            on_success=self.on_favorites_loaded,
+            on_failure=self.on_load_failed,
+            force_refresh=False  # ← используем кэш
+        )
+
+    def refresh_favorites(self):
+        """Принудительно обновляет избранное с сервера"""
+        if not api.is_authenticated():
+            self._show_auth_message()
+            return
+
+        self._show_loading()
+        self._update_top_nav(0)
 
         api.get_favorites(
             on_success=self.on_favorites_loaded,
-            on_failure=self.on_load_failed
+            on_failure=self.on_load_failed,
+            force_refresh=True  # ← принудительно с сервера
         )
 
-    def on_favorites_loaded(self, favorites):
-        """Обработчик успешной загрузки избранного"""
-        self._clear_loading()
-        self.cards_container.clear_widgets()
-
-        formatted_favorites = []
-        for item in favorites:
-            if isinstance(item, dict):
-                formatted_favorites.append(item)
-            elif isinstance(item, str):
-                parts = item.split(' - ', 1)
-                if len(parts) == 2:
-                    formatted_favorites.append({'artist': parts[0], 'title': parts[1], 'id': 0})
-                else:
-                    formatted_favorites.append({'artist': '', 'title': item, 'id': 0})
-
-        self.favorites = formatted_favorites
-
-        if not self.favorites:
-            self._show_empty()
-            return
-
-        # Обновляем TopNav с количеством
-        self._update_top_nav(len(self.favorites))
-
-        for song_data in self.favorites:
-            card = FavoriteSongCard(song=song_data, on_click=self.on_song_selected)
-            self.cards_container.add_widget(card)
-
-        bottom_spacer = Widget(size_hint_y=None, height=dp(12))
-        self.cards_container.add_widget(bottom_spacer)
-
-        logger.info(f"Загружено {len(self.favorites)} избранных песен")
 
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
@@ -553,6 +537,41 @@ class FavoritesScreen(BaseScreen):
         logger.info("Вход в экран избранного")
         if api.is_authenticated():
             self.load_favorites()
+
+    def on_favorites_loaded(self, favorites):
+        """Обработчик успешной загрузки избранного"""
+        self._clear_loading()
+        self.cards_container.clear_widgets()
+
+        formatted_favorites = []
+        for item in favorites:
+            if isinstance(item, dict):
+                if 'id' in item and 'song_id' not in item:
+                    item['song_id'] = item['id']
+                formatted_favorites.append(item)
+            elif isinstance(item, str):
+                parts = item.split(' - ', 1)
+                if len(parts) == 2:
+                    formatted_favorites.append({'artist': parts[0], 'title': parts[1], 'id': 0, 'song_id': 0})
+                else:
+                    formatted_favorites.append({'artist': '', 'title': item, 'id': 0, 'song_id': 0})
+
+        self.favorites = formatted_favorites
+
+        if not self.favorites:
+            self._show_empty()
+            return
+
+        self._update_top_nav(len(self.favorites))
+
+        for song_data in self.favorites:
+            card = FavoriteSongCard(song=song_data, on_click=self.on_song_selected)
+            self.cards_container.add_widget(card)
+
+        bottom_spacer = Widget(size_hint_y=None, height=dp(12))
+        self.cards_container.add_widget(bottom_spacer)
+
+        logger.info(f"Загружено {len(self.favorites)} избранных песен")
 
     def on_leave(self):
         """При выходе с экрана"""

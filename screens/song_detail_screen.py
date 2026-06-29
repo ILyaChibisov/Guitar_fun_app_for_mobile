@@ -1897,11 +1897,25 @@ class SongDetailScreen(BaseScreen):
         self.load_song_data()
 
     def load_song_data(self):
+        """Загружает песню с кэшированием"""
+        self.show_loading()
+
+        # Используем кэш (force_refresh=False)
+        api.get_tab(
+            song_id=self.song_id,
+            on_success=self.on_song_loaded,
+            on_failure=self.on_load_failed,
+            force_refresh=False  # ← используем кэш
+        )
+
+    def refresh_song(self):
+        """Принудительно обновляет песню с сервера (для pull-to-refresh)"""
         self.show_loading()
         api.get_tab(
             song_id=self.song_id,
             on_success=self.on_song_loaded,
-            on_failure=self.on_load_failed
+            on_failure=self.on_load_failed,
+            force_refresh=True  # ← игнорируем кэш
         )
 
     def show_loading(self):
@@ -1937,10 +1951,18 @@ class SongDetailScreen(BaseScreen):
             self.content_label.text = original_text
             self.content_label.markup = True
             self._update_content_height()
+
         self.is_liked = data.get('is_liked', False)
-        self.is_favorite = data.get('is_favorite', False)
+
+        # ============ ПРОВЕРЯЕМ ИЗБРАННОЕ ИЗ КЭША ============
+        self.is_favorite = api.is_song_favorited(self.song_id)
+        if not self.is_favorite:
+            self.is_favorite = data.get('is_favorite', False)
+
         self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
         self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
+
+        logger.info(f"⭐ Песня {self.song_id} в избранном: {self.is_favorite}")
 
         self.update_top_nav_title()
 

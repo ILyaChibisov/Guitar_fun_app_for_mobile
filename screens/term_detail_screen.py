@@ -1,7 +1,7 @@
 # screens/term_detail_screen.py
 """
 Экран определения термина - в стиле song_detail_screen
-BottomNav всегда виден, панель настроек строго над ним и всегда видна
+BottomNav всегда виден, панель настроек над текстом
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle
@@ -15,7 +15,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.app import MDApp
 from kivy.uix.widget import Widget
-from kivy.uix.scrollview import ScrollView
+from kivymd.uix.scrollview import MDScrollView
 from kivy.utils import platform
 
 from config.theme import theme
@@ -39,13 +39,13 @@ except ImportError:
 
 
 class IconActionButton(MDIconButton):
-    """Кнопка действия в нижней панели"""
+    """Кнопка действия в панели"""
 
     def __init__(self, icon_name, on_press_callback=None, icon_color=None, **kwargs):
         super().__init__(**kwargs)
         self.on_press_callback = on_press_callback
         self.size_hint = (1, None)
-        self.height = dp(36)
+        self.height = dp(40)
         self.theme_icon_color = "Custom"
         if icon_color:
             self.icon_color = icon_color
@@ -90,6 +90,10 @@ class TermDetailScreen(BaseScreen):
 
         # Для смены темы текста
         self.is_light_theme = False
+
+        # Панель-контейнер
+        self.panel_container = None
+        self.current_panel_type = 'main'
 
         self.init_ui()
         self.load_background()
@@ -171,28 +175,35 @@ class TermDetailScreen(BaseScreen):
     def _set_green_theme(self):
         """Зелёная тема - фон из ассета, текст белый"""
         self.is_light_theme = False
-        self.term_description_label.text_color = [1, 1, 1, 0.95]
+        self.content_label.text_color = [1, 1, 1, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [0, 0, 0, 0]
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.icon = "weather-sunny"
+            self.theme_btn.icon_color = [0.46, 0.70, 0.71, 1]
 
     def _set_light_theme(self):
         """Светлая тема - фон белый, текст чёрный"""
         self.is_light_theme = True
-        self.term_description_label.text_color = [0, 0, 0, 0.95]
+        self.content_label.text_color = [0, 0, 0, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [1, 1, 1, 1]
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.icon = "white-balance-sunny"
+            self.theme_btn.icon_color = [1, 1, 1, 1]
 
     def _set_dark_theme(self):
         """Тёмная тема - фон чёрный, текст белый"""
         self.is_light_theme = False
-        self.term_description_label.text_color = [1, 1, 1, 0.95]
+        self.content_label.text_color = [1, 1, 1, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [0.05, 0.05, 0.05, 1]
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.icon = "weather-night"
+            self.theme_btn.icon_color = [0.3, 0.3, 0.3, 1]
 
     def init_ui(self):
-        """Инициализирует UI с BottomNav всегда видимым и панелью настроек под текстом"""
-
-        # Основной вертикальный контейнер
+        """Инициализирует UI как в song_detail_screen"""
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
         # ============ ОТСТУП ПОД TOPNAV ============
@@ -207,10 +218,16 @@ class TermDetailScreen(BaseScreen):
         self._top_spacer_term = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_term)
 
-        # ============ КАРТОЧКА С КОНТЕНТОМ ============
+        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧКИ ============
+        card_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[0, 0, 0, 0]
+        )
+
+        # ============ ОТСТУП СНИЗУ ============
         nav_bar_height = get_navigation_bar_height()
-        panel_height = dp(52)
-        bottom_padding_for_card = panel_height + nav_bar_height
+        bottom_padding_for_card = layout_config.get_bottom_padding()
 
         self.term_card = MDCard(
             orientation='vertical',
@@ -219,46 +236,63 @@ class TermDetailScreen(BaseScreen):
             spacing=0,
             radius=[0, 0, 0, 0],
             md_bg_color=[0, 0, 0, 0],
-            elevation=0,
-            line_width=0.5,
-            line_color=[0, 0, 0, 0]
+            elevation=0
         )
 
-        # ============ ВЕРХНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА (как в song_detail) ============
-        top_divider = MDBoxLayout(
+        # ============ ВЕРХНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ============
+        self.top_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(2),
             md_bg_color=[0.5, 0.5, 0.5, 0.3],
             padding=[0, 0, 0, 0]
         )
-        self.term_card.add_widget(top_divider)
+        self.term_card.add_widget(self.top_divider)
+
+        # ============ ПАНЕЛЬ-КОНТЕЙНЕР (НАД КОНТЕНТОМ) ============
+        self.panel_container = MDCard(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(52),
+            md_bg_color=[0, 0, 0, 0.06],
+            elevation=0,
+            radius=[0, 0, 0, 0],
+            padding=[0, 0, 0, 0],
+            spacing=0
+        )
+        self.term_card.add_widget(self.panel_container)
+
+        # ============ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ПОД ПАНЕЛЬЮ ============
+        self.panel_divider = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(2),
+            md_bg_color=[0.5, 0.5, 0.5, 0.3],
+            padding=[0, 0, 0, 0]
+        )
+        self.term_card.add_widget(self.panel_divider)
 
         # ============ СКРОЛЛ ДЛЯ ТЕКСТА ============
-        self.content_scroll = ScrollView(
+        self.content_scroll = MDScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
             bar_width=3,
             bar_color=[0.5, 0.5, 0.5, 0.3],
             bar_inactive_color=[0.5, 0.5, 0.5, 0.1]
         )
-        self.content_scroll.clip = True
 
         # ============ КОНТЕЙНЕР ДЛЯ ТЕКСТА ============
-        # Отступ снизу: только небольшой зазор до нижней полоски
-        bottom_padding = dp(8)
-
         self._text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
-            padding=[dp(16), dp(20), dp(16), bottom_padding],
+            padding=[dp(16), dp(16), dp(16), dp(8)],
             adaptive_height=True,
             md_bg_color=[0, 0, 0, 0]
         )
 
         # ============ ОПИСАНИЕ ТЕРМИНА ============
-        self.term_description_label = MDLabel(
+        self.content_label = MDLabel(
             text="",
             font_size=self.current_font_size,
             size_hint_y=None,
@@ -267,48 +301,48 @@ class TermDetailScreen(BaseScreen):
             valign="top",
             line_height=1.6
         )
-        self.term_description_label.bind(texture_size=self._update_content_height)
-        self._text_container.add_widget(self.term_description_label)
+        self.content_label.bind(texture_size=self._update_content_height)
+        self._text_container.add_widget(self.content_label)
 
         self.content_scroll.add_widget(self._text_container)
         self.term_card.add_widget(self.content_scroll)
 
-        # ============ НИЖНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА (как в song_detail) ============
-        bottom_divider = MDBoxLayout(
+        # ============ НИЖНЯЯ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСКА ============
+        self.bottom_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(2),
             md_bg_color=[0.5, 0.5, 0.5, 0.3],
             padding=[0, 0, 0, 0]
         )
-        self.term_card.add_widget(bottom_divider)
+        self.term_card.add_widget(self.bottom_divider)
 
-        # ============ НИЖНЯЯ ПАНЕЛЬ (слайдер + смена темы) ============
-        self._create_bottom_panel()
-        self.term_card.add_widget(self.bottom_panel)
-
-        main_container.add_widget(self.term_card)
+        card_container.add_widget(self.term_card)
+        main_container.add_widget(card_container)
 
         self.add_widget(main_container)
 
-        logger.info(f"TermDetailScreen: init_ui completed")
-        logger.info(f"  bottom_padding_for_card = {bottom_padding_for_card}dp")
-        logger.info(f"  nav_bar_height = {nav_bar_height}dp")
-        logger.info(f"  panel_height = {panel_height}dp")
+        if hasattr(self, '_top_spacer') and self._top_spacer:
+            self._top_spacer.height = 0
+        if hasattr(self, '_bottom_spacer') and self._bottom_spacer:
+            self._bottom_spacer.height = 0
 
-    def _create_bottom_panel(self):
-        """Создаёт нижнюю панель с меню настроек (слайдер + смена темы)"""
-        self.bottom_panel = MDCard(
+        # ============ СОЗДАЁМ НАЧАЛЬНУЮ ПАНЕЛЬ ============
+        self._create_main_panel()
+
+        logger.info(f"TermDetailScreen: init_ui completed")
+        logger.info(f"  top_padding={top_padding_for_nav}dp")
+        logger.info(f"  bottom_padding_for_card={bottom_padding_for_card}dp")
+
+    def _create_main_panel(self):
+        """Создаёт основную панель с настройками шрифта и темы"""
+        self.panel_container.clear_widgets()
+
+        panel = MDBoxLayout(
             orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(52),
-            padding=[dp(8), dp(4), dp(8), dp(4)],
-            spacing=dp(4),
-            radius=[0, 0, 0, 0],
-            md_bg_color=[0, 0, 0, 0.06],
-            elevation=0,
-            line_width=0.5,
-            line_color=[0.5, 0.5, 0.5, 0.3]  # ← ТАКАЯ ЖЕ ПОЛОСКА, КАК В SONG_DETAIL
+            size_hint=(1, 1),
+            padding=[dp(4), dp(2), dp(4), dp(2)],
+            spacing=dp(2)
         )
 
         center_container = MDBoxLayout(
@@ -409,9 +443,14 @@ class TermDetailScreen(BaseScreen):
                 self.current_font_size = new_size
                 self.font_value_label.text = self._get_font_multiplier(new_size)
 
-                if hasattr(self, 'term_description_label'):
-                    self.term_description_label.font_size = self.current_font_size
+                if hasattr(self, 'content_label'):
+                    self.content_label.font_size = self.current_font_size
                     self._update_content_height()
+
+                    # Прокручиваем вверх после изменения шрифта
+                    delays = [0.0, 0.01, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3]
+                    for delay in delays:
+                        Clock.schedule_once(lambda dt, d=delay: setattr(self.content_scroll, 'scroll_y', 1.0), delay)
 
                 logger.info(f"🔍 Размер шрифта изменён на: {self.current_font_size}")
 
@@ -431,8 +470,12 @@ class TermDetailScreen(BaseScreen):
         self.theme_btn.size_hint = (None, None)
         self.theme_btn.size = (dp(36), dp(36))
 
-        self.bottom_panel.add_widget(center_container)
-        self.bottom_panel.add_widget(self.theme_btn)
+        panel.add_widget(center_container)
+        panel.add_widget(self.theme_btn)
+
+        self.panel_container.add_widget(panel)
+        self.current_panel_type = 'main'
+        logger.info("✅ Создана основная панель")
 
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.1)
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.3)
@@ -459,17 +502,17 @@ class TermDetailScreen(BaseScreen):
 
     def _update_content_height(self, *args):
         """Обновляет высоту контейнера с текстом"""
-        if not self.term_description_label.texture:
+        if not self.content_label.texture:
             Clock.schedule_once(lambda dt: self._update_content_height(), 0.05)
             return
 
-        text_height = self.term_description_label.texture_size[1]
-        self.term_description_label.height = max(dp(50), text_height + dp(8))
+        text_height = self.content_label.texture_size[1]
+        self.content_label.height = max(dp(50), text_height + dp(8))
 
-        if self.term_description_label.parent:
-            self.term_description_label.parent.height = text_height + dp(16)
-            if hasattr(self.term_description_label.parent, 'minimum_height'):
-                self.term_description_label.parent.minimum_height = text_height + dp(16)
+        if self.content_label.parent:
+            self.content_label.parent.height = text_height + dp(16)
+            if hasattr(self.content_label.parent, 'minimum_height'):
+                self.content_label.parent.minimum_height = text_height + dp(16)
 
         self.content_scroll.scroll_y = 1.0
 
@@ -477,8 +520,8 @@ class TermDetailScreen(BaseScreen):
         """Сбрасывает настройки к стандартным"""
         # Сброс шрифта
         self.current_font_size = self.STANDARD_FONT_SIZE
-        if hasattr(self, 'term_description_label'):
-            self.term_description_label.font_size = self.current_font_size
+        if hasattr(self, 'content_label'):
+            self.content_label.font_size = self.current_font_size
             self._update_content_height()
         if hasattr(self, 'font_value_label'):
             self.font_value_label.text = self._get_font_multiplier(self.current_font_size)
@@ -525,11 +568,7 @@ class TermDetailScreen(BaseScreen):
         # Описание - очищаем от пустых строк в начале/конце
         description = term_data.get('description', 'Описание отсутствует')
         description = self._clean_description(description)
-        self.term_description_label.text = description
-
-        # Вычисляем высоту для описания
-        lines = len(description) // 30 + 1
-        self.term_description_label.height = max(dp(40), lines * dp(28))
+        self.content_label.text = description
 
         # Обновляем TopNav
         self._update_top_nav(term_name)
@@ -544,13 +583,48 @@ class TermDetailScreen(BaseScreen):
             self.content_scroll.scroll_y = 1.0
 
     def _update_top_nav(self, title):
-        """Обновляет заголовок в TopNav"""
+        """Обновляет заголовок в TopNav с переносом длинных названий"""
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
-                app.top_nav.set_custom_title(title)
+                # Форматируем название: первая буква заглавная, остальные строчные
+                formatted_title = title.capitalize() if title else "Термин"
+
+                from kivymd.uix.boxlayout import MDBoxLayout
+                from kivymd.uix.label import MDLabel
+                from kivy.metrics import dp, sp
+
+                title_container = MDBoxLayout(
+                    orientation='vertical',
+                    size_hint=(1, 1),
+                    spacing=dp(2),
+                    padding=[dp(8), dp(4), dp(8), dp(4)]
+                )
+
+                # Для длинных терминов (больше 20 символов) уменьшаем шрифт
+                font_size = sp(18) if len(formatted_title) <= 20 else sp(15)
+
+                title_label = MDLabel(
+                    text=formatted_title,
+                    font_size=font_size,
+                    halign="center",
+                    valign="middle",
+                    theme_text_color="Custom",
+                    text_color=[1, 1, 1, 1],
+                    bold=True,
+                    text_size=(dp(250), None),  # ← ПЕРЕНОС ПО ШИРИНЕ
+                    shorten=False,  # ← ОТКЛЮЧАЕМ ОБРЕЗАНИЕ
+                    size_hint_y=None,
+                    height=dp(60)  # ← ДОСТАТОЧНО МЕСТА ДЛЯ 2 СТРОК
+                )
+
+                title_container.add_widget(title_label)
+
+                app.top_nav.set_custom_title_widget(title_container)
                 app.top_nav._show_back_button()
                 app.top_nav.back_btn.on_release = self.go_back
+
+                logger.info(f"✅ TopNav обновлён: {formatted_title}")
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
 
@@ -567,15 +641,27 @@ class TermDetailScreen(BaseScreen):
         """При входе на экран"""
         logger.info("Вход в экран определения термина")
 
-        # НЕ СКРЫВАЕМ BottomNav - он всегда виден
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav._show_back_button()
+            if self.term_name:
+                self._update_top_nav(self.term_name)
+            else:
+                app.top_nav.set_custom_title("Термин")
 
         if self.term_name:
-            self._update_top_nav(self.term_name)
             Clock.schedule_once(self._scroll_to_top, 0.2)
+
+        if hasattr(self, '_top_spacer_term'):
+            top_padding = layout_config.get_top_padding()
+            if platform == 'android':
+                top_padding = top_padding + dp(16)
+            self._top_spacer_term.height = top_padding
 
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из экрана определения термина")
 
-        # Сбрасываем настройки при выходе
-        self._reset_to_defaults()
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.reset_to_default()
