@@ -1,6 +1,7 @@
 # screens/artists_by_letter_screen.py
 """
 Экран списка исполнителей по выбранной букве - с двухстрочным заголовком в TopNav
+с круговым спиннером загрузки по центру
 """
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDIconButton
@@ -21,6 +22,7 @@ from config.layout_config import layout_config
 from api.client import api
 from screens.recycle_artist_card import ArtistRecycleView, set_shared_icon
 from screens.base_screen import BaseScreen
+from screens.components.loading_spinner import LoadingSpinner
 from kivymd.app import MDApp
 from utils.screen_state import screen_state
 
@@ -28,9 +30,12 @@ logger = screen_logger('ArtistsByLetter')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -58,18 +63,6 @@ def init_shared_icon():
     return None
 
 
-class SimpleLoadingLabel(MDLabel):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.text = "Загрузка исполнителей..."
-        self.halign = "center"
-        self.font_size = sp(14)
-        self.theme_text_color = "Custom"
-        self.text_color = [1, 1, 1, 0.6]
-        self.size_hint_y = None
-        self.height = dp(60)
-
-
 class ArtistsByLetterScreen(BaseScreen):
     """Экран списка исполнителей по букве с двухстрочным заголовком в TopNav"""
 
@@ -79,7 +72,7 @@ class ArtistsByLetterScreen(BaseScreen):
         self.current_letter = None
         self.recycle_view = None
         self.empty_label = None
-        self.loading_label = None
+        self.loading_spinner = None
         self.letter_label = None
         self.back_btn = None
         self._pending_letter = None
@@ -87,6 +80,16 @@ class ArtistsByLetterScreen(BaseScreen):
         self.bg_image = None
         self._top_spacer = None
         self._total_artists = 0
+        self._is_loading = False
+
+        # ============ ЗАГРУЗКА ВСЕХ СТРАНИЦ ============
+        self._all_artists = []
+        self._page = 0
+        self._limit = 200
+        self._is_loading_more = False
+        self._has_more = True
+        self._loading_all = False
+        self._total_pages = 0
 
         self.md_bg_color = [0, 0, 0, 0]
         self.init_ui()
@@ -123,7 +126,6 @@ class ArtistsByLetterScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def _create_top_nav_title(self):
-        """Создаёт двухстрочный заголовок для TopNav (буква и количество)"""
         from kivymd.uix.boxlayout import MDBoxLayout
         from kivymd.uix.label import MDLabel
         from kivy.metrics import sp, dp
@@ -169,7 +171,6 @@ class ArtistsByLetterScreen(BaseScreen):
         return title_container
 
     def _get_count_text(self, total):
-        """Возвращает текст с количеством исполнителей с правильным склонением"""
         if total == 0:
             return "Нет исполнителей"
         elif total == 1:
@@ -180,7 +181,6 @@ class ArtistsByLetterScreen(BaseScreen):
             return f"{total} исполнителей"
 
     def _update_top_nav(self):
-        """Обновляет TopNav с двухстрочным заголовком"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             if self.current_letter:
@@ -193,17 +193,15 @@ class ArtistsByLetterScreen(BaseScreen):
                 logger.warning("⚠️ Не удалось обновить TopNav: current_letter отсутствует")
 
     def _restore_top_nav(self, *args):
-        """Принудительное восстановление заголовка с задержкой"""
         if self.current_letter:
             self._update_top_nav()
-            logger.info(f"   ✅ Принудительно восстановлен заголовок: {self.current_letter} ({self._total_artists} исполнителей)")
+            logger.info(
+                f"   ✅ Принудительно восстановлен заголовок: {self.current_letter} ({self._total_artists} исполнителей)")
 
     def init_ui(self):
-        """Инициализирует UI с правильными отступами"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
         self._main_layout = main_layout
 
-        # ============ ВЕРХНИЙ ОТСТУП ============
         top_padding = layout_config.get_top_padding()
         top_padding = top_padding - dp(8)
         if top_padding < dp(20):
@@ -212,7 +210,6 @@ class ArtistsByLetterScreen(BaseScreen):
         self._top_spacer = Widget(size_hint_y=None, height=top_padding)
         main_layout.add_widget(self._top_spacer)
 
-        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК (используем layout_config) ============
         bottom_padding = layout_config.get_bottom_padding()
 
         cards_container = MDBoxLayout(
@@ -222,7 +219,6 @@ class ArtistsByLetterScreen(BaseScreen):
         )
         cards_container.clip = True
 
-        # RecycleView с оптимизациями
         self.recycle_view = ArtistRecycleView(on_artist_click=self.on_artist_selected)
         self.recycle_view.bar_width = 0
         self.recycle_view.bar_color = [0, 0, 0, 0]
@@ -237,7 +233,6 @@ class ArtistsByLetterScreen(BaseScreen):
         logger.info(f"UI построен, bottom_padding={bottom_padding}dp")
 
     def on_enter(self):
-        """Вызывается когда экран становится видимым"""
         logger.info(f"on_enter: current_letter={self.current_letter}, pending={self._pending_letter}")
 
         if self.current_letter:
@@ -259,6 +254,12 @@ class ArtistsByLetterScreen(BaseScreen):
         self.current_letter = letter
         self._total_artists = 0
 
+        self._page = 0
+        self._all_artists = []
+        self._has_more = True
+        self._is_loading_more = False
+        self._loading_all = False
+
         self._update_top_nav()
 
         if not self.manager or self.manager.current != self.name:
@@ -269,10 +270,16 @@ class ArtistsByLetterScreen(BaseScreen):
         self._do_load_letter(letter)
 
     def _do_load_letter(self, letter):
-        """Загружает исполнителей для буквы с сервера"""
+        """Загружает всех исполнителей для буквы последовательно"""
         logger.info(f"_do_load_letter: {letter}")
 
         self.current_letter = letter
+
+        self._page = 0
+        self._all_artists = []
+        self._has_more = True
+        self._is_loading_more = False
+        self._loading_all = True
 
         if self.recycle_view:
             self.recycle_view.clear()
@@ -282,27 +289,192 @@ class ArtistsByLetterScreen(BaseScreen):
         self._show_loading()
 
         if letter in ("digits", "0-9"):
-            api.get_artists_by_digits(limit=200, offset=0,
-                                      on_success=self._on_artists_loaded,
-                                      on_failure=self._on_load_failed)
+            api.get_artists_by_digits(
+                limit=self._limit,
+                offset=0,
+                on_success=self._on_first_page_loaded,
+                on_failure=self._on_page_failed
+            )
         else:
-            api.get_artists_by_letter(letter=letter, limit=200, offset=0,
-                                      on_success=self._on_artists_loaded,
-                                      on_failure=self._on_load_failed)
+            api.get_artists_by_letter(
+                letter=letter,
+                limit=self._limit,
+                offset=0,
+                on_success=self._on_first_page_loaded,
+                on_failure=self._on_page_failed
+            )
+
+    def _on_first_page_loaded(self, data):
+        """Обработчик первой страницы - сразу показываем и продолжаем загрузку"""
+        if data is None:
+            data = {"artists": [], "total": 0}
+        if not isinstance(data, dict):
+            data = {"artists": [], "total": 0}
+
+        artists = data.get('artists', [])
+        total = data.get('total', 0)
+
+        if not isinstance(artists, list):
+            artists = []
+            total = 0
+
+        self._total_artists = total
+
+        # Сохраняем первую страницу
+        for a in artists:
+            name = a.get('artist') if isinstance(a, dict) else None
+            count = a.get('songs_count', 0) if isinstance(a, dict) else 0
+            if name:
+                self._all_artists.append({'artist': name, 'songs_count': count, 'on_click': self.on_artist_selected})
+
+        logger.info(f"📄 Первая страница: {len(self._all_artists)} из {total} исполнителей")
+
+        # Проверяем, все ли загружены
+        if len(self._all_artists) >= total:
+            self._has_more = False
+            self._loading_all = False
+            self._display_final_list()
+            return
+
+        # Загружаем остальные страницы в фоне
+        self._loading_all = True
+        # Обновляем текст только если есть спиннер
+        if self.loading_spinner:
+            self.loading_spinner.set_text("Загрузка исполнителей...")
+        self._load_next_pages()
+
+    def _load_next_pages(self):
+        """Загружает остальные страницы последовательно"""
+        if not self._has_more or self._is_loading_more:
+            return
+
+        if self._total_artists > 0 and len(self._all_artists) >= self._total_artists:
+            self._has_more = False
+            self._loading_all = False
+            self._display_final_list()
+            return
+
+        self._is_loading_more = True
+        self._page += 1
+
+        offset = self._page * self._limit
+
+        logger.info(f"🔄 Фоновая загрузка страницы {self._page + 1} (offset={offset})")
+
+        if self.current_letter in ("digits", "0-9"):
+            api.get_artists_by_digits(
+                limit=self._limit,
+                offset=offset,
+                on_success=self._on_next_page_loaded,
+                on_failure=self._on_page_failed
+            )
+        else:
+            api.get_artists_by_letter(
+                letter=self.current_letter,
+                limit=self._limit,
+                offset=offset,
+                on_success=self._on_next_page_loaded,
+                on_failure=self._on_page_failed
+            )
+
+    def _on_next_page_loaded(self, data):
+        """Обработчик загрузки следующей страницы"""
+        self._is_loading_more = False
+
+        if data is None:
+            data = {"artists": [], "total": 0}
+        if not isinstance(data, dict):
+            data = {"artists": [], "total": 0}
+
+        artists = data.get('artists', [])
+        total = data.get('total', 0)
+
+        if not isinstance(artists, list):
+            artists = []
+
+        if not artists:
+            self._has_more = False
+            self._loading_all = False
+            self._display_final_list()
+            return
+
+        # Добавляем новых исполнителей
+        for artist in artists:
+            name = artist.get('artist') if isinstance(artist, dict) else None
+            count = artist.get('songs_count', 0) if isinstance(artist, dict) else 0
+            if name:
+                self._all_artists.append({'artist': name, 'songs_count': count, 'on_click': self.on_artist_selected})
+
+        new_count = len(self._all_artists)
+        logger.info(f"✅ Загружено {new_count} из {total} исполнителей")
+
+        # Обновляем текст только если есть спиннер
+        if self.loading_spinner:
+            self.loading_spinner.set_text("Загрузка исполнителей...")
+
+        # Проверяем, все ли загружены
+        if new_count >= total:
+            self._has_more = False
+            self._loading_all = False
+            self._display_final_list()
+            return
+
+        # Загружаем следующую страницу с задержкой
+        Clock.schedule_once(lambda dt: self._load_next_pages(), 0.1)
+
+    def _display_final_list(self):
+        """Показывает финальный список исполнителей"""
+        self._hide_loading()
+        self._update_top_nav()
+
+        if not self._all_artists:
+            self._show_empty()
+            if self.recycle_view:
+                self.recycle_view.clear()
+            return
+
+        if self.recycle_view:
+            self.recycle_view.data = self._all_artists
+            self.recycle_view.refresh_from_data()
+            # Прокручиваем в самый верх
+            Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
+
+        logger.info(f"✅ Отображено {len(self._all_artists)} исполнителей для {self.current_letter}")
+
+    def _on_page_failed(self, req, error):
+        """Обработчик ошибки загрузки страницы"""
+        self._is_loading_more = False
+        self._loading_all = False
+        self._hide_loading()
+        logger.error(f"❌ Ошибка загрузки для буквы {self.current_letter}: {error}")
+
+        self._total_artists = 0
+
+        if self.recycle_view:
+            self.recycle_view.clear()
+
+        self._show_empty("Ошибка загрузки\nПроверьте интернет")
+        self._update_top_nav()
 
     def _show_loading(self):
-        if self.loading_label:
+        if self.loading_spinner:
             return
         if self.recycle_view:
             self.recycle_view.clear()
-        self.loading_label = SimpleLoadingLabel()
+
+        # Создаём спиннер с текстом
+        self.loading_spinner = LoadingSpinner(text="Загрузка исполнителей...")
+        self.loading_spinner.start_animation()
+
         if self._main_layout:
-            self._main_layout.add_widget(self.loading_label)
+            self._main_layout.add_widget(self.loading_spinner)
 
     def _hide_loading(self):
-        if self.loading_label and self.loading_label.parent:
-            self.loading_label.parent.remove_widget(self.loading_label)
-        self.loading_label = None
+        if self.loading_spinner:
+            self.loading_spinner.stop_animation()
+            if self.loading_spinner.parent:
+                self.loading_spinner.parent.remove_widget(self.loading_spinner)
+        self.loading_spinner = None
 
     def _show_empty(self, text="Нет исполнителей на эту букву"):
         if self.empty_label:
@@ -324,68 +496,6 @@ class ArtistsByLetterScreen(BaseScreen):
             self.empty_label.parent.remove_widget(self.empty_label)
         self.empty_label = None
 
-    def _display_artists(self, artists, total):
-        if artists is None:
-            artists = []
-        if total is None:
-            total = 0
-
-        logger.info(f"_display_artists: {len(artists)} артистов, total={total}")
-        self._total_artists = total
-
-        self._hide_loading()
-        self._hide_empty()
-
-        self._update_top_nav()
-
-        if not artists:
-            self._show_empty()
-            if self.recycle_view:
-                self.recycle_view.clear()
-            return
-
-        data = []
-        for a in artists:
-            name = a.get('artist') if isinstance(a, dict) else None
-            count = a.get('songs_count', 0) if isinstance(a, dict) else 0
-            if name:
-                data.append({'artist': name, 'songs_count': count, 'on_click': self.on_artist_selected})
-
-        if self.recycle_view:
-            self.recycle_view.data = data
-            self.recycle_view.refresh_from_data()
-
-        logger.info(f"Отображено {len(data)} исполнителей для {self.current_letter}")
-
-    def _on_artists_loaded(self, data):
-        logger.info(f"_on_artists_loaded для буквы {self.current_letter}")
-
-        if data is None:
-            data = {"artists": [], "total": 0}
-        if not isinstance(data, dict):
-            data = {"artists": [], "total": 0}
-
-        artists = data.get('artists', [])
-        total = data.get('total', 0)
-
-        if not isinstance(artists, list):
-            artists = []
-            total = 0
-
-        self._display_artists(artists, total)
-
-    def _on_load_failed(self, req, error):
-        self._hide_loading()
-        logger.error(f"Ошибка загрузки для буквы {self.current_letter}: {error}")
-
-        self._total_artists = 0
-
-        if self.recycle_view:
-            self.recycle_view.clear()
-
-        self._show_empty("Ошибка загрузки\nПроверьте интернет")
-        self._update_top_nav()
-
     def on_artist_selected(self, artist, songs_count):
         logger.info(f"Выбран исполнитель: {artist}")
         if hasattr(self, 'manager') and self.manager:
@@ -395,7 +505,6 @@ class ArtistsByLetterScreen(BaseScreen):
                 self.manager.current = 'artist_songs'
 
     def go_back(self, instance=None):
-        """Возврат на экран песен (songs)"""
         logger.info("🔙 go_back: возврат на songs")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
@@ -405,8 +514,8 @@ class ArtistsByLetterScreen(BaseScreen):
             self.manager.current = 'songs'
 
     def on_leave(self):
-        """При выходе с экрана"""
         logger.info("Выход из экрана исполнителей")
+        self._hide_loading()
         if self.manager and self.manager.current not in ['artist_songs', 'song_detail']:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):

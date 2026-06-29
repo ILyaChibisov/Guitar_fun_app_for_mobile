@@ -1,7 +1,7 @@
 # screens/favorites_screen.py
 """
 Экран избранного - список любимых песен пользователя
-с двухстрочным заголовком в TopNav
+с двухстрочным заголовком в TopNav и круговым спиннером загрузки по центру
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -24,6 +24,7 @@ from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
+from screens.components.loading_spinner import LoadingSpinner
 from api.client import api
 from utils.notifications import notify
 
@@ -239,7 +240,7 @@ class FavoritesScreen(BaseScreen):
         self.bg_image = None
         self.cards_container = None
         self._main_layout = None
-        self.loading_label = None
+        self.loading_spinner = None
         self._top_spacer = None
         self._pending_refresh = False
         self._top_nav_updated = False
@@ -380,7 +381,6 @@ class FavoritesScreen(BaseScreen):
 
     def _update_top_nav(self, total):
         """Обновляет TopNav с двухстрочным заголовком (только если экран активен)"""
-        # Обновляем заголовок ТОЛЬКО если мы сейчас на экране избранного
         if self.manager and self.manager.current != self.name:
             logger.debug(f"Пропускаем обновление TopNav: экран не активен (current={self.manager.current})")
             return
@@ -414,20 +414,24 @@ class FavoritesScreen(BaseScreen):
         self._update_top_nav(0)
 
     def _show_loading(self):
-        """Показывает состояние загрузки"""
-        if self.loading_label:
+        """Показывает состояние загрузки с круговым спиннером"""
+        if self.loading_spinner:
             return
+
         self.cards_container.clear_widgets()
-        self.loading_label = MDLabel(
-            text="Загрузка избранного...",
-            halign="center",
-            font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.6],
-            size_hint_y=None,
-            height=dp(60)
-        )
-        self.cards_container.add_widget(self.loading_label)
+        self.loading_spinner = LoadingSpinner(text="Загрузка избранного...")
+        self.loading_spinner.start_animation()
+
+        if self._main_layout:
+            self._main_layout.add_widget(self.loading_spinner)
+
+    def _hide_loading(self):
+        """Убирает индикатор загрузки"""
+        if self.loading_spinner:
+            self.loading_spinner.stop_animation()
+            if self.loading_spinner.parent:
+                self.loading_spinner.parent.remove_widget(self.loading_spinner)
+        self.loading_spinner = None
 
     def _show_empty(self):
         """Показывает пустое состояние (нет избранных, но пользователь авторизован)"""
@@ -472,12 +476,6 @@ class FavoritesScreen(BaseScreen):
         empty_card.add_widget(text_label)
         self.cards_container.add_widget(empty_card)
 
-    def _clear_loading(self):
-        """Убирает индикатор загрузки"""
-        if self.loading_label and self.loading_label.parent:
-            self.cards_container.remove_widget(self.loading_label)
-        self.loading_label = None
-
     def load_favorites(self):
         """Загружает избранные песни (с кэшем)"""
         self._show_loading()
@@ -507,7 +505,7 @@ class FavoritesScreen(BaseScreen):
 
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
-        self._clear_loading()
+        self._hide_loading()
         self.cards_container.clear_widgets()
 
         if "401" in str(error) or "Unauthorized" in str(error):
@@ -533,7 +531,6 @@ class FavoritesScreen(BaseScreen):
         """Возврат на главный экран"""
         logger.info("🔙 go_back: возврат на home")
 
-        # Сбрасываем TopNav перед переходом
         self._reset_top_nav()
 
         if hasattr(self, 'manager') and self.manager:
@@ -551,14 +548,12 @@ class FavoritesScreen(BaseScreen):
         """При входе на экран"""
         logger.info("Вход в экран избранного")
 
-        # Обновляем TopNav при входе только если экран активен
         if self.favorites:
             self._update_top_nav(len(self.favorites))
         else:
             self._update_top_nav(0)
 
         if api.is_authenticated():
-            # Если уже авторизованы, загружаем данные
             if not self.favorites:
                 self.load_favorites()
         else:
@@ -567,12 +562,11 @@ class FavoritesScreen(BaseScreen):
     def on_login_success(self):
         """Обработчик успешного входа - вызывается из модального окна авторизации"""
         logger.info("✅ Успешная авторизация на экране избранного - обновляем список")
-        # Принудительно обновляем избранное с задержкой, чтобы успели загрузиться данные пользователя
         Clock.schedule_once(lambda dt: self.refresh_favorites(), 0.3)
 
     def on_favorites_loaded(self, favorites):
         """Обработчик успешной загрузки избранного"""
-        self._clear_loading()
+        self._hide_loading()
         self.cards_container.clear_widgets()
 
         formatted_favorites = []
@@ -594,7 +588,6 @@ class FavoritesScreen(BaseScreen):
             self._show_empty()
             return
 
-        # Обновляем TopNav с количеством (только если экран активен)
         self._update_top_nav(len(self.favorites))
 
         for song_data in self.favorites:
@@ -609,7 +602,5 @@ class FavoritesScreen(BaseScreen):
     def on_leave(self):
         """При выходе с экрана"""
         logger.info("Выход из экрана избранного")
-        self._clear_loading()
-
-        # Сбрасываем кастомный заголовок при выходе
+        self._hide_loading()
         self._reset_top_nav()

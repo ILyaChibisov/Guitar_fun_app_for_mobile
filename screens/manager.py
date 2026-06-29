@@ -1,5 +1,5 @@
-# screens/manager.py (обновлённый - без SearchResultsScreen)
-from kivy.uix.screenmanager import ScreenManager
+# screens/manager.py (с NoTransition - без затемнения)
+from kivy.uix.screenmanager import ScreenManager, NoTransition
 from config.logger_config import get_logger
 from .home_screen import HomeScreen
 from .songs_screen import SongsScreen
@@ -31,7 +31,12 @@ logger = get_logger('ScreenManager')
 
 
 def setup_screen_manager():
-    sm = ScreenManager()
+    # ============ МГНОВЕННАЯ СМЕНА ЭКРАНОВ БЕЗ АНИМАЦИИ ============
+    # NoTransition - нет затемнения, нет сдвига, просто мгновенная смена
+    sm = ScreenManager(transition=NoTransition())
+
+    # Если хочешь с минимальной задержкой для плавности:
+    # sm = ScreenManager(transition=NoTransition(duration=0.0))
 
     sm.add_widget(HomeScreen(name='home'))
     sm.add_widget(SongsScreen(name='songs'))
@@ -62,5 +67,5 @@ def setup_screen_manager():
     sm.add_widget(DomhveParserScreen(name='domhve_parser'))
     sm.add_widget(RushSoundParserScreen(name='rushsound_parser'))
 
-    logger.info('ScreenManager настроен, добавлено 22 экрана (SearchResultsScreen удалён)')
+    logger.info('ScreenManager настроен с NoTransition (мгновенная смена), добавлено 22 экрана')
     return sm
