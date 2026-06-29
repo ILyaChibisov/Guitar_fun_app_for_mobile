@@ -1,6 +1,6 @@
 # screens/home_screen.py
 """
-Главный экран гитарного приложения - с сеткой разделов 3x2 в стиле карусели
+Главный экран гитарного приложения - с сеткой разделов 3x2 и информацией о пользователе
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
@@ -50,12 +50,12 @@ def hex_to_rgb(hex_color):
 
 
 class GridCard(CircularRippleBehavior, MDCard):
-    """Карточка раздела в сетке 3x2 - точь-в-точь как SectionCard из карусели"""
+    """Карточка раздела в сетке 3x2"""
 
     # Свойство для анимации масштаба
     scale = NumericProperty(1.0)
 
-    # Цвета из SectionCard
+    # Цвета разделов
     SECTION_COLORS = {
         'songs': ('#E53935', '#C62828'),
         'chords': ('#43A047', '#2E7D32'),
@@ -131,7 +131,6 @@ class GridCard(CircularRippleBehavior, MDCard):
         self.bind(scale=self._update_scale)
 
     def _update_scale(self, instance, value):
-        """Обновляет визуальный размер при изменении scale"""
         pass
 
     def _load_icon(self):
@@ -152,13 +151,11 @@ class GridCard(CircularRippleBehavior, MDCard):
         return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)] + [alpha]
 
     def _on_enter(self, *args):
-        """При наведении - ярче и поднимаем"""
         Animation(elevation=6, duration=0.15).start(self)
         self.md_bg_color = self._hex_to_rgba(self.bg_color, 1.0)
         Animation(scale=1.05, duration=0.15).start(self)
 
     def _on_leave(self, *args):
-        """При убирании курсора"""
         Animation(elevation=2, duration=0.15).start(self)
         self.md_bg_color = self._hex_to_rgba(self.bg_color, 0.85)
         Animation(scale=1.0, duration=0.15).start(self)
@@ -179,18 +176,41 @@ class HomeScreen(BaseScreen):
 
         self.user = None
         self.auth_check_done = False
-        self.welcome_label = None
-        self.username_label = None
         self.app_name_label = None
+        self.user_info_label = None
         self.auth_modal_shown = False
         self.is_authenticated = False
+        self._grid = None
+        self._user_info_container = None
+        self._top_nav_reset_done = False
 
         self.init_ui()
-        Clock.schedule_once(self._check_auth, 0.5)
+
+        # Принудительно устанавливаем заголовок при создании
+        Clock.schedule_once(self._force_set_home_title, 0.1)
+        Clock.schedule_once(self._force_set_home_title, 0.3)
+        Clock.schedule_once(self._force_set_home_title, 0.5)
+
+        Clock.schedule_once(self._check_auth, 0.7)
+
         logger.info('Главный экран создан')
 
+    def _force_set_home_title(self, dt):
+        """Принудительно устанавливает 'Главная' в TopNav"""
+        try:
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'top_nav') and app.top_nav:
+                app.top_nav.clear_custom_title_widget()
+                app.top_nav.update_title('home')
+                app.top_nav._update_left_button('home')
+                app.top_nav._update_right_buttons('home')
+                logger.debug("✅ TopNav принудительно установлен на 'Главная'")
+                self._top_nav_reset_done = True
+        except Exception as e:
+            logger.debug(f"TopNav ещё не готов: {e}")
+
     def init_ui(self):
-        """Инициализирует UI с сеткой 3x2"""
+        """Инициализирует UI с сеткой 3x2 и информацией о пользователе"""
 
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
@@ -209,52 +229,24 @@ class HomeScreen(BaseScreen):
             padding=[content_padding[0], 0, content_padding[2], 0]
         )
 
-        # ============ ЗАГОЛОВОК ============
-        header_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(40),
-            spacing=dp(2),
-            padding=[dp(8), dp(4), dp(8), dp(4)]
-        )
-
-        # Добро пожаловать (показывается сначала)
-        self.welcome_label = MDLabel(
-            text="",
-            font_size=sp(18),
-            halign="center",
-            valign="middle",
-            size_hint_y=None,
-            height=dp(40),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
-            bold=True,
-            opacity=1
-        )
-
-        # Название приложения (появляется после)
+        # ============ НАЗВАНИЕ ПРИЛОЖЕНИЯ ============
         self.app_name_label = MDLabel(
             text="GuitarFuns",
-            font_size=sp(24),
+            font_size=sp(32),
             halign="center",
-            valign="middle",
             size_hint_y=None,
-            height=dp(40),
+            height=dp(60),
             theme_text_color="Custom",
             text_color=hex_to_rgb(theme.PRIMARY) + [1],
-            bold=True,
-            opacity=0
+            bold=True
         )
-
-        header_container.add_widget(self.welcome_label)
-        header_container.add_widget(self.app_name_label)
-        content_wrapper.add_widget(header_container)
+        content_wrapper.add_widget(self.app_name_label)
 
         # Небольшой отступ
-        content_wrapper.add_widget(Widget(size_hint_y=None, height=dp(4)))
+        content_wrapper.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         # ============ СЕТКА 3x2 ============
-        grid = GridLayout(
+        self._grid = GridLayout(
             cols=3,
             spacing=dp(12),
             size_hint=(1, None),
@@ -277,49 +269,45 @@ class HomeScreen(BaseScreen):
                 icon_asset=icon_asset,
                 on_click=self._on_section_selected
             )
-            grid.add_widget(card)
+            self._grid.add_widget(card)
 
-        content_wrapper.add_widget(grid)
+        content_wrapper.add_widget(self._grid)
 
-        # ============ ПОПУЛЯРНЫЕ ПОДБОРЫ (заглушка) ============
-        content_wrapper.add_widget(Widget(size_hint_y=None, height=dp(16)))
+        # ============ ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ ============
+        content_wrapper.add_widget(Widget(size_hint_y=None, height=dp(24)))
 
-        popular_label = MDLabel(
-            text="Популярные подборы",
-            font_size=sp(16),
-            halign="center",
-            bold=True,
-            size_hint_y=None,
-            height=dp(30),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.7]
-        )
-        content_wrapper.add_widget(popular_label)
-
-        # Заглушка для популярных подборов
-        placeholder_card = MDCard(
+        self._user_info_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(80),
-            radius=[dp(12), dp(12), dp(12), dp(12)],
-            md_bg_color=[0, 0, 0, 0.08],
-            elevation=0,
-            padding=[dp(16), dp(16), dp(16), dp(16)],
-            line_color=[1, 1, 1, 0.05],
-            line_width=1
+            height=dp(50),
+            spacing=dp(4),
+            padding=[dp(8), dp(4), dp(8), dp(4)]
         )
 
-        placeholder_label = MDLabel(
-            text="Скоро здесь появятся популярные подборы",
-            halign="center",
-            valign="middle",
-            font_size=sp(13),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.4],
-            size_hint=(1, 1)
+        # Разделительная линия
+        divider = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(1),
+            md_bg_color=[1, 1, 1, 0.1],
+            padding=[dp(20), 0, dp(20), 0]
         )
-        placeholder_card.add_widget(placeholder_label)
-        content_wrapper.add_widget(placeholder_card)
+        self._user_info_container.add_widget(divider)
+
+        # Информация о пользователе
+        self.user_info_label = MDLabel(
+            text="👤 Пользователь: гость",
+            font_size=sp(14),
+            halign="center",
+            size_hint_y=None,
+            height=dp(32),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6],
+            bold=False
+        )
+        self._user_info_container.add_widget(self.user_info_label)
+
+        content_wrapper.add_widget(self._user_info_container)
 
         # Растягивающийся виджет внизу
         content_wrapper.add_widget(Widget(size_hint_y=1))
@@ -334,50 +322,27 @@ class HomeScreen(BaseScreen):
 
         logger.info(f"HomeScreen: top_padding = {top_padding}dp")
 
-    def _show_welcome(self, username):
-        """Показывает приветствие с именем пользователя"""
-        if self.welcome_label:
-            self.welcome_label.text = f"Добро пожаловать, {username}!"
-            self.welcome_label.opacity = 1
-            self.app_name_label.opacity = 0
+    def _update_user_info(self, username=None):
+        """Обновляет информацию о пользователе"""
+        if self.user_info_label:
+            if username:
+                self.user_info_label.text = f"👤 Пользователь: {username}"
+            else:
+                self.user_info_label.text = "👤 Пользователь: гость"
 
-            # Через 1.5 секунды меняем на название приложения
-            Clock.schedule_once(self._show_app_name, 1.5)
-
-    def _show_app_name(self, dt):
-        """Показывает название приложения вместо приветствия"""
-        if self.welcome_label:
-            # Анимируем исчезновение приветствия
-            anim1 = Animation(opacity=0, duration=0.4)
-            anim1.start(self.welcome_label)
-
-            # Через 0.4 секунды показываем название
-            Clock.schedule_once(lambda x: self._show_app_name_after(), 0.4)
-
-    def _show_app_name_after(self):
-        """Показывает название приложения"""
-        if self.app_name_label:
-            self.app_name_label.opacity = 1
-            anim = Animation(opacity=1, duration=0.4)
-            anim.start(self.app_name_label)
-            logger.info("Показано название приложения")
-
-    def _show_auth_modal(self):
-        """Показывает окно авторизации"""
-        if self.auth_modal_shown:
-            return
-        self.auth_modal_shown = True
-
-        # Задерживаем показ, чтобы пользователь увидел приветствие
-        Clock.schedule_once(self._show_auth_modal_delayed, 1.0)
-
-    def _show_auth_modal_delayed(self, dt):
-        """Показывает окно авторизации с задержкой"""
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'open_profile'):
-            # Используем метод приложения для показа авторизации
-            app.open_profile()
-        self.auth_modal_shown = False
+    def _reset_top_nav_to_home(self):
+        """Сбрасывает TopNav в состояние для главного экрана"""
+        try:
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'top_nav') and app.top_nav:
+                app.top_nav.clear_custom_title_widget()
+                app.top_nav.update_title('home')
+                app.top_nav._update_left_button('home')
+                app.top_nav._update_right_buttons('home')
+                logger.debug("TopNav сброшен для главного экрана")
+                self._top_nav_reset_done = True
+        except Exception as e:
+            logger.debug(f"TopNav ещё не готов: {e}")
 
     def _on_section_selected(self, section_id):
         """Обработчик выбора раздела"""
@@ -411,8 +376,7 @@ class HomeScreen(BaseScreen):
             )
         else:
             logger.info("Нет токена, показываем гостя")
-            self._show_welcome("гость")
-            # Показываем окно авторизации для гостя
+            self._update_user_info()
             self._show_auth_modal()
 
     def _on_auth_success(self, user):
@@ -420,39 +384,95 @@ class HomeScreen(BaseScreen):
         api.user_data = user
         username = user.get('username', 'Гость')
         logger.info(f'Пользователь авторизован: {username}')
-        self._show_welcome(username)
+        self._update_user_info(username)
+
+        # Сбрасываем TopNav на главный экран
+        self._reset_top_nav_to_home()
+
+        # Обновляем избранное, если экран избранного активен
+        self._refresh_favorites_if_needed()
 
     def _on_auth_failure(self, req, error):
         logger.warning(f'Авторизация не пройдена: {error}')
-        self._show_welcome("гость")
-        # Показываем окно авторизации при ошибке
+        self._update_user_info()
         self._show_auth_modal()
 
+    def _show_auth_modal(self):
+        """Показывает окно авторизации"""
+        if self.auth_modal_shown:
+            return
+        self.auth_modal_shown = True
+
+        Clock.schedule_once(self._show_auth_modal_delayed, 0.5)
+
+    def _show_auth_modal_delayed(self, dt):
+        """Показывает окно авторизации с задержкой"""
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'open_profile'):
+            app.open_profile()
+        self.auth_modal_shown = False
+
+    def _refresh_favorites_if_needed(self):
+        """Обновляет экран избранного, если он открыт"""
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('favorites'):
+                favorites_screen = self.manager.get_screen('favorites')
+                if hasattr(favorites_screen, 'refresh_favorites'):
+                    Clock.schedule_once(lambda dt: favorites_screen.refresh_favorites(), 0.5)
+
     def on_login_success(self):
-        """Обработчик успешного входа"""
-        if api.access_token:
-            api.get_current_user(
-                on_success=self._on_user_data_loaded,
-                on_failure=lambda req, err: None
-            )
+        """Обработчик успешного входа - вызывается из main.py"""
+        logger.info("✅ Успешная авторизация на главном экране")
+        # Сбрасываем TopNav на главный экран
+        self._reset_top_nav_to_home()
+
+        # Обновляем информацию о пользователе
+        if api.is_authenticated() and api.user_data:
+            username = api.user_data.get('username', 'Гость')
+            self._update_user_info(username)
+        else:
+            self._check_auth(0)
 
     def _on_user_data_loaded(self, user):
         self.user = user
         api.user_data = user
         username = user.get('username', 'Гость')
-        self._show_welcome(username)
+        self._update_user_info(username)
+        self._refresh_favorites_if_needed()
+        logger.info(f'Данные пользователя обновлены: {username}')
 
     def on_enter(self):
         """При входе на экран"""
         logger.info("Вход в главный экран")
-        # Если пользователь уже авторизован, показываем приветствие
+
+        # ============ ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ ЗАГОЛОВОК "ГЛАВНАЯ" ============
+        try:
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'top_nav') and app.top_nav:
+                app.top_nav.clear_custom_title_widget()
+                app.top_nav.update_title('home')
+                app.top_nav._update_left_button('home')
+                app.top_nav._update_right_buttons('home')
+                logger.debug("✅ TopNav принудительно установлен на 'Главная' при входе")
+                self._top_nav_reset_done = True
+        except Exception as e:
+            logger.debug(f"TopNav ещё не готов: {e}")
+
+        # Если пользователь уже авторизован - показываем его имя
         if api.is_authenticated() and api.user_data:
             username = api.user_data.get('username', 'Гость')
-            self._show_welcome(username)
+            self._update_user_info(username)
+        elif api.is_authenticated() and api.access_token:
+            # Есть токен, но нет данных - загружаем
+            api.get_current_user(
+                on_success=self._on_user_data_loaded,
+                on_failure=lambda req, err: self._update_user_info()
+            )
         elif not api.is_authenticated():
-            # Если не авторизован, но приветствие ещё не показывали
             if not self.auth_check_done:
                 self._check_auth(0)
+            else:
+                self._update_user_info()
 
     def on_leave(self):
         """При выходе с экрана"""

@@ -261,20 +261,51 @@ class GuitarFunsApp(MDApp):
         self.set_blocking(False)
 
     def _on_auth_success(self, provider=None):
+        """Обработчик успешной авторизации"""
         logger.info(f"Авторизация успешна: {provider}")
+
+        # Закрываем модальное окно
         if self.blocking_layer:
             self.blocking_layer.clear_modal_widget()
         self.current_auth_modal = None
         self.set_blocking(False)
+
+        # Загружаем данные пользователя
         if api.access_token:
             api.get_current_user(
-                on_success=lambda user: setattr(api, 'user_data', user),
+                on_success=self._on_user_data_loaded,
                 on_failure=lambda req, err: None
             )
+
+        # Обновляем текущий экран после авторизации
+        Clock.schedule_once(self._refresh_current_screen, 0.3)
+
+    def _on_user_data_loaded(self, user):
+        """Загружены данные пользователя"""
+        api.user_data = user
+        username = user.get('username', 'Гость')
+        logger.info(f"Данные пользователя загружены: {username}")
+
+    def _refresh_current_screen(self, dt):
+        """Обновляет текущий экран после авторизации"""
         if self.screen_manager:
             current_screen = self.screen_manager.current_screen
-            if hasattr(current_screen, 'on_login_success'):
-                current_screen.on_login_success()
+            if current_screen:
+                screen_name = current_screen.name
+                logger.info(f"Обновление экрана после авторизации: {screen_name}")
+
+                # Вызываем on_login_success если есть
+                if hasattr(current_screen, 'on_login_success'):
+                    current_screen.on_login_success()
+                # Если экран избранного - принудительно обновляем
+                elif screen_name == 'favorites' and hasattr(current_screen, 'refresh_favorites'):
+                    current_screen.refresh_favorites()
+
+                # Обновляем главный экран если он есть в менеджере
+                if self.screen_manager.has_screen('home'):
+                    home_screen = self.screen_manager.get_screen('home')
+                    if hasattr(home_screen, 'on_login_success'):
+                        home_screen.on_login_success()
 
     def build(self):
         logger.debug('Создание интерфейса...')
@@ -315,6 +346,12 @@ class GuitarFunsApp(MDApp):
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
         self.top_nav.pos_hint = {'top': 1}
+
+        # ============ УСТАНАВЛИВАЕМ НАЧАЛЬНЫЙ ЗАГОЛОВОК "ГЛАВНАЯ" ============
+        # Принудительно устанавливаем заголовок "Главная" при создании TopNav
+        self.top_nav.update_title('home')
+        self.top_nav._hide_back_button()
+        logger.info("✅ TopNav установлен на 'Главная'")
 
         self.bottom_nav = BottomNav(self.screen_manager)
         self.bottom_nav.pos_hint = {'y': 0}

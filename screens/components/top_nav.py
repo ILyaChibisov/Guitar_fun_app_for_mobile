@@ -115,7 +115,7 @@ class TopNav(MDCard):
             text_color=[1, 1, 1, 1],
             bold=True,
             size_hint=(None, None),
-            width=dp(250),  # Фиксированная ширина для центрирования
+            width=dp(250),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             shorten=True,
             shorten_from="right"
@@ -206,7 +206,6 @@ class TopNav(MDCard):
 
     def update_title(self, screen_name: str):
         self.screen_title.text = self._get_screen_title(screen_name)
-        # Обновляем ширину для длинных заголовков
         self._adjust_title_width()
 
     def set_custom_title(self, title: str):
@@ -219,14 +218,23 @@ class TopNav(MDCard):
         if not text:
             return
 
-        # Примерный расчёт ширины текста
-        char_width = sp(12)  # Примерная ширина символа
+        window_width = Window.width
+
+        left_width = dp(48)
+        right_width = dp(100)
+        padding = dp(32)
+
+        max_width = window_width - left_width - right_width - padding
+
+        if max_width < dp(100):
+            max_width = dp(100)
+
+        char_width = sp(12)
         text_width = len(text) * char_width + dp(16)
 
-        # Ограничиваем максимальную ширину
-        max_width = Window.width - dp(120)  # Учитываем кнопки по бокам
         if text_width > max_width:
             text_width = max_width
+
         if text_width < dp(80):
             text_width = dp(80)
 
@@ -242,10 +250,27 @@ class TopNav(MDCard):
         if self.screen_title in self.container.children:
             self.container.remove_widget(self.screen_title)
 
-        # Кастомный виджет тоже центрируем
+        # Кастомный виджет центрируем с правильными размерами
         widget.size_hint = (None, None)
-        widget.width = dp(250)
+
+        # Определяем оптимальную ширину в зависимости от содержимого
+        window_width = Window.width
+        left_width = dp(48)
+        right_width = dp(100)
+        padding = dp(32)
+        max_width = window_width - left_width - right_width - padding
+
+        if max_width < dp(100):
+            max_width = dp(100)
+
+        widget.width = max_width
+        widget.height = dp(48)
         widget.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+
+        # Добавляем небольшой отступ, чтобы не перекрывать кнопки
+        if hasattr(widget, 'padding'):
+            widget.padding = [dp(8), dp(4), dp(8), dp(4)]
+
         self.container.add_widget(widget)
         self.custom_title_widget = widget
 
@@ -309,33 +334,30 @@ class TopNav(MDCard):
         if old and old != screen_name:
             self._previous_screen = old
 
-        screens_with_custom_title = ['song_detail', 'terms_by_letter', 'term_detail', 'artists_by_letter',
-                                     'artist_songs', 'favorites']
+        # Экран с кастомным заголовком
+        screens_with_custom_title = ['song_detail', 'terms_by_letter', 'term_detail',
+                                     'artists_by_letter', 'artist_songs', 'favorites']
 
+        # Обновляем левую кнопку
+        self._update_left_button(screen_name)
+
+        # Обновляем правые кнопки
+        self._update_right_buttons(screen_name)
+
+        # Если экран НЕ с кастомным заголовком - обновляем стандартный
         if screen_name not in screens_with_custom_title:
             if self.custom_title_widget:
                 self.clear_custom_title_widget()
-                self.update_title(screen_name)
-            else:
-                self.update_title(screen_name)
+            self.update_title(screen_name)
+        else:
+            # Для экранов с кастомным заголовком - не трогаем стандартный
+            # Если кастомный виджет есть - оставляем его
+            pass
 
-        self._update_left_button(screen_name)
-
-        if screen_name not in screens_with_custom_title:
-            if not hasattr(self, 'custom_title_widget') or not self.custom_title_widget:
-                self.update_title(screen_name)
-
-        if old in ['terms_by_letter', 'term_detail', 'artist_songs', 'artists_by_letter',
-                   'favorites'] and screen_name != old:
+        # Если возвращаемся с кастомного экрана на обычный
+        if old in screens_with_custom_title and screen_name not in screens_with_custom_title:
             self.clear_custom_title_widget()
             self.update_title(screen_name)
-
-        if old == 'song_detail' and screen_name != 'song_detail':
-            self.clear_custom_title_widget()
-            self.update_title(screen_name)
-
-        if screen_name != 'chords':
-            self.clear_custom_back_callback()
 
         self._update_right_buttons(screen_name)
 
