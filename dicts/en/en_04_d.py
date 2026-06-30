@@ -62,4 +62,38 @@ Second — transition to lower positions on the fretboard.
 Third — important to control downward movement.
 """
     ),
+
+    "DRONE": Term(
+        name="Drone",
+        description="""
+A low, continuous sound created by string or air vibration. In guitar technique — an effect created by an ostinato bass or drone.
+
+Where it appears:
+In folk music — as a bourdon.
+In guitar music — in ethnic compositions.
+In electronic music — as a sound background.
+
+Guitarist-Specific Tips:
+First — drone is created by an ostinato bass on open strings.
+Second — used in folk music.
+Third — creates atmosphere and depth of sound.
+"""
+    ),
+
+    "DENSE SOUND": Term(
+        name="Dense sound",
+        description="""
+A rich, thick timbre with pronounced lower and middle overtones. Contrasted with a thin, transparent sound.
+
+Where it appears:
+In orchestra — in low strings and winds.
+In guitar music — when playing with fingers or pick.
+In acoustics — as a characteristic of the instrument.
+
+Guitarist-Specific Tips:
+First — dense sound is created by strong attack and deep sound production.
+Second — depends on string material and guitar body.
+Third — important for performing powerful chords and bass lines.
+"""
+    ),
 }

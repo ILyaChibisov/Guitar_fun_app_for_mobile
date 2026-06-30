@@ -965,4 +965,21 @@ Second — important to distinguish between chord tones and non-chord tones.
 Third — used in improvisation and composition.
 """
     ),
+
+    "ANTHEM": Term(
+        name="Anthem",
+        description="""
+A solemn song glorifying a country, event, or idea. Characterized by a majestic melody and simple, clear harmony.
+
+Where it appears:
+In state ceremonies — as an official symbol.
+In church music — as a sacred hymn.
+In guitar music — as arrangements of national anthems.
+
+Guitarist-Specific Tips:
+First — the anthem requires a powerful, solemn sound.
+Second — clear rhythmic pulsation is important.
+Third — open chords and bass notes are often used.
+"""
+    ),
 }

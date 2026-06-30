@@ -46,4 +46,38 @@ Second — affects fingering choice.
 Third — helps navigate in tonality.
 """
     ),
+
+    "NUT": Term(
+        name="Nut",
+        description="""
+A fastening element on the guitar headstock that holds the strings at the top nut. Regulates the height of the strings above the fretboard and affects the scale length.
+
+Where it appears:
+In guitar construction — as the top nut.
+In electric guitars — as part of the bridge.
+In instrument setup — as an adjustable element.
+
+Guitarist-Specific Tips:
+First — replacing the nut affects intonation and sound.
+Second — nut material (bone, plastic, metal) affects timbre.
+Third — correct slot height for strings is important.
+"""
+    ),
+
+    "NECK": Term(
+        name="Neck",
+        description="""
+The long part of the guitar on which the frets are located and on which the strings are pressed to change their length and pitch.
+
+Where it appears:
+In guitar construction — as a main part.
+In playing — as the area of left-hand work.
+In guitar selection — as an important parameter.
+
+Guitarist-Specific Tips:
+First — necks can have different thickness, shape, and radius.
+Second — neck material affects sound.
+Third — neck comfort for the hand is important.
+"""
+    ),
 }

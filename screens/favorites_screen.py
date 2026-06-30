@@ -2,7 +2,7 @@
 """
 Экран избранного - список любимых песен пользователя
 с двухстрочным заголовком в TopNav и круговым спиннером загрузки по центру
-ОПТИМИЗИРОВАННАЯ ВЕРСИЯ С КЭШЕМ СОСТОЯНИЯ
+ОПТИМИЗИРОВАННАЯ ВЕРСИЯ С БЫСТРЫМИ ПЕРЕХОДАМИ И КЭШИРОВАНИЕМ
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -243,7 +243,7 @@ class AuthMessageCard(MDCard):
 
 # ============ ОСНОВНОЙ ЭКРАН ============
 class FavoritesScreen(BaseScreen):
-    """Экран избранного - ОПТИМИЗИРОВАННЫЙ"""
+    """Экран избранного - ОПТИМИЗИРОВАННЫЙ С БЫСТРЫМИ ПЕРЕХОДАМИ"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -256,6 +256,8 @@ class FavoritesScreen(BaseScreen):
         self.loading_spinner = None
         self._top_spacer = None
         self._last_load_time = 0
+        self._top_nav_updated = False
+        self._pending_refresh = False
 
         self.init_ui()
         self.load_background()
@@ -387,23 +389,27 @@ class FavoritesScreen(BaseScreen):
             return f"{total} песен"
 
     def _update_top_nav(self, total):
+        """Обновляет TopNav — только если экран активен и нужно обновить"""
         if not self.manager or self.manager.current != self.name:
             return
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
+            if self._top_nav_updated:
+                return
+
             title_container = self._create_top_nav_title(total)
             app.top_nav.set_custom_title_widget(title_container)
             app.top_nav._show_back_button()
             app.top_nav.back_btn.on_release = self.go_back
+            self._top_nav_updated = True
 
     def _reset_top_nav(self):
+        """БЫСТРЫЙ сброс TopNav — без лишних операций"""
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
-                app.top_nav.clear_custom_title_widget()
-                app.top_nav.update_title('home')
-                app.top_nav._hide_back_button()
+                self._top_nav_updated = False
         except Exception as e:
             logger.debug(f"Ошибка сброса TopNav: {e}")
 
@@ -482,7 +488,6 @@ class FavoritesScreen(BaseScreen):
             self._show_auth_message()
             return
 
-        # Если есть данные и не принудительно — показываем без загрузки
         if self.favorites and not force_refresh:
             logger.info(f"📦 Показываем кэшированное избранное: {len(self.favorites)} песен")
             self._show_favorites(self.favorites)
@@ -500,11 +505,13 @@ class FavoritesScreen(BaseScreen):
     def refresh_favorites(self):
         """Принудительно обновляет избранное с сервера"""
         logger.info("🔄 Принудительное обновление избранного")
+        self._pending_refresh = True
         self.load_favorites(force_refresh=True)
 
     def on_favorites_loaded(self, favorites):
         """Обработчик успешной загрузки избранного"""
         self._hide_loading()
+        self._pending_refresh = False
 
         formatted_favorites = []
         for item in favorites:
@@ -559,6 +566,7 @@ class FavoritesScreen(BaseScreen):
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
         self._hide_loading()
+        self._pending_refresh = False
         self.cards_container.clear_widgets()
 
         error_str = str(error)
@@ -575,18 +583,31 @@ class FavoritesScreen(BaseScreen):
                 notify.error("Ошибка загрузки избранного")
 
     def on_song_selected(self, song_id, song_title):
+        """БЫСТРЫЙ переход к песне — с обновлением состояния"""
         if not song_id:
             notify.error("Ошибка: не удалось загрузить песню")
             return
 
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('song_detail'):
+                # Сбрасываем TopNav перед переходом
+                self._reset_top_nav()
+
                 song_detail_screen = self.manager.get_screen('song_detail')
                 song_detail_screen.set_previous_screen('favorites')
                 song_detail_screen.set_song(song_id)
+
+                # Если песня уже есть в favorites, передаем данные для ускорения
+                for song in self.favorites:
+                    if song.get('song_id') == song_id or song.get('id') == song_id:
+                        song_detail_screen.song_artist = song.get('artist', '')
+                        song_detail_screen.song_title = song.get('title', '')
+                        break
+
                 self.manager.current = 'song_detail'
 
     def go_back(self, instance=None):
+        """БЫСТРЫЙ возврат на главный экран"""
         logger.info("🔙 go_back: возврат на home")
         self._reset_top_nav()
         if hasattr(self, 'manager') and self.manager:
@@ -626,6 +647,10 @@ class FavoritesScreen(BaseScreen):
         if not api.is_authenticated():
             return
 
+        # Если было обновление, не проверяем
+        if self._pending_refresh:
+            return
+
         cached = api._load_favorites_cache()
         if cached is None:
             logger.info("🔄 Кэш устарел, обновляем в фоне")
@@ -641,5 +666,8 @@ class FavoritesScreen(BaseScreen):
         self.load_favorites(force_refresh=True)
 
     def on_leave(self):
+        """БЫСТРЫЙ выход — без лишних операций"""
         logger.info("Выход из экрана избранного")
         self._hide_loading()
+        # НЕ вызываем _reset_top_nav() здесь — это делается при переходе
+        self._top_nav_updated = False

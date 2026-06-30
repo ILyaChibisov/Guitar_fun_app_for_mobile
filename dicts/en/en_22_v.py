@@ -421,4 +421,38 @@ Second — helps save space in writing.
 Third — often found in guitar literature.
 """
     ),
+
+    "VOICE": Term(
+        name="Voice",
+        description="""
+A musical term denoting a part in polyphonic music or the sound produced by vocal cords. Also — a separate layer in the texture.
+
+Where it appears:
+In choir — as a vocal part.
+In polyphony — as an independent line.
+In guitar music — as a voice in accompaniment.
+
+Guitarist-Specific Tips:
+First — guitar can lead multiple voices simultaneously.
+Second — important to bring out and hear each voice.
+Third — the foundation of polyphonic playing.
+"""
+    ),
+
+    "VOICE LEADING": Term(
+        name="Voice leading",
+        description="""
+The rules and principles of connecting voices in polyphonic music, regulating the movement of each voice relative to others. Ensures smoothness and logical harmonic development.
+
+Where it appears:
+In polyphony — as the basis of composition.
+In harmony — as part of voice leading.
+In guitar music — in chord progressions.
+
+Guitarist-Specific Tips:
+First — voice leading helps build smooth chord transitions.
+Second — important to hear the movement of each voice.
+Third — the foundation for arrangement and composition.
+"""
+    ),
 }

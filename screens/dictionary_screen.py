@@ -1,6 +1,7 @@
 # screens/dictionary_screen.py
 """
-Экран словаря терминов - с поиском и алфавитной навигацией
+Экран словаря терминов - с единым меню
+ПОИСК | ЛЕЙБЛ | МЕНЮ (ЯЗЫК + БУКВЫ) | РЕЗУЛЬТАТЫ
 """
 import importlib
 import pkgutil
@@ -14,10 +15,11 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.scrollview import ScrollView
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton
+from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.textfield import MDTextField
 from kivymd.app import MDApp
@@ -30,7 +32,6 @@ from kivy.properties import StringProperty, ObjectProperty
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
-from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from utils.notifications import notify
 
@@ -47,85 +48,318 @@ except ImportError:
     def load_asset_as_bytes(name):
         return None
 
-# ============ ГЛОБАЛЬНАЯ ИКОНКА ============
-_shared_dict_icon_texture = None
+# ============ ГЛОБАЛЬНЫЕ ИКОНКИ - ЗАГРУЖАЕМ СРАЗУ ============
+_shared_rus_flag_texture = None
+_shared_eng_flag_texture = None
 
 
-def init_shared_dict_icon():
-    global _shared_dict_icon_texture
-    if _shared_dict_icon_texture is not None:
-        return _shared_dict_icon_texture
+def load_shared_icons_sync():
+    """Синхронная загрузка иконок - вызывается ДО создания UI"""
+    global _shared_rus_flag_texture, _shared_eng_flag_texture
+
+    if _shared_rus_flag_texture is not None:
+        return
 
     if HAS_ASSETS:
         try:
-            icon_data = load_asset_as_bytes('dictionary_png')
-            if icon_data:
-                img = CoreImage(BytesIO(icon_data), ext="png")
-                _shared_dict_icon_texture = img.texture
-                logger.info("✅ Общая иконка словаря загружена")
-                return _shared_dict_icon_texture
+            # Загружаем русский флаг
+            rus_data = load_asset_as_bytes('rus_png')
+            if rus_data:
+                img = CoreImage(BytesIO(rus_data), ext="png")
+                _shared_rus_flag_texture = img.texture
+                logger.info("✅ Русский флаг загружен синхронно")
+            else:
+                logger.warning("⚠️ Русский флаг не найден в ассетах")
+
+            # Загружаем английский флаг
+            eng_data = load_asset_as_bytes('eng_png')
+            if eng_data:
+                img = CoreImage(BytesIO(eng_data), ext="png")
+                _shared_eng_flag_texture = img.texture
+                logger.info("✅ Английский флаг загружен синхронно")
+            else:
+                logger.warning("⚠️ Английский флаг не найден в ассетах")
+
         except Exception as e:
-            logger.error(f"Ошибка загрузки иконки dictionary_png: {e}")
-    return None
+            logger.error(f"Ошибка загрузки иконок: {e}")
 
 
-# ============ КЛАССЫ ============
+# ============ СОВРЕМЕННАЯ ПОИСКОВАЯ СТРОКА ============
 
-class LetterButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка буквы для сетки"""
+class SearchBar(MDBoxLayout):
+    """Современная поисковая строка с mode: round и рабочим крестиком"""
 
-    def __init__(self, text, is_active=False, on_press_callback=None, **kwargs):
+    def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
-        self.btn_text = text
-        self.on_press_callback = on_press_callback
-        self.size_hint = (1, 1)
-        self.padding = [dp(1), dp(1), dp(1), dp(1)]
+        self.on_search = on_search
+        self.on_clear = on_clear
+        self.current_query = ""
+        self._search_timer = None
 
-        self.main_layout = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=[dp(4), dp(2), dp(4), dp(2)]
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(56)
+        self.padding = [dp(0), dp(0), dp(0), dp(0)]
+        self.spacing = dp(0)
+
+        # ============ ПОЛЕ ВВОДА С MODE ROUND ============
+        self.search_field = MDTextField(
+            hint_text="Поиск терминов...",
+            size_hint=(1, None),
+            height=dp(48),
+            mode="round",
+            icon_left="magnify",
+            fill_color_normal=[0.95, 0.95, 0.95, 1],
+            fill_color_focus=[0.95, 0.95, 0.95, 1],
+            line_color_normal=[0, 0, 0, 0],
+            line_color_focus=[0.46, 0.70, 0.71, 1],
+            hint_text_color=[0.6, 0.6, 0.6, 1],
+            font_size=sp(15),
+            on_text_validate=self._on_search
         )
 
+        # Устанавливаем свойства ПОСЛЕ создания
+        self.search_field.theme_text_color = "Custom"
+        self.search_field.text_color = [0.1, 0.1, 0.1, 1]
+        self.search_field.icon_right = ""
+
+        # Привязываем события
+        self.search_field.bind(text=self._on_text_change)
+
+        # Перехватываем касания для обработки клика по крестику
+        self.search_field.bind(on_touch_down=self._on_field_touch)
+
+        self.add_widget(self.search_field)
+
+    def _on_text_change(self, instance, text):
+        self.current_query = text
+
+        # Управляем видимостью крестика
+        if text.strip():
+            instance.icon_right = "close"
+        else:
+            instance.icon_right = ""
+
+        if self._search_timer:
+            Clock.unschedule(self._search_timer)
+            self._search_timer = None
+
+        if not text.strip():
+            if self.on_clear:
+                self.on_clear()
+        else:
+            self._search_timer = Clock.schedule_once(lambda dt: self._do_search(), 0.5)
+
+    def _do_search(self):
+        if self.on_search and self.current_query:
+            text = self.current_query.strip()
+            if text:
+                self.on_search(text)
+
+    def _on_search(self, instance):
+        if self._search_timer:
+            Clock.unschedule(self._search_timer)
+            self._search_timer = None
+
+        if self.on_search:
+            text = self.search_field.text.strip()
+            if text:
+                self.on_search(text)
+
+    def _on_field_touch(self, instance, touch):
+        """Обработчик касаний для определения клика по крестику"""
+        if not instance.collide_point(*touch.pos):
+            return False
+
+        # Проверяем, есть ли крестик
+        if instance.icon_right != "close":
+            return False
+
+        # Получаем позицию крестика (справа)
+        field_width = instance.width
+        icon_size = dp(32)  # Примерный размер иконки
+        right_edge = field_width
+        left_edge = field_width - icon_size - dp(12)  # Отступ от края
+
+        # Проверяем, попали ли по крестику
+        if left_edge <= touch.x <= right_edge:
+            # Клик по крестику
+            self.search_field.text = ""
+            self.search_field.icon_right = ""
+            self.current_query = ""
+            if self.on_clear:
+                self.on_clear()
+            return True
+
+        return False
+
+    def clear(self):
+        self.search_field.text = ""
+        self.search_field.icon_right = ""
+        self.current_query = ""
+
+    def focus(self):
+        self.search_field.focus = True
+
+
+# ============ КОМПОНЕНТЫ МЕНЮ ============
+
+class FlagToggle(ButtonBehavior, MDBoxLayout):
+    """Кнопка-флаг для переключения языка с подписью"""
+
+    def __init__(self, on_press=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_press_callback = on_press
+        self.current_language = 'ru'
+
+        self.orientation = 'vertical'
+        self.size_hint = (1, 1)
+        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.spacing = dp(1)
+        self.md_bg_color = [0, 0, 0, 0]
+
+        # Контейнер для флага
+        flag_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(28),
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        self.flag_image = Image(
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        flag_container.add_widget(self.flag_image)
+
+        # Подпись
+        self.label = MDLabel(
+            text="RUS",
+            font_size=sp(9),
+            halign="center",
+            valign="top",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.6],
+            bold=True,
+            size_hint_y=None,
+            height=dp(14)
+        )
+
+        self.add_widget(flag_container)
+        self.add_widget(self.label)
+
+        # Устанавливаем флаг (иконки уже загружены)
+        self._update_flag()
+
+        # Привязываем события
+        self.flag_image.bind(on_touch_down=self._on_press)
+        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
+
+    def _on_enter(self, *args):
+        self.md_bg_color = [1, 1, 1, 0.05]
+
+    def _on_leave(self, *args):
+        self.md_bg_color = [0, 0, 0, 0]
+
+    def _on_press(self, instance, touch):
+        if self.collide_point(*touch.pos) and self.on_press_callback:
+            self.on_press_callback()
+            return True
+        return False
+
+    def _update_flag(self):
+        if self.current_language == 'ru':
+            if _shared_rus_flag_texture:
+                self.flag_image.texture = _shared_rus_flag_texture
+            else:
+                # Fallback на эмодзи
+                self.flag_image.text = "🇷🇺"
+            self.label.text = "RUS"
+        else:
+            if _shared_eng_flag_texture:
+                self.flag_image.texture = _shared_eng_flag_texture
+            else:
+                # Fallback на эмодзи
+                self.flag_image.text = "🇬🇧"
+            self.label.text = "ENG"
+
+    def set_language(self, language):
+        self.current_language = language
+        self._update_flag()
+
+
+class LetterButton(MDBoxLayout):
+    """Кнопка буквы в меню (как в аккордах)"""
+
+    def __init__(self, text, on_press=None, **kwargs):
+        super().__init__(**kwargs)
+        self.btn_text = text
+        self.on_press_callback = on_press
+        self.is_selected = False
+
+        self.size_hint = (None, 1)
+        self.width = dp(32)
+        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.spacing = 0
+        self.md_bg_color = [0, 0, 0, 0]
+
+        # Текст буквы
         self.label = MDLabel(
             text=text.upper(),
             font_size=sp(13),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7],
             bold=True,
-            size_hint=(1, 1),
-            text_size=(None, None),
-            shorten=False
+            size_hint=(1, 1)
         )
-        self.main_layout.add_widget(self.label)
-        self.add_widget(self.main_layout)
 
-        self.is_active = is_active
-        self.bind(on_release=self._on_press)
-        self.update_style()
+        self.add_widget(self.label)
 
-    def update_style(self):
-        if self.is_active:
+        # Обработчики касаний
+        self.bind(on_touch_down=self._on_touch_down)
+        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
+
+        self._update_style()
+
+    def _on_enter(self, *args):
+        if not self.is_selected:
+            self.md_bg_color = [1, 1, 1, 0.05]
+            self.label.text_color = [1, 1, 1, 0.9]
+
+    def _on_leave(self, *args):
+        if not self.is_selected:
+            self.md_bg_color = [0, 0, 0, 0]
+            self.label.text_color = [1, 1, 1, 0.7]
+
+    def _on_touch_down(self, instance, touch):
+        if self.collide_point(*touch.pos):
+            if self.on_press_callback:
+                self.on_press_callback(self.btn_text)
+            return True
+        return False
+
+    def set_selected(self, selected):
+        self.is_selected = selected
+        self._update_style()
+
+    def _update_style(self):
+        if self.is_selected:
+            self.md_bg_color = [0.0, 0.74, 0.83, 1]
             self.label.text_color = [1, 1, 1, 1]
-            self.main_layout.md_bg_color = [0.46, 0.70, 0.71, 1]
-            self.main_layout.radius = [dp(8), dp(8), dp(8), dp(8)]
+            self.radius = [dp(6), dp(6), dp(6), dp(6)]
         else:
-            self.label.text_color = [0.9, 0.95, 0.85, 0.9]
-            self.main_layout.md_bg_color = [0.08, 0.22, 0.14, 0.6]
-            self.main_layout.radius = [dp(6), dp(6), dp(6), dp(6)]
-
-    def set_active(self, active):
-        self.is_active = active
-        self.update_style()
-
-    def _on_press(self, instance):
-        if self.on_press_callback:
-            self.on_press_callback(self.btn_text)
+            self.md_bg_color = [0, 0, 0, 0]
+            self.label.text_color = [1, 1, 1, 0.7]
+            self.radius = [0, 0, 0, 0]
 
 
-class AlphabetGrid(MDCard):
-    """Сетка с буквами для словаря"""
+class AlphabetMenu(MDBoxLayout):
+    """Меню с буквами алфавита (скроллится) - без видимой карточки"""
 
     RU_LETTERS = ['а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и',
                   'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т',
@@ -136,316 +370,151 @@ class AlphabetGrid(MDCard):
                   'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
                   'u', 'v', 'w', 'x', 'y', 'z']
 
-    def __init__(self, on_letter_press=None, **kwargs):
+    def __init__(self, on_letter_press=None, current_language='ru', **kwargs):
         super().__init__(**kwargs)
         self.on_letter_press = on_letter_press
-        self.current_language = 'ru'
-        self.current_selected = None
+        self.current_language = current_language
+        self.current_selection = None
 
-        self.orientation = 'vertical'
-        self.size_hint = (1, None)
-        self.padding = [dp(6), dp(6), dp(6), dp(6)]
-        self.radius = [dp(16), dp(16), dp(16), dp(16)]
-        self.md_bg_color = [0.06, 0.18, 0.12, 0.92]
-        self.line_color = [0.9, 0.9, 0.8, 0.15]
-        self.line_width = 1
-        self.elevation = 0
+        self.orientation = 'horizontal'
+        self.size_hint = (1, 1)
+        self.spacing = dp(2)
+        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.md_bg_color = [0, 0, 0, 0]
 
-        self.rows = []
+        self.scroll = None
+        self.container = None
         self.buttons = []
 
-        self._create_all_buttons()
-        self._update_height()
+        self._build_ui()
 
-    def _create_all_buttons(self):
-        max_rows = 4
-        for i in range(max_rows):
-            row = MDBoxLayout(
-                orientation='horizontal',
-                spacing=dp(6),
-                size_hint_y=None,
-                height=dp(34)
-            )
-            self.rows.append(row)
-            self.add_widget(row)
+    def _build_ui(self):
+        self.scroll = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=True,
+            do_scroll_y=False,
+            bar_width=0,
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0],
+            bar_margin=0
+        )
 
-        max_buttons = max(len(self.RU_LETTERS), len(self.EN_LETTERS))
-        for i in range(max_buttons):
+        self.container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=None,
+            spacing=dp(3),
+            padding=[dp(4), dp(4), dp(4), dp(4)]
+        )
+        self.container.bind(minimum_width=self.container.setter('width'))
+
+        self._populate_items()
+
+        self.scroll.add_widget(self.container)
+        self.add_widget(self.scroll)
+
+    def _populate_items(self):
+        self.container.clear_widgets()
+        self.buttons = []
+
+        letters = self.RU_LETTERS if self.current_language == 'ru' else self.EN_LETTERS
+
+        for letter in letters:
             btn = LetterButton(
-                text="",
-                is_active=False,
-                on_press_callback=self._on_letter_press
+                text=letter,
+                on_press=self._on_letter_press
             )
+            if letter == self.current_selection:
+                btn.set_selected(True)
             self.buttons.append(btn)
+            self.container.add_widget(btn)
 
-        self._redistribute_buttons()
-
-    def _redistribute_buttons(self):
-        for row in self.rows:
-            row.clear_widgets()
-
-        if self.current_language == 'ru':
-            items = self.RU_LETTERS
-            rows_count = 4
-        else:
-            items = self.EN_LETTERS
-            rows_count = 3
-
-        for i, row in enumerate(self.rows):
-            row.height = dp(34) if i < rows_count else 0
-            row.opacity = 1 if i < rows_count else 0
-
-        total_items = len(items)
-        items_per_row = (total_items + rows_count - 1) // rows_count
-
-        btn_index = 0
-        for row_idx in range(rows_count):
-            for col_idx in range(items_per_row):
-                if btn_index < total_items:
-                    btn = self.buttons[btn_index]
-                    text = items[btn_index]
-                    btn.btn_text = text
-                    btn.label.text = text.upper()
-                    btn.opacity = 1
-                    btn.disabled = False
-                    self.rows[row_idx].add_widget(btn)
-                    btn_index += 1
-                else:
-                    spacer = MDBoxLayout(size_hint=(1, 1))
-                    self.rows[row_idx].add_widget(spacer)
-
-        for i in range(btn_index, len(self.buttons)):
-            self.buttons[i].opacity = 0
-            self.buttons[i].disabled = True
-
-        self._update_height()
-
-    def _update_height(self):
-        if self.current_language == 'ru':
-            self.height = dp(34) * 4 + dp(12)
-        else:
-            self.height = dp(34) * 3 + dp(12)
+        self.container.width = sum(btn.width + dp(3) for btn in self.buttons) + dp(8)
 
     def _on_letter_press(self, letter):
-        self.current_selected = letter
+        self.current_selection = letter
         for btn in self.buttons:
-            btn.set_active(btn.btn_text == letter)
+            btn.set_selected(btn.btn_text == letter)
         if self.on_letter_press:
             self.on_letter_press(letter)
 
     def set_language(self, language):
-        if self.current_language == language:
+        if self.current_language == language and self.buttons:
             return
         self.current_language = language
-        self.current_selected = None
+        self.current_selection = None
+        self._populate_items()
+
+    def set_current(self, letter):
+        self.current_selection = letter
         for btn in self.buttons:
-            btn.set_active(False)
-        self._redistribute_buttons()
-
-    def clear_selection(self):
-        self.current_selected = None
-        for btn in self.buttons:
-            btn.set_active(False)
+            btn.set_selected(btn.btn_text == letter)
 
 
-class GoogleSearchBar(MDCard):
-    """Поисковая строка - поиск ТОЛЬКО по нажатию на лупу или Enter"""
+class DictionaryMenu(MDCard):
+    """Единое меню: ЯЗЫК (флаг с подписью) | БУКВЫ (скролл)"""
 
-    def __init__(self, on_search=None, on_clear=None, **kwargs):
+    def __init__(self,
+                 on_language_toggle=None,
+                 on_letter_press=None,
+                 current_language='ru',
+                 **kwargs):
         super().__init__(**kwargs)
-        self.on_search = on_search
-        self.on_clear = on_clear
-        self.current_query = ""
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(48)
-        self.radius = [dp(24), dp(24), dp(24), dp(24)]
-        self.md_bg_color = [0.96, 0.96, 0.96, 1]
+        self.height = dp(60)
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
+        self.md_bg_color = [0, 0, 0, 0.08]
         self.elevation = 0
-        self.padding = [dp(16), dp(6), dp(12), dp(6)]
-        self.spacing = dp(8)
+        self.line_color = [1, 1, 1, 0.15]
+        self.line_width = 0.8
+        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.spacing = dp(0)
 
-        self.line_color = [0.46, 0.70, 0.71, 0.4]
-        self.line_width = 1.0
+        # 1. ЯЗЫК (флаг с подписью) - слева
+        self.flag_toggle = FlagToggle(
+            on_press=on_language_toggle
+        )
+        self.flag_toggle.current_language = current_language
+        self.flag_toggle._update_flag()
 
-        self.search_field = MDTextField(
-            hint_text="Поиск обозначений",
-            size_hint_x=1,
-            font_size=sp(15),
-            height=dp(36),
-            on_text_validate=self._on_search,
-            mode="fill"
+        # 2. БУКВЫ (скроллящийся алфавит) - без карточки
+        self.alphabet_menu = AlphabetMenu(
+            on_letter_press=on_letter_press,
+            current_language=current_language
         )
 
-        self.search_field.line_color_normal = [0, 0, 0, 0]
-        self.search_field.line_color_focus = [0, 0, 0, 0]
-        self.search_field.fill_color_normal = [1, 1, 1, 0]
-        self.search_field.fill_color_focus = [1, 1, 1, 0]
-        self.search_field.hint_text_color = [0.7, 0.7, 0.7, 1]
-        self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
-
-        self.clear_btn = MDIconButton(
-            icon="close-circle",
-            size_hint=(None, None),
-            size=(dp(24), dp(24)),
-            theme_icon_color="Custom",
-            icon_color=[0.6, 0.6, 0.6, 1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_clear,
-            opacity=0
+        # Флаг фиксированной ширины
+        flag_container = MDBoxLayout(
+            size_hint_x=None,
+            width=dp(44),
+            orientation='vertical'
         )
+        flag_container.add_widget(self.flag_toggle)
 
-        self.search_icon = MDIconButton(
-            icon="magnify",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[0.46, 0.70, 0.71, 1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_search,
-            pos_hint={'center_y': 0.5}
+        self.add_widget(flag_container)
+        self.add_widget(self._create_divider())
+        self.add_widget(self.alphabet_menu)
+
+    def _create_divider(self):
+        return MDBoxLayout(
+            size_hint_x=None,
+            width=dp(1),
+            md_bg_color=[1, 1, 1, 0.1]
         )
-
-        self.add_widget(self.search_field)
-        self.add_widget(self.clear_btn)
-        self.add_widget(self.search_icon)
-
-        self.search_field.bind(text=self._on_text_change)
-
-    def _on_text_change(self, instance, text):
-        self.clear_btn.opacity = 1 if text else 0
-        self.current_query = text
-
-        if not text.strip():
-            if self.on_clear:
-                self.on_clear()
-
-    def _on_search(self, instance):
-        if self.on_search:
-            text = self.search_field.text.strip()
-            if text:
-                self.on_search(text)
-
-    def _on_clear(self, instance):
-        self.search_field.text = ""
-        self.search_field.focus = True
-        self.clear_btn.opacity = 0
-        if self.on_clear:
-            self.on_clear()
-
-    def clear(self):
-        self.search_field.text = ""
-        self.clear_btn.opacity = 0
-
-    def focus(self):
-        self.search_field.focus = True
-
-
-class LanguageSelector(MDBoxLayout):
-    """Выбор языка - системные иконки стрелок, текст по центру (как в Songs)"""
-
-    def __init__(self, on_language_change=None, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint_y = None
-        self.size_hint_x = 1
-        self.height = dp(48)
-        self.padding = [0, 0, 0, 0]
-
-        self.on_language_change = on_language_change
-        self.current_language = 'ru'
-
-        self.languages = [
-            {'code': 'ru', 'name': 'Русский'},
-            {'code': 'en', 'name': 'English'}
-        ]
-
-        # Используем FloatLayout для точного центрирования
-        self.float_layout = FloatLayout(size_hint=(1, 1))
-
-        # --- СИСТЕМНЫЕ ИКОНКИ СТРЕЛОК ---
-        self.prev_btn = MDIconButton(
-            icon="chevron-left",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 0.9],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.prev_language,
-            pos_hint={'center_x': 0.35, 'center_y': 0.5}
-        )
-
-        self.language_label = MDLabel(
-            text="Русский",
-            font_size=sp(18),
-            halign="center",
-            valign="middle",
-            size_hint=(None, None),
-            width=dp(120),
-            height=dp(48),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True,
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
-        )
-
-        self.next_btn = MDIconButton(
-            icon="chevron-right",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 0.9],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self.next_language,
-            pos_hint={'center_x': 0.65, 'center_y': 0.5}
-        )
-
-        self.float_layout.add_widget(self.prev_btn)
-        self.float_layout.add_widget(self.language_label)
-        self.float_layout.add_widget(self.next_btn)
-
-        self.add_widget(self.float_layout)
-
-        self._update_display()
-
-    def _update_display(self):
-        for lang in self.languages:
-            if lang['code'] == self.current_language:
-                self.language_label.text = lang['name']
-                break
-
-    def get_current_language(self):
-        return self.current_language
-
-    def prev_language(self, instance):
-        current_index = 0 if self.current_language == 'ru' else 1
-        new_index = (current_index - 1) % len(self.languages)
-        self.current_language = self.languages[new_index]['code']
-        self._update_display()
-        if self.on_language_change:
-            self.on_language_change(self.current_language)
-
-    def next_language(self, instance):
-        current_index = 0 if self.current_language == 'ru' else 1
-        new_index = (current_index + 1) % len(self.languages)
-        self.current_language = self.languages[new_index]['code']
-        self._update_display()
-        if self.on_language_change:
-            self.on_language_change(self.current_language)
 
     def set_language(self, language):
-        if self.current_language == language:
-            return
-        self.current_language = language
-        self._update_display()
+        self.flag_toggle.set_language(language)
+        self.alphabet_menu.set_language(language)
+
+    def set_current_letter(self, letter):
+        self.alphabet_menu.set_current(letter)
 
 
-# ============ RECYCLEVIEW ДЛЯ РЕЗУЛЬТАТОВ ПОИСКА ============
+# ============ RECYCLEVIEW ДЛЯ РЕЗУЛЬТАТОВ ============
 
 class SearchTermCard(RecycleDataViewBehavior, MDCard):
-    """Карточка термина для RecycleView (результаты поиска)"""
-
+    """Карточка термина с иконкой из Material Design"""
     term_name = StringProperty('')
     on_click = ObjectProperty(None)
 
@@ -453,31 +522,29 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(56)
-        self.padding = [dp(16), dp(10), dp(12), dp(10)]
-        self.spacing = dp(12)
+        self.height = dp(52)
+        self.padding = [dp(12), dp(8), dp(12), dp(8)]
+        self.spacing = dp(10)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
-        self.ripple_behavior = False  # Отключаем для производительности
+        self.ripple_behavior = False
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.06]
         self.line_color = [1, 1, 1, 0.05]
         self.line_width = 0.5
-        self.clip = True
         self._build_ui()
 
     def _build_ui(self):
-        # Иконка
-        self.icon = Image(
-            size_hint=(None, 1),
-            width=dp(30),
-            allow_stretch=True,
-            keep_ratio=True
+        # Иконка из Material Design
+        self.icon = MDIconButton(
+            icon="book-open-variant",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            pos_hint={'center_y': 0.5}
         )
-        if _shared_dict_icon_texture:
-            self.icon.texture = _shared_dict_icon_texture
-        else:
-            self.icon.text = "📖"
 
         # Текст
         self.term_label = MDLabel(
@@ -522,8 +589,6 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
 
 
 class TermRecycleView(RecycleView):
-    """Виртуализированный список терминов для поиска"""
-
     def __init__(self, on_term_click=None, **kwargs):
         super().__init__(**kwargs)
         self.on_term_click = on_term_click
@@ -531,15 +596,15 @@ class TermRecycleView(RecycleView):
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
-        self.clip = True
+        self.size_hint = (1, None)
 
         self.layout_manager = RecycleBoxLayout(
-            default_size=(None, dp(60)),
+            default_size=(None, dp(56)),
             default_size_hint=(1, None),
             size_hint_y=None,
-            height=dp(60) * 10,
+            height=dp(56) * 10,
             orientation='vertical',
-            spacing=dp(6)
+            spacing=dp(4)
         )
         self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
         self.viewclass = 'SearchTermCard'
@@ -554,16 +619,27 @@ class TermRecycleView(RecycleView):
             })
         self.data = data
         self.refresh_from_data()
+        self.height = self.layout_manager.minimum_height
 
     def clear(self):
         self.data = []
         self.refresh_from_data()
+        self.height = 0
 
 
 # ============ ОСНОВНОЙ ЭКРАН ============
 
 class DictionaryScreen(BaseScreen):
-    """Экран словаря с поиском и алфавитной навигацией"""
+    """Экран словаря с поиском и меню ЯЗЫК | БУКВЫ"""
+
+    RU_LETTERS = ['а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и',
+                  'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т',
+                  'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь',
+                  'э', 'ю', 'я']
+
+    EN_LETTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+                  'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+                  'u', 'v', 'w', 'x', 'y', 'z']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -577,25 +653,25 @@ class DictionaryScreen(BaseScreen):
         self.is_search_mode: bool = False
         self.search_results: list = []
         self._last_query: str = ""
+        self.current_language: str = 'ru'
 
         # UI элементы
         self.search_bar = None
-        self.language_selector = None
-        self.alphabet_grid = None
-        self.hint_label = None
+        self._main_label = None
+        self._result_label = None
+        self.dictionary_menu = None
+        self._hint_timer = None
         self.search_recycle_view = None
-        self._main_layout = None
-        self.top_container = None
-        self.keyboard_container = None
-        self._keyboard_height = 0
         self.cards_container = None
         self.no_results_label = None
+        self._scroll_view = None
+
+        # ============ ЗАГРУЖАЕМ ИКОНКИ СИНХРОННО ПЕРЕД СОЗДАНИЕМ UI ============
+        load_shared_icons_sync()
 
         self.init_ui()
         self.load_background()
         self.scan_terms()
-
-        Clock.schedule_once(lambda dt: init_shared_dict_icon(), 0.1)
 
         logger.info('Экран словаря создан')
 
@@ -625,8 +701,322 @@ class DictionaryScreen(BaseScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
+    def init_ui(self):
+        """Инициализирует UI с современной поисковой строкой"""
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
+
+        # Верхний отступ
+        top_padding = layout_config.get_top_padding()
+        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        content_padding = layout_config.get_content_padding()
+        padding = content_padding
+
+        # ============ 1. СОВРЕМЕННЫЙ ПОИСК ============
+        search_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(56),
+            padding=[padding[0], 0, padding[2], 0]
+        )
+        self.search_bar = SearchBar(
+            on_search=self.do_search,
+            on_clear=self.clear_search
+        )
+        search_container.add_widget(self.search_bar)
+        main_layout.add_widget(search_container)
+
+        # Отступ после поиска
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
+
+        # ============ 2. ОСНОВНОЙ ЛЕЙБЛ ============
+        self._main_label = MDLabel(
+            text="Поиск по алфавиту",
+            font_size=sp(14),
+            halign="center",
+            size_hint_y=None,
+            height=dp(28),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.5],
+        )
+        main_layout.add_widget(self._main_label)
+
+        # Минимальный отступ
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
+
+        # ============ 3. МЕНЮ ============
+        menu_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(60),
+            md_bg_color=[0, 0, 0, 0],
+            padding=[padding[0], 0, padding[2], 0]
+        )
+
+        self.dictionary_menu = DictionaryMenu(
+            on_language_toggle=self._toggle_language,
+            on_letter_press=self.on_letter_press,
+            current_language=self.current_language
+        )
+        menu_container.add_widget(self.dictionary_menu)
+        main_layout.add_widget(menu_container)
+
+        # ============ 4. ЛЕЙБЛ С РЕЗУЛЬТАТАМИ ============
+        self._result_label = MDLabel(
+            text="",
+            font_size=sp(13),
+            halign="center",
+            size_hint_y=None,
+            height=dp(24),
+            theme_text_color="Custom",
+            text_color=[0.46, 0.70, 0.71, 1],
+            opacity=0,
+            bold=True
+        )
+        main_layout.add_widget(self._result_label)
+
+        # ============ 5. КОНТЕЙНЕР С РЕЗУЛЬТАТАМИ ============
+        bottom_padding = layout_config.get_bottom_padding()
+
+        cards_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[dp(12), 0, dp(12), bottom_padding]  # Убрал верхний отступ
+        )
+        cards_container.clip = True
+
+        # ScrollView для прокрутки
+        self._scroll_view = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_width=0,
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0]
+        )
+
+        # Контейнер внутри ScrollView с adaptive_height
+        self.cards_container = MDBoxLayout(
+            orientation='vertical',
+            spacing=dp(8),
+            size_hint_y=None,
+            adaptive_height=True
+        )
+        self.cards_container.bind(minimum_height=self.cards_container.setter('height'))
+
+        # Лейбл "ничего не найдено"
+        self.no_results_label = MDLabel(
+            text="",
+            halign="center",
+            font_size=sp(16),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4],
+            size_hint_y=None,
+            height=dp(60),
+            opacity=0
+        )
+        self.cards_container.add_widget(self.no_results_label)
+
+        # RecycleView
+        self.search_recycle_view = TermRecycleView(
+            on_term_click=self.on_term_selected,
+            size_hint_y=None,
+            height=0
+        )
+        self.cards_container.add_widget(self.search_recycle_view)
+
+        self._scroll_view.add_widget(self.cards_container)
+        cards_container.add_widget(self._scroll_view)
+        main_layout.add_widget(cards_container)
+
+        self.clear_widgets()
+        self.add_widget(main_layout)
+
+        logger.info(f"UI словаря построен с современным поиском")
+
+    # ============ УПРАВЛЕНИЕ ============
+
+    def _toggle_language(self):
+        """Переключение языка"""
+        if self.current_language == 'ru':
+            self.current_language = 'en'
+            self._show_temporary_hint("Выбран английский язык", 1.2)
+        else:
+            self.current_language = 'ru'
+            self._show_temporary_hint("Выбран русский язык", 1.2)
+
+        self.dictionary_menu.set_language(self.current_language)
+        self.current_letter = None
+        self.clear_search()
+
+        logger.info(f"🔤 Язык изменён на: {self.current_language}")
+
+    def _show_hint(self, text):
+        """Показывает подсказку в основном лейбле"""
+        if hasattr(self, '_hint_timer') and self._hint_timer:
+            Clock.unschedule(self._hint_timer)
+            self._hint_timer = None
+        if self._main_label:
+            self._main_label.text = text
+
+    def _show_temporary_hint(self, text, duration=1.5):
+        """Показывает временную подсказку"""
+        if self._main_label:
+            self._main_label.text = text
+            if hasattr(self, '_hint_timer') and self._hint_timer:
+                Clock.unschedule(self._hint_timer)
+            self._hint_timer = Clock.schedule_once(lambda dt: self._restore_hint(), duration)
+
+    def _restore_hint(self):
+        """Восстанавливает стандартную подсказку"""
+        if hasattr(self, '_hint_timer'):
+            self._hint_timer = None
+        if self.is_search_mode:
+            self._main_label.text = "Результаты поиска"
+        else:
+            self._main_label.text = "Поиск по алфавиту"
+
+    def _show_result_label(self, text):
+        """Показывает лейбл с информацией о результатах"""
+        if self._result_label:
+            self._result_label.text = text
+            self._result_label.opacity = 1
+
+    def _hide_result_label(self):
+        """Скрывает лейбл с результатами"""
+        if self._result_label:
+            self._result_label.text = ""
+            self._result_label.opacity = 0
+
+    def _show_no_results(self, query):
+        """Показывает сообщение 'ничего не найдено'"""
+        self.no_results_label.text = f'По запросу "{query}"\nничего не найдено'
+        self.no_results_label.opacity = 1
+        self.search_recycle_view.clear()
+        self.search_recycle_view.height = 0
+        self.cards_container.height = dp(60)
+
+    def _hide_no_results(self):
+        """Скрывает сообщение 'ничего не найдено'"""
+        self.no_results_label.opacity = 0
+        self.no_results_label.text = ""
+
+    # ============ ПОИСК ============
+
+    def do_search(self, query):
+        logger.info(f"🔍 Поиск: {query}")
+        query_lower = query.strip().lower()
+        self._last_query = query
+
+        if len(query_lower) < 2:
+            self._show_temporary_hint("Введите минимум 2 символа", 1.5)
+            return
+
+        self.is_search_mode = True
+        self.current_letter = None
+        self.dictionary_menu.set_current_letter(None)
+        self._show_hint("Результаты поиска")
+
+        query_words = query_lower.split()
+
+        exact_matches = []
+        prefix_matches = []
+        contains_matches = []
+        word_matches = []
+
+        for term_name, term_data in self.all_terms.items():
+            term_lower = term_name.lower()
+
+            if term_lower == query_lower:
+                if term_name not in exact_matches:
+                    exact_matches.append(term_name)
+                continue
+
+            if term_lower.startswith(query_lower):
+                if term_name not in prefix_matches:
+                    prefix_matches.append(term_name)
+                continue
+
+            if query_lower in term_lower:
+                if term_name not in contains_matches:
+                    contains_matches.append(term_name)
+                continue
+
+            for word in query_words:
+                if len(word) >= 2 and word in term_lower:
+                    if term_name not in word_matches:
+                        word_matches.append(term_name)
+                    break
+
+        results = []
+        for r in exact_matches:
+            if r not in results:
+                results.append(r)
+        for r in prefix_matches:
+            if r not in results:
+                results.append(r)
+        for r in contains_matches:
+            if r not in results:
+                results.append(r)
+        for r in word_matches:
+            if r not in results:
+                results.append(r)
+
+        self.search_results = results
+
+        if not self.search_results:
+            self._show_no_results(query)
+            self._hide_result_label()
+        else:
+            self._hide_no_results()
+            self.search_recycle_view.set_terms(self.search_results, self.on_term_selected)
+            self.cards_container.height = self.cards_container.minimum_height
+            self._show_result_label(f"Найдено терминов: {len(self.search_results)}")
+
+    def clear_search(self):
+        self.is_search_mode = False
+        self.search_results = []
+        self.search_bar.clear()
+        self.search_recycle_view.clear()
+        self.search_recycle_view.height = 0
+        self.cards_container.height = 0
+        self.no_results_label.opacity = 0
+        self.no_results_label.text = ""
+        self._last_query = ""
+        self._hide_result_label()
+        self._show_hint("Поиск по алфавиту")
+
+    # ============ ОБРАБОТЧИКИ ============
+
+    def on_letter_press(self, letter):
+        logger.info(f"Выбрана буква: {letter}")
+        self.current_letter = letter
+        self.dictionary_menu.set_current_letter(letter)
+        self.clear_search()
+        self._show_hint(f"Термины на букву '{letter.upper()}'")
+
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('terms_by_letter'):
+                terms_screen = self.manager.get_screen('terms_by_letter')
+                terms_screen.set_letter(letter, self)
+                self.manager.current = 'terms_by_letter'
+
+    def on_term_selected(self, term_name):
+        logger.info(f"Выбран термин: {term_name}")
+
+        term_data = self.all_terms.get(term_name)
+        if not term_data:
+            self._show_temporary_hint("Термин не найден", 1.5)
+            return
+
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('term_detail'):
+                term_detail = self.manager.get_screen('term_detail')
+                term_detail.set_term(term_name, term_data, self.name)
+                self.manager.current = 'term_detail'
+
+    # ============ ЗАГРУЗКА ТЕРМИНОВ ============
+
     def scan_terms(self):
-        """Сканирует все модули словаря из папок ru/ и en/"""
         logger.info("📚 Сканирование терминов...")
         self.all_terms.clear()
         self.terms_by_letter.clear()
@@ -703,301 +1093,36 @@ class DictionaryScreen(BaseScreen):
             return first_char
         return None
 
-    def init_ui(self):
-        """Инициализирует UI с правильными отступами"""
-        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
-        self._main_layout = main_layout
-
-        # Верхний отступ
-        top_padding = layout_config.get_top_padding()
-        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
-
-        content_padding = layout_config.get_content_padding()
-
-        # ============ ВЕРХНЯЯ ЧАСТЬ (поиск + клавиатура) ============
-        self.top_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            adaptive_height=True,
-            padding=[content_padding[0], 0, content_padding[2], 0]
-        )
-
-        self.search_bar = GoogleSearchBar(
-            on_search=self.do_search,
-            on_clear=self._on_clear_search
-        )
-        self.top_container.add_widget(self.search_bar)
-        self.top_container.add_widget(Widget(size_hint_y=None, height=dp(16)))
-
-        # ============ КЛАВИАТУРА ============
-        self.keyboard_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            adaptive_height=True,
-            spacing=dp(8)
-        )
-
-        self.language_selector = LanguageSelector(
-            on_language_change=self.on_language_changed
-        )
-        self.keyboard_container.add_widget(self.language_selector)
-
-        self.alphabet_grid = AlphabetGrid(on_letter_press=self.on_letter_press)
-        self.keyboard_container.add_widget(self.alphabet_grid)
-
-        self.hint_label = MDLabel(
-            text="Нажмите на букву для просмотра терминов",
-            halign="center",
-            font_size=sp(13),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.4],
-            size_hint_y=None,
-            height=dp(32)
-        )
-        self.keyboard_container.add_widget(self.hint_label)
-
-        self.top_container.add_widget(self.keyboard_container)
-        main_layout.add_widget(self.top_container)
-
-        # ============ КОНТЕЙНЕР ДЛЯ РЕЗУЛЬТАТОВ ============
-        bottom_padding = layout_config.get_bottom_padding()
-
-        self.cards_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=[content_padding[0], dp(4), content_padding[2], bottom_padding]
-        )
-        self.cards_container.clip = True
-
-        # Контейнер для сообщения "ничего не найдено"
-        self.no_results_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=[dp(16), dp(16), dp(16), dp(16)]
-        )
-        self.no_results_label = MDLabel(
-            text="",
-            halign="center",
-            font_size=sp(16),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.4],
-            size_hint_y=None,
-            height=dp(60),
-            opacity=0
-        )
-        self.no_results_container.add_widget(self.no_results_label)
-
-        self.search_recycle_view = TermRecycleView(on_term_click=self.on_term_selected)
-        self.search_recycle_view.bar_width = 0
-        self.search_recycle_view.bar_color = [0, 0, 0, 0]
-        self.search_recycle_view.bar_inactive_color = [0, 0, 0, 0]
-        self.search_recycle_view.clip = True
-
-        self.cards_container.add_widget(self.search_recycle_view)
-        main_layout.add_widget(self.cards_container)
-
-        self.add_widget(main_layout)
-
-        Clock.schedule_once(self._save_keyboard_height, 0.5)
-
-        logger.info(f"UI словаря построен, bottom_padding={bottom_padding}dp")
-
-    def _save_keyboard_height(self, dt):
-        if self.keyboard_container:
-            self._keyboard_height = self.keyboard_container.height
-            logger.info(f"📏 Высота клавиатуры: {self._keyboard_height}dp")
-
-    def _show_keyboard(self):
-        if self.keyboard_container:
-            self.keyboard_container.opacity = 1
-            self.keyboard_container.disabled = False
-            self.keyboard_container.height = self._keyboard_height
-
-    def _hide_keyboard(self):
-        if self.keyboard_container:
-            self.keyboard_container.opacity = 0
-            self.keyboard_container.disabled = True
-            self.keyboard_container.height = 0
-
-    def _show_no_results(self, query):
-        """Показывает сообщение 'По вашему запросу ничего не найдено'"""
-        self.no_results_label.text = f'По вашему запросу "{query}"\nничего не найдено'
-        self.no_results_label.opacity = 1
-        self.search_recycle_view.clear()
-
-    def _hide_no_results(self):
-        self.no_results_label.opacity = 0
-        self.no_results_label.text = ""
-
-    def _show_search_results(self):
-        """Показывает результаты поиска в RecycleView"""
-        self.hint_label.opacity = 0
-        self._hide_no_results()
-
-        if not self.search_results:
-            self.search_recycle_view.clear()
-            return
-
-        self.search_recycle_view.set_terms(self.search_results, self.on_term_selected)
-
-    def _clear_search_results(self):
-        self.search_recycle_view.clear()
-        self._hide_no_results()
-        self.hint_label.text = "Нажмите на букву для просмотра терминов"
-        self.hint_label.opacity = 1
-
-    def _on_clear_search(self):
-        logger.info("🧹 Очистка поиска (крестик)")
-        self.clear_search()
-        self._show_keyboard()
-
-    # ============ ОБРАБОТЧИКИ ============
-
-    def on_language_changed(self, language):
-        logger.info(f"🔤 Язык изменён на: {language}")
-        self.alphabet_grid.set_language(language)
-        self.alphabet_grid.clear_selection()
-        self.current_letter = None
-        self.clear_search()
-        self._clear_search_results()
-        self._show_keyboard()
-
-    def on_letter_press(self, letter):
-        logger.info(f"Выбрана буква: {letter}")
-        self.current_letter = letter
-        self.alphabet_grid.clear_selection()
-        self.clear_search()
-        self._clear_search_results()
-
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('terms_by_letter'):
-                terms_screen = self.manager.get_screen('terms_by_letter')
-                terms_screen.set_letter(letter, self)
-                self.manager.current = 'terms_by_letter'
-
-    def do_search(self, query):
-        """Выполняет поиск терминов с приоритетами"""
-        logger.info(f"🔍 Поиск: {query}")
-        query_lower = query.strip().lower()
-        self._last_query = query
-
-        if len(query_lower) < 2:
-            notify.warning("Введите минимум 2 символа для поиска")
-            return
-
-        self.is_search_mode = True
-        self.current_letter = None
-        self.alphabet_grid.clear_selection()
-
-        self._hide_keyboard()
-
-        # Разбиваем запрос на слова
-        query_words = query_lower.split()
-
-        # Результаты с приоритетами
-        exact_matches = []
-        prefix_matches = []
-        contains_matches = []
-        word_matches = []
-
-        for term_name, term_data in self.all_terms.items():
-            term_lower = term_name.lower()
-
-            # 1. Точное совпадение (высший приоритет)
-            if term_lower == query_lower:
-                if term_name not in exact_matches:
-                    exact_matches.append(term_name)
-                continue
-
-            # 2. Начинается с запроса
-            if term_lower.startswith(query_lower):
-                if term_name not in prefix_matches:
-                    prefix_matches.append(term_name)
-                continue
-
-            # 3. Содержит запрос как часть слова
-            if query_lower in term_lower:
-                if term_name not in contains_matches:
-                    contains_matches.append(term_name)
-                continue
-
-            # 4. Содержит любое слово из запроса
-            for word in query_words:
-                if len(word) >= 2 and word in term_lower:
-                    if term_name not in word_matches:
-                        word_matches.append(term_name)
-                    break
-
-        # Объединяем результаты с приоритетами
-        results = []
-        for r in exact_matches:
-            if r not in results:
-                results.append(r)
-        for r in prefix_matches:
-            if r not in results:
-                results.append(r)
-        for r in contains_matches:
-            if r not in results:
-                results.append(r)
-        for r in word_matches:
-            if r not in results:
-                results.append(r)
-
-        self.search_results = results
-
-        if not self.search_results:
-            self._show_no_results(query)
-            self.hint_label.opacity = 0
-        else:
-            self._show_search_results()
-
-    def clear_search(self):
-        self.is_search_mode = False
-        self.search_results = []
-        self.search_bar.clear()
-        self._clear_search_results()
-        self._hide_no_results()
-
-    def on_term_selected(self, term_name):
-        logger.info(f"Выбран термин: {term_name}")
-
-        term_data = self.all_terms.get(term_name)
-        if not term_data:
-            notify.error("Термин не найден")
-            return
-
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('term_detail'):
-                term_detail = self.manager.get_screen('term_detail')
-                term_detail.set_term(term_name, term_data, self.name)
-                self.manager.current = 'term_detail'
+    # ============ ЖИЗНЕННЫЙ ЦИКЛ ============
 
     def on_enter(self):
-        logger.info("Вход в словарь")
-        self._update_top_nav("Словарь")
-        self._show_keyboard()
-        # Если был поиск и ничего не найдено - показываем сообщение
-        if self.is_search_mode and not self.search_results and self._last_query:
-            self._show_no_results(self._last_query)
+        logger.info("🚪 Вход в словарь")
 
-    def _update_top_nav(self, title):
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
-                app.top_nav.set_custom_title(title)
+                app.top_nav.set_custom_title("Словарь")
                 app.top_nav._show_back_button()
                 app.top_nav.back_btn.on_release = self.go_back
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
 
-    def go_back(self, instance=None):
-        logger.info("🔙 go_back: возврат на home")
-        if hasattr(self, 'manager') and self.manager:
-            self.manager.current = 'home'
+        self._show_hint("Поиск по алфавиту")
+        self._hide_result_label()
+        # Фокусируемся на поиске при входе
+        Clock.schedule_once(lambda dt: self.search_bar.focus(), 0.2)
 
     def on_leave(self):
-        logger.info("Выход из словаря")
+        logger.info("🚪 Выход из словаря")
         self.clear_search()
         self.current_letter = None
-        self.alphabet_grid.clear_selection()
+        self.dictionary_menu.set_current_letter(None)
+
+        if hasattr(self, '_hint_timer') and self._hint_timer:
+            Clock.unschedule(self._hint_timer)
+            self._hint_timer = None
+
+    def go_back(self, instance=None):
+        logger.info("🔙 Возврат на home")
+        if hasattr(self, 'manager') and self.manager:
+            self.manager.current = 'home'

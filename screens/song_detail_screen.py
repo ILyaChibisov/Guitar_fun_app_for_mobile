@@ -1934,6 +1934,7 @@ class SongDetailScreen(BaseScreen):
             self.loading_spinner = None
 
     def on_song_loaded(self, data):
+        """Обработчик загрузки песни - с проверкой избранного из кэша"""
         artist = data.get('artist') or 'Неизвестный'
         title = data.get('title') or 'Без названия'
         self.song_artist = artist
@@ -1955,14 +1956,24 @@ class SongDetailScreen(BaseScreen):
         self.is_liked = data.get('is_liked', False)
 
         # ============ ПРОВЕРЯЕМ ИЗБРАННОЕ ИЗ КЭША ============
+        # 1. Сначала проверяем через API кэш
         self.is_favorite = api.is_song_favorited(self.song_id)
+
+        # 2. Если в кэше нет, используем данные с сервера
         if not self.is_favorite:
             self.is_favorite = data.get('is_favorite', False)
+
+        # 3. Если песня открыта из избранного (previous_screen == 'favorites')
+        # и is_favorite == False, значит песня уже удалена из избранного
+        # но мы все еще на экране - показываем правильное состояние
+        if self.previous_screen == 'favorites' and not self.is_favorite:
+            logger.info(f"⚠️ Песня {self.song_id} удалена из избранного, обновляем иконку")
 
         self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
         self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
-        logger.info(f"⭐ Песня {self.song_id} в избранном: {self.is_favorite}")
+        logger.info(
+            f"⭐ Песня {self.song_id} в избранном: {self.is_favorite} (из кэша: {api.is_song_favorited(self.song_id)})")
 
         self.update_top_nav_title()
 
@@ -1998,6 +2009,7 @@ class SongDetailScreen(BaseScreen):
         api.toggle_like(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
 
     def toggle_favorite(self, *args):
+        """Переключает избранное с принудительным обновлением состояния"""
         if not api.is_authenticated():
             app = MDApp.get_running_app()
             if app and hasattr(app, 'open_profile'):
@@ -2005,9 +2017,12 @@ class SongDetailScreen(BaseScreen):
             return
 
         if self.is_favorite:
+            # Удаляем из избранного
             def on_success(result):
                 self.is_favorite = False
                 self.favorite_btn.icon = "star-outline"
+                # ✅ Принудительно обновляем состояние избранного в API
+                api._clear_favorites_cache()
                 notify.success("Удалено из избранного")
                 self._refresh_favorites_screen()
 
@@ -2016,9 +2031,14 @@ class SongDetailScreen(BaseScreen):
 
             api.remove_from_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
         else:
+            # Добавляем в избранное
             def on_success(result):
                 self.is_favorite = True
                 self.favorite_btn.icon = "star"
+                # ✅ Принудительно обновляем состояние избранного в API
+                api._clear_favorites_cache()
+                # ✅ Закэшируем текст песни
+                self._cache_song_for_offline()
                 notify.success("Добавлено в избранное")
                 self._refresh_favorites_screen()
 
@@ -2026,6 +2046,24 @@ class SongDetailScreen(BaseScreen):
                 notify.error("Ошибка")
 
             api.add_to_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+
+    def _cache_song_for_offline(self):
+        """Закэширует текущую песню для офлайн-доступа"""
+        try:
+            import threading
+            # Сохраняем текущие данные песни в кэш
+            if self.song_id and self.tabs:
+                data = {
+                    'artist': self.song_artist,
+                    'title': self.song_title,
+                    'tabs': self.tabs,
+                    'is_favorite': True,
+                    'is_liked': self.is_liked
+                }
+                api._save_song_cache(self.song_id, data)
+                logger.info(f"📦 Песня {self.song_id} закэширована для офлайн-доступа")
+        except Exception as e:
+            logger.error(f"Ошибка кэширования песни: {e}")
 
     def _refresh_favorites_screen(self):
         if hasattr(self, 'manager') and self.manager:
@@ -2035,7 +2073,9 @@ class SongDetailScreen(BaseScreen):
                     Clock.schedule_once(lambda dt: fav_screen.load_favorites(), 0.5)
 
     def go_back(self, instance=None):
+        """Возврат с обновлением состояния избранного на предыдущем экране"""
         logger.info("🔙 Нажата кнопка возврата")
+
         if self.is_tonality_mode:
             self.cancel_tonality()
         if self.is_font_mode:
@@ -2044,12 +2084,20 @@ class SongDetailScreen(BaseScreen):
             self.close_scroll_panel()
         if self.is_chords_mode:
             self.close_chords_section()
-        if self.manager and self.manager.has_screen('song_detail'):
+
+        # ============ ОБНОВЛЯЕМ ПРЕДЫДУЩИЙ ЭКРАН ============
+        if self.manager:
+            # Если возвращаемся на favorites — обновляем список
+            if self.previous_screen == 'favorites':
+                if self.manager.has_screen('favorites'):
+                    fav_screen = self.manager.get_screen('favorites')
+                    if hasattr(fav_screen, 'refresh_favorites'):
+                        # Обновляем с задержкой, чтобы дать API время
+                        Clock.schedule_once(lambda dt: fav_screen.refresh_favorites(), 0.3)
+
             screen_state.clear_pending_chord()
-            self.manager.current = 'song_detail'
-            logger.info("✅ Принудительный возврат на song_detail")
-        elif self.manager and self.manager.has_screen('home'):
-            self.manager.current = 'home'
+            self.manager.current = self.previous_screen if self.manager.has_screen(self.previous_screen) else 'home'
+            logger.info(f"✅ Возврат на {self.previous_screen}")
 
     def on_size(self, *args):
         """Вызывается при изменении размера экрана (поворот и т.д.)"""

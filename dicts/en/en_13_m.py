@@ -63,4 +63,18 @@ Second — includes command of all techniques and styles.
 Third — achieved through a combination of technique and musicianship.
 """
     ),
+
+    "MASTER": Term(
+        name="Master",
+        description="""
+An outdated respectful address to a musician, composer, or teacher. In guitar terminology, may denote a master or mentor.
+
+Where it appears:
+In musical literature — as an address.
+In pedagogy — as a respectful address to a teacher.
+
+Guitarist-Specific Tips:
+First — respect for mentors and masters.
+"""
+    ),
 }

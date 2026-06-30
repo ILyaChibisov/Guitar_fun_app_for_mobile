@@ -4,7 +4,7 @@
 ТОН | ТИП | АККОРД | ВАРИАНТЫ | ПАЛЬЦЫ/НОТЫ
 С меню выбора тональности, типа и аккорда
 СТАТИЧНЫЙ ЭКРАН - БЕЗ ПРОКРУТКИ
-С КЭШИРОВАНИЕМ МЕНЮ ДЛЯ БЫСТРОЙ РАБОТЫ НА ANDROID
+С КЭШИРОВАНИЕМ МЕНЮ (создаются сразу при инициализации)
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -650,19 +650,22 @@ class ChordsScreen(BaseScreen):
 
         self.init_ui()
         self.load_background()
-        self.scan_chords()
 
-        # Инициализируем кэшированные меню после загрузки аккордов
-        Clock.schedule_once(self._init_cached_menus, 0.3)
+        # ============ СОЗДАЁМ КЭШИРОВАННЫЕ МЕНЮ СРАЗУ ============
+        # Не ждём загрузки аккордов - создаём меню сразу с дефолтными значениями
+        Clock.schedule_once(self._create_cached_menus, 0.05)
+
+        # Загружаем аккорды
+        self.scan_chords()
 
         logger.info('Экран аккордов создан (статичный, с кэшированием меню)')
 
-    def _init_cached_menus(self, dt):
-        """Создаёт кэшированные меню один раз"""
+    def _create_cached_menus(self, dt=None):
+        """Создаёт кэшированные меню сразу при инициализации"""
         if self._menu_cache_initialized:
             return
 
-        logger.info("🔧 Инициализация кэшированных меню...")
+        logger.info("🔧 Создание кэшированных меню...")
 
         # Меню тональности
         self.tonality_selector = TonalitySelectorMenu(
@@ -684,10 +687,10 @@ class ChordsScreen(BaseScreen):
         self.type_selector.disabled = True
         self._menu_container.add_widget(self.type_selector)
 
-        # Меню аккордов
+        # Меню аккордов (с дефолтным списком)
         self.chord_selector = ChordSelectorMenu(
-            available_chords=self.available_chords or ["A"],
-            current_chord=self.current_chord_name,
+            available_chords=["A"],
+            current_chord="A",
             on_confirm=self._on_chord_confirmed,
             on_cancel=self._close_chord_selector
         )
@@ -696,7 +699,7 @@ class ChordsScreen(BaseScreen):
         self._menu_container.add_widget(self.chord_selector)
 
         self._menu_cache_initialized = True
-        logger.info("✅ Кэшированные меню инициализированы")
+        logger.info("✅ Кэшированные меню созданы")
 
     def load_background(self):
         try:
@@ -1232,6 +1235,10 @@ class ChordsScreen(BaseScreen):
             self.available_chords = []
             self.current_variants = []
             self.current_chord_data = None
+
+        # Обновляем меню аккордов если оно уже создано
+        if self.chord_selector and self._menu_cache_initialized:
+            self.chord_selector.update_chords(self.available_chords, self.current_chord_name)
 
     def extract_tonality(self, chord_name):
         if not chord_name:

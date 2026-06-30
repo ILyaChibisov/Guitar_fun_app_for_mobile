@@ -250,4 +250,21 @@ Second — important to check intonation and string action.
 Third — requires knowledge and experience.
 """
     ),
+
+    "SCALE PASSAGE": Term(
+        name="Scale passage",
+        description="""
+A rapid sequential movement through the notes of a scale upward or downward. Used as a technical element in virtuosic works.
+
+Where it appears:
+In classical music — in études and cadenzas.
+In jazz — in improvisations.
+In guitar music — in solos and études.
+
+Guitarist-Specific Tips:
+First — scale passages develop finger fluency.
+Second — requires even dynamics and clear articulation.
+Third — the foundation of many guitar solos.
+"""
+    ),
 }

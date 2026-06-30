@@ -62,4 +62,21 @@ Second — sluggish performance requires soft attack.
 Third — creates contrast with energetic sections.
 """
     ),
+
+    "LOUD": Term(
+        name="Loud",
+        description="""
+A dynamic level denoting loud sound. In notation marked as forte (f) or fortissimo (ff).
+
+Where it appears:
+In classical music — as contrast with quiet sections.
+In rock music — as the foundation of sound.
+In guitar music — in climaxes and powerful chords.
+
+Guitarist-Specific Tips:
+First — loud playing requires strong right-hand attack.
+Second — important not to overload the sound and maintain clarity.
+Third — used to create dramatic effect.
+"""
+    ),
 }

@@ -860,4 +860,21 @@ Second — use of ostinato basses and drones.
 Third — often used in folk music.
 """
     ),
+
+    "BARITONE GUITAR": Term(
+        name="Baritone guitar",
+        description="""
+A type of guitar with a longer scale length and lower tuning (usually a fourth or third below standard). Used in jazz, rock, and ensemble music.
+
+Where it appears:
+In jazz — as a solo and accompanying instrument.
+In rock music — for creating a lower, denser sound.
+In ensembles — as a timbral contrast.
+
+Guitarist-Specific Tips:
+First — requires fingering adaptation due to larger fret spacing.
+Second — tuning is lower than standard by a fourth or third.
+Third — sound is warmer and denser.
+"""
+    ),
 }

@@ -777,5 +777,20 @@ class APIClient:
             print(f"Ошибка получения букв: {e}")
             return None
 
+    def force_refresh_favorites(self):
+        """Принудительно обновляет кэш избранного с сервера"""
+        Logger.info("🔄 Принудительное обновление кэша избранного")
+        self._clear_favorites_cache()
+
+        def refresh():
+            self.get_favorites(
+                on_success=lambda x: Logger.info("✅ Кэш избранного обновлен"),
+                on_failure=lambda req, err: Logger.warning(f"⚠️ Ошибка обновления кэша: {err}"),
+                force_refresh=True
+            )
+
+        import threading
+        threading.Thread(target=refresh, daemon=True).start()
+
 
 api = APIClient()
