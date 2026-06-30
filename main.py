@@ -74,6 +74,7 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -151,6 +152,7 @@ MDIconButton.ripple_alpha = 0
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
     print("✅ Модуль ассетов загружен")
 except ImportError as e:
@@ -221,6 +223,7 @@ class GuitarFunsApp(MDApp):
         self.current_auth_modal = None
         self.is_auth_blocking = False
         self._bottom_nav_visible = False
+        self._favorites_preloaded = False  # ← флаг предзагрузки
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
@@ -286,6 +289,9 @@ class GuitarFunsApp(MDApp):
         username = user.get('username', 'Гость')
         logger.info(f"Данные пользователя загружены: {username}")
 
+        # После загрузки данных пользователя — предзагружаем избранное
+        Clock.schedule_once(lambda dt: self._preload_favorites(), 0.5)
+
     def _refresh_current_screen(self, dt):
         """Обновляет текущий экран после авторизации"""
         if self.screen_manager:
@@ -294,18 +300,54 @@ class GuitarFunsApp(MDApp):
                 screen_name = current_screen.name
                 logger.info(f"Обновление экрана после авторизации: {screen_name}")
 
-                # Вызываем on_login_success если есть
                 if hasattr(current_screen, 'on_login_success'):
                     current_screen.on_login_success()
-                # Если экран избранного - принудительно обновляем
                 elif screen_name == 'favorites' and hasattr(current_screen, 'refresh_favorites'):
                     current_screen.refresh_favorites()
 
-                # Обновляем главный экран если он есть в менеджере
                 if self.screen_manager.has_screen('home'):
                     home_screen = self.screen_manager.get_screen('home')
                     if hasattr(home_screen, 'on_login_success'):
                         home_screen.on_login_success()
+
+    # ============ ПРЕДЗАГРУЗКА ИЗБРАННОГО ============
+
+    def _preload_favorites(self):
+        """Предзагружает избранное в фоне при запуске приложения"""
+        if self._favorites_preloaded:
+            logger.debug("ℹ️ Избранное уже предзагружено")
+            return
+
+        if not api.is_authenticated():
+            logger.info("ℹ️ Пользователь не авторизован, предзагрузка избранного пропущена")
+            return
+
+        logger.info("🔄 Фоновая предзагрузка избранного...")
+
+        def preload():
+            try:
+                from api.client import api
+                api.get_favorites(
+                    on_success=self._on_favorites_preloaded,
+                    on_failure=lambda req, err: logger.warning(f"⚠️ Предзагрузка избранного не удалась: {err}"),
+                    force_refresh=False
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ Ошибка предзагрузки избранного: {e}")
+
+        # Запускаем в фоновом потоке
+        import threading
+        threading.Thread(target=preload, daemon=True).start()
+
+    def _on_favorites_preloaded(self, favorites):
+        """Обработчик успешной предзагрузки избранного"""
+        try:
+            from utils.screen_state import screen_state
+            screen_state.cache_screen_data('favorites', favorites)
+            self._favorites_preloaded = True
+            logger.info(f"✅ Избранное предзагружено: {len(favorites)} песен")
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка сохранения предзагруженного избранного: {e}")
 
     def build(self):
         logger.debug('Создание интерфейса...')
@@ -338,8 +380,6 @@ class GuitarFunsApp(MDApp):
         except ImportError:
             logger.warning("⚠️ Модуль icon_cache не найден")
 
-        # ============ УБРАНА ПРЕДЗАГРУЗКА ВСЕХ АРТИСТОВ ============
-        # Теперь данные загружаются только по запросу пользователя
         logger.info("📡 Режим работы: все данные загружаются с сервера по запросу")
 
         self.top_nav = TopNav(self.screen_manager)
@@ -347,8 +387,6 @@ class GuitarFunsApp(MDApp):
         self.top_nav.size_hint = (1, None)
         self.top_nav.pos_hint = {'top': 1}
 
-        # ============ УСТАНАВЛИВАЕМ НАЧАЛЬНЫЙ ЗАГОЛОВОК "ГЛАВНАЯ" ============
-        # Принудительно устанавливаем заголовок "Главная" при создании TopNav
         self.top_nav.update_title('home')
         self.top_nav._hide_back_button()
         logger.info("✅ TopNav установлен на 'Главная'")
@@ -403,6 +441,11 @@ class GuitarFunsApp(MDApp):
     def on_start(self):
         logger.info('Приложение GuitarFuns запущено')
         check_audio_support()
+
+        # ============ ПРЕДЗАГРУЗКА ИЗБРАННОГО ============
+        # Запускаем с задержкой, чтобы дать приложению полностью загрузиться
+        Clock.schedule_once(lambda dt: self._preload_favorites(), 1.0)
+
         if HAS_ASSETS:
             try:
                 from data import Assets

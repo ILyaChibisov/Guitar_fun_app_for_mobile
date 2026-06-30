@@ -2,6 +2,7 @@
 """
 Экран избранного - список любимых песен пользователя
 с двухстрочным заголовком в TopNav и круговым спиннером загрузки по центру
+ОПТИМИЗИРОВАННАЯ ВЕРСИЯ С КЭШЕМ СОСТОЯНИЯ
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -27,6 +28,7 @@ from screens.base_screen import BaseScreen
 from screens.components.loading_spinner import LoadingSpinner
 from api.client import api
 from utils.notifications import notify
+from utils.screen_state import screen_state
 
 logger = screen_logger('Favorites')
 
@@ -41,12 +43,12 @@ except ImportError:
     def load_asset_as_bytes(name):
         return None
 
-# Глобальная текстура для иконки песни
+# ============ ГЛОБАЛЬНАЯ ТЕКСТУРА ДЛЯ ВСЕХ КАРТОЧЕК ============
 _shared_song_texture = None
 
 
 def init_shared_song_icon():
-    """Загружает общую иконку для всех карточек"""
+    """ОДНОКРАТНО загружает иконку для всех карточек"""
     global _shared_song_texture
     if _shared_song_texture is not None:
         return _shared_song_texture
@@ -57,15 +59,19 @@ def init_shared_song_icon():
             if icon_data:
                 img = CoreImage(BytesIO(icon_data), ext="png")
                 _shared_song_texture = img.texture
-                logger.info("✅ Общая иконка песни загружена для избранного")
+                logger.info("✅ Общая иконка песни загружена")
                 return _shared_song_texture
         except Exception as e:
-            logger.error(f"Ошибка загрузки иконки песни: {e}")
+            logger.error(f"Ошибка загрузки иконки: {e}")
+
     return None
 
 
+# ============ КАРТОЧКА ИЗБРАННОЙ ПЕСНИ ============
 class FavoriteSongCard(MDCard):
-    """Карточка избранной песни - оптимизированная"""
+    """Карточка избранной песни - ОПТИМИЗИРОВАННАЯ"""
+
+    _shared_texture = None
 
     def __init__(self, song, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -111,10 +117,15 @@ class FavoriteSongCard(MDCard):
             allow_stretch=True,
             keep_ratio=True
         )
-        if _shared_song_texture:
-            self.icon_image.texture = _shared_song_texture
+
+        if FavoriteSongCard._shared_texture:
+            self.icon_image.texture = FavoriteSongCard._shared_texture
         else:
-            self.icon_image.text = "🎵"
+            FavoriteSongCard._shared_texture = init_shared_song_icon()
+            if FavoriteSongCard._shared_texture:
+                self.icon_image.texture = FavoriteSongCard._shared_texture
+            else:
+                self.icon_image.text = "🎵"
 
         text_layout = MDBoxLayout(
             orientation='vertical',
@@ -172,6 +183,7 @@ class FavoriteSongCard(MDCard):
             self.on_click_callback(self.song_id, self.song_title)
 
 
+# ============ КАРТОЧКА АВТОРИЗАЦИИ ============
 class AuthMessageCard(MDCard):
     """Карточка сообщения для неавторизованных пользователей"""
 
@@ -229,8 +241,9 @@ class AuthMessageCard(MDCard):
         self.add_widget(self.message_label)
 
 
+# ============ ОСНОВНОЙ ЭКРАН ============
 class FavoritesScreen(BaseScreen):
-    """Экран избранного"""
+    """Экран избранного - ОПТИМИЗИРОВАННЫЙ"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -242,13 +255,12 @@ class FavoritesScreen(BaseScreen):
         self._main_layout = None
         self.loading_spinner = None
         self._top_spacer = None
-        self._pending_refresh = False
-        self._top_nav_updated = False
+        self._last_load_time = 0
 
         self.init_ui()
         self.load_background()
-        Clock.schedule_once(lambda dt: init_shared_song_icon(), 0.1)
 
+        Clock.schedule_once(lambda dt: init_shared_song_icon(), 0.05)
         logger.info('Экран избранного создан')
 
     def load_background(self):
@@ -282,7 +294,6 @@ class FavoritesScreen(BaseScreen):
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
         self._main_layout = main_layout
 
-        # ============ ВЕРХНИЙ ОТСТУП ============
         top_padding = layout_config.get_top_padding()
         top_padding = top_padding - dp(8)
         if top_padding < dp(20):
@@ -291,7 +302,6 @@ class FavoritesScreen(BaseScreen):
         self._top_spacer = Widget(size_hint_y=None, height=top_padding)
         main_layout.add_widget(self._top_spacer)
 
-        # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧЕК ============
         bottom_padding = layout_config.get_bottom_padding()
 
         cards_container = MDBoxLayout(
@@ -301,7 +311,6 @@ class FavoritesScreen(BaseScreen):
         )
         cards_container.clip = True
 
-        # ScrollView для карточек
         scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
@@ -327,7 +336,6 @@ class FavoritesScreen(BaseScreen):
         logger.info(f"UI избранного построен, bottom_padding={bottom_padding}dp")
 
     def _create_top_nav_title(self, total):
-        """Создаёт двухстрочный заголовок для TopNav (название + количество)"""
         from kivymd.uix.boxlayout import MDBoxLayout
         from kivymd.uix.label import MDLabel
         from kivy.metrics import sp, dp
@@ -369,7 +377,6 @@ class FavoritesScreen(BaseScreen):
         return title_container
 
     def _get_count_text(self, total):
-        """Возвращает текст с количеством песен с правильным склонением"""
         if total == 0:
             return "Нет песен"
         elif total == 1:
@@ -380,9 +387,7 @@ class FavoritesScreen(BaseScreen):
             return f"{total} песен"
 
     def _update_top_nav(self, total):
-        """Обновляет TopNav с двухстрочным заголовком (только если экран активен)"""
-        if self.manager and self.manager.current != self.name:
-            logger.debug(f"Пропускаем обновление TopNav: экран не активен (current={self.manager.current})")
+        if not self.manager or self.manager.current != self.name:
             return
 
         app = MDApp.get_running_app()
@@ -391,30 +396,24 @@ class FavoritesScreen(BaseScreen):
             app.top_nav.set_custom_title_widget(title_container)
             app.top_nav._show_back_button()
             app.top_nav.back_btn.on_release = self.go_back
-            self._top_nav_updated = True
 
     def _reset_top_nav(self):
-        """Сбрасывает TopNav на стандартный заголовок"""
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
                 app.top_nav.clear_custom_title_widget()
                 app.top_nav.update_title('home')
                 app.top_nav._hide_back_button()
-                self._top_nav_updated = False
-                logger.debug("✅ TopNav сброшен на стандартный заголовок")
         except Exception as e:
             logger.debug(f"Ошибка сброса TopNav: {e}")
 
     def _show_auth_message(self):
-        """Показывает сообщение о необходимости авторизации"""
         self.cards_container.clear_widgets()
         auth_card = AuthMessageCard()
         self.cards_container.add_widget(auth_card)
         self._update_top_nav(0)
 
     def _show_loading(self):
-        """Показывает состояние загрузки с круговым спиннером"""
         if self.loading_spinner:
             return
 
@@ -423,10 +422,12 @@ class FavoritesScreen(BaseScreen):
         self.loading_spinner.start_animation()
 
         if self._main_layout:
-            self._main_layout.add_widget(self.loading_spinner)
+            if self.loading_spinner.parent:
+                self.loading_spinner.parent.remove_widget(self.loading_spinner)
+            index = self._main_layout.children.index(self._top_spacer) + 1
+            self._main_layout.add_widget(self.loading_spinner, index)
 
     def _hide_loading(self):
-        """Убирает индикатор загрузки"""
         if self.loading_spinner:
             self.loading_spinner.stop_animation()
             if self.loading_spinner.parent:
@@ -434,7 +435,6 @@ class FavoritesScreen(BaseScreen):
         self.loading_spinner = None
 
     def _show_empty(self):
-        """Показывает пустое состояние (нет избранных, но пользователь авторизован)"""
         self.cards_container.clear_widgets()
         self._update_top_nav(0)
 
@@ -476,44 +476,103 @@ class FavoritesScreen(BaseScreen):
         empty_card.add_widget(text_label)
         self.cards_container.add_widget(empty_card)
 
-    def load_favorites(self):
-        """Загружает избранные песни (с кэшем)"""
-        self._show_loading()
-        self._update_top_nav(0)
-
-        api.get_favorites(
-            on_success=self.on_favorites_loaded,
-            on_failure=self.on_load_failed,
-            force_refresh=False
-        )
-
-    def refresh_favorites(self):
-        """Принудительно обновляет избранное с сервера - вызывается после авторизации"""
+    def load_favorites(self, force_refresh=False):
+        """Загружает избранные песни"""
         if not api.is_authenticated():
             self._show_auth_message()
             return
 
-        logger.info("🔄 Принудительное обновление избранного после авторизации")
+        # Если есть данные и не принудительно — показываем без загрузки
+        if self.favorites and not force_refresh:
+            logger.info(f"📦 Показываем кэшированное избранное: {len(self.favorites)} песен")
+            self._show_favorites(self.favorites)
+            return
+
         self._show_loading()
         self._update_top_nav(0)
 
         api.get_favorites(
             on_success=self.on_favorites_loaded,
             on_failure=self.on_load_failed,
-            force_refresh=True
+            force_refresh=force_refresh
         )
+
+    def refresh_favorites(self):
+        """Принудительно обновляет избранное с сервера"""
+        logger.info("🔄 Принудительное обновление избранного")
+        self.load_favorites(force_refresh=True)
+
+    def on_favorites_loaded(self, favorites):
+        """Обработчик успешной загрузки избранного"""
+        self._hide_loading()
+
+        formatted_favorites = []
+        for item in favorites:
+            if isinstance(item, dict):
+                if 'id' in item and 'song_id' not in item:
+                    item['song_id'] = item['id']
+                formatted_favorites.append(item)
+            elif isinstance(item, str):
+                parts = item.split(' - ', 1)
+                if len(parts) == 2:
+                    formatted_favorites.append({
+                        'artist': parts[0],
+                        'title': parts[1],
+                        'id': 0,
+                        'song_id': 0
+                    })
+                else:
+                    formatted_favorites.append({
+                        'artist': '',
+                        'title': item,
+                        'id': 0,
+                        'song_id': 0
+                    })
+
+        self.favorites = formatted_favorites
+
+        # Сохраняем в кэш состояния
+        screen_state.cache_screen_data('favorites', formatted_favorites)
+        self._last_load_time = 0
+
+        self._show_favorites(formatted_favorites)
+
+    def _show_favorites(self, favorites):
+        """Отображает список избранных песен"""
+        self.cards_container.clear_widgets()
+
+        if not favorites:
+            self._show_empty()
+            return
+
+        self._update_top_nav(len(favorites))
+
+        for song_data in favorites:
+            card = FavoriteSongCard(song=song_data, on_click=self.on_song_selected)
+            self.cards_container.add_widget(card)
+
+        bottom_spacer = Widget(size_hint_y=None, height=dp(12))
+        self.cards_container.add_widget(bottom_spacer)
+
+        logger.info(f"Отображено {len(favorites)} избранных песен")
 
     def on_load_failed(self, req, error):
         """Обработчик ошибки загрузки"""
         self._hide_loading()
         self.cards_container.clear_widgets()
 
-        if "401" in str(error) or "Unauthorized" in str(error):
+        error_str = str(error)
+        if "401" in error_str or "Unauthorized" in error_str:
             self._show_auth_message()
         else:
             logger.error(f"Ошибка загрузки избранного: {error}")
-            self._show_empty()
-            notify.error("Ошибка загрузки избранного")
+            if self.favorites:
+                logger.info("📦 Показываем устаревший кэш избранного")
+                self._show_favorites(self.favorites)
+                notify.error("Ошибка обновления, показан кэш")
+            else:
+                self._show_empty()
+                notify.error("Ошибка загрузки избранного")
 
     def on_song_selected(self, song_id, song_title):
         if not song_id:
@@ -528,79 +587,59 @@ class FavoritesScreen(BaseScreen):
                 self.manager.current = 'song_detail'
 
     def go_back(self, instance=None):
-        """Возврат на главный экран"""
         logger.info("🔙 go_back: возврат на home")
-
         self._reset_top_nav()
-
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
 
     def on_pre_enter(self):
-        """Вызывается перед входом на экран"""
+        logger.info("on_pre_enter: подготовка к показу")
+
+    def on_enter(self):
+        """При входе на экран — основная загрузка"""
+        logger.info("Вход в экран избранного")
+
         if not api.is_authenticated():
             self._show_auth_message()
             return
 
-        self.load_favorites()
+        # Проверяем кэш состояния
+        cached_favorites = screen_state.get_cached_screen_data('favorites', max_age=60)
 
-    def on_enter(self):
-        """При входе на экран"""
-        logger.info("Вход в экран избранного")
-
-        if self.favorites:
-            self._update_top_nav(len(self.favorites))
-        else:
-            self._update_top_nav(0)
-
-        if api.is_authenticated():
-            if not self.favorites:
-                self.load_favorites()
-        else:
-            self._show_auth_message()
-
-    def on_login_success(self):
-        """Обработчик успешного входа - вызывается из модального окна авторизации"""
-        logger.info("✅ Успешная авторизация на экране избранного - обновляем список")
-        Clock.schedule_once(lambda dt: self.refresh_favorites(), 0.3)
-
-    def on_favorites_loaded(self, favorites):
-        """Обработчик успешной загрузки избранного"""
-        self._hide_loading()
-        self.cards_container.clear_widgets()
-
-        formatted_favorites = []
-        for item in favorites:
-            if isinstance(item, dict):
-                if 'id' in item and 'song_id' not in item:
-                    item['song_id'] = item['id']
-                formatted_favorites.append(item)
-            elif isinstance(item, str):
-                parts = item.split(' - ', 1)
-                if len(parts) == 2:
-                    formatted_favorites.append({'artist': parts[0], 'title': parts[1], 'id': 0, 'song_id': 0})
-                else:
-                    formatted_favorites.append({'artist': '', 'title': item, 'id': 0, 'song_id': 0})
-
-        self.favorites = formatted_favorites
-
-        if not self.favorites:
-            self._show_empty()
+        if cached_favorites:
+            logger.info(f"📦 Показываем избранное из кэша состояния: {len(cached_favorites)} песен")
+            self.favorites = cached_favorites
+            self._show_favorites(cached_favorites)
+            # Обновляем в фоне
+            Clock.schedule_once(lambda dt: self._check_and_refresh(), 0.5)
             return
 
-        self._update_top_nav(len(self.favorites))
+        if self.favorites:
+            self._show_favorites(self.favorites)
+            Clock.schedule_once(lambda dt: self._check_and_refresh(), 0.5)
+            return
 
-        for song_data in self.favorites:
-            card = FavoriteSongCard(song=song_data, on_click=self.on_song_selected)
-            self.cards_container.add_widget(card)
+        self.load_favorites(force_refresh=False)
 
-        bottom_spacer = Widget(size_hint_y=None, height=dp(12))
-        self.cards_container.add_widget(bottom_spacer)
+    def _check_and_refresh(self):
+        """Проверяет, нужно ли обновить избранное в фоне"""
+        if not api.is_authenticated():
+            return
 
-        logger.info(f"Загружено {len(self.favorites)} избранных песен")
+        cached = api._load_favorites_cache()
+        if cached is None:
+            logger.info("🔄 Кэш устарел, обновляем в фоне")
+            api.get_favorites(
+                on_success=self.on_favorites_loaded,
+                on_failure=lambda req, err: None,
+                force_refresh=True
+            )
+
+    def on_login_success(self):
+        """Обработчик успешного входа"""
+        logger.info("✅ Успешная авторизация — обновляем избранное")
+        self.load_favorites(force_refresh=True)
 
     def on_leave(self):
-        """При выходе с экрана"""
         logger.info("Выход из экрана избранного")
         self._hide_loading()
-        self._reset_top_nav()

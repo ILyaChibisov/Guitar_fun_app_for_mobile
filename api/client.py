@@ -1,6 +1,7 @@
 # api/client.py
 """
 HTTP клиент для работы с сервером - с кэшированием избранного и текстов песен
+ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
 """
 import json
 import os
@@ -179,7 +180,6 @@ class APIClient:
             self.access_token = None
             self.refresh_token = None
             self.user_data = None
-            # Очищаем кэш при выходе
             self.clear_cache()
             Logger.info('API: Токены очищены')
         except Exception as e:
@@ -257,7 +257,7 @@ class APIClient:
         # Сначала проверяем память
         if self._favorites_cache is not None:
             if time.time() - self._favorites_cache_timestamp < config.FAVORITES_CACHE_TTL:
-                Logger.info(f"📦 Избранное из памяти: {len(self._favorites_cache)} песен")
+                Logger.debug(f"📦 Избранное из памяти: {len(self._favorites_cache)} песен")
                 return self._favorites_cache
             else:
                 Logger.debug("⏳ Кэш в памяти устарел")
@@ -268,25 +268,12 @@ class APIClient:
             if os.path.exists(cache_path):
                 with open(cache_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    # Проверяем TTL
                     if time.time() - data.get('timestamp', 0) < config.FAVORITES_CACHE_TTL:
                         favorites = data.get('favorites', [])
-                        # Сохраняем в память
                         self._favorites_cache = favorites
                         self._favorites_cache_timestamp = data.get('timestamp', 0)
                         Logger.info(f"📦 Избранное из файла: {len(favorites)} песен")
                         return favorites
-                    else:
-                        Logger.debug("⏳ Кэш в файле устарел")
-            else:
-                Logger.debug("📁 Файл кэша не найден")
-        except json.JSONDecodeError as e:
-            Logger.error(f"❌ Ошибка парсинга кэша: {e}")
-            # Удаляем битый файл
-            try:
-                os.remove(cache_path)
-            except:
-                pass
         except Exception as e:
             Logger.error(f"❌ Ошибка загрузки кэша: {e}")
 
@@ -295,18 +282,15 @@ class APIClient:
     def _save_favorites_cache(self, favorites):
         """Сохраняет кэш избранного в память и файл"""
         try:
-            # Сохраняем в память
             self._favorites_cache = favorites
             self._favorites_cache_timestamp = time.time()
 
-            # Сохраняем в файл
             cache_path = self._get_favorites_cache_path()
             data = {
                 'favorites': favorites,
                 'timestamp': time.time()
             }
 
-            # Убеждаемся, что папка существует
             cache_dir = os.path.dirname(cache_path)
             if not os.path.exists(cache_dir):
                 os.makedirs(cache_dir, mode=0o755)
@@ -343,21 +327,12 @@ class APIClient:
             if os.path.exists(cache_path):
                 with open(cache_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    # Проверяем TTL (24 часа)
                     if time.time() - data.get('timestamp', 0) < config.SONG_CACHE_TTL:
                         Logger.info(f"📦 Текст песни {song_id} загружен из кэша")
                         return data.get('data')
                     else:
                         Logger.info(f"⏳ Кэш песни {song_id} устарел")
                         os.remove(cache_path)
-            else:
-                Logger.debug(f"📁 Файл песни {song_id} не найден")
-        except json.JSONDecodeError as e:
-            Logger.error(f"❌ Ошибка парсинга кэша песни {song_id}: {e}")
-            try:
-                os.remove(cache_path)
-            except:
-                pass
         except Exception as e:
             Logger.error(f"❌ Ошибка загрузки кэша песни {song_id}: {e}")
         return None
@@ -365,18 +340,14 @@ class APIClient:
     def _save_song_cache(self, song_id, data):
         """Сохраняет текст песни в кэш"""
         try:
-            # Проверяем количество файлов в кэше
             cache_dir = config.CACHE_DIR
             if not os.path.exists(cache_dir):
                 os.makedirs(cache_dir, mode=0o755)
 
             song_files = [f for f in os.listdir(cache_dir) if f.startswith('song_') and f.endswith('.json')]
 
-            # Если слишком много, удаляем самые старые
             if len(song_files) >= config.MAX_CACHED_SONGS:
-                # Сортируем по времени изменения
                 song_files.sort(key=lambda f: os.path.getmtime(os.path.join(cache_dir, f)))
-                # Удаляем половину (самые старые)
                 to_delete = song_files[:len(song_files) // 2]
                 for f in to_delete:
                     try:
@@ -410,7 +381,6 @@ class APIClient:
                     os.remove(cache_path)
                     Logger.info(f"🗑️ Кэш песни {song_id} очищен")
             else:
-                # Удаляем все файлы song_*.json
                 count = 0
                 for f in os.listdir(cache_dir):
                     if f.startswith('song_') and f.endswith('.json'):
@@ -421,28 +391,11 @@ class APIClient:
             Logger.error(f"❌ Ошибка очистки кэша песен: {e}")
 
     def clear_cache(self):
-        """Очищает весь кэш (избранное + песни)"""
+        """Очищает весь кэш"""
         self._clear_favorites_cache()
         self._clear_song_cache()
+        Logger.info("🗑️ Весь кэш очищен")
 
-        # Также можно очистить всю папку кэша
-        try:
-            import shutil
-            cache_dir = config.CACHE_DIR
-            if os.path.exists(cache_dir):
-                # Удаляем все, кроме .gitkeep
-                for item in os.listdir(cache_dir):
-                    if item != '.gitkeep':
-                        item_path = os.path.join(cache_dir, item)
-                        if os.path.isfile(item_path):
-                            os.remove(item_path)
-                        elif os.path.isdir(item_path):
-                            shutil.rmtree(item_path)
-                Logger.info("🗑️ Весь кэш очищен")
-        except Exception as e:
-            Logger.error(f"❌ Ошибка полной очистки кэша: {e}")
-
-    
     # ============ API МЕТОДЫ ============
 
     def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
@@ -454,7 +407,6 @@ class APIClient:
             on_failure: колбэк при ошибке
             force_refresh: принудительно обновить с сервера
         """
-        # Если не принудительно, пробуем загрузить из кэша
         if not force_refresh:
             cached = self._load_favorites_cache()
             if cached is not None:
@@ -493,14 +445,12 @@ class APIClient:
                             'song_id': 0
                         })
                 else:
-                    # Убеждаемся, что есть song_id для идентификации
                     if 'id' in item and 'song_id' not in item:
                         item['song_id'] = item['id']
                     elif 'song_id' in item and 'id' not in item:
                         item['id'] = item['song_id']
                     formatted_favorites.append(item)
 
-            # Сохраняем в кэш
             self._save_favorites_cache(formatted_favorites)
             Logger.info(f'✅ Получено избранных: {len(formatted_favorites)}')
 
@@ -508,7 +458,6 @@ class APIClient:
                 on_success(formatted_favorites)
 
         def _on_failure(req, error):
-            # При ошибке пробуем показать устаревший кэш
             cached = self._load_favorites_cache()
             if cached is not None:
                 Logger.warning(f"⚠️ Ошибка сервера, показываем устаревший кэш ({len(cached)} песен)")
@@ -531,12 +480,9 @@ class APIClient:
         """Добавить в избранное с обновлением кэша"""
 
         def _on_success(result):
-            # Очищаем кэш избранного
             self._clear_favorites_cache()
 
-            # Закэшируем песню (если еще не закэширована)
             if not self._load_song_cache(song_id):
-                # Загружаем песню в фоне для кэша
                 def cache_song():
                     self.get_tab(
                         song_id=song_id,
@@ -562,7 +508,6 @@ class APIClient:
         """Удалить из избранного с обновлением кэша"""
 
         def _on_success(result):
-            # Очищаем кэш избранного
             self._clear_favorites_cache()
             Logger.info(f"⭐ Песня {song_id} удалена из избранного, кэш очищен")
             if on_success:
@@ -579,14 +524,12 @@ class APIClient:
     def is_song_favorited(self, song_id: int) -> bool:
         """
         Проверяет, находится ли песня в избранном (из кэша)
-        Используется для отображения звездочки в song_detail_screen
         """
         cached = self._load_favorites_cache()
         if cached is None:
             return False
 
         for song in cached:
-            # Проверяем по разным ключам
             if song.get('id') == song_id or song.get('song_id') == song_id:
                 return True
             if str(song.get('id', '')) == str(song_id) or str(song.get('song_id', '')) == str(song_id):
@@ -596,14 +539,7 @@ class APIClient:
     def get_tab(self, song_id: int, on_success=None, on_failure=None, force_refresh=False):
         """
         Получить текст песни с кэшированием
-
-        Args:
-            song_id: ID песни
-            on_success: колбэк при успехе
-            on_failure: колбэк при ошибке
-            force_refresh: принудительно обновить с сервера
         """
-        # Если не принудительно, пробуем загрузить из кэша
         if not force_refresh:
             cached = self._load_song_cache(song_id)
             if cached is not None:
@@ -614,13 +550,11 @@ class APIClient:
         Logger.info(f"🔄 Загрузка песни {song_id} с сервера...")
 
         def _on_success(result):
-            # Сохраняем в кэш
             self._save_song_cache(song_id, result)
             if on_success:
                 on_success(result)
 
         def _on_failure(req, error):
-            # При ошибке пробуем показать устаревший кэш
             cached = self._load_song_cache(song_id)
             if cached is not None:
                 Logger.warning(f"⚠️ Ошибка сервера, показываем устаревший кэш песни {song_id}")
@@ -639,16 +573,9 @@ class APIClient:
             include_auth=False
         )
 
-    def clear_cache(self):
-        """Очищает весь кэш (избранное + песни)"""
-        self._clear_favorites_cache()
-        self._clear_song_cache()
-        Logger.info("🗑️ Весь кэш очищен")
-
     # ============ API МЕТОДЫ (без кэша) ============
 
     def get_alphabet(self, on_success=None, on_failure=None):
-        """Получить алфавит"""
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/alphabet",
             method='GET',
@@ -659,7 +586,6 @@ class APIClient:
 
     def get_artists_by_letter(self, letter: str, limit: int = 200, offset: int = 0,
                               on_success=None, on_failure=None):
-        """Получить артистов по букве"""
         encoded_letter = self._encode_letter(letter)
         url = f"{self.config.API_BASE_URL}/songs/artists/{encoded_letter}?limit={limit}&offset={offset}"
         Logger.info(f"Запрос артистов для буквы: {letter}")
@@ -667,21 +593,18 @@ class APIClient:
 
     def get_artists_by_digits(self, limit: int = 200, offset: int = 0,
                               on_success=None, on_failure=None):
-        """Получить артистов для цифр"""
         url = f"{self.config.API_BASE_URL}/songs/artists/digits?limit={limit}&offset={offset}"
         Logger.info("Запрос артистов для цифр")
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=False)
 
     def get_songs_by_artist(self, artist: str, limit: int = 200, offset: int = 0,
                             on_success=None, on_failure=None):
-        """Получить песни артиста"""
         encoded_artist = urllib.parse.quote(artist, safe='')
         url = f"{self.config.API_BASE_URL}/songs/{encoded_artist}?limit={limit}&offset={offset}"
         Logger.info(f"Запрос песен для артиста: {artist}")
         return self._request(url=url, method='GET', on_success=on_success, on_failure=on_failure, include_auth=False)
 
     def get_popular_songs(self, limit: int = 20, on_success=None, on_failure=None):
-        """Получить популярные песни"""
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/popular?limit={limit}",
             method='GET', on_success=on_success, on_failure=on_failure, include_auth=False
@@ -713,9 +636,7 @@ class APIClient:
     # ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
 
     def _encode_letter(self, letter: str) -> str:
-        """Правильно кодирует букву для URL"""
         import urllib.parse
-
         special_chars = {
             'Ё': '%D0%81',
             'ё': '%D1%91',
@@ -728,10 +649,8 @@ class APIClient:
             '#': '%23',
             ' ': '%20',
         }
-
         if letter in special_chars:
             return special_chars[letter]
-
         try:
             return urllib.parse.quote(letter, safe='')
         except Exception as e:
