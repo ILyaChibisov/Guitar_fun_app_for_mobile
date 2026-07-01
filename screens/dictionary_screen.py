@@ -888,6 +888,16 @@ class DictionaryScreen(BaseScreen):
             self._result_label.text = ""
             self._result_label.opacity = 0
 
+    def _show_letter_terms(self, letter):
+        """Показывает термины для выбранной буквы"""
+        terms = self.terms_by_letter.get(letter, [])
+        if terms:
+            self.search_recycle_view.set_terms(terms, self.on_term_selected)
+            self._show_result_label(f"Термины на букву {letter.upper()}")
+        else:
+            self.search_recycle_view.clear()
+            self._show_result_label(f"Нет терминов на букву {letter.upper()}")
+
     # ============ ПОИСК ============
 
     def do_search(self, query):
@@ -966,22 +976,23 @@ class DictionaryScreen(BaseScreen):
         self.search_recycle_view.clear()
         self._last_query = ""
         self._hide_result_label()
+        self.current_letter = None
+        self.dictionary_menu.set_current_letter(None)
         self._show_hint("Поиск по алфавиту")
 
     # ============ ОБРАБОТЧИКИ ============
 
     def on_letter_press(self, letter):
+        """Обработчик выбора буквы - показывает термины прямо на экране"""
         logger.info(f"Выбрана буква: {letter}")
         self.current_letter = letter
         self.dictionary_menu.set_current_letter(letter)
-        self.clear_search()
-        self._show_hint(f"Термины на букву '{letter.upper()}'")
+        self.is_search_mode = False
+        self.search_bar.clear()
+        self._last_query = ""
 
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('terms_by_letter'):
-                terms_screen = self.manager.get_screen('terms_by_letter')
-                terms_screen.set_letter(letter, self)
-                self.manager.current = 'terms_by_letter'
+        # Показываем термины для буквы
+        self._show_letter_terms(letter)
 
     def on_term_selected(self, term_name):
         logger.info(f"Выбран термин: {term_name}")
@@ -1092,6 +1103,9 @@ class DictionaryScreen(BaseScreen):
 
         self._show_hint("Поиск по алфавиту")
         self._hide_result_label()
+        self.search_recycle_view.clear()
+        self.current_letter = None
+        self.dictionary_menu.set_current_letter(None)
 
     def on_leave(self):
         logger.info("🚪 Выход из словаря")

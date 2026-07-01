@@ -24,19 +24,13 @@ from .parsers_screens.fivelad_parser_screen import FiveLadParserScreen
 from .parsers_screens.akkordbard_parser_screen import AkkordBardParserScreen
 from .parsers_screens.domhve_parser_screen import DomhveParserScreen
 from .parsers_screens.rushsound_parser_screen import RushSoundParserScreen
-from .terms_by_letter_screen import TermsByLetterScreen
 from .term_detail_screen import TermDetailScreen
 
 logger = get_logger('ScreenManager')
 
 
 def setup_screen_manager():
-    # ============ МГНОВЕННАЯ СМЕНА ЭКРАНОВ БЕЗ АНИМАЦИИ ============
-    # NoTransition - нет затемнения, нет сдвига, просто мгновенная смена
     sm = ScreenManager(transition=NoTransition())
-
-    # Если хочешь с минимальной задержкой для плавности:
-    # sm = ScreenManager(transition=NoTransition(duration=0.0))
 
     sm.add_widget(HomeScreen(name='home'))
     sm.add_widget(SongsScreen(name='songs'))
@@ -51,8 +45,6 @@ def setup_screen_manager():
     sm.add_widget(SongDetailScreen(name='song_detail'))
     sm.add_widget(AdminScreen(name='admin'))
     sm.add_widget(SearchScreen(name='search'))
-    sm.add_widget(DictionaryScreen(name='dictionary'))
-    sm.add_widget(TermsByLetterScreen(name='terms_by_letter'))
     sm.add_widget(TermDetailScreen(name='term_detail'))
 
     # Парсеры
@@ -67,5 +59,5 @@ def setup_screen_manager():
     sm.add_widget(DomhveParserScreen(name='domhve_parser'))
     sm.add_widget(RushSoundParserScreen(name='rushsound_parser'))
 
-    logger.info('ScreenManager настроен с NoTransition (мгновенная смена), добавлено 22 экрана')
+    logger.info('ScreenManager настроен с NoTransition, добавлено 21 экран')
     return sm
