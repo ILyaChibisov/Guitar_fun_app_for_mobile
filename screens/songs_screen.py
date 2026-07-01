@@ -1,6 +1,7 @@
 # screens/songs_screen.py
 """
-Экран песен - с единым меню (ЯЗЫК | БУКВЫ) и поиском
+Экран песен - с единым меню (БУКВЫ | ЯЗЫК) и поиском
+Результаты поиска, исполнители по букве и песни исполнителя показываются на одном экране
 """
 import time
 from kivy.metrics import dp, sp
@@ -33,6 +34,7 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
+from utils.screen_state import screen_state
 
 logger = screen_logger('Songs')
 
@@ -51,11 +53,13 @@ except ImportError:
 _shared_rus_flag_texture = None
 _shared_eng_flag_texture = None
 _shared_song_icon_texture = None
+_shared_artist_icon_texture = None
 
 
 def load_shared_icons_sync():
     """Синхронная загрузка иконок - вызывается ДО создания UI"""
-    global _shared_rus_flag_texture, _shared_eng_flag_texture, _shared_song_icon_texture
+    global _shared_rus_flag_texture, _shared_eng_flag_texture
+    global _shared_song_icon_texture, _shared_artist_icon_texture
 
     if _shared_rus_flag_texture is not None:
         return
@@ -89,6 +93,15 @@ def load_shared_icons_sync():
             else:
                 logger.warning("⚠️ Иконка песни не найдена в ассетах")
 
+            # Загружаем иконку исполнителя
+            artist_data = load_asset_as_bytes('artist_png')
+            if artist_data:
+                img = CoreImage(BytesIO(artist_data), ext="png")
+                _shared_artist_icon_texture = img.texture
+                logger.info("✅ Иконка исполнителя загружена синхронно")
+            else:
+                logger.warning("⚠️ Иконка исполнителя не найдена в ассетах")
+
         except Exception as e:
             logger.error(f"Ошибка загрузки иконок: {e}")
 
@@ -114,11 +127,9 @@ class SearchBar(MDCard):
         self.padding = [dp(12), dp(4), dp(8), dp(4)]
         self.spacing = dp(4)
 
-        # ============ КРАСИВАЯ ОБВОДКА ============
         self.line_color = [0.1, 0.1, 0.1, 0.3]
         self.line_width = 1.6
 
-        # ============ ПОЛЕ ВВОДА (ПРОЗРАЧНОЕ) ============
         self.search_field = MDTextField(
             hint_text="Поиск песен...",
             size_hint_x=1,
@@ -138,7 +149,6 @@ class SearchBar(MDCard):
 
         self.search_field.bind(text=self._on_text_change)
 
-        # ============ КНОПКА ОЧИСТКИ ============
         self.clear_btn = MDIconButton(
             icon="close-circle",
             size_hint=(None, None),
@@ -152,7 +162,6 @@ class SearchBar(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # ============ ИКОНКА ЛУПЫ ============
         self.search_icon = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
@@ -164,17 +173,14 @@ class SearchBar(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # Собираем UI
         self.add_widget(self.search_icon)
         self.add_widget(self.search_field)
         self.add_widget(self.clear_btn)
 
-        # Привязываем фокус для изменения обводки
         self.search_field.bind(focus=self._on_focus)
 
     def _on_text_change(self, instance, text):
         self.current_query = text
-        # Управляем видимостью крестика
         if text.strip():
             self.clear_btn.opacity = 1
             self.clear_btn.disabled = False
@@ -218,7 +224,6 @@ class SearchBar(MDCard):
         self.search_field.focus = True
 
     def _on_focus(self, instance, value):
-        """Обработчик фокуса - меняет цвет обводки"""
         if value:
             self.line_color = [0.1, 0.1, 0.1, 0.3]
             self.line_width = 1.8
@@ -252,7 +257,6 @@ class FlagToggle(ButtonBehavior, MDBoxLayout):
         self.spacing = dp(1)
         self.md_bg_color = [0, 0, 0, 0]
 
-        # Контейнер для флага
         flag_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -269,7 +273,6 @@ class FlagToggle(ButtonBehavior, MDBoxLayout):
         )
         flag_container.add_widget(self.flag_image)
 
-        # Подпись
         self.label = MDLabel(
             text="RUS",
             font_size=sp(9),
@@ -285,10 +288,8 @@ class FlagToggle(ButtonBehavior, MDBoxLayout):
         self.add_widget(flag_container)
         self.add_widget(self.label)
 
-        # Устанавливаем флаг (иконки уже загружены)
         self._update_flag()
 
-        # Привязываем события
         self.flag_image.bind(on_touch_down=self._on_press)
         self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
 
@@ -311,12 +312,15 @@ class FlagToggle(ButtonBehavior, MDBoxLayout):
             else:
                 self.flag_image.text = "🇷🇺"
             self.label.text = "RUS"
-        else:
+        elif self.current_language == 'en':
             if _shared_eng_flag_texture:
                 self.flag_image.texture = _shared_eng_flag_texture
             else:
                 self.flag_image.text = "🇬🇧"
             self.label.text = "ENG"
+        else:  # digits - используем Material Design иконку
+            self.flag_image.text = "🔢"
+            self.label.text = "0-9"
 
     def set_language(self, language):
         self.current_language = language
@@ -338,11 +342,11 @@ class LetterButton(MDBoxLayout):
         self.spacing = 0
         self.md_bg_color = [0, 0, 0, 0]
 
-        display_text = '0-9' if text == '09' else text
+        display_text = text
 
         self.label = MDLabel(
             text=display_text,
-            font_size=sp(11) if text == '09' else sp(13),
+            font_size=sp(13),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -371,8 +375,7 @@ class LetterButton(MDBoxLayout):
     def _on_touch_down(self, instance, touch):
         if self.collide_point(*touch.pos):
             if self.on_press_callback:
-                letter = '0-9' if self.btn_text == '09' else self.btn_text
-                self.on_press_callback(letter)
+                self.on_press_callback(self.btn_text)
             return True
         return False
 
@@ -392,16 +395,18 @@ class LetterButton(MDBoxLayout):
 
 
 class AlphabetMenu(MDBoxLayout):
-    """Меню с буквами алфавита (скроллится)"""
+    """Меню с буквами алфавита (скроллится) - слева от флага"""
 
     RU_LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И',
                   'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т',
                   'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь',
-                  'Э', 'Ю', 'Я', '#', '09']
+                  'Э', 'Ю', 'Я']
 
     EN_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
                   'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-                  'U', 'V', 'W', 'X', 'Y', 'Z', '#', '09']
+                  'U', 'V', 'W', 'X', 'Y', 'Z']
+
+    DIGITS_LETTERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '#']
 
     def __init__(self, on_letter_press=None, current_language='ru', **kwargs):
         super().__init__(**kwargs)
@@ -449,7 +454,12 @@ class AlphabetMenu(MDBoxLayout):
         self.container.clear_widgets()
         self.buttons = []
 
-        letters = self.RU_LETTERS if self.current_language == 'ru' else self.EN_LETTERS
+        if self.current_language == 'ru':
+            letters = self.RU_LETTERS
+        elif self.current_language == 'en':
+            letters = self.EN_LETTERS
+        else:  # digits
+            letters = self.DIGITS_LETTERS
 
         for letter in letters:
             btn = LetterButton(
@@ -484,7 +494,7 @@ class AlphabetMenu(MDBoxLayout):
 
 
 class SongsMenu(MDCard):
-    """Единое меню: ЯЗЫК (флаг с подписью) | БУКВЫ (скролл)"""
+    """Единое меню: БУКВЫ (скролл) | ЯЗЫК (флаг с подписью) - флаг справа"""
 
     def __init__(self,
                  on_language_toggle=None,
@@ -504,16 +514,18 @@ class SongsMenu(MDCard):
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
         self.spacing = dp(0)
 
+        # 1. БУКВЫ (слева)
+        self.alphabet_menu = AlphabetMenu(
+            on_letter_press=on_letter_press,
+            current_language=current_language
+        )
+
+        # 2. ЯЗЫК (флаг с подписью) - справа
         self.flag_toggle = FlagToggle(
             on_press=on_language_toggle
         )
         self.flag_toggle.current_language = current_language
         self.flag_toggle._update_flag()
-
-        self.alphabet_menu = AlphabetMenu(
-            on_letter_press=on_letter_press,
-            current_language=current_language
-        )
 
         flag_container = MDBoxLayout(
             size_hint_x=None,
@@ -522,9 +534,9 @@ class SongsMenu(MDCard):
         )
         flag_container.add_widget(self.flag_toggle)
 
-        self.add_widget(flag_container)
-        self.add_widget(self._create_divider())
         self.add_widget(self.alphabet_menu)
+        self.add_widget(self._create_divider())
+        self.add_widget(flag_container)
 
     def _create_divider(self):
         return MDBoxLayout(
@@ -541,10 +553,197 @@ class SongsMenu(MDCard):
         self.alphabet_menu.set_current(letter)
 
 
-# ============ RECYCLEVIEW ДЛЯ РЕЗУЛЬТАТОВ ПОИСКА ============
+# ============ RECYCLEVIEW КАРТОЧКИ ============
+
+class ArtistCard(RecycleDataViewBehavior, MDCard):
+    """Карточка исполнителя с иконкой artist_png"""
+
+    artist_name = StringProperty('')
+    songs_count = NumericProperty(0)
+    on_click = ObjectProperty(None)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(44)
+        self.padding = [dp(10), dp(4), dp(10), dp(4)]
+        self.spacing = dp(8)
+        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.elevation = 0
+        self.ripple_behavior = False
+        self.theme_bg_color = "Custom"
+        self.md_bg_color = [0, 0, 0, 0.06]
+        self.line_color = [1, 1, 1, 0.05]
+        self.line_width = 0.5
+        self.clip = True
+        self._build_ui()
+
+    def _build_ui(self):
+        self.icon = Image(
+            size_hint=(None, 1),
+            width=dp(28),
+            allow_stretch=True,
+            keep_ratio=True
+        )
+
+        if _shared_artist_icon_texture:
+            self.icon.texture = _shared_artist_icon_texture
+        else:
+            self.icon.text = "🎤"
+
+        self.artist_label = MDLabel(
+            font_size=sp(15),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95],
+            bold=True,
+            shorten=True,
+            shorten_from="right",
+            valign="middle",
+            size_hint_x=1
+        )
+
+        self.count_label = MDLabel(
+            text="",
+            font_size=sp(11),
+            size_hint_x=None,
+            width=dp(40),
+            halign="right",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4]
+        )
+
+        arrow = MDLabel(
+            text="›",
+            font_size=sp(22),
+            size_hint_x=None,
+            width=dp(24),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.3]
+        )
+
+        self.add_widget(self.icon)
+        self.add_widget(self.artist_label)
+        self.add_widget(self.count_label)
+        self.add_widget(arrow)
+
+    def refresh_view_attrs(self, rv, index, data):
+        self.artist_name = data.get('artist', '')
+        self.songs_count = data.get('songs_count', 0)
+        self.on_click = data.get('on_click')
+        self.artist_label.text = self.artist_name
+        self.count_label.text = str(self.songs_count) if self.songs_count > 0 else ""
+        return super().refresh_view_attrs(rv, index, data)
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            if self.on_click:
+                self.on_click(self.artist_name, self.songs_count)
+            return True
+        return super().on_touch_down(touch)
+
+
+class SongCard(RecycleDataViewBehavior, MDCard):
+    """Карточка песни - такой же стиль как у исполнителей, иконка song_png"""
+
+    title = StringProperty('')
+    tabs_count = NumericProperty(0)
+    song_id = NumericProperty(0)
+    on_click = ObjectProperty(None)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(44)
+        self.padding = [dp(10), dp(4), dp(10), dp(4)]
+        self.spacing = dp(8)
+        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.elevation = 0
+        self.ripple_behavior = False
+        self.theme_bg_color = "Custom"
+        self.md_bg_color = [0, 0, 0, 0.06]
+        self.line_color = [1, 1, 1, 0.05]
+        self.line_width = 0.5
+        self.clip = True
+        self._build_ui()
+
+    def _build_ui(self):
+        # Иконка песни
+        self.icon = Image(
+            size_hint=(None, 1),
+            width=dp(28),
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        if _shared_song_icon_texture:
+            self.icon.texture = _shared_song_icon_texture
+        else:
+            self.icon.text = "🎵"
+
+        # Название песни
+        self.title_label = MDLabel(
+            font_size=sp(15),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95],
+            bold=True,
+            shorten=True,
+            shorten_from="right",
+            valign="middle",
+            size_hint_x=1
+        )
+
+        # Количество подборов (просто цифра)
+        self.count_label = MDLabel(
+            text="",
+            font_size=sp(11),
+            size_hint_x=None,
+            width=dp(40),
+            halign="right",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4]
+        )
+
+        # Стрелка
+        arrow = MDLabel(
+            text="›",
+            font_size=sp(22),
+            size_hint_x=None,
+            width=dp(24),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.3]
+        )
+
+        self.add_widget(self.icon)
+        self.add_widget(self.title_label)
+        self.add_widget(self.count_label)
+        self.add_widget(arrow)
+
+    def refresh_view_attrs(self, rv, index, data):
+        self.title = data.get('title', '')
+        self.tabs_count = data.get('tabs_count', 0)
+        self.song_id = data.get('song_id', 0)
+        self.on_click = data.get('on_click')
+        self.title_label.text = self.title
+        self.count_label.text = str(self.tabs_count) if self.tabs_count > 0 else ""
+        return super().refresh_view_attrs(rv, index, data)
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            if self.on_click:
+                self.on_click(self.song_id, self.title)
+            return True
+        return super().on_touch_down(touch)
+
 
 class SearchSongCard(RecycleDataViewBehavior, MDCard):
-    """Карточка песни для RecycleView"""
+    """Карточка песни для поиска"""
 
     title = StringProperty('')
     artist = StringProperty('')
@@ -643,18 +842,21 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
         return super().on_touch_down(touch)
 
 
-class SongRecycleView(RecycleView):
-    """Виртуализированный список песен"""
+# ============ RECYCLEVIEW ============
 
-    def __init__(self, on_song_click=None, **kwargs):
+class SongsRecycleView(RecycleView):
+    """Виртуализированный список"""
+
+    def __init__(self, on_item_click=None, viewclass='ArtistCard', **kwargs):
         super().__init__(**kwargs)
-        self.on_song_click = on_song_click
+        self.on_item_click = on_item_click
         self.animate_scroll = False
         self.size_hint = (1, 1)
         self.clip = True
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
+        self.viewclass = viewclass
 
         self.layout_manager = RecycleBoxLayout(
             default_size=(None, dp(48)),
@@ -665,8 +867,16 @@ class SongRecycleView(RecycleView):
             spacing=dp(2)
         )
         self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
-        self.viewclass = 'SearchSongCard'
         self.add_widget(self.layout_manager)
+
+    def set_items(self, items, on_click):
+        data = []
+        for item in items:
+            item_data = item.copy()
+            item_data['on_click'] = on_click
+            data.append(item_data)
+        self.data = data
+        self.refresh_from_data()
 
     def set_songs(self, songs, on_click):
         data = []
@@ -688,30 +898,51 @@ class SongRecycleView(RecycleView):
 # ============ ОСНОВНОЙ ЭКРАН ============
 
 class SongsScreen(BaseScreen):
-    """Экран песен с единым меню ЯЗЫК | БУКВЫ"""
+    """Экран песен с единым меню БУКВЫ | ЯЗЫК"""
+
+    # Список языков для переключения
+    LANGUAGES = ['ru', 'en', 'digits']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'songs'
         self.current_letter = None
+        self.current_artist = None
         self.is_search_mode = False
         self.search_results = []
         self.current_language = 'ru'
+        self._lang_index = 0
+
+        # Для загрузки исполнителей
+        self._all_artists = []
+        self._page = 0
+        self._limit = 200
+        self._is_loading_more = False
+        self._has_more = True
+        self._loading_all = False
+        self._total_artists = 0
+
+        # Для загрузки песен исполнителя
+        self._all_songs = []
+        self._page_songs = 0
+        self._is_loading_more_songs = False
+        self._has_more_songs = True
+        self._total_songs = 0
 
         self.search_bar = None
         self._main_label = None
         self._result_label = None
         self.songs_menu = None
         self._hint_timer = None
-        self.search_recycle_view = None
+        self.recycle_view = None
+        self._main_layout = None
 
-        # ============ ЗАГРУЖАЕМ ИКОНКИ СИНХРОННО ПЕРЕД СОЗДАНИЕМ UI ============
         load_shared_icons_sync()
 
         self.init_ui()
         self.load_background()
 
-        logger.info('Экран песен создан')
+        logger.info('Экран песен создан с объединенной логикой')
 
     def load_background(self):
         try:
@@ -740,10 +971,10 @@ class SongsScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        """Инициализирует UI с единым меню"""
+        """Инициализирует UI с единым меню и RecycleView"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
+        self._main_layout = main_layout
 
-        # Верхний отступ
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
@@ -764,12 +995,11 @@ class SongsScreen(BaseScreen):
         search_container.add_widget(self.search_bar)
         main_layout.add_widget(search_container)
 
-        # Отступ после поиска
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
         # ============ 2. ОСНОВНОЙ ЛЕЙБЛ ============
         self._main_label = MDLabel(
-            text="Поиск исполнителей по алфавиту",  # Изменено
+            text="Поиск исполнителей по алфавиту",
             font_size=sp(14),
             halign="center",
             size_hint_y=None,
@@ -779,7 +1009,6 @@ class SongsScreen(BaseScreen):
         )
         main_layout.add_widget(self._main_label)
 
-        # Отступ
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(2)))
 
         # ============ 3. МЕНЮ ============
@@ -813,7 +1042,7 @@ class SongsScreen(BaseScreen):
         )
         main_layout.add_widget(self._result_label)
 
-        # ============ 5. RECYCLEVIEW С КАРТОЧКАМИ ============
+        # ============ 5. RECYCLEVIEW ============
         bottom_padding = layout_config.get_bottom_padding()
 
         wrapper = MDBoxLayout(
@@ -823,10 +1052,11 @@ class SongsScreen(BaseScreen):
             padding=[padding[0], dp(4), padding[2], bottom_padding]
         )
 
-        self.search_recycle_view = SongRecycleView(
-            on_song_click=self.on_song_selected
+        self.recycle_view = SongsRecycleView(
+            on_item_click=self.on_item_selected,
+            viewclass='ArtistCard'
         )
-        wrapper.add_widget(self.search_recycle_view)
+        wrapper.add_widget(self.recycle_view)
 
         main_layout.add_widget(wrapper)
 
@@ -836,22 +1066,21 @@ class SongsScreen(BaseScreen):
         logger.info(f"UI песен построен")
 
     def _toggle_language(self):
-        """Переключение языка"""
-        if self.current_language == 'ru':
-            self.current_language = 'en'
-            self._show_temporary_hint("Выбран английский язык", 1.2)
-        else:
-            self.current_language = 'ru'
-            self._show_temporary_hint("Выбран русский язык", 1.2)
+        """Переключение языка по кругу: ru -> en -> digits -> ru"""
+        self._lang_index = (self._lang_index + 1) % len(self.LANGUAGES)
+        self.current_language = self.LANGUAGES[self._lang_index]
+
+        lang_names = {'ru': 'Русский', 'en': 'English', 'digits': '0-9'}
+        self._show_temporary_hint(f"Выбран {lang_names[self.current_language]}", 1.2)
 
         self.songs_menu.set_language(self.current_language)
         self.current_letter = None
+        self.current_artist = None
         self.clear_search()
 
         logger.info(f"🔤 Язык изменён на: {self.current_language}")
 
     def _show_hint(self, text):
-        """Показывает подсказку в основном лейбле"""
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
@@ -859,7 +1088,6 @@ class SongsScreen(BaseScreen):
             self._main_label.text = text
 
     def _show_temporary_hint(self, text, duration=1.5):
-        """Показывает временную подсказку"""
         if self._main_label:
             self._main_label.text = text
             if hasattr(self, '_hint_timer') and self._hint_timer:
@@ -867,13 +1095,14 @@ class SongsScreen(BaseScreen):
             self._hint_timer = Clock.schedule_once(lambda dt: self._restore_hint(), duration)
 
     def _restore_hint(self):
-        """Восстанавливает стандартную подсказку"""
         if hasattr(self, '_hint_timer'):
             self._hint_timer = None
         if self.is_search_mode:
-            self._main_label.text = "Результаты поиска песен"  # Изменено
+            self._main_label.text = "Результаты поиска песен"
+        elif self.current_artist:
+            self._main_label.text = f"Песни исполнителя: {self.current_artist}"
         else:
-            self._main_label.text = "Поиск исполнителей по алфавиту"  # Изменено
+            self._main_label.text = "Поиск исполнителей по алфавиту"
 
     def _show_result_label(self, text):
         """Показывает лейбл с информацией о результатах"""
@@ -887,21 +1116,459 @@ class SongsScreen(BaseScreen):
             self._result_label.text = ""
             self._result_label.opacity = 0
 
+    def _show_empty(self, text="Нет исполнителей"):
+        """Показывает сообщение об отсутствии исполнителей в лейбле результатов"""
+        self._show_result_label(text)
+
+    def _hide_empty(self):
+        """Скрывает сообщение об отсутствии - просто убираем лейбл"""
+        self._hide_result_label()
+
+    def _show_loading(self, text="Идёт загрузка данных..."):
+        """Показывает текст загрузки в основном лейбле"""
+        self._show_hint(text)
+
+    def _hide_loading(self):
+        """Скрывает текст загрузки - восстанавливает подсказку"""
+        self._restore_hint()
+
+    # ============ ЗАГРУЗКА ИСПОЛНИТЕЛЕЙ ============
+
+    def _load_artists(self, letter):
+        """Загружает исполнителей для буквы с пагинацией"""
+        logger.info(f"_load_artists: {letter}")
+
+        self.current_artist = None
+        self.current_letter = letter
+
+        # Для цифр показываем специальную подсказку
+        if self.current_language == 'digits':
+            display_letter = '#' if letter == '#' else letter
+            self._show_loading(f"Загрузка исполнителей на '{display_letter}'...")
+        else:
+            self._show_loading(f"Загрузка исполнителей на букву '{letter}'...")
+
+        self._hide_result_label()
+
+        self._page = 0
+        self._all_artists = []
+        self._has_more = True
+        self._is_loading_more = False
+        self._total_artists = 0
+
+        self.recycle_view.viewclass = 'ArtistCard'
+        self.recycle_view.clear()
+        self._hide_empty()
+
+        if self.current_language == 'digits':
+            api.get_artists_by_digits(
+                limit=self._limit,
+                offset=0,
+                on_success=self._on_digits_first_page_loaded,
+                on_failure=self._on_artists_page_failed
+            )
+        else:
+            api.get_artists_by_letter(
+                letter=letter,
+                limit=self._limit,
+                offset=0,
+                on_success=self._on_artists_first_page_loaded,
+                on_failure=self._on_artists_page_failed
+            )
+
+    def _on_digits_first_page_loaded(self, data):
+        """Обработчик первой страницы цифр - фильтруем по выбранной цифре или #"""
+        if data is None:
+            data = {"artists": [], "total": 0}
+        if not isinstance(data, dict):
+            data = {"artists": [], "total": 0}
+
+        artists = data.get('artists', [])
+        total = data.get('total', 0)
+
+        if not isinstance(artists, list):
+            artists = []
+            total = 0
+
+        # Фильтруем исполнителей по выбранной цифре или #
+        filtered_artists = []
+        for a in artists:
+            name = a.get('artist') if isinstance(a, dict) else None
+            if name:
+                first_char = name[0] if name else ''
+                if self.current_letter == '#':
+                    # Показываем всё, что НЕ является:
+                    # - Русскими буквами (кириллица)
+                    # - Английскими буквами (латиница)
+                    # - Цифрами (0-9)
+                    is_cyrillic = ('А' <= first_char <= 'Я') or ('а' <= first_char <= 'я') or first_char in ['Ё', 'ё']
+                    is_latin = ('A' <= first_char <= 'Z') or ('a' <= first_char <= 'z')
+                    is_digit = first_char.isdigit()
+
+                    if not is_cyrillic and not is_latin and not is_digit:
+                        filtered_artists.append(a)
+                else:
+                    # Показываем тех, кто начинается с нужной цифры
+                    if first_char == self.current_letter:
+                        filtered_artists.append(a)
+
+        self._total_artists = len(filtered_artists)
+
+        for a in filtered_artists:
+            name = a.get('artist') if isinstance(a, dict) else None
+            count = a.get('songs_count', 0) if isinstance(a, dict) else 0
+            if name:
+                self._all_artists.append({'artist': name, 'songs_count': count})
+
+        logger.info(
+            f"📄 Первая страница цифр: {len(self._all_artists)} из {self._total_artists} для '{self.current_letter}'")
+
+        if len(self._all_artists) >= self._total_artists:
+            self._has_more = False
+            self._display_artists()
+            return
+
+        # Загружаем остальные страницы
+        self._load_next_digits_pages()
+
+    def _load_next_digits_pages(self):
+        """Загружает остальные страницы цифр"""
+        if not self._has_more or self._is_loading_more:
+            return
+
+        if self._total_artists > 0 and len(self._all_artists) >= self._total_artists:
+            self._has_more = False
+            self._display_artists()
+            return
+
+        self._is_loading_more = True
+        self._page += 1
+        offset = self._page * self._limit
+
+        api.get_artists_by_digits(
+            limit=self._limit,
+            offset=offset,
+            on_success=self._on_digits_next_page_loaded,
+            on_failure=self._on_artists_page_failed
+        )
+
+    def _on_digits_next_page_loaded(self, data):
+        """Обработчик следующей страницы цифр - фильтруем"""
+        self._is_loading_more = False
+
+        if data is None:
+            data = {"artists": [], "total": 0}
+        if not isinstance(data, dict):
+            data = {"artists": [], "total": 0}
+
+        artists = data.get('artists', [])
+        if not isinstance(artists, list) or not artists:
+            self._has_more = False
+            self._display_artists()
+            return
+
+        for a in artists:
+            name = a.get('artist') if isinstance(a, dict) else None
+            if name:
+                first_char = name[0] if name else ''
+                if self.current_letter == '#':
+                    is_cyrillic = ('А' <= first_char <= 'Я') or ('а' <= first_char <= 'я') or first_char in ['Ё', 'ё']
+                    is_latin = ('A' <= first_char <= 'Z') or ('a' <= first_char <= 'z')
+                    is_digit = first_char.isdigit()
+
+                    if not is_cyrillic and not is_latin and not is_digit:
+                        self._all_artists.append({
+                            'artist': name,
+                            'songs_count': a.get('songs_count', 0) if isinstance(a, dict) else 0
+                        })
+                else:
+                    if first_char == self.current_letter:
+                        self._all_artists.append({
+                            'artist': name,
+                            'songs_count': a.get('songs_count', 0) if isinstance(a, dict) else 0
+                        })
+
+        if len(self._all_artists) >= self._total_artists:
+            self._has_more = False
+            self._display_artists()
+            return
+
+        Clock.schedule_once(lambda dt: self._load_next_digits_pages(), 0.1)
+
+    def _on_artists_first_page_loaded(self, data):
+        """Обработчик первой страницы исполнителей"""
+        if data is None:
+            data = {"artists": [], "total": 0}
+        if not isinstance(data, dict):
+            data = {"artists": [], "total": 0}
+
+        artists = data.get('artists', [])
+        total = data.get('total', 0)
+
+        if not isinstance(artists, list):
+            artists = []
+            total = 0
+
+        self._total_artists = total
+
+        for a in artists:
+            name = a.get('artist') if isinstance(a, dict) else None
+            count = a.get('songs_count', 0) if isinstance(a, dict) else 0
+            if name:
+                self._all_artists.append({'artist': name, 'songs_count': count})
+
+        logger.info(f"📄 Первая страница исполнителей: {len(self._all_artists)} из {total}")
+
+        if len(self._all_artists) >= total:
+            self._has_more = False
+            self._display_artists()
+            return
+
+        self._load_next_artists_pages()
+
+    def _load_next_artists_pages(self):
+        """Загружает остальные страницы исполнителей"""
+        if not self._has_more or self._is_loading_more:
+            return
+
+        if self._total_artists > 0 and len(self._all_artists) >= self._total_artists:
+            self._has_more = False
+            self._display_artists()
+            return
+
+        self._is_loading_more = True
+        self._page += 1
+        offset = self._page * self._limit
+
+        api.get_artists_by_letter(
+            letter=self.current_letter,
+            limit=self._limit,
+            offset=offset,
+            on_success=self._on_artists_next_page_loaded,
+            on_failure=self._on_artists_page_failed
+        )
+
+    def _on_artists_next_page_loaded(self, data):
+        """Обработчик следующей страницы исполнителей"""
+        self._is_loading_more = False
+
+        if data is None:
+            data = {"artists": [], "total": 0}
+        if not isinstance(data, dict):
+            data = {"artists": [], "total": 0}
+
+        artists = data.get('artists', [])
+        if not isinstance(artists, list) or not artists:
+            self._has_more = False
+            self._display_artists()
+            return
+
+        for artist in artists:
+            name = artist.get('artist') if isinstance(artist, dict) else None
+            count = artist.get('songs_count', 0) if isinstance(artist, dict) else 0
+            if name:
+                self._all_artists.append({'artist': name, 'songs_count': count})
+
+        if len(self._all_artists) >= self._total_artists:
+            self._has_more = False
+            self._display_artists()
+            return
+
+        Clock.schedule_once(lambda dt: self._load_next_artists_pages(), 0.1)
+
+    def _display_artists(self):
+        """Показывает список исполнителей"""
+        self._hide_loading()
+
+        if not self._all_artists:
+            self._show_empty("Нет исполнителей")
+            self.recycle_view.clear()
+            return
+
+        self._hide_empty()
+        self.recycle_view.viewclass = 'ArtistCard'
+        self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
+        Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
+        self._show_result_label(f"Исполнители: {len(self._all_artists)}")
+
+    def _on_artists_page_failed(self, req, error):
+        """Обработчик ошибки загрузки исполнителей"""
+        self._is_loading_more = False
+        self._hide_loading()
+        logger.error(f"❌ Ошибка загрузки исполнителей: {error}")
+        self._show_empty("Ошибка загрузки\nПроверьте интернет")
+
+    # ============ ЗАГРУЗКА ПЕСЕН ИСПОЛНИТЕЛЯ ============
+
+    def _load_artist_songs(self, artist):
+        """Загружает песни исполнителя с пагинацией"""
+        logger.info(f"_load_artist_songs: {artist}")
+
+        self.current_artist = artist
+        self.current_letter = None
+        self.songs_menu.set_current_letter(None)
+        self._show_loading("Идёт загрузка данных...")
+        self._hide_result_label()
+
+        self._page_songs = 0
+        self._all_songs = []
+        self._has_more_songs = True
+        self._is_loading_more_songs = False
+        self._total_songs = 0
+
+        self.recycle_view.viewclass = 'SongCard'
+        self.recycle_view.clear()
+        self._hide_empty()
+
+        api.get_songs_by_artist(
+            artist=artist,
+            limit=self._limit,
+            offset=0,
+            on_success=self._on_songs_first_page_loaded,
+            on_failure=self._on_songs_page_failed
+        )
+
+    def _on_songs_first_page_loaded(self, data):
+        """Обработчик первой страницы песен"""
+        if data is None:
+            data = {"songs": [], "total": 0}
+        if not isinstance(data, dict):
+            data = {"songs": [], "total": 0}
+
+        songs = data.get('songs', [])
+        total = data.get('total', 0)
+
+        if not isinstance(songs, list):
+            songs = []
+            total = 0
+
+        self._total_songs = total
+
+        for song in songs:
+            self._all_songs.append({
+                'song_id': song.get('song_id', 0),
+                'title': song.get('title', ''),
+                'tabs_count': song.get('tabs_count', 1),
+                'on_click': self.on_song_selected
+            })
+
+        logger.info(f"📄 Первая страница песен: {len(self._all_songs)} из {total}")
+
+        if len(self._all_songs) >= total:
+            self._has_more_songs = False
+            self._display_songs()
+            return
+
+        self._load_next_songs_pages()
+
+    def _load_next_songs_pages(self):
+        """Загружает остальные страницы песен"""
+        if not self._has_more_songs or self._is_loading_more_songs:
+            return
+
+        if self._total_songs > 0 and len(self._all_songs) >= self._total_songs:
+            self._has_more_songs = False
+            self._display_songs()
+            return
+
+        self._is_loading_more_songs = True
+        self._page_songs += 1
+        offset = self._page_songs * self._limit
+
+        api.get_songs_by_artist(
+            artist=self.current_artist,
+            limit=self._limit,
+            offset=offset,
+            on_success=self._on_songs_next_page_loaded,
+            on_failure=self._on_songs_page_failed
+        )
+
+    def _on_songs_next_page_loaded(self, data):
+        """Обработчик следующей страницы песен"""
+        self._is_loading_more_songs = False
+
+        if data is None:
+            data = {"songs": [], "total": 0}
+        if not isinstance(data, dict):
+            data = {"songs": [], "total": 0}
+
+        songs = data.get('songs', [])
+        if not isinstance(songs, list) or not songs:
+            self._has_more_songs = False
+            self._display_songs()
+            return
+
+        for song in songs:
+            self._all_songs.append({
+                'song_id': song.get('song_id', 0),
+                'title': song.get('title', ''),
+                'tabs_count': song.get('tabs_count', 1),
+                'on_click': self.on_song_selected
+            })
+
+        if len(self._all_songs) >= self._total_songs:
+            self._has_more_songs = False
+            self._display_songs()
+            return
+
+        Clock.schedule_once(lambda dt: self._load_next_songs_pages(), 0.1)
+
+    def _display_songs(self):
+        """Показывает список песен"""
+        self._hide_loading()
+
+        if not self._all_songs:
+            self._show_empty("Нет песен")
+            self.recycle_view.clear()
+            return
+
+        self._hide_empty()
+        self.recycle_view.viewclass = 'SongCard'
+        self.recycle_view.set_items(self._all_songs, self.on_song_selected)
+        Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
+        self._show_result_label(f"Песни: {len(self._all_songs)}")
+
+    def _on_songs_page_failed(self, req, error):
+        """Обработчик ошибки загрузки песен"""
+        self._is_loading_more_songs = False
+        self._hide_loading()
+        logger.error(f"❌ Ошибка загрузки песен: {error}")
+        self._show_empty("Ошибка загрузки\nПроверьте интернет")
+
     # ============ ОБРАБОТЧИКИ ============
 
     def on_letter_press(self, letter):
-        """Обработчик выбора буквы - переход на экран исполнителей"""
+        """Обработчик выбора буквы - загружает исполнителей"""
         logger.info(f"Выбрана буква: {letter}")
-        self.current_letter = letter
+        self.is_search_mode = False
+        self.current_artist = None
+        self.search_bar.clear()
         self.songs_menu.set_current_letter(letter)
-        self.clear_search()
-        self._show_hint(f"Исполнители на букву '{letter}'")
+        self._load_artists(letter)
+
+    def on_artist_selected(self, artist, songs_count):
+        """Обработчик выбора исполнителя - загружает его песни"""
+        logger.info(f"Выбран исполнитель: {artist}")
+        self.is_search_mode = False
+        self.search_bar.clear()
+        self.songs_menu.set_current_letter(None)
+        self._load_artist_songs(artist)
+
+    def on_song_selected(self, song_id, title):
+        """Обработчик выбора песни"""
+        logger.info(f"Выбрана песня: {title}, id: {song_id}")
+        if not song_id:
+            notify.error("Ошибка: не удалось загрузить песню")
+            return
+
+        screen_state.set_previous_screen('songs')
 
         if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('artists_by_letter'):
-                artists_screen = self.manager.get_screen('artists_by_letter')
-                artists_screen.set_letter(letter)
-                self.manager.current = 'artists_by_letter'
+            if self.manager.has_screen('song_detail'):
+                song_detail_screen = self.manager.get_screen('song_detail')
+                song_detail_screen.set_previous_screen('songs')
+                song_detail_screen.set_song(song_id)
+                self.manager.current = 'song_detail'
 
     def do_search(self, query):
         """Выполняет поиск песен"""
@@ -914,9 +1581,11 @@ class SongsScreen(BaseScreen):
 
         self.is_search_mode = True
         self.current_letter = None
+        self.current_artist = None
         self.songs_menu.set_current_letter(None)
-        self._show_hint("Результаты поиска песен")  # Изменено
-        self.search_recycle_view.clear()
+        self._show_loading("Идёт загрузка данных...")
+        self.recycle_view.clear()
+        self.recycle_view.viewclass = 'SearchSongCard'
 
         api.search_songs(
             query=query,
@@ -946,19 +1615,19 @@ class SongsScreen(BaseScreen):
         self.search_results = formatted_results
 
         if not self.search_results:
-            self.search_recycle_view.clear()
+            self.recycle_view.clear()
             self._hide_result_label()
-            self._show_hint("Ничего не найдено")
+            self._show_empty("Ничего не найдено")
         else:
-            self.search_recycle_view.set_songs(self.search_results, self.on_song_selected)
+            self.recycle_view.set_songs(self.search_results, self.on_song_selected)
             self._show_result_label(f"Найдено песен: {len(self.search_results)}")
 
     def _on_search_failed(self, req, error):
         """Обработчик ошибки поиска"""
         self.search_results = []
-        self.search_recycle_view.clear()
+        self.recycle_view.clear()
         self._hide_result_label()
-        self._show_hint(f"Ошибка поиска: {error}")
+        self._show_empty("Ошибка поиска\nПроверьте интернет")
         logger.error(f"Ошибка поиска: {error}")
 
     def clear_search(self):
@@ -966,26 +1635,19 @@ class SongsScreen(BaseScreen):
         self.is_search_mode = False
         self.search_results = []
         self.search_bar.clear()
-        self.search_recycle_view.clear()
+        self.recycle_view.clear()
         self._hide_result_label()
-        self._show_hint("Поиск исполнителей по алфавиту")  # Изменено
+        self._hide_loading()
+        self._hide_empty()
+        self.current_letter = None
+        self.current_artist = None
+        self.songs_menu.set_current_letter(None)
+        self._show_hint("Поиск исполнителей по алфавиту")
 
-    def on_song_selected(self, song_id, title):
-        """Обработчик выбора песни"""
-        logger.info(f"Выбрана песня: {title}, id: {song_id}")
-        if not song_id:
-            notify.error("Ошибка: не удалось загрузить песню")
-            return
-
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('song_detail'):
-                song_detail_screen = self.manager.get_screen('song_detail')
-                song_detail_screen.set_previous_screen('songs')
-                song_detail_screen.set_song(song_id)
-                self.manager.current = 'song_detail'
+    def on_item_selected(self, item_type, *args):
+        pass
 
     def on_enter(self):
-        """При входе на экран"""
         logger.info("Вход в экран песен")
 
         try:
@@ -997,22 +1659,20 @@ class SongsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
 
-        self._show_hint("Поиск исполнителей по алфавиту")  # Изменено
+        self._show_hint("Поиск исполнителей по алфавиту")
         self._hide_result_label()
 
     def on_leave(self):
-        """При выходе с экрана"""
         logger.info("Выход из экрана песен")
         self.clear_search()
-        self.current_letter = None
-        self.songs_menu.set_current_letter(None)
+        self._hide_loading()
+        self._hide_empty()
 
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
 
     def go_back(self, instance=None):
-        """Возврат на home"""
         logger.info("🔙 Возврат на home")
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
