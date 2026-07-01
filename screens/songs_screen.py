@@ -135,8 +135,8 @@ class GoogleSearchBar(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(48)
-        self.radius = [dp(24), dp(24), dp(24), dp(24)]
+        self.height = dp(42)
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.md_bg_color = [0.96, 0.96, 0.96, 1]
         self.elevation = 0
         self.padding = [dp(16), dp(6), dp(12), dp(6)]

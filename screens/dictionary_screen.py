@@ -16,7 +16,7 @@ from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.scrollview import ScrollView
-
+from kivy.graphics import Color, Line, Rectangle
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton, MDRaisedButton
@@ -86,8 +86,8 @@ def load_shared_icons_sync():
 
 # ============ СОВРЕМЕННАЯ ПОИСКОВАЯ СТРОКА ============
 
-class SearchBar(MDBoxLayout):
-    """Современная поисковая строка с mode: round и рабочим крестиком"""
+class SearchBar(MDCard):
+    """Поисковая строка в стиле Google с красивой обводкой"""
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
@@ -98,47 +98,80 @@ class SearchBar(MDBoxLayout):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(56)
-        self.padding = [dp(0), dp(0), dp(0), dp(0)]
-        self.spacing = dp(0)
+        self.height = dp(44)  # Чуть выше для комфорта
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
+        self.md_bg_color = [1, 1, 1, 1]  # Полностью белый фон
+        self.elevation = 0
+        self.padding = [dp(12), dp(4), dp(8), dp(4)]
+        self.spacing = dp(4)
 
-        # ============ ПОЛЕ ВВОДА С MODE ROUND ============
+        # ============ КРАСИВАЯ ОБВОДКА ============
+        self.line_color = [0.1, 0.1, 0.1, 0.3]
+        self.line_width = 1.6
+
+        # ============ ПОЛЕ ВВОДА (ПРОЗРАЧНОЕ) ============
         self.search_field = MDTextField(
-            hint_text="Поиск терминов...",
-            size_hint=(1, None),
-            height=dp(48),
-            mode="round",
-            icon_left="magnify",
-            fill_color_normal=[0.95, 0.95, 0.95, 1],
-            fill_color_focus=[0.95, 0.95, 0.95, 1],
-            line_color_normal=[0, 0, 0, 0],
-            line_color_focus=[0.46, 0.70, 0.71, 1],
-            hint_text_color=[0.6, 0.6, 0.6, 1],
+            hint_text="Поиск терминов",
+            size_hint_x=1,
             font_size=sp(15),
-            on_text_validate=self._on_search
+            height=dp(42),
+            on_text_validate=self._on_search,
+            mode="fill"
         )
 
-        # Устанавливаем свойства ПОСЛЕ создания
+        self.search_field.line_color_normal = [0, 0, 0, 0]
+        self.search_field.line_color_focus = [0, 0, 0, 0]
+        self.search_field.fill_color_normal = [1, 1, 1, 0]
+        self.search_field.fill_color_focus = [1, 1, 1, 0]
+        self.search_field.hint_text_color = [0.6, 0.6, 0.6, 1]
         self.search_field.theme_text_color = "Custom"
         self.search_field.text_color = [0.1, 0.1, 0.1, 1]
-        self.search_field.icon_right = ""
 
-        # Привязываем события
         self.search_field.bind(text=self._on_text_change)
 
-        # Перехватываем касания для обработки клика по крестику
-        self.search_field.bind(on_touch_down=self._on_field_touch)
+        # ============ КНОПКА ОЧИСТКИ ============
+        self.clear_btn = MDIconButton(
+            icon="close-circle",
+            size_hint=(None, None),
+            size=(dp(28), dp(28)),
+            theme_icon_color="Custom",
+            icon_color=[0.5, 0.5, 0.5, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_clear,
+            opacity=0,
+            disabled=True,
+            pos_hint={'center_y': 0.5}
+        )
 
+        # ============ ИКОНКА ЛУПЫ ============
+        self.search_icon = MDIconButton(
+            icon="magnify",
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
+            theme_icon_color="Custom",
+            icon_color=[0.46, 0.70, 0.71, 1],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_search,
+            pos_hint={'center_y': 0.5}
+        )
+
+        # Собираем UI
+        self.add_widget(self.search_icon)
         self.add_widget(self.search_field)
+        self.add_widget(self.clear_btn)
+
+        # Привязываем фокус для изменения обводки
+        self.search_field.bind(focus=self._on_focus)
 
     def _on_text_change(self, instance, text):
         self.current_query = text
-
         # Управляем видимостью крестика
         if text.strip():
-            instance.icon_right = "close"
+            self.clear_btn.opacity = 1
+            self.clear_btn.disabled = False
         else:
-            instance.icon_right = ""
+            self.clear_btn.opacity = 0
+            self.clear_btn.disabled = True
 
         if self._search_timer:
             Clock.unschedule(self._search_timer)
@@ -166,36 +199,30 @@ class SearchBar(MDBoxLayout):
             if text:
                 self.on_search(text)
 
-    def _on_field_touch(self, instance, touch):
-        """Обработчик касаний для определения клика по крестику"""
-        if not instance.collide_point(*touch.pos):
-            return False
+    def _on_clear(self, instance):
+        self.search_field.text = ""
+        self.clear_btn.opacity = 0
+        self.clear_btn.disabled = True
+        self.current_query = ""
+        if self.on_clear:
+            self.on_clear()
+        self.search_field.focus = True
 
-        # Проверяем, есть ли крестик
-        if instance.icon_right != "close":
-            return False
-
-        # Получаем позицию крестика (справа)
-        field_width = instance.width
-        icon_size = dp(32)  # Примерный размер иконки
-        right_edge = field_width
-        left_edge = field_width - icon_size - dp(12)  # Отступ от края
-
-        # Проверяем, попали ли по крестику
-        if left_edge <= touch.x <= right_edge:
-            # Клик по крестику
-            self.search_field.text = ""
-            self.search_field.icon_right = ""
-            self.current_query = ""
-            if self.on_clear:
-                self.on_clear()
-            return True
-
-        return False
+    def _on_focus(self, instance, value):
+        """Обработчик фокуса - меняет цвет обводки"""
+        if value:
+            # При фокусе - бирюзовая рамка
+            self.line_color = [0.1, 0.1, 0.1, 0.3]
+            self.line_width = 1.8
+        else:
+            # Обычное состояние - серая рамка
+            self.line_color = [0.1, 0.1, 0.1, 0.3]
+            self.line_width = 1.5
 
     def clear(self):
         self.search_field.text = ""
-        self.search_field.icon_right = ""
+        self.clear_btn.opacity = 0
+        self.clear_btn.disabled = True
         self.current_query = ""
 
     def focus(self):
