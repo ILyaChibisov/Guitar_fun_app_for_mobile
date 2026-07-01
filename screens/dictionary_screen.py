@@ -98,9 +98,9 @@ class SearchBar(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)  # Чуть выше для комфорта
+        self.height = dp(44)
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
-        self.md_bg_color = [1, 1, 1, 1]  # Полностью белый фон
+        self.md_bg_color = [1, 1, 1, 1]
         self.elevation = 0
         self.padding = [dp(12), dp(4), dp(8), dp(4)]
         self.spacing = dp(4)
@@ -211,11 +211,9 @@ class SearchBar(MDCard):
     def _on_focus(self, instance, value):
         """Обработчик фокуса - меняет цвет обводки"""
         if value:
-            # При фокусе - бирюзовая рамка
             self.line_color = [0.1, 0.1, 0.1, 0.3]
             self.line_width = 1.8
         else:
-            # Обычное состояние - серая рамка
             self.line_color = [0.1, 0.1, 0.1, 0.3]
             self.line_width = 1.5
 
@@ -489,7 +487,7 @@ class DictionaryMenu(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(60)
+        self.height = dp(56)
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.md_bg_color = [0, 0, 0, 0.08]
         self.elevation = 0
@@ -549,9 +547,9 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(52)
-        self.padding = [dp(12), dp(8), dp(12), dp(8)]
-        self.spacing = dp(10)
+        self.height = dp(44)
+        self.padding = [dp(10), dp(4), dp(10), dp(4)]
+        self.spacing = dp(8)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
         self.ripple_behavior = False
@@ -559,6 +557,7 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
         self.md_bg_color = [0, 0, 0, 0.06]
         self.line_color = [1, 1, 1, 0.05]
         self.line_width = 0.5
+        self.clip = True
         self._build_ui()
 
     def _build_ui(self):
@@ -566,7 +565,7 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
         self.icon = MDIconButton(
             icon="book-open-variant",
             size_hint=(None, None),
-            size=(dp(32), dp(32)),
+            size=(dp(28), dp(28)),
             theme_icon_color="Custom",
             icon_color=[0.46, 0.70, 0.71, 1],
             md_bg_color=[0, 0, 0, 0],
@@ -575,7 +574,7 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
 
         # Текст
         self.term_label = MDLabel(
-            font_size=sp(16),
+            font_size=sp(15),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
@@ -588,9 +587,9 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
         # Стрелка
         arrow = MDLabel(
             text="›",
-            font_size=sp(24),
+            font_size=sp(22),
             size_hint_x=None,
-            width=dp(28),
+            width=dp(24),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -616,22 +615,25 @@ class SearchTermCard(RecycleDataViewBehavior, MDCard):
 
 
 class TermRecycleView(RecycleView):
+    """RecycleView с встроенной прокруткой"""
+
     def __init__(self, on_term_click=None, **kwargs):
         super().__init__(**kwargs)
         self.on_term_click = on_term_click
         self.animate_scroll = False
+        self.size_hint = (1, 1)
+        self.clip = True
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
-        self.size_hint = (1, None)
 
         self.layout_manager = RecycleBoxLayout(
-            default_size=(None, dp(56)),
+            default_size=(None, dp(48)),
             default_size_hint=(1, None),
             size_hint_y=None,
-            height=dp(56) * 10,
+            height=dp(48) * 50,
             orientation='vertical',
-            spacing=dp(4)
+            spacing=dp(2)
         )
         self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
         self.viewclass = 'SearchTermCard'
@@ -646,12 +648,10 @@ class TermRecycleView(RecycleView):
             })
         self.data = data
         self.refresh_from_data()
-        self.height = self.layout_manager.minimum_height
 
     def clear(self):
         self.data = []
         self.refresh_from_data()
-        self.height = 0
 
 
 # ============ ОСНОВНОЙ ЭКРАН ============
@@ -689,9 +689,6 @@ class DictionaryScreen(BaseScreen):
         self.dictionary_menu = None
         self._hint_timer = None
         self.search_recycle_view = None
-        self.cards_container = None
-        self.no_results_label = None
-        self._scroll_view = None
 
         # ============ ЗАГРУЖАЕМ ИКОНКИ СИНХРОННО ПЕРЕД СОЗДАНИЕМ UI ============
         load_shared_icons_sync()
@@ -729,21 +726,31 @@ class DictionaryScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        """Инициализирует UI с современной поисковой строкой"""
+        """Инициализирует UI с RecycleView вместо ScrollView"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
 
-        # Верхний отступ
+        # ============ ЗОНА 1: ВЕРХНИЙ ОТСТУП + ПОИСК + ЛЕЙБЛЫ ============
         top_padding = layout_config.get_top_padding()
-        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
-
         content_padding = layout_config.get_content_padding()
         padding = content_padding
 
-        # ============ 1. СОВРЕМЕННЫЙ ПОИСК ============
+        # Контейнер верхней зоны с фиксированной высотой
+        top_zone = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=top_padding + dp(48) + dp(4) + dp(24) + dp(2) + dp(56) + dp(20),
+            spacing=0,
+            padding=[0, 0, 0, 0]
+        )
+
+        # Верхний отступ
+        top_zone.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        # Поиск
         search_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(56),
+            height=dp(48),
             padding=[padding[0], 0, padding[2], 0]
         )
         self.search_bar = SearchBar(
@@ -751,114 +758,81 @@ class DictionaryScreen(BaseScreen):
             on_clear=self.clear_search
         )
         search_container.add_widget(self.search_bar)
-        main_layout.add_widget(search_container)
+        top_zone.add_widget(search_container)
 
         # Отступ после поиска
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
+        top_zone.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
-        # ============ 2. ОСНОВНОЙ ЛЕЙБЛ ============
+        # Основной лейбл
         self._main_label = MDLabel(
             text="Поиск по алфавиту",
             font_size=sp(14),
             halign="center",
             size_hint_y=None,
-            height=dp(28),
+            height=dp(24),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
         )
-        main_layout.add_widget(self._main_label)
+        top_zone.add_widget(self._main_label)
 
-        # Минимальный отступ
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
+        # Отступ
+        top_zone.add_widget(Widget(size_hint_y=None, height=dp(2)))
 
-        # ============ 3. МЕНЮ ============
+        # Меню
         menu_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(60),
+            height=dp(56),
             md_bg_color=[0, 0, 0, 0],
             padding=[padding[0], 0, padding[2], 0]
         )
-
         self.dictionary_menu = DictionaryMenu(
             on_language_toggle=self._toggle_language,
             on_letter_press=self.on_letter_press,
             current_language=self.current_language
         )
         menu_container.add_widget(self.dictionary_menu)
-        main_layout.add_widget(menu_container)
+        top_zone.add_widget(menu_container)
 
-        # ============ 4. ЛЕЙБЛ С РЕЗУЛЬТАТАМИ ============
+        # Лейбл с результатами
         self._result_label = MDLabel(
             text="",
             font_size=sp(13),
             halign="center",
             size_hint_y=None,
-            height=dp(24),
+            height=dp(20),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             opacity=0,
             bold=True
         )
-        main_layout.add_widget(self._result_label)
+        top_zone.add_widget(self._result_label)
 
-        # ============ 5. КОНТЕЙНЕР С РЕЗУЛЬТАТАМИ ============
+        main_layout.add_widget(top_zone)
+
+        # ============ ЗОНА 2: RECYCLEVIEW С КАРТОЧКАМИ ============
+        # Занимает всё оставшееся место
         bottom_padding = layout_config.get_bottom_padding()
 
-        cards_container = MDBoxLayout(
+        wrapper = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), 0, dp(12), bottom_padding]  # Убрал верхний отступ
-        )
-        cards_container.clip = True
-
-        # ScrollView для прокрутки
-        self._scroll_view = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_width=0,
-            bar_color=[0, 0, 0, 0],
-            bar_inactive_color=[0, 0, 0, 0]
+            spacing=0,
+            padding=[padding[0], dp(4), padding[2], bottom_padding]
         )
 
-        # Контейнер внутри ScrollView с adaptive_height
-        self.cards_container = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(8),
-            size_hint_y=None,
-            adaptive_height=True
-        )
-        self.cards_container.bind(minimum_height=self.cards_container.setter('height'))
-
-        # Лейбл "ничего не найдено"
-        self.no_results_label = MDLabel(
-            text="",
-            halign="center",
-            font_size=sp(16),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.4],
-            size_hint_y=None,
-            height=dp(60),
-            opacity=0
-        )
-        self.cards_container.add_widget(self.no_results_label)
-
-        # RecycleView
+        # Используем RecycleView с встроенной прокруткой
         self.search_recycle_view = TermRecycleView(
-            on_term_click=self.on_term_selected,
-            size_hint_y=None,
-            height=0
+            on_term_click=self.on_term_selected
         )
-        self.cards_container.add_widget(self.search_recycle_view)
+        wrapper.add_widget(self.search_recycle_view)
 
-        self._scroll_view.add_widget(self.cards_container)
-        cards_container.add_widget(self._scroll_view)
-        main_layout.add_widget(cards_container)
+        main_layout.add_widget(wrapper)
 
         self.clear_widgets()
         self.add_widget(main_layout)
 
-        logger.info(f"UI словаря построен с современным поиском")
+        logger.info(f"UI словаря построен с RecycleView")
 
     # ============ УПРАВЛЕНИЕ ============
 
@@ -913,19 +887,6 @@ class DictionaryScreen(BaseScreen):
         if self._result_label:
             self._result_label.text = ""
             self._result_label.opacity = 0
-
-    def _show_no_results(self, query):
-        """Показывает сообщение 'ничего не найдено'"""
-        self.no_results_label.text = f'По запросу "{query}"\nничего не найдено'
-        self.no_results_label.opacity = 1
-        self.search_recycle_view.clear()
-        self.search_recycle_view.height = 0
-        self.cards_container.height = dp(60)
-
-    def _hide_no_results(self):
-        """Скрывает сообщение 'ничего не найдено'"""
-        self.no_results_label.opacity = 0
-        self.no_results_label.text = ""
 
     # ============ ПОИСК ============
 
@@ -991,12 +952,11 @@ class DictionaryScreen(BaseScreen):
         self.search_results = results
 
         if not self.search_results:
-            self._show_no_results(query)
+            self.search_recycle_view.clear()
             self._hide_result_label()
+            self._show_hint(f'По запросу "{query}" ничего не найдено')
         else:
-            self._hide_no_results()
             self.search_recycle_view.set_terms(self.search_results, self.on_term_selected)
-            self.cards_container.height = self.cards_container.minimum_height
             self._show_result_label(f"Найдено терминов: {len(self.search_results)}")
 
     def clear_search(self):
@@ -1004,10 +964,6 @@ class DictionaryScreen(BaseScreen):
         self.search_results = []
         self.search_bar.clear()
         self.search_recycle_view.clear()
-        self.search_recycle_view.height = 0
-        self.cards_container.height = 0
-        self.no_results_label.opacity = 0
-        self.no_results_label.text = ""
         self._last_query = ""
         self._hide_result_label()
         self._show_hint("Поиск по алфавиту")
@@ -1136,8 +1092,6 @@ class DictionaryScreen(BaseScreen):
 
         self._show_hint("Поиск по алфавиту")
         self._hide_result_label()
-        # Фокусируемся на поиске при входе
-        Clock.schedule_once(lambda dt: self.search_bar.focus(), 0.2)
 
     def on_leave(self):
         logger.info("🚪 Выход из словаря")
