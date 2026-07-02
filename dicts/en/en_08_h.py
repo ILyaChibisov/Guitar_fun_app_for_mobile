@@ -335,4 +335,59 @@ Second — important to hear the interaction of horizontal and vertical.
 Third — the foundation for polyphonic playing.
 """
     ),
+
+    "HEDGEHOG": Term(
+        name="Hedgehog",
+        description="""
+A forest hedgehog — a character in children's songs and poems, often appearing in musical works for children. Also — a folk name for some instruments or rhythmic figures.
+
+Where it appears: In children's songs — as a playful character. In musical fairy tales. In guitar music — in arrangements for children.
+
+Guitarist-Specific Tips: Children's songs about hedgehogs use simple chords and memorable melodies. Guitar is well suited for accompanying such songs. Important to create a light, playful mood.
+"""
+    ),
+
+    "HEAT": Term(
+        name="Heat",
+        description="""
+A musical expression denoting hot, passionate, emotionally charged performance. Often used in reference to jazz, flamenco, or rock music.
+
+Where it appears: In performance — as energy. In jazz — as "hot jazz." In guitar music — in expressive performance.
+
+Guitarist-Specific Tips: Playing with "heat" requires bright dynamics, fast tempo, and emotional delivery. On electric guitar, achieved through overdrive and intense attack. The performer's charisma is important.
+"""
+    ),
+
+    "HALL": Term(
+        name="Hall",
+        description="""
+A room for concerts, performances, or rehearsals. Affects acoustics, sound projection, and music perception.
+
+Where it appears: In concert activity — as a venue. In acoustics — as an influencing factor. In guitar practice — as a space for playing.
+
+Guitarist-Specific Tips: Hall acoustics affect guitar sound. Important to adapt playing to different rooms: play louder and with more projection in large halls.
+"""
+    ),
+
+    "HOOK": Term(
+        name="Hook",
+        description="""
+A short introduction or jingle that "hooks" the listener before the main part of the work. Can be a riff or melody.
+
+Where it appears: In rock music — as an introduction. In pop music — as an intro. In guitar music — as a bright riff.
+
+Guitarist-Specific Tips: A hook should immediately attract attention. Bright riffs, slap, or powerful chords are used. Important to "hook" the listener from the first notes.
+"""
+    ),
+
+    "HARPSICHORD": Term(
+        name="Harpsichord",
+        description="""
+A stringed keyboard instrument popular in the Baroque era. Sound is produced by plucking the string with a plectrum. Has a characteristic, slightly metallic timbre.
+
+Where it appears: In Baroque music — by Bach, Handel, Scarlatti. In orchestra — as an instrument. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Guitar often performs arrangements of harpsichord music. Important to convey Baroque style and ornamentation.
+"""
+    ),
 }

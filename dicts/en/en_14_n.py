@@ -80,4 +80,48 @@ Second — neck material affects sound.
 Third — neck comfort for the hand is important.
 """
     ),
+
+    "NATURAL SCALE": Term(
+        name="Natural scale",
+        description="""
+A scale based on natural overtones (harmonic series). Contains sounds corresponding to the vibrations of a string or air column.
+
+Where it appears: In acoustics — as a physical phenomenon. In music — as the basis of tuning. In guitar technique — as harmonics.
+
+Guitarist-Specific Tips: The natural scale underlies harmonics on the guitar. Used for tuning and creating clean, ringing sounds. Important to know the location of natural harmonics on the fretboard.
+"""
+    ),
+
+    "NATURAL MODE": Term(
+        name="Natural mode",
+        description="""
+A mode built on the notes of the natural scale, without alteration. Such modes include Dorian, Phrygian, Lydian, Mixolydian, and other church modes.
+
+Where it appears: In folk music — as the basis. In church music — in chorales. In jazz — in modal improvisation.
+
+Guitarist-Specific Tips: Knowledge of natural modes helps in improvisation. Each mode creates its own characteristic sound. Used in jazz, folk, and rock music.
+"""
+    ),
+
+    "NATURAL TUNING": Term(
+        name="Natural tuning",
+        description="""
+A tuning system for musical instruments based on pure intervals (pure fifths, thirds) rather than equal temperament. Used in early and folk music.
+
+Where it appears: In early music — as the basis of tuning. In folk music — in authentic performance. In guitar music — in historical reconstructions.
+
+Guitarist-Specific Tips: Natural tuning requires a special approach to tuning. Pure intervals sound more harmonious but limit modulation. Found in early guitar music.
+"""
+    ),
+
+    "NECK BACK": Term(
+        name="Neck back",
+        description="""
+The back part of the guitar neck that the musician touches with the palm of the left hand. Affects playing comfort and thumb technique.
+
+Where it appears: In guitar construction — as part of the neck. In playing technique — as a support point. In setup — as a parameter.
+
+Guitarist-Specific Tips: The neck back should be comfortable for the hand. Different shapes and finishes affect comfort. Used for thumb technique.
+"""
+    ),
 }

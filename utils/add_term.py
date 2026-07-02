@@ -89,23 +89,21 @@ def get_module_path(language, letter, index, file_name):
 
 
 def format_description_for_module(description):
-    """Форматирует описание для вставки в модуль (сохраняет все переносы)"""
+    """Форматирует описание для вставки в модуль (сохраняет ВСЕ переносы и пустые строки)"""
     if not description:
         return '""'
 
-    # Разбиваем на строки
     lines = description.split('\n')
 
-    # Убираем пустые строки в начале и конце
-    while lines and not lines[0].strip():
+    # Убираем пустые строки только в самом начале и самом конце
+    while lines and lines[0].strip() == '':
         lines.pop(0)
-    while lines and not lines[-1].strip():
+    while lines and lines[-1].strip() == '':
         lines.pop()
 
     if not lines:
         return '""'
 
-    # Если больше одной строки — используем тройные кавычки
     if len(lines) > 1:
         return '"""\n' + '\n'.join(lines) + '\n"""'
     else:
@@ -149,36 +147,83 @@ TERMS = {{
 
 
 def add_term_to_module(module_path, term_name, description):
-    """Добавляет термин в модуль"""
+    """
+    Добавляет или ПЕРЕЗАПИСЫВАЕТ термин в модуле.
+    Если термин существует — он заменяется новым описанием.
+    """
     if not module_path.exists():
         create_module(module_path)
 
     with open(module_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    if f'"{term_name}":' in content or f"'{term_name}':" in content:
-        return False, f"Термин '{term_name}' уже существует!"
-
     formatted_desc = format_description_for_module(description)
-    term_entry = f'\n    "{term_name}": Term(\n        name="{term_name.capitalize()}",\n        description={formatted_desc}\n    ),'
+    new_entry = f'\n    "{term_name}": Term(\n        name="{term_name.capitalize()}",\n        description={formatted_desc}\n    ),'
 
-    if 'TERMS = {' in content:
-        start_pos = content.find('TERMS = {') + len('TERMS = {')
-        end_pos = content.rfind('}')
+    # Проверяем, существует ли термин
+    term_pattern = f'"{term_name}":'
+    if term_pattern in content:
+        # Термин существует — ПЕРЕЗАПИСЫВАЕМ его
+        start = content.find(term_pattern)
+        if start == -1:
+            return False, f"Не удалось найти термин '{term_name}'"
 
-        if start_pos > 0 and end_pos > start_pos:
-            new_content = (
-                    content[:end_pos] +
-                    term_entry +
-                    '\n' +
-                    content[end_pos:]
-            )
+        # Ищем конец записи: находим закрывающую скобку ")"
+        depth = 0
+        end = start
+        in_string = False
+        i = start
 
-            with open(module_path, 'w', encoding='utf-8') as f:
-                f.write(new_content)
-            return True, f"Термин '{term_name}' успешно добавлен!"
+        while i < len(content):
+            ch = content[i]
 
-    return False, "Не удалось найти словарь TERMS!"
+            if ch == '"' and (i == 0 or content[i - 1] != '\\'):
+                in_string = not in_string
+
+            if not in_string:
+                if ch == '(':
+                    depth += 1
+                elif ch == ')':
+                    depth -= 1
+                    if depth == 0:
+                        end = i + 1
+                        while end < len(content) and content[end].isspace():
+                            end += 1
+                        if end < len(content) and content[end] == ',':
+                            end += 1
+                        break
+            i += 1
+
+        if end <= start:
+            return False, f"Не удалось определить конец записи для '{term_name}'"
+
+        new_content = content[:start] + new_entry + content[end:]
+
+        with open(module_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        return True, f"Термин '{term_name}' перезаписан!"
+
+    else:
+        # Термин НЕ существует — добавляем новый
+        if 'TERMS = {' in content:
+            start_pos = content.find('TERMS = {') + len('TERMS = {')
+            end_pos = content.rfind('}')
+
+            if start_pos > 0 and end_pos > start_pos:
+                new_content = (
+                        content[:end_pos] +
+                        new_entry +
+                        '\n' +
+                        content[end_pos:]
+                )
+
+                with open(module_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                return True, f"Термин '{term_name}' добавлен!"
+            else:
+                return False, "Не удалось найти словарь TERMS!"
+        else:
+            return False, "Не удалось найти словарь TERMS!"
 
 
 def parse_batch_text(text):
@@ -195,30 +240,25 @@ def parse_batch_text(text):
     current_desc_lines = []
 
     for line in lines:
-        stripped = line.strip()
+        stripped = line.lstrip()
+        lower_stripped = stripped.lower()
 
-        # Проверяем, начинается ли строка с "Термин:" или "Term:"
-        lower_line = stripped.lower()
-        if lower_line.startswith('термин:') or lower_line.startswith('term:'):
-            # Сохраняем предыдущий термин
+        if lower_stripped.startswith('термин:') or lower_stripped.startswith('term:'):
             if current_name and current_desc_lines:
                 desc = '\n'.join(current_desc_lines).strip()
                 if desc:
                     terms.append((current_name, desc))
                 current_desc_lines = []
 
-            # Извлекаем название (всё после маркера)
-            parts = stripped.split(':', 1)
-            if len(parts) == 2:
-                current_name = parts[1].strip()
+            colon_pos = stripped.find(':')
+            if colon_pos != -1:
+                current_name = stripped[colon_pos + 1:].strip()
             else:
                 current_name = stripped
         else:
-            # Это описание (только если есть текущий термин)
             if current_name is not None:
                 current_desc_lines.append(line)
 
-    # Добавляем последний термин
     if current_name and current_desc_lines:
         desc = '\n'.join(current_desc_lines).strip()
         if desc:
@@ -262,6 +302,8 @@ class TermAdderApp:
     Text description...
 
 Важно: каждый термин ДОЛЖЕН начинаться со слова "Термин:" или "Term:"
+
+Если термин уже существует — он будет ПЕРЕЗАПИСАН новым описанием.
 """
 
         info_label = ttk.Label(
@@ -273,7 +315,6 @@ class TermAdderApp:
         )
         info_label.pack(anchor=tk.W)
 
-        # Основное поле для ввода всего текста
         text_frame = ttk.LabelFrame(main_frame, text="📝 Весь текст с терминами", padding="10")
         text_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
@@ -285,7 +326,6 @@ class TermAdderApp:
         )
         self.input_text.pack(fill=tk.BOTH, expand=True)
 
-        # Кнопка вставки под полем
         paste_btn_frame = ttk.Frame(text_frame)
         paste_btn_frame.pack(fill=tk.X, pady=(5, 0))
 
@@ -305,7 +345,6 @@ class TermAdderApp:
         )
         hint_label.pack(side=tk.LEFT, padx=(10, 0))
 
-        # Панель кнопок
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill=tk.X, pady=(10, 0))
 
@@ -333,7 +372,6 @@ class TermAdderApp:
         )
         exit_btn.pack(side=tk.RIGHT)
 
-        # Статусная строка
         self.status_label = ttk.Label(
             main_frame,
             text="Готов к работе",
@@ -342,7 +380,6 @@ class TermAdderApp:
         )
         self.status_label.pack(pady=(15, 0), anchor=tk.W)
 
-        # Горячие клавиши
         self.input_text.bind('<Control-v>', self.paste_to_widget_event)
         self.input_text.bind('<Control-V>', self.paste_to_widget_event)
         self.root.bind('<Control-Return>', lambda e: self.add_terms_batch())
@@ -383,23 +420,21 @@ class TermAdderApp:
                 "Термин: НАЗВАНИЕ 1\n"
                 "Текст описания...\n"
                 "Термин: НАЗВАНИЕ 2\n"
-                "Текст описания...\n\n"
-                "или\n\n"
-                "Term: NAME 1\n"
-                "Text description...\n"
-                "Term: NAME 2\n"
-                "Text description..."
+                "Текст описания..."
             )
             return
 
         confirm = messagebox.askyesno(
             "Подтверждение",
-            f"Найдено {len(terms)} терминов.\nДобавить их все?"
+            f"Найдено {len(terms)} терминов.\n"
+            f"Существующие термины будут ПЕРЕЗАПИСАНЫ.\n\n"
+            f"Добавить их все?"
         )
         if not confirm:
             return
 
         added = 0
+        updated = 0
         errors = []
 
         for term_name, description in terms:
@@ -417,20 +452,27 @@ class TermAdderApp:
             success, message = add_term_to_module(module_path, clean_name, description)
 
             if success:
-                added += 1
+                if "перезаписан" in message:
+                    updated += 1
+                else:
+                    added += 1
             else:
                 errors.append(f"❌ {message}")
 
-        result_msg = f"✅ Добавлено терминов: {added} из {len(terms)}"
+        result_msg = (
+            f"✅ Добавлено новых терминов: {added}\n"
+            f"🔄 Перезаписано существующих: {updated}\n"
+            f"📊 Всего обработано: {added + updated} из {len(terms)}"
+        )
         if errors:
             result_msg += f"\n\nОшибки:\n" + "\n".join(errors[:5])
             if len(errors) > 5:
                 result_msg += f"\n... и ещё {len(errors) - 5} ошибок"
 
-        self.status_label.config(text=result_msg, foreground='green' if added > 0 else 'red')
+        self.status_label.config(text=result_msg, foreground='green' if (added + updated) > 0 else 'red')
         messagebox.showinfo("Результат", result_msg)
 
-        if added > 0:
+        if (added + updated) > 0:
             self.clear_fields()
 
 

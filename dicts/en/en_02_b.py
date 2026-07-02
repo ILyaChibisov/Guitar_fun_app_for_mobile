@@ -6,21 +6,20 @@ from dicts.base_term import Term
 
 TERMS = {
 
-
-    "BRACE": Term(
-        name="Brace",
+    "BACKING VOCAL": Term(
+        name="Backing vocal",
         description="""
-A curved bracket in musical notation connecting several staves that are to be played simultaneously. Shows that parts belong to one instrument or ensemble.
+Vocal support for the soloist, providing harmonic richness and fullness of sound. Performed by a backing group or other musicians.
 
 Where it appears:
-In piano scores — connects right and left hand parts.
-In ensemble scores — connects voices (violin, cello, flute).
-In guitar scores — may connect notes with tablature.
+In pop and rock music — as part of the arrangement.
+In jazz — vocal ensembles.
+In choir — as an accompaniment part.
 
 Guitarist-Specific Tips:
-First — in guitar notation, the brace often connects notes and tablature for convenience.
-Second — helps read multiple voices simultaneously.
-Third — important to understand which voices belong to right and left hands.
+First — a guitarist can also perform backing vocals.
+Second — important to combine guitar playing and singing.
+Third — requires coordination between voice and hands.
 """
     ),
 
@@ -41,37 +40,20 @@ Third — collected as memorabilia from concerts.
 """
     ),
 
-    "BODY-BUILDING": Term(
-        name="Body-building",
+    "BAGPIPES": Term(
+        name="Bagpipes",
         description="""
-Sound preparation, "body building" in the process of learning to play a musical instrument. Work on rhythm perception, freedom of movement, muscle relaxation, and releasing tension.
+A folk reed instrument consisting of a leather bag and several pipes. Has a characteristic drone sound, used in Scottish, Irish, and other cultures.
 
 Where it appears:
-In pedagogy — as a teaching method.
-In musician training — as body work.
-In guitar schools — as the foundation of proper positioning.
+In Scottish folk music — as a symbol of Scotland.
+In Irish and Breton music — as a folk instrument.
+In guitar music — as a timbre to imitate.
 
 Guitarist-Specific Tips:
-First — helps avoid tension while playing.
-Second — the basis for fast and clean playing.
-Third — includes relaxation exercises.
-"""
-    ),
-
-    "BACKING VOCAL": Term(
-        name="Backing vocal",
-        description="""
-Vocal support for the soloist, providing harmonic richness and fullness of sound. Performed by a backing group or other musicians.
-
-Where it appears:
-In pop and rock music — as part of the arrangement.
-In jazz — vocal ensembles.
-In choir — as an accompaniment part.
-
-Guitarist-Specific Tips:
-First — a guitarist can also perform backing vocals.
-Second — important to combine guitar playing and singing.
-Third — requires coordination between voice and hands.
+First — guitar can imitate the drone sound of bagpipes.
+Second — use of ostinato basses and drones.
+Third — often used in folk music.
 """
     ),
 
@@ -145,20 +127,20 @@ Third — often used in pedagogical repertoire.
 """
     ),
 
-    "BANJO": Term(
-        name="Banjo",
+    "BAND": Term(
+        name="Band",
         description="""
-A stringed plucked instrument with a body resembling a tambourine and a long neck. Has a characteristic timbre, often used in country, folk, and early jazz.
+A musical group (ensemble, orchestra), usually performing popular, jazz, or dance music. In jazz — big band.
 
 Where it appears:
-In country music — as a primary instrument.
-In folk music — Irish, American folk songs.
-In Dixieland — early jazz.
+In jazz — big bands.
+In pop music — bands.
+In rock music — rock bands.
 
 Guitarist-Specific Tips:
-First — banjo playing technique differs from guitar.
-Second — often uses a pick and specific fingering.
-Third — guitarists can learn banjo as a second instrument.
+First — guitarist is often a member of a band.
+Second — interaction with other musicians is important.
+Third — ability to work in a collective.
 """
     ),
 
@@ -230,6 +212,23 @@ Third — often used in ensembles with guitar.
 """
     ),
 
+    "BANJO": Term(
+        name="Banjo",
+        description="""
+A stringed plucked instrument with a body resembling a tambourine and a long neck. Has a characteristic timbre, often used in country, folk, and early jazz.
+
+Where it appears:
+In country music — as a primary instrument.
+In folk music — Irish, American folk songs.
+In Dixieland — early jazz.
+
+Guitarist-Specific Tips:
+First — banjo playing technique differs from guitar.
+Second — often uses a pick and specific fingering.
+Third — guitarists can learn banjo as a second instrument.
+"""
+    ),
+
     "BARD": Term(
         name="Bard",
         description="""
@@ -278,6 +277,23 @@ Guitarist-Specific Tips:
 First — baritone guitar has lowered tuning.
 Second — used in ensemble music.
 Third — timbre is warmer and lower.
+"""
+    ),
+
+    "BARITONE GUITAR": Term(
+        name="Baritone guitar",
+        description="""
+A type of guitar with a longer scale length and lower tuning (usually a fourth or third below standard). Used in jazz, rock, and ensemble music.
+
+Where it appears:
+In jazz — as a solo and accompanying instrument.
+In rock music — for creating a lower, denser sound.
+In ensembles — as a timbral contrast.
+
+Guitarist-Specific Tips:
+First — requires fingering adaptation due to larger fret spacing.
+Second — tuning is lower than standard by a fourth or third.
+Third — sound is warmer and denser.
 """
     ),
 
@@ -333,23 +349,6 @@ Third — playing technique differs from lead guitar.
 """
     ),
 
-    "BASS GUITAR": Term(
-        name="Bass guitar",
-        description="""
-A stringed instrument with four to six strings, providing the bass line in an ensemble. Has a longer scale length and lower tuning.
-
-Where it appears:
-In rock music — as part of the rhythm section.
-In jazz — double bass or bass guitar.
-In pop music — the foundation of harmony.
-
-Guitarist-Specific Tips:
-First — switching from guitar requires adaptation.
-Second — fingerstyle or pick technique.
-Third — rhythmic accuracy is crucial.
-"""
-    ),
-
     "BASS CLEF": Term(
         name="Bass clef",
         description="""
@@ -364,6 +363,40 @@ Guitarist-Specific Tips:
 First — guitarists rarely use bass clef.
 Second — needed for reading bass parts.
 Third — useful for understanding harmony.
+"""
+    ),
+
+    "BASS DRUM": Term(
+        name="Bass drum",
+        description="""
+A percussion instrument producing a low, powerful sound. Used in orchestras, marching bands, and drum kits for accents and bass pulse.
+
+Where it appears:
+In orchestra — as part of the percussion section.
+In drum kit — as the kick drum.
+In marching bands — as the primary rhythmic instrument.
+
+Guitarist-Specific Tips:
+First — guitarist must hear the bass drum.
+Second — rhythm guitar synchronizes with it.
+Third — creates the rhythmic foundation.
+"""
+    ),
+
+    "BASS GUITAR": Term(
+        name="Bass guitar",
+        description="""
+A stringed instrument with four to six strings, providing the bass line in an ensemble. Has a longer scale length and lower tuning.
+
+Where it appears:
+In rock music — as part of the rhythm section.
+In jazz — double bass or bass guitar.
+In pop music — the foundation of harmony.
+
+Guitarist-Specific Tips:
+First — switching from guitar requires adaptation.
+Second — fingerstyle or pick technique.
+Third — rhythmic accuracy is crucial.
 """
     ),
 
@@ -401,37 +434,48 @@ Third — creates a hypnotic effect.
 """
     ),
 
-    "BACHIANA": Term(
-        name="Bachiana",
+    "BEAT": Term(
+        name="Beat",
         description="""
-A musical work written under the influence of Johann Sebastian Bach's style. Often includes elements of polyphony and Baroque form.
+The rhythmic pulse, the foundation of musical time that determines the movement of music. In contemporary music — the drum part (strumming, drum machine).
 
 Where it appears:
-In works of 20th-century composers (Villa-Lobos, "Bachianas Brasileiras").
-In guitar repertoire — arrangements.
-In contemporary music — neo-Baroque.
+In electronic music — drum machine, beat.
+In rock music — rhythm section.
+In jazz — swing, beat.
 
 Guitarist-Specific Tips:
-First — requires good polyphonic playing.
-Second — voice leading is important.
-Third — often used in guitar arrangements.
+First — guitarist must feel the beat.
+Second — rhythm guitar sets the beat in ensemble.
+Third — important to play evenly and in pulse.
 """
     ),
 
-    "BEL CANTO": Term(
-        name="Bel canto",
+    "BEAT (METRICAL)": Term(
+        name="Beat (metrical)",
         description="""
-A style of singing characteristic of 18th-19th century Italian opera, distinguished by beauty, smoothness, and vocal virtuosity. Literally — "beautiful singing."
+A rhythmic unit in music that determines meter and pulsation. Beats can be strong (accented) and weak (unaccented).
+
+Where it appears: In rhythmics — as the basis of meter. In music — as pulse. In guitar playing — as rhythmic foundation.
+
+Guitarist-Specific Tips: Important to feel strong and weak beats. Accents and rhythmic patterns are built on them. The basis for playing in ensemble.
+"""
+    ),
+
+    "BEAT MUSIC": Term(
+        name="Beat music",
+        description="""
+A musical style based on rhythmic pulsation (beat). Often associated with rock and roll and pop music of the 1960s.
 
 Where it appears:
-In Italian opera — Bellini, Donizetti, Rossini.
-In vocal pedagogy — as a school of singing.
-In guitar arrangements — arias in bel canto style.
+In 1960s music — The Beatles, The Rolling Stones.
+In contemporary pop music — dance music.
+In guitar music — as a rhythmic foundation.
 
 Guitarist-Specific Tips:
-First — bel canto arrangements require singing tone.
-Second — legato and phrasing are important.
-Third — imitation of vocal cantilena.
+First — rhythm guitar is the foundation of beat music.
+Second — simple chord progressions.
+Third — emphasis on rhythm and drive.
 """
     ),
 
@@ -487,37 +531,14 @@ Third — dynamic variety is important.
 """
     ),
 
-    "BEAT": Term(
-        name="Beat",
+    "BINARY FORM": Term(
+        name="Binary form",
         description="""
-The rhythmic pulse, the foundation of musical time that determines the movement of music. In contemporary music — the drum part (strumming, drum machine).
+A musical form consisting of two parts (A and B), often contrasting in character, key, or material. One of the simplest forms in music.
 
-Where it appears:
-In electronic music — drum machine, beat.
-In rock music — rhythm section.
-In jazz — swing, beat.
+Where it appears: In dance music — as the basis. In old suites — as a form. In guitar music — in miniatures.
 
-Guitarist-Specific Tips:
-First — guitarist must feel the beat.
-Second — rhythm guitar sets the beat in ensemble.
-Third — important to play evenly and in pulse.
-"""
-    ),
-
-    "BEAT MUSIC": Term(
-        name="Beat music",
-        description="""
-A musical style based on rhythmic pulsation (beat). Often associated with rock and roll and pop music of the 1960s.
-
-Where it appears:
-In 1960s music — The Beatles, The Rolling Stones.
-In contemporary pop music — dance music.
-In guitar music — as a rhythmic foundation.
-
-Guitarist-Specific Tips:
-First — rhythm guitar is the foundation of beat music.
-Second — simple chord progressions.
-Third — emphasis on rhythm and drive.
+Guitarist-Specific Tips: Binary form is often used in guitar pieces. Contrast between parts is important. The basis for composition.
 """
     ),
 
@@ -590,23 +611,6 @@ Fourth — often uses bends and slides.
 """
     ),
 
-    "BLUES SCALE": Term(
-        name="Blues scale",
-        description="""
-A scale based on the pentatonic scale with the addition of the blue note (diminished fifth). Used for improvisation in blues, rock, and jazz.
-
-Where it appears:
-In blues improvisation — as the primary material.
-In rock guitar — in solos.
-In jazz — in blues standards.
-
-Guitarist-Specific Tips:
-First — one of the most important scales for guitarists.
-Second — easy to memorize and apply.
-Third — the foundation of blues and rock solos.
-"""
-    ),
-
     "BLUES PROGRESSION": Term(
         name="Blues progression",
         description="""
@@ -641,6 +645,40 @@ Third — combines the blues progression with rock drive.
 """
     ),
 
+    "BLUES SCALE": Term(
+        name="Blues scale",
+        description="""
+A scale based on the pentatonic scale with the addition of the blue note (diminished fifth). Used for improvisation in blues, rock, and jazz.
+
+Where it appears:
+In blues improvisation — as the primary material.
+In rock guitar — in solos.
+In jazz — in blues standards.
+
+Guitarist-Specific Tips:
+First — one of the most important scales for guitarists.
+Second — easy to memorize and apply.
+Third — the foundation of blues and rock solos.
+"""
+    ),
+
+    "BODY-BUILDING": Term(
+        name="Body-building",
+        description="""
+Sound preparation, "body building" in the process of learning to play a musical instrument. Work on rhythm perception, freedom of movement, muscle relaxation, and releasing tension.
+
+Where it appears:
+In pedagogy — as a teaching method.
+In musician training — as body work.
+In guitar schools — as the foundation of proper positioning.
+
+Guitarist-Specific Tips:
+First — helps avoid tension while playing.
+Second — the basis for fast and clean playing.
+Third — includes relaxation exercises.
+"""
+    ),
+
     "BOLERO": Term(
         name="Bolero",
         description="""
@@ -658,23 +696,6 @@ Third — dynamics and smoothness are important.
 """
     ),
 
-    "BASS DRUM": Term(
-        name="Bass drum",
-        description="""
-A percussion instrument producing a low, powerful sound. Used in orchestras, marching bands, and drum kits for accents and bass pulse.
-
-Where it appears:
-In orchestra — as part of the percussion section.
-In drum kit — as the kick drum.
-In marching bands — as the primary rhythmic instrument.
-
-Guitarist-Specific Tips:
-First — guitarist must hear the bass drum.
-Second — rhythm guitar synchronizes with it.
-Third — creates the rhythmic foundation.
-"""
-    ),
-
     "BOSSA NOVA": Term(
         name="Bossa nova",
         description="""
@@ -689,6 +710,23 @@ Guitarist-Specific Tips:
 First — requires specific rhythmic pulsation.
 Second — uses complex harmonies and jazz chords.
 Third — softness and elegance of sound are important.
+"""
+    ),
+
+    "BRACE": Term(
+        name="Brace",
+        description="""
+A curved bracket in musical notation connecting several staves that are to be played simultaneously. Shows that parts belong to one instrument or ensemble.
+
+Where it appears:
+In piano scores — connects right and left hand parts.
+In ensemble scores — connects voices (violin, cello, flute).
+In guitar scores — may connect notes with tablature.
+
+Guitarist-Specific Tips:
+First — in guitar notation, the brace often connects notes and tablature for convenience.
+Second — helps read multiple voices simultaneously.
+Third — important to understand which voices belong to right and left hands.
 """
     ),
 
@@ -726,6 +764,17 @@ Third — use of bright dynamic contrasts.
 """
     ),
 
+    "BREATH": Term(
+        name="Breath",
+        description="""
+An important element of musical phrasing, creating a feeling of naturalness and living performance. In guitar music — agogic pauses and decelerations.
+
+Where it appears: In vocal music — as the singer's breath. In instrumental music — as phrasing. In guitar music — as an expressive device.
+
+Guitarist-Specific Tips: Breath is created through agogics and pauses. Important for expressiveness. Makes music alive.
+"""
+    ),
+
     "BREVE": Term(
         name="Breve",
         description="""
@@ -742,20 +791,15 @@ Second — important to know for historical research.
 """
     ),
 
+    
     "BRIDGE": Term(
         name="Bridge",
         description="""
-A section of a musical composition contrasting with the verse and chorus. Often serves as a transition or introduction to the finale.
+A small support for strings on the guitar body, transmitting string vibrations to the soundboard. Affects timbre and sustain.
 
-Where it appears:
-In pop music — as a contrasting section.
-In rock music — in song structure.
-In jazz — in standards.
+Where it appears: In guitar construction — as part of the bridge. In acoustics — as a transmitting element. In craftsmanship — as an important parameter.
 
-Guitarist-Specific Tips:
-First — the bridge often contains a guitar solo.
-Second — harmonic contrast is important.
-Third — often speeds up or slows down the tempo.
+Guitarist-Specific Tips: The bridge affects guitar sound and sustain. The material and shape of the bridge are important for timbre.
 """
     ),
 
@@ -810,23 +854,6 @@ Third — creation of unique sound textures.
 """
     ),
 
-    "BAND": Term(
-        name="Band",
-        description="""
-A musical group (ensemble, orchestra), usually performing popular, jazz, or dance music. In jazz — big band.
-
-Where it appears:
-In jazz — big bands.
-In pop music — bands.
-In rock music — rock bands.
-
-Guitarist-Specific Tips:
-First — guitarist is often a member of a band.
-Second — interaction with other musicians is important.
-Third — ability to work in a collective.
-"""
-    ),
-
     "BYZANTINE CHANT": Term(
         name="Byzantine chant",
         description="""
@@ -844,37 +871,159 @@ Third — creating meditative guitar works.
 """
     ),
 
-    "BAGPIPES": Term(
-        name="Bagpipes",
+    "BEL CANTO": Term(
+        name="Bel canto",
         description="""
-A folk reed instrument consisting of a leather bag and several pipes. Has a characteristic drone sound, used in Scottish, Irish, and other cultures.
+A style of singing characteristic of 18th-19th century Italian opera, distinguished by beauty, smoothness, and vocal virtuosity. Literally — "beautiful singing."
 
 Where it appears:
-In Scottish folk music — as a symbol of Scotland.
-In Irish and Breton music — as a folk instrument.
-In guitar music — as a timbre to imitate.
+In Italian opera — Bellini, Donizetti, Rossini.
+In vocal pedagogy — as a school of singing.
+In guitar arrangements — arias in bel canto style.
 
 Guitarist-Specific Tips:
-First — guitar can imitate the drone sound of bagpipes.
-Second — use of ostinato basses and drones.
-Third — often used in folk music.
+First — bel canto arrangements require singing tone.
+Second — legato and phrasing are important.
+Third — imitation of vocal cantilena.
 """
     ),
 
-    "BARITONE GUITAR": Term(
-        name="Baritone guitar",
+    "BACHIANA": Term(
+        name="Bachiana",
         description="""
-A type of guitar with a longer scale length and lower tuning (usually a fourth or third below standard). Used in jazz, rock, and ensemble music.
+A musical work written under the influence of Johann Sebastian Bach's style. Often includes elements of polyphony and Baroque form.
 
 Where it appears:
-In jazz — as a solo and accompanying instrument.
-In rock music — for creating a lower, denser sound.
-In ensembles — as a timbral contrast.
+In works of 20th-century composers (Villa-Lobos, "Bachianas Brasileiras").
+In guitar repertoire — arrangements.
+In contemporary music — neo-Baroque.
 
 Guitarist-Specific Tips:
-First — requires fingering adaptation due to larger fret spacing.
-Second — tuning is lower than standard by a fourth or third.
-Third — sound is warmer and denser.
+First — requires good polyphonic playing.
+Second — voice leading is important.
+Third — often used in guitar arrangements.
+"""
+    ),
+
+    "BLIND (PLAYING)": Term(
+        name="Blind (playing)",
+        description="""
+Playing with closed eyes, allowing one to focus on auditory sensations and develop inner hearing. Also — a humorous designation for intuitive playing.
+
+Where it appears: In pedagogy — as an exercise for hearing development. In performance — as a method of concentration. In guitar practice — as training.
+
+Guitarist-Specific Tips: Playing "blind" helps develop hearing and intuition. With closed eyes, the guitarist better hears intonation and dynamics. Useful for developing inner hearing.
+"""
+    ),
+
+    
+    "BUZZER": Term(
+        name="Buzzer",
+        description="""
+A device for producing a sound signal, often used for tuning instruments. Guitar — a buzzer for a tuner.
+
+Where it appears: In sound recording — as a device. In guitar practice — for tuning. In electronics — as a signal.
+
+Guitarist-Specific Tips: A buzzer is used in tuners for tuning guitar. Provides a reference sound for ear training.
+"""
+    ),
+
+    "BACK": Term(
+        name="Back",
+        description="""
+The back part of the guitar body, affecting timbre, projection, and sustain. The material and construction determine the sound.
+
+Where it appears: In guitar construction — as part of the body. In acoustics — as a sound-affecting element. In craftsmanship — as an important parameter.
+
+Guitarist-Specific Tips: The back material (rosewood, maple, mahogany) affects timbre. Harder woods give bright and sharp sound, softer ones give warm and deep sound.
+"""
+    ),
+
+    "BLOCKAGE": Term(
+        name="Blockage",
+        description="""
+Guitar slang for a technical or creative stop, inability to continue playing. Also — a delay in sound delivery.
+
+Where it appears: In guitar circles — as slang. In education — as a problem. In performance — as a technical stop.
+
+Guitarist-Specific Tips: Blockage can be caused by fatigue, tension, or lack of ideas. Important to be able to relax and find creative solutions.
+"""
+    ),
+
+    "BRIGHTENING": Term(
+        name="Brightening",
+        description="""
+A change in dynamics or timbre toward a lighter, more transparent sound. Used as an expressive device.
+
+Where it appears: In orchestra — as a timbral change. In guitar music — in solos and accompaniment. In arrangement — as a technique.
+
+Guitarist-Specific Tips: Brightening is achieved through upper positions, harmonics, or soft attack. Creates a feeling of transparency and light.
+"""
+    ),
+
+    "BELL RINGER": Term(
+        name="Bell ringer",
+        description="""
+A musician performing bell ringing, or a specialist in bell music. Also — a virtuoso guitar performer.
+
+Where it appears: In church music — as a bell ringer. In guitar culture — as a virtuoso. In folklore — as an image.
+
+Guitarist-Specific Tips: A bell ringer on guitar is a virtuoso who masters harmonics, fast arpeggios, and clean sound. Used in Spanish and classical music.
+"""
+    ),
+
+    "BELFRY": Term(
+        name="Belfry",
+        description="""
+A place for bells or a tower with bells. In music — bell ringing as a genre or image.
+
+Where it appears: In church architecture — as a bell tower. In music — as bell ringing. In guitar music — as an image.
+
+Guitarist-Specific Tips: A belfry can inspire guitar pieces imitating bell chimes. Harmonics and arpeggios are used.
+"""
+    ),
+
+    "BUILDING": Term(
+        name="Building",
+        description="""
+An architectural structure housing concert halls, studios, or rehearsal spaces. Affects acoustics and atmosphere.
+
+Where it appears: In concert activity — as a venue. In sound recording — as a studio. In guitar practice — as a rehearsal base.
+
+Guitarist-Specific Tips: Building acoustics affect sound. Important to adapt playing to different spaces.
+"""
+    ),
+
+    "BOW": Term(
+        name="Bow",
+        description="""
+A musical gesture or image — bowing before art, audience, or tradition. In guitar culture — respect for music.
+
+Where it appears: In concert practice — as a bow. In culture — as a gesture. In guitar circles — as respect.
+
+Guitarist-Specific Tips: A bow is respect for listeners and art. Important to treat the guitar with respect.
+"""
+    ),
+
+    "BANNER": Term(
+        name="Banner",
+        description="""
+Znamenny notation — a system of writing music in Old Russian tradition using hooks and banners.
+
+Where it appears: In church music — as notation. In history — as a stage. In guitar music — in historical research.
+
+Guitarist-Specific Tips: Knowledge of banners helps in understanding Old Russian music and its arrangements for guitar.
+"""
+    ),
+
+    "BELL": Term(
+        name="Bell",
+        description="""
+A percussion instrument in the form of a metal bell. Also — bell ringing as a genre or image in music.
+
+Where it appears: In orchestra — in bells. In church music — as ringing. In guitar music — in descriptive pieces.
+
+Guitarist-Specific Tips: The bell is an image that inspires guitarists to create pieces imitating ringing. Harmonics and arpeggios are used.
 """
     ),
 }

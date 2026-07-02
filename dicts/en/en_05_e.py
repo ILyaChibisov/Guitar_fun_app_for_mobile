@@ -148,4 +148,92 @@ Second — entrance depends on breathing and head nod.
 Third — an error in entrance disrupts synchronization.
 """
     ),
+
+    "EUROPEAN MUSIC": Term(
+        name="European music",
+        description="""
+The musical tradition that developed in Europe, encompassing academic, folk, and popular music. Based on the tonal system, notation, and developed harmony.
+
+Where it appears: In classical music — as the foundation of Western tradition. In folk music — in European cultures. In guitar music — as the basis of repertoire.
+
+Guitarist-Specific Tips: European music forms the basis of the classical guitar repertoire. Includes works by Bach, Sor, Tárrega. Guitar is widely used in European folk music (Spanish, Italian, Gypsy).
+"""
+    ),
+
+    "EUROPOP": Term(
+        name="Europop",
+        description="""
+A style of popular music combining pop music from European countries. Characterized by melodiousness, use of synthesizers, and dance rhythms.
+
+Where it appears: In European pop music — as a mass genre. In popular music — at festivals. In guitar music — rarely used.
+
+Guitarist-Specific Tips: In Europap, guitar is most often used as a rhythmic instrument. Clean chords and arpeggios are used. Acoustic guitar is often used for ballad compositions.
+"""
+    ),
+
+    "EURO ROCK": Term(
+        name="Euro rock",
+        description="""
+A direction of rock music that developed in Europe from the 1960s. Includes British rock, German krautrock, Italian prog-rock, and other national schools.
+
+Where it appears: In European rock music — as an independent direction. In guitar music — in the work of European guitarists. At rock festivals.
+
+Guitarist-Specific Tips: European rock has produced many outstanding guitarists. Characterized by the use of guitar riffs, solos, and effects. Distinguished by a variety of styles (from blues rock to progressive metal).
+"""
+    ),
+
+    "EUPHONY": Term(
+        name="Euphony",
+        description="""
+Pleasant, harmonious sounding, a harmonious combination of sounds. Contrasted with dissonance and cacophony.
+
+Where it appears: In musical aesthetics — as a quality of sound. In acoustics — as a pleasant timbre. In guitar music — as the goal of sound production.
+
+Guitarist-Specific Tips: Euphony is achieved through proper hand positioning and high-quality sound production. Important to choose the right chords and their combinations. Soft attack and clean string sound are used.
+"""
+    ),
+
+    "EGYPTIAN MUSIC": Term(
+        name="Egyptian music",
+        description="""
+The musical culture of Ancient Egypt, based on religious rituals, characteristic modes, and instruments (harp, lute, flute). Influenced Greek and Arabic music.
+
+Where it appears: In historical music — as an ancient civilization. In contemporary music — as Eastern influence. In guitar music — in ethnic compositions.
+
+Guitarist-Specific Tips: Egyptian music uses special modes (maqam) that can be imitated on guitar. Guitar can perform Eastern melodies using glissando and specific intervals. Often used in ethno-jazz and fusion.
+"""
+    ),
+
+    "ENGALO": Term(
+        name="Engalo",
+        description="""
+A musical instrument or folk term associated with African culture. In some regions — a percussion instrument.
+
+Where it appears: In African folk music. In ethnic ensembles. In contemporary music — as an exotic element.
+
+Guitarist-Specific Tips: Engalo can be used as a rhythmic foundation in ensembles with guitar. Guitar can imitate its timbre or rhythmic pattern.
+"""
+    ),
+
+    "EPITONE": Term(
+        name="Epitone",
+        description="""
+A micro-interval used in some musical systems, especially in Byzantine and Ancient Greek music. Smaller than a semitone.
+
+Where it appears: In Ancient Greek music — as a theoretical interval. In Byzantine chant. In contemporary microtonality.
+
+Guitarist-Specific Tips: Epitone is rarely found in ordinary guitar music. Used in experimental and ethnic music. On guitar, it can be imitated with bends or slides.
+"""
+    ),
+
+    "EPITROPY": Term(
+        name="Epitropy",
+        description="""
+A principle of interaction in improvisational music where one musician passes initiative to another, submitting to their choice.
+
+Where it appears: In jazz — as a principle of interaction. In avant-garde music — as a method. In guitar music — in ensemble improvisation.
+
+Guitarist-Specific Tips: Epitropy is important in jam sessions and ensemble playing. The guitarist must be able to listen, pick up, and develop partners' ideas.
+"""
+    ),
 }

@@ -148,4 +148,71 @@ Second — music is often arranged for guitar and flute.
 Third — important to consider timbral combination.
 """
     ),
+
+    
+    
+    
+    
+    "WOOD": Term(
+        name="Wood",
+        description="""
+The material for making guitars, affecting sound, weight, and appearance. Different wood species create different timbres (spruce, cedar, rosewood, maple).
+
+Where it appears: In guitar construction — as the main material. In acoustics — as a sound-affecting factor. In guitar selection — as an important parameter.
+
+Guitarist-Specific Tips: Wood determines timbre and projection. Important to choose quality wood. Affects weight and instrument comfort.
+"""
+    ),
+
+    
+    
+    
+    
+    "WAVELENGTH": Term(
+        name="Wavelength",
+        description="""
+A physical characteristic of sound that determines its pitch. In guitar technique — string length that determines pitch.
+
+Where it appears: In acoustics — as a physical quantity. In music — as the basis of pitch. In guitar playing — as tuning.
+
+Guitarist-Specific Tips: Wavelength depends on string length. Shortening the string (fretting) raises the pitch. The basis for tuning.
+"""
+    ),
+
+    
+    
+    
+    
+    "WIND INSTRUMENTS": Term(
+        name="Wind instruments",
+        description="""
+A group of instruments where sound is produced by air vibration (flute, oboe, clarinet, trumpet, saxophone, etc.).
+
+Where it appears: In orchestra — as an independent group. In jazz — as solo instruments. In ensembles.
+
+Guitarist-Specific Tips: Guitar is rarely combined with winds. Can be used with guitar in ensembles.
+"""
+    ),
+
+    "WIND-UP": Term(
+        name="Wind-up",
+        description="""
+A guitar technique where the pick or finger winds under the string for a strong pluck. Also — an emotional lift in music.
+
+Where it appears: In guitar technique — as a playing technique. In performance — as a state. In rock music — as energy.
+
+Guitarist-Specific Tips: Wind-up creates a powerful attack and bright sound. Used in riffs and accents. Important to feel the energy of the music and convey it through the instrument.
+"""
+    ),
+
+    "WOODEN BOX": Term(
+        name="Wooden box",
+        description="""
+A folk percussion instrument in the form of a small box struck with sticks. Used in folk and popular music.
+
+Where it appears: In folk music — as a rhythmic instrument. In orchestra — as percussion. In guitar music — as a percussive element.
+
+Guitarist-Specific Tips: A wooden box can be used in ensemble with guitar. Guitar can imitate its sound with percussive techniques.
+"""
+    ),
 }

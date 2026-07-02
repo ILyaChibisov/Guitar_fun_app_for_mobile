@@ -11,4 +11,15 @@ TERMS = {
     #     name="Term",
     #     description="Detailed description of the term."
     # ),
+
+    "XYLOPHONE": Term(
+        name="Xylophone",
+        description="""
+A percussion instrument consisting of wooden bars arranged by pitch. Sound is produced with mallets.
+
+Where it appears: In orchestra — as a percussion instrument. In jazz — in ensembles. In guitar music — rarely.
+
+Guitarist-Specific Tips: Xylophone can be used in ensemble with guitar. Guitar can imitate xylophone sound with harmonics.
+"""
+    ),
 }

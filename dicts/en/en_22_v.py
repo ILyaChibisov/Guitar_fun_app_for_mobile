@@ -98,20 +98,15 @@ Third — legato and rich dynamics are used.
 """
     ),
 
+    
     "VERSE": Term(
         name="Verse",
         description="""
-A short introduction or interlude performed on the organ during church service. In musical terminology — a short instrumental introduction.
+A stanza in a song, repeated with new text while the melody and chords remain unchanged.
 
-Where it appears:
-In church music — as ritual.
-In organ music — as a form.
-In guitar music — as a miniature.
+Where it appears: In songs — as a strophic form. In folk music — in verse songs. In guitar music — in accompaniment.
 
-Guitarist-Specific Tips:
-First — can be used as a prelude in guitar music.
-Second — requires improvisational character.
-Third — often based on a chorale theme.
+Guitarist-Specific Tips: Verses require repeating chords and rhythmic patterns. Important to maintain accompaniment stability when changing lyrics.
 """
     ),
 
@@ -453,6 +448,28 @@ Guitarist-Specific Tips:
 First — voice leading helps build smooth chord transitions.
 Second — important to hear the movement of each voice.
 Third — the foundation for arrangement and composition.
+"""
+    ),
+
+    "VOCAL SCORE": Term(
+        name="Vocal score",
+        description="""
+A condensed arrangement of orchestral or opera music for piano or another keyboard instrument. Also — the musical text for keyboard instruments.
+
+Where it appears: In classical music — as an arrangement. In opera — as an opera vocal score. In guitar music — as the basis for arrangements.
+
+Guitarist-Specific Tips: A vocal score can serve as the basis for guitar arrangements. Guitar often performs adaptations of keyboard music.
+"""
+    ),
+
+    "VIBRATION": Term(
+        name="Vibration",
+        description="""
+Periodic movements of a string that create sound. The frequency of vibration determines the pitch.
+
+Where it appears: In acoustics — as a physical phenomenon. In music — as the basis of sound. In guitar playing — as string vibration.
+
+Guitarist-Specific Tips: The quality of string vibration depends on tension, material, and playing technique. Important to control vibrations for clean sound.
 """
     ),
 }

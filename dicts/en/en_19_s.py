@@ -115,20 +115,15 @@ Third — used in slow, singing pieces.
 """
     ),
 
+    
     "SOUND PRODUCTION": Term(
         name="Sound production",
         description="""
-The process of producing sound on an instrument. In guitar terminology — the moment of plucking or striking the string, determining the attack, timbre, and dynamics of the sound.
+The process of producing sound on a musical instrument. On guitar — plucking a string with fingers or a pick.
 
-Where it appears:
-In all styles of playing — the foundation of sound production.
-In guitar pedagogy — as a primary skill.
-In acoustics — as the initial moment of sound.
+Where it appears: In guitar technique — as the foundation. In education — as a primary skill. In performance — as sound control.
 
-Guitarist-Specific Tips:
-First — proper sound production is the foundation of technique.
-Second — depends on finger position, angle of attack, and strength.
-Third — different types: tirando, apoyando, pick stroke.
+Guitarist-Specific Tips: Sound production quality determines timbre, dynamics, and expressiveness of playing. Important to work on right-hand technique.
 """
     ),
 
@@ -265,6 +260,309 @@ Guitarist-Specific Tips:
 First — scale passages develop finger fluency.
 Second — requires even dynamics and clear articulation.
 Third — the foundation of many guitar solos.
+"""
+    ),
+    
+    
+    
+    "SOUND PROJECTION": Term(
+        name="Sound projection",
+        description="""
+The ability of sound to travel over long distances while maintaining its power and clarity. Important for music performed outdoors or in large halls.
+
+Where it appears: In acoustics — as a sound characteristic. In orchestral music — as an instrument quality. In guitar music — as sound projection.
+
+Guitarist-Specific Tips: Projection depends on the material and construction of the instrument. Important for concert performance. Amplifiers and effects help enhance the sound.
+"""
+    ),
+    
+    
+    
+    "SHARP": Term(
+        name="Sharp",
+        description="""
+An accidental sign that raises a note by a semitone. Denoted by the symbol ♯.
+
+Where it appears: In musical notation — as an accidental. In keys — as a key signature. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: Sharps change fingering. Important to know the location of sharp notes on the fretboard. Used in major keys.
+"""
+    ),
+    
+    
+    
+    "SOUNDBOARD": Term(
+        name="Soundboard",
+        description="""
+The soundboard or part of the guitar body that amplifies sound. In electric guitar — part of the body.
+
+Where it appears: In acoustic guitar — as the top. In electric guitar — as the body. In guitar craftsmanship — as an element.
+
+Guitarist-Specific Tips: The soundboard affects sound and projection. Important to choose quality wood. In electric guitar affects sustain.
+"""
+    ),
+
+    "SUSPENSION": Term(
+        name="Suspension",
+        description="""
+A harmonic technique where one voice is held over from the previous chord, creating a dissonance that then resolves.
+
+Where it appears: In classical harmony — as a technique. In jazz — as an expressive device. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: Suspension creates tension and expressiveness. Often used in arpeggios and slow pieces on guitar. Important to hear the resolution of dissonance into consonance.
+"""
+    ),
+
+    "SOLIDIFICATION": Term(
+        name="Solidification",
+        description="""
+Repetition or variation of musical material to establish a theme, idea, or key in the listener's mind.
+
+Where it appears: In composition — as a developmental technique. In education — as memorization. In guitar music — in repeating riffs.
+
+Guitarist-Specific Tips: Solidifying a theme through repetition helps the listener remember the melody. Used in choruses and main riffs. Important not to make repetition mechanical.
+"""
+    ),
+
+    "STAGNATION": Term(
+        name="Stagnation",
+        description="""
+Lack of development, static quality in a musical work. Can be used as an expressive device to create tension.
+
+Where it appears: In composition — as a technique. In jazz — as a moment of expectation. In guitar music — in meditative pieces.
+
+Guitarist-Specific Tips: Stagnation is created through repeating chords or ostinato. Important not to lose tension and create anticipation of development.
+"""
+    ),
+
+    "SHRED": Term(
+        name="Shred",
+        description="""
+In guitar slang — to play very well, virtuosically, "killing it." The opposite of "blockage" or "cheating."
+
+Where it appears: In guitar circles — as a positive assessment. At concerts — as a characteristic of performance. In slang — as praise.
+
+Guitarist-Specific Tips: To shred means to master the instrument at a high level. This includes technique, musicality, and stage presence.
+"""
+    ),
+
+    "SOUND": Term(
+        name="Sound",
+        description="""
+Physical vibration of air perceived by hearing. In music — the primary material from which a work is built.
+
+Where it appears: In acoustics — as a physical phenomenon. In music — as material. In guitar playing — as the goal of sound production.
+
+Guitarist-Specific Tips: Sound quality depends on technique, instrument, and mood. A guitarist must be able to produce beautiful, clean, and expressive sound.
+"""
+    ),
+
+    "SOUND WAVE": Term(
+        name="Sound wave",
+        description="""
+Physical propagation of vibrations in the air, perceived as sound. In guitar acoustics — as a sound production process.
+
+Where it appears: In acoustics — as a physical phenomenon. In music — as the basis of sound. In guitar practice — as sound projection.
+
+Guitarist-Specific Tips: Sound wave quality depends on guitar material and construction. Important to understand how sound propagates in space.
+"""
+    ),
+
+    "SOUND FIELD": Term(
+        name="Sound field",
+        description="""
+Space filled with sound waves. Affects the perception of music by the listener and performer.
+
+Where it appears: In acoustics — as an environment. In concert hall — as acoustics. In guitar practice — as sound projection.
+
+Guitarist-Specific Tips: Important to consider room acoustics when playing. Play louder in large halls, quieter and with softer attack in small rooms.
+"""
+    ),
+
+    "SOUND REPRODUCTION": Term(
+        name="Sound reproduction",
+        description="""
+The process of converting recorded sound into an acoustic signal through speakers, headphones, or other devices.
+
+Where it appears: In sound recording — as playback. In concert activity — as sound reinforcement. In guitar practice — through amplifiers.
+
+Guitarist-Specific Tips: Sound reproduction quality depends on the amplifier, speakers, and settings. Important to properly set up equipment for clean sound.
+"""
+    ),
+
+    "SOUND RECORDING": Term(
+        name="Sound recording",
+        description="""
+The process of fixing sound on a medium for subsequent playback. Includes studio, live, and home recording.
+
+Where it appears: In studios — as a process. In the industry — as a product. In guitar practice — for analysis and idea preservation.
+
+Guitarist-Specific Tips: Quality guitar recording requires a good microphone, proper settings, and clean performance. Useful to record yourself for game analysis.
+"""
+    ),
+
+    "SOUND FORMATION": Term(
+        name="Sound formation",
+        description="""
+The physical and acoustic process of sound generation in an instrument. On guitar — string vibration transmitted to the body.
+
+Where it appears: In acoustics — as a process. In music — as the basis of sound. In guitar craftsmanship — as a constructive element.
+
+Guitarist-Specific Tips: Understanding the sound formation process helps improve sound. Body, strings, and technique affect the final result.
+"""
+    ),
+
+    "SOUND CONDUCTIVITY": Term(
+        name="Sound conductivity",
+        description="""
+The ability of a material to transmit sound vibrations. Affects instrument acoustics and sound quality.
+
+Where it appears: In acoustics — as a material property. In guitar craftsmanship — when choosing wood. In sound recording — as a parameter.
+
+Guitarist-Specific Tips: Guitar wood should have good sound conductivity for a rich and warm timbre. Important to choose quality materials.
+"""
+    ),
+
+    "SCALE": Term(
+        name="Scale",
+        description="""
+A series of sounds arranged by pitch, as the basis for building scales and modes. Can be diatonic, chromatic, or pentatonic.
+
+Where it appears: In music theory — as the foundation. In education — as material for exercises. In guitar practice — as the basis of scales.
+
+Guitarist-Specific Tips: Knowledge of scales helps in improvisation and understanding harmony. The foundation for building scales and chords.
+"""
+    ),
+
+    "SOUNDING": Term(
+        name="Sounding",
+        description="""
+The quality of sound, its timbre, character, and color. Determined by instrument, technique, and acoustic conditions.
+
+Where it appears: In performance — as a result. In acoustics — as a characteristic. In guitar practice — as a goal.
+
+Guitarist-Specific Tips: Beautiful guitar sound is achieved through proper technique, tuning, and instrument selection. Important to control timbre and dynamics.
+"""
+    ),
+
+    "SHIFT": Term(
+        name="Shift",
+        description="""
+A shift in musical material (key, rhythm, texture) to create development, contrast, or modulation.
+
+Where it appears: In composition — as a technique. In harmony — as modulation. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: A shift in guitar music often manifests in key changes or rhythmic shifts. Important to smoothly transition between different parts.
+"""
+    ),
+
+    "SINGSPIEL": Term(
+        name="Singspiel",
+        description="""
+A German genre of musical theater from the 18th-19th centuries, combining singing and spoken dialogue. A precursor to operetta.
+
+Where it appears: In German music — as a genre. In opera — as influence. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Singspiel provides material for guitar arrangements. Combines lyrical and dramatic music.
+"""
+    ),
+
+    "SERPENT": Term(
+        name="Serpent",
+        description="""
+A folk wind or percussion instrument associated with folklore and rituals.
+
+Where it appears: In folk music — as an instrument. In ethnic music — in ensembles. In guitar music — rarely.
+
+Guitarist-Specific Tips: Serpent and guitar are a rare combination. Used in ethnic projects.
+"""
+    ),
+
+    "SIGN": Term(
+        name="Sign",
+        description="""
+A graphic symbol in musical notation indicating pitch, duration, dynamics, tempo, or other performance parameters.
+
+Where it appears: In notation — as the basis of writing. In education — as the basis of reading. In guitar practice — as knowledge of notation.
+
+Guitarist-Specific Tips: Knowledge of musical signs is necessary for reading music. Important to distinguish clefs, durations, dynamics, and strokes.
+"""
+    ),
+
+    "SONG": Term(
+        name="Song",
+        description="""
+A song in German, usually lyrical or folk. In guitar music — songs accompanied by guitar.
+
+Where it appears: In German culture — as a song. In guitar music — in performance. In folklore — as a genre.
+
+Guitarist-Specific Tips: Songs are often performed on guitar with simple chords and expressive lyrics.
+"""
+    ),
+
+    "SONDER": Term(
+        name="Sonder",
+        description="""
+A German word meaning "special," used in musical terminology for special instruments or techniques.
+
+Where it appears: In orchestra — as a special instrument. In guitar music — as a special technique. In theory — as a term.
+
+Guitarist-Specific Tips: Sonder is something special, beyond standard. Can mean special tuning or technique.
+"""
+    ),
+
+    "SONDERGOTT": Term(
+        name="Sondergott",
+        description="""
+German for "special God" — in music rarely, can mean a special musical instrument.
+
+Where it appears: In history — as a rare term. In guitar terminology — not used.
+
+Guitarist-Specific Tips: Sondergott is an exotic term for general knowledge.
+"""
+    ),
+
+    "SONDERTON": Term(
+        name="Sonderton",
+        description="""
+German term meaning "special tone" — a specific timbre or special sound.
+
+Where it appears: In music — as a special timbre. In guitar practice — in arrangement. In sound recording — as processing.
+
+Guitarist-Specific Tips: Sonderton is a special timbre achieved through effects, tuning, or playing technique.
+"""
+    ),
+
+    "SONDERFLÖTE": Term(
+        name="Sonderflöte",
+        description="""
+German special flute — an instrument for special timbral tasks.
+
+Where it appears: In orchestra — as a special instrument. In guitar music — rarely.
+
+Guitarist-Specific Tips: Sonderflöte is an exotic term for general knowledge.
+"""
+    ),
+
+    "SONDERZUNG": Term(
+        name="Sonderzung",
+        description="""
+German term meaning "special arrangement" — a specific instrument tuning.
+
+Where it appears: In theory — as a special tuning. In guitar practice — as non-standard tuning.
+
+Guitarist-Specific Tips: Sonderzung is a non-standard guitar tuning used for specific works or effects.
+"""
+    ),
+
+    "SWELL": Term(
+        name="Swell",
+        description="""
+Wave-like movement in music, dynamic or rhythmic pulsation.
+
+Where it appears: In music — as a technique. In guitar playing — as a dynamic wave. In acoustics — as an effect.
+
+Guitarist-Specific Tips: Swell is created through wave-like dynamics and arpeggios. Used to create movement.
 """
     ),
 }

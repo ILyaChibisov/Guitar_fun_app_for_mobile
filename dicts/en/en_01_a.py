@@ -27,23 +27,15 @@ The intro of a ballad is played freely, with "breath." There is a Fermata on the
 """
     ),
 
+    
     "A CAPPELLA": Term(
         name="A cappella",
-        description="""Performance of vocal or instrumental music without instrumental accompaniment. Literally translated from Italian — "in the style of the chapel" (church choir).
+        description="""
+Performance of vocal or instrumental music without instrumental accompaniment. Literally translated from Italian — "in the style of the chapel" (church choir).
 
-Where it appears:
-In vocal music — choral works, folk songs, jazz vocal ensembles.
-In instrumental music — solo pieces for guitar, violin, or other instruments without accompaniment.
-In modern genres — beatboxing, vocal groups (Pentatonix, Home Free).
+Where it appears: In vocal music — choral works, folk songs, jazz vocal ensembles. In instrumental music — solo pieces for guitar.
 
-Guitarist-Specific Tips:
-First — the role of accompaniment. When a guitarist plays a cappella, they become simultaneously the melody, harmony, and rhythm section. The ability to combine bass lines, chords, and melody in a single part is essential.
-Second — finger technique. Combined technique is often used: thumb handles the bass, index and middle fingers handle chords, ring and pinky handle the melody.
-Third — dynamics. Without the support of other instruments, the guitarist must create all dynamic nuances themselves — from pianissimo to fortissimo — using different attack strengths.
-Fourth — rhythmic freedom. In solo performance, more rubato is acceptable since there's no need to synchronize with other musicians.
-
-Practical Example:
-Classical guitar pieces (e.g., "Requiem" or Villa-Lobos' "Etudes") are often performed a cappella. The guitarist holds the bass on open strings, plays chords, and simultaneously carries the melodic line. It's important to maintain balance between voices so no element drowns out others. In jazz guitar, a cappella is often used in intros or solo cadenzas.
+Guitarist-Specific Tips: When a guitarist plays a cappella, they become simultaneously the melody, harmony, and rhythm section. Important to combine bass lines, chords, and melody in a single part.
 """
     ),
 
@@ -980,6 +972,83 @@ Guitarist-Specific Tips:
 First — the anthem requires a powerful, solemn sound.
 Second — clear rhythmic pulsation is important.
 Third — open chords and bass notes are often used.
+"""
+    ),
+
+    "ANOINTING MUSIC": Term(
+        name="Anointing music",
+        description="""
+Church music performed during the sacrament of anointing (unction) in the Orthodox tradition. Characterized by a prayerful, quiet, and repentant character.
+
+Where it appears: In the Orthodox Church — as part of worship. In choral music — in spiritual concerts. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Guitar arrangements of anointing music require a soft, singing sound. Important to convey a prayerful mood. Quiet dynamic levels and smooth legato are used.
+"""
+    ),
+
+    "ASSTROKE": Term(
+        name="Asstroke",
+        description="""
+Guitar slang denoting incorrect posture or hand positioning. In a figurative sense — poor performance or bad sound.
+
+Where it appears: In the guitar environment — as a humorous remark. In pedagogy — as an indication of error. In guitar jargon — as a critical comment.
+
+Guitarist-Specific Tips: Important to avoid bad posture and positioning. Proper posture ensures freedom of movement and clean sound. Corrected through exercises and teacher supervision.
+"""
+    ),
+
+    "ASSCHORD": Term(
+        name="Asschord",
+        description="""
+A humorous name for a guitar chord that sounds bad or is uncomfortable. In a broader sense — any dissonant chord.
+
+Where it appears: In guitar jargon — as a joke. In education — as an example of bad fingering. In music — rarely.
+
+Guitarist-Specific Tips: An asschord is a bad combination of notes or an uncomfortable position on the fretboard. Important to find convenient and sonorous alternatives. Used as a joke among guitarists.
+"""
+    ),
+
+    "ASS FILTER": Term(
+        name="Ass filter",
+        description="""
+A humorous name for a guitar filter or pedal that alters the sound beyond recognition. In slang — any low-quality sound effect.
+
+Where it appears: In guitar jargon — as a joke. In sound recording — as an ironic name. In guitar culture — as a meme.
+
+Guitarist-Specific Tips: An ass filter is a humorous designation for a low-quality effect. Important to choose quality pedals and filters for good sound. Sometimes used as a joke in the musical environment.
+"""
+    ),
+
+    "ACTIVE PICKUP": Term(
+        name="Active pickup",
+        description="""
+A pickup with a built-in preamplifier powered by a battery. Provides a powerful, clean signal with high output.
+
+Where it appears: In electric guitars — for clean sound. In bass guitars — for power. In the studio — for recording.
+
+Guitarist-Specific Tips: Active pickup requires a battery. Provides a more powerful and clean signal. Suitable for heavy music and clean styles.
+"""
+    ),
+
+    "ACCIDENTALS": Term(
+        name="Accidentals",
+        description="""
+Signs that alter pitch: sharp (♯), flat (♭), natural (♮), double sharp (✕), double flat (♭♭).
+
+Where it appears: In musical notation — as alteration. In theory — as a system. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: Accidentals change fingering on the fretboard. Important to know their meaning for reading music and improvisation.
+"""
+    ),
+
+    "ABBREVIATION SIGNS": Term(
+        name="Abbreviation signs",
+        description="""
+Signs in notation that shorten the writing of repeated fragments: measure repetition, octave transpositions, tremolo.
+
+Where it appears: In musical notation — as text economy. In orchestral scores — as standard. In guitar music — in complex parts.
+
+Guitarist-Specific Tips: Abbreviation signs speed up reading music. Important to understand their meaning for quickly analyzing works.
 """
     ),
 }

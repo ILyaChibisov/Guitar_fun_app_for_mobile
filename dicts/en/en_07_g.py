@@ -285,20 +285,15 @@ Third — important to match amplifier with pedals and guitar.
 """
     ),
 
+    
     "GUITARRÓN": Term(
         name="Guitarrón",
         description="""
-A large Mexican acoustic guitar with an enlarged body and thick strings. Used in Mexican folk ensembles to create a powerful bass sound.
+A large Mexican guitar with an enlarged body and thick strings, used in mariachi ensembles to create a powerful bass sound.
 
-Where it appears:
-In Mexican folk music — mariachi.
-In Latin American ensembles — as a bass instrument.
-In ethnic music — as an authentic instrument.
+Where it appears: In Mexican folk music — as a bass instrument. In mariachi ensembles. In guitar music — as an ethnic instrument.
 
-Guitarist-Specific Tips:
-First — guitarron requires powerful technique due to thick strings.
-Second — often used as a bass instrument.
-Third — sound is lower and richer.
+Guitarist-Specific Tips: Guitarron requires powerful technique due to thick strings. Often used as a bass instrument. Sound is lower and richer.
 """
     ),
 
@@ -517,6 +512,65 @@ In guitar music — as a character or theme.
 Guitarist-Specific Tips:
 First — guitar and gusli rarely overlap.
 Second — the theme of the gusli player can inspire guitar compositions.
+"""
+    ),
+
+    
+    
+    
+    
+    "GENTLEMAN'S SET": Term(
+        name="Gentleman's set",
+        description="""
+A set of guitars, usually including acoustic, classical, and electric guitars. Designed for all-round guitarist development and performing different styles.
+
+Where it appears: In guitar stores — as a gift set. In education — as a universal kit. In practice — for different genres.
+
+Guitarist-Specific Tips: A gentleman's set gives the opportunity to play different styles. Includes different guitar types (acoustic, classical, electric).
+"""
+    ),
+
+    "GENRE": Term(
+        name="Genre",
+        description="""
+A type of musical work united by common features: form, content, style, and composition of performers. Examples: symphony, sonata, romance, opera, rock ballad.
+
+Where it appears: In music — as a classification. In theory — as a formal category. In guitar music — as the basis of repertoire.
+
+Guitarist-Specific Tips: Knowledge of genres helps the guitarist navigate the repertoire. Each genre requires different technical techniques and expressive means. Important to be able to perform works in different genres.
+"""
+    ),
+
+    "GREENIE": Term(
+        name="Greenie",
+        description="""
+A humorous name for a cheap guitar or poor instrument, as well as green coloring of some guitars.
+
+Where it appears: In guitar slang — as a joke. In culture — in songs. In guitar circles — as a meme.
+
+Guitarist-Specific Tips: Greenie is a humorous name. Important to choose a quality instrument, not judge by color.
+"""
+    ),
+
+    "GOLDEN MEAN": Term(
+        name="Golden mean",
+        description="""
+A principle of balance in music — moderation, harmony, avoidance of extremes. An important aesthetic principle.
+
+Where it appears: In aesthetics — as a principle. In music — as balance. In guitar practice — as moderation.
+
+Guitarist-Specific Tips: The golden mean is a balance between technique and music, loudness and silence, speed and expressiveness.
+"""
+    ),
+
+    "GOLD": Term(
+        name="Gold",
+        description="""
+An image in music — a symbol of wealth, beauty, warm and rich sound. "Golden" timbre is warm and deep.
+
+Where it appears: In poetry — as an image. In music — as a timbral characteristic. In guitar practice — as sound quality.
+
+Guitarist-Specific Tips: Golden guitar sound is warm, rich, deep timbre. Achieved through proper technique and quality instrument.
 """
     ),
 }
