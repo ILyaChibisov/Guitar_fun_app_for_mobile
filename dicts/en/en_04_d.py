@@ -757,4 +757,127 @@ Where it appears: In orchestra — as a bass instrument. In jazz — in the rhyt
 Guitarist-Specific Tips: Double bass and guitar combine well in ensembles. Guitar can play in duet with double bass.
 """
     ),
+
+    
+    "DOWNPOUR": Term(
+        name="Downpour",
+        description="""
+An image in music — onomatopoeia of rain or downpour. Achieved through fast passages, arpeggios, and tremolo.
+
+Where it appears: In program music — as an image. In guitar music — in descriptive pieces. In Romantic music — as a technique.
+
+Guitarist-Specific Tips: Downpour in guitar music is fast arpeggios and passages that create a feeling of flow.
+"""
+    ),
+
+    
+    "DIRECT SOUND": Term(
+        name="Direct sound",
+        description="""
+Straight, open, powerful sound without effects. Used in rock and blues for aggressive sound.
+
+Where it appears: In electric guitar — as a characteristic. In rock music — in riffs. In guitar music — in powerful chords.
+
+Guitarist-Specific Tips: Direct sound is straight, powerful, without effects. Achieved through proper settings and attack.
+"""
+    ),
+
+    "DEAD": Term(
+        name="Dead",
+        description="""
+In music — a designation for a quiet, fading sound, as well as a mournful or dark character of a work.
+
+Where it appears: In performance — as a dynamic technique. In classical music — in mourning sections. In guitar music — in slow pieces.
+
+Guitarist-Specific Tips: A dead sound is dull, without sustain. Used for special effects.
+"""
+    ),
+
+    "DOWN STROKE": Term(
+        name="Down stroke",
+        description="""
+Movement of the pick or finger downward (downstroke). Used in rhythmic playing.
+
+Where it appears: In guitar technique — as a downward stroke. In rhythm — as a strong beat. In playing — in strumming.
+
+Guitarist-Specific Tips: A down stroke is the basis of rhythmic playing.
+"""
+    ),
+
+    "DUTCH SCHOOL": Term(
+        name="Dutch school",
+        description="""
+A historical music school associated with Dutch tradition.
+
+Where it appears: In music history — as a school. In guitar music — rarely. In culture — as tradition.
+
+Guitarist-Specific Tips: The Dutch School is a historical term.
+"""
+    ),
+
+    "DOMINANT NINTH CHORD": Term(
+        name="Dominant ninth chord",
+        description="""
+A dominant seventh chord with an added ninth. Used to create tense harmonies.
+
+Where it appears: In jazz — as a tense chord. In contemporary music — in harmony. In guitar music — in jazz improvisations.
+
+Guitarist-Specific Tips: A dominant ninth chord requires good technique and fretboard knowledge.
+"""
+    ),
+
+    "DEVIATION": Term(
+        name="Deviation",
+        description="""
+In music — a brief departure from the main key to another without a full modulation. Used to create harmonic variety.
+
+Where it appears: In harmony — as a technique. In classical music — in deviations. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: Deviation creates harmonic variety and tension. Important to be able to use it in improvisation.
+"""
+    ),
+
+    "DANDRUFF": Term(
+        name="Dandruff",
+        description="""
+Guitar slang for a buzzing, unclean sound of strings.
+
+Where it appears: In guitar slang — as a drawback. In guitar circles — in colloquial speech. In sound recording — as noise.
+
+Guitarist-Specific Tips: Dandruff is a buzzing sound caused by malfunctions.
+"""
+    ),
+
+    "DOORSTEP": Term(
+        name="Doorstep",
+        description="""
+Guitar slang for a guitarist playing in a doorway or on the street.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: A doorstep is a guitarist playing on the street.
+"""
+    ),
+
+    "DIRECT VOICE LEADING": Term(
+        name="Direct voice leading",
+        description="""
+The movement of voices in the same direction. Used in harmony and polyphony.
+
+Where it appears: In harmony — as a technique. In polyphony — in voice leading. In guitar music — in chords.
+
+Guitarist-Specific Tips: Direct voice leading requires smooth movement.
+"""
+    ),
+
+    "DOTTED RHYTHM": Term(
+        name="Dotted rhythm",
+        description="""
+A rhythmic pattern based on the combination of a long and a short duration with a dot (dotted rhythm). Creates energetic, march-like motion.
+
+Where it appears: In march music — as a rhythm. In classical music — in overtures. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: Dotted rhythm requires accurate execution of durations.
+"""
+    ),
 }

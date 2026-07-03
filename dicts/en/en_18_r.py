@@ -111,4 +111,81 @@ Where it appears: In acoustics — as a characteristic. In guitar music — in p
 Guitarist-Specific Tips: Resonant sound is achieved through thick strings, powerful attack, and proper tuning. Used in rock and blues.
 """
     ),
+
+    "RECENTLY": Term(
+        name="Recently",
+        description="""
+Guitar slang for a recent performance or event.
+
+Where it appears: In guitar slang — as a time reference. In guitar circles — in colloquial speech. In culture — as a joke.
+
+Guitarist-Specific Tips: Recently — not long ago, yesterday. Used in colloquial speech.
+"""
+    ),
+
+    "RULE BREAKING": Term(
+        name="Rule breaking",
+        description="""
+In music — a conscious or accidental deviation from theoretical or stylistic norms.
+
+Where it appears: In composition — as a technique. In jazz — in improvisation. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: Rule breaking can be a conscious technique for creating original sound.
+"""
+    ),
+
+    "RUSSIAN SCHOOL": Term(
+        name="Russian school",
+        description="""
+A historical school in music associated with Russian tradition.
+
+Where it appears: In music history — as a school. In guitar music — rarely. In culture — as tradition.
+
+Guitarist-Specific Tips: The Russian School is a historical term.
+"""
+    ),
+
+    "RELATIVE PITCH": Term(
+        name="Relative pitch",
+        description="""
+The ability to determine the pitch of a note relative to a given key, without an absolute reference. The basis for reading music and improvisation.
+
+Where it appears: In education — as a skill. In performance — as hearing. In guitar practice — in intonation.
+
+Guitarist-Specific Tips: Relative pitch is developed through solfège and practice. Important for playing guitar.
+"""
+    ),
+
+    "REST": Term(
+        name="Rest",
+        description="""
+A break in sound, the absence of sound. Used as an expressive device and an element of rhythm.
+
+Where it appears: In music — as a structural element. In rhythm — as a duration. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A rest creates tension and breathing in music. Important to accurately observe rest durations.
+"""
+    ),
+
+    "ROOSTER": Term(
+        name="Rooster",
+        description="""
+An image in music — onomatopoeia of a rooster. Used in program and folk music.
+
+Where it appears: In program music — as onomatopoeia. In folk music — in songs. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A rooster is an image inspiring humorous pieces.
+"""
+    ),
+
+    "REPETITION": Term(
+        name="Repetition",
+        description="""
+The return of musical material, theme, or section. Used to reinforce form.
+
+Where it appears: In music — as a structural element. In composition — in form. In guitar music — in riffs and choruses.
+
+Guitarist-Specific Tips: Repetition creates a memorable structure.
+"""
+    ),
 }

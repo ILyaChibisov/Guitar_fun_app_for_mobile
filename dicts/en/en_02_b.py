@@ -928,14 +928,15 @@ Guitarist-Specific Tips: A buzzer is used in tuners for tuning guitar. Provides 
 """
     ),
 
+    
     "BACK": Term(
         name="Back",
         description="""
-The back part of the guitar body, affecting timbre, projection, and sustain. The material and construction determine the sound.
+The back part of an acoustic guitar body, affecting timbre and sound projection.
 
-Where it appears: In guitar construction — as part of the body. In acoustics — as a sound-affecting element. In craftsmanship — as an important parameter.
+Where it appears: In guitar construction — as part of the body. In acoustics — on timbre. In guitar craftsmanship — on sound.
 
-Guitarist-Specific Tips: The back material (rosewood, maple, mahogany) affects timbre. Harder woods give bright and sharp sound, softer ones give warm and deep sound.
+Guitarist-Specific Tips: The back affects the overall timbre and sustain of the guitar.
 """
     ),
 
@@ -1024,6 +1025,206 @@ A percussion instrument in the form of a metal bell. Also — bell ringing as a 
 Where it appears: In orchestra — in bells. In church music — as ringing. In guitar music — in descriptive pieces.
 
 Guitarist-Specific Tips: The bell is an image that inspires guitarists to create pieces imitating ringing. Harmonics and arpeggios are used.
+"""
+    ),
+
+    
+    "BOAT": Term(
+        name="Boat",
+        description="""
+An image in music — water surface, smooth movement. Often used in lyrical and folk songs.
+
+Where it appears: In folk music — as an image. In songs — as a theme. In guitar music — in lyrical pieces.
+
+Guitarist-Specific Tips: A boat is an image of smoothness and peace. Guitar conveys this image well through arpeggios.
+"""
+    ),
+
+    
+    "BROKEN RHYTHM": Term(
+        name="Broken rhythm",
+        description="""
+A rhythmic pattern with syncopations, displaced accents, and unconventional durations. Used in jazz, funk, and Latin American music.
+
+Where it appears: In jazz — as the basis of swing. In funk — as a rhythmic foundation. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: Broken rhythm requires a precise sense of rhythm and syncopation. Important to be able to play with accents on weak beats.
+"""
+    ),
+
+    "BLIZZARD": Term(
+        name="Blizzard",
+        description="""
+An image in music — onomatopoeia of a blizzard. Achieved through fast passages, tremolo, and arpeggios.
+
+Where it appears: In program music — as an image. In guitar music — in descriptive pieces. In Romantic music — as a technique.
+
+Guitarist-Specific Tips: A blizzard in guitar music is fast passages creating a feeling of wind and snow.
+"""
+    ),
+
+    "BELLOWS": Term(
+        name="Bellows",
+        description="""
+Part of the accordion, bayan, and some other instruments that supplies air to the reeds. In guitar terminology — rarely.
+
+Where it appears: In accordion — as a part. In bayan — as a mechanism. In guitar music — rarely.
+
+Guitarist-Specific Tips: Bellows are part of the accordion. Guitar and accordion can be combined in ensembles.
+"""
+    ),
+
+    "BRAINS": Term(
+        name="Brains",
+        description="""
+Guitar slang for an intellectual approach to music, understanding theory and harmony.
+
+Where it appears: In guitar slang — as intellect. In education — as theory. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Brains are the theoretical foundation of a guitarist.
+"""
+    ),
+
+    "BY HEART": Term(
+        name="By heart",
+        description="""
+Performing music from memory, without sheet music. An important skill for any musician.
+
+Where it appears: In performance — as a skill. In education — as a goal. In guitar practice — in repertoire.
+
+Guitarist-Specific Tips: Playing by heart gives freedom on stage. Important to memorize works through analysis and repetition.
+"""
+    ),
+
+    "BEGINNING": Term(
+        name="Beginning",
+        description="""
+The first measure or first section of a musical work. The introduction from which the music starts.
+
+Where it appears: In music — as a structural element. In guitar music — at the beginning of a piece. In composition — as the opening.
+
+Guitarist-Specific Tips: The beginning is important for capturing the listener's attention. A guitar introduction should be bright and expressive.
+"""
+    ),
+
+    "BEGINNER SCHOOL": Term(
+        name="Beginner school",
+        description="""
+The first stage of learning to play a musical instrument, including guitar. Mastering basic skills.
+
+Where it appears: In pedagogy — as a stage. In guitar education — as a beginner course. In culture — in education.
+
+Guitarist-Specific Tips: Beginner school is the foundation of guitar mastery. Important to master proper positioning and technique.
+"""
+    ),
+
+    "BLINDER": Term(
+        name="Blinder",
+        description="""
+Guitar slang for a bright, piercing sound with a lot of high frequencies.
+
+Where it appears: In guitar slang — as a characteristic. In sound recording — as timbre. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Blinder is a bright, piercing sound.
+"""
+    ),
+
+    "BUZZ": Term(
+        name="Buzz",
+        description="""
+Guitar slang for a buzzing, unclean sound of strings.
+
+Where it appears: In guitar slang — as a drawback. In guitar circles — in colloquial speech. In sound recording — as noise.
+
+Guitarist-Specific Tips: Buzz is a buzzing sound caused by malfunctions or poor setup.
+"""
+    ),
+
+    "BUZZER (Guitar)": Term(
+        name="Buzzer (guitar)",
+        description="""
+Guitar slang for a cheap, low-quality guitar.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as a cheap instrument.
+
+Guitarist-Specific Tips: Buzzer is a humorous name for an inexpensive guitar.
+"""
+    ),
+
+    "BUZZER (Effect)": Term(
+        name="Buzzer (effect)",
+        description="""
+Guitar slang for an instrument or effect with a buzzing, unclean sound.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In sound recording — as an effect.
+
+Guitarist-Specific Tips: Buzzer is a device with an unclean sound.
+"""
+    ),
+
+    "BEER-VODKA": Term(
+        name="Beer-vodka",
+        description="""
+Guitar slang for music performed in an informal setting, often with alcohol.
+
+Where it appears: In guitar slang — as a joke. In backyard culture — in songs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Beer-vodka is songs in an informal setting.
+"""
+    ),
+
+    "BY STYLE": Term(
+        name="By style",
+        description="""
+Guitar slang for playing in the style of a particular musician or direction.
+
+Where it appears: In guitar slang — as a style. In guitar circles — in colloquial speech. In performance — in imitation.
+
+Guitarist-Specific Tips: By style is playing in the style of a particular guitarist.
+"""
+    ),
+
+    "BRIDGE (GUITAR)": Term(
+        name="Bridge (guitar)",
+        description="""
+The part of the guitar on which the strings are attached (bridge). Affects timbre, sustain, and tuning.
+
+Where it appears: In guitar construction — as a part. In setup — for adjustment. In guitar craftsmanship — as an element.
+
+Guitarist-Specific Tips: The bridge affects the transmission of string vibrations to the body.
+"""
+    ),
+
+    "BUILD-UP": Term(
+        name="Build-up",
+        description="""
+Guitar slang for an introduction or preparation for a climax.
+
+Where it appears: In guitar slang — as preparation. In guitar circles — in colloquial speech. In performance — in dynamics.
+
+Guitarist-Specific Tips: A build-up is preparation for a climactic moment.
+"""
+    ),
+
+    "BIRD FARM": Term(
+        name="Bird farm",
+        description="""
+Guitar slang for a sound with a lot of high frequencies, resembling bird chirping.
+
+Where it appears: In guitar slang — as timbre. In sound recording — in processing. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: A bird farm is a sound with high frequencies.
+"""
+    ),
+
+    "BIG BELLY": Term(
+        name="Big belly",
+        description="""
+Guitar slang for a guitar with a large body (jumbo or classical).
+
+Where it appears: In guitar slang — as a shape. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: Big belly is a guitar with a large body.
 """
     ),
 }

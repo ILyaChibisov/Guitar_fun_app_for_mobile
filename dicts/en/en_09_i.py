@@ -534,4 +534,92 @@ Where it appears: In guitar craftsmanship — for string and wood care. In acous
 Guitarist-Specific Tips: Iodine is sometimes used for disinfecting and treating wooden parts of the guitar. It can also be used for fretboard tinting.
 """
     ),
+
+    "ICE CREAM MAN": Term(
+        name="Ice cream man",
+        description="""
+Guitar slang for a musician who plays with many effects and pedals.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In sound recording — as an effect.
+
+Guitarist-Specific Tips: An ice cream man is a guitarist with many pedals.
+"""
+    ),
+
+    "INCOMPLETE MEASURE": Term(
+        name="Incomplete measure",
+        description="""
+A measure with which a musical work or phrase begins. Creates a sense of motion toward the strong beat.
+
+Where it appears: In music — as a structural element. In guitar music — at the beginning of pieces. In rhythm — in upbeats.
+
+Guitarist-Specific Tips: An incomplete measure requires correct counting and entry.
+"""
+    ),
+
+    "INARTICULATE SINGING": Term(
+        name="Inarticulate singing",
+        description="""
+Singing with unclear articulation, blending of sounds. Used in some vocal techniques.
+
+Where it appears: In vocal music — as a technique. In folk music — in some traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Inarticulate singing is a specific vocal technique.
+"""
+    ),
+
+    "INNOVATION": Term(
+        name="Innovation",
+        description="""
+The introduction of new ideas, styles, and techniques into music. An important element of guitar art development.
+
+Where it appears: In music — as progress. In guitar culture — in creativity. In performance — as experimentation.
+
+Guitarist-Specific Tips: Innovation is the search for new sound, technique, and style.
+"""
+    ),
+
+    "INNER SOUND": Term(
+        name="Inner sound",
+        description="""
+Guitar slang for the internal sound, resonance of the guitar body.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In acoustics — as resonance.
+
+Guitarist-Specific Tips: Inner sound is a warm, internal guitar sound.
+"""
+    ),
+
+    "INTERVAL INVERSION": Term(
+        name="Interval inversion",
+        description="""
+Moving the lower note of an interval up an octave, transforming the interval into another interval. For example, a second becomes a seventh.
+
+Where it appears: In music theory — as the foundation. In harmony — in voice leading. In guitar music — in intervals and chords.
+
+Guitarist-Specific Tips: Interval inversion helps understand the structure of chords and intervals on the fretboard.
+"""
+    ),
+
+    "ICE CREAM STICK": Term(
+        name="Ice cream stick",
+        description="""
+Guitar slang for a pick, especially a cheap or low-quality one.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: An ice cream stick is a humorous name for a pick.
+"""
+    ),
+
+    "INFANTRY HORN": Term(
+        name="Infantry horn",
+        description="""
+An early wind instrument used in the army. In guitar terminology — rarely.
+
+Where it appears: In military music — as a signal instrument. In history — as a horn. In guitar music — rarely.
+
+Guitarist-Specific Tips: An infantry horn is a historical military instrument.
+"""
+    ),
 }

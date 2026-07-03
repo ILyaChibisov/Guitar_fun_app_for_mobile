@@ -145,4 +145,38 @@ Where it appears: In folk music — as an instrument. In ensembles — as a solo
 Guitarist-Specific Tips: Zurna and guitar can be combined in ethnic ensembles. Guitar can imitate the sound of zurna with a slide.
 """
     ),
+
+    "ZERO": Term(
+        name="Zero",
+        description="""
+Guitar slang for the zero fret (nut) or the zero position on the fretboard.
+
+Where it appears: In guitar slang — as the nut. In guitar circles — in colloquial speech. In sound recording — as the beginning.
+
+Guitarist-Specific Tips: Zero is the nut or zero position on guitar.
+"""
+    ),
+
+    
+    "ZERO FRET": Term(
+        name="Zero fret",
+        description="""
+The nut of the guitar located before the first fret. Also — the open position.
+
+Where it appears: In guitar construction — as a nut. In guitar technique — as an open position. In guitar craftsmanship — as a part.
+
+Guitarist-Specific Tips: A zero fret is the nut before the first fret.
+"""
+    ),
+
+    "ZERO STRING": Term(
+        name="Zero string",
+        description="""
+Guitar slang for a string tuned to the note E (open first string). Also — the zero position.
+
+Where it appears: In guitar slang — as a string. In guitar circles — in colloquial speech. In sound recording — as a note.
+
+Guitarist-Specific Tips: A zero string is the open first string E.
+"""
+    ),
 }

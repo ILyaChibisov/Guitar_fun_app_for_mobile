@@ -215,4 +215,48 @@ Where it appears: In folk music — as a rhythmic instrument. In orchestra — a
 Guitarist-Specific Tips: A wooden box can be used in ensemble with guitar. Guitar can imitate its sound with percussive techniques.
 """
     ),
+
+    "WHINER": Term(
+        name="Whiner",
+        description="""
+Guitar slang for slow, drawn-out, melancholic music or performance.
+
+Where it appears: In guitar slang — as a characteristic. In blues — in slow compositions. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: A whiner is melancholic, sad music.
+"""
+    ),
+
+    "WRITING-PEE-PEE": Term(
+        name="Writing-pee-pee",
+        description="""
+Guitar slang for a frivolous, joking instrument or technique.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: Writing-pee-pee is a humorous name.
+"""
+    ),
+
+    "WINDOWSILL": Term(
+        name="Windowsill",
+        description="""
+Guitar slang for a guitarist playing on a windowsill or in an informal setting.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: A windowsill is a guitarist playing on a windowsill.
+"""
+    ),
+
+    "WAY CHANT": Term(
+        name="Way chant",
+        description="""
+An old Russian chant used in church music. Characterized by smoothness and melodiousness.
+
+Where it appears: In church music — as a tradition. In history — as a stage. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A way chant requires a soft and singing sound.
+"""
+    ),
 }

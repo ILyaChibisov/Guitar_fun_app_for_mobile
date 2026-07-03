@@ -236,4 +236,136 @@ Where it appears: In jazz — as a principle of interaction. In avant-garde musi
 Guitarist-Specific Tips: Epitropy is important in jam sessions and ensemble playing. The guitarist must be able to listen, pick up, and develop partners' ideas.
 """
     ),
+
+    "E": Term(
+        name="E",
+        description="""
+The note E — the third degree of C major and the fifth degree of A minor. Used in most keys.
+
+Where it appears: In solfège — as a note. In guitar practice — in chords and scales. In tuning — as an open string.
+
+Guitarist-Specific Tips: The note E is the open first and sixth string of the guitar.
+"""
+    ),
+
+    "E-FLAT MAJOR": Term(
+        name="E-flat major",
+        description="""
+A major key with tonic E-flat. Has three flats in the key signature (B, E, A).
+
+Where it appears: In classical music — as a key. In guitar music — in major works. In jazz — in improvisation.
+
+Guitarist-Specific Tips: E-flat major is often used in jazz and blues compositions.
+"""
+    ),
+
+    "E-FLAT MINOR": Term(
+        name="E-flat minor",
+        description="""
+A minor key with tonic E-flat. Has six flats in the key signature.
+
+Where it appears: In classical music — as a key. In guitar music — in minor works. In jazz — in improvisation.
+
+Guitarist-Specific Tips: E-flat minor is a complex key for guitar, requiring barre chords.
+"""
+    ),
+
+    "E-FLAT": Term(
+        name="E-flat",
+        description="""
+The note E lowered by a semitone. Used in flat keys.
+
+Where it appears: In music — as an altered sound. In harmony — in chords. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: E-flat is often used in jazz and blues chords.
+"""
+    ),
+
+    "E-SHARP": Term(
+        name="E-sharp",
+        description="""
+The note E raised by a semitone. Used in sharp keys.
+
+Where it appears: In music — as an altered sound. In harmony — in chords. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: E-sharp is rarely used, usually replaced by F.
+"""
+    ),
+
+    "E MAJOR": Term(
+        name="E major",
+        description="""
+A major key with tonic E. Has four sharps in the key signature (F, C, G, D).
+
+Where it appears: In classical music — as a key. In guitar music — in major works. In popular music — in songs.
+
+Guitarist-Specific Tips: E major is often used in guitar compositions.
+"""
+    ),
+
+    "E MINOR": Term(
+        name="E minor",
+        description="""
+A minor key with tonic E. Has one sharp in the key signature (F).
+
+Where it appears: In classical music — as a key. In guitar music — in minor works. In rock music — in songs.
+
+Guitarist-Specific Tips: E minor is one of the most common keys in guitar music.
+"""
+    ),
+
+    "EXTERNAL SPEAKER": Term(
+        name="External speaker",
+        description="""
+An external speaker or cabinet for amplifying guitar sound at concerts and rehearsals.
+
+Where it appears: In concert activity — as equipment. In sound recording — in monitors. In guitar practice — in amplification.
+
+Guitarist-Specific Tips: An external speaker is used for sound reinforcement of guitar on stage.
+"""
+    ),
+
+    "EMBELLISHMENT": Term(
+        name="Embellishment",
+        description="""
+A guitar technique where auxiliary notes are added around the main melody or chord, creating movement and ornamentation.
+
+Where it appears: In guitar music — in accompaniment. In jazz — in improvisation. In folk music — in arrangements.
+
+Guitarist-Specific Tips: Embellishment makes playing more lively and expressive. Used in solos and accompaniment.
+"""
+    ),
+
+    "EYES": Term(
+        name="Eyes",
+        description="""
+In music — eyes, an image associated with visual perception or the expressiveness of a gaze.
+
+Where it appears: In poetry — as an image. In music — in romances. In guitar music — in lyrical pieces.
+
+Guitarist-Specific Tips: Eyes is a poetic image in music.
+"""
+    ),
+
+    "EYE": Term(
+        name="Eye",
+        description="""
+Guitar slang for a pickup or a hole in the guitar body.
+
+Where it appears: In guitar slang — as a pickup. In guitar circles — in colloquial speech. In sound recording — as an element.
+
+Guitarist-Specific Tips: An eye is a pickup or sound hole.
+"""
+    ),
+
+    "EXPOSITION": Term(
+        name="Exposition",
+        description="""
+The development and repetition of a theme in various voices or keys. Used in polyphony and sonata form.
+
+Where it appears: In polyphony — as development. In classical music — in theme exposition. In guitar music — in variations.
+
+Guitarist-Specific Tips: Exposition is the development of a theme in different voices.
+"""
+    ),
 }

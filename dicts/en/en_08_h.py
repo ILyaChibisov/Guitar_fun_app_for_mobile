@@ -302,20 +302,15 @@ Third — material and shape affect overall instrument balance.
 """
     ),
 
+    
     "HOMOPHONY": Term(
         name="Homophony",
         description="""
-A type of musical texture where one voice is the main (melody) and the others support it (accompaniment). Contrasted with polyphony, where all voices are equal.
+A type of musical texture in which one voice is the main (melody) and the others support it (accompaniment). Contrasted with polyphony.
 
-Where it appears:
-In classical music — as the main type of texture.
-In popular music — as the foundation of arrangement.
-In guitar music — in accompaniment.
+Where it appears: In classical music — as the main type of texture. In popular music — as the foundation. In guitar music — in accompaniment.
 
-Guitarist-Specific Tips:
-First — guitar often performs homophonic music (melody + accompaniment).
-Second — important to bring out the melody against the chords.
-Third — the foundation of many guitar pieces.
+Guitarist-Specific Tips: Homophony is the basis of guitar accompaniment. Guitar often performs melody with chordal accompaniment.
 """
     ),
 
@@ -347,14 +342,15 @@ Guitarist-Specific Tips: Children's songs about hedgehogs use simple chords and 
 """
     ),
 
+    
     "HEAT": Term(
         name="Heat",
         description="""
-A musical expression denoting hot, passionate, emotionally charged performance. Often used in reference to jazz, flamenco, or rock music.
+Brightness, saturation, and energy of sound. Often used in descriptions of powerful, driving performance.
 
-Where it appears: In performance — as energy. In jazz — as "hot jazz." In guitar music — in expressive performance.
+Where it appears: In performance — as a characteristic. In rock music — in drive. In guitar music — in powerful riffs.
 
-Guitarist-Specific Tips: Playing with "heat" requires bright dynamics, fast tempo, and emotional delivery. On electric guitar, achieved through overdrive and intense attack. The performer's charisma is important.
+Guitarist-Specific Tips: Heat is bright, energetic sound. Achieved through strong attack and dynamics.
 """
     ),
 
@@ -388,6 +384,105 @@ A stringed keyboard instrument popular in the Baroque era. Sound is produced by 
 Where it appears: In Baroque music — by Bach, Handel, Scarlatti. In orchestra — as an instrument. In guitar music — in arrangements.
 
 Guitarist-Specific Tips: Guitar often performs arrangements of harpsichord music. Important to convey Baroque style and ornamentation.
+"""
+    ),
+
+    "HEADPHONES": Term(
+        name="Headphones",
+        description="""
+Devices for listening to sound, used in studio work and for rehearsals.
+
+Where it appears: In sound recording — as monitors. In guitar practice — for rehearsals. In education — in audio equipment.
+
+Guitarist-Specific Tips: Headphones are used for quiet rehearsals and studio recording of guitar.
+"""
+    ),
+
+    "HUNTING HORN": Term(
+        name="Hunting horn",
+        description="""
+An early wind instrument used for signals during hunting. In orchestra — in some works.
+
+Where it appears: In music history — as an instrument. In orchestra — in pastoral music. In guitar music — rarely.
+
+Guitarist-Specific Tips: The hunting horn is a historical wind instrument.
+"""
+    ),
+
+    "HUNTING MUSIC": Term(
+        name="Hunting music",
+        description="""
+Music related to hunting themes, often using hunting horns and wind instruments.
+
+Where it appears: In program music — as an image. In folk music — in hunting songs. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Hunting music requires a bright and energetic character.
+"""
+    ),
+
+    "HALF-BRICK": Term(
+        name="Half-brick",
+        description="""
+Guitar slang for part of an instrument or accessory, especially if it is thick or massive.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: Half-brick is a humorous name for a thick pick.
+"""
+    ),
+
+    "HALF": Term(
+        name="Half",
+        description="""
+Guitar slang for a half duration or half stroke.
+
+Where it appears: In guitar slang — as a duration. In guitar circles — in colloquial speech. In rhythm — in durations.
+
+Guitarist-Specific Tips: Half is a half-note duration.
+"""
+    ),
+
+    "HALF NOTE": Term(
+        name="Half note",
+        description="""
+A note duration equal to half of a whole note. Used in rhythm.
+
+Where it appears: In notation — as a duration. In education — as the foundation. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A half note is an important rhythmic duration.
+"""
+    ),
+
+    "HALF REST": Term(
+        name="Half rest",
+        description="""
+A rest equal in duration to a half note. Used in rhythm.
+
+Where it appears: In notation — as a rest. In education — as a duration. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A half rest requires accurate observance of duration.
+"""
+    ),
+
+    "HALF CADENCE": Term(
+        name="Half cadence",
+        description="""
+A cadence concluding a passage on the dominant, creating a sense of incompleteness.
+
+Where it appears: In music — in the middle of movements. In harmony — as incompleteness. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: A half cadence creates a sense of incompleteness.
+"""
+    ),
+
+    "HOLIDAYS": Term(
+        name="Holidays",
+        description="""
+Music associated with festive events. Characterized by major mode and energetic character.
+
+Where it appears: In folk music — as festive. In classical music — in solemn movements. In guitar music — in festive pieces.
+
+Guitarist-Specific Tips: Holiday music requires a joyful and energetic character.
 """
     ),
 }

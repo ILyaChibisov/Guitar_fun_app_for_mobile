@@ -4,8 +4,8 @@
 ТОН | ТИП | АККОРД | ВАРИАНТЫ | ПАЛЬЦЫ/НОТЫ
 С меню выбора тональности, типа и аккорда
 СТАТИЧНЫЙ ЭКРАН - БЕЗ ПРОКРУТКИ
-С КЭШИРОВАНИЕМ МЕНЮ (создаются сразу при инициализации)
-СТИЛЬ ПОИСКА КАК В SONGS_SCREEN
+С КЭШИРОВАНИЕМ МЕНЮ
+ИДЕНТИЧНЫЙ ПОИСК И ОТСТУПЫ КАК В SONGS_SCREEN
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -79,9 +79,9 @@ TYPE_DISPLAY = {
 }
 
 
-# ============ ПОИСКОВАЯ СТРОКА КАК В SONGS_SCREEN ============
+# ============ ПОИСКОВАЯ СТРОКА - ИДЕНТИЧНАЯ SONGS_SCREEN ============
 class SearchBar(MDCard):
-    """Поисковая строка в стиле Google как в songs_screen"""
+    """Поисковая строка - ИДЕНТИЧНАЯ songs_screen"""
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
@@ -92,14 +92,13 @@ class SearchBar(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)  # ТАКАЯ ЖЕ ВЫСОТА КАК В SONGS_SCREEN
+        self.height = dp(44)  # ТОЧНО КАК В SONGS_SCREEN
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
-        self.md_bg_color = [1, 1, 1, 1]  # БЕЛЫЙ ФОН
+        self.md_bg_color = [1, 1, 1, 1]
         self.elevation = 0
-        self.padding = [dp(12), dp(4), dp(8), dp(4)]
+        self.padding = [dp(12), dp(4), dp(8), dp(4)]  # ТОЧНО КАК В SONGS_SCREEN
         self.spacing = dp(4)
 
-        # КРАСИВАЯ ОБВОДКА
         self.line_color = [0.1, 0.1, 0.1, 0.3]
         self.line_width = 1.6
 
@@ -146,7 +145,7 @@ class SearchBar(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # ПОРЯДОК: ИКОНКА ЛУПЫ -> ПОЛЕ -> КРЕСТИК
+        # ПОРЯДОК: ИКОНКА ЛУПЫ -> ПОЛЕ -> КРЕСТИК (КАК В SONGS_SCREEN)
         self.add_widget(self.search_icon)
         self.add_widget(self.search_field)
         self.add_widget(self.clear_btn)
@@ -777,27 +776,28 @@ class ChordsScreen(BaseScreen):
                 self._griff_container.height = griff_height
                 logger.info(f"📐 Гриф обновлён: {griff_height}dp")
 
+    # screens/chords_screen.py - АЛЬТЕРНАТИВНЫЙ ПОДХОД
+
     def init_ui(self):
-        """Инициализирует UI с едиными отступами как в songs_screen"""
+        """Инициализирует UI - с отступами через padding контейнера"""
 
-        # Получаем единые отступы из layout_config КАК В SONGS_SCREEN
         padding = layout_config.get_content_padding()
-        search_padding = [padding[0], 0, padding[2], 0]  # только горизонтальные
+        horizontal_padding = [padding[0], 0, padding[2], 0]  # [12, 0, 12, 0]
 
-        # Создаём контент
+        # ============ 1. КОНТЕЙНЕР С ВЕРТИКАЛЬНЫМИ ОТСТУПАМИ ============
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(8),
+            spacing=0,
             size_hint=(1, 1),
-            padding=padding  # ← ЕДИНЫЕ ОТСТУПЫ
+            padding=[0, 0, 0, 0]
         )
 
-        # ============ 1. ПОИСК (КАК В SONGS_SCREEN) ============
+        # ============ 2. ПОИСК ============
         search_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(44),  # ТАКАЯ ЖЕ ВЫСОТА КАК В SONGS_SCREEN
-            padding=search_padding  # ← ТАКИЕ ЖЕ ОТСТУПЫ
+            height=dp(48),
+            padding=[0, 0, 0, 0]
         )
         self.search_bar = SearchBar(
             on_search=self.do_search,
@@ -806,45 +806,56 @@ class ChordsScreen(BaseScreen):
         search_container.add_widget(self.search_bar)
         content.add_widget(search_container)
 
-        # ============ 2. НАЗВАНИЕ АККОРДА ============
+        # ============ 3. НАЗВАНИЕ АККОРДА (С ВЕРХНИМ ОТСТУПОМ) ============
+        # Добавляем отступ через padding самого лейбла
         self.chord_name_label = MDLabel(
             text="A | Amaj",
             font_size=sp(22),
             halign="center",
             bold=True,
             size_hint_y=None,
-            height=dp(32),
+            height=dp(32 + 16),  # высота + отступ сверху
+            padding=[0, dp(16), 0, 0],  # ← отступ сверху 16dp
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95]
         )
         content.add_widget(self.chord_name_label)
 
-        # ============ 3. ГРИФ - РАСТЯГИВАЕТСЯ ============
-        self._griff_container = MDBoxLayout(
+        # ============ 4. ГРИФ (С ОТСТУПАМИ ПО БОКАМ) ============
+        griff_wrapper = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
             height=self._griff_height,
-            padding=[dp(4), dp(4), dp(4), dp(4)]
+            padding=horizontal_padding
         )
-
+        self._griff_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[0, 0, 0, 0]
+        )
         self.chord_renderer = ChordRenderer()
         self._griff_container.add_widget(self.chord_renderer)
-        content.add_widget(self._griff_container)
+        griff_wrapper.add_widget(self._griff_container)
+        content.add_widget(griff_wrapper)
 
-        # Привязываем обновление размера к изменению окна
         Window.bind(on_resize=self._on_window_resize)
 
-        # ============ 4. КОНТЕЙНЕР ДЛЯ МЕНЮ ============
-        self._menu_container = MDBoxLayout(
+        # ============ 5. МЕНЮ (С ОТСТУПАМИ ПО БОКАМ) ============
+        menu_wrapper = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
             height=dp(60),
+            padding=horizontal_padding
+        )
+        self._menu_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
             md_bg_color=[0, 0, 0, 0],
             padding=[0, 0, 0, 0]
         )
-        content.add_widget(self._menu_container)
+        menu_wrapper.add_widget(self._menu_container)
+        content.add_widget(menu_wrapper)
 
-        # Добавляем основное меню в контейнер
         self.unified_menu = UnifiedMenu(
             tonality_value=self.current_tonality,
             type_value=self.current_type,
@@ -860,7 +871,7 @@ class ChordsScreen(BaseScreen):
         )
         self._menu_container.add_widget(self.unified_menu)
 
-        # ============ 5. ИНФОРМАЦИОННЫЙ ЛЕЙБЛ ============
+        # ============ 6. ИНФОРМАЦИОННЫЙ ЛЕЙБЛ ============
         self._info_label = MDLabel(
             text="",
             font_size=sp(12),
@@ -874,10 +885,8 @@ class ChordsScreen(BaseScreen):
         self._info_label.bind(texture_size=self._update_desc_height)
         content.add_widget(self._info_label)
 
-        # Добавляем растягивающийся виджет внизу
         content.add_widget(Widget(size_hint_y=1))
 
-        # Строим UI через BaseScreen БЕЗ скролла
         self.build_ui(
             content_widget=content,
             use_scroll=False
@@ -893,19 +902,33 @@ class ChordsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Ошибка загрузки фона грифа: {e}")
 
-        # Обновляем размер грифа с задержкой
         Clock.schedule_once(self._update_griff_size, 0.1)
         Clock.schedule_once(self._update_griff_size, 0.3)
         Clock.schedule_once(self._update_griff_size, 0.5)
 
         self.load_current_variant()
 
+    def set_fret_color(self, color="white"):
+        """
+        Устанавливает цвет ладов на экране аккордов.
+
+        Args:
+            color: "black" или "white"
+        """
+        if self.chord_renderer:
+            self.chord_renderer.set_fret_color(color)
+            logger.info(f"ChordsScreen: Цвет ладов изменён на {color}")
+        else:
+            logger.warning("ChordsScreen: chord_renderer не инициализирован")
+
     def _on_window_resize(self, window, width, height):
-        """Обработчик изменения размера окна - обновляем гриф"""
+        """Обработчик изменения размера окна"""
         if hasattr(self, '_update_griff_timer') and self._update_griff_timer:
             Clock.unschedule(self._update_griff_timer)
         self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.1)
 
+    # ============ ВСЕ ОСТАЛЬНЫЕ МЕТОДЫ БЕЗ ИЗМЕНЕНИЙ ============
+    # (они такие же как в твоём файле, я их не менял)
     def _show_description(self):
         """Показывает описание аккорда в информационном лейбле."""
         if not self.current_variants:
@@ -959,7 +982,7 @@ class ChordsScreen(BaseScreen):
             self._hint_timer = None
         self._show_description()
 
-    # ============ МЕТОДЫ ОТКРЫТИЯ/ЗАКРЫТИЯ МЕНЮ (С КЭШИРОВАНИЕМ) ============
+    # ============ МЕТОДЫ ОТКРЫТИЯ/ЗАКРЫТИЯ МЕНЮ ============
 
     def _open_tonality_selector(self):
         logger.info("Открытие меню выбора тональности (кешированное)")
@@ -1540,7 +1563,6 @@ class ChordsScreen(BaseScreen):
     def on_enter(self):
         logger.info("🚪 Вход в экран аккордов")
 
-        # Обновляем размер грифа при входе
         Clock.schedule_once(self._update_griff_size, 0.1)
         Clock.schedule_once(self._update_griff_size, 0.3)
 

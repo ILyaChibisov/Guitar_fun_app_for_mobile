@@ -1,6 +1,6 @@
 # screens/chord_renderer.py
 """
-Рендерер аккордов - исправленная версия
+Рендерер аккордов - с поддержкой цветных ладов
 """
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.image import Image
@@ -12,6 +12,9 @@ class ChordRenderer(RelativeLayout):
     # Реальный размер картинки грифа
     IMAGE_WIDTH = 1376
     IMAGE_HEIGHT = 830
+
+    # Цвет ладов: "black" или "white"
+    FRET_COLOR = "white"  # ← ВРЕМЕННО БЕЛЫЙ, ПОТОМ БУДЕТ МЕНЯТЬСЯ
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -42,6 +45,21 @@ class ChordRenderer(RelativeLayout):
             Logger.info("ChordRenderer: Фон грифа установлен")
         else:
             Logger.error("ChordRenderer: Получен пустой texture для фона")
+
+    def set_fret_color(self, color):
+        """
+        Устанавливает цвет ладов.
+
+        Args:
+            color: "black" или "white"
+        """
+        if color in ("black", "white"):
+            self.FRET_COLOR = color
+            Logger.info(f"ChordRenderer: Цвет ладов изменён на {color}")
+            if self.current_module:
+                self._create_sprites()
+        else:
+            Logger.warning(f"ChordRenderer: Неизвестный цвет {color}, оставляем {self.FRET_COLOR}")
 
     def load_chord(self, chord_module):
         """Загружает модуль аккорда для отображения"""
@@ -106,7 +124,7 @@ class ChordRenderer(RelativeLayout):
             selected = getattr(self.current_module, 'SELECTED_NOTE', [])
             Logger.info(f"ChordRenderer: Режим note, выбрано {len(selected)} элементов")
 
-        # Рисуем лады
+        # Рисуем лады (ВСЕГДА белые/чёрные в зависимости от темы)
         for fret_id, fret_data in frets.items():
             self._add_fret_sprite(fret_data)
 
@@ -125,7 +143,7 @@ class ChordRenderer(RelativeLayout):
                 self._add_x_sprite(open_notes[key])
 
     def _add_fret_sprite(self, fret_data):
-        """Добавляет спрайт лада"""
+        """Добавляет спрайт лада с текущим цветом"""
         x = fret_data.get('x', 0)
         y = fret_data.get('y', 0)
         symbol = str(fret_data.get('symbol', ''))
@@ -137,7 +155,8 @@ class ChordRenderer(RelativeLayout):
         new_x, new_y, scale = self._transform_coords(x, y, offset_x=0, offset_y=790, invert_y=False)
         new_size = size * scale
 
-        texture = sprite_loader.get_fret_sprite(symbol, size)
+        # Загружаем спрайт с нужным цветом
+        texture = sprite_loader.get_fret_sprite(symbol, size, self.FRET_COLOR)
         if texture:
             sprite = Image(
                 texture=texture,

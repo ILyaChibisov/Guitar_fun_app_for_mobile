@@ -1056,4 +1056,158 @@ Where it appears: In early music — as a dance. In suites — as a movement. In
 Guitarist-Specific Tips: Courante requires elegant and rhythmic playing. Guitar is well suited for early dance music.
 """
     ),
+
+    "CHAMBER SYMPHONY ORCHESTRA": Term(
+        name="Chamber symphony orchestra",
+        description="""
+A smaller orchestra than a full symphony orchestra. Used for chamber and light music.
+
+Where it appears: In classical music — as a composition. In theater — as accompaniment. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A chamber orchestra may include guitar. Guitar is often used in chamber orchestras.
+"""
+    ),
+
+    "COPPER": Term(
+        name="Copper",
+        description="""
+A metal used for making strings and some guitar parts. Affects timbre and durability.
+
+Where it appears: In guitar strings — as a material. In sound recording — as a characteristic. In guitar craftsmanship — as an element.
+
+Guitarist-Specific Tips: Copper strings produce a bright and ringing sound.
+"""
+    ),
+
+    "CATCHY MELODY": Term(
+        name="Catchy melody",
+        description="""
+A melody that is easy to remember and often gets "stuck" in the head. Also — a repeating riff or tune.
+
+Where it appears: In popular music — as a hit chorus. In guitar music — in riffs. In advertising — in jingles.
+
+Guitarist-Specific Tips: A catchy melody is a "sticky" riff. Guitar riffs often become the hallmark of songs.
+"""
+    ),
+
+    "COVER": Term(
+        name="Cover",
+        description="""
+Guitar slang for the top nut or part of the guitar body.
+
+Where it appears: In guitar slang — as a part of the guitar. In guitar circles — in colloquial speech. In sound recording — as an element.
+
+Guitarist-Specific Tips: A cover is the top part of the guitar.
+"""
+    ),
+
+    "CONTINUOUS BASS": Term(
+        name="Continuous bass",
+        description="""
+A continuously sounding bass voice, often in the form of an ostinato. Used in early and contemporary music.
+
+Where it appears: In early music — as a bass. In contemporary music — in ostinato. In guitar music — in bass lines.
+
+Guitarist-Specific Tips: Continuous bass creates a foundation for guitar accompaniment.
+"""
+    ),
+
+    "CHORD INVERSION": Term(
+        name="Chord inversion",
+        description="""
+A change in the order of notes in a chord by moving the lowest note up an octave. Creates new harmonic colors and voice leading.
+
+Where it appears: In harmony — as a technique. In classical music — in voice leading. In guitar music — in chords and arpeggios.
+
+Guitarist-Specific Tips: Chord inversions expand the harmonic capabilities of the guitar. Used in arrangement and improvisation.
+"""
+    ),
+
+    "CUTOFF": Term(
+        name="Cutoff",
+        description="""
+Guitar slang for a sudden stop of sound, a sound break. Used in rhythmic playing.
+
+Where it appears: In guitar technique — as a technique. In rhythm guitar — as an accent. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Cutoff is a sudden stop of sound to create an accent.
+"""
+    ),
+
+    "CROSSED MORDENT": Term(
+        name="Crossed mordent",
+        description="""
+A mordent with a cross, performed with a special accent or variation.
+
+Where it appears: In classical music — as an ornament. In Baroque music — in embellishments. In guitar music — in melismas.
+
+Guitarist-Specific Tips: A crossed mordent requires fast and precise technique.
+"""
+    ),
+
+    "COOKIE": Term(
+        name="Cookie",
+        description="""
+Guitar slang for a pleasant, "tasty" sound.
+
+Where it appears: In guitar slang — as a positive characteristic. In guitar circles — in colloquial speech. In culture — as a joke.
+
+Guitarist-Specific Tips: A cookie is a pleasant, tasty guitar sound.
+"""
+    ),
+
+    "CORRECTION": Term(
+        name="Correction",
+        description="""
+A correction, adjustment of musical text, fingering, or playing technique.
+
+Where it appears: In education — as a process. In performance — as improvement. In guitar practice — in working on a piece.
+
+Guitarist-Specific Tips: Correction is improving technique and interpretation.
+"""
+    ),
+
+    "CHARACTERISTICS": Term(
+        name="Characteristics",
+        description="""
+Characteristic features of a musical work that determine its style or genre.
+
+Where it appears: In music — as a characteristic. In education — as analysis. In guitar music — in determining style.
+
+Guitarist-Specific Tips: Characteristics help determine style and manner of playing.
+"""
+    ),
+
+    "CHORUS": Term(
+        name="Chorus",
+        description="""
+The repeating part of a song with constant lyrics and melody. Contrasted with the verse.
+
+Where it appears: In songs — as a repeating part. In pop music — in hits. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: A chorus requires a bright and memorable accompaniment.
+"""
+    ),
+
+    "CONTRARY MOTION": Term(
+        name="Contrary motion",
+        description="""
+The movement of voices in opposite directions in polyphony. Used to create counterpoint.
+
+Where it appears: In polyphony — as a technique. In counterpoint — in voice leading. In guitar music — in polyphonic pieces.
+
+Guitarist-Specific Tips: Contrary motion creates expressive voice leading.
+"""
+    ),
+
+    "COUNTERSUBJECT": Term(
+        name="Countersubject",
+        description="""
+In polyphony — a voice contrasting with the main theme. Used in fugues and canons.
+
+Where it appears: In polyphony — in fugues. In counterpoint — in voice leading. In guitar music — in polyphonic pieces.
+
+Guitarist-Specific Tips: A countersubject requires contrast and expressiveness.
+"""
+    ),
 }

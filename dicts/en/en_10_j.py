@@ -167,4 +167,27 @@ Where it appears: In film — as a musical theme. On television — as a program
 Guitarist-Specific Tips: A guitar jingle should be bright and memorable. Often used in rock music as a "calling card" of a song.
 """
     ),
+
+    
+    "JIGSAW": Term(
+        name="Jigsaw",
+        description="""
+Guitar slang for fast, virtuosic playing with many passages and arpeggios.
+
+Where it appears: In guitar slang — as a characteristic. In virtuosic music — as a technique. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Jigsaw is fast, virtuosic playing. Requires excellent technique and coordination.
+"""
+    ),
+
+    "JACK TIP": Term(
+        name="Jack tip",
+        description="""
+Part of a guitar cable, a connector (jack). Used for connecting the guitar to an amplifier.
+
+Where it appears: In guitar equipment — as a connector. In sound recording — as a cable. In guitar practice — for connection.
+
+Guitarist-Specific Tips: A jack tip is a connector for connecting the guitar. Important to choose quality cables and connectors.
+"""
+    ),
 }

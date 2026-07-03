@@ -472,4 +472,70 @@ Where it appears: In acoustics — as a physical phenomenon. In music — as the
 Guitarist-Specific Tips: The quality of string vibration depends on tension, material, and playing technique. Important to control vibrations for clean sound.
 """
     ),
+
+    "VOCAL PRAYER": Term(
+        name="Vocal prayer",
+        description="""
+A vocal work of religious content, close to a prayer. Performed in church or chamber music.
+
+Where it appears: In church music — as a chant. In chamber music — as a spiritual miniature. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A vocal prayer requires a prayerful, exalted character.
+"""
+    ),
+
+    "VOLUME SET": Term(
+        name="Volume set",
+        description="""
+A parameter in sound recording or guitar equipment that regulates volume. In guitar terminology — a signal level control.
+
+Where it appears: In sound recording — as a parameter. In guitar amplifiers — in settings. In guitar practice — in pedals.
+
+Guitarist-Specific Tips: Volume set helps control sound on stage and in the studio. Important to adjust signal level for different situations.
+"""
+    ),
+
+    "VARIABLE FUNCTIONS": Term(
+        name="Variable functions",
+        description="""
+The property of chords to perform different harmonic functions depending on context.
+
+Where it appears: In harmony — as a theory. In jazz — in improvisation. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: Variable functions expand the harmonic capabilities of the guitar.
+"""
+    ),
+
+    "VARIABLE MODE": Term(
+        name="Variable mode",
+        description="""
+A mode in which major and minor modes alternate. Used in folk and contemporary music.
+
+Where it appears: In folk music — as a tradition. In jazz — in modal harmony. In guitar music — in contrasting sections.
+
+Guitarist-Specific Tips: A variable mode requires flexibility in improvisation and understanding of keys.
+"""
+    ),
+
+    "VALVE": Term(
+        name="Valve",
+        description="""
+A valve on wind instruments. In guitar terminology — rarely.
+
+Where it appears: On wind instruments — as a mechanism. In orchestra — in brass instruments. In guitar music — rarely.
+
+Guitarist-Specific Tips: A valve is a mechanism on wind instruments.
+"""
+    ),
+
+    "VOICE PLACEMENT": Term(
+        name="Voice placement",
+        description="""
+The technique of proper breathing and articulation for singing. In guitar terminology — rarely.
+
+Where it appears: In vocal pedagogy — as the foundation. In education — as a skill. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: Voice placement is important for vocalists accompanied by guitar.
+"""
+    ),
 }

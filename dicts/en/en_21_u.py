@@ -118,4 +118,103 @@ Where it appears: In guitar slang — as a joke. In sound recording — as an ac
 Guitarist-Specific Tips: An umbrella protects against noise and feedback. Used at concerts.
 """
     ),
+
+    "UNDERDOG": Term(
+        name="Underdog",
+        description="""
+Guitar slang for an unfinished, incomplete instrument or a weak sound.
+
+Where it appears: In guitar slang — as a drawback. In guitar circles — in colloquial speech. In culture — as a joke.
+
+Guitarist-Specific Tips: Underdog is a low-quality instrument or weak sound.
+"""
+    ),
+
+    "UNDER-PRESS": Term(
+        name="Under-press",
+        description="""
+Guitar slang for insufficient pressing of the string, causing buzzing or unclean sound.
+
+Where it appears: In guitar technique — as a mistake. In education — as a drawback. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Under-press is insufficient string pressing. Important to control pressing force for clean sound.
+"""
+    ),
+
+    "UNEQUAL DURATIONS": Term(
+        name="Unequal durations",
+        description="""
+A rhythmic technique where durations are performed with slight deviations to create a "live" sound.
+
+Where it appears: In Baroque music — as a technique. In jazz — in swing. In guitar music — in phrasing.
+
+Guitarist-Specific Tips: Unequal durations make playing more natural and expressive.
+"""
+    ),
+
+    "UNTEMPERED TUNING": Term(
+        name="Untempered tuning",
+        description="""
+A tuning not based on equal temperament. Used in early and folk music.
+
+Where it appears: In early music — as tuning. In folk music — in traditions. In guitar music — in historical reconstructions.
+
+Guitarist-Specific Tips: Untempered tuning requires a special approach to guitar tuning.
+"""
+    ),
+
+    "UNSTABLE NOTES": Term(
+        name="Unstable notes",
+        description="""
+Notes that tend to resolve to stable degrees of the mode (tonic, mediant, dominant). The basis of harmonic development.
+
+Where it appears: In harmony — as the basis of motion. In melody — in attraction. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: Unstable notes create tension that requires resolution.
+"""
+    ),
+
+    "UNCLEAN": Term(
+        name="Unclean",
+        description="""
+Inaccurate intonation, false sound. In guitar terminology — unclean playing.
+
+Where it appears: In performance — as a drawback. In education — as a mistake. In guitar practice — in inaccurate intonation.
+
+Guitarist-Specific Tips: Unclean means false playing. Important to work on intonation purity.
+"""
+    ),
+
+    "UNCLEANNESS": Term(
+        name="Uncleanness",
+        description="""
+Unclean playing, inaccurate intonation. In guitar terminology — an error in sound production.
+
+Where it appears: In performance — as a drawback. In education — as a mistake. In guitar practice — in inaccurate intonation.
+
+Guitarist-Specific Tips: Uncleanness is an error in playing. Important to eliminate it through ear training.
+"""
+    ),
+
+    "UNGULATES": Term(
+        name="Ungulates",
+        description="""
+Guitar slang for musicians playing in the same style or group.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: Ungulates is a humorous name for musicians in the same group.
+"""
+    ),
+
+    "UNDER STYLE": Term(
+        name="Under style",
+        description="""
+Guitar slang for playing in the style of a particular musician or direction.
+
+Where it appears: In guitar slang — as a style. In guitar circles — in colloquial speech. In performance — in imitation.
+
+Guitarist-Specific Tips: Under style is playing in the style of a particular guitarist.
+"""
+    ),
 }

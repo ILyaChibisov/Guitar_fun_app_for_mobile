@@ -594,21 +594,15 @@ Third — creating "oriental" color using specific techniques (glissando, tremol
 """
     ),
 
+    
     "ARRANGEMENT": Term(
         name="Arrangement",
         description="""
-The adaptation, treatment of a musical work for a different complement of instruments or voices. The arranger adapts the material while preserving its structure and character.
+A transcription or adaptation of a musical work for a different ensemble of instruments or voices. Includes changes in texture, harmony, and form.
 
-Where it appears:
-In popular music — creating accompaniment for a song.
-In jazz — arranging standards.
-In classical — arrangements for guitar.
+Where it appears: In music — as a creative process. In guitar music — in transcriptions. In folk music — in arrangements.
 
-Guitarist-Specific Tips:
-First — ability to arrange for guitar is an important skill.
-Second — important to consider instrument characteristics (range, technique).
-Third — creating solo and ensemble versions.
-Fourth — in contemporary music, arrangement includes use of effects.
+Guitarist-Specific Tips: Arranging folk melodies for guitar is an important skill. Guitar is well suited for transcriptions and arrangements.
 """
     ),
 
@@ -1049,6 +1043,170 @@ Signs in notation that shorten the writing of repeated fragments: measure repeti
 Where it appears: In musical notation — as text economy. In orchestral scores — as standard. In guitar music — in complex parts.
 
 Guitarist-Specific Tips: Abbreviation signs speed up reading music. Important to understand their meaning for quickly analyzing works.
+"""
+    ),
+
+    
+    "ALBUM LEAF": Term(
+        name="Album leaf",
+        description="""
+A short instrumental piece, often lyrical, written for an album. A popular genre in Romantic music.
+
+Where it appears: In classical music — as a genre. In guitar music — as a miniature. In Romantic music — in albums.
+
+Guitarist-Specific Tips: An album leaf is a miniature for guitar. Requires expressive and singing performance.
+"""
+    ),
+
+    
+    "A": Term(
+        name="A",
+        description="""
+The note A — the first degree of A minor and the sixth degree of C major. The reference note for tuning (440 Hz).
+
+Where it appears: In solfège — as a note. In tuning — as a reference. In guitar practice — as an open string.
+
+Guitarist-Specific Tips: The note A is the reference for tuning. The open fifth string gives the note A.
+"""
+    ),
+
+    
+    "A-FLAT": Term(
+        name="A-flat",
+        description="""
+The note A lowered by a semitone (A-flat). Used in flat keys.
+
+Where it appears: In music — as an altered sound. In harmony — in chords. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: A-flat is often used in jazz and blues chords.
+"""
+    ),
+
+    
+    "A-SHARP": Term(
+        name="A-sharp",
+        description="""
+The note A raised by a semitone (A-sharp). Used in sharp keys.
+
+Where it appears: In music — as an altered sound. In harmony — in chords. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: A-sharp is often used in jazz and blues chords.
+"""
+    ),
+
+    
+    "A MAJOR": Term(
+        name="A major",
+        description="""
+A major key with tonic A. Has three sharps in the key signature (F, C, G).
+
+Where it appears: In classical music — as a key. In guitar music — in major works. In popular music — in songs.
+
+Guitarist-Specific Tips: A major is often used in guitar compositions. Simple chords (A, D, E).
+"""
+    ),
+
+    
+    "A MINOR": Term(
+        name="A minor",
+        description="""
+A minor key with tonic A. Has no sharps or flats in the key signature.
+
+Where it appears: In classical music — as a key. In guitar music — in minor works. In popular music — in songs.
+
+Guitarist-Specific Tips: A minor is often used in guitar compositions. Simple chords (Am, Dm, E).
+"""
+    ),
+
+    
+    "A MINOR PENTATONIC": Term(
+        name="A minor pentatonic",
+        description="""
+A pentatonic scale based on A minor. One of the most popular scales for improvisation in blues, rock, and jazz.
+
+Where it appears: In blues improvisation — as the foundation. In rock guitar — in solos. In jazz — in improvisations.
+
+Guitarist-Specific Tips: A minor pentatonic is one of the most important scales for guitarists. Easy to memorize and apply in improvisation.
+"""
+    ),
+
+    
+    "A NOTE": Term(
+        name="A note",
+        description="""
+The note A, the reference for tuning musical instruments (440 Hz). The fundamental tone in A minor and A major.
+
+Where it appears: In tuning — as a reference. In music — as the fundamental tone. In guitar practice — as an open string.
+
+Guitarist-Specific Tips: The A note is the tuning reference. The open fifth string gives the note A.
+"""
+    ),
+
+    
+    "A STRING": Term(
+        name="A string",
+        description="""
+The fifth string on guitar, tuned to the note A. The basis for chords and bass lines.
+
+Where it appears: In guitar construction — as a string. In tuning — as the fifth string. In playing — in chords and bass lines.
+
+Guitarist-Specific Tips: The A string is the fifth string of the guitar. Used for bass lines and chords.
+"""
+    ),
+
+    
+    "A KEY": Term(
+        name="A key",
+        description="""
+A key based on the note A (A major or A minor). One of the most common keys in guitar music.
+
+Where it appears: In guitar music — in major and minor works. In popular music — in songs. In guitar practice — in accompaniment.
+
+Guitarist-Specific Tips: The A key is one of the main keys in guitar music. Simple chords and comfortable fingering.
+"""
+    ),
+
+    "AMATEUR MUSIC-MAKING": Term(
+        name="Amateur music-making",
+        description="""
+Amateur music-making without professional music education.
+
+Where it appears: In culture — as a mass phenomenon. In backyard music — as a tradition. In guitar music — in amateur ensembles.
+
+Guitarist-Specific Tips: Amateur music-making is the foundation of many guitar traditions.
+"""
+    ),
+
+    "ATTIRE": Term(
+        name="Attire",
+        description="""
+Guitar slang for the appearance of a guitar (color, finish, accessories).
+
+Where it appears: In guitar slang — as design. In guitar circles — in colloquial speech. In culture — as appearance.
+
+Guitarist-Specific Tips: Attire is the appearance and design of the guitar.
+"""
+    ),
+
+    "AUTUMNISM": Term(
+        name="Autumnism",
+        description="""
+A musical direction or style associated with autumn themes, melancholy, and decay. In guitar music — in descriptive pieces.
+
+Where it appears: In program music — as an image. In Romantic music — as a mood. In guitar music — in autumn pieces.
+
+Guitarist-Specific Tips: Autumnism requires a melancholic and singing character. Guitar conveys autumn mood well.
+"""
+    ),
+
+    "ALTERNATE PICKING": Term(
+        name="Alternate picking",
+        description="""
+Alternating downstrokes and upstrokes. Used in rhythmic playing.
+
+Where it appears: In guitar technique — as the foundation. In rhythm — in strumming. In education — as a skill.
+
+Guitarist-Specific Tips: Alternate picking is the foundation of rhythmic playing on guitar.
 """
     ),
 }

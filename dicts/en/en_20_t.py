@@ -286,4 +286,338 @@ Where it appears: In guitar construction — as part of the headstock. In tuning
 Guitarist-Specific Tips: Tuning pegs are used for precise guitar tuning. Important to use quality pegs for stable tuning.
 """
     ),
+
+    
+    "TUBE": Term(
+        name="Tube",
+        description="""
+An electronic tube in guitar amplifiers, creating a characteristic "warm" and "live" sound. Used in tube amplifiers.
+
+Where it appears: In electric guitar — in amplifiers. In sound recording — as an effect. In guitar practice — in tube equipment.
+
+Guitarist-Specific Tips: Tube amplifiers are valued for their warm, rich sound with natural overdrive. Important to properly maintain the tubes.
+"""
+    ),
+
+    
+    "TUBE AMPLIFIER": Term(
+        name="Tube amplifier",
+        description="""
+A guitar amplifier operating on electronic tubes. Provides a warm, rich sound with soft clipping. Valued by guitarists for its "live" sound.
+
+Where it appears: In electric guitar — as professional equipment. In studios — for recording. In guitar practice — for quality sound.
+
+Guitarist-Specific Tips: A tube amplifier requires maintenance and tube replacement. Provides a warmer and more organic sound compared to transistor amplifiers.
+"""
+    ),
+
+    
+    "TAPE": Term(
+        name="Tape",
+        description="""
+Magnetic tape for sound recording (obsolete medium). Also — a continuous sequence of sounds in music.
+
+Where it appears: In sound recording — as a medium. In music — as continuity. In guitar practice — in tape recordings.
+
+Guitarist-Specific Tips: Tape is an old method of recording. Important to know the history of sound recording to understand the evolution of guitar sound.
+"""
+    ),
+
+    
+    "TIMPANI": Term(
+        name="Timpani",
+        description="""
+A percussion instrument in the form of kettles with a membrane, tunable to a specific pitch. Used in orchestra for accents and rhythmic figures.
+
+Where it appears: In orchestra — as a percussion instrument. In classical music — for accents. In guitar music — rarely.
+
+Guitarist-Specific Tips: Timpani can be used in ensemble with guitar. Guitar can imitate timpani with rhythmic accents.
+"""
+    ),
+
+    "TO PROTOTYPE": Term(
+        name="To prototype",
+        description="""
+To create a trial version of a musical work or arrangement.
+
+Where it appears: In studio work — as a process. In arrangement — as a stage. In guitar practice — in creating arrangements.
+
+Guitarist-Specific Tips: Prototyping helps test ideas before final recording. Guitar is often used to create demos.
+"""
+    ),
+
+    "TO PUMP": Term(
+        name="To pump",
+        description="""
+In guitar terminology — to play with a large number of effects, creating a full and saturated sound.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in saturated riffs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To pump means to play with a powerful, full sound using effects.
+"""
+    ),
+
+    "TO PUFF UP": Term(
+        name="To puff up",
+        description="""
+Guitar slang for playing with an overdriven, powerful sound.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in powerful riffs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To puff up means to play powerfully, with overdrive.
+"""
+    ),
+
+    "TO FIND ONESELF": Term(
+        name="To find oneself",
+        description="""
+In music — to find one's own style, manner of playing, or creative path.
+
+Where it appears: In creativity — as a stage of development. In performance — as a goal. In guitar music — in finding one's sound.
+
+Guitarist-Specific Tips: To find oneself means to develop an individual style and sound on guitar.
+"""
+    ),
+
+    "TO THE LEFT": Term(
+        name="To the left",
+        description="""
+Guitar slang for playing with the left hand or unconventional performance.
+
+Where it appears: In guitar slang — as a direction. In guitar circles — in colloquial speech. In performance — as an unconventional approach.
+
+Guitarist-Specific Tips: To the left means playing with the left hand, an unconventional technique.
+"""
+    ),
+
+    "TO TYPE OUT": Term(
+        name="To type out",
+        description="""
+Guitar slang for fast, precise playing with many notes.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in fast riffs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To type out means to play quickly and precisely, like on a typewriter.
+"""
+    ),
+
+    "TENSION (NAPRYAG)": Term(
+        name="Tension (napryag)",
+        description="""
+Guitar slang for tension, excitement, or difficulty in performance.
+
+Where it appears: In guitar slang — as a state. In education — as difficulty. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Tension is excitement or difficulty in playing.
+"""
+    ),
+
+    "TUNING": Term(
+        name="Tuning",
+        description="""
+The process of bringing the guitar to the correct pitch. Includes tuning strings, adjusting the truss rod, and intonation.
+
+Where it appears: In guitar practice — as a process. In education — as a skill. In performance — as preparation.
+
+Guitarist-Specific Tips: Tuning is the basis of clean sound. Important to regularly tune the guitar.
+"""
+    ),
+
+    "TUNER": Term(
+        name="Tuner",
+        description="""
+A specialist in tuning musical instruments, including guitars.
+
+Where it appears: In guitar craftsmanship — as a profession. In music stores — as a service. In guitar practice — in instrument care.
+
+Guitarist-Specific Tips: A tuner helps keep the guitar in perfect condition.
+"""
+    ),
+
+    "TOOL": Term(
+        name="Tool",
+        description="""
+In music — an instrument, a means of creating sound. In guitar terminology — the instrument itself.
+
+Where it appears: In music — as an instrument. In guitar practice — as a guitar. In culture — as a means.
+
+Guitarist-Specific Tips: A tool is a musical instrument, the guitar.
+"""
+    ),
+
+    "TO BREAK AWAY": Term(
+        name="To break away",
+        description="""
+Guitar slang for virtuosic playing, "breaking away" from standard riffs and chords.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in fast solos. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To break away means to play virtuosically, with abandon.
+"""
+    ),
+
+    "TRANSCRIPTION": Term(
+        name="Transcription",
+        description="""
+An arrangement or adaptation of a musical work for a different ensemble of instruments.
+
+Where it appears: In music — as a process. In guitar music — in arrangements. In arrangement — as adaptation.
+
+Guitarist-Specific Tips: Transcription for guitar requires consideration of the instrument's characteristics.
+"""
+    ),
+
+    "TO SING BETWEEN CHAIRS": Term(
+        name="To sing between chairs",
+        description="""
+Guitar slang for non-standard or awkward playing.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: To sing between chairs means non-standard playing.
+"""
+    ),
+
+    "TO BAKE PANCAKES": Term(
+        name="To bake pancakes",
+        description="""
+Guitar slang for fast, virtuosic playing with many passages.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in virtuosic playing.
+
+Guitarist-Specific Tips: To bake pancakes means to play virtuosically and fast.
+"""
+    ),
+
+    "TABLET": Term(
+        name="Tablet",
+        description="""
+Guitar slang for a tablet or device for reading sheet music and controlling sound.
+
+Where it appears: In guitar slang — as a device. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A tablet is used for reading sheet music and controlling programs.
+"""
+    ),
+
+    "TO SQUASH": Term(
+        name="To squash",
+        description="""
+Guitar slang for playing with a lot of overdrive and powerful sound.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in powerful riffs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To squash means to play powerfully, with overdrive.
+"""
+    ),
+
+    "TWO GLASSES": Term(
+        name="Two glasses",
+        description="""
+Guitar slang for playing in a relaxed, informal state, often after alcohol.
+
+Where it appears: In guitar slang — as a joke. In backyard culture — in songs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Two glasses is a humorous term for informal playing.
+"""
+    ),
+
+    "TO GO BY THE SQUARE": Term(
+        name="To go by the square",
+        description="""
+Guitar slang for playing by a standard harmonic grid (square), such as the blues square.
+
+Where it appears: In guitar slang — as a technique. In blues improvisation — in the square. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To go by the square means to play by a standard harmonic grid.
+"""
+    ),
+
+    "TO WATER": Term(
+        name="To water",
+        description="""
+Guitar slang for playing with a lot of effects, especially reverb and delay.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in processing.
+
+Guitarist-Specific Tips: To water means to play with many effects.
+"""
+    ),
+
+    "TOMATO BOXES": Term(
+        name="Tomato boxes",
+        description="""
+Guitar slang for a cheap guitar or low-quality instrument.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: Tomato boxes is a humorous name for a cheap guitar.
+"""
+    ),
+
+    "TUNE": Term(
+        name="Tune",
+        description="""
+A short melodic phrase or motif, often of folk origin. Used in folklore and popular music.
+
+Where it appears: In folk music — as a melody. In guitar music — in riffs. In folklore — in songs.
+
+Guitarist-Specific Tips: A tune is a short guitar riff.
+"""
+    ),
+
+    "TO TEAR": Term(
+        name="To tear",
+        description="""
+Guitar slang for virtuosic, powerful playing, "tearing" through standard boundaries.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in powerful solos. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To tear means to play powerfully and virtuosically.
+"""
+    ),
+
+    "TO SEND": Term(
+        name="To send",
+        description="""
+Guitar slang for powerful, energetic playing, "sending" the sound.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in powerful riffs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To send means to play powerfully, with great projection.
+"""
+    ),
+
+    "TO SET A LOCK": Term(
+        name="To set a lock",
+        description="""
+Guitar slang for fretting a barre or using a capo to change key.
+
+Where it appears: In guitar slang — as a technique. In guitar circles — in colloquial speech. In performance — in chords.
+
+Guitarist-Specific Tips: To set a lock means to fret a barre or capo.
+"""
+    ),
+
+    "TO TRY OUT": Term(
+        name="To try out",
+        description="""
+Guitar slang for trying a new technique, effect, or style of playing.
+
+Where it appears: In guitar slang — as an experiment. In guitar circles — in colloquial speech. In performance — in search.
+
+Guitarist-Specific Tips: To try out means to try something new in playing.
+"""
+    ),
+
+    "TO BLOW": Term(
+        name="To blow",
+        description="""
+Guitar slang for strong playing with powerful attack and large sound volume.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in powerful riffs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To blow means to play powerfully and loudly.
+"""
+    ),
 }

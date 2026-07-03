@@ -105,4 +105,15 @@ Where it appears: In folk music — as an instrument. In theory — as a term. I
 Guitarist-Specific Tips: Quinton is a rare term for general knowledge.
 """
     ),
+
+    "QUAIL": Term(
+        name="Quail",
+        description="""
+A bird used in music as an image or onomatopoeia. In guitar music — in descriptive pieces.
+
+Where it appears: In program music — as onomatopoeia. In folk music — in songs. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A quail is an image inspiring the creation of guitar pieces.
+"""
+    ),
 }

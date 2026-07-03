@@ -320,4 +320,15 @@ Where it appears: In Bashkir folk music — as an instrument. In ethnic ensemble
 Guitarist-Specific Tips: Kyusle and guitar can be combined in ethnic ensembles. Studying Bashkir music enriches the guitar repertoire.
 """
     ),
+
+    "KEY SIGNATURE CHANGE": Term(
+        name="Key signature change",
+        description="""
+A change of key in a musical work with a change of key signatures.
+
+Where it appears: In music — in modulations. In theory — as a sign change. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: A key signature change requires attention when reading music.
+"""
+    ),
 }

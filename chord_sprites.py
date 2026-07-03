@@ -72,8 +72,30 @@ class SpriteLoader:
     def get_barre_sprite(self, style, width, height):
         return self.get_texture(f"barre_{style}_{width}x{height}")
 
-    def get_fret_sprite(self, symbol, size=30):
-        return self.get_texture(f"fret_{symbol}_{size}")
+    def get_fret_sprite(self, symbol, size=30, color="white"):
+        """
+        Возвращает спрайт лада с указанным цветом.
+
+        Args:
+            symbol: номер лада (2, 3, 4, 5 и т.д.)
+            size: размер спрайта
+            color: "black" или "white" (по умолчанию "white")
+        """
+        # Формируем имя спрайта
+        if color == "white":
+            sprite_name = f"fret_{symbol}_{size}_white"
+        else:
+            sprite_name = f"fret_{symbol}_{size}"
+
+        # Если белого нет — пробуем чёрный как fallback
+        texture = self.get_texture(sprite_name)
+        if texture is None and color == "white":
+            # Fallback на чёрный
+            fallback_name = f"fret_{symbol}_{size}"
+            Logger.warning(f"SpriteLoader: Белый спрайт {sprite_name} не найден, используем {fallback_name}")
+            texture = self.get_texture(fallback_name)
+
+        return texture
 
 
 sprite_loader = SpriteLoader()

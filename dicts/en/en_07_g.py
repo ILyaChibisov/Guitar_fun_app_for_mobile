@@ -573,4 +573,59 @@ Where it appears: In poetry — as an image. In music — as a timbral character
 Guitarist-Specific Tips: Golden guitar sound is warm, rich, deep timbre. Achieved through proper technique and quality instrument.
 """
     ),
+
+    "GUITAR LOAD RESISTOR": Term(
+        name="Guitar load resistor",
+        description="""
+A device that simulates a speaker for safe amplifier operation without connecting a cabinet.
+
+Where it appears: In guitar equipment — as protection. In studio work — for recording. In guitar practice — in rehearsals.
+
+Guitarist-Specific Tips: A load resistor allows playing on an amplifier without a speaker. Important for safe operation of tube amplifiers.
+"""
+    ),
+
+    "GERMAN SIX-STRING BASS": Term(
+        name="German six-string bass",
+        description="""
+A historical bass instrument used in Europe. In guitar terminology — rarely.
+
+Where it appears: In music history — as an instrument. In guitar practice — rarely. In Baroque music — as a bass instrument.
+
+Guitarist-Specific Tips: The German six-string bass is a historical instrument.
+"""
+    ),
+
+    "GRAMOPHONE": Term(
+        name="Gramophone",
+        description="""
+An outdated name for a gramophone or record player. In guitar terminology — rarely.
+
+Where it appears: In sound recording history — as a device. In culture — as a retro image. In guitar music — rarely.
+
+Guitarist-Specific Tips: A gramophone is an old way of reproducing sound.
+"""
+    ),
+
+    "GUITAR STAND": Term(
+        name="Guitar stand",
+        description="""
+Guitar slang for a guitar stand.
+
+Where it appears: In guitar slang — as an accessory. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A guitar stand is a stand for the guitar.
+"""
+    ),
+
+    "GEAR": Term(
+        name="Gear",
+        description="""
+Guitar slang for guitar equipment, especially amplifiers and speakers.
+
+Where it appears: In guitar slang — as equipment. In guitar circles — in colloquial speech. In sound recording — in apparatus.
+
+Guitarist-Specific Tips: Gear is guitar equipment.
+"""
+    ),
 }
