@@ -710,18 +710,23 @@ class SearchScreen(BaseScreen):
             notify.error("Ошибка навигации")
             return
 
+        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
+        screen_state.set_previous_screen('search')
+
         if hasattr(self.chords_screen, 'select_chord_by_name'):
             self.chords_screen.select_chord_by_name(chord_name)
         elif hasattr(self.chords_screen, 'load_chord_by_name'):
             self.chords_screen.load_chord_by_name(chord_name)
-
-        screen_state.set_previous_screen('search')
 
         if self.manager and self.manager.has_screen('chords'):
             self.manager.current = 'chords'
 
     def select_song(self, song_id):
         logger.info(f"🎵 Выбрана песня: {song_id}")
+
+        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
+        screen_state.set_previous_screen('search')
+
         if self.manager and self.manager.has_screen('song_detail'):
             song_detail = self.manager.get_screen('song_detail')
             song_detail.set_previous_screen('search')
@@ -740,6 +745,9 @@ class SearchScreen(BaseScreen):
         if not term_data:
             notify.error("Термин не найден")
             return
+
+        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
+        screen_state.set_previous_screen('search')
 
         if self.manager and self.manager.has_screen('term_detail'):
             term_detail = self.manager.get_screen('term_detail')

@@ -587,7 +587,6 @@ class TermDetailScreen(BaseScreen):
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
-                # Форматируем название: первая буква заглавная, остальные строчные
                 formatted_title = title.capitalize() if title else "Термин"
 
                 from kivymd.uix.boxlayout import MDBoxLayout
@@ -601,7 +600,6 @@ class TermDetailScreen(BaseScreen):
                     padding=[dp(8), dp(4), dp(8), dp(4)]
                 )
 
-                # Для длинных терминов (больше 20 символов) уменьшаем шрифт
                 font_size = sp(18) if len(formatted_title) <= 20 else sp(15)
 
                 title_label = MDLabel(
@@ -612,16 +610,17 @@ class TermDetailScreen(BaseScreen):
                     theme_text_color="Custom",
                     text_color=[1, 1, 1, 1],
                     bold=True,
-                    text_size=(dp(250), None),  # ← ПЕРЕНОС ПО ШИРИНЕ
-                    shorten=False,  # ← ОТКЛЮЧАЕМ ОБРЕЗАНИЕ
+                    text_size=(dp(250), None),
+                    shorten=False,
                     size_hint_y=None,
-                    height=dp(60)  # ← ДОСТАТОЧНО МЕСТА ДЛЯ 2 СТРОК
+                    height=dp(60)
                 )
 
                 title_container.add_widget(title_label)
 
                 app.top_nav.set_custom_title_widget(title_container)
-                app.top_nav._show_back_button()
+                # Убираем _show_back_button() - логика в TopNav
+                # app.top_nav._show_back_button()
                 app.top_nav.back_btn.on_release = self.go_back
 
                 logger.info(f"✅ TopNav обновлён: {formatted_title}")
@@ -643,7 +642,8 @@ class TermDetailScreen(BaseScreen):
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            app.top_nav._show_back_button()
+            # Убираем _show_back_button() - логика в TopNav
+            # app.top_nav._show_back_button()
             if self.term_name:
                 self._update_top_nav(self.term_name)
             else:

@@ -1165,4 +1165,81 @@ Where it appears: In folk music — as a genre. In folklore — in ritual songs.
 Guitarist-Specific Tips: Laments require a melancholic and singing character.
 """
     ),
+
+    "LARD": Term(
+        name="Lard",
+        description="""
+Guitar slang for a "fat," rich sound with good sustain.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Lard is a "fat," rich guitar sound.
+"""
+    ),
+
+    "LIGHT": Term(
+        name="Light",
+        description="""
+Lighting design for a concert or show. Affects the atmosphere and perception of music.
+
+Where it appears: In concerts — as design. In theater — in lighting. In guitar music — in shows.
+
+Guitarist-Specific Tips: Light is an important element of a concert performance.
+"""
+    ),
+
+    "LIGHTING TECHNICIAN": Term(
+        name="Lighting technician",
+        description="""
+A specialist in lighting design for concerts and events.
+
+Where it appears: In concerts — as a profession. In theater — in lighting. In guitar music — in shows.
+
+Guitarist-Specific Tips: A lighting technician is a lighting specialist at concerts.
+"""
+    ),
+
+    "LEAP IN MELODY": Term(
+        name="Leap in melody",
+        description="""
+A sharp change in pitch in a melody by a large interval. Used to create contrast and drama.
+
+Where it appears: In classical music — as a technique. In jazz — in improvisation. In guitar music — in melodies.
+
+Guitarist-Specific Tips: A leap creates expressiveness and tension in a guitar melody.
+"""
+    ),
+
+    "LEAP": Term(
+        name="Leap",
+        description="""
+A sharp change in pitch in a melody by an interval larger than a third. Used in music for contrast.
+
+Where it appears: In melody — as a technique. In vocal music — in leaps. In guitar music — in solos.
+
+Guitarist-Specific Tips: A leap is a sharp change in pitch in a guitar part.
+"""
+    ),
+
+    "LYRICAL TEXT": Term(
+        name="Lyrical text",
+        description="""
+A poetic or prose text set to music. The basis of a vocal work.
+
+Where it appears: In vocal music — as text. In opera — as a libretto. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: Lyrical text is important for accompaniment to vocals.
+"""
+    ),
+
+    "LINEUP": Term(
+        name="Lineup",
+        description="""
+A group of musicians, an ensemble, or an orchestra lineup. In guitar terminology — a band lineup.
+
+Where it appears: In music — as a group. In orchestra — as a lineup. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A lineup is a group of guitarists in an ensemble.
+"""
+    ),
 }

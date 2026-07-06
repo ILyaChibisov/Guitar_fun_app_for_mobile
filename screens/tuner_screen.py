@@ -1,13 +1,12 @@
 # screens/tuner_screen.py
 """
-Экран гитарного тюнера - со шкалой нот как на картинке ORFCTUNER
-Просто и красиво - без рисования грифа
+Экран гитарного тюнера - с реальным определением частоты
+Работает на Android через audiostream, на Windows через pyaudio
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Ellipse
 from kivy.core.image import Image as CoreImage
 from kivy.uix.widget import Widget
-from kivy.uix.floatlayout import FloatLayout
 from kivy.clock import Clock
 from kivy.animation import Animation
 from kivy.properties import NumericProperty, StringProperty, ListProperty
@@ -15,6 +14,8 @@ from kivy.utils import platform
 from io import BytesIO
 import math
 import random
+import threading
+import struct
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -42,6 +43,10 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
+
+# ============ НАСТРОЙКИ АУДИО ============
+SAMPLE_RATE = 44100
+CHUNK_SIZE = 1024
 
 # ============ СТРОИ ГИТАР ============
 TUNINGS = {
@@ -96,8 +101,92 @@ NOTES = {
 }
 
 
+# ============ ОПРЕДЕЛЕНИЕ ЧАСТОТЫ ============
+def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
+    """
+    Определяет частоту через автокорреляцию
+    Работает с аудио данными из микрофона
+    """
+    if not audio_data or len(audio_data) < 100:
+        return 0
+
+    # Преобразуем байты в список целых чисел
+    try:
+        if isinstance(audio_data, bytes):
+            if len(audio_data) % 2 == 0:
+                samples = struct.unpack(f'{len(audio_data) // 2}h', audio_data)
+            else:
+                return 0
+        else:
+            samples = audio_data
+    except:
+        return 0
+
+    # Находим среднее значение для центрирования
+    mean = sum(samples) / len(samples) if samples else 0
+    samples = [s - mean for s in samples]
+
+    # Автокорреляция
+    max_corr = 0
+    max_lag = 0
+
+    # Ищем только в диапазоне 80-800 Гц (гитарный диапазон)
+    min_lag = int(sample_rate / 800)
+    max_lag = int(sample_rate / 80)
+
+    # Ограничиваем для производительности
+    if max_lag > len(samples) // 2:
+        max_lag = len(samples) // 2
+
+    if min_lag >= max_lag:
+        return 0
+
+    # Вычисляем автокорреляцию
+    for lag in range(min_lag, max_lag):
+        corr = sum(samples[i] * samples[i + lag] for i in range(len(samples) - lag))
+        if corr > max_corr:
+            max_corr = corr
+            max_lag = lag
+
+    if max_lag > 0:
+        freq = sample_rate / max_lag
+        # Проверяем, что частота в диапазоне 80-800 Гц
+        if 80 < freq < 800:
+            return freq
+
+    return 0
+
+
+def freq_to_note(freq):
+    """Преобразует частоту в ближайшую ноту"""
+    closest_note = None
+    closest_freq = None
+    min_diff = float('inf')
+
+    for note, note_freq in NOTES.items():
+        diff = abs(freq - note_freq)
+        if diff < min_diff:
+            min_diff = diff
+            closest_note = note
+            closest_freq = note_freq
+
+    if min_diff < 30:  # Допустимое отклонение
+        return closest_note, closest_freq, min_diff
+    return None, None, None
+
+
+def cents_deviation(freq, target_freq):
+    """Отклонение в центах (-50..50)"""
+    if target_freq == 0:
+        return 0
+    cents = 1200 * math.log2(freq / target_freq)
+    return max(-50, min(50, cents))
+
+
+# ============ КОМПОНЕНТЫ UI ============
+
 class NoteScale(Widget):
-    """Шкала нот - как на картинке ORFCTUNER"""
+    """Шкала нот"""
 
     current_note = StringProperty('--')
     highlighted_notes = ListProperty([])
@@ -113,14 +202,13 @@ class NoteScale(Widget):
         self.bind(highlighted_notes=self.redraw)
 
     def redraw(self, *args):
-        """Перерисовывает шкалу"""
         self.canvas.clear()
 
         if self.width <= 0 or self.height <= 0:
             return
 
         with self.canvas:
-            # Фон шкалы
+            # Фон
             Color(0.1, 0.1, 0.1, 0.3)
             Rectangle(
                 pos=(self.x, self.y),
@@ -142,11 +230,9 @@ class NoteScale(Widget):
             for i, note in enumerate(self.notes):
                 x = self.x + i * note_width + note_width / 2
 
-                # Проверяем, подсвечена ли нота
                 is_highlighted = note in self.highlighted_notes
                 is_current = note == self.current_note
 
-                # Цвет фона для ноты
                 if is_current:
                     Color(0.46, 0.70, 0.71, 0.3)
                     Ellipse(
@@ -160,7 +246,6 @@ class NoteScale(Widget):
                         size=(note_width * 0.5, note_height * 0.6)
                     )
 
-                # Цвет текста
                 if is_current:
                     Color(0.46, 0.70, 0.71, 1)
                 elif is_highlighted:
@@ -168,11 +253,7 @@ class NoteScale(Widget):
                 else:
                     Color(0.5, 0.5, 0.5, 0.4)
 
-                # Рисуем текст ноты через Canvas (упрощённо)
-                # Для качественного текста лучше использовать Label
-                # Но для простоты рисуем кружок с буквой
-
-                # Кружок
+                # Кружок для текущей ноты
                 if is_current:
                     Color(0.46, 0.70, 0.71, 0.2)
                     Ellipse(
@@ -180,16 +261,11 @@ class NoteScale(Widget):
                         size=(dp(28), dp(20))
                     )
 
-                # Буква - рисуем через Label в отдельном слое
-                # Для canvas используем упрощённый вариант
-
     def set_current_note(self, note):
-        """Устанавливает текущую ноту"""
         self.current_note = note
         self.redraw()
 
     def set_highlighted(self, notes):
-        """Устанавливает подсвеченные ноты"""
         self.highlighted_notes = notes
         self.redraw()
 
@@ -284,7 +360,7 @@ class TunerDial(Widget):
         )
 
     def _draw_needle(self):
-        angle_deg = self.deviation * 45
+        angle_deg = self.deviation * 45 / 50  # -50..50 центов -> -45..45 градусов
         angle_rad = math.radians(angle_deg)
         radius = min(self.width, self.height) * 0.35
 
@@ -292,9 +368,9 @@ class TunerDial(Widget):
         y_end = self.center_y + radius * math.cos(angle_rad)
 
         abs_dev = abs(self.deviation)
-        if abs_dev < 0.1:
+        if abs_dev < 5:
             color = self.colors['green']
-        elif abs_dev < 0.3:
+        elif abs_dev < 15:
             color = self.colors['yellow']
         else:
             color = self.colors['red']
@@ -318,7 +394,6 @@ class NoteLabel(MDLabel):
         self._anim = None
 
     def set_note(self, note, is_in_tuning=True):
-        """Устанавливает ноту с анимацией"""
         self.text = note
 
         if is_in_tuning:
@@ -326,7 +401,6 @@ class NoteLabel(MDLabel):
         else:
             self.text_color = [0.9, 0.7, 0.2, 1]
 
-        # Анимация появления
         if self._anim:
             self._anim.cancel(self)
         self.opacity = 0
@@ -334,20 +408,23 @@ class NoteLabel(MDLabel):
         self._anim.start(self)
 
 
+# ============ ОСНОВНОЙ ЭКРАН ============
+
 class TunerScreen(BaseScreen):
-    """Гитарный тюнер со шкалой нот - в стиле ORFCTUNER"""
+    """Гитарный тюнер с реальным определением частоты"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'tuner'
         self.bg_image = None
         self.is_listening = False
-        self.microphone = None
         self.current_frequency = 0
         self.current_deviation = 0
         self.detected_note = None
         self.detected_freq = 0
-        self._emulation_event = None
+        self._audio_thread = None
+        self._running = False
+        self._audio_backend = 'emulation'
 
         # Текущий строй
         self.current_tuning = 'standard_6'
@@ -362,9 +439,10 @@ class TunerScreen(BaseScreen):
         self.init_ui()
         self.load_background()
 
-        Clock.schedule_once(self._init_microphone, 0.5)
+        # Инициализируем аудио
+        Clock.schedule_once(self._init_audio, 0.5)
 
-        logger.info('Экран тюнера создан (со шкалой нот)')
+        logger.info('Экран тюнера создан')
 
     def load_background(self):
         try:
@@ -392,109 +470,226 @@ class TunerScreen(BaseScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
-    def _init_microphone(self, dt):
+    def _init_audio(self, dt):
+        """Инициализация аудио для всех платформ"""
+        try:
+            if platform == 'android':
+                # ============ ANDROID ============
+                try:
+                    from android.permissions import request_permissions, Permission
+                    request_permissions([Permission.RECORD_AUDIO])
+                    logger.info("✅ Запрошено разрешение RECORD_AUDIO")
+                except Exception as e:
+                    logger.error(f"Ошибка запроса разрешений: {e}")
+
+                # Пробуем audiostream (единственное что работает на Android)
+                try:
+                    import audiostream
+                    self._audio_backend = 'audiostream'
+                    logger.info("✅ audiostream загружен (Android)")
+                    return
+                except ImportError:
+                    logger.warning("⚠️ audiostream не найден на Android")
+
+                # Если ничего нет - эмуляция
+                logger.warning("⚠️ Аудио не доступно на Android, используем эмуляцию")
+                self._audio_backend = 'emulation'
+
+            else:
+                # ============ WINDOWS / MACOS / LINUX ============
+                # Пробуем pyaudio (лучший вариант для десктопа)
+                try:
+                    import pyaudio
+                    self._audio_backend = 'pyaudio'
+                    logger.info("✅ pyaudio загружен (Desktop)")
+                    return
+                except ImportError:
+                    logger.warning("⚠️ pyaudio не найден")
+
+                # Пробуем plyer.microphone
+                try:
+                    from plyer import microphone
+                    self._audio_backend = 'plyer'
+                    logger.info("✅ plyer.microphone загружен (Desktop)")
+                    return
+                except ImportError:
+                    logger.warning("⚠️ plyer.microphone не найден")
+
+                # Эмуляция
+                logger.warning("⚠️ Аудио не доступно, используем эмуляцию")
+                self._audio_backend = 'emulation'
+
+        except Exception as e:
+            logger.error(f"Ошибка инициализации аудио: {e}")
+            self._audio_backend = 'emulation'
+
+    def _start_audio_thread(self):
+        """Запускает поток захвата аудио"""
+        if self._running:
+            return
+
+        self._running = True
+
+        if self._audio_backend == 'audiostream':
+            self._audio_thread = threading.Thread(target=self._audio_loop_audiostream)
+        elif self._audio_backend == 'pyaudio':
+            self._audio_thread = threading.Thread(target=self._audio_loop_pyaudio)
+        elif self._audio_backend == 'plyer':
+            self._audio_thread = threading.Thread(target=self._audio_loop_plyer)
+        else:
+            self._audio_thread = threading.Thread(target=self._audio_loop_emulation)
+
+        self._audio_thread.daemon = True
+        self._audio_thread.start()
+        logger.info(f"🎤 Аудио поток запущен (бэкенд: {self._audio_backend})")
+
+    def _audio_loop_audiostream(self):
+        """Захват через audiostream (Android)"""
+        try:
+            import audiostream
+
+            def callback(data):
+                if data and self._running:
+                    freq = detect_pitch(data, SAMPLE_RATE)
+                    if freq > 0:
+                        Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
+
+            stream = audiostream.get_input_stream(
+                callback=callback,
+                rate=SAMPLE_RATE,
+                channels=1,
+                buffersize=CHUNK_SIZE
+            )
+
+            if stream:
+                stream.start()
+                logger.info("✅ audiostream захват запущен")
+
+                while self._running:
+                    import time
+                    time.sleep(0.1)
+
+                stream.stop()
+            else:
+                logger.error("❌ Не удалось создать аудио поток")
+                self._audio_loop_emulation()
+
+        except Exception as e:
+            logger.error(f"Ошибка audiostream: {e}")
+            self._audio_loop_emulation()
+
+    def _audio_loop_pyaudio(self):
+        """Захват через pyaudio (Windows/Desktop)"""
+        try:
+            import pyaudio
+
+            p = pyaudio.PyAudio()
+            stream = p.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=SAMPLE_RATE,
+                input=True,
+                frames_per_buffer=CHUNK_SIZE
+            )
+
+            logger.info("✅ pyaudio захват запущен")
+
+            while self._running:
+                try:
+                    data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
+                    if data:
+                        freq = detect_pitch(data, SAMPLE_RATE)
+                        if freq > 0:
+                            Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
+                except Exception as e:
+                    logger.error(f"Ошибка чтения аудио: {e}")
+                    break
+
+            stream.stop_stream()
+            stream.close()
+            p.terminate()
+
+        except ImportError:
+            logger.warning("⚠️ pyaudio не установлен")
+            self._audio_loop_emulation()
+        except Exception as e:
+            logger.error(f"Ошибка pyaudio: {e}")
+            self._audio_loop_emulation()
+
+    def _audio_loop_plyer(self):
+        """Захват через plyer.microphone (Desktop)"""
         try:
             from plyer import microphone
-            if hasattr(microphone, 'request_permissions'):
-                microphone.request_permissions()
-            self.microphone = microphone
-            self.is_listening = True
-            if hasattr(microphone, 'start_recording'):
-                self._start_microphone()
-            else:
-                self._start_emulation()
-            logger.info("✅ Микрофон инициализирован")
-        except ImportError:
-            logger.warning("⚠️ plyer не установлен, используем эмуляцию")
-            self._start_emulation()
+
+            def callback(data):
+                if data and self._running:
+                    freq = detect_pitch(data, SAMPLE_RATE)
+                    if freq > 0:
+                        Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
+
+            microphone.start_recording(callback, SAMPLE_RATE, CHUNK_SIZE)
+            logger.info("✅ plyer.microphone захват запущен")
+
+            while self._running:
+                import time
+                time.sleep(0.1)
+
+            microphone.stop_recording()
+
         except Exception as e:
-            logger.error(f"❌ Ошибка инициализации микрофона: {e}")
-            self._start_emulation()
+            logger.error(f"Ошибка plyer.microphone: {e}")
+            self._audio_loop_emulation()
 
-    def _start_microphone(self):
-        try:
-            from plyer import audio
-            if hasattr(audio, 'record_audio'):
-                audio.record_audio(
-                    duration=0.1,
-                    callback=self._on_audio_data,
-                    format='pcm'
-                )
-                logger.info("🎤 Захват звука запущен")
-            else:
-                self._start_emulation()
-        except Exception as e:
-            logger.error(f"Ошибка захвата звука: {e}")
-            self._start_emulation()
+    def _audio_loop_emulation(self):
+        """Эмуляция для тестирования"""
+        logger.info("🎵 Эмуляция аудио")
+        while self._running:
+            import time
+            if self.tuning_freqs:
+                freq = random.choice(self.tuning_freqs)
+                freq += (random.random() - 0.5) * 10
+                Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
+            time.sleep(0.3)
 
-    def _start_emulation(self):
-        logger.info("🎵 Используем эмуляцию тюнера")
-        self.is_listening = True
-        if self._emulation_event:
-            Clock.unschedule(self._emulation_event)
-        self._emulation_event = Clock.schedule_interval(self._emulate_frequency, 0.5)
-
-    def _emulate_frequency(self, dt):
-        if self.tuning_freqs:
-            base_freq = random.choice(self.tuning_freqs)
-            freq = base_freq + (random.random() - 0.5) * 15
-            self._process_frequency(freq)
-
-    def _on_audio_data(self, data):
-        if not self.is_listening:
-            return
-        try:
-            freq = self._estimate_frequency(data)
-            if freq > 0:
-                self._process_frequency(freq)
-        except Exception as e:
-            logger.error(f"Ошибка обработки аудио: {e}")
-
-    def _estimate_frequency(self, data):
-        return 440 + (random.random() - 0.5) * 20
+    def _stop_audio_thread(self):
+        """Останавливает аудио поток"""
+        self._running = False
+        if self._audio_thread and self._audio_thread.is_alive():
+            self._audio_thread.join(timeout=1)
+        self._audio_thread = None
+        logger.info("⏹ Аудио поток остановлен")
 
     def _process_frequency(self, freq):
-        self.current_frequency = freq
+        """Обрабатывает обнаруженную частоту"""
+        if not self.is_listening:
+            return
 
-        closest_note = None
-        closest_freq = None
-        min_diff = float('inf')
+        # Находим ближайшую ноту
+        note, note_freq, diff = freq_to_note(freq)
 
-        for note, note_freq in NOTES.items():
-            diff = abs(freq - note_freq)
-            if diff < min_diff:
-                min_diff = diff
-                closest_note = note
-                closest_freq = note_freq
-
-        if closest_note and min_diff < 30:
-            self.detected_note = closest_note
-            self.detected_freq = closest_freq
-
-            cents = 1200 * math.log2(freq / closest_freq) if closest_freq > 0 else 0
-            self.current_deviation = cents / 50
-            self.current_deviation = max(-1, min(1, self.current_deviation))
+        if note:
+            # Вычисляем отклонение в центах
+            cents = cents_deviation(freq, note_freq)
+            deviation = cents / 50  # -1..1
 
             # Обновляем круговой индикатор
             if hasattr(self, 'tuner_dial'):
-                self.tuner_dial.deviation = self.current_deviation
-                self.tuner_dial.note_name = closest_note
-                self.tuner_dial.note_frequency = closest_freq
+                self.tuner_dial.deviation = deviation
+                self.tuner_dial.note_name = note
+                self.tuner_dial.note_frequency = note_freq
 
             # Обновляем шкалу нот
             if hasattr(self, 'note_scale'):
-                self.note_scale.set_current_note(closest_note)
-
-                # Подсвечиваем ноты из текущего строя
-                tuning_notes = self.tuning_note_names
-                self.note_scale.set_highlighted(tuning_notes)
+                self.note_scale.set_current_note(note)
+                self.note_scale.set_highlighted(self.tuning_note_names)
 
             # Обновляем информацию
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.1f} Hz"
+
             if hasattr(self, 'note_label'):
-                is_in_tuning = closest_note in self.tuning_note_names
-                self.note_label.set_note(closest_note, is_in_tuning)
+                is_in_tuning = note in self.tuning_note_names
+                self.note_label.set_note(note, is_in_tuning)
 
     def _show_tuning_dialog(self):
         content = MDBoxLayout(
@@ -568,10 +763,11 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'tuning_name_label'):
             self.tuning_name_label.text = tuning['name']
 
-        # Обновляем шкалу - подсвечиваем ноты из нового строя
+        # Обновляем шкалу
         if hasattr(self, 'note_scale'):
             self.note_scale.set_highlighted(self.tuning_note_names)
 
+        # Сбрасываем индикаторы
         if hasattr(self, 'tuner_dial'):
             self.tuner_dial.deviation = 0
             self.tuner_dial.note_name = '--'
@@ -584,7 +780,7 @@ class TunerScreen(BaseScreen):
         logger.info(f"🎸 Выбран строй: {tuning['name']}")
 
     def init_ui(self):
-        """Инициализирует UI - СТАТИЧНЫЙ, БЕЗ ПРОКРУТКИ"""
+        """Инициализирует UI"""
 
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
@@ -592,12 +788,11 @@ class TunerScreen(BaseScreen):
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # Нижний отступ (под BottomNav)
+        # Нижний отступ
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
 
-        # Контейнер с контентом
         content_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -624,7 +819,7 @@ class TunerScreen(BaseScreen):
         )
         content.add_widget(title_label)
 
-        # ============ ШКАЛА НОТ (как на картинке) ============
+        # ============ ШКАЛА НОТ ============
         scale_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -632,7 +827,6 @@ class TunerScreen(BaseScreen):
             padding=[dp(4), dp(2), dp(4), dp(2)]
         )
         self.note_scale = NoteScale()
-        # Изначально подсвечиваем ноты из текущего строя
         self.note_scale.set_highlighted(self.tuning_note_names)
         scale_container.add_widget(self.note_scale)
         content.add_widget(scale_container)
@@ -715,7 +909,6 @@ class TunerScreen(BaseScreen):
             spacing=0
         )
 
-        # Кнопка Play/Stop
         self.play_btn = MDIconButton(
             icon="play",
             size_hint=(1, 1),
@@ -731,7 +924,6 @@ class TunerScreen(BaseScreen):
             md_bg_color=[1, 1, 1, 0.1]
         )
 
-        # Кнопка выбора строя
         self.tuning_btn = MDIconButton(
             icon="tune",
             size_hint=(1, 1),
@@ -747,7 +939,6 @@ class TunerScreen(BaseScreen):
             md_bg_color=[1, 1, 1, 0.1]
         )
 
-        # Кнопка сброса
         self.reset_btn = MDIconButton(
             icon="refresh",
             size_hint=(1, 1),
@@ -765,7 +956,7 @@ class TunerScreen(BaseScreen):
 
         content.add_widget(menu_card)
 
-        # ============ ПОДСКАЗКА ПОД МЕНЮ ============
+        # ============ ПОДСКАЗКА ============
         self._hint_label = MDLabel(
             text="",
             font_size=sp(11),
@@ -778,14 +969,13 @@ class TunerScreen(BaseScreen):
         )
         content.add_widget(self._hint_label)
 
-        # ============ ДОБАВЛЯЕМ КОНТЕНТ ============
         content_container.add_widget(content)
         content_container.add_widget(Widget(size_hint_y=1))
 
         main_layout.add_widget(content_container)
         self.add_widget(main_layout)
 
-        logger.info("UI тюнера построен (со шкалой нот)")
+        logger.info("UI тюнера построен")
 
     def toggle_tuner(self, instance):
         """Включает/выключает тюнер"""
@@ -794,21 +984,15 @@ class TunerScreen(BaseScreen):
             self.play_btn.icon = "stop"
             self.play_btn.icon_color = [0.8, 0.3, 0.3, 1]
             self._show_temporary_hint("Тюнер запущен")
-
-            if not hasattr(self.microphone, 'start_recording'):
-                if self._emulation_event:
-                    Clock.unschedule(self._emulation_event)
-                self._emulation_event = Clock.schedule_interval(self._emulate_frequency, 0.3)
+            self._start_audio_thread()
         else:
             self.is_listening = False
             self.play_btn.icon = "play"
             self.play_btn.icon_color = [0.46, 0.70, 0.71, 1]
             self._show_temporary_hint("Тюнер остановлен")
+            self._stop_audio_thread()
 
-            if self._emulation_event:
-                Clock.unschedule(self._emulation_event)
-                self._emulation_event = None
-
+            # Сбрасываем индикаторы
             if hasattr(self, 'tuner_dial'):
                 self.tuner_dial.deviation = 0
                 self.tuner_dial.note_name = '--'
@@ -838,7 +1022,6 @@ class TunerScreen(BaseScreen):
         logger.info("🔄 Тюнер сброшен")
 
     def _show_temporary_hint(self, text, duration=1.5):
-        """Показывает временную подсказку"""
         if hasattr(self, '_hint_label') and self._hint_label:
             self._hint_label.text = text
             self._hint_label.opacity = 1
@@ -847,7 +1030,6 @@ class TunerScreen(BaseScreen):
             self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), duration)
 
     def _hide_hint(self):
-        """Скрывает подсказку"""
         if hasattr(self, '_hint_label') and self._hint_label:
             self._hint_label.text = ""
             self._hint_label.opacity = 0
@@ -859,16 +1041,14 @@ class TunerScreen(BaseScreen):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.set_custom_title("Тюнер")
-            app.top_nav._show_back_button()
+            # app.top_nav._show_back_button()  # ← УДАЛИТЬ
             app.top_nav.back_btn.on_release = self.go_back
 
     def go_back(self, instance=None):
         logger.info("🔙 Возврат на home")
         if self.is_listening:
             self.toggle_tuner(None)
-        if self._emulation_event:
-            Clock.unschedule(self._emulation_event)
-            self._emulation_event = None
+        self._stop_audio_thread()
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
 
@@ -876,9 +1056,7 @@ class TunerScreen(BaseScreen):
         logger.info("Выход из экрана тюнера")
         if self.is_listening:
             self.toggle_tuner(None)
-        if self._emulation_event:
-            Clock.unschedule(self._emulation_event)
-            self._emulation_event = None
+        self._stop_audio_thread()
         self._hide_hint()
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):

@@ -2075,6 +2075,7 @@ class SongDetailScreen(BaseScreen):
     def go_back(self, instance=None):
         """Возврат с обновлением состояния избранного на предыдущем экране"""
         logger.info("🔙 Нажата кнопка возврата")
+        logger.info(f"   📌 previous_screen = {self.previous_screen}")
 
         if self.is_tonality_mode:
             self.cancel_tonality()
@@ -2092,12 +2093,25 @@ class SongDetailScreen(BaseScreen):
                 if self.manager.has_screen('favorites'):
                     fav_screen = self.manager.get_screen('favorites')
                     if hasattr(fav_screen, 'refresh_favorites'):
-                        # Обновляем с задержкой, чтобы дать API время
                         Clock.schedule_once(lambda dt: fav_screen.refresh_favorites(), 0.3)
 
+            # Если возвращаемся на songs — обновляем состояние
+            if self.previous_screen == 'songs':
+                if self.manager.has_screen('songs'):
+                    songs_screen = self.manager.get_screen('songs')
+                    # Принудительно восстанавливаем состояние
+                    if hasattr(songs_screen, 'restore_state'):
+                        Clock.schedule_once(lambda dt: songs_screen.restore_state(), 0.2)
+
             screen_state.clear_pending_chord()
-            self.manager.current = self.previous_screen if self.manager.has_screen(self.previous_screen) else 'home'
-            logger.info(f"✅ Возврат на {self.previous_screen}")
+
+            # Возвращаемся на предыдущий экран, если он существует
+            if self.previous_screen and self.manager.has_screen(self.previous_screen):
+                self.manager.current = self.previous_screen
+                logger.info(f"✅ Возврат на {self.previous_screen}")
+            else:
+                self.manager.current = 'home'
+                logger.info("✅ Возврат на home (по умолчанию)")
 
     def on_size(self, *args):
         """Вызывается при изменении размера экрана (поворот и т.д.)"""
@@ -2110,11 +2124,14 @@ class SongDetailScreen(BaseScreen):
         if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
             Clock.schedule_once(self._wait_for_ready_and_scroll, 0.3)
 
+        # screens/song_detail_screen.py - исправленный метод on_enter
+
     def on_enter(self):
         """При входе на экран"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            app.top_nav._show_back_button()
+            # Убираем _show_back_button()
+            # app.top_nav._show_back_button()
 
             if self.song_title:
                 self.update_top_nav_title()

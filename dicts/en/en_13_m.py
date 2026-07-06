@@ -2343,14 +2343,15 @@ Guitarist-Specific Tips: A muted register is a muted sound on guitar.
 """
     ),
 
+    
     "MUTE": Term(
         name="Mute",
         description="""
-In music — an indication to play quietly, muted, without bright dynamics.
+A device for muting sound on musical instruments. Used on violin, trumpet, and other instruments.
 
-Where it appears: In performance — as dynamics. In orchestra — as muting. In guitar music — in quiet pieces.
+Where it appears: On string instruments — as a mute. In orchestra — in mutes. In guitar music — rarely.
 
-Guitarist-Specific Tips: A mute sound is quiet, muted.
+Guitarist-Specific Tips: A mute is a device for muting sound.
 """
     ),
 
@@ -2550,6 +2551,204 @@ A stand for sheet music, used in orchestras and for individual practice.
 Where it appears: In orchestra — as a music stand. In education — as an accessory. In guitar practice — in music lessons.
 
 Guitarist-Specific Tips: A music stand is a stand for sheet music.
+"""
+    ),
+
+    "MUSIC RATINGS": Term(
+        name="Music ratings",
+        description="""
+Ratings and assessments of musical works, performers, and albums.
+
+Where it appears: In the industry — as ratings. In culture — in charts. In guitar music — in ratings.
+
+Guitarist-Specific Tips: Music ratings are an assessment of the popularity of guitar music.
+"""
+    ),
+
+    "MUSICAL SPEECH": Term(
+        name="Musical speech",
+        description="""
+A musical statement built according to the laws of logic, phrasing, and breathing. The basis of musical communication.
+
+Where it appears: In music — as a statement. In performance — in phrasing. In guitar music — in expressiveness.
+
+Guitarist-Specific Tips: Musical speech requires expressiveness and logical phrasing.
+"""
+    ),
+
+    "MOUTH": Term(
+        name="Mouth",
+        description="""
+Part of the body used for singing and playing wind instruments. In guitar terminology — rarely.
+
+Where it appears: In vocals — as an organ. On wind instruments — as a part. In guitar music — rarely.
+
+Guitarist-Specific Tips: The mouth is a part of the body used in vocals and wind instruments.
+"""
+    ),
+
+    "MOUTH PLAYER": Term(
+        name="Mouth player",
+        description="""
+Guitar slang for a musician who plays wind instruments.
+
+Where it appears: In guitar slang — as a wind player. In guitar circles — in colloquial speech. In music — in wind ensembles.
+
+Guitarist-Specific Tips: A mouth player is a performer on wind instruments.
+"""
+    ),
+
+    "MERMAID": Term(
+        name="Mermaid",
+        description="""
+An image in music — a mythical creature associated with water, mystery, and romance. Used in program music.
+
+Where it appears: In program music — as an image. In Romantic music — in mythological subjects. In guitar music — in descriptive pieces.
+
+Guitarist-Specific Tips: A mermaid is a mysterious image for guitar music.
+"""
+    ),
+
+    "MARKET": Term(
+        name="Market",
+        description="""
+The music market — the industry of selling music, instruments, and equipment.
+
+Where it appears: In the industry — as a market. In culture — in economics. In guitar music — in sales.
+
+Guitarist-Specific Tips: The market is a place to buy guitars and equipment.
+"""
+    ),
+
+    "MIXING": Term(
+        name="Mixing",
+        description="""
+The process of blending audio tracks into a single whole in sound recording. An important stage of creating a recording.
+
+Where it appears: In sound recording — as a process. In the studio — in the mix. In guitar music — in recording.
+
+Guitarist-Specific Tips: Mixing is an important stage in creating a quality guitar recording.
+"""
+    ),
+
+    "MONITORING SYSTEM": Term(
+        name="Monitoring system",
+        description="""
+A stage monitoring system that allows musicians to hear themselves and others on stage.
+
+Where it appears: In concert activity — as equipment. In sound recording — in monitoring. In guitar practice — in performances.
+
+Guitarist-Specific Tips: A monitoring system helps the guitarist hear their sound on stage.
+"""
+    ),
+
+    "MUSICAL TEXTURE": Term(
+        name="Musical texture",
+        description="""
+A type of musical texture: monody, homophony, polyphony, heterophony. Defines the organization of voices in music.
+
+Where it appears: In music theory — as texture. In education — in analysis. In guitar music — in voice organization.
+
+Guitarist-Specific Tips: Musical texture determines voice leading and the texture of a guitar part.
+"""
+    ),
+
+    "MIXED TEXTURE": Term(
+        name="Mixed texture",
+        description="""
+A combination of different types of texture (homophony, polyphony) in one work.
+
+Where it appears: In classical music — as texture. In education — in analysis. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Mixed texture requires flexibility in voice leading.
+"""
+    ),
+
+    "MIXED METERS": Term(
+        name="Mixed meters",
+        description="""
+Meters combining simple and compound beats (5/4, 7/8). Used in contemporary and folk music.
+
+Where it appears: In contemporary music — in rhythmic experiments. In folk music — in traditions. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: Mixed meters require a precise sense of rhythm.
+"""
+    ),
+
+    "MIND-BLOWING": Term(
+        name="Mind-blowing",
+        description="""
+Guitar slang for a powerful, mind-blowing sound or effect.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in powerful sound.
+
+Guitarist-Specific Tips: Mind-blowing is a powerful, stunning guitar sound.
+"""
+    ),
+
+    "MIX": Term(
+        name="Mix",
+        description="""
+Guitar slang for a mix of styles, techniques, or effects in one performance.
+
+Where it appears: In guitar slang — as a mix. In guitar circles — in colloquial speech. In performance — in mixing styles.
+
+Guitarist-Specific Tips: A mix is a mix of styles and techniques in guitar playing.
+"""
+    ),
+
+    "MUSIC COMPETITION": Term(
+        name="Music competition",
+        description="""
+A music competition where musicians compete in performance or composition skills.
+
+Where it appears: In culture — as a competition. In education — as a stimulus. In guitar music — in guitar competitions.
+
+Guitarist-Specific Tips: A music competition is a competition for guitarists.
+"""
+    ),
+
+    "MUSICAL CONTEST": Term(
+        name="Musical contest",
+        description="""
+A musical competition or contest where musicians demonstrate their skills.
+
+Where it appears: In culture — as a competition. In education — as a stimulus. In guitar music — in guitar contests.
+
+Guitarist-Specific Tips: A musical contest is a stimulus for developing guitar mastery.
+"""
+    ),
+
+    "MUSICAL ABILITY": Term(
+        name="Musical ability",
+        description="""
+Natural or acquired abilities for music: ear, sense of rhythm, musical memory.
+
+Where it appears: In education — as the foundation. In pedagogy — in development. In guitar music — in performance.
+
+Guitarist-Specific Tips: Musical abilities are the foundation of guitar mastery.
+"""
+    ),
+
+    "MEDIEVAL MODES": Term(
+        name="Medieval modes",
+        description="""
+Diatonic modes used in medieval music: Dorian, Phrygian, Lydian, Mixolydian, and others.
+
+Where it appears: In music history — as modes. In church music — in chorales. In guitar music — in modal improvisation.
+
+Guitarist-Specific Tips: Medieval modes are used in jazz and folk music.
+"""
+    ),
+
+    "MIDDLE REGISTER": Term(
+        name="Middle register",
+        description="""
+The middle range of sounds, between high and low registers. Characteristic of many instruments and voices.
+
+Where it appears: In music — as a register. In guitar music — in middle positions. In vocals — in middle register.
+
+Guitarist-Specific Tips: The middle register is the most comfortable for playing guitar.
 """
     ),
 }

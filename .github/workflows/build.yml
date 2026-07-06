@@ -1,3 +1,4 @@
+# .github/workflows/build.yml
 name: Android Build
 
 on:
@@ -42,6 +43,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-android-sdk-
 
+      - name: Cache Android NDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer/android/platform/android-ndk
+          key: ${{ runner.os }}-android-ndk-${{ env.date }}
+          restore-keys: |
+            ${{ runner.os }}-android-ndk-
+
       - name: Install dependencies
         run: |
           sudo apt update
@@ -70,8 +79,11 @@ jobs:
       - name: Install pip dependencies
         run: |
           pip install --upgrade pip
-          # ВАЖНО: используем старую версию cython для совместимости
           pip install buildozer cython==0.29.37
+
+      - name: Create keystore directory
+        run: |
+          mkdir -p ./.buildozer/android/platform/
 
       - name: Build with Buildozer
         run: |
@@ -82,3 +94,10 @@ jobs:
         with:
           name: GuitarFuns-APK-${{ github.run_number }}
           path: bin/*.apk
+
+      - name: Upload debug logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-logs
+          path: .buildozer/logs/

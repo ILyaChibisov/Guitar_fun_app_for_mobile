@@ -331,4 +331,26 @@ Where it appears: In music — in modulations. In theory — as a sign change. I
 Guitarist-Specific Tips: A key signature change requires attention when reading music.
 """
     ),
+
+    "KNIGHT OF THE MOTIONLESS STAND": Term(
+        name="Knight of the motionless stand",
+        description="""
+Guitar slang for a musician who plays sitting down, without moving on stage.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: A knight of the motionless stand is a humorous name for a static performer.
+"""
+    ),
+
+    "KNOCKER": Term(
+        name="Knocker",
+        description="""
+Guitar slang for a percussive effect created by tapping on the guitar body.
+
+Where it appears: In guitar slang — as an effect. In guitar circles — in colloquial speech. In performance — in percussive techniques.
+
+Guitarist-Specific Tips: A knocker is a percussive effect on guitar.
+"""
+    ),
 }

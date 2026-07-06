@@ -622,4 +622,15 @@ Where it appears: In military music — as a signal instrument. In history — a
 Guitarist-Specific Tips: An infantry horn is a historical military instrument.
 """
     ),
+
+    "IDIOPHONE": Term(
+        name="Idiophone",
+        description="""
+An instrument where sound is produced by the vibration of the material itself. Examples: xylophone, cymbals, triangle.
+
+Where it appears: In orchestra — as percussion instruments. In folk music — in percussion. In guitar music — rarely.
+
+Guitarist-Specific Tips: Idiophones are rarely combined with guitar but can be used in percussive effects.
+"""
+    ),
 }

@@ -169,14 +169,15 @@ Guitarist-Specific Tips: Overtones create the richness of guitar timbre. Harmoni
 """
     ),
 
+    
     "OVERTONE SERIES": Term(
         name="Overtone series",
         description="""
-A sequence of sounds consisting of the fundamental tone and its overtones. The basis of acoustics and musical tuning.
+A sequence of overtones based on the fundamental tone. Used in acoustics and for producing harmonics.
 
-Where it appears: In acoustics — as a physical phenomenon. In music — as the basis of timbre. In guitar music — in harmonics.
+Where it appears: In acoustics — as a physical phenomenon. In guitar technique — in harmonics. In music — in timbre.
 
-Guitarist-Specific Tips: The overtone series is used for producing harmonics on guitar. Knowledge of overtones helps in tuning and understanding timbre.
+Guitarist-Specific Tips: The overtone series is used for producing harmonics on guitar.
 """
     ),
 
@@ -739,6 +740,17 @@ The movement of voices in opposite directions. Used in polyphony to create indep
 Where it appears: In polyphony — as a technique. In counterpoint — in voice leading. In guitar music — in polyphonic pieces.
 
 Guitarist-Specific Tips: Opposite voice leading requires precise coordination.
+"""
+    ),
+
+    "OPEN SPACING": Term(
+        name="Open spacing",
+        description="""
+The arrangement of voices or chords with large intervals, creating a sparse, transparent texture.
+
+Where it appears: In harmony — as texture. In guitar music — in open chords. In orchestra — in transparent texture.
+
+Guitarist-Specific Tips: Open spacing creates a bright and transparent sound.
 """
     ),
 }

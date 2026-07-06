@@ -2,6 +2,7 @@
 """
 Экран песен - с единым меню (БУКВЫ | ЯЗЫК) и поиском
 Результаты поиска, исполнители по букве и песни исполнителя показываются на одном экране
+С сохранением состояния и позиции скролла
 """
 import time
 from kivy.metrics import dp, sp
@@ -912,6 +913,7 @@ class SongsScreen(BaseScreen):
         self.search_results = []
         self.current_language = 'ru'
         self._lang_index = 0
+        self._selected_song_id = None
 
         # Для загрузки исполнителей
         self._all_artists = []
@@ -1557,10 +1559,18 @@ class SongsScreen(BaseScreen):
     def on_song_selected(self, song_id, title):
         """Обработчик выбора песни"""
         logger.info(f"Выбрана песня: {title}, id: {song_id}")
+
+        # ✅ СОХРАНЯЕМ ID ВЫБРАННОЙ ПЕСНИ
+        self._selected_song_id = song_id
+
         if not song_id:
             notify.error("Ошибка: не удалось загрузить песню")
             return
 
+        # ✅ СОХРАНЯЕМ СОСТОЯНИЕ ПЕРЕД ПЕРЕХОДОМ
+        self.save_current_state()
+
+        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ songs
         screen_state.set_previous_screen('songs')
 
         if hasattr(self, 'manager') and self.manager:
@@ -1647,23 +1657,184 @@ class SongsScreen(BaseScreen):
     def on_item_selected(self, item_type, *args):
         pass
 
-    def on_enter(self):
-        logger.info("Вход в экран песен")
+    # ============ СОХРАНЕНИЕ СОСТОЯНИЯ ============
 
+    def save_current_state(self):
+        """Сохраняет текущее состояние экрана песен"""
+        logger.info("=" * 50)
+        logger.info("💾 СОХРАНЕНИЕ СОСТОЯНИЯ SongsScreen")
+
+        # Определяем режим
+        if self.current_artist and self._all_songs:
+            mode = 'songs'
+        elif self.is_search_mode and self._all_songs:
+            mode = 'search'
+        elif self.current_letter and self._all_artists:
+            mode = 'artists'
+        else:
+            mode = 'empty'
+
+        # Сохраняем позицию скролла
+        scroll_position = 1.0
+        if self.recycle_view:
+            scroll_position = self.recycle_view.scroll_y
+            logger.info(f"📜 Текущая позиция скролла: {scroll_position:.2f}")
+
+        state = {
+            'mode': mode,
+            'current_letter': self.current_letter,
+            'current_artist': self.current_artist,
+            'is_search_mode': self.is_search_mode,
+            'current_language': self.current_language,
+            'search_query': self.search_bar.current_query if self.search_bar else '',
+            'all_artists': self._all_artists[:50],
+            'all_songs': self._all_songs[:50],
+            'total_artists': self._total_artists,
+            'total_songs': self._total_songs,
+            'page': self._page,
+            'page_songs': self._page_songs,
+            'has_artists': len(self._all_artists) > 0,
+            'has_songs': len(self._all_songs) > 0,
+            'scroll_position': scroll_position,
+            'selected_song_id': self._selected_song_id if hasattr(self, '_selected_song_id') else None,
+        }
+
+        logger.info(f"📦 Сохраняем: mode={mode}, artist={state.get('current_artist')}, "
+                    f"songs={len(state.get('all_songs', []))}, "
+                    f"scroll={state.get('scroll_position', 1.0):.2f}")
+
+        screen_state.save_screen_state('songs', state)
+        logger.info("=" * 50)
+
+    def restore_state(self):
+        """Восстанавливает состояние экрана песен"""
+        logger.info("=" * 50)
+        logger.info("📂 ВОССТАНОВЛЕНИЕ СОСТОЯНИЯ SongsScreen")
+
+        state = screen_state.get_screen_state('songs', max_age=300)
+
+        if not state:
+            logger.info("❌ Нет сохранённого состояния")
+            logger.info("=" * 50)
+            return False
+
+        try:
+            logger.info(f"📦 Получено состояние: {list(state.keys())}")
+
+            # Восстанавливаем базовые данные
+            self.current_letter = state.get('current_letter')
+            self.current_artist = state.get('current_artist')
+            self.is_search_mode = state.get('is_search_mode', False)
+            self.current_language = state.get('current_language', 'ru')
+            self._all_artists = state.get('all_artists', [])
+            self._all_songs = state.get('all_songs', [])
+            self._total_artists = state.get('total_artists', 0)
+            self._total_songs = state.get('total_songs', 0)
+            self._page = state.get('page', 0)
+            self._page_songs = state.get('page_songs', 0)
+
+            # Получаем режим и позицию скролла
+            mode = state.get('mode', 'empty')
+            scroll_position = state.get('scroll_position', 1.0)
+
+            # Восстанавливаем язык
+            if self.current_language in ['ru', 'en', 'digits']:
+                self._lang_index = ['ru', 'en', 'digits'].index(self.current_language)
+                if self.songs_menu:
+                    self.songs_menu.set_language(self.current_language)
+
+            # Восстанавливаем поисковый запрос
+            search_query = state.get('search_query', '')
+            if search_query and self.search_bar:
+                self.search_bar.search_field.text = search_query
+                logger.info(f"🔍 Восстановлен запрос: {search_query}")
+
+            # ============ ВОССТАНАВЛИВАЕМ ОТОБРАЖЕНИЕ ПО РЕЖИМУ ============
+            if mode == 'songs' and self._all_songs:
+                self.recycle_view.viewclass = 'SongCard'
+                self.recycle_view.set_items(self._all_songs, self.on_song_selected)
+                self._show_result_label(f"Песни: {len(self._all_songs)}")
+                logger.info(f"🎵 Восстановлено {len(self._all_songs)} песен исполнителя {self.current_artist}")
+
+            elif mode == 'search' and self._all_songs:
+                self.recycle_view.viewclass = 'SearchSongCard'
+                self.recycle_view.set_songs(self._all_songs, self.on_song_selected)
+                self._show_result_label(f"Найдено песен: {len(self._all_songs)}")
+                logger.info(f"🔍 Восстановлено {len(self._all_songs)} результатов поиска")
+
+            elif mode == 'artists' and self._all_artists:
+                self.recycle_view.viewclass = 'ArtistCard'
+                self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
+                self._show_result_label(f"Исполнители: {len(self._all_artists)}")
+                if self.songs_menu and self.current_letter:
+                    self.songs_menu.set_current_letter(self.current_letter)
+                logger.info(f"🎤 Восстановлено {len(self._all_artists)} исполнителей на букву {self.current_letter}")
+
+            else:
+                self.recycle_view.clear()
+                self._show_hint("Поиск исполнителей по алфавиту")
+                self._hide_result_label()
+                logger.info("📄 Пустое состояние")
+                logger.info("=" * 50)
+                return True
+
+            # ============ ВОССТАНАВЛИВАЕМ ПОЗИЦИЮ СКРОЛЛА ============
+            def restore_scroll(dt):
+                if self.recycle_view:
+                    self.recycle_view.scroll_y = scroll_position
+                    logger.info(f"📜 Восстановлена позиция скролла: {scroll_position:.2f}")
+
+            # Запускаем с задержкой, чтобы RecycleView успел отрисоваться
+            Clock.schedule_once(restore_scroll, 0.1)
+            Clock.schedule_once(restore_scroll, 0.2)
+            Clock.schedule_once(restore_scroll, 0.3)
+
+            logger.info("✅ Восстановление завершено")
+            logger.info("=" * 50)
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка восстановления: {e}")
+            import traceback
+            traceback.print_exc()
+            logger.info("=" * 50)
+            return False
+
+    # ============ on_enter, on_pre_leave, on_leave ============
+
+    def on_pre_leave(self):
+        """Вызывается перед тем, как экран будет покинут"""
+        logger.info("🚪 on_pre_leave: сохранение состояния перед выходом")
+        self.save_current_state()
+        return super().on_pre_leave()
+
+    def on_enter(self):
+        logger.info("🚪 Вход в экран песен")
+
+        # Обновляем TopNav — НЕ устанавливаем back_btn!
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
                 app.top_nav.set_custom_title("Песни")
-                app.top_nav._show_back_button()
-                app.top_nav.back_btn.on_release = self.go_back
+                # ❌ НЕ УСТАНАВЛИВАЕМ back_btn.on_release — на songs должна быть настройки
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
 
-        self._show_hint("Поиск исполнителей по алфавиту")
-        self._hide_result_label()
+        # Пробуем восстановить состояние
+        restored = self.restore_state()
+        logger.info(f"📊 Результат восстановления: {restored}")
+
+        if not restored:
+            # Нет сохранённого состояния — показываем начальное
+            self._show_hint("Поиск исполнителей по алфавиту")
+            self._hide_result_label()
+            self.recycle_view.clear()
+            logger.info("📄 Показано начальное состояние")
 
     def on_leave(self):
-        logger.info("Выход из экрана песен")
+        logger.info("🚪 Выход из экрана песен")
+        logger.info("=" * 50)
+
         self.clear_search()
         self._hide_loading()
         self._hide_empty()
@@ -1672,7 +1843,13 @@ class SongsScreen(BaseScreen):
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
 
+        logger.info("=" * 50)
+
     def go_back(self, instance=None):
-        logger.info("🔙 Возврат на home")
+        """
+        На экране песен нет стрелки назад, этот метод не должен вызываться.
+        Если всё-таки вызван — переходим на home.
+        """
+        logger.warning("⚠️ go_back вызван на songs_screen, но здесь не должно быть стрелки назад")
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'

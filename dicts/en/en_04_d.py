@@ -880,4 +880,125 @@ Where it appears: In march music — as a rhythm. In classical music — in over
 Guitarist-Specific Tips: Dotted rhythm requires accurate execution of durations.
 """
     ),
+
+    "DEVELOPMENT": Term(
+        name="Development",
+        description="""
+The process of changing and expanding musical material in a work. The basis of musical form.
+
+Where it appears: In music — as a structural element. In composition — as a process. In guitar music — in theme development.
+
+Guitarist-Specific Tips: Development is a key element of guitar composition. Important to be able to develop a theme.
+"""
+    ),
+
+    "DEVELOPED EAR": Term(
+        name="Developed ear",
+        description="""
+A well-developed ability to perceive and distinguish musical sounds, intervals, and chords.
+
+Where it appears: In education — as a skill. In performance — as the foundation. In guitar practice — in intonation.
+
+Guitarist-Specific Tips: A developed ear is the foundation for playing guitar and improvisation.
+"""
+    ),
+
+    "DEVELOPMENT SECTION": Term(
+        name="Development section",
+        description="""
+The section of sonata form where themes are developed and transformed. Used in classical music.
+
+Where it appears: In classical music — in sonata form. In guitar music — in sonatas. In education — in form analysis.
+
+Guitarist-Specific Tips: The development section requires the development and transformation of themes.
+"""
+    ),
+
+    "DAWN": Term(
+        name="Dawn",
+        description="""
+An image in music — the beginning of the day, light, hope. Used in program music.
+
+Where it appears: In program music — as an image. In guitar music — in descriptive pieces. In Romantic music — in bright images.
+
+Guitarist-Specific Tips: Dawn is a bright image for guitar music.
+"""
+    ),
+
+    "D": Term(
+        name="D",
+        description="""
+The note D — the second degree of C major and the fourth degree of A minor. Used in most keys.
+
+Where it appears: In solfège — as a note. In guitar practice — in chords and scales. In tuning — as an open string.
+
+Guitarist-Specific Tips: The note D is the open fourth string of the guitar.
+"""
+    ),
+
+    "DIRECTOR": Term(
+        name="Director",
+        description="""
+The creator and leader of a musical or theatrical project. In guitar terminology — the leader of an ensemble or show.
+
+Where it appears: In theater — as a director. In concerts — as a leader. In guitar music — in projects.
+
+Guitarist-Specific Tips: A director is the leader of a musical project.
+"""
+    ),
+
+    "DECISIVE CONCERT": Term(
+        name="Decisive concert",
+        description="""
+A concert that is decisive for the career of a musician or creative collective.
+
+Where it appears: In concert activity — as key. In culture — as an event. In guitar music — as an important moment.
+
+Guitarist-Specific Tips: A decisive concert is an important event in a guitarist's career.
+"""
+    ),
+
+    "DESCENT": Term(
+        name="Descent",
+        description="""
+Guitar slang for downward movement on the fretboard or down the staff.
+
+Where it appears: In guitar slang — as movement. In guitar circles — in colloquial speech. In performance — in passages.
+
+Guitarist-Specific Tips: Descent is downward movement on the guitar fretboard.
+"""
+    ),
+
+    "DEGREE": Term(
+        name="Degree",
+        description="""
+The ordinal number of a note in a mode. Degrees are designated by Roman numerals.
+
+Where it appears: In music theory — as a degree. In harmony — in tonality. In guitar music — in chords.
+
+Guitarist-Specific Tips: A degree is the basis of the harmonic language of the guitar.
+"""
+    ),
+
+    "DRY SOUND": Term(
+        name="Dry sound",
+        description="""
+Sound with minimal overtones and reverb, "dry," without effects.
+
+Where it appears: In sound recording — as a characteristic. In guitar music — in dry sound. In acoustics — in timbre.
+
+Guitarist-Specific Tips: A dry sound is a sound without effects and overtones.
+"""
+    ),
+
+    "DIAGRAM": Term(
+        name="Diagram",
+        description="""
+A graphic or logical representation of the structure of a musical work or equipment.
+
+Where it appears: In music — as a structure. In sound recording — in diagrams. In guitar practice — in equipment connection.
+
+Guitarist-Specific Tips: A diagram is the structure of a guitar work or equipment.
+"""
+    ),
 }

@@ -111,14 +111,15 @@ Third — used in slow, singing pieces.
     ),
 
     
+    
     "SOUND PRODUCTION": Term(
         name="Sound production",
         description="""
-The process of producing sound on a musical instrument. On guitar — plucking a string with fingers or a pick.
+The process of creating and producing sound in music. Includes recording, mixing, and mastering.
 
-Where it appears: In guitar technique — as the foundation. In education — as a primary skill. In performance — as sound control.
+Where it appears: In sound recording — as a process. In the industry — in production. In guitar music — in recording.
 
-Guitarist-Specific Tips: Sound production quality determines timbre, dynamics, and expressiveness of playing. Important to work on right-hand technique.
+Guitarist-Specific Tips: Sound production is an important stage in creating a guitar recording.
 """
     ),
 
@@ -156,20 +157,15 @@ Third — the listener is "suggested" the mood of the music.
 """
     ),
 
+    
     "SECOND": Term(
         name="Second",
         description="""
-A musical interval equal to two degrees of a diatonic scale. Can be a minor or major second.
+An interval equal to two degrees of a diatonic scale. Can be minor or major.
 
-Where it appears:
-In melody — as a step up or down.
-In chords — as an added tone (second).
-In harmony — as a dissonance.
+Where it appears: In music theory — as an interval. In guitar music — in chords and melodies. In education — in intervals.
 
-Guitarist-Specific Tips:
-First — the second is often used in chords (add9, sus2).
-Second — the minor second creates tension.
-Third — often used in jazz harmony.
+Guitarist-Specific Tips: A second is often used in guitar chords and melodies.
 """
     ),
 
@@ -435,14 +431,15 @@ Guitarist-Specific Tips: Beautiful guitar sound is achieved through proper techn
 """
     ),
 
+    
     "SHIFT": Term(
         name="Shift",
         description="""
-A shift in musical material (key, rhythm, texture) to create development, contrast, or modulation.
+Guitar slang for a shift in rhythm, accent, or key. Used to create drive or contrast.
 
-Where it appears: In composition — as a technique. In harmony — as modulation. In guitar music — in chord progressions.
+Where it appears: In guitar slang — as a shift. In guitar circles — in colloquial speech. In performance — in rhythmic shifts.
 
-Guitarist-Specific Tips: A shift in guitar music often manifests in key changes or rhythmic shifts. Important to smoothly transition between different parts.
+Guitarist-Specific Tips: A shift is a shift in accent or key.
 """
     ),
 
@@ -457,14 +454,15 @@ Guitarist-Specific Tips: Singspiel provides material for guitar arrangements. Co
 """
     ),
 
+    
     "SERPENT": Term(
         name="Serpent",
         description="""
-A folk wind or percussion instrument associated with folklore and rituals.
+An early wind instrument with a curved tube, a predecessor of the tuba. Has a soft, deep timbre.
 
-Where it appears: In folk music — as an instrument. In ethnic music — in ensembles. In guitar music — rarely.
+Where it appears: In early music — as an instrument. In history — in wind ensembles. In guitar music — rarely.
 
-Guitarist-Specific Tips: Serpent and guitar are a rare combination. Used in ethnic projects.
+Guitarist-Specific Tips: A serpent is an early wind instrument.
 """
     ),
 
@@ -773,14 +771,15 @@ Guitarist-Specific Tips: The sound hole amplifies sound and affects timbre. Impo
 """
     ),
 
+    
     "SUSTAIN": Term(
         name="Sustain",
         description="""
-Sound that continues after sound production stops. In guitar terminology — sustain.
+The duration of a note's sound after it is played. An important parameter in guitar technique and sound recording.
 
-Where it appears: In acoustics — as sustain. In guitar music — in long notes. In performance — in decay.
+Where it appears: In guitar music — as sound duration. In sound recording — in sustain. In performance — in sound control.
 
-Guitarist-Specific Tips: Sustain is the guitar's sustain. Important to control the duration of sound.
+Guitarist-Specific Tips: Sustain is the duration of a guitar note's sound.
 """
     ),
 
@@ -872,14 +871,15 @@ Guitarist-Specific Tips: A song without words requires a singing, cantabile soun
 """
     ),
 
+    
     "SAND": Term(
         name="Sand",
         description="""
-Guitar slang for a sound with a lot of high frequencies, resembling sand.
+Guitar slang for a sound with a characteristic "sandy" texture.
 
-Where it appears: In guitar slang — as timbre. In sound recording — in processing. In guitar circles — in colloquial speech.
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
 
-Guitarist-Specific Tips: Sand is a sound with many high frequencies.
+Guitarist-Specific Tips: Sand is a sound with a "sandy" texture.
 """
     ),
 
@@ -905,14 +905,15 @@ Guitarist-Specific Tips: A scribe is a guitarist who plays from notation.
 """
     ),
 
+    
     "SQUEAKER": Term(
         name="Squeaker",
         description="""
-Guitar slang for a high, piercing sound or effect.
+Guitar slang for a high, whistling sound or effect.
 
-Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in processing.
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in effects.
 
-Guitarist-Specific Tips: A squeaker is a high, piercing guitar sound.
+Guitarist-Specific Tips: A squeaker is a high, whistling guitar sound.
 """
     ),
 
@@ -1155,6 +1156,1822 @@ Part of the tremolo system on an electric guitar, ensuring the bridge returns to
 Where it appears: In guitar construction — as part of the tremolo. In setup — in adjustment. In guitar craftsmanship — in repair.
 
 Guitarist-Specific Tips: A spring affects the operation of the tremolo system.
+"""
+    ),
+
+    "SCHEDULE": Term(
+        name="Schedule",
+        description="""
+The schedule of concerts, rehearsals, or studio sessions. An important element of organizing a musician's work.
+
+Where it appears: In concert activity — as a plan. In culture — as a schedule. In guitar practice — in organization.
+
+Guitarist-Specific Tips: A schedule helps plan rehearsals and performances.
+"""
+    ),
+
+    "SALE": Term(
+        name="Sale",
+        description="""
+The sale of musical instruments, equipment, or sheet music at reduced prices.
+
+Where it appears: In music stores — as an event. In guitar practice — in purchasing equipment. In culture — in trade.
+
+Guitarist-Specific Tips: A sale is an opportunity to purchase a guitar or equipment.
+"""
+    ),
+
+    "SOIREE": Term(
+        name="Soiree",
+        description="""
+An informal musical event, a party with live music.
+
+Where it appears: In culture — as an event. In guitar music — in informal concerts. In entertainment — as a party.
+
+Guitarist-Specific Tips: A soiree is an informal concert or party.
+"""
+    ),
+
+    "SOUNDBOARD (RESONANT TOP)": Term(
+        name="Soundboard (resonant top)",
+        description="""
+The top of an acoustic guitar that amplifies sound through resonance. The most important element of an acoustic guitar.
+
+Where it appears: In acoustic guitar — as part of the body. In acoustics — in sound amplification. In guitar craftsmanship — in construction.
+
+Guitarist-Specific Tips: The soundboard affects the volume and timbre of the guitar.
+"""
+    ),
+
+    "SOUND HOLE (RESONATOR HOLE)": Term(
+        name="Sound hole (resonator hole)",
+        description="""
+An opening in the guitar body (rosette) that amplifies sound and affects timbre and projection.
+
+Where it appears: In acoustic guitar — as part of the body. In acoustics — in sound amplification. In guitar craftsmanship — in construction.
+
+Guitarist-Specific Tips: The sound hole amplifies sound and affects guitar timbre.
+"""
+    ),
+
+    "SLINGSHOT": Term(
+        name="Slingshot",
+        description="""
+Guitar slang for a non-standard or homemade instrument.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: A slingshot is a humorous name for a non-standard instrument.
+"""
+    ),
+
+    "SHELL": Term(
+        name="Shell",
+        description="""
+Guitar slang for a pickup with a characteristic "shell-like" timbre.
+
+Where it appears: In guitar slang — as timbre. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A shell is a pickup with a special timbre.
+"""
+    ),
+
+    
+    "SPEAKER": Term(
+        name="Speaker",
+        description="""
+A speaker in sound equipment. In guitar terminology — a speaker or amplifier cabinet.
+
+Where it appears: In sound recording — as equipment. In concerts — in speakers. In guitar music — in amplifiers.
+
+Guitarist-Specific Tips: A speaker is a guitar amplifier speaker.
+"""
+    ),
+
+    "SERIES": Term(
+        name="Series",
+        description="""
+A sequence of sounds or elements in music. Used in theory and composition.
+
+Where it appears: In music theory — as a sequence. In composition — in series. In guitar music — in scales.
+
+Guitarist-Specific Tips: A series is a sequence of sounds in a guitar scale.
+"""
+    ),
+
+    "SADKO": Term(
+        name="Sadko",
+        description="""
+A legendary Novgorod gusli player, a hero of Russian epics and Rimsky-Korsakov's opera. A symbol of Russian musical epic.
+
+Where it appears: In Russian music — in Rimsky-Korsakov's opera "Sadko." In folklore — in epics. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Sadko is a symbol of a folk musician and storyteller, inspiring guitarists to perform epic compositions.
+"""
+    ),
+
+    "SIDE": Term(
+        name="Side",
+        description="""
+Guitar slang for a side or channel in stereo sound.
+
+Where it appears: In guitar slang — as a side of sound. In sound recording — in stereo channels. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: Side is a side or channel of sound in stereo recording.
+"""
+    ),
+
+    "SACKBUT PLAYER": Term(
+        name="Sackbut player",
+        description="""
+An outdated term for a musician playing the sackbut (an early wind instrument). In guitar terminology — rarely.
+
+Where it appears: In music history — as a performer. In culture — in early music. In guitar music — rarely.
+
+Guitarist-Specific Tips: A sackbut player is a rare historical term.
+"""
+    ),
+
+    "SAXOPHONE": Term(
+        name="Saxophone",
+        description="""
+A wind instrument with a single reed, invented by Adolphe Sax. Has a warm, rich timbre and a wide range.
+
+Where it appears: In jazz — as a primary solo instrument. In orchestra — in wind groups. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Saxophone and guitar are often combined in jazz and blues ensembles.
+"""
+    ),
+
+    "SAXOPHONIST": Term(
+        name="Saxophonist",
+        description="""
+A musician who plays the saxophone. In guitar terminology — rarely.
+
+Where it appears: In jazz — as a performer. In orchestra — as a soloist. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A saxophonist is a partner of the guitarist in jazz ensembles.
+"""
+    ),
+
+    "SALAGA": Term(
+        name="Salaga",
+        description="""
+Guitar slang for a beginner, inexperienced musician.
+
+Where it appears: In guitar slang — as a beginner. In guitar circles — in colloquial speech. In education — in humorous terms.
+
+Guitarist-Specific Tips: Salaga is a beginner guitarist, a student.
+"""
+    ),
+
+    "SAMBA": Term(
+        name="Samba",
+        description="""
+A Brazilian musical style and dance characterized by syncopated rhythm and bright percussion. The basis of carnival music.
+
+Where it appears: In Brazilian music — as a genre. In Latin American music — in samba. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Samba requires syncopated rhythm and a bright, energetic character.
+"""
+    ),
+
+    "SAMOGUDY": Term(
+        name="Samogudy",
+        description="""
+An old name for musical instruments that sound by themselves (idiophones). In guitar terminology — rarely.
+
+Where it appears: In music history — as idiophones. In culture — in early music. In guitar music — rarely.
+
+Guitarist-Specific Tips: Samogudy are ancient self-sounding instruments.
+"""
+    ),
+
+    
+    
+    "SAMPLE": Term(
+        name="Sample",
+        description="""
+A digital fragment of a sound recording used in music. The basis of modern electronic music.
+
+Where it appears: In electronic music — as the foundation. In sound recording — in sampling. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: A sample is a digital fragment of guitar sound.
+"""
+    ),
+
+    
+    
+    "SAMPLER": Term(
+        name="Sampler",
+        description="""
+A device or program for playing and processing samples.
+
+Where it appears: In electronic music — as equipment. In sound recording — in studios. In guitar music — in experimental music.
+
+Guitarist-Specific Tips: A sampler is a device for working with guitar samples.
+"""
+    ),
+
+    "SANKS": Term(
+        name="Sanks",
+        description="""
+Guitar slang for a humorous name for a pickup or guitar equipment.
+
+Where it appears: In guitar slang — as equipment. In guitar circles — in colloquial speech. In sound recording — in accessories.
+
+Guitarist-Specific Tips: Sanks is a humorous name for guitar equipment.
+"""
+    ),
+
+    "SANTUR": Term(
+        name="Santur",
+        description="""
+An Iranian and Armenian folk percussion instrument, similar to a dulcimer. Used in Eastern music.
+
+Where it appears: In Iranian folk music — as an instrument. In Armenian music — in traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Santur and guitar can be combined in ethnic ensembles.
+"""
+    ),
+
+    "SANTURI": Term(
+        name="Santuri",
+        description="""
+A Georgian folk percussion instrument, related to the santur. Used in Georgian folk music.
+
+Where it appears: In Georgian folk music — as an instrument. In ethnic ensembles. In guitar music — rarely.
+
+Guitarist-Specific Tips: Santuri is a Georgian instrument rarely combined with guitar.
+"""
+    ),
+
+    "SANTUR PLAYER": Term(
+        name="Santur player",
+        description="""
+A performer on the santur. In guitar terminology — rarely.
+
+Where it appears: In Eastern music — as a performer. In ethnic ensembles. In guitar music — rarely.
+
+Guitarist-Specific Tips: A santur player is a performer on the santur.
+"""
+    ),
+
+    "SANXIAN": Term(
+        name="Sanxian",
+        description="""
+A Chinese folk stringed plucked instrument with a long neck. Used in Chinese folk music.
+
+Where it appears: In Chinese folk music — as an instrument. In ethnic ensembles. In guitar music — rarely.
+
+Guitarist-Specific Tips: Sanxian is a Chinese instrument rarely combined with guitar.
+"""
+    ),
+
+    "SHOEMAKER": Term(
+        name="Shoemaker",
+        description="""
+Guitar slang for a master of guitar repair and equipment maintenance.
+
+Where it appears: In guitar slang — as a master. In guitar circles — in colloquial speech. In sound recording — in repair.
+
+Guitarist-Specific Tips: A shoemaker is a guitar repair master.
+"""
+    ),
+
+    "SARABANDE": Term(
+        name="Sarabande",
+        description="""
+An old Spanish dance in slow tempo, in 3/4 time. Characterized by a solemn, majestic character. Used in suites.
+
+Where it appears: In early music — as a dance. In suites — as a movement. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Sarabande requires majestic and solemn performance.
+"""
+    ),
+
+    "SATURATOR": Term(
+        name="Saturator",
+        description="""
+A device or effect for saturating sound with harmonics and overtones. Used to create a warm, "tube-like" sound.
+
+Where it appears: In sound recording — as processing. In guitar music — in effects. In the studio — in mastering.
+
+Guitarist-Specific Tips: A saturator adds warmth and richness to guitar sound.
+"""
+    ),
+
+    "SOUND (SAUND)": Term(
+        name="Sound (saund)",
+        description="""
+Guitar slang for sound, timbre, or the overall sound of an instrument or equipment.
+
+Where it appears: In guitar slang — as sound. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Sound is the characteristic sound of a guitar or equipment.
+"""
+    ),
+
+    "SOUND ENGINEER": Term(
+        name="Sound engineer",
+        description="""
+A specialist responsible for sound quality in recording and live sound reinforcement.
+
+Where it appears: In sound recording — as a profession. In concerts — as a sound operator. In guitar music — in sound engineering.
+
+Guitarist-Specific Tips: A sound engineer helps the guitarist achieve quality sound on stage and in the studio.
+"""
+    ),
+
+    "SOUND PRODUCER": Term(
+        name="Sound producer",
+        description="""
+A specialist responsible for the sound and musical direction of a project. In guitar music — a producer shaping the sound.
+
+Where it appears: In sound recording — as a producer. In the industry — in production. In guitar music — in recording.
+
+Guitarist-Specific Tips: A sound producer helps the guitarist find their sound.
+"""
+    ),
+
+    "SOUND PROJECT": Term(
+        name="Sound project",
+        description="""
+A musical project focused on creating a specific sound or sound concept.
+
+Where it appears: In music — as a project. In sound recording — in concept. In guitar music — in sound experiments.
+
+Guitarist-Specific Tips: A sound project is a creative project based on a sound concept.
+"""
+    ),
+
+    "SOUND DIRECTOR": Term(
+        name="Sound director",
+        description="""
+A sound director responsible for sound design and atmosphere in film, theater, or music.
+
+Where it appears: In film — as a sound director. In theater — as a sound designer. In guitar music — in projects.
+
+Guitarist-Specific Tips: A sound director creates the sound atmosphere for projects.
+"""
+    ),
+
+    "SOUND SYSTEM": Term(
+        name="Sound system",
+        description="""
+A sound system for amplifying and reproducing sound at concerts and events.
+
+Where it appears: In concerts — as equipment. In sound recording — in systems. In guitar music — in sound reinforcement.
+
+Guitarist-Specific Tips: A sound system is equipment for amplifying guitar sound.
+"""
+    ),
+
+    "SOUND STUDIO": Term(
+        name="Sound studio",
+        description="""
+A recording studio specializing in sound creation and processing.
+
+Where it appears: In sound recording — as a studio. In the industry — in production. In guitar music — in recording.
+
+Guitarist-Specific Tips: A sound studio is a place for recording guitar music.
+"""
+    ),
+
+    
+    "SOUNDTRACK": Term(
+        name="Soundtrack",
+        description="""
+Original music written for a film, game, or theatrical production.
+
+Where it appears: In film — as original music. In games — in scoring. In guitar music — in soundtracks.
+
+Guitarist-Specific Tips: Soundtracks often include guitar compositions.
+"""
+    ),
+
+    "SOUNDCHECK": Term(
+        name="Soundcheck",
+        description="""
+A sound check before a performance or recording. Includes equipment setup and volume balancing.
+
+Where it appears: In concerts — as a check. In sound recording — as a test. In guitar practice — in preparation.
+
+Guitarist-Specific Tips: A soundcheck is an important stage of concert preparation.
+"""
+    ),
+
+    "SOUND AND LIGHT": Term(
+        name="Sound and light",
+        description="""
+Sound and lighting design for a concert or show. Synchronization of sound and light.
+
+Where it appears: In concerts — in shows. In theater — in design. In guitar music — in performances.
+
+Guitarist-Specific Tips: Sound and light is the visual and sound design of a performance.
+"""
+    ),
+
+    "SOUND EFFECT": Term(
+        name="Sound effect",
+        description="""
+A sound effect used in music, film, or theater to create atmosphere.
+
+Where it appears: In sound recording — as an effect. In film — in scoring. In guitar music — in effects.
+
+Guitarist-Specific Tips: A sound effect is a sound effect used by the guitarist.
+"""
+    ),
+
+    "SATS": Term(
+        name="Sats",
+        description="""
+Guitar slang for a saturator or saturation effect.
+
+Where it appears: In guitar slang — as an effect. In guitar circles — in colloquial speech. In sound recording — in processing.
+
+Guitarist-Specific Tips: Sats is a saturator for saturating sound.
+"""
+    ),
+
+    "SVANKA": Term(
+        name="Svanka",
+        description="""
+Guitar slang for a guitar or instrument with a non-standard appearance.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: Svanka is a humorous name for a non-standard guitar.
+"""
+    ),
+
+    "SOUND AND LIGHT EQUIPMENT": Term(
+        name="Sound and light equipment",
+        description="""
+Equipment combining sound and lighting design for concerts and shows.
+
+Where it appears: In concerts — in shows. In theater — in design. In guitar music — in performances.
+
+Guitarist-Specific Tips: Sound and light equipment is the basis of a concert show.
+"""
+    ),
+
+    "SWING": Term(
+        name="Swing",
+        description="""
+A rhythmic style in jazz based on uneven eighth notes and syncopation. Creates a "swinging" feel.
+
+Where it appears: In jazz — as the foundation. In blues — in swing rhythms. In guitar music — in jazz compositions.
+
+Guitarist-Specific Tips: Swing requires a special sense of rhythm and "swing."
+"""
+    ),
+
+    
+    "SUITE": Term(
+        name="Suite",
+        description="""
+An instrumental cycle consisting of dance or contrasting movements. Popular in Baroque and classical music.
+
+Where it appears: In Baroque music — as a genre. In classical music — in suites. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A suite is a cycle of guitar pieces united by a common concept.
+"""
+    ),
+
+    "SI (NOTE)": Term(
+        name="Si (note)",
+        description="""
+In solfège — a syllable for singing the note B in some systems. In guitar terminology — rarely.
+
+Where it appears: In solfège — as a syllable. In education — in singing. In guitar practice — rarely.
+
+Guitarist-Specific Tips: Si is a syllable for singing the note B.
+"""
+    ),
+
+    
+    "SUBITO": Term(
+        name="Subito",
+        description="""
+A performance indication requiring a sudden, sharp change in dynamics or tempo.
+
+Where it appears: In classical music — as an indication. In Romantic music — in dynamic contrasts. In guitar music — in dramatic moments.
+
+Guitarist-Specific Tips: Subito is a sudden change in dynamics or tempo.
+"""
+    ),
+
+    "SEQUENCER": Term(
+        name="Sequencer",
+        description="""
+A device or program for creating and playing sequences of notes and rhythms. Used in electronic music.
+
+Where it appears: In electronic music — as equipment. In sound recording — as a program. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: A sequencer allows creating guitar sequences in electronic music.
+"""
+    ),
+
+    "SEQUENCE": Term(
+        name="Sequence",
+        description="""
+The repetition of a musical phrase at different pitches. Used in classical and contemporary music.
+
+Where it appears: In classical music — as a technique. In jazz — in improvisation. In guitar music — in melodies.
+
+Guitarist-Specific Tips: A sequence is the repetition of a phrase at different pitches, an important technique of guitar improvisation.
+"""
+    ),
+
+    "SIXTH": Term(
+        name="Sixth",
+        description="""
+An interval equal to six degrees of a diatonic scale. Can be minor or major.
+
+Where it appears: In music theory — as an interval. In guitar music — in chords and melodies. In education — in intervals.
+
+Guitarist-Specific Tips: A sixth is often used in guitar chords and melodies.
+"""
+    ),
+
+    "SIXTH CHORD": Term(
+        name="Sixth chord",
+        description="""
+An inversion of a triad where the sixth is in the bass.
+
+Where it appears: In harmony — as an inversion. In classical music — in voice leading. In guitar music — in chords.
+
+Guitarist-Specific Tips: A sixth chord is an inversion of a triad often used on guitar.
+"""
+    ),
+
+    "SEXTET": Term(
+        name="Sextet",
+        description="""
+An ensemble of six performers. Also — a musical work for six instruments.
+
+Where it appears: In chamber music — as a composition. In jazz — in sextets. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A sextet is an ensemble of six musicians.
+"""
+    ),
+
+    "SEXTOL": Term(
+        name="Sextol",
+        description="""
+A rhythmic figure where six notes are played in the time of four beats.
+
+Where it appears: In classical music — as a rhythmic embellishment. In contemporary music — as polyrhythm. In guitar music — as a rhythmic technique.
+
+Guitarist-Specific Tips: A sextol requires precise rhythmic performance.
+"""
+    ),
+
+    "SECONDARY SEVENTH CHORD": Term(
+        name="Secondary seventh chord",
+        description="""
+An inversion of a seventh chord where the second is in the bass.
+
+Where it appears: In harmony — as an inversion. In classical music — in voice leading. In guitar music — in chords.
+
+Guitarist-Specific Tips: A secondary seventh chord is an inversion of a seventh chord used on guitar.
+"""
+    ),
+
+    "SECTION": Term(
+        name="Section",
+        description="""
+A group of musicians in an orchestra or ensemble united by instrument type (string section, wind section).
+
+Where it appears: In orchestra — as a group. In jazz — in sections. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A section is a group of instruments in an orchestra or ensemble.
+"""
+    ),
+
+    "SELECTOR": Term(
+        name="Selector",
+        description="""
+A switch on a guitar that allows choosing between pickups or operating modes.
+
+Where it appears: In guitar equipment — as a switch. In sound recording — in control. In guitar practice — in setup.
+
+Guitarist-Specific Tips: A selector is a pickup switch on a guitar.
+"""
+    ),
+
+    "SEMANTICS": Term(
+        name="Semantics",
+        description="""
+The meaning of musical elements: sounds, intervals, chords, and themes. An important aspect of musical analysis.
+
+Where it appears: In musicology — as a branch. In education — as analysis. In guitar music — in interpretation.
+
+Guitarist-Specific Tips: Semantics helps understand the meaning and significance of musical material.
+"""
+    ),
+
+    "SEMINARIAN": Term(
+        name="Seminarian",
+        description="""
+Guitar slang for a musician studying theory and practice at a music school.
+
+Where it appears: In guitar slang — as a student. In guitar circles — in colloquial speech. In education — in music institutions.
+
+Guitarist-Specific Tips: A seminarian is a student of a music school.
+"""
+    ),
+
+    "SAMPLING": Term(
+        name="Sampling",
+        description="""
+Guitar slang for the process of creating or using samples.
+
+Where it appears: In guitar slang — as a process. In guitar circles — in colloquial speech. In sound recording — in sampling.
+
+Guitarist-Specific Tips: Sampling is the process of creating guitar samples.
+"""
+    ),
+
+    "SAMPTER": Term(
+        name="Sampter",
+        description="""
+Guitar slang for a sampler or sampling device.
+
+Where it appears: In guitar slang — as equipment. In guitar circles — in colloquial speech. In sound recording — in samplers.
+
+Guitarist-Specific Tips: Sampler is a humorous name for a sampler.
+"""
+    ),
+
+    "SEVENTH CHORD": Term(
+        name="Seventh chord",
+        description="""
+A chord consisting of four notes: a triad + a seventh. Used in classical and jazz harmony.
+
+Where it appears: In harmony — as a chord. In jazz — in seventh chords. In guitar music — in chords.
+
+Guitarist-Specific Tips: A seventh chord is the basis of jazz harmony on guitar.
+"""
+    ),
+
+    "SEVENTH": Term(
+        name="Seventh",
+        description="""
+An interval equal to seven degrees of a diatonic scale. Can be minor or major.
+
+Where it appears: In music theory — as an interval. In guitar music — in seventh chords. In education — in intervals.
+
+Guitarist-Specific Tips: A seventh is often used in jazz and blues chords.
+"""
+    ),
+
+    "SEPTOL": Term(
+        name="Septol",
+        description="""
+A rhythmic figure where seven notes are played in the time of four or eight beats.
+
+Where it appears: In classical music — as a rhythmic embellishment. In contemporary music — as polyrhythm. In guitar music — as a rhythmic technique.
+
+Guitarist-Specific Tips: A septol requires precise rhythmic performance.
+"""
+    ),
+
+    "SERVICE TECHNICIAN": Term(
+        name="Service technician",
+        description="""
+Guitar slang for a specialist in guitar and equipment maintenance and repair.
+
+Where it appears: In guitar slang — as a master. In guitar circles — in colloquial speech. In sound recording — in repair.
+
+Guitarist-Specific Tips: A service technician is a guitar repair master.
+"""
+    ),
+
+    "SERENADE": Term(
+        name="Serenade",
+        description="""
+A musical work performed under a lover's window. Characterized by a lyrical, gentle character.
+
+Where it appears: In classical music — as a genre. In vocal music — in serenades. In guitar music — in lyrical pieces.
+
+Guitarist-Specific Tips: A serenade requires a singing and gentle sound. Guitar is well suited for this genre.
+"""
+    ),
+
+    "SERIAL MUSIC": Term(
+        name="Serial music",
+        description="""
+Music based on serial technique (dodecaphony). Used in contemporary academic music.
+
+Where it appears: In contemporary music — as a style. In theory — as a technique. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: Serial music requires a new approach to harmony and melody.
+"""
+    ),
+
+    "SERIAL TECHNIQUE": Term(
+        name="Serial technique",
+        description="""
+A composition technique based on the use of series (rows) of sounds. Used in contemporary music.
+
+Where it appears: In contemporary music — as a technique. In theory — as a system. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: Serial technique expands the compositional possibilities of the guitarist.
+"""
+    ),
+
+    "SET": Term(
+        name="Set",
+        description="""
+Guitar slang for a setlist or performance program.
+
+Where it appears: In guitar slang — as a program. In guitar circles — in colloquial speech. In concerts — in performances.
+
+Guitarist-Specific Tips: A set is a concert performance program.
+"""
+    ),
+
+    "SETLIST": Term(
+        name="Setlist",
+        description="""
+A concert program, a list of songs or pieces for a performance.
+
+Where it appears: In concert activity — as a list. In guitar music — in performances. In rock culture — in programs.
+
+Guitarist-Specific Tips: A setlist is a list of songs for a guitar performance.
+"""
+    ),
+
+    "SIBERIAN BLUES": Term(
+        name="Siberian blues",
+        description="""
+A blues direction developing in Siberia. Characterized by a harsh, melancholic sound.
+
+Where it appears: In Russian blues music — as a style. In guitar music — in Siberian arrangements. At blues festivals.
+
+Guitarist-Specific Tips: Siberian blues requires a powerful, expressive guitar sound.
+"""
+    ),
+
+    "SIBERIAN METAL": Term(
+        name="Siberian metal",
+        description="""
+A metal direction developing in Siberia. Characterized by an aggressive and powerful sound.
+
+Where it appears: In metal music — as a style. In guitar music — in Siberian bands. At metal festivals.
+
+Guitarist-Specific Tips: Siberian metal requires a powerful overdriven sound and aggressive technique.
+"""
+    ),
+
+    "SIGNATURE": Term(
+        name="Signature",
+        description="""
+A characteristic sound, timbre, or "signature" of a musician. A recognizable style of a performer.
+
+Where it appears: In performance — as recognizability. In guitar music — in individual sound. In sound recording — in signature.
+
+Guitarist-Specific Tips: A signature is a characteristic, recognizable guitar sound.
+"""
+    ),
+
+    "SITTER": Term(
+        name="Sitter",
+        description="""
+Guitar slang for a guitarist who plays sitting down, without moving on stage.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: A sitter is a humorous name for a static performer.
+"""
+    ),
+
+    "SIX-BEAT MEASURE": Term(
+        name="Six-beat measure",
+        description="""
+In music — a measure with six beats (6/8, 6/4). Used in folk and dance music.
+
+Where it appears: In folk music — as a meter. In dance music — in six-beat measures. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A six-beat measure requires six-beat pulsation.
+"""
+    ),
+
+    "SIMONIA": Term(
+        name="Simonia",
+        description="""
+In music — noisy, chaotic sound, dissonance. In guitar terminology — rarely.
+
+Where it appears: In contemporary music — as an effect. In guitar music — in experimental compositions. In acoustics — in noise.
+
+Guitarist-Specific Tips: Simonia is chaotic, noisy sound.
+"""
+    ),
+
+    "SYMPHONY CHAPEL": Term(
+        name="Symphony chapel",
+        description="""
+A concert hall or ensemble performing symphonic music. Also — an orchestra and choir in one group.
+
+Where it appears: In classical music — as an ensemble. In concert halls — in chapels. In guitar music — rarely.
+
+Guitarist-Specific Tips: A symphony chapel is an ensemble performing symphonic music.
+"""
+    ),
+
+    "SYMPHONIC MUSIC": Term(
+        name="Symphonic music",
+        description="""
+Music written for a symphony orchestra. Includes symphonies, overtures, concertos, and poems.
+
+Where it appears: In classical music — as a genre. In concerts — as repertoire. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Symphonic music can be arranged for guitar.
+"""
+    ),
+
+    "SYMPHONIC POEM": Term(
+        name="Symphonic poem",
+        description="""
+A one-movement programmatic work for symphony orchestra. Based on a literary or pictorial subject.
+
+Where it appears: In Romantic music — as a genre. In classical music — in poems. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A symphonic poem requires expressiveness and dramaturgy.
+"""
+    ),
+
+    "SYMPHONY ORCHESTRA": Term(
+        name="Symphony orchestra",
+        description="""
+A large orchestra including string, wind, and percussion instruments. Performs symphonic music.
+
+Where it appears: In classical music — as an ensemble. In concerts — as an orchestra. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Guitar is rarely part of a symphony orchestra but is used as a solo instrument.
+"""
+    ),
+
+    "SYMPHONY": Term(
+        name="Symphony",
+        description="""
+A large-scale musical work for symphony orchestra, consisting of several movements. One of the main genres of classical music.
+
+Where it appears: In classical music — as a genre. In concerts — as the main repertoire. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A symphony can be arranged for guitar.
+"""
+    ),
+
+    "SINGLE": Term(
+        name="Single",
+        description="""
+A single song or composition released separately from an album. Often used for music promotion.
+
+Where it appears: In pop music — as a release. In rock music — in singles. In guitar music — in recordings.
+
+Guitarist-Specific Tips: A single is a separate release of a guitar composition.
+"""
+    ),
+
+    "SINGLE PLAY": Term(
+        name="Single play",
+        description="""
+Playing guitar without accompaniment, a solo part. In guitar terminology — monophonic playing.
+
+Where it appears: In guitar music — in solos. In education — in exercises. In performance — in solo playing.
+
+Guitarist-Specific Tips: Single play is a solo guitar part.
+"""
+    ),
+
+    "SYNCOPATION": Term(
+        name="Syncopation",
+        description="""
+A rhythmic technique where the accent shifts from the strong beat to the weak beat. Used in jazz, funk, and rock music.
+
+Where it appears: In jazz — as the basis of swing. In funk — in rhythmic patterns. In guitar music — in riffs.
+
+Guitarist-Specific Tips: Syncopation creates rhythmic tension and drive.
+"""
+    ),
+
+    "SYNTHESIZER": Term(
+        name="Synthesizer",
+        description="""
+An electronic instrument that generates sound through synthesis. Used in electronic and pop music.
+
+Where it appears: In electronic music — as an instrument. In pop music — in arrangements. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A synthesizer can be combined with guitar in ensembles.
+"""
+    ),
+
+    "SYNTH PLAYER": Term(
+        name="Synth player",
+        description="""
+Guitar slang for a musician who plays the synthesizer.
+
+Where it appears: In guitar slang — as a performer. In guitar circles — in colloquial speech. In sound recording — in synthesizer music.
+
+Guitarist-Specific Tips: A synth player is a performer on the synthesizer.
+"""
+    ),
+
+    "SIREN": Term(
+        name="Siren",
+        description="""
+A sound signal with a changing pitch. Used as a warning signal and in music as an effect.
+
+Where it appears: In music — as an effect. In film — in sound design. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: A siren is a sound effect created on guitar with bends and pedals.
+"""
+    ),
+
+    "SITAR": Term(
+        name="Sitar",
+        description="""
+An Indian folk stringed plucked instrument with a long neck and resonator. Has a characteristic drone sound.
+
+Where it appears: In Indian music — as a primary instrument. In ethnic music — in traditions. In guitar music — in ethnic arrangements.
+
+Guitarist-Specific Tips: The sitar inspires guitarists to use drone techniques and slides.
+"""
+    ),
+
+    "SITUATION": Term(
+        name="Situation",
+        description="""
+Guitar slang for the situation, atmosphere, or vibe at a concert or rehearsal.
+
+Where it appears: In guitar slang — as atmosphere. In guitar circles — in colloquial speech. In concerts — in atmosphere.
+
+Guitarist-Specific Tips: Situation is the atmosphere at a concert or rehearsal.
+"""
+    ),
+
+    "SKAZ": Term(
+        name="Skaz",
+        description="""
+In music — a narrative genre based on folk tales. Often used in program music.
+
+Where it appears: In folk music — as a genre. In program music — in skaz. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Skaz requires a narrative and imaginative character.
+"""
+    ),
+
+    "STORYTELLER": Term(
+        name="Storyteller",
+        description="""
+A performer of skaz, folk tales. In guitar terminology — a storyteller-performer.
+
+Where it appears: In folk culture — as a narrator. In music — in skaz. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A storyteller is a performer of folk tales.
+"""
+    ),
+
+    "SKELETON": Term(
+        name="Skeleton",
+        description="""
+Guitar slang for the framework or basis of a musical work — the harmonic scheme.
+
+Where it appears: In guitar slang — as the basis. In guitar circles — in colloquial speech. In composition — in harmonic schemes.
+
+Guitarist-Specific Tips: A skeleton is the harmonic basis of a guitar composition.
+"""
+    ),
+
+    "SCHERZO": Term(
+        name="Scherzo",
+        description="""
+A musical genre characterized by fast tempo, humorous or grotesque character. Often used in sonatas and symphonies.
+
+Where it appears: In classical music — in sonatas and symphonies. In guitar music — in arrangements. In Romantic music — in scherzos.
+
+Guitarist-Specific Tips: Scherzo requires fast and light technique.
+"""
+    ),
+
+    "SKIP": Term(
+        name="Skip",
+        description="""
+Guitar slang for a skip, a missing note or rest in a rhythmic pattern.
+
+Where it appears: In guitar slang — as a skip. In guitar circles — in colloquial speech. In rhythm — in syncopation.
+
+Guitarist-Specific Tips: A skip is a missing note or rest in a guitar part.
+"""
+    ),
+
+    "SCEPTER": Term(
+        name="Scepter",
+        description="""
+Guitar slang for the guitar neck or the long part of the guitar.
+
+Where it appears: In guitar slang — as the neck. In guitar circles — in colloquial speech. In construction — as a part.
+
+Guitarist-Specific Tips: A scepter is a humorous name for the guitar neck.
+"""
+    ),
+
+    "SCLEROSIS": Term(
+        name="Sclerosis",
+        description="""
+Guitar slang for stiffness, rigidity in playing, lack of flexibility.
+
+Where it appears: In guitar slang — as a drawback. In guitar circles — in colloquial speech. In education — in technique.
+
+Guitarist-Specific Tips: Sclerosis is stiffness in playing, requiring relaxation.
+"""
+    ),
+
+    "SKOMOROKH": Term(
+        name="Skomorokh",
+        description="""
+An ancient Russian wandering musician, actor, and singer. A symbol of folk music and theater.
+
+Where it appears: In Russian folk culture — as a performer. In music — in skomoroshina. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A skomorokh is an image of a folk musician, inspiring guitarists.
+"""
+    ),
+
+    "SKOMOROSHINA": Term(
+        name="Skomoroshina",
+        description="""
+A humorous folk song or dance performed by skomorokhs. Characterized by witty lyrics and lively rhythm.
+
+Where it appears: In Russian folk music — as a genre. In folklore — in skomoroshina. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Skomoroshina requires a playful and lively character.
+"""
+    ),
+
+    "SCORING": Term(
+        name="Scoring",
+        description="""
+The process of writing music for films, games, or theatrical productions. Creating a soundtrack.
+
+Where it appears: In film — as a process. In sound recording — in creating soundtracks. In guitar music — in sound production.
+
+Guitarist-Specific Tips: Scoring is creating music for media projects.
+"""
+    ),
+
+    "SPEED": Term(
+        name="Speed",
+        description="""
+Tempo of performance, playing speed on guitar. An important aspect of virtuosic technique.
+
+Where it appears: In performance — as a parameter. In education — as development. In guitar music — in fast passages.
+
+Guitarist-Specific Tips: Speed is developed through exercises and metronome practice.
+"""
+    ),
+
+    "SCRATCH": Term(
+        name="Scratch",
+        description="""
+A technique in electronic music where sound is recorded and played back with speed changes. Used in hip-hop.
+
+Where it appears: In hip-hop culture — as a technique. In electronic music — in scratching. In guitar music — rarely.
+
+Guitarist-Specific Tips: Scratching is a technique rarely used on guitar.
+"""
+    ),
+
+    "SCRAPER": Term(
+        name="Scraper",
+        description="""
+An instrument or device for producing a scraping sound. Used in percussion.
+
+Where it appears: In percussion — as an instrument. In folk music — in rhythmic effects. In guitar music — rarely.
+
+Guitarist-Specific Tips: A scraper is a percussion instrument.
+"""
+    ),
+
+    "SCRIPT": Term(
+        name="Script",
+        description="""
+A program or script for controlling sound equipment or software.
+
+Where it appears: In sound recording — as a program. In guitar practice — in controlling effects. In education — in digital technologies.
+
+Guitarist-Specific Tips: A script is a program for controlling guitar sound.
+"""
+    ),
+
+    "SKRYABINIST": Term(
+        name="Skryabinist",
+        description="""
+Guitar slang for a fan of composer Alexander Scriabin's work. In guitar terminology — rarely.
+
+Where it appears: In guitar slang — as a fan. In culture — in musicology. In guitar music — rarely.
+
+Guitarist-Specific Tips: A Skryabinist is a fan of Scriabin's music.
+"""
+    ),
+
+    "SWEET": Term(
+        name="Sweet",
+        description="""
+In music — a soft, pleasant, melodic sound or character.
+
+Where it appears: In performance — as a characteristic. In guitar music — in singing pieces. In sound recording — in timbre.
+
+Guitarist-Specific Tips: A sweet sound is a soft, pleasant guitar timbre.
+"""
+    ),
+
+    "SWEETLY": Term(
+        name="Sweetly",
+        description="""
+A performance indication requiring sweet, gentle, pleasant performance.
+
+Where it appears: In classical music — as an articulation. In Romantic music — in lyrical themes. In guitar music — in gentle pieces.
+
+Guitarist-Specific Tips: Sweetly means gentle, singing performance on guitar.
+"""
+    ),
+
+    "SLIDE": Term(
+        name="Slide",
+        description="""
+A guitar technique where the finger slides along the string, creating a smooth transition between notes. Used in blues, rock, and slide guitar.
+
+Where it appears: In blues guitar — as a technique. In rock guitar — in solos. In guitar music — in slide technique.
+
+Guitarist-Specific Tips: A slide is a smooth slide along the string, an important guitar technique.
+"""
+    ),
+
+    "SLANG": Term(
+        name="Slang",
+        description="""
+The professional language of musicians. In guitar terminology — jargon words and expressions.
+
+Where it appears: In guitar circles — as a professional language. In culture — in colloquial speech. In education — in terms.
+
+Guitarist-Specific Tips: Slang is the language of communication for guitarists.
+"""
+    ),
+
+    "SONG LYRICS": Term(
+        name="Song lyrics",
+        description="""
+The poetic text of a song performed with music. An important element of the song genre.
+
+Where it appears: In songs — as text. In poetry — in lyrics. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: Song lyrics are important for accompaniment and interpretation.
+"""
+    ),
+
+    "SLOVAK": Term(
+        name="Slovak",
+        description="""
+Guitar slang for a musician from Slovakia or a performer of Slovak music.
+
+Where it appears: In guitar slang — as ethnic origin. In guitar circles — in colloquial speech. In culture — in Slovak music.
+
+Guitarist-Specific Tips: A Slovak is a performer of Slovak music.
+"""
+    ),
+
+    "SLAP": Term(
+        name="Slap",
+        description="""
+A technique on bass guitar where the string is struck against the fretboard. Used in funk and rock music.
+
+Where it appears: On bass guitar — as a technique. In funk — in rhythmic patterns. In guitar music — in slap.
+
+Guitarist-Specific Tips: Slap is a technique on bass guitar used in funk.
+"""
+    ),
+
+    "SMIKE": Term(
+        name="Smike",
+        description="""
+Guitar slang for a sound with a soft, "smeared" attack, without a sharp beginning.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Smike is a soft, "smeared" guitar sound.
+"""
+    ),
+
+    "SOVIET JAZZ": Term(
+        name="Soviet jazz",
+        description="""
+A jazz direction that developed in the Soviet Union. Characterized by a specific style and ideological influence.
+
+Where it appears: In music history — as a direction. In culture — in Soviet jazz. In guitar music — in jazz arrangements.
+
+Guitarist-Specific Tips: Soviet jazz is a historical direction including guitar parts.
+"""
+    ),
+
+    "SOIL": Term(
+        name="Soil",
+        description="""
+Guitar slang for a sound or timbre with an "earthy," natural character.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Soil is a natural, "earthy" guitar sound.
+"""
+    ),
+
+    "SOLOIST": Term(
+        name="Soloist",
+        description="""
+A musician performing a solo part. In guitar music — a guitarist playing a solo.
+
+Where it appears: In music — as a solo performer. In orchestra — as a soloist. In guitar music — in guitar solos.
+
+Guitarist-Specific Tips: A soloist is a guitarist playing a solo part.
+"""
+    ),
+
+    "SOLO": Term(
+        name="Solo",
+        description="""
+A solo part or performance by one performer. In guitar music — a guitar solo.
+
+Where it appears: In music — as solo performance. In orchestra — as a solo part. In guitar music — in solos.
+
+Guitarist-Specific Tips: A solo is a solo guitar part.
+"""
+    ),
+
+    
+    "SOLFEGE": Term(
+        name="Solfege",
+        description="""
+Same as solfege — an educational discipline for developing musical ear.
+
+Where it appears: In education — as a discipline. In pedagogy — in solfege. In guitar music — in ear development.
+
+Guitarist-Specific Tips: Solfege is the foundation of a guitarist's music education.
+"""
+    ),
+
+    "SONATA": Term(
+        name="Sonata",
+        description="""
+A large instrumental work for one or two instruments, consisting of several movements. One of the main genres of classical music.
+
+Where it appears: In classical music — as a genre. In guitar music — in guitar sonatas. In education — in repertoire.
+
+Guitarist-Specific Tips: A sonata is an important genre of guitar repertoire.
+"""
+    ),
+
+    "SONATINA": Term(
+        name="Sonatina",
+        description="""
+A small sonata, usually smaller and less complex. Used in education and as a light concert piece.
+
+Where it appears: In classical music — as a genre. In guitar music — in sonatinas. In education — in repertoire.
+
+Guitarist-Specific Tips: A sonatina is a small guitar sonata, often used in education.
+"""
+    ),
+
+    "SONATA FORM": Term(
+        name="Sonata form",
+        description="""
+A musical form consisting of exposition, development, and recapitulation. Used in sonatas, symphonies, and concertos.
+
+Where it appears: In classical music — as a form. In education — in analysis. In guitar music — in sonatas.
+
+Guitarist-Specific Tips: Sonata form is an important element of guitar sonatas.
+"""
+    ),
+
+    "SONORITY": Term(
+        name="Sonority",
+        description="""
+Sound or timbre with a pronounced overtone content. In guitar terminology — sonority.
+
+Where it appears: In acoustics — as a characteristic. In guitar music — in timbre. In sound recording — in sonority.
+
+Guitarist-Specific Tips: Sonority is the sonority and timbre of guitar sound.
+"""
+    ),
+
+    "SONORANT": Term(
+        name="Sonorant",
+        description="""
+A sound with pronounced overtones. In guitar terminology — sonorous, rich sound.
+
+Where it appears: In acoustics — as a characteristic. In guitar music — in timbre. In sound recording — in sonorant.
+
+Guitarist-Specific Tips: A sonorant is a sonorous, rich guitar sound.
+"""
+    ),
+
+    "SONORICS": Term(
+        name="Sonorics",
+        description="""
+A technique in contemporary music based on the use of timbres and noise effects. Characteristic of avant-garde music.
+
+Where it appears: In contemporary music — as a technique. In avant-garde — in sonorics. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: Sonorics is the use of timbres and noises in guitar music.
+"""
+    ),
+
+    "SONOROUS INTERVALS": Term(
+        name="Sonorous intervals",
+        description="""
+Intervals that sound resonant and rich, with many overtones.
+
+Where it appears: In music theory — as intervals. In guitar music — in chords. In education — in analysis.
+
+Guitarist-Specific Tips: Sonorous intervals produce a resonant, rich sound.
+"""
+    ),
+
+    "SOPRANO": Term(
+        name="Soprano",
+        description="""
+The highest female singing voice. Has a bright, clear timbre.
+
+Where it appears: In choir — as a high female voice. In opera — as soprano parts. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: Soprano requires accompaniment in a key comfortable for this voice.
+"""
+    ),
+
+    "SOPRANO CLEF": Term(
+        name="Soprano clef",
+        description="""
+A clef used for writing high voices (soprano). In guitar terminology — rarely.
+
+Where it appears: In vocal music — for soprano. In notation — in choral parts. In guitar music — rarely.
+
+Guitarist-Specific Tips: The soprano clef is rarely used in guitar music.
+"""
+    ),
+
+    "SORTING": Term(
+        name="Sorting",
+        description="""
+Guitar slang for sorting or organizing equipment, sheet music, or songs.
+
+Where it appears: In guitar slang — as organizing. In guitar circles — in colloquial speech. In sound recording — in organization.
+
+Guitarist-Specific Tips: Sorting is organizing guitar material.
+"""
+    ),
+
+    "SOUL": Term(
+        name="Soul",
+        description="""
+A musical genre that emerged in African American culture, combining elements of gospel, rhythm and blues, and jazz. Characterized by expressive vocals.
+
+Where it appears: In African American music — as a genre. In pop music — as influence. In guitar music — in soul arrangements.
+
+Guitarist-Specific Tips: Soul requires an expressive and emotional guitar sound.
+"""
+    ),
+
+    "SOFT": Term(
+        name="Soft",
+        description="""
+Guitar slang for a soft, gentle sound or effect.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Soft is a soft, gentle guitar sound.
+"""
+    ),
+
+    "SOUND SPECTRUM": Term(
+        name="Sound spectrum",
+        description="""
+The frequency content of sound, determining its timbre. An important parameter in acoustics and sound recording.
+
+Where it appears: In acoustics — as a characteristic. In sound recording — in spectrum. In guitar music — in timbre.
+
+Guitarist-Specific Tips: The sound spectrum determines the timbre of the guitar.
+"""
+    ),
+
+    "SPINET": Term(
+        name="Spinet",
+        description="""
+An early keyboard instrument, a type of harpsichord. In guitar terminology — rarely.
+
+Where it appears: In early music — as an instrument. In history — in keyboard instruments. In guitar music — rarely.
+
+Guitarist-Specific Tips: A spinet is an early keyboard instrument.
+"""
+    ),
+
+    "SPIRAL": Term(
+        name="Spiral",
+        description="""
+An image in music — continuous motion, development in a spiral. Used in composition.
+
+Where it appears: In music — as an image. In composition — in development. In guitar music — in forms.
+
+Guitarist-Specific Tips: A spiral is an image of continuous development in guitar music.
+"""
+    ),
+
+    "SPEECH": Term(
+        name="Speech",
+        description="""
+Guitar slang for a short speech or announcement at a concert.
+
+Where it appears: In guitar slang — as an announcement. In guitar circles — in colloquial speech. In concerts — in performances.
+
+Guitarist-Specific Tips: A speech is a short announcement at a concert.
+"""
+    ),
+
+    "SPLASH": Term(
+        name="Splash",
+        description="""
+Guitar slang for a sound with a bright, "splashing" timbre.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: A splash is a bright, "splashing" guitar sound.
+"""
+    ),
+
+    "SOUND PRODUCTION METHOD": Term(
+        name="Sound production method",
+        description="""
+The technique of producing sound on an instrument. On guitar — plucking with fingers or pick.
+
+Where it appears: In guitar technique — as the foundation. In education — as a skill. In performance — in sound production.
+
+Guitarist-Specific Tips: The sound production method determines the timbre and dynamics of guitar sound.
+"""
+    ),
+
+    "SATELLITE": Term(
+        name="Satellite",
+        description="""
+Guitar slang for a guitarist playing together with another musician in a duet.
+
+Where it appears: In guitar slang — as a partner. In guitar circles — in colloquial speech. In performance — in duets.
+
+Guitarist-Specific Tips: A satellite is a partner in a guitar duet.
+"""
+    ),
+
+    
+    "STACCATO": Term(
+        name="Staccato",
+        description="""
+Short, detached performance of notes. Contrasted with legato.
+
+Where it appears: In classical music — as an articulation. In guitar music — in short sounds. In education — in articulation.
+
+Guitarist-Specific Tips: Staccato requires clear and short attack.
+"""
+    ),
+
+    "STACCATISSIMO": Term(
+        name="Staccatissimo",
+        description="""
+Extremely short performance, shorter than staccato. Used in virtuosic music.
+
+Where it appears: In classical music — as an articulation. In guitar music — in fast passages. In education — in articulation.
+
+Guitarist-Specific Tips: Staccatissimo requires the shortest and clearest attack.
+"""
+    ),
+
+    "STEEL STRINGS": Term(
+        name="Steel strings",
+        description="""
+Strings for guitar made of steel. Produce a bright, ringing sound characteristic of acoustic and electric guitars.
+
+Where it appears: In acoustic guitars — as strings. In electric guitars — as strings. In guitar music — in bright sound.
+
+Guitarist-Specific Tips: Steel strings produce a bright and ringing sound.
+"""
+    ),
+
+    "STANDARD": Term(
+        name="Standard",
+        description="""
+In music — a jazz or pop work that has become a classic of the genre. Performed by many musicians.
+
+Where it appears: In jazz — as a classic. In pop — in standards. In guitar music — in jazz standards.
+
+Guitarist-Specific Tips: A standard is a jazz work every guitarist should know.
+"""
+    ),
+
+    "STANDARD TUNING": Term(
+        name="Standard tuning",
+        description="""
+The standard guitar tuning EADGBE. The most common tuning for six-string guitar.
+
+Where it appears: In guitar practice — as the foundation. In education — as a standard. In guitar music — in most works.
+
+Guitarist-Specific Tips: Standard tuning is the basis of guitar tuning.
+"""
+    ),
+
+    "START": Term(
+        name="Start",
+        description="""
+The beginning of a musical work or concert. Also — the start of a musician's career.
+
+Where it appears: In music — as a beginning. In concerts — as an opening. In guitar music — at the start of a performance.
+
+Guitarist-Specific Tips: A start is the beginning of a guitar performance.
+"""
+    ),
+
+    
+    "STAND": Term(
+        name="Stand",
+        description="""
+Guitar slang for a stand or stand for a guitar or equipment.
+
+Where it appears: In guitar slang — as a stand. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A stand is a stand for a guitar.
+"""
+    ),
+
+    "STEALTH": Term(
+        name="Stealth",
+        description="""
+Guitar slang for a smooth, unnoticeable transition in playing.
+
+Where it appears: In guitar slang — as a transition. In guitar circles — in colloquial speech. In performance — in smooth transitions.
+
+Guitarist-Specific Tips: Stealth is a smooth, unnoticeable transition in a guitar part.
+"""
+    ),
+
+    "STEP": Term(
+        name="Step",
+        description="""
+Guitar slang for step dance or a style of playing with accents on weak beats.
+
+Where it appears: In guitar slang — as a style. In guitar circles — in colloquial speech. In performance — in rhythmic patterns.
+
+Guitarist-Specific Tips: Step is a style of playing with accents on weak beats.
+"""
+    ),
+
+    "STYLIST": Term(
+        name="Stylist",
+        description="""
+Guitar slang for a stylist or musician working on the style and image of a band.
+
+Where it appears: In guitar slang — as a stylist. In guitar circles — in colloquial speech. In culture — in image.
+
+Guitarist-Specific Tips: A stylist is a musician working on a band's style.
+"""
+    ),
+
+    "STILL": Term(
+        name="Still",
+        description="""
+Guitar slang for a static, unmoving sound or image.
+
+Where it appears: In guitar slang — as static. In guitar circles — in colloquial speech. In performance — in static sounds.
+
+Guitarist-Specific Tips: Still is a static, unmoving guitar sound.
+"""
+    ),
+
+    "STYLE": Term(
+        name="Style",
+        description="""
+A set of characteristic features, techniques, and expressive means that distinguish one composer, performer, or era from others.
+
+Where it appears: In music — as a style. In performance — in manner. In guitar music — in guitar styles.
+
+Guitarist-Specific Tips: Style is a guitarist's characteristic manner of playing.
+"""
+    ),
+
+    "SCHOLARSHIP": Term(
+        name="Scholarship",
+        description="""
+Financial support provided to a musician for education or participation in competitions.
+
+Where it appears: In education — as a scholarship. In culture — in support. In guitar music — in education.
+
+Guitarist-Specific Tips: A scholarship is financial support for a guitarist.
+"""
+    ),
+
+    "STICHERA": Term(
+        name="Stichera",
+        description="""
+A church chant in the Orthodox tradition. Used in worship and choral music.
+
+Where it appears: In church music — as a genre. In choral music — in stichera. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Stichera requires a spiritual and prayerful character.
+"""
+    ),
+
+    "STOP-TIME": Term(
+        name="Stop-time",
+        description="""
+In music — a stop in time, a pause, or a moment when all instruments fall silent.
+
+Where it appears: In jazz — as a pause. In rock music — as a stop. In guitar music — in dramatic moments.
+
+Guitarist-Specific Tips: Stop-time is a moment of silence in a guitar part.
+"""
+    ),
+
+    "STRETTO": Term(
+        name="Stretto",
+        description="""
+In polyphony — a compressed presentation of a theme where voices enter with minimal interval. Used in fugues.
+
+Where it appears: In polyphony — in fugues. In classical music — in strettos. In guitar music — in polyphonic pieces.
+
+Guitarist-Specific Tips: Stretta is a compressed presentation of a theme in polyphony.
+"""
+    ),
+
+    "STRETCH": Term(
+        name="Stretch",
+        description="""
+Guitar slang for finger stretching on the guitar.
+
+Where it appears: In guitar slang — as stretching. In guitar circles — in colloquial speech. In education — in exercises.
+
+Guitarist-Specific Tips: Stretch is finger stretching for playing guitar.
+"""
+    ),
+
+    
+    "STRING": Term(
+        name="String",
+        description="""
+A part of the guitar that vibrates and produces sound. Can be metal, nylon, and others.
+
+Where it appears: In guitar construction — as a part. In sound recording — as a sound source. In guitar practice — in playing.
+
+Guitarist-Specific Tips: A string is the main element of the guitar that produces sound.
+"""
+    ),
+
+    "STRING INSTRUMENTS": Term(
+        name="String instruments",
+        description="""
+Instruments where sound is created by vibrating strings. Divided into plucked, bowed, and hammered.
+
+Where it appears: In music — as a group. In orchestra — in strings. In guitar music — in guitar instruments.
+
+Guitarist-Specific Tips: Guitar is one of the main string instruments.
+"""
+    ),
+
+    "STRING QUARTET": Term(
+        name="String quartet",
+        description="""
+An ensemble of two violins, viola, and cello. One of the main genres of chamber music.
+
+Where it appears: In chamber music — as a genre. In classical music — in quartets. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A string quartet rarely includes guitar but can be arranged for guitar ensemble.
+"""
+    ),
+
+    "STRING QUINTET": Term(
+        name="String quintet",
+        description="""
+An ensemble of five string instruments. An expanded version of the string quartet.
+
+Where it appears: In chamber music — as a genre. In classical music — in quintets. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A string quintet rarely includes guitar.
+"""
+    ),
+
+    "STRING ORCHESTRA": Term(
+        name="String orchestra",
+        description="""
+An orchestra consisting only of string instruments: violins, violas, cellos, and double basses.
+
+Where it appears: In classical music — as a lineup. In chamber music — in orchestras. In guitar music — rarely.
+
+Guitarist-Specific Tips: Guitar is rarely part of a string orchestra but is used as a solo instrument.
+"""
+    ),
+
+    "STRING TRIO": Term(
+        name="String trio",
+        description="""
+An ensemble of three string instruments (e.g., violin, viola, cello). A popular chamber genre.
+
+Where it appears: In chamber music — as a genre. In classical music — in trios. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A string trio rarely includes guitar.
+"""
+    ),
+
+    "STUDIO": Term(
+        name="Studio",
+        description="""
+A room for classes, rehearsals, or recording music.
+
+Where it appears: In music — as a room. In education — in studios. In guitar practice — in rehearsals.
+
+Guitarist-Specific Tips: A studio is a place for practicing and recording guitar.
+"""
+    ),
+
+    "SCALE DEGREE": Term(
+        name="Scale degree",
+        description="""
+The ordinal number of a note in a diatonic scale. Degrees determine the key and harmony.
+
+Where it appears: In music theory — as a degree. In harmony — in tonality. In guitar music — in chords.
+
+Guitarist-Specific Tips: Scale degrees are the basis for building chords and harmony.
+"""
+    ),
+
+    "SUBDOMINANT": Term(
+        name="Subdominant",
+        description="""
+The fourth degree of a mode, a chord built on the fourth degree (IV). The basis of harmonic motion along with the tonic and dominant.
+
+Where it appears: In harmony — as a function. In classical music — in chord progressions. In guitar music — in chords.
+
+Guitarist-Specific Tips: The subdominant is an important chord in guitar harmony.
+"""
+    ),
+
+    "SUB-CONTRA OCTAVE": Term(
+        name="Sub-contra octave",
+        description="""
+An octave below the contra octave. Used in bass registers and in music theory.
+
+Where it appears: In music theory — as a low octave. In orchestra — in bass instruments. In guitar music — rarely.
+
+Guitarist-Specific Tips: Sub-contra octave is a very low octave.
+"""
+    ),
+
+    "SUICIDE": Term(
+        name="Suicide",
+        description="""
+Guitar slang for something risky or dangerous in performance, such as a very difficult passage.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In performance — in difficult moments.
+
+Guitarist-Specific Tips: Suicide is a humorous name for a very difficult passage.
+"""
+    ),
+
+    "SFORZANDO": Term(
+        name="Sforzando",
+        description="""
+A sudden, sharp accent on a single note or chord. Used to create emphasis.
+
+Where it appears: In classical music — as a dynamic technique. In Romantic music — in accents. In guitar music — in powerful chords.
+
+Guitarist-Specific Tips: Sforzando is a sharp accent on guitar.
+"""
+    ),
+
+    "STAGE": Term(
+        name="Stage",
+        description="""
+A place for musicians to perform. Includes the stage, lighting, and sound equipment.
+
+Where it appears: In concerts — as a performance venue. In theater — as a stage. In guitar music — in performances.
+
+Guitarist-Specific Tips: The stage is the place for a guitarist's concert performance.
+"""
+    ),
+
+    "STAGE MUSIC": Term(
+        name="Stage music",
+        description="""
+Music written for theatrical productions. Includes music for dramatic performances.
+
+Where it appears: In theater — as music. In drama — in performances. In guitar music — in theatrical arrangements.
+
+Guitarist-Specific Tips: Stage music is music for theatrical productions.
 """
     ),
 }

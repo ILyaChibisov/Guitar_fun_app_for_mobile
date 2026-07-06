@@ -25,6 +25,33 @@ logger = get_logger('TopNav')
 class TopNav(MDCard):
     """Верхняя панель навигации"""
 
+    # Список экранов, где всегда показывается стрелка назад
+    ALWAYS_BACK_SCREENS = [
+        'song_detail',
+        'term_detail',
+        'admin',
+        'amdm_parser',
+        'mytabs_parser',
+        'accord_pro_parser',
+        'akkordus_parser',
+        'muzland_parser',
+        'chordie_parser',
+        'fivelad_parser',
+        'akkordbard_parser',
+        'domhve_parser',
+        'rushsound_parser',
+    ]
+
+    # Список экранов с кастомным заголовком
+    CUSTOM_TITLE_SCREENS = [
+        'song_detail',
+        'terms_by_letter',
+        'term_detail',
+        'artists_by_letter',
+        'artist_songs',
+        'favorites',
+    ]
+
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
@@ -46,7 +73,7 @@ class TopNav(MDCard):
             self.height = dp(88)
             top_padding = status_h + dp(24)
         else:
-            self.height = dp(64)
+            self.height = dp(80)
             top_padding = status_h + dp(8)
 
         self.padding = [0, top_padding, 0, 0]
@@ -80,8 +107,8 @@ class TopNav(MDCard):
             pos_hint={'x': 0, 'center_y': 0.5}
         )
 
-        # Кнопка меню (настройки) - только для home
-        self.menu_btn = MDIconButton(
+        # Кнопка настроек (шестерёнка) - переход в профиль
+        self.settings_btn = MDIconButton(
             icon="tune",
             size_hint=(None, None),
             size=(dp(44), dp(44)),
@@ -90,8 +117,9 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
+        self.settings_btn.bind(on_release=self._on_settings_press)
 
-        # Кнопка назад
+        # Кнопка назад (стрелка) - возврат на предыдущий экран
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -101,9 +129,10 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
+        self.back_btn.bind(on_release=self._on_back_press)
 
-        # Изначально добавляем только меню (home)
-        self.left_container.add_widget(self.menu_btn)
+        # Изначально добавляем настройки (home)
+        self.left_container.add_widget(self.settings_btn)
 
         # ============ ЗАГОЛОВОК - ПО ЦЕНТРУ ============
         self.screen_title = MDLabel(
@@ -125,12 +154,13 @@ class TopNav(MDCard):
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, 1),
-            width=dp(100),
-            spacing=dp(8),
+            width=dp(48),
+            spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'right': 1, 'center_y': 0.5}
         )
 
+        # Кнопка домой - возврат на главный экран
         self.home_btn = MDIconButton(
             icon="home",
             size_hint=(None, None),
@@ -138,10 +168,11 @@ class TopNav(MDCard):
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_home_press,
             pos_hint={'center_y': 0.5}
         )
+        self.home_btn.bind(on_release=self._on_home_press)
 
+        # Кнопка поиска - переход на экран поиска
         self.search_btn = MDIconButton(
             icon="magnify",
             size_hint=(None, None),
@@ -149,24 +180,12 @@ class TopNav(MDCard):
             theme_icon_color="Custom",
             icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_search_press,
             pos_hint={'center_y': 0.5}
         )
+        self.search_btn.bind(on_release=self._on_search_press)
 
-        self.profile_btn = MDIconButton(
-            icon="account-circle",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_profile_press,
-            pos_hint={'center_y': 0.5}
-        )
-
-        # Начинаем с home: лупа + профиль
+        # Начинаем с home: лупа
         self.right_container.add_widget(self.search_btn)
-        self.right_container.add_widget(self.profile_btn)
 
         # Добавляем всё во FloatLayout
         self.container.add_widget(self.left_container)
@@ -192,14 +211,10 @@ class TopNav(MDCard):
             'metronome': 'Метроном',
             'favorites': 'Избранное',
             'profile': 'Профиль',
-            'artists_by_letter': '',
-            'artist_songs': '',
-            'song_detail': '',
-            'search_results': 'Результаты поиска',
             'dictionary': 'Словарь',
             'admin': 'Админ панель',
             'search': 'Быстрый поиск',
-            'terms_by_letter': '',
+            'song_detail': '',
             'term_detail': '',
         }
         return titles.get(screen_name, screen_name.capitalize())
@@ -221,7 +236,7 @@ class TopNav(MDCard):
         window_width = Window.width
 
         left_width = dp(48)
-        right_width = dp(100)
+        right_width = dp(48)
         padding = dp(32)
 
         max_width = window_width - left_width - right_width - padding
@@ -256,7 +271,7 @@ class TopNav(MDCard):
         # Определяем оптимальную ширину в зависимости от содержимого
         window_width = Window.width
         left_width = dp(48)
-        right_width = dp(100)
+        right_width = dp(48)
         padding = dp(32)
         max_width = window_width - left_width - right_width - padding
 
@@ -296,31 +311,45 @@ class TopNav(MDCard):
         self._custom_back_callback = None
 
     def _update_left_button(self, screen_name):
-        """Обновляет левую кнопку в зависимости от экрана"""
+        """
+        Обновляет левую кнопку в зависимости от экрана.
+        """
         self.left_container.clear_widgets()
 
         logger.info(f"🔧 _update_left_button для экрана: {screen_name}")
 
-        if screen_name == 'home':
-            self.left_container.add_widget(self.menu_btn)
-            self.menu_btn.icon = "tune"
-            self.menu_btn.on_release = self._on_menu_press
-            logger.info("   → Установлена иконка настроек (tune)")
-        else:
+        # 1. Всегда показываем стрелку на этих экранах
+        if screen_name in self.ALWAYS_BACK_SCREENS:
             self.left_container.add_widget(self.back_btn)
-            self.back_btn.on_release = self._on_back_press
-            logger.info(f"   → Установлена стрелка назад")
+            logger.info("   → Установлена стрелка назад (всегда)")
+            return
+
+        # 2. Специальная логика для chords
+        if screen_name == 'chords':
+            previous_screen = screen_state.get_previous_screen()
+            if previous_screen == 'search':
+                self.left_container.add_widget(self.back_btn)
+                logger.info("   → Установлена стрелка назад (пришли из search)")
+                return
+            else:
+                self.left_container.add_widget(self.settings_btn)
+                logger.info("   → Установлена иконка настроек")
+                return
+
+        # 3. Все остальные экраны — показываем настройки
+        self.left_container.add_widget(self.settings_btn)
+        logger.info("   → Установлена иконка настроек")
 
     def _update_right_buttons(self, screen_name):
-        """Обновляет правые кнопки: на home показываем лупу, на остальных - дом"""
+        """Обновляет правые кнопки"""
         self.right_container.clear_widgets()
 
         if screen_name == 'home':
             self.right_container.add_widget(self.search_btn)
-            self.right_container.add_widget(self.profile_btn)
+            logger.info("   → Установлена лупа (поиск)")
         else:
             self.right_container.add_widget(self.home_btn)
-            self.right_container.add_widget(self.profile_btn)
+            logger.info("   → Установлена иконка домой")
 
     def _on_screen_changed(self, instance, screen_name):
         old = self.current_screen_name
@@ -334,9 +363,18 @@ class TopNav(MDCard):
         if old and old != screen_name:
             self._previous_screen = old
 
-        # Экран с кастомным заголовком
-        screens_with_custom_title = ['song_detail', 'terms_by_letter', 'term_detail',
-                                     'artists_by_letter', 'artist_songs', 'favorites']
+        # ============ СБРАСЫВАЕМ КАСТОМНЫЙ CALLBACK ============
+        # Если на экране показывается настройки (не стрелка) — сбрасываем callback
+        if screen_name not in self.ALWAYS_BACK_SCREENS:
+            # Для chords проверяем особый случай
+            if screen_name == 'chords':
+                prev = screen_state.get_previous_screen()
+                if prev != 'search':
+                    self._custom_back_callback = None
+                    logger.info("   → Сброшен custom callback (chords, не из search)")
+            else:
+                self._custom_back_callback = None
+                logger.info(f"   → Сброшен custom callback ({screen_name})")
 
         # Обновляем левую кнопку
         self._update_left_button(screen_name)
@@ -345,26 +383,19 @@ class TopNav(MDCard):
         self._update_right_buttons(screen_name)
 
         # Если экран НЕ с кастомным заголовком - обновляем стандартный
-        if screen_name not in screens_with_custom_title:
+        if screen_name not in self.CUSTOM_TITLE_SCREENS:
             if self.custom_title_widget:
                 self.clear_custom_title_widget()
             self.update_title(screen_name)
-        else:
-            # Для экранов с кастомным заголовком - не трогаем стандартный
-            # Если кастомный виджет есть - оставляем его
-            pass
 
         # Если возвращаемся с кастомного экрана на обычный
-        if old in screens_with_custom_title and screen_name not in screens_with_custom_title:
+        if old in self.CUSTOM_TITLE_SCREENS and screen_name not in self.CUSTOM_TITLE_SCREENS:
             self.clear_custom_title_widget()
             self.update_title(screen_name)
-
-        self._update_right_buttons(screen_name)
 
     def _on_back_press(self, *args):
         """Обработчик нажатия на стрелку назад."""
         logger.info(f"🔙 _on_back_press для экрана: {self.current_screen_name}")
-        logger.info(f"   📌 screen_state.previous_screen = {screen_state.get_previous_screen()}")
 
         if self._custom_back_callback:
             logger.info("   → Используем кастомный callback")
@@ -376,72 +407,71 @@ class TopNav(MDCard):
 
         current = self.sm.current
         prev_from_state = screen_state.get_previous_screen()
+        logger.info(f"   📌 screen_state.previous_screen = {prev_from_state}")
 
+        # ============ ЛОГИКА ДЛЯ song_detail ============
         if current == 'song_detail':
             if prev_from_state and self.sm.has_screen(prev_from_state):
-                logger.info(f"   → SongDetail возврат на {prev_from_state} (из screen_state)")
-                self.sm.current = prev_from_state
-                return
-
-            if self.sm.has_screen('favorites'):
-                if self._previous_screen == 'favorites':
-                    logger.info("   → SongDetail возврат на favorites (из _previous_screen)")
-                    self.sm.current = 'favorites'
+                if prev_from_state in ['songs', 'favorites', 'search', 'chords']:
+                    logger.info(f"   → SongDetail возврат на {prev_from_state}")
+                    self.sm.current = prev_from_state
                     return
-
-            if self.sm.has_screen('artist_songs'):
-                if self._previous_screen == 'artist_songs':
-                    logger.info("   → SongDetail возврат на artist_songs (из _previous_screen)")
-                    self.sm.current = 'artist_songs'
-                    return
-
-            if self.sm.has_screen('artists_by_letter'):
-                logger.info("   → SongDetail возврат на artists_by_letter (по умолчанию)")
-                self.sm.current = 'artists_by_letter'
-                return
 
             if self.sm.has_screen('home'):
-                logger.info("   → SongDetail возврат на home")
+                logger.info("   → SongDetail возврат на home (по умолчанию)")
                 self.sm.current = 'home'
                 return
 
-        back_map = {
-            'artist_songs': 'artists_by_letter',
-            'artists_by_letter': 'songs',
-            'songs': 'home',
-            'favorites': 'home',
-            'profile': 'home',
-            'admin': 'profile',
-            'dictionary': 'home',
-            'terms_by_letter': 'dictionary',
-            'term_detail': 'terms_by_letter',
-            'search': 'home',
-            'tuner': 'home',
-            'metronome': 'home',
-            'chords': self._get_previous_screen_for_chords,
-        }
+        # ============ ЛОГИКА ДЛЯ term_detail ============
+        if current == 'term_detail':
+            if prev_from_state and self.sm.has_screen(prev_from_state):
+                if prev_from_state in ['dictionary', 'search']:
+                    logger.info(f"   → TermDetail возврат на {prev_from_state}")
+                    self.sm.current = prev_from_state
+                    return
 
-        if current in back_map:
-            target = back_map[current]
-            if callable(target):
-                target = target()
-            if target and self.sm.has_screen(target):
-                logger.info(f"   → Переход на {target}")
-                self.sm.current = target
+            if self.sm.has_screen('dictionary'):
+                logger.info("   → TermDetail возврат на dictionary (по умолчанию)")
+                self.sm.current = 'dictionary'
+                return
+            elif self.sm.has_screen('home'):
+                logger.info("   → TermDetail возврат на home")
+                self.sm.current = 'home'
                 return
 
+        # ============ ЛОГИКА ДЛЯ chords ============
+        if current == 'chords':
+            if prev_from_state == 'search' and self.sm.has_screen('search'):
+                logger.info("   → Chords возврат на search")
+                self.sm.current = 'search'
+                return
+
+            if self.sm.has_screen('home'):
+                logger.info("   → Chords возврат на home")
+                self.sm.current = 'home'
+                return
+
+        # ============ ЛОГИКА ДЛЯ admin и парсеров ============
+        if current == 'admin':
+            if self.sm.has_screen('profile'):
+                logger.info("   → Admin возврат на profile")
+                self.sm.current = 'profile'
+                return
+
+        if current in self.ALWAYS_BACK_SCREENS and current not in ['song_detail', 'term_detail', 'admin']:
+            if self.sm.has_screen('admin'):
+                logger.info(f"   → {current} возврат на admin")
+                self.sm.current = 'admin'
+                return
+
+        # ============ ПО УМОЛЧАНИЮ ============
         if self.sm.has_screen('home'):
             logger.info("   → Переход на home (по умолчанию)")
             self.sm.current = 'home'
 
-    def _get_previous_screen_for_chords(self):
-        prev = screen_state.get_previous_screen()
-        if prev and self.sm.has_screen(prev):
-            return prev
-        return 'home'
-
-    def _on_menu_press(self, *args):
-        logger.info("⚙️ Нажата настройки")
+    def _on_settings_press(self, *args):
+        """Обработчик нажатия на иконку настроек (шестерёнка)"""
+        logger.info("⚙️ Нажата иконка настроек")
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             return
@@ -451,33 +481,34 @@ class TopNav(MDCard):
             self.app.open_profile()
 
     def _on_home_press(self, *args):
+        """Обработчик нажатия на иконку домой"""
+        logger.info("🏠 Нажата иконка домой")
         if self.sm and self.sm.has_screen('home'):
             self.sm.current = 'home'
 
     def _on_search_press(self, *args):
+        """Обработчик нажатия на иконку поиска"""
+        logger.info("🔍 Нажата иконка поиска")
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
             return
-        if self.sm and self.sm.has_screen('chords') and self.sm.has_screen('search'):
-            chords_screen = self.sm.get_screen('chords')
-            search_screen = self.sm.get_screen('search')
-            search_screen.set_chords_screen(chords_screen)
+
+        if self.sm and self.sm.has_screen('search'):
+            if self.sm.has_screen('chords'):
+                chords_screen = self.sm.get_screen('chords')
+                search_screen = self.sm.get_screen('search')
+                search_screen.set_chords_screen(chords_screen)
+
+            if self.sm.has_screen('dictionary'):
+                dictionary_screen = self.sm.get_screen('dictionary')
+                search_screen = self.sm.get_screen('search')
+                search_screen.set_dictionary_screen(dictionary_screen)
 
             if self.sm.current == 'search':
+                search_screen = self.sm.get_screen('search')
                 search_screen.refresh_search()
             else:
                 self.sm.current = 'search'
-
-    def _on_profile_press(self, *args):
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'open_profile'):
-            app.open_profile()
-        else:
-            if self.sm and self.sm.has_screen('profile'):
-                self.sm.current = 'profile'
-                logger.info("Переход на экран профиля (прямой)")
-            else:
-                logger.warning("Экран 'profile' не найден")
 
     def set_app(self, app):
         self.app = app
@@ -488,12 +519,6 @@ class TopNav(MDCard):
             self.update_title(self.sm.current)
             self._update_right_buttons(self.sm.current)
             self._update_left_button(self.sm.current)
-
-    def _show_back_button(self):
-        pass
-
-    def _hide_back_button(self):
-        pass
 
     def on_size(self, *args):
         """При изменении размера обновляем ширину заголовка"""

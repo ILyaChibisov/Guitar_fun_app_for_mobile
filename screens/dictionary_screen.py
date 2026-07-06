@@ -34,6 +34,7 @@ from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from utils.notifications import notify
+from utils.screen_state import screen_state
 
 logger = screen_logger('Dictionary')
 
@@ -1002,6 +1003,9 @@ class DictionaryScreen(BaseScreen):
             self._show_temporary_hint("Термин не найден", 1.5)
             return
 
+        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ dictionary
+        screen_state.set_previous_screen('dictionary')
+
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('term_detail'):
                 term_detail = self.manager.get_screen('term_detail')
@@ -1089,6 +1093,7 @@ class DictionaryScreen(BaseScreen):
 
     # ============ ЖИЗНЕННЫЙ ЦИКЛ ============
 
+
     def on_enter(self):
         logger.info("🚪 Вход в словарь")
 
@@ -1096,7 +1101,8 @@ class DictionaryScreen(BaseScreen):
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
                 app.top_nav.set_custom_title("Словарь")
-                app.top_nav._show_back_button()
+                # Убираем _show_back_button()
+                # app.top_nav._show_back_button()
                 app.top_nav.back_btn.on_release = self.go_back
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")

@@ -1,3 +1,5 @@
+# buildozer.spec
+
 [app]
 
 # --- ОСНОВНЫЕ НАСТРОЙКИ ---
@@ -18,14 +20,14 @@ version.code = 2
 orientation = portrait
 
 # --- ИКОНКА ПРИЛОЖЕНИЯ ---
-# Указываем путь к PNG иконке (Buildozer сам масштабирует)
 icon.filename = android_res/drawable/icon.png
 
 # --- ЗАВИСИМОСТИ ---
-requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui
+# audiostream - для работы с микрофоном на Android
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,audiostream
 
 # --- ПРАВА ---
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,RECORD_AUDIO
 android.api = 33
 android.minapi = 24
 android.enable_androidx = True

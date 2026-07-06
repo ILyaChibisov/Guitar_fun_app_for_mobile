@@ -1584,8 +1584,6 @@ class ChordsScreen(BaseScreen):
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
-                app.top_nav.back_btn.opacity = 1
-                app.top_nav.back_btn.disabled = False
                 app.top_nav._custom_back_callback = self.go_back
                 app.top_nav.screen_title.text = "Аккорды"
                 logger.info("✅ Кнопка возврата принудительно показана")

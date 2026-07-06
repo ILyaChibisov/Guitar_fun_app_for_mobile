@@ -234,20 +234,15 @@ Third — the foundation for rhythm guitar.
 """
     ),
 
+    
     "HARMONY": Term(
         name="Harmony",
         description="""
-The branch of music theory that studies chords, their structure, functions, and interrelations. Also — the collection of chords in a specific musical work.
+A harmonious combination of sounds, chords, or voices. The basis of musical harmony.
 
-Where it appears:
-In music — as the basis of verticality.
-In education — as a fundamental subject.
-In composition — as the basis of creativity.
+Where it appears: In music — as harmony. In theory — as harmony. In guitar music — in chords.
 
-Guitarist-Specific Tips:
-First — harmony is the foundation of guitar accompaniment.
-Second — knowledge of harmony helps improvisation.
-Third — the foundation for arrangement.
+Guitarist-Specific Tips: Harmony is a harmonious combination of sounds on guitar.
 """
     ),
 
@@ -483,6 +478,39 @@ Music associated with festive events. Characterized by major mode and energetic 
 Where it appears: In folk music — as festive. In classical music — in solemn movements. In guitar music — in festive pieces.
 
 Guitarist-Specific Tips: Holiday music requires a joyful and energetic character.
+"""
+    ),
+
+    "HORN": Term(
+        name="Horn",
+        description="""
+A wind instrument made from animal horn or metal. Used in folk and orchestral music.
+
+Where it appears: In folk music — as an instrument. In orchestra — in pastoral music. In guitar music — rarely.
+
+Guitarist-Specific Tips: A horn is a wind instrument rarely combined with guitar.
+"""
+    ),
+
+    "HORN PLAYER": Term(
+        name="Horn player",
+        description="""
+A musician who plays the horn or French horn. In guitar terminology — rarely.
+
+Where it appears: In orchestra — as a horn player. In folk music — in horns. In guitar music — rarely.
+
+Guitarist-Specific Tips: A horn player is a performer on the horn.
+"""
+    ),
+
+    "HAND": Term(
+        name="Hand",
+        description="""
+Part of the body used for playing guitar. The left hand frets the strings, the right hand produces sound.
+
+Where it appears: In guitar technique — as the foundation. In education — as a skill. In performance — in technique.
+
+Guitarist-Specific Tips: The hand is the main instrument of the guitarist.
 """
     ),
 }

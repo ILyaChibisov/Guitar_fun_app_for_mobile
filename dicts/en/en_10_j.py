@@ -190,4 +190,71 @@ Where it appears: In guitar equipment — as a connector. In sound recording —
 Guitarist-Specific Tips: A jack tip is a connector for connecting the guitar. Important to choose quality cables and connectors.
 """
     ),
+
+    "JAGGED RHYTHM": Term(
+        name="Jagged rhythm",
+        description="""
+Rhythm with syncopations, sharp accents, and unconventional durations. Used in jazz, funk, and rock.
+
+Where it appears: In jazz — in rhythmic patterns. In funk — in syncopations. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: Jagged rhythm requires a precise sense of rhythm and syncopation.
+"""
+    ),
+
+    
+    "JUMP": Term(
+        name="Jump",
+        description="""
+Guitar slang for a sharp leap in melody or position on the fretboard.
+
+Where it appears: In guitar slang — as a leap. In guitar circles — in colloquial speech. In performance — in position changes.
+
+Guitarist-Specific Tips: A jump is a sharp leap in a guitar part.
+"""
+    ),
+
+    "JUICE": Term(
+        name="Juice",
+        description="""
+Guitar slang for a "juicy," rich sound with good sustain.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Juice is a "juicy," rich guitar sound.
+"""
+    ),
+
+    "JUICY": Term(
+        name="Juicy",
+        description="""
+Guitar slang for a sound with "juice" — a rich, saturated timbre.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Juicy is a rich, saturated guitar sound.
+"""
+    ),
+
+    "JOINT": Term(
+        name="Joint",
+        description="""
+Guitar slang for the connection of two parts of a work or a change of position on the fretboard.
+
+Where it appears: In guitar slang — as a connection. In guitar circles — in colloquial speech. In performance — in transitions.
+
+Guitarist-Specific Tips: A joint is a connection of parts of a guitar part.
+"""
+    ),
+
+    "JAM SESSION": Term(
+        name="Jam session",
+        description="""
+Guitar slang for an informal meeting of musicians, a jam session.
+
+Where it appears: In guitar slang — as a meeting. In guitar circles — in colloquial speech. In music — in informal sessions.
+
+Guitarist-Specific Tips: A jam session is an informal meeting of guitarists.
+"""
+    ),
 }

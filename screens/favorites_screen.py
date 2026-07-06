@@ -400,7 +400,8 @@ class FavoritesScreen(BaseScreen):
 
             title_container = self._create_top_nav_title(total)
             app.top_nav.set_custom_title_widget(title_container)
-            app.top_nav._show_back_button()
+            # Убираем _show_back_button()
+            # app.top_nav._show_back_button()
             app.top_nav.back_btn.on_release = self.go_back
             self._top_nav_updated = True
 
@@ -590,14 +591,13 @@ class FavoritesScreen(BaseScreen):
 
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('song_detail'):
-                # Сбрасываем TopNav перед переходом
-                self._reset_top_nav()
+                # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ favorites
+                screen_state.set_previous_screen('favorites')
 
                 song_detail_screen = self.manager.get_screen('song_detail')
                 song_detail_screen.set_previous_screen('favorites')
                 song_detail_screen.set_song(song_id)
 
-                # Если песня уже есть в favorites, передаем данные для ускорения
                 for song in self.favorites:
                     if song.get('song_id') == song_id or song.get('id') == song_id:
                         song_detail_screen.song_artist = song.get('artist', '')

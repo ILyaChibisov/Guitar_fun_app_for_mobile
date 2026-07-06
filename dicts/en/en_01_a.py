@@ -1209,4 +1209,48 @@ Where it appears: In guitar technique — as the foundation. In rhythm — in st
 Guitarist-Specific Tips: Alternate picking is the foundation of rhythmic playing on guitar.
 """
     ),
+
+    "ADVERTISING MUSIC": Term(
+        name="Advertising music",
+        description="""
+Music used in advertising commercials and campaigns. Often short, memorable, and bright.
+
+Where it appears: In advertising — as background. In media — as sound accompaniment. In guitar music — in jingles.
+
+Guitarist-Specific Tips: Advertising music often uses guitar to create memorable melodies.
+"""
+    ),
+
+    "AUDITION": Term(
+        name="Audition",
+        description="""
+Guitar slang for an audition or tryout for participation in a band or project.
+
+Where it appears: In guitar slang — as an audition. In guitar circles — in colloquial speech. In music — in musician selection.
+
+Guitarist-Specific Tips: An audition is a tryout for participation in a band.
+"""
+    ),
+
+    "AIR VIBRATION": Term(
+        name="Air vibration",
+        description="""
+A physical phenomenon underlying sound waves. In guitar acoustics — the basis of sound production.
+
+Where it appears: In acoustics — as a physical phenomenon. In guitar music — in sound production. In sound recording — in acoustics.
+
+Guitarist-Specific Tips: Air vibration is the basis of guitar sound.
+"""
+    ),
+
+    "ARTICLE": Term(
+        name="Article",
+        description="""
+A scholarly or journalistic work about music. Used in musicology and journalism.
+
+Where it appears: In musicology — as an article. In journalism — as a publication. In guitar music — in research.
+
+Guitarist-Specific Tips: An article is a piece about guitar music.
+"""
+    ),
 }

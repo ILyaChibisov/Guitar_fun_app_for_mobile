@@ -259,4 +259,70 @@ Where it appears: In church music — as a tradition. In history — as a stage.
 Guitarist-Specific Tips: A way chant requires a soft and singing sound.
 """
     ),
+
+    "WORKING (MUSICIAN)": Term(
+        name="Working (musician)",
+        description="""
+Guitar slang for a musician who constantly performs or rehearses. Also — a working guitar.
+
+Where it appears: In guitar slang — as a musician. In guitar circles — in colloquial speech. In culture — as a worker.
+
+Guitarist-Specific Tips: A working musician is a guitarist who constantly plays and performs.
+"""
+    ),
+
+    "WARM-UP": Term(
+        name="Warm-up",
+        description="""
+Guitar slang for warming up or preparing to play.
+
+Where it appears: In guitar slang — as a warm-up. In guitar circles — in colloquial speech. In education — in preparation.
+
+Guitarist-Specific Tips: A warm-up is preparation before playing guitar.
+"""
+    ),
+
+    "WELDING": Term(
+        name="Welding",
+        description="""
+Guitar slang for a powerful, rich sound with many harmonics, resembling welding.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Welding is a powerful, rich guitar sound.
+"""
+    ),
+
+    "WHISTLE": Term(
+        name="Whistle",
+        description="""
+A wind instrument or device that produces a whistling sound. Used in folk music and as a signaling instrument.
+
+Where it appears: In folk music — as an instrument. In football — as a referee's whistle. In guitar music — rarely.
+
+Guitarist-Specific Tips: A whistle is an instrument for whistling sounds.
+"""
+    ),
+
+    "WEAK BEAT": Term(
+        name="Weak beat",
+        description="""
+An unaccented beat of the measure. Contrasted with a strong beat.
+
+Where it appears: In rhythm — as a weak beat. In music — in accents. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A weak beat is the basis for syncopation and shifted accents.
+"""
+    ),
+
+    "WORK STYLE": Term(
+        name="Work style",
+        description="""
+The manner and approach of a musician to playing, rehearsals, and performances. Determines professionalism and productivity.
+
+Where it appears: In performance — as an approach. In education — as a method. In guitar music — in work.
+
+Guitarist-Specific Tips: Work style is a guitarist's approach to practice and performances.
+"""
+    ),
 }

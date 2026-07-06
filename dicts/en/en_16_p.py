@@ -1709,4 +1709,103 @@ Where it appears: In guitar slang — as a style. In guitar circles — in collo
 Guitarist-Specific Tips: Pieforte is a guitar style imitating piano.
 """
     ),
+
+    "PLACEMENT": Term(
+        name="Placement",
+        description="""
+The placement of accents, voices, or instruments in a musical work. Affects sound and perception.
+
+Where it appears: In arrangement — as a technique. In guitar music — in texture. In orchestra — in voices.
+
+Guitarist-Specific Tips: Placement affects the sound and perception of guitar music.
+"""
+    ),
+
+    "PAINTING": Term(
+        name="Painting",
+        description="""
+A pattern or decorative painting on a guitar. Affects the appearance of the instrument.
+
+Where it appears: In guitar craftsmanship — as decoration. In culture — as art. In guitar music — in design.
+
+Guitarist-Specific Tips: Painting is a decorative embellishment of the guitar.
+"""
+    ),
+
+    "PIPE": Term(
+        name="Pipe",
+        description="""
+An ancient wind instrument, a predecessor of the flute. Made from reed or wood.
+
+Where it appears: In folk music — as an instrument. In early music — in pastorals. In guitar music — rarely.
+
+Guitarist-Specific Tips: A pipe is an ancient wind instrument.
+"""
+    ),
+
+    "POWER": Term(
+        name="Power",
+        description="""
+Guitar slang for the power of sound, powerful attack, and drive in playing.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in powerful playing.
+
+Guitarist-Specific Tips: Power is the power and drive of guitar sound.
+"""
+    ),
+
+    "POWER CHORD": Term(
+        name="Power chord",
+        description="""
+A powerful chord consisting of the root and fifth (power chord). Used in rock music.
+
+Where it appears: In rock music — in powerful riffs. In metal — in chord parts. In guitar music — in power chords.
+
+Guitarist-Specific Tips: A power chord is the foundation of rock guitar riffs.
+"""
+    ),
+
+    "PA SYSTEM": Term(
+        name="Pa system",
+        description="""
+A set of equipment for sound reinforcement at concerts and events.
+
+Where it appears: In concerts — as equipment. In sound recording — in systems. In guitar music — in sound reinforcement.
+
+Guitarist-Specific Tips: A PA system is equipment for amplifying guitar sound.
+"""
+    ),
+
+    "PASSIONS": Term(
+        name="Passions",
+        description="""
+In music — dramatic, passionate emotions expressed through music. Often used in Romantic and opera music.
+
+Where it appears: In Romantic music — as emotion. In opera — in dramatic scenes. In guitar music — in passionate pieces.
+
+Guitarist-Specific Tips: Passions are the expression of strong emotions in guitar playing.
+"""
+    ),
+
+    "PERCUSSION INSTRUMENT": Term(
+        name="Percussion instrument",
+        description="""
+A percussion instrument whose sound is produced by striking. In guitar terminology — rarely.
+
+Where it appears: In orchestra — as a percussion instrument. In folk music — in percussion. In guitar music — rarely.
+
+Guitarist-Specific Tips: A percussion instrument is a percussion instrument.
+"""
+    ),
+
+    "PROMPTER": Term(
+        name="Prompter",
+        description="""
+In theater — an assistant who prompts actors with lines. In guitar terminology — rarely.
+
+Where it appears: In theater — as an assistant. In opera — in prompter boxes. In guitar music — rarely.
+
+Guitarist-Specific Tips: A prompter is an assistant in theater, rarely associated with guitar.
+"""
+    ),
 }

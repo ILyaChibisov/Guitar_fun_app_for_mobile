@@ -870,14 +870,15 @@ Guitarist-Specific Tips: Comic opera requires light and playful accompaniment. G
 """
     ),
 
+    
     "COMPOSITION": Term(
         name="Composition",
         description="""
-A musical work, its structure, form, and content. Also — the process of creating music.
+A musical work created by a composer. Includes all genres and forms of music.
 
-Where it appears: In music — as a work. In education — as a subject. In guitar practice — as creating music.
+Where it appears: In music — as a work. In education — in repertoire. In guitar music — in compositions.
 
-Guitarist-Specific Tips: Composition for guitar requires an understanding of form, harmony, and texture. Important to be able to build logical development of musical material.
+Guitarist-Specific Tips: A composition is a guitar composition.
 """
     ),
 
@@ -1208,6 +1209,282 @@ In polyphony — a voice contrasting with the main theme. Used in fugues and can
 Where it appears: In polyphony — in fugues. In counterpoint — in voice leading. In guitar music — in polyphonic pieces.
 
 Guitarist-Specific Tips: A countersubject requires contrast and expressiveness.
+"""
+    ),
+
+    "CHANT (RASPEV)": Term(
+        name="Chant (raspev)",
+        description="""
+A melodic line in church or folk music, based on smooth motion and melodiousness.
+
+Where it appears: In church music — as a genre. In folk music — as a melody. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Chant requires a singing and smooth sound.
+"""
+    ),
+
+    "CROSSROADS": Term(
+        name="Crossroads",
+        description="""
+In music — a moment of choice, development, or change of direction in a work. Used in composition.
+
+Where it appears: In music — as a structural element. In composition — as a turning point. In guitar music — in development.
+
+Guitarist-Specific Tips: A crossroads is a turning point in a guitar composition.
+"""
+    ),
+
+    "CALCULATION": Term(
+        name="Calculation",
+        description="""
+Guitar slang for planning fingering, position, or arrangement.
+
+Where it appears: In guitar slang — as planning. In guitar circles — in colloquial speech. In education — in analysis.
+
+Guitarist-Specific Tips: Calculation is planning fingering and position.
+"""
+    ),
+
+    "CLEANING": Term(
+        name="Cleaning",
+        description="""
+Cleaning the guitar or its parts from dirt, oxidation, or residue. An important element of instrument care.
+
+Where it appears: In guitar craftsmanship — as maintenance. In guitar practice — in servicing. In sound recording — in preparation.
+
+Guitarist-Specific Tips: Cleaning is caring for the guitar and its parts.
+"""
+    ),
+
+    "CONTROL": Term(
+        name="Control",
+        description="""
+A device or control element that regulates sound parameters: volume, timbre, frequency.
+
+Where it appears: In guitar equipment — as an element. In sound recording — in settings. In guitar practice — in control.
+
+Guitarist-Specific Tips: A control is an important element of guitar sound management.
+"""
+    ),
+
+    "COMBINED CHOIR": Term(
+        name="Combined choir",
+        description="""
+A united choir from several groups. Often used in solemn and mass events.
+
+Where it appears: In culture — in mass events. In music — in solemn performances. In guitar music — rarely.
+
+Guitarist-Specific Tips: A combined choir is a united choir for mass performances.
+"""
+    ),
+
+    
+    "CONNECTION": Term(
+        name="Connection",
+        description="""
+Guitar slang for connecting cables, effects, or equipment.
+
+Where it appears: In guitar slang — as a connection. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A connection is connecting guitar equipment.
+"""
+    ),
+
+    "CINEMA": Term(
+        name="Cinema",
+        description="""
+Guitar slang for film or cinematic music.
+
+Where it appears: In guitar slang — as film. In guitar circles — in colloquial speech. In sound recording — in soundtracks.
+
+Guitarist-Specific Tips: Cinema is film music, often including guitar.
+"""
+    ),
+
+    "CONTINUOUS DRAMATURGY": Term(
+        name="Continuous dramaturgy",
+        description="""
+A principle of continuous development of dramatic action in music, without division into separate numbers.
+
+Where it appears: In Wagner's operas — as a principle. In symphonic music — in continuous development. In guitar music — in large forms.
+
+Guitarist-Specific Tips: Continuous dramaturgy requires continuous development of musical material.
+"""
+    ),
+
+    "CONTINUOUS DEVELOPMENT": Term(
+        name="Continuous development",
+        description="""
+A principle of continuous musical development, without repetitions and stops. Used in Romantic music.
+
+Where it appears: In Romantic music — in symphonic poems. In guitar music — in large pieces. In opera — in continuous action.
+
+Guitarist-Specific Tips: Continuous development requires constant motion and transformation of material.
+"""
+    ),
+
+    "CONTINUOUS COUNTERPOINT": Term(
+        name="Continuous counterpoint",
+        description="""
+Counterpoint that runs through the entire work without stops. Used in polyphony.
+
+Where it appears: In polyphony — as a technique. In classical music — in fugues. In guitar music — in polyphonic pieces.
+
+Guitarist-Specific Tips: Continuous counterpoint requires continuous voice leading.
+"""
+    ),
+
+    "COMPLEX FORM": Term(
+        name="Complex form",
+        description="""
+A musical form consisting of several parts, each with its own structure. Examples: sonata form, rondo.
+
+Where it appears: In classical music — as a form. In education — in analysis. In guitar music — in large pieces.
+
+Guitarist-Specific Tips: Complex form requires understanding of structure and development.
+"""
+    ),
+
+    "COMPOUND INTERVALS": Term(
+        name="Compound intervals",
+        description="""
+Intervals exceeding an octave. These include the ninth, tenth, eleventh, and twelfth.
+
+Where it appears: In music theory — as intervals. In guitar music — in chords. In education — in analysis.
+
+Guitarist-Specific Tips: Compound intervals are used in jazz chords.
+"""
+    ),
+
+    "COMPOUND METERS": Term(
+        name="Compound meters",
+        description="""
+Measures with complex metric division (6/8, 9/8, 12/8). Contrasted with simple meters.
+
+Where it appears: In music — as meter. In guitar music — in rhythmic patterns. In education — in rhythm.
+
+Guitarist-Specific Tips: Compound meters require a precise sense of rhythm.
+"""
+    ),
+
+    "CHANGE": Term(
+        name="Change",
+        description="""
+Guitar slang for a change of position, chord, or effect in playing.
+
+Where it appears: In guitar slang — as a transition. In guitar circles — in colloquial speech. In performance — in changes.
+
+Guitarist-Specific Tips: A change is a transition between positions or effects.
+"""
+    ),
+
+    "COLLECTED WORKS": Term(
+        name="Collected works",
+        description="""
+A complete collection of a composer's musical works. Used in musicology and publishing.
+
+Where it appears: In music — as a publication. In culture — in collections. In guitar music — in printed editions.
+
+Guitarist-Specific Tips: Collected works is a complete edition of a composer's works.
+"""
+    ),
+
+    "COMBINED MIX": Term(
+        name="Combined mix",
+        description="""
+Guitar slang for a mixed sound combining different signal sources.
+
+Where it appears: In guitar slang — as sound. In guitar circles — in colloquial speech. In sound recording — in mixing.
+
+Guitarist-Specific Tips: A combined mix is a mixed guitar sound.
+"""
+    ),
+
+    "CONTENT": Term(
+        name="Content",
+        description="""
+The ideological and emotional content of a musical work. The basis of its artistic value.
+
+Where it appears: In music — as meaning. In education — in analysis. In guitar music — in interpretation.
+
+Guitarist-Specific Tips: Content is the meaning and emotions embedded in a guitar work.
+"""
+    ),
+
+    "COMPOUND MEASURE": Term(
+        name="Compound measure",
+        description="""
+A measure consisting of several metric groups (e.g., 3+2 in 5/4 time). Used in folk and contemporary music.
+
+Where it appears: In folk music — in rhythmic patterns. In contemporary music — in experiments. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A compound measure requires a precise sense of rhythm.
+"""
+    ),
+
+    "CHORAL REHEARSAL": Term(
+        name="Choral rehearsal",
+        description="""
+A rehearsal of a vocal ensemble or choir aimed at tuning voices and ensemble sound.
+
+Where it appears: In vocal music — as a rehearsal. In choir — in choral rehearsals. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A choral rehearsal is a rehearsal of a vocal ensemble.
+"""
+    ),
+
+    "CONTINUOUS": Term(
+        name="Continuous",
+        description="""
+In music — continuous, without stops, sound or motion. Used in virtuosic music.
+
+Where it appears: In music — as continuity. In guitar music — in fast passages. In performance — in continuous playing.
+
+Guitarist-Specific Tips: Continuous is continuous sound without pauses.
+"""
+    ),
+
+    "CALMLY": Term(
+        name="Calmly",
+        description="""
+A performance indication requiring a calm, restrained character.
+
+Where it appears: In classical music — as an articulation. In guitar music — in calm pieces. In education — in performance.
+
+Guitarist-Specific Tips: Calmly means restrained, even performance on guitar.
+"""
+    ),
+
+    "CRAZY": Term(
+        name="Crazy",
+        description="""
+Guitar slang for an insanely fast, complex, or unconventional style of playing.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in virtuosic playing.
+
+Guitarist-Specific Tips: Crazy is an insanely fast, virtuosic style of playing.
+"""
+    ),
+
+    "COUNTING": Term(
+        name="Counting",
+        description="""
+Rhythmic counting of beats in a measure. Used to maintain tempo and synchronization in ensemble.
+
+Where it appears: In rhythm — as counting. In education — in exercises. In guitar music — in performance.
+
+Guitarist-Specific Tips: Counting helps maintain rhythm and synchronization.
+"""
+    ),
+
+    "COUNTING RHYME": Term(
+        name="Counting rhyme",
+        description="""
+A short rhythmic phrase for counting beats. Used in rhythm education.
+
+Where it appears: In education — as an exercise. In rhythm — in counting rhymes. In guitar music — in rhythm development.
+
+Guitarist-Specific Tips: A counting rhyme is an exercise for developing rhythm.
 """
     ),
 }

@@ -358,14 +358,15 @@ Guitarist-Specific Tips: Neo-modal harmony expands the harmonic language of the 
 """
     ),
 
+    
     "NASAL": Term(
         name="Nasal",
         description="""
-Guitar slang for a note or passage with a characteristic "nasal" timbre.
+Guitar slang for a nasal, twangy sound or timbre.
 
-Where it appears: In guitar slang — as timbre. In sound recording — as a characteristic. In guitar circles — in colloquial speech.
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
 
-Guitarist-Specific Tips: Nasal is a nasal, twangy timbre.
+Guitarist-Specific Tips: Nasal is a nasal, twangy guitar sound.
 """
     ),
 
@@ -685,6 +686,17 @@ The lower part of the guitar neck or the heel joint in some instruments.
 Where it appears: In guitar construction — as part of the neck. In guitar craftsmanship — in repair. In guitar terminology — rarely.
 
 Guitarist-Specific Tips: A neck heel is part of the guitar neck.
+"""
+    ),
+
+    "NATIVE SOUND": Term(
+        name="Native sound",
+        description="""
+A sound that the guitarist considers their own, natural, and comfortable for their style.
+
+Where it appears: In performance — as a characteristic. In guitar music — in individual sound. In education — in finding one's sound.
+
+Guitarist-Specific Tips: Native sound is an individual guitar timbre.
 """
     ),
 }

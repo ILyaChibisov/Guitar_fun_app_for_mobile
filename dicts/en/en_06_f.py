@@ -419,14 +419,15 @@ Guitarist-Specific Tips: A floor tom is an element of a drum kit synchronized wi
 """
     ),
 
+    
     "FEEDBACK": Term(
         name="Feedback",
         description="""
-An acoustic phenomenon where sound from a speaker feeds back into a microphone or pickup, creating a characteristic humming or whistling sound. Used as an effect in rock music.
+Acoustic feedback — an effect that occurs when sound is amplified. Used in rock music as a special effect.
 
 Where it appears: In electric guitar — as an effect. In sound recording — as an undesirable phenomenon. In rock music — in powerful solos.
 
-Guitarist-Specific Tips: Feedback can be used as a special effect. Controlled by distance from the amplifier and volume level.
+Guitarist-Specific Tips: Feedback can be used as a special effect.
 """
     ),
 
@@ -493,6 +494,138 @@ A measure with time signature 5/4 or 5/8, consisting of five beats. Used in cont
 Where it appears: In contemporary music — in rhythmic experiments. In folk music — in some traditions. In guitar music — in rhythmic patterns.
 
 Guitarist-Specific Tips: A five-beat measure requires a precise sense of rhythm.
+"""
+    ),
+
+    "FRAME": Term(
+        name="Frame",
+        description="""
+The boundaries of a musical form or construction. Also — the layout of musical text.
+
+Where it appears: In music — as a structural element. In sheet music — in layout. In guitar music — in form.
+
+Guitarist-Specific Tips: A frame is the boundary of a musical form.
+"""
+    ),
+
+    "FOOTLIGHTS": Term(
+        name="Footlights",
+        description="""
+Stage lighting in theater directed at the apron. In guitar terminology — rarely.
+
+Where it appears: In theater — as lighting. In concerts — as lighting design. In guitar music — in stage image.
+
+Guitarist-Specific Tips: Footlights are stage lighting that creates atmosphere.
+"""
+    ),
+
+    "FLOWERING": Term(
+        name="Flowering",
+        description="""
+A period of flowering of creativity, virtuosity, and mastery. Used in musicians' biographies.
+
+Where it appears: In culture — as a period. In biographies — as flowering. In guitar music — in a creative path.
+
+Guitarist-Specific Tips: Flowering is the peak of a guitarist's creative mastery.
+"""
+    ),
+
+    "FATAL": Term(
+        name="Fatal",
+        description="""
+In music — fatal, fateful, dramatic character. Often used in ballads and dramatic works.
+
+Where it appears: In rock ballads — as a character. In dramatic music — in fatal themes. In guitar music — in dramatic pieces.
+
+Guitarist-Specific Tips: A fatal character requires drama and expressiveness.
+"""
+    ),
+
+    "FISH": Term(
+        name="Fish",
+        description="""
+Guitar slang for a beautiful, melodic phrase or solo.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in expressive playing.
+
+Guitarist-Specific Tips: A fish is a beautiful melodic guitar phrase.
+"""
+    ),
+
+    "FISHERMAN": Term(
+        name="Fisherman",
+        description="""
+Guitar slang for a guitarist "catching" beautiful melodies and riffs.
+
+Where it appears: In guitar slang — as an image. In guitar circles — in colloquial speech. In performance — in finding melodies.
+
+Guitarist-Specific Tips: A fisherman is a guitarist searching for beautiful melodies.
+"""
+    ),
+
+    "FISH TAIL": Term(
+        name="Fish tail",
+        description="""
+Guitar slang for the ending of a phrase or solo with a characteristic "tail" — a fade-out.
+
+Where it appears: In guitar slang — as an ending. In guitar circles — in colloquial speech. In performance — in phrase endings.
+
+Guitarist-Specific Tips: A fish tail is a characteristic ending of a guitar phrase.
+"""
+    ),
+
+    "FREE FORM": Term(
+        name="Free form",
+        description="""
+A musical form that does not follow strict rules and structures. Characteristic of improvisation and program music.
+
+Where it appears: In classical music — in fantasies. In jazz — in improvisations. In guitar music — in free pieces.
+
+Guitarist-Specific Tips: Free form gives the guitarist creative freedom.
+"""
+    ),
+
+    "FAST": Term(
+        name="Fast",
+        description="""
+A fast tempo or character of performance. Used in virtuosic music.
+
+Where it appears: In music — as a tempo. In guitar music — in fast pieces. In performance — in speed playing.
+
+Guitarist-Specific Tips: Fast tempo requires fast and precise technique.
+"""
+    ),
+
+    "FOLLOW": Term(
+        name="Follow",
+        description="""
+Guitar slang for a sequence of chords or a melodic line.
+
+Where it appears: In guitar slang — as a sequence. In guitar circles — in colloquial speech. In performance — in harmony.
+
+Guitarist-Specific Tips: A follow is a sequence of guitar chords.
+"""
+    ),
+
+    "FLAVOR": Term(
+        name="Flavor",
+        description="""
+Guitar slang for a highlight, special charm, or characteristic technique in playing.
+
+Where it appears: In guitar slang — as a feature. In guitar circles — in colloquial speech. In performance — in characteristic techniques.
+
+Guitarist-Specific Tips: Flavor is a highlight in guitar playing.
+"""
+    ),
+
+    "FAIRNESS": Term(
+        name="Fairness",
+        description="""
+In music — harmonious, balanced sound where all voices and elements are balanced.
+
+Where it appears: In sound recording — in balance. In performance — in dynamics. In guitar music — in sound.
+
+Guitarist-Specific Tips: Fairness is a balanced sound in a guitar part.
 """
     ),
 }

@@ -387,8 +387,11 @@ class GuitarFunsApp(MDApp):
         self.top_nav.size_hint = (1, None)
         self.top_nav.pos_hint = {'top': 1}
 
+        # Обновляем заголовок для home
         self.top_nav.update_title('home')
-        self.top_nav._hide_back_button()
+        # Левую кнопку обновляем через встроенный метод TopNav
+        self.top_nav._update_left_button('home')
+        self.top_nav._update_right_buttons('home')
         logger.info("✅ TopNav установлен на 'Главная'")
 
         self.bottom_nav = BottomNav(self.screen_manager)

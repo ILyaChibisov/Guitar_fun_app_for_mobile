@@ -99,14 +99,15 @@ Third — legato and rich dynamics are used.
     ),
 
     
+    
     "VERSE": Term(
         name="Verse",
         description="""
-A stanza in a song, repeated with new text while the melody and chords remain unchanged.
+A poetic text set to music. In guitar music — lyrics for songs.
 
-Where it appears: In songs — as a strophic form. In folk music — in verse songs. In guitar music — in accompaniment.
+Where it appears: In songs — as text. In poetry — in verses. In guitar music — in accompaniment.
 
-Guitarist-Specific Tips: Verses require repeating chords and rhythmic patterns. Important to maintain accompaniment stability when changing lyrics.
+Guitarist-Specific Tips: A verse is a poetic text for a guitar song.
 """
     ),
 
@@ -536,6 +537,61 @@ The technique of proper breathing and articulation for singing. In guitar termin
 Where it appears: In vocal pedagogy — as the foundation. In education — as a skill. In guitar music — in accompaniment.
 
 Guitarist-Specific Tips: Voice placement is important for vocalists accompanied by guitar.
+"""
+    ),
+
+    "VOCAL WARM-UP": Term(
+        name="Vocal warm-up",
+        description="""
+A vocal exercise for warming up the voice before singing. In guitar terminology — finger warm-up.
+
+Where it appears: In vocal pedagogy — as an exercise. In guitar practice — as a warm-up. In education — in preparation.
+
+Guitarist-Specific Tips: A vocal warm-up is a finger warm-up before playing guitar.
+"""
+    ),
+
+    "VOICE ARRANGEMENT": Term(
+        name="Voice arrangement",
+        description="""
+The distribution of voices in a polyphonic texture by range and function. Affects sound and clarity.
+
+Where it appears: In harmony — as texture. In polyphony — in voice leading. In guitar music — in chords.
+
+Guitarist-Specific Tips: Voice arrangement affects the transparency and sound of the guitar texture.
+"""
+    ),
+
+    "VOLUME CONTROL": Term(
+        name="Volume control",
+        description="""
+A control that regulates the volume level on a guitar, amplifier, or pedal.
+
+Where it appears: In guitar equipment — as a control. In sound recording — in settings. In guitar practice — in amplification.
+
+Guitarist-Specific Tips: A volume control is important for controlling sound on stage and in the studio.
+"""
+    ),
+
+    "VOLUME KNOB": Term(
+        name="Volume knob",
+        description="""
+A knob or volume control on a guitar, amplifier, or pedal. Used to control signal level.
+
+Where it appears: In guitar equipment — as a control. In sound recording — in settings. In guitar practice — in control.
+
+Guitarist-Specific Tips: A volume knob is important for controlling sound on stage.
+"""
+    ),
+
+    "VIOLIN": Term(
+        name="Violin",
+        description="""
+A stringed bowed instrument of high register. One of the main instruments in orchestra and chamber music.
+
+Where it appears: In orchestra — as a primary instrument. In chamber music — in quartets. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Violin and guitar are often combined in duets and ensembles.
 """
     ),
 }

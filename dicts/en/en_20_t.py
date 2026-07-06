@@ -456,14 +456,15 @@ Guitarist-Specific Tips: To break away means to play virtuosically, with abandon
 """
     ),
 
+    
     "TRANSCRIPTION": Term(
         name="Transcription",
         description="""
-An arrangement or adaptation of a musical work for a different ensemble of instruments.
+A recording of music in the form of a musical transcription. In guitar terminology — musical notation.
 
-Where it appears: In music — as a process. In guitar music — in arrangements. In arrangement — as adaptation.
+Where it appears: In notation — as a recording. In education — in transcriptions. In guitar music — in musical notation.
 
-Guitarist-Specific Tips: Transcription for guitar requires consideration of the instrument's characteristics.
+Guitarist-Specific Tips: A transcription is a musical notation of guitar music.
 """
     ),
 
@@ -618,6 +619,347 @@ Guitar slang for strong playing with powerful attack and large sound volume.
 Where it appears: In guitar slang — as a characteristic. In rock music — in powerful riffs. In guitar circles — in colloquial speech.
 
 Guitarist-Specific Tips: To blow means to play powerfully and loudly.
+"""
+    ),
+
+    "TO DEVELOP TECHNIQUE": Term(
+        name="To develop technique",
+        description="""
+The process of improving technical skills on guitar through exercises and practice.
+
+Where it appears: In education — as a goal. In performance — as a process. In guitar practice — in training.
+
+Guitarist-Specific Tips: Developing technique requires regular exercises and mindful practice.
+"""
+    ),
+
+    "TIME SIGNATURE": Term(
+        name="Time signature",
+        description="""
+The number of beats in a measure, determining the metric structure of music. Denoted by a fraction at the beginning of the staff.
+
+Where it appears: In music theory — as the foundation. In guitar music — in rhythmic patterns. In education — as the foundation.
+
+Guitarist-Specific Tips: Time signature determines the rhythmic organization of guitar music. Important to feel the time signature.
+"""
+    ),
+
+    "TUNING ISSUE": Term(
+        name="Tuning issue",
+        description="""
+Inaccurate tuning of the guitar, causing false sound. Also — emotional disorder or creative crisis.
+
+Where it appears: In tuning — as a problem. In guitar practice — in an untuned instrument. In culture — in a creative state.
+
+Guitarist-Specific Tips: A tuning issue is inaccurate guitar tuning requiring adjustment.
+"""
+    ),
+
+    "TO STRETCH OUT": Term(
+        name="To stretch out",
+        description="""
+Guitar slang for slow, stretched performance, often with agogics.
+
+Where it appears: In guitar slang — as performance. In guitar circles — in colloquial speech. In performance — in slow pieces.
+
+Guitarist-Specific Tips: To stretch out means to play slowly and stretched.
+"""
+    ),
+
+    "TO RUSH": Term(
+        name="To rush",
+        description="""
+Guitar slang for powerful, energetic playing with "abandon."
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in powerful solos. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To rush means to play powerfully and energetically.
+"""
+    ),
+
+    "TONE CONTROL": Term(
+        name="Tone control",
+        description="""
+A control that regulates the timbre of the sound on a guitar, amplifier, or pedal.
+
+Where it appears: In guitar equipment — as a control. In sound recording — in settings. In guitar practice — in timbre.
+
+Guitarist-Specific Tips: A tone control is important for shaping guitar sound.
+"""
+    ),
+
+    "TO REHEARSE": Term(
+        name="To rehearse",
+        description="""
+To practice, repeat musical material in preparation for a performance or recording.
+
+Where it appears: In education — as a process. In performance — as preparation. In guitar practice — in rehearsals.
+
+Guitarist-Specific Tips: To rehearse is to prepare for a concert or recording.
+"""
+    ),
+
+    "TO CHOP": Term(
+        name="To chop",
+        description="""
+Guitar slang for powerful, rhythmic playing with strong attack, especially in rock.
+
+Where it appears: In guitar slang — as a characteristic. In rock music — in powerful riffs. In guitar circles — in colloquial speech.
+
+Guitarist-Specific Tips: To chop means to play powerfully and rhythmically.
+"""
+    ),
+
+    "TONE KNOB": Term(
+        name="Tone knob",
+        description="""
+A knob or tone control on a guitar, amplifier, or pedal. Used to shape the sound.
+
+Where it appears: In guitar equipment — as a control. In sound recording — in settings. In guitar practice — in control.
+
+Guitarist-Specific Tips: A tone knob is important for shaping guitar sound.
+"""
+    ),
+
+    "TO COBBLE TOGETHER": Term(
+        name="To cobble together",
+        description="""
+Guitar slang for playing or creating music quickly and carelessly.
+
+Where it appears: In guitar slang — as an action. In guitar circles — in colloquial speech. In performance — in careless playing.
+
+Guitarist-Specific Tips: To cobble together means to play quickly and carelessly.
+"""
+    ),
+
+    "TO BUILD": Term(
+        name="To build",
+        description="""
+Guitar slang for to make, create, or assemble a guitar or equipment.
+
+Where it appears: In guitar slang — as an action. In guitar circles — in colloquial speech. In sound recording — in creation.
+
+Guitarist-Specific Tips: To build means to create or assemble a guitar.
+"""
+    ),
+
+    "TO RIP": Term(
+        name="To rip",
+        description="""
+Guitar slang for fast, energetic performance of a riff or passage.
+
+Where it appears: In guitar slang — as an action. In guitar circles — in colloquial speech. In performance — in fast playing.
+
+Guitarist-Specific Tips: To rip means to play quickly and energetically.
+"""
+    ),
+
+    "TO PLAY WITH A METRONOME": Term(
+        name="To play with a metronome",
+        description="""
+To perform a piece or fragment strictly in time, with a metronome, without tempo deviations.
+
+Where it appears: In education — as an exercise. In performance — as control. In guitar practice — in training.
+
+Guitarist-Specific Tips: Playing with a metronome develops a sense of rhythm and accuracy.
+"""
+    ),
+
+    "TO MAKE A FISH": Term(
+        name="To make a fish",
+        description="""
+Guitar slang for playing a beautiful, melodic phrase or solo.
+
+Where it appears: In guitar slang — as an action. In guitar circles — in colloquial speech. In performance — in expressive playing.
+
+Guitarist-Specific Tips: To make a fish means to play a beautiful guitar phrase.
+"""
+    ),
+
+    "TO DO WELL": Term(
+        name="To do well",
+        description="""
+Guitar slang for quality performance, a professional approach to playing.
+
+Where it appears: In guitar slang — as quality. In guitar circles — in colloquial speech. In performance — in professionalism.
+
+Guitarist-Specific Tips: To do well means to perform a guitar part with quality.
+"""
+    ),
+
+    "TO SIT": Term(
+        name="To sit",
+        description="""
+In guitar slang — to play sitting down, without moving on stage.
+
+Where it appears: In guitar slang — as an action. In guitar circles — in colloquial speech. In performance — in concerts.
+
+Guitarist-Specific Tips: To sit means to play guitar sitting down, without stage movement.
+"""
+    ),
+
+    "TO COMPOSE": Term(
+        name="To compose",
+        description="""
+To create a musical work, to write original music.
+
+Where it appears: In composition — as a process. In education — as a skill. In guitar music — in creativity.
+
+Guitarist-Specific Tips: To compose means to create an original guitar composition.
+"""
+    ),
+
+    "TREBLE CLEF": Term(
+        name="Treble clef",
+        description="""
+A clef indicating the position of G on the second line of the staff. Used for writing high instruments.
+
+Where it appears: In notation — as a clef. In guitar music — in the treble clef. In education — as the foundation.
+
+Guitarist-Specific Tips: The treble clef is used for writing guitar music.
+"""
+    ),
+
+    "TEARS": Term(
+        name="Tears",
+        description="""
+An image in music — a sad, melancholic mood. Often conveyed through minor keys and smooth melodies.
+
+Where it appears: In Romantic music — as an image. In blues — in melancholic themes. In guitar music — in lyrical pieces.
+
+Guitarist-Specific Tips: Tears is a sad, melancholic image for guitar music.
+"""
+    ),
+
+    "TO HEAR": Term(
+        name="To hear",
+        description="""
+To perceive sounds, distinguish musical nuances and intonation. An important quality of a musician.
+
+Where it appears: In performance — as perception. In education — as a skill. In guitar practice — in listening.
+
+Guitarist-Specific Tips: To hear is an important quality of a guitarist, allowing accurate intonation and ensemble feel.
+"""
+    ),
+
+    "TUNING CHANGE": Term(
+        name="Tuning change",
+        description="""
+A change in guitar tuning, switching to a different tuning (open tuning, drop tuning, etc.).
+
+Where it appears: In guitar practice — in tuning. In folk music — in open tunings. In guitar music — in experimental tunings.
+
+Guitarist-Specific Tips: A tuning change expands the sonic possibilities of the guitar.
+"""
+    ),
+
+    "TO DESCEND": Term(
+        name="To descend",
+        description="""
+A gradual decrease in volume, tempo, or pitch. Used in dynamics and agogics.
+
+Where it appears: In dynamics — as fading. In agogics — as slowing down. In guitar music — in phrase endings.
+
+Guitarist-Specific Tips: To descend means to gradually decrease volume or tempo.
+"""
+    ),
+
+    "TO PROVOKE": Term(
+        name="To provoke",
+        description="""
+In music — to evoke an emotional response, inspiration, or reaction from the listener.
+
+Where it appears: In performance — as impact. In education — as stimulus. In guitar music — in expressiveness.
+
+Guitarist-Specific Tips: To provoke is to evoke an emotional response from the listener.
+"""
+    ),
+
+    "TO CONFUSE": Term(
+        name="To confuse",
+        description="""
+Guitar slang for a mistake in playing, confusion in fingering or rhythm.
+
+Where it appears: In guitar slang — as a mistake. In guitar circles — in colloquial speech. In education — in inaccuracies.
+
+Guitarist-Specific Tips: To confuse means to make a mistake in a guitar part.
+"""
+    ),
+
+    "TO COMPARE": Term(
+        name="To compare",
+        description="""
+In music — to compare sounds, intervals, chords, or styles for analysis and understanding.
+
+Where it appears: In education — as analysis. In performance — in interpretation. In guitar music — in comparing styles.
+
+Guitarist-Specific Tips: To compare is to compare guitar styles and techniques.
+"""
+    ),
+
+    "TABLE": Term(
+        name="Table",
+        description="""
+Guitar slang for a table for equipment or a music stand.
+
+Where it appears: In guitar slang — as a table. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A table is a guitarist's work table.
+"""
+    ),
+
+    "TAILPIECE": Term(
+        name="Tailpiece",
+        description="""
+A part of the guitar where the strings are attached (bridge). Affects timbre and sustain.
+
+Where it appears: In guitar construction — as a part. In setup — in adjustment. In guitar craftsmanship — in repair.
+
+Guitarist-Specific Tips: A tailpiece is a part of the guitar that affects sound.
+"""
+    ),
+
+    "TO COUNT": Term(
+        name="To count",
+        description="""
+To count beats in a measure, to follow the rhythm. An important skill for any musician.
+
+Where it appears: In education — as a skill. In performance — in rhythm. In guitar practice — in playing.
+
+Guitarist-Specific Tips: To count is to count beats for accurate rhythm.
+"""
+    ),
+
+    "TO PLAY WITH THE ORCHESTRA": Term(
+        name="To play with the orchestra",
+        description="""
+The process of a guitarist adapting to the sound of the orchestra, tuning into the overall sound.
+
+Where it appears: In ensemble practice — as adaptation. In orchestra — in playing together. In guitar music — in concerts.
+
+Guitarist-Specific Tips: To play with the orchestra is to adapt to the overall sound.
+"""
+    ),
+
+    "TO PLAY TOGETHER": Term(
+        name="To play together",
+        description="""
+The process of musicians playing together to achieve synchronization and cohesion.
+
+Where it appears: In ensemble practice — as a process. In orchestra — in playing together. In guitar music — in bands.
+
+Guitarist-Specific Tips: To play together is to achieve cohesion in an ensemble.
+"""
+    ),
+
+    "TO POUR": Term(
+        name="To pour",
+        description="""
+Guitar slang for fast, technical playing with many notes.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in virtuosic playing.
+
+Guitarist-Specific Tips: To pour means to play fast and technically.
 """
     ),
 }

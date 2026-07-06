@@ -368,4 +368,92 @@ Where it appears: In polyphony — as development. In classical music — in the
 Guitarist-Specific Tips: Exposition is the development of a theme in different voices.
 """
     ),
+
+    "EQUAL TEMPERAMENT": Term(
+        name="Equal temperament",
+        description="""
+A tuning system for musical instruments where the octave is divided into 12 equal semitones. The basis of modern musical tuning.
+
+Where it appears: In music theory — as a system. In tuning — as the foundation. In guitar music — in standard tuning.
+
+Guitarist-Specific Tips: Equal temperament allows playing in any key. The basis of modern guitar tuning.
+"""
+    ),
+
+    "ENTERTAINMENT MUSIC": Term(
+        name="Entertainment music",
+        description="""
+Light, cheerful music intended for relaxation and entertainment. Contrasted with serious and academic music.
+
+Where it appears: In variety — as a genre. In culture — in entertainment events. In guitar music — in light pieces.
+
+Guitarist-Specific Tips: Entertainment music requires a light and cheerful character.
+"""
+    ),
+
+    "EARLY MUSIC": Term(
+        name="Early music",
+        description="""
+Music created in early periods (Medieval, Renaissance, Baroque). Performed on period instruments.
+
+Where it appears: In music history — as a period. In culture — as heritage. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Early music is the foundation of the guitar repertoire, including works by Bach and other composers.
+"""
+    ),
+
+    "EXPENSE": Term(
+        name="Expense",
+        description="""
+Guitar slang for the expenditure of energy, time, or money on guitar equipment.
+
+Where it appears: In guitar slang — as expenditure. In guitar circles — in colloquial speech. In culture — in expenses.
+
+Guitarist-Specific Tips: Expense is spending on guitar equipment.
+"""
+    ),
+
+    "EDITING": Term(
+        name="Editing",
+        description="""
+The correction and improvement of musical material, musical text, or arrangement.
+
+Where it appears: In composition — as a process. In guitar music — in editing. In education — in correction.
+
+Guitarist-Specific Tips: Editing is the improvement of guitar material and arrangements.
+"""
+    ),
+
+    "EVEN SOUND": Term(
+        name="Even sound",
+        description="""
+A stable, even sound in volume and timbre without sharp changes. Important in accompaniment.
+
+Where it appears: In performance — as a quality. In guitar music — in accompaniment. In education — in sound production.
+
+Guitarist-Specific Tips: An even sound is the foundation of quality accompaniment.
+"""
+    ),
+
+    "ELEPHANT": Term(
+        name="Elephant",
+        description="""
+Guitar slang for a large, massive instrument or amplifier.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: An elephant is a humorous name for a large instrument or amplifier.
+"""
+    ),
+
+    "EAR": Term(
+        name="Ear",
+        description="""
+Musical ear — the ability to perceive and distinguish musical sounds, intervals, and chords.
+
+Where it appears: In music — as an ability. In education — in solfège. In guitar music — in intonation.
+
+Guitarist-Specific Tips: Ear is the foundation of guitar playing and improvisation.
+"""
+    ),
 }

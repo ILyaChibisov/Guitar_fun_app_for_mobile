@@ -57,21 +57,15 @@ Third — often used in folk music.
 """
     ),
 
+    
     "BALANCE": Term(
         name="Balance",
         description="""
-The ratio of volume and timbres of different voices, instruments, or parts in music. Creating a harmonious sound picture where all elements are audible and don't overpower each other.
+A quality of sound in which all frequencies and volume levels harmoniously combine.
 
-Where it appears:
-In orchestra — balance between instrument groups.
-In mixing — balance between tracks in the studio.
-In ensemble — balance between musicians.
+Where it appears: In sound recording — in the mix. In performance — in balance. In guitar music — in sound.
 
-Guitarist-Specific Tips:
-First — balance between accompaniment and solo.
-Second — balance within chords (all notes audible).
-Third — important when playing with other instruments.
-Fourth — regulated by dynamics and attack.
+Guitarist-Specific Tips: Balance is an important quality of guitar sound.
 """
     ),
 
@@ -995,14 +989,15 @@ Guitarist-Specific Tips: Building acoustics affect sound. Important to adapt pla
 """
     ),
 
+    
     "BOW": Term(
         name="Bow",
         description="""
-A musical gesture or image — bowing before art, audience, or tradition. In guitar culture — respect for music.
+An instrument for playing stringed bowed instruments. In guitar terminology — rarely.
 
-Where it appears: In concert practice — as a bow. In culture — as a gesture. In guitar circles — as respect.
+Where it appears: On violin, cello — as an instrument. In orchestra — in string groups. In guitar music — rarely.
 
-Guitarist-Specific Tips: A bow is respect for listeners and art. Important to treat the guitar with respect.
+Guitarist-Specific Tips: A bow is an instrument for bowed instruments, not related to guitar.
 """
     ),
 
@@ -1017,14 +1012,15 @@ Guitarist-Specific Tips: Knowledge of banners helps in understanding Old Russian
 """
     ),
 
+    
     "BELL": Term(
         name="Bell",
         description="""
-A percussion instrument in the form of a metal bell. Also — bell ringing as a genre or image in music.
+Part of a wind instrument that flares out at the end. In guitar terminology — rarely.
 
-Where it appears: In orchestra — in bells. In church music — as ringing. In guitar music — in descriptive pieces.
+Where it appears: On wind instruments — as a part. In orchestra — in brass instruments. In guitar music — rarely.
 
-Guitarist-Specific Tips: The bell is an image that inspires guitarists to create pieces imitating ringing. Harmonics and arpeggios are used.
+Guitarist-Specific Tips: A bell is part of a wind instrument.
 """
     ),
 
@@ -1225,6 +1221,105 @@ Guitar slang for a guitar with a large body (jumbo or classical).
 Where it appears: In guitar slang — as a shape. In guitar circles — in colloquial speech. In culture — as an image.
 
 Guitarist-Specific Tips: Big belly is a guitar with a large body.
+"""
+    ),
+
+    "BOW DISTRIBUTION": Term(
+        name="Bow distribution",
+        description="""
+The technique of distributing the bow on string instruments. In guitar terminology — rarely.
+
+Where it appears: In string music — as a technique. In education — as a skill. In guitar music — rarely.
+
+Guitarist-Specific Tips: Bow distribution is a technique for bowed instruments.
+"""
+    ),
+
+    "BACKPACK": Term(
+        name="Backpack",
+        description="""
+Guitar slang for a case or bag for a guitar.
+
+Where it appears: In guitar slang — as a case. In guitar circles — in colloquial speech. In sound recording — in accessories.
+
+Guitarist-Specific Tips: A backpack is a case for carrying a guitar.
+"""
+    ),
+
+    "BOOT": Term(
+        name="Boot",
+        description="""
+Guitar slang for a guitar cable or cord.
+
+Where it appears: In guitar slang — as a cable. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A boot is a humorous name for a guitar cable.
+"""
+    ),
+
+    "B-FLAT": Term(
+        name="B-flat",
+        description="""
+The note B lowered by a semitone. Used in flat keys.
+
+Where it appears: In music — as an altered sound. In harmony — in chords. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: B-flat is often used in jazz and blues chords.
+"""
+    ),
+
+    "B-SHARP": Term(
+        name="B-sharp",
+        description="""
+The note B raised by a semitone. Used in sharp keys.
+
+Where it appears: In music — as an altered sound. In harmony — in chords. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: B-sharp is rarely used, usually replaced by C.
+"""
+    ),
+
+    "B": Term(
+        name="B",
+        description="""
+The note B — the seventh degree of C major and the second degree of A minor. Used in most keys.
+
+Where it appears: In solfège — as a note. In guitar practice — in chords and scales. In tuning — as an open string.
+
+Guitarist-Specific Tips: The note B is the open second string of the guitar.
+"""
+    ),
+
+    "BENCH": Term(
+        name="Bench",
+        description="""
+Guitar slang for a bench or stand for a guitar.
+
+Where it appears: In guitar slang — as an accessory. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A bench is a stand for a guitar.
+"""
+    ),
+
+    "BORING INSTRUMENT": Term(
+        name="Boring instrument",
+        description="""
+Guitar slang for an instrument with a poor, dull sound.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: A boring instrument is a guitar with a poor sound.
+"""
+    ),
+
+    "BARREL": Term(
+        name="Barrel",
+        description="""
+Guitar slang for the guitar neck or the long part of the instrument.
+
+Where it appears: In guitar slang — as the neck. In guitar circles — in colloquial speech. In construction — as a part.
+
+Guitarist-Specific Tips: A barrel is the guitar neck.
 """
     ),
 }

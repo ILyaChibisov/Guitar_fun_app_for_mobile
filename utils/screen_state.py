@@ -49,10 +49,12 @@ class ScreenStateManager:
         logger.debug("Очищены все состояния")
 
     def set_previous_screen(self, screen_name):
+        old = self._previous_screen
         self._previous_screen = screen_name
-        logger.debug(f"✅ screen_state: установлен предыдущий экран = {screen_name}")
+        logger.info(f"✅ screen_state: предыдущий экран изменён: {old} → {screen_name}")
 
     def get_previous_screen(self):
+        logger.info(f"📌 screen_state.get_previous_screen() = {self._previous_screen}")
         return self._previous_screen
 
     def set_pending_chord(self, chord_name):
@@ -65,31 +67,14 @@ class ScreenStateManager:
     def clear_pending_chord(self):
         self._pending_chord = None
 
-    # ============ НОВЫЕ МЕТОДЫ ДЛЯ КЭША СОСТОЯНИЙ ============
+    # ============ КЭШ СОСТОЯНИЙ ЭКРАНОВ ============
 
     def cache_screen_data(self, screen_name, data):
-        """
-        Сохраняет данные экрана в кэш (например, список избранного)
-
-        Args:
-            screen_name: имя экрана
-            data: данные для сохранения
-        """
         self._screen_cache[screen_name] = data
         self._last_update[screen_name] = time.time()
         logger.debug(f"📦 Закэшированы данные для {screen_name}: {len(data) if data else 0} элементов")
 
     def get_cached_screen_data(self, screen_name, max_age=60):
-        """
-        Возвращает кэшированные данные экрана, если они не устарели
-
-        Args:
-            screen_name: имя экрана
-            max_age: максимальный возраст кэша в секундах (по умолчанию 60)
-
-        Returns:
-            данные или None, если кэш устарел или отсутствует
-        """
         if screen_name in self._screen_cache:
             age = time.time() - self._last_update.get(screen_name, 0)
             if age < max_age:
@@ -100,12 +85,6 @@ class ScreenStateManager:
         return None
 
     def invalidate_screen_cache(self, screen_name=None):
-        """
-        Инвалидирует кэш экрана (или всех экранов)
-
-        Args:
-            screen_name: имя экрана или None для всех
-        """
         if screen_name:
             if screen_name in self._screen_cache:
                 del self._screen_cache[screen_name]
@@ -118,10 +97,56 @@ class ScreenStateManager:
             logger.debug("🗑️ Инвалидирован кэш всех экранов")
 
     def is_cache_valid(self, screen_name, max_age=60):
-        """Проверяет, валиден ли кэш для экрана"""
         if screen_name in self._last_update:
             return (time.time() - self._last_update[screen_name]) < max_age
         return False
+
+    # ============ НОВЫЕ МЕТОДЫ ДЛЯ СОХРАНЕНИЯ СОСТОЯНИЯ ЭКРАНОВ ============
+
+    def save_screen_state(self, screen_name, state_dict):
+        """
+        Сохраняет полное состояние экрана
+        """
+        state_dict['_timestamp'] = time.time()
+        cache_key = f'{screen_name}_state'
+        self._screen_cache[cache_key] = state_dict
+        self._last_update[cache_key] = time.time()
+        logger.info(f"💾 СОХРАНЕНО состояние для {screen_name}: {list(state_dict.keys())}")
+        logger.info(f"   → ключ кэша: {cache_key}")
+
+    def get_screen_state(self, screen_name, max_age=60):
+        """
+        Возвращает сохранённое состояние экрана
+        """
+        cache_key = f'{screen_name}_state'
+        logger.info(f"🔍 ПОИСК состояния для {screen_name}")
+        logger.info(f"   → ключ: {cache_key}")
+        logger.info(f"   → есть в кэше: {cache_key in self._screen_cache}")
+
+        if cache_key in self._screen_cache:
+            age = time.time() - self._last_update.get(cache_key, 0)
+            logger.info(f"   → возраст: {age:.1f}с (макс: {max_age}с)")
+
+            if age < max_age:
+                state = self._screen_cache[cache_key]
+                if '_timestamp' in state:
+                    del state['_timestamp']
+                logger.info(f"✅ СОСТОЯНИЕ НАЙДЕНО для {screen_name}")
+                return state
+            else:
+                logger.info(f"⏳ Состояние для {screen_name} устарело")
+        else:
+            logger.info(f"❌ Состояние для {screen_name} НЕ НАЙДЕНО")
+
+        return None
+
+    def clear_screen_state(self, screen_name):
+        cache_key = f'{screen_name}_state'
+        if cache_key in self._screen_cache:
+            del self._screen_cache[cache_key]
+            if cache_key in self._last_update:
+                del self._last_update[cache_key]
+            logger.debug(f"🗑️ Очищено состояние для {screen_name}")
 
 
 # Глобальный экземпляр

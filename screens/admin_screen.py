@@ -467,7 +467,6 @@ class AdminScreen(BaseScreen):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.set_custom_title("Админ панель")
-            app.top_nav._show_back_button()
             app.top_nav.back_btn.on_release = self.go_back
 
     def go_back(self, instance=None):

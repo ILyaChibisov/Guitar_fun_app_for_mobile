@@ -628,4 +628,125 @@ Where it appears: In guitar slang — as equipment. In guitar circles — in col
 Guitarist-Specific Tips: Gear is guitar equipment.
 """
     ),
+
+    "GROWTH": Term(
+        name="Growth",
+        description="""
+Guitar slang for expansion of possibilities or progress in playing.
+
+Where it appears: In guitar slang — as progress. In guitar circles — in colloquial speech. In education — in development.
+
+Guitarist-Specific Tips: Growth is progress and development in guitar playing.
+"""
+    ),
+
+    "GUITAR REPAIR": Term(
+        name="Guitar repair",
+        description="""
+The process of restoring or improving a guitar: replacing strings, adjusting the neck, replacing pickups, etc.
+
+Where it appears: In guitar craftsmanship — as a service. In guitar practice — in maintenance. In sound recording — in preparation.
+
+Guitarist-Specific Tips: Guitar repair is an important element of instrument care.
+"""
+    ),
+
+    "GRID": Term(
+        name="Grid",
+        description="""
+Guitar slang for a grid or metric grid in rhythm.
+
+Where it appears: In guitar slang — as a grid. In guitar circles — in colloquial speech. In rhythm — in a metric grid.
+
+Guitarist-Specific Tips: A grid is a metric grid in rhythm.
+"""
+    ),
+
+    "GRAND PIANO": Term(
+        name="Grand piano",
+        description="""
+A keyboard instrument with a horizontal body, a type of piano. In guitar terminology — rarely.
+
+Where it appears: In classical music — as an instrument. In concerts — in piano music. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A grand piano is a keyboard instrument that can be combined with guitar.
+"""
+    ),
+
+    "GARDEN": Term(
+        name="Garden",
+        description="""
+An image in music — a blooming garden symbolizing beauty, life, and harmony. Used in program and Romantic music.
+
+Where it appears: In program music — as an image of nature. In Romantic music — in lyrical pieces. In guitar music — in descriptive pieces.
+
+Guitarist-Specific Tips: A garden is an inspiring image for creating bright, harmonious guitar compositions.
+"""
+    ),
+
+    "GLORIFICATION": Term(
+        name="Glorification",
+        description="""
+A musical work glorifying God, saints, or an event. Used in church music.
+
+Where it appears: In church music — as a genre. In choral music — in glorifications. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Glorification requires a solemn and exalted character.
+"""
+    ),
+
+    "G-FLAT": Term(
+        name="G-flat",
+        description="""
+The note G lowered by a semitone. Used in flat keys.
+
+Where it appears: In music — as an altered sound. In harmony — in chords. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: G-flat is often used in jazz chords.
+"""
+    ),
+
+    "G-SHARP": Term(
+        name="G-sharp",
+        description="""
+The note G raised by a semitone. Used in sharp keys.
+
+Where it appears: In music — as an altered sound. In harmony — in chords. In guitar practice — in chords and scales.
+
+Guitarist-Specific Tips: G-sharp is often used in jazz chords.
+"""
+    ),
+
+    "G MAJOR": Term(
+        name="G major",
+        description="""
+A major key with tonic G. Has one sharp in the key signature (F).
+
+Where it appears: In classical music — as a key. In guitar music — in major works. In popular music — in songs.
+
+Guitarist-Specific Tips: G major is often used in guitar compositions.
+"""
+    ),
+
+    "G MINOR": Term(
+        name="G minor",
+        description="""
+A minor key with tonic G. Has two flats in the key signature (B, E).
+
+Where it appears: In classical music — as a key. In guitar music — in minor works. In popular music — in songs.
+
+Guitarist-Specific Tips: G minor is often used in guitar compositions.
+"""
+    ),
+
+    "G": Term(
+        name="G",
+        description="""
+The note G — the fifth degree of C major and the third degree of A minor. Used in most keys.
+
+Where it appears: In solfège — as a note. In guitar practice — in chords and scales. In tuning — as an open string.
+
+Guitarist-Specific Tips: The note G is the open third string of the guitar.
+"""
+    ),
 }

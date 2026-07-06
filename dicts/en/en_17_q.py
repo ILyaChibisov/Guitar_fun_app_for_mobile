@@ -116,4 +116,15 @@ Where it appears: In program music — as onomatopoeia. In folk music — in son
 Guitarist-Specific Tips: A quail is an image inspiring the creation of guitar pieces.
 """
     ),
+
+    "QUARREL": Term(
+        name="Quarrel",
+        description="""
+Guitar slang for a sound with a lot of harmonics and noise, a "quarrelsome" sound.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: A quarrel is a sound with many harmonics.
+"""
+    ),
 }

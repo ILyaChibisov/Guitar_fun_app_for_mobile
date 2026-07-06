@@ -22,4 +22,15 @@ Where it appears: In orchestra — as a percussion instrument. In jazz — in en
 Guitarist-Specific Tips: Xylophone can be used in ensemble with guitar. Guitar can imitate xylophone sound with harmonics.
 """
     ),
+
+    "X-RAY PIPE": Term(
+        name="X-ray pipe",
+        description="""
+Guitar slang for a powerful, piercing sound resembling X-ray radiation.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: An X-ray pipe is a piercing, powerful guitar sound.
+"""
+    ),
 }
