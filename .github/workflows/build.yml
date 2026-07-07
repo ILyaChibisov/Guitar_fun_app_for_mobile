@@ -85,17 +85,29 @@ jobs:
         run: |
           mkdir -p ./.buildozer/android/platform/
 
-      - name: Copy keystore (if exists)
+      - name: Setup keystore
         run: |
+          KEYSTORE_PATH="./.buildozer/android/platform/guitarfuns_keystore.jks"
+          
+          # Проверяем, есть ли keystore в корне проекта
           if [ -f "guitarfuns_keystore.jks" ]; then
-            cp guitarfuns_keystore.jks ./.buildozer/android/platform/
-            echo "✅ Keystore скопирован"
+            echo "✅ Keystore найден в корне проекта, копируем..."
+            cp guitarfuns_keystore.jks $KEYSTORE_PATH
+          # Проверяем, есть ли keystore в папке .buildozer
+          elif [ -f "$KEYSTORE_PATH" ]; then
+            echo "✅ Keystore уже существует в .buildozer"
           else
             echo "⚠️ Keystore не найден, создаем новый..."
-            keytool -genkey -v -keystore ./.buildozer/android/platform/guitarfuns_keystore.jks \
-              -alias guitarfuns -keyalg RSA -keysize 2048 -validity 10000 \
+            keytool -genkey -v -keystore $KEYSTORE_PATH \
+              -alias guitarfuns \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
               -dname "CN=GuitarFuns, OU=GuitarFuns, O=GuitarFuns, L=City, S=State, C=RU" \
-              -storepass lexx311285 -keypass lexx311285
+              -storepass lexx311285 \
+              -keypass lexx311285 \
+              -noprompt
+            echo "✅ Новый keystore создан"
           fi
 
       - name: Build with Buildozer
