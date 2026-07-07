@@ -1036,8 +1036,8 @@ class SongsScreen(BaseScreen):
         self._selected_song_id = None
         self._temp_scroll_position = None
         self._is_restoring = False
-        self._saved_scroll_position = 1.0  # позиция скролла в списке исполнителей
-        self._is_artist_songs_mode = False  # режим отображения песен исполнителя
+        self._saved_scroll_position = 1.0
+        self._is_artist_songs_mode = False
 
         # Для загрузки исполнителей
         self._all_artists = []
@@ -1058,12 +1058,13 @@ class SongsScreen(BaseScreen):
         self.search_bar = None
         self._main_label = None
         self._result_label = None
+        self._songs_count_label = None  # ← лейбл с количеством песен
         self.songs_menu = None
-        self._songs_menu_widget = None  # для хранения меню с песнями
+        self._songs_menu_widget = None
         self._hint_timer = None
         self.recycle_view = None
         self._main_layout = None
-        self._menu_container = None  # контейнер для меню
+        self._menu_container = None
 
         load_shared_icons_sync()
 
@@ -1156,6 +1157,20 @@ class SongsScreen(BaseScreen):
         )
         menu_container.add_widget(self.songs_menu)
         main_layout.add_widget(menu_container)
+
+        # ============ 3.5. ЛЕЙБЛ С КОЛИЧЕСТВОМ ПЕСЕН ============
+        self._songs_count_label = MDLabel(
+            text="",
+            font_size=sp(13),
+            halign="center",
+            size_hint_y=None,
+            height=dp(20),
+            theme_text_color="Custom",
+            text_color=[0.46, 0.70, 0.71, 1],
+            opacity=0,
+            bold=True
+        )
+        main_layout.add_widget(self._songs_count_label)
 
         # ============ 4. ЛЕЙБЛ С РЕЗУЛЬТАТАМИ ============
         self._result_label = MDLabel(
@@ -1296,10 +1311,20 @@ class SongsScreen(BaseScreen):
         # Обновляем лейбл
         self._main_label.text = f"Песни исполнителя: {self.current_artist}"
 
+        # ✅ Показываем количество песен
+        total = len(self._all_songs)
+        if total == 1:
+            self._songs_count_label.text = "1 песня"
+        elif 2 <= total <= 4:
+            self._songs_count_label.text = f"{total} песни"
+        else:
+            self._songs_count_label.text = f"{total} песен"
+        self._songs_count_label.opacity = 1
+
         # Скрываем результат
         self._hide_result_label()
 
-        # Обновляем TopNav — показываем настройки
+        # Обновляем TopNav
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
@@ -1328,6 +1353,10 @@ class SongsScreen(BaseScreen):
 
         self._is_artist_songs_mode = False
 
+        # ✅ Скрываем лейбл с количеством песен
+        self._songs_count_label.opacity = 0
+        self._songs_count_label.text = ""
+
         # Восстанавливаем лейбл
         if self.is_search_mode:
             self._main_label.text = "Результаты поиска песен"
@@ -1348,7 +1377,7 @@ class SongsScreen(BaseScreen):
         # Скрываем результат
         self._hide_result_label()
 
-        # Обновляем TopNav — показываем настройки
+        # Обновляем TopNav
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
@@ -1750,6 +1779,8 @@ class SongsScreen(BaseScreen):
         if not self._all_songs:
             self._show_empty("Нет песен")
             self.recycle_view.clear()
+            # ✅ Скрываем лейбл с количеством
+            self._songs_count_label.opacity = 0
             return
 
         self._hide_empty()
@@ -1830,10 +1861,8 @@ class SongsScreen(BaseScreen):
         """Обработчик выбора песни"""
         logger.info(f"Выбрана песня: {title}, id: {song_id}")
 
-        # ✅ СОХРАНЯЕМ ID ВЫБРАННОЙ ПЕСНИ
         self._selected_song_id = song_id
 
-        # ✅ СОХРАНЯЕМ ПОЗИЦИЮ СКРОЛЛА ПЕРЕД ПЕРЕХОДОМ
         if self.recycle_view:
             self._temp_scroll_position = self.recycle_view.scroll_y
             logger.info(f"📜 Сохраняем позицию перед переходом: {self._temp_scroll_position:.2f}")
@@ -1842,10 +1871,7 @@ class SongsScreen(BaseScreen):
             notify.error("Ошибка: не удалось загрузить песню")
             return
 
-        # ✅ СОХРАНЯЕМ СОСТОЯНИЕ ПЕРЕД ПЕРЕХОДОМ
         self.save_current_state()
-
-        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ songs
         screen_state.set_previous_screen('songs')
 
         if hasattr(self, 'manager') and self.manager:
@@ -1864,7 +1890,6 @@ class SongsScreen(BaseScreen):
             self._show_temporary_hint("Введите минимум 2 символа", 1.5)
             return
 
-        # Если мы в режиме песен — возвращаемся к алфавиту
         if self._is_artist_songs_mode:
             self.switch_to_artists_mode()
 
@@ -1934,7 +1959,6 @@ class SongsScreen(BaseScreen):
         if self.songs_menu:
             self.songs_menu.set_current_letter(None)
 
-        # Если мы в режиме песен — возвращаемся к алфавиту
         if self._is_artist_songs_mode:
             self.switch_to_artists_mode()
 
@@ -2076,7 +2100,6 @@ class SongsScreen(BaseScreen):
         logger.info("=" * 50)
         logger.info("💾 СОХРАНЕНИЕ СОСТОЯНИЯ SongsScreen")
 
-        # Определяем режим
         if self.current_artist and self._all_songs:
             mode = 'songs'
         elif self.is_search_mode and self._all_songs:
@@ -2086,7 +2109,6 @@ class SongsScreen(BaseScreen):
         else:
             mode = 'empty'
 
-        # Сохраняем позицию скролла
         scroll_position = 1.0
         if hasattr(self, '_temp_scroll_position') and self._temp_scroll_position is not None:
             scroll_position = self._temp_scroll_position
@@ -2144,7 +2166,6 @@ class SongsScreen(BaseScreen):
 
             self._is_restoring = True
 
-            # Восстанавливаем базовые данные
             self.current_letter = state.get('current_letter')
             self.current_artist = state.get('current_artist')
             self.is_search_mode = state.get('is_search_mode', False)
@@ -2156,32 +2177,26 @@ class SongsScreen(BaseScreen):
             self._has_more = state.get('has_more_artists', True)
             self._has_more_songs = state.get('has_more_songs', True)
 
-            # Восстанавливаем ВСЕ данные
             restored_artists = state.get('all_artists', [])
             restored_songs = state.get('all_songs', [])
 
-            # Получаем режим и позицию скролла
             mode = state.get('mode', 'empty')
             scroll_position = state.get('scroll_position', 1.0)
             saved_scroll_position = state.get('saved_scroll_position', 1.0)
             is_artist_songs_mode = state.get('is_artist_songs_mode', False)
 
-            # Сохраняем позицию скролла для исполнителей
             self._saved_scroll_position = saved_scroll_position
 
-            # Восстанавливаем язык
             if self.current_language in ['ru', 'en', 'digits']:
                 self._lang_index = ['ru', 'en', 'digits'].index(self.current_language)
                 if self.songs_menu:
                     self.songs_menu.set_language(self.current_language)
 
-            # Восстанавливаем поисковый запрос
             search_query = state.get('search_query', '')
             if search_query and self.search_bar:
                 self.search_bar.search_field.text = search_query
                 logger.info(f"🔍 Восстановлен запрос: {search_query}")
 
-            # ============ ВОССТАНАВЛИВАЕМ ОТОБРАЖЕНИЕ ============
             if mode == 'songs' and self.current_artist:
                 if restored_songs:
                     self._all_songs = restored_songs
@@ -2190,14 +2205,21 @@ class SongsScreen(BaseScreen):
                     self._show_result_label(f"Песни: {len(self._all_songs)} из {self._total_songs}")
                     logger.info(f"🎵 Восстановлено {len(self._all_songs)} песен исполнителя {self.current_artist}")
 
-                    # Переключаем меню на песни, если был в этом режиме
                     if is_artist_songs_mode:
                         self.switch_to_artist_songs()
                     else:
-                        # Если не были в режиме песен, но есть песни — переключаем
                         self.switch_to_artist_songs()
 
-                    # Если есть ещё страницы — догружаем
+                    # ✅ Убеждаемся, что лейбл с количеством показан
+                    total = len(self._all_songs)
+                    if total == 1:
+                        self._songs_count_label.text = "1 песня"
+                    elif 2 <= total <= 4:
+                        self._songs_count_label.text = f"{total} песни"
+                    else:
+                        self._songs_count_label.text = f"{total} песен"
+                    self._songs_count_label.opacity = 1
+
                     if self._has_more_songs and len(self._all_songs) < self._total_songs:
                         logger.info(f"🔄 Догружаем остальные песни...")
                         Clock.schedule_once(lambda dt: self._load_remaining_songs(), 0.3)
@@ -2218,7 +2240,6 @@ class SongsScreen(BaseScreen):
                         self.songs_menu.set_current_letter(self.current_letter)
                     logger.info(f"🎤 Восстановлено {len(self._all_artists)} исполнителей на букву {self.current_letter}")
 
-                    # Если были в режиме песен — возвращаемся к алфавиту
                     if is_artist_songs_mode:
                         self.switch_to_artists_mode()
 
@@ -2237,7 +2258,6 @@ class SongsScreen(BaseScreen):
                 logger.info("=" * 50)
                 return True
 
-            # ============ ВОССТАНАВЛИВАЕМ ПОЗИЦИЮ СКРОЛЛА ============
             def restore_scroll(dt):
                 if self.recycle_view:
                     self.recycle_view.scroll_y = scroll_position
@@ -2264,7 +2284,6 @@ class SongsScreen(BaseScreen):
     # ============ on_enter, on_pre_leave, on_leave ============
 
     def on_pre_leave(self):
-        """Вызывается перед тем, как экран будет покинут"""
         logger.info("🚪 on_pre_leave: сохранение состояния перед выходом")
 
         if self.recycle_view:

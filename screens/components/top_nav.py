@@ -14,6 +14,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.app import MDApp
 from kivy.clock import Clock
+
 from config.theme import theme
 from config.logger_config import get_logger
 from config.system_bars import get_status_bar_height, get_screen_density
@@ -40,13 +41,17 @@ class TopNav(MDCard):
         'akkordbard_parser',
         'domhve_parser',
         'rushsound_parser',
+        'settings',      # ← добавляем
+        'help',          # ← добавляем
+        'promo',         # ← добавляем
+        'feedback',      # ← добавляем
     ]
 
     # Список экранов с кастомным заголовком
     CUSTOM_TITLE_SCREENS = [
         'song_detail',
         'terms_by_letter',
-        'term_detail',      # ← добавляем term_detail
+        'term_detail',
         'artists_by_letter',
         'artist_songs',
         'favorites',
@@ -107,7 +112,7 @@ class TopNav(MDCard):
             pos_hint={'x': 0, 'center_y': 0.5}
         )
 
-        # Кнопка настроек (шестерёнка) - переход в профиль
+        # Кнопка настроек (шестерёнка) - теперь открывает Sidebar
         self.settings_btn = MDIconButton(
             icon="tune",
             size_hint=(None, None),
@@ -117,7 +122,7 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
-        self.settings_btn.bind(on_release=self._on_settings_press)
+        # Обработчик будет установлен из main.py
 
         # Кнопка назад (стрелка) - возврат на предыдущий экран
         self.back_btn = MDIconButton(
@@ -215,7 +220,11 @@ class TopNav(MDCard):
             'admin': 'Админ панель',
             'search': 'Быстрый поиск',
             'song_detail': '',
-            'term_detail': 'Термин',  # ← добавляем заголовок для term_detail
+            'term_detail': 'Термин',
+            'settings': 'Настройки',
+            'help': 'Помощь',
+            'promo': 'Промокод',
+            'feedback': 'Обратная связь',
         }
         return titles.get(screen_name, screen_name.capitalize())
 
@@ -265,10 +274,8 @@ class TopNav(MDCard):
         if self.screen_title in self.container.children:
             self.container.remove_widget(self.screen_title)
 
-        # Кастомный виджет центрируем с правильными размерами
         widget.size_hint = (None, None)
 
-        # Определяем оптимальную ширину в зависимости от содержимого
         window_width = Window.width
         left_width = dp(48)
         right_width = dp(48)
@@ -282,7 +289,6 @@ class TopNav(MDCard):
         widget.height = dp(48)
         widget.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
-        # Добавляем небольшой отступ, чтобы не перекрывать кнопки
         if hasattr(widget, 'padding'):
             widget.padding = [dp(8), dp(4), dp(8), dp(4)]
 
@@ -311,9 +317,7 @@ class TopNav(MDCard):
         self._custom_back_callback = None
 
     def _update_left_button(self, screen_name):
-        """
-        Обновляет левую кнопку в зависимости от экрана.
-        """
+        """Обновляет левую кнопку в зависимости от экрана."""
         self.left_container.clear_widgets()
 
         logger.info(f"🔧 _update_left_button для экрана: {screen_name}")
@@ -364,9 +368,7 @@ class TopNav(MDCard):
             self._previous_screen = old
 
         # ============ СБРАСЫВАЕМ КАСТОМНЫЙ CALLBACK ============
-        # Если на экране показывается настройки (не стрелка) — сбрасываем callback
         if screen_name not in self.ALWAYS_BACK_SCREENS:
-            # Для chords проверяем особый случай
             if screen_name == 'chords':
                 prev = screen_state.get_previous_screen()
                 if prev != 'search':
@@ -382,22 +384,30 @@ class TopNav(MDCard):
         # Обновляем правые кнопки
         self._update_right_buttons(screen_name)
 
+        # ============ ОБНОВЛЯЕМ BOTTOM NAV ============
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'bottom_nav') and app.bottom_nav:
+            nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
+            if screen_name in nav_screens:
+                for item, (_, _, screen) in zip(app.bottom_nav.items, app.bottom_nav.nav_items):
+                    item.active = (screen == screen_name)
+            else:
+                app.bottom_nav.clear_active()
+                logger.info(f"🔽 BottomNav: экран '{screen_name}' не в меню, все иконки сброшены")
+
         # Если экран НЕ с кастомным заголовком - обновляем стандартный
         if screen_name not in self.CUSTOM_TITLE_SCREENS:
             if self.custom_title_widget:
                 self.clear_custom_title_widget()
             self.update_title(screen_name)
         else:
-            # Для term_detail устанавливаем заголовок "Термин"
             if screen_name == 'term_detail':
                 if self.custom_title_widget:
                     self.clear_custom_title_widget()
                 self.set_custom_title("Термин")
-            # Для song_detail оставляем как есть (кастомный виджет)
             elif screen_name == 'song_detail':
                 pass  # song_detail сам управляет заголовком
 
-        # Если возвращаемся с кастомного экрана на обычный
         if old in self.CUSTOM_TITLE_SCREENS and screen_name not in self.CUSTOM_TITLE_SCREENS:
             self.clear_custom_title_widget()
             self.update_title(screen_name)
@@ -473,21 +483,24 @@ class TopNav(MDCard):
                 self.sm.current = 'admin'
                 return
 
+        # ============ ЛОГИКА ДЛЯ НОВЫХ ЭКРАНОВ ============
+        if current in ['settings', 'help', 'promo', 'feedback']:
+            if self.sm.has_screen('home'):
+                logger.info(f"   → {current} возврат на home")
+                self.sm.current = 'home'
+                return
+
         # ============ ПО УМОЛЧАНИЮ ============
         if self.sm.has_screen('home'):
             logger.info("   → Переход на home (по умолчанию)")
             self.sm.current = 'home'
 
     def _on_settings_press(self, *args):
-        """Обработчик нажатия на иконку настроек (шестерёнка)"""
-        logger.info("⚙️ Нажата иконка настроек")
+        """Обработчик нажатия на иконку настроек (шестерёнка) - открывает Sidebar"""
+        logger.info("⚙️ Нажата иконка настроек → открываем Sidebar")
         app = MDApp.get_running_app()
-        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
-            return
-        if self.sm and self.sm.has_screen('profile'):
-            self.sm.current = 'profile'
-        elif self.app and hasattr(self.app, 'open_profile'):
-            self.app.open_profile()
+        if hasattr(app, 'sidebar') and app.sidebar:
+            app.sidebar.toggle()
 
     def _on_home_press(self, *args):
         """Обработчик нажатия на иконку домой"""

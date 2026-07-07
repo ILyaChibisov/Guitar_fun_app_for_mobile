@@ -1,7 +1,8 @@
 # screens/dictionary_screen.py
 """
 Экран словаря терминов - с единым меню
-ПОИСК | ЛЕЙБЛ | МЕНЮ (ЯЗЫК + БУКВЫ) | РЕЗУЛЬТАТЫ
+ПОИСК | ЛЕЙБЛ | МЕНЮ (БУКВЫ + ЯЗЫК справа) | РЕЗУЛЬТАТЫ
+С сохранением состояния и позиции скролла
 """
 import importlib
 import pkgutil
@@ -231,7 +232,7 @@ class SearchBar(MDCard):
 # ============ КОМПОНЕНТЫ МЕНЮ ============
 
 class FlagToggle(ButtonBehavior, MDBoxLayout):
-    """Кнопка-флаг для переключения языка с подписью"""
+    """Кнопка-флаг для переключения языка с подписью (справа)"""
 
     def __init__(self, on_press=None, **kwargs):
         super().__init__(**kwargs)
@@ -301,14 +302,12 @@ class FlagToggle(ButtonBehavior, MDBoxLayout):
             if _shared_rus_flag_texture:
                 self.flag_image.texture = _shared_rus_flag_texture
             else:
-                # Fallback на эмодзи
                 self.flag_image.text = "🇷🇺"
             self.label.text = "RUS"
         else:
             if _shared_eng_flag_texture:
                 self.flag_image.texture = _shared_eng_flag_texture
             else:
-                # Fallback на эмодзи
                 self.flag_image.text = "🇬🇧"
             self.label.text = "ENG"
 
@@ -385,7 +384,7 @@ class LetterButton(MDBoxLayout):
 
 
 class AlphabetMenu(MDBoxLayout):
-    """Меню с буквами алфавита (скроллится) - без видимой карточки"""
+    """Меню с буквами алфавита (скроллится) - слева от флага"""
 
     RU_LETTERS = ['а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и',
                   'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т',
@@ -477,7 +476,7 @@ class AlphabetMenu(MDBoxLayout):
 
 
 class DictionaryMenu(MDCard):
-    """Единое меню: ЯЗЫК (флаг с подписью) | БУКВЫ (скролл)"""
+    """Единое меню: БУКВЫ (скролл) | ЯЗЫК (флаг с подписью) - флаг справа"""
 
     def __init__(self,
                  on_language_toggle=None,
@@ -497,20 +496,19 @@ class DictionaryMenu(MDCard):
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
         self.spacing = dp(0)
 
-        # 1. ЯЗЫК (флаг с подписью) - слева
+        # 1. БУКВЫ (слева) — занимает всё доступное место
+        self.alphabet_menu = AlphabetMenu(
+            on_letter_press=on_letter_press,
+            current_language=current_language
+        )
+
+        # 2. ЯЗЫК (флаг с подписью) - СПРАВА
         self.flag_toggle = FlagToggle(
             on_press=on_language_toggle
         )
         self.flag_toggle.current_language = current_language
         self.flag_toggle._update_flag()
 
-        # 2. БУКВЫ (скроллящийся алфавит) - без карточки
-        self.alphabet_menu = AlphabetMenu(
-            on_letter_press=on_letter_press,
-            current_language=current_language
-        )
-
-        # Флаг фиксированной ширины
         flag_container = MDBoxLayout(
             size_hint_x=None,
             width=dp(44),
@@ -518,9 +516,10 @@ class DictionaryMenu(MDCard):
         )
         flag_container.add_widget(self.flag_toggle)
 
-        self.add_widget(flag_container)
-        self.add_widget(self._create_divider())
+        # БУКВЫ слева, разделитель, ЯЗЫК справа
         self.add_widget(self.alphabet_menu)
+        self.add_widget(self._create_divider())
+        self.add_widget(flag_container)
 
     def _create_divider(self):
         return MDBoxLayout(
@@ -654,11 +653,20 @@ class TermRecycleView(RecycleView):
         self.data = []
         self.refresh_from_data()
 
+    def get_scroll_position(self):
+        """Возвращает текущую позицию скролла (0-1)"""
+        return self.scroll_y
+
+    def set_scroll_position(self, position):
+        """Устанавливает позицию скролла (0-1)"""
+        if 0 <= position <= 1:
+            self.scroll_y = position
+
 
 # ============ ОСНОВНОЙ ЭКРАН ============
 
 class DictionaryScreen(BaseScreen):
-    """Экран словаря с поиском и меню ЯЗЫК | БУКВЫ"""
+    """Экран словаря с поиском и меню БУКВЫ | ЯЗЫК справа"""
 
     RU_LETTERS = ['а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и',
                   'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т',
@@ -682,6 +690,7 @@ class DictionaryScreen(BaseScreen):
         self.search_results: list = []
         self._last_query: str = ""
         self.current_language: str = 'ru'
+        self._saved_scroll_position: float = 1.0  # для сохранения позиции скролла
 
         # UI элементы
         self.search_bar = None
@@ -847,6 +856,10 @@ class DictionaryScreen(BaseScreen):
             self._show_temporary_hint("Выбран русский язык", 1.2)
 
         self.dictionary_menu.set_language(self.current_language)
+
+        # Сохраняем состояние перед сменой языка
+        self.save_current_state()
+
         self.current_letter = None
         self.clear_search()
 
@@ -986,6 +999,10 @@ class DictionaryScreen(BaseScreen):
     def on_letter_press(self, letter):
         """Обработчик выбора буквы - показывает термины прямо на экране"""
         logger.info(f"Выбрана буква: {letter}")
+
+        # Сохраняем состояние перед сменой буквы
+        self.save_current_state()
+
         self.current_letter = letter
         self.dictionary_menu.set_current_letter(letter)
         self.is_search_mode = False
@@ -1002,6 +1019,9 @@ class DictionaryScreen(BaseScreen):
         if not term_data:
             self._show_temporary_hint("Термин не найден", 1.5)
             return
+
+        # ✅ СОХРАНЯЕМ СОСТОЯНИЕ ПЕРЕД ПЕРЕХОДОМ
+        self.save_current_state()
 
         # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ dictionary
         screen_state.set_previous_screen('dictionary')
@@ -1091,8 +1111,119 @@ class DictionaryScreen(BaseScreen):
             return first_char
         return None
 
+    # ============ СОХРАНЕНИЕ СОСТОЯНИЯ ============
+
+    def save_current_state(self):
+        """Сохраняет текущее состояние экрана словаря"""
+        logger.info("=" * 50)
+        logger.info("💾 СОХРАНЕНИЕ СОСТОЯНИЯ DictionaryScreen")
+
+        # Сохраняем позицию скролла
+        scroll_position = 1.0
+        if self.search_recycle_view:
+            scroll_position = self.search_recycle_view.get_scroll_position()
+            logger.info(f"📜 Текущая позиция скролла: {scroll_position:.2f}")
+
+        state = {
+            'current_letter': self.current_letter,
+            'is_search_mode': self.is_search_mode,
+            'current_language': self.current_language,
+            'search_query': self._last_query,
+            'search_results': self.search_results[:50],
+            'scroll_position': scroll_position,
+        }
+
+        logger.info(f"📦 Сохраняем: letter={state.get('current_letter')}, "
+                    f"search_mode={state.get('is_search_mode')}, "
+                    f"scroll={state.get('scroll_position', 1.0):.2f}")
+
+        screen_state.save_screen_state('dictionary', state)
+        logger.info("=" * 50)
+
+    def restore_state(self):
+        """Восстанавливает состояние экрана словаря"""
+        logger.info("=" * 50)
+        logger.info("📂 ВОССТАНОВЛЕНИЕ СОСТОЯНИЯ DictionaryScreen")
+
+        state = screen_state.get_screen_state('dictionary', max_age=300)
+
+        if not state:
+            logger.info("❌ Нет сохранённого состояния")
+            logger.info("=" * 50)
+            return False
+
+        try:
+            logger.info(f"📦 Получено состояние: {list(state.keys())}")
+
+            self.current_letter = state.get('current_letter')
+            self.is_search_mode = state.get('is_search_mode', False)
+            self.current_language = state.get('current_language', 'ru')
+            self._last_query = state.get('search_query', '')
+            self.search_results = state.get('search_results', [])
+            scroll_position = state.get('scroll_position', 1.0)
+
+            # Восстанавливаем язык
+            if self.dictionary_menu:
+                self.dictionary_menu.set_language(self.current_language)
+
+            # Восстанавливаем отображение
+            if self.is_search_mode and self.search_results:
+                # Результаты поиска
+                self.search_recycle_view.set_terms(self.search_results, self.on_term_selected)
+                self._show_result_label(f"Найдено терминов: {len(self.search_results)}")
+                if self._last_query:
+                    self._show_hint(f"Результаты поиска: {self._last_query}")
+                self._main_label.text = f"Результаты поиска: {self._last_query}"
+                logger.info(f"🔍 Восстановлены результаты поиска: {len(self.search_results)} терминов")
+
+            elif self.current_letter:
+                # Термины по букве
+                terms = self.terms_by_letter.get(self.current_letter, [])
+                if terms:
+                    self.search_recycle_view.set_terms(terms, self.on_term_selected)
+                    self._show_result_label(f"Термины на букву {self.current_letter.upper()}")
+                    if self.dictionary_menu:
+                        self.dictionary_menu.set_current_letter(self.current_letter)
+                    logger.info(f"📖 Восстановлена буква {self.current_letter}: {len(terms)} терминов")
+                else:
+                    self.search_recycle_view.clear()
+                    self._show_result_label(f"Нет терминов на букву {self.current_letter.upper()}")
+                    logger.info(f"📖 Буква {self.current_letter} — терминов нет")
+            else:
+                # Пустое состояние
+                self.search_recycle_view.clear()
+                self._show_hint("Поиск по алфавиту")
+                self._hide_result_label()
+                logger.info("📄 Пустое состояние")
+
+            # ============ ВОССТАНАВЛИВАЕМ ПОЗИЦИЮ СКРОЛЛА ============
+            def restore_scroll(dt):
+                if self.search_recycle_view:
+                    self.search_recycle_view.set_scroll_position(scroll_position)
+                    logger.info(f"📜 Восстановлена позиция скролла: {scroll_position:.2f}")
+
+            Clock.schedule_once(restore_scroll, 0.1)
+            Clock.schedule_once(restore_scroll, 0.2)
+            Clock.schedule_once(restore_scroll, 0.3)
+
+            logger.info("✅ Восстановление завершено")
+            logger.info("=" * 50)
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка восстановления состояния: {e}")
+            import traceback
+            traceback.print_exc()
+            logger.info("=" * 50)
+            return False
+
     # ============ ЖИЗНЕННЫЙ ЦИКЛ ============
 
+    def on_pre_leave(self):
+        """Вызывается перед тем, как экран будет покинут"""
+        logger.info("🚪 on_pre_leave: сохранение состояния перед выходом")
+        self.save_current_state()
+        return super().on_pre_leave()
 
     def on_enter(self):
         logger.info("🚪 Вход в словарь")
@@ -1101,23 +1232,33 @@ class DictionaryScreen(BaseScreen):
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
                 app.top_nav.set_custom_title("Словарь")
-                # Убираем _show_back_button()
-                # app.top_nav._show_back_button()
                 app.top_nav.back_btn.on_release = self.go_back
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
 
-        self._show_hint("Поиск по алфавиту")
-        self._hide_result_label()
-        self.search_recycle_view.clear()
-        self.current_letter = None
-        self.dictionary_menu.set_current_letter(None)
+        # Пробуем восстановить состояние
+        restored = self.restore_state()
+        logger.info(f"📊 Результат восстановления: {restored}")
+
+        if not restored:
+            self._show_hint("Поиск по алфавиту")
+            self._hide_result_label()
+            self.search_recycle_view.clear()
+            self.current_letter = None
+            if self.dictionary_menu:
+                self.dictionary_menu.set_current_letter(None)
+            logger.info("📄 Показано начальное состояние")
 
     def on_leave(self):
         logger.info("🚪 Выход из словаря")
+
+        # Сохраняем состояние перед выходом
+        self.save_current_state()
+
         self.clear_search()
         self.current_letter = None
-        self.dictionary_menu.set_current_letter(None)
+        if self.dictionary_menu:
+            self.dictionary_menu.set_current_letter(None)
 
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)

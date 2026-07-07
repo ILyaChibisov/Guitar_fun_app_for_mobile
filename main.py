@@ -141,6 +141,7 @@ from api.client import api
 from api.network_handler import network_manager
 from screens.components.bottom_nav import BottomNav
 from screens.components.top_nav import TopNav
+from screens.components.sidebar import Sidebar  # ← ДОБАВЛЯЕМ
 from screens.components.blocking_layer import BlockingLayer
 from config.system_bars import get_navigation_bar_height, get_status_bar_height, get_screen_density, get_all_system_info
 
@@ -220,11 +221,12 @@ class GuitarFunsApp(MDApp):
         self.screen_manager = None
         self.bottom_nav = None
         self.top_nav = None
+        self.sidebar = None  # ← ДОБАВЛЯЕМ
         self.blocking_layer = None
         self.current_auth_modal = None
         self.is_auth_blocking = False
         self._bottom_nav_visible = False
-        self._favorites_preloaded = False  # ← флаг предзагрузки
+        self._favorites_preloaded = False
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
@@ -284,6 +286,9 @@ class GuitarFunsApp(MDApp):
         # Обновляем текущий экран после авторизации
         Clock.schedule_once(self._refresh_current_screen, 0.3)
 
+        # Обновляем Sidebar
+        Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
+
     def _on_user_data_loaded(self, user):
         """Загружены данные пользователя"""
         api.user_data = user
@@ -292,6 +297,14 @@ class GuitarFunsApp(MDApp):
 
         # После загрузки данных пользователя — предзагружаем избранное
         Clock.schedule_once(lambda dt: self._preload_favorites(), 0.5)
+
+        # Обновляем Sidebar
+        Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
+
+    def _update_sidebar(self):
+        """Обновляет информацию в Sidebar"""
+        if self.sidebar:
+            self.sidebar.update_user_info()
 
     def _refresh_current_screen(self, dt):
         """Обновляет текущий экран после авторизации"""
@@ -383,35 +396,63 @@ class GuitarFunsApp(MDApp):
 
         logger.info("📡 Режим работы: все данные загружаются с сервера по запросу")
 
+        # ============ TOP NAV ============
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
         self.top_nav.pos_hint = {'top': 1}
 
-        # Обновляем заголовок для home
         self.top_nav.update_title('home')
-        # Левую кнопку обновляем через встроенный метод TopNav
         self.top_nav._update_left_button('home')
         self.top_nav._update_right_buttons('home')
         logger.info("✅ TopNav установлен на 'Главная'")
 
+        # ============ BOTTOM NAV ============
         self.bottom_nav = BottomNav(self.screen_manager)
         self.bottom_nav.pos_hint = {'y': 0}
 
+        current_screen = self.screen_manager.current
+        nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
+        if current_screen in nav_screens:
+            for item, (_, _, screen) in zip(self.bottom_nav.items, self.bottom_nav.nav_items):
+                item.active = (screen == current_screen)
+        else:
+            self.bottom_nav.clear_active()
+        logger.info(f"✅ BottomNav инициализирован: экран '{current_screen}'")
+
+        # ============ SIDEBAR ============
+        self.sidebar = Sidebar(self.screen_manager)
+        # ============ ВАЖНО: СКРЫВАЕМ SIDEBAR С ПОМОЩЬЮ pos_hint ============
+        self.sidebar.pos_hint = {'x': -1.0, 'y': 0}
+        self.sidebar.is_open = False
+        logger.info("✅ Sidebar создан и скрыт (pos_hint x=-1.0)")
+
+        # ============ BLOCKING LAYER ============
         self.blocking_layer = BlockingLayer()
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
+        # ============ ДОБАВЛЯЕМ ВСЁ НА ROOT ============
         root.add_widget(self.screen_manager)
         root.add_widget(self.bottom_nav)
         root.add_widget(self.top_nav)
+        root.add_widget(self.sidebar)
         root.add_widget(self.blocking_layer)
+
+        # ============ ПЕРЕОПРЕДЕЛЯЕМ КНОПКУ НАСТРОЕК ============
+        self.top_nav.settings_btn.on_release = self._on_settings_press
 
         network_manager.start_monitoring()
         Window.bind(on_resize=self.on_window_resize)
 
         logger.info('Интерфейс успешно создан')
         return root
+
+    def _on_settings_press(self, *args):
+        """Обработчик нажатия на иконку настроек (шестерёнка) - открывает Sidebar"""
+        logger.info("⚙️ Нажата иконка настроек → открываем Sidebar")
+        if hasattr(self, 'sidebar') and self.sidebar:
+            self.sidebar.toggle()
 
     def on_window_resize(self, window, width, height):
         from config.layout_config import layout_config
@@ -447,8 +488,10 @@ class GuitarFunsApp(MDApp):
         check_audio_support()
 
         # ============ ПРЕДЗАГРУЗКА ИЗБРАННОГО ============
-        # Запускаем с задержкой, чтобы дать приложению полностью загрузиться
         Clock.schedule_once(lambda dt: self._preload_favorites(), 1.0)
+
+        # Обновляем Sidebar при старте
+        Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
 
         if HAS_ASSETS:
             try:
@@ -464,6 +507,8 @@ class GuitarFunsApp(MDApp):
 
     def on_resume(self):
         logger.debug('Приложение восстановлено')
+        # Обновляем Sidebar при возврате
+        Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
     def on_stop(self):
         logger.info('Приложение закрыто')

@@ -1,4 +1,4 @@
-# screens/manager.py (с NoTransition - без затемнения)
+# screens/manager.py
 from kivy.uix.screenmanager import ScreenManager, NoTransition
 from config.logger_config import get_logger
 from .home_screen import HomeScreen
@@ -24,6 +24,12 @@ from .parsers_screens.domhve_parser_screen import DomhveParserScreen
 from .parsers_screens.rushsound_parser_screen import RushSoundParserScreen
 from .term_detail_screen import TermDetailScreen
 
+# ============ НОВЫЕ ЭКРАНЫ ============
+from .settings_screen import SettingsScreen
+from .help_screen import HelpScreen
+from .promo_screen import PromoScreen
+from .feedback_screen import FeedbackScreen
+
 logger = get_logger('ScreenManager')
 
 
@@ -43,6 +49,12 @@ def setup_screen_manager():
     sm.add_widget(SearchScreen(name='search'))
     sm.add_widget(TermDetailScreen(name='term_detail'))
 
+    # ============ НОВЫЕ ЭКРАНЫ ============
+    sm.add_widget(SettingsScreen(name='settings'))
+    sm.add_widget(HelpScreen(name='help'))
+    sm.add_widget(PromoScreen(name='promo'))
+    sm.add_widget(FeedbackScreen(name='feedback'))
+
     # Парсеры
     sm.add_widget(AMDMParserScreen(name='amdm_parser'))
     sm.add_widget(MyTabsParserScreen(name='mytabs_parser'))
@@ -55,5 +67,5 @@ def setup_screen_manager():
     sm.add_widget(DomhveParserScreen(name='domhve_parser'))
     sm.add_widget(RushSoundParserScreen(name='rushsound_parser'))
 
-    logger.info('ScreenManager настроен с NoTransition, добавлено 21 экран')
+    logger.info('ScreenManager настроен с NoTransition, добавлено 25 экранов')
     return sm

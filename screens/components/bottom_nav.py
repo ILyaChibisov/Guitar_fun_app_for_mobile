@@ -41,7 +41,6 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.size_hint = (1, 1)
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
-        # ============ РАЗМЕРЫ ============
         if platform == 'android':
             icon_size = dp(28)
             label_height = dp(16)
@@ -51,14 +50,11 @@ class NavItem(ButtonBehavior, BoxLayout):
             label_height = dp(15)
             font_size = sp(10)
 
-        # Медно-золотой цвет для активного состояния
         self.copper_gold = [0.85, 0.65, 0.25, 1]
 
-        # ============ ИСПОЛЬЗУЕМ FLOATLAYOUT С ТОЧНЫМИ КООРДИНАТАМИ ============
         from kivy.uix.floatlayout import FloatLayout
         self.inner_layout = FloatLayout(size_hint=(1, 1))
 
-        # Иконка - по центру по X, чуть выше середины
         self.icon_btn = MDIconButton(
             icon=icon_name,
             size_hint=(None, None),
@@ -71,7 +67,6 @@ class NavItem(ButtonBehavior, BoxLayout):
         )
         self.icon_btn.bind(on_release=self._on_child_click)
 
-        # Текст - под иконкой с отступом
         self.text_label = MDLabel(
             text=text,
             halign="center",
@@ -169,6 +164,9 @@ class NavItem(ButtonBehavior, BoxLayout):
 class BottomNav(BoxLayout):
     """Нижняя панель навигации - 5 разделов (с Метрономом)"""
 
+    # Список экранов, которые есть в нижнем меню
+    NAV_SCREENS = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
+
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
@@ -177,15 +175,11 @@ class BottomNav(BoxLayout):
 
         nav_bar_height = get_navigation_bar_height()
 
-        # ============ ВЫСОТА ПАНЕЛИ ============
-        self.nav_height = dp(52)  # Высота самой панели с иконками
+        self.nav_height = dp(52)
 
-        # ============ ЭМУЛЯЦИЯ СИСТЕМНОЙ НАВИГАЦИИ НА WINDOWS ============
         if platform == 'android':
-            # На Android системная навигация не добавляется в BottomNav
             bottom_padding = 0
         else:
-            # На Windows эмулируем системную навигацию Android
             bottom_padding = nav_bar_height
 
         self.total_height = self.nav_height + bottom_padding
@@ -196,7 +190,6 @@ class BottomNav(BoxLayout):
         self.spacing = 0
         self.md_bg_color = [0, 0, 0, 0]
 
-        # ============ РИСУЕМ РАЗДЕЛИТЕЛЬНУЮ ЛИНИЮ ВВЕРХУ ============
         with self.canvas.before:
             Color(1, 1, 1, 0.08)
             self.line = Rectangle(pos=(self.x, self.y + self.height - dp(1)),
@@ -231,14 +224,28 @@ class BottomNav(BoxLayout):
             screen_manager.add_observer(self.on_screen_changed)
 
     def _update_line(self, *args):
-        """Обновляет позицию разделительной линии"""
         if hasattr(self, 'line'):
             self.line.pos = (self.x, self.y + self.height - dp(1))
             self.line.size = (self.width, dp(1))
 
     def on_screen_changed(self, screen_name):
-        for item, (_, _, screen) in zip(self.items, self.nav_items):
-            item.active = (screen == screen_name)
+        """Обновляет активное состояние иконок при смене экрана"""
+        self._update_active_state(screen_name)
+
+    def _update_active_state(self, screen_name):
+        """Внутренний метод для обновления активного состояния"""
+        if screen_name in self.NAV_SCREENS:
+            for item, (_, _, screen) in zip(self.items, self.nav_items):
+                item.active = (screen == screen_name)
+        else:
+            # Экран не в меню - сбрасываем все иконки
+            self.clear_active()
+
+    def clear_active(self):
+        """Сбрасывает активное состояние всех иконок"""
+        for item in self.items:
+            item.active = False
+        logger.debug("🔽 Все иконки BottomNav сброшены")
 
     def switch_to(self, screen_name):
         app = MDApp.get_running_app()
@@ -248,8 +255,7 @@ class BottomNav(BoxLayout):
         if not self.sm or self.sm.current == screen_name:
             return
 
-        for item, (_, _, screen) in zip(self.items, self.nav_items):
-            item.active = (screen == screen_name)
+        self._update_active_state(screen_name)
 
         try:
             current_index = next(i for i, (_, _, s) in enumerate(self.nav_items) if s == self.sm.current)
@@ -265,7 +271,6 @@ class BottomNav(BoxLayout):
         self.switch_to(screen_name)
 
     def reload_config(self):
-        """Перезагружает конфигурацию (для динамических изменений)"""
         nav_bar_height = get_navigation_bar_height()
 
         self.nav_height = dp(52)
