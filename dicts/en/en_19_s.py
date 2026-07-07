@@ -2918,10 +2918,11 @@ Guitarist-Specific Tips: Scale degrees are the basis for building chords and har
 """
     ),
 
+    
     "SUBDOMINANT": Term(
         name="Subdominant",
         description="""
-The fourth degree of a mode, a chord built on the fourth degree (IV). The basis of harmonic motion along with the tonic and dominant.
+The fourth degree of a musical mode. A chord built on the fourth degree (IV).
 
 Where it appears: In harmony — as a function. In classical music — in chord progressions. In guitar music — in chords.
 
@@ -3598,6 +3599,18 @@ Guitar slang for an element of an electrical circuit for signal regulation.
 Where it appears: In guitar slang — as an element. In guitar circles — in colloquial speech. In sound recording — in equipment.
 
 Guitarist-Specific Tips: A shunt is an element of the electrical circuit of guitar equipment.
+"""
+    ),
+
+    
+    "SKETCH": Term(
+        name="Sketch",
+        description="""
+A preliminary draft of a musical work. Used in composition and arrangement.
+
+Where it appears: In composition — as a draft. In arrangement — in sketches. In guitar music — in creating works.
+
+Guitarist-Specific Tips: A sketch is a preliminary draft of a guitar work.
 """
     ),
 }

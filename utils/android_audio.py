@@ -140,14 +140,12 @@ class AndroidAudioRecorder:
             logger.info("✅ AudioRecord запущен")
 
             # Буфер для данных
-            buffer = bytearray(self._chunk_size * 2)  # 16-bit = 2 байта на сэмпл
+            buffer = bytearray(self._chunk_size * 2)
 
             while self._running:
-                # Читаем данные
                 bytes_read = audio_record.read(buffer, 0, len(buffer))
 
                 if bytes_read > 0 and self._callback:
-                    # Отдаем данные в callback
                     data = bytes(buffer[:bytes_read])
                     self._callback(data)
 

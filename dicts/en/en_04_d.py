@@ -629,27 +629,29 @@ Guitarist-Specific Tips: Ductus determines the rhythmic character of a piece. Im
 
     
     
+    
     "DUO": Term(
         name="Duo",
         description="""
-A musical ensemble of two performers (instrumentalists or vocalists). Also — a work for two performers.
+A musical ensemble or work for two performers. One of the main forms of chamber music.
 
-Where it appears: In chamber music — as a duet. In guitar music — as a guitar duet. In vocal music — as a duet.
+Where it appears: In chamber music — as a duet. In guitar music — as a guitar duet.
 
-Guitarist-Specific Tips: Duo is often used in guitar music. Interaction between performers is important. Common combinations: guitar + guitar, guitar + voice.
+Guitarist-Specific Tips: Requires interaction and synchronization between performers.
 """
     ),
 
     
     
+    
     "DUOL": Term(
         name="Duol",
         description="""
-A rhythmic figure where two notes are played in the time of three beats (or vice versa). A type of triplet.
+A rhythmic figure where two notes are played in the time of three beats. A type of polyrhythm.
 
-Where it appears: In classical music — as a rhythmic embellishment. In contemporary music — as polyrhythm. In guitar music — as a rhythmic technique.
+Where it appears: In classical music — as rhythmic embellishment. In guitar music — in complex rhythmic patterns.
 
-Guitarist-Specific Tips: Duol requires precise rhythmic performance. Used in complex rhythmic patterns.
+Guitarist-Specific Tips: Requires precise rhythmic performance.
 """
     ),
 
@@ -870,14 +872,15 @@ Guitarist-Specific Tips: Direct voice leading requires smooth movement.
 """
     ),
 
+    
     "DOTTED RHYTHM": Term(
         name="Dotted rhythm",
         description="""
-A rhythmic pattern based on the combination of a long and a short duration with a dot (dotted rhythm). Creates energetic, march-like motion.
+A rhythmic pattern based on the combination of a long and a short duration with a dot. Creates energetic motion.
 
-Where it appears: In march music — as a rhythm. In classical music — in overtures. In guitar music — in rhythmic patterns.
+Where it appears: In march music — as a rhythm. In classical music — in overtures.
 
-Guitarist-Specific Tips: Dotted rhythm requires accurate execution of durations.
+Guitarist-Specific Tips: Requires accurate execution of durations.
 """
     ),
 
@@ -1186,6 +1189,28 @@ Guitar slang for a fastening element or retainer.
 Where it appears: In guitar slang — as a fastener. In guitar circles — in colloquial speech. In construction — in mechanics.
 
 Guitarist-Specific Tips: A dowel is a fastening element of a guitar.
+"""
+    ),
+
+    "DÉTACHÉ": Term(
+        name="Détaché",
+        description="""
+A bow stroke in string music where each note is played with a separate bow movement. In guitar terminology — clear separation of notes.
+
+Where it appears: In violin music — as the main bow stroke. In guitar playing — as articulation.
+
+Guitarist-Specific Tips: Requires clear finger work and distinct articulation.
+"""
+    ),
+
+    "DODECAPHONY": Term(
+        name="Dodecaphony",
+        description="""
+A composition technique using a series of 12 chromatic pitches without repetition.
+
+Where it appears: In music by Schoenberg, Webern, Berg. In contemporary academic music.
+
+Guitarist-Specific Tips: Requires a new approach to harmony and melody on guitar.
 """
     ),
 }

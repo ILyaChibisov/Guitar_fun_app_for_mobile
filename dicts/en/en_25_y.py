@@ -220,4 +220,279 @@ Where it appears: In Korean folk music — as an instrument. In ethnic music —
 Guitarist-Specific Tips: Yo-chin is a string instrument. Guitar can imitate its timbre and playing technique.
 """
     ),
+
+    "YY": Term(
+        name="Yy",
+        description="""
+Guitar slang for a sound or exclamation, often used in a humorous or emotional manner.
+
+Where it appears: In guitar slang — as an interjection. In guitar circles — in colloquial speech. In culture — in jokes.
+
+Guitarist-Specific Tips: Yy is a humorous expression used by guitarists for emotional release.
+"""
+    ),
+
+    "YM": Term(
+        name="Ym",
+        description="""
+Guitar slang for a hum, drone, or low sound.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in noise.
+
+Guitarist-Specific Tips: Ym is a low, humming sound on guitar.
+"""
+    ),
+
+    "YR": Term(
+        name="Yr",
+        description="""
+Guitar slang for a sound or exclamation expressing surprise or approval.
+
+Where it appears: In guitar slang — as an interjection. In guitar circles — in colloquial speech. In culture — in emotions.
+
+Guitarist-Specific Tips: Yr is an exclamation of surprise or approval in guitar circles.
+"""
+    ),
+
+    "YRLAU": Term(
+        name="Yrlau",
+        description="""
+Turkic folk singing characterized by a throaty, drawn-out sound. Used in the folk music of Turkic peoples.
+
+Where it appears: In Turkic folk music — as a genre. In ethnic music — in traditions. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Yrlaw is drawn-out throat singing that inspires guitarists to create ethnic arrangements.
+"""
+    ),
+
+    "YRCHY": Term(
+        name="Yrchy",
+        description="""
+A performer of yrlaw — a Turkic folk singer. In guitar terminology — a performer of ethnic music.
+
+Where it appears: In Turkic folk music — as a performer. In ethnic music — in traditions. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Yrchy is a performer of Turkic folk music, inspiring guitarists to create ethnic compositions.
+"""
+    ),
+
+    "YSYYKH": Term(
+        name="Ysyykh",
+        description="""
+A folk holiday or ritual in Turkic culture, accompanied by music and singing.
+
+Where it appears: In Turkic folk culture — as a holiday. In ethnic music — in rituals. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Ysyykh is a festive ritual inspiring guitarists to create ethnic compositions.
+"""
+    ),
+
+    "YKH": Term(
+        name="Ykh",
+        description="""
+Guitar slang for a sigh, a sound of relief or surprise.
+
+Where it appears: In guitar slang — as an interjection. In guitar circles — in colloquial speech. In culture — in emotions.
+
+Guitarist-Specific Tips: Ykh is a sound of relief or surprise in guitar circles.
+"""
+    ),
+
+    "YU-M": Term(
+        name="Yu-m",
+        description="""
+Guitar slang for a drum kit or rhythm section.
+
+Where it appears: In guitar slang — as drums. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: Yu-m is a drum kit synchronized with the guitar.
+"""
+    ),
+
+    "YUON": Term(
+        name="Yuon",
+        description="""
+Guitar slang for a sound or effect with a characteristic "yuon" — a sharp, piercing timbre.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in effects.
+
+Guitarist-Specific Tips: Yuon is a sharp, piercing guitar sound.
+"""
+    ),
+
+    "YUROCHKA, YURACHKA": Term(
+        name="Yurochka, yurachka",
+        description="""
+Guitar slang for a fast, light passage or riff.
+
+Where it appears: In guitar slang — as a passage. In guitar circles — in colloquial speech. In performance — in fast playing.
+
+Guitarist-Specific Tips: Yurochka is a fast, light guitar passage.
+"""
+    ),
+
+    "YURYAN": Term(
+        name="Yuryan",
+        description="""
+Guitar slang for a nimble, fast style of playing.
+
+Where it appears: In guitar slang — as a style. In guitar circles — in colloquial speech. In performance — in agile playing.
+
+Guitarist-Specific Tips: Yuryan is a fast, nimble style of guitar playing.
+"""
+    ),
+
+    "YABLOCHKO": Term(
+        name="Yablochko",
+        description="""
+A Russian folk dance, often performed by sailors. Characterized by energetic movements and syncopated rhythm.
+
+Where it appears: In Russian folk music — as a dance. In folklore ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Yablochko requires fast and rhythmic playing on guitar.
+"""
+    ),
+
+    "YAVA": Term(
+        name="Yava",
+        description="""
+Guitar slang for a phenomenon, event, or concert.
+
+Where it appears: In guitar slang — as an event. In guitar circles — in colloquial speech. In culture — in events.
+
+Guitarist-Specific Tips: Yava is a concert event or phenomenon in guitar circles.
+"""
+    ),
+
+    "YAVSHI MUKAM": Term(
+        name="Yavshi mukam",
+        description="""
+An Uzbek folk musical form based on improvisation and complex modal systems.
+
+Where it appears: In Uzbek folk music — as a genre. In ethnic ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Yavshi mukam requires an improvisational approach and knowledge of Eastern modes.
+"""
+    ),
+
+    "YADASSON": Term(
+        name="Yadasson",
+        description="""
+A folk instrument or musical term associated with Eastern tradition.
+
+Where it appears: In folk music — as a term. In ethnic music — in traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Yadasson is an exotic term for general knowledge.
+"""
+    ),
+
+    "YAKIMOVSKAYA": Term(
+        name="Yakimovskaya",
+        description="""
+Guitar slang for a style or manner of playing characteristic of a particular musician.
+
+Where it appears: In guitar slang — as a style. In guitar circles — in colloquial speech. In performance — in an individual manner.
+
+Guitarist-Specific Tips: Yakimovskaya is an individual manner of guitar playing.
+"""
+    ),
+
+    "YALGNI YALKHAN": Term(
+        name="Yalgni yalkhan",
+        description="""
+A folk musical term associated with Eastern tradition.
+
+Where it appears: In folk music — as a term. In ethnic music — in traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Yalgni yalkhan is an exotic term for general knowledge.
+"""
+    ),
+
+    "YALKADE": Term(
+        name="Yalkade",
+        description="""
+A folk dance or musical genre associated with Eastern tradition.
+
+Where it appears: In folk music — as a genre. In ethnic ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Yalkade is an ethnic genre inspiring guitarists to create arrangements.
+"""
+    ),
+
+    "YALLY": Term(
+        name="Yally",
+        description="""
+An Azerbaijani folk dance characterized by a lively rhythm and energetic character.
+
+Where it appears: In Azerbaijani folk music — as a dance. In folklore ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Yally requires energetic and rhythmic performance on guitar.
+"""
+    ),
+
+    "YAMAYA-LABAYALG": Term(
+        name="Yamaya-labayalg",
+        description="""
+A folk musical term associated with Eastern tradition.
+
+Where it appears: In folk music — as a term. In ethnic music — in traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Yamaya-labayalg is an exotic term for general knowledge.
+"""
+    ),
+
+    "YAMBIK": Term(
+        name="Yambik",
+        description="""
+Guitar slang for a fast, rhythmic passage or riff.
+
+Where it appears: In guitar slang — as a passage. In guitar circles — in colloquial speech. In performance — in fast playing.
+
+Guitarist-Specific Tips: Yambik is a fast, rhythmic guitar riff.
+"""
+    ),
+
+    "YAN": Term(
+        name="Yan",
+        description="""
+Guitar slang for a sound with a characteristic sharp, piercing timbre.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Yan is a sharp, piercing guitar sound.
+"""
+    ),
+
+    "YANKA": Term(
+        name="Yanka",
+        description="""
+Guitar slang for a small guitar or an inexpensive instrument.
+
+Where it appears: In guitar slang — as a small guitar. In guitar circles — in colloquial speech. In culture — in jokes.
+
+Guitarist-Specific Tips: Yank a is a humorous name for a small guitar.
+"""
+    ),
+
+    "YANGE": Term(
+        name="Yange",
+        description="""
+A folk instrument or musical term associated with Eastern tradition.
+
+Where it appears: In folk music — as a term. In ethnic music — in traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Yange is an exotic term for general knowledge.
+"""
+    ),
+
+    "YATS": Term(
+        name="Yats",
+        description="""
+Guitar slang for a sound with a characteristic clicking or snapping.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in effects.
+
+Guitarist-Specific Tips: Yats is a clicking, snapping guitar sound.
+"""
+    ),
 }

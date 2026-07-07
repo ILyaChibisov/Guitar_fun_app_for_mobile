@@ -46,7 +46,7 @@ class TopNav(MDCard):
     CUSTOM_TITLE_SCREENS = [
         'song_detail',
         'terms_by_letter',
-        'term_detail',
+        'term_detail',      # ← добавляем term_detail
         'artists_by_letter',
         'artist_songs',
         'favorites',
@@ -215,7 +215,7 @@ class TopNav(MDCard):
             'admin': 'Админ панель',
             'search': 'Быстрый поиск',
             'song_detail': '',
-            'term_detail': '',
+            'term_detail': 'Термин',  # ← добавляем заголовок для term_detail
         }
         return titles.get(screen_name, screen_name.capitalize())
 
@@ -387,6 +387,15 @@ class TopNav(MDCard):
             if self.custom_title_widget:
                 self.clear_custom_title_widget()
             self.update_title(screen_name)
+        else:
+            # Для term_detail устанавливаем заголовок "Термин"
+            if screen_name == 'term_detail':
+                if self.custom_title_widget:
+                    self.clear_custom_title_widget()
+                self.set_custom_title("Термин")
+            # Для song_detail оставляем как есть (кастомный виджет)
+            elif screen_name == 'song_detail':
+                pass  # song_detail сам управляет заголовком
 
         # Если возвращаемся с кастомного экрана на обычный
         if old in self.CUSTOM_TITLE_SCREENS and screen_name not in self.CUSTOM_TITLE_SCREENS:

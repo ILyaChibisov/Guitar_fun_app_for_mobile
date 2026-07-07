@@ -316,14 +316,15 @@ Guitarist-Specific Tips: Impedance matching is important for clean and powerful 
 """
     ),
 
+    
     "IMPROVISATION": Term(
         name="Improvisation",
         description="""
-Creating music at the moment of performance, without prior preparation. The foundation of jazz, flamenco, blues, and many other styles.
+Creating music at the moment of performance, without prior preparation. The foundation of jazz, blues, and many other styles.
 
-Where it appears: In jazz — as the foundation of the style. In blues — in solos. In guitar music — in solos and ethnic music.
+Where it appears: In jazz — as the foundation. In blues — in solos. In guitar music — in solos and ethnic music.
 
-Guitarist-Specific Tips: Improvisation develops musical thinking, hearing, and technique. Based on knowledge of scales, modes, and harmony. Important to listen and feel other musicians.
+Guitarist-Specific Tips: Develops musical thinking, ear, and technique.
 """
     ),
 
@@ -382,14 +383,15 @@ Guitarist-Specific Tips: Knowledge of instrumentology helps in choosing and cari
 """
     ),
 
+    
     "INTERVAL": Term(
         name="Interval",
         description="""
-The distance between two pitches. Measured in tones and semitones. Can be melodic (successive) or harmonic (simultaneous).
+The distance between two pitches. Can be melodic (successive) or harmonic (simultaneous).
 
-Where it appears: In music theory — as the basis of harmony. In guitar music — in chords and melodies. In improvisation — as material.
+Where it appears: In music theory — as the basis of harmony. In guitar music — in chords and melodies.
 
-Guitarist-Specific Tips: Knowledge of intervals helps build chords and improvise. On guitar, intervals are easily visualized on the fretboard.
+Guitarist-Specific Tips: Knowledge of intervals helps build chords and improvise.
 """
     ),
 
@@ -448,14 +450,15 @@ Guitarist-Specific Tips: Interference affects guitar timbre and volume. Understa
 """
     ),
 
+    
     "INTONATION": Term(
         name="Intonation",
         description="""
-The purity and accuracy of reproducing pitch. In guitar playing — the accuracy of finger placement on the fret.
+The purity and accuracy of pitch reproduction. In guitar playing — the accuracy of finger placement on the fret.
 
-Where it appears: In performance — as a quality of playing. In vocals — as singing accuracy. In guitar practice — as tuning.
+Where it appears: In performance — as a quality of playing. In guitar practice — as tuning.
 
-Guitarist-Specific Tips: Intonation on guitar depends on proper finger placement and instrument tuning. Important to develop hearing and control sound.
+Guitarist-Specific Tips: Depends on proper finger placement and instrument tuning.
 """
     ),
 

@@ -29,21 +29,15 @@ Third — dynamics from quiet to loud.
 """
     ),
 
+    
     "GAVOTTE": Term(
         name="Gavotte",
         description="""
-An old French dance in 4/4 or 2/2 time, moderate tempo, often with an upbeat on the fourth beat. Characterized by elegance and gracefulness.
+An old French dance in 4/4 time, elegant and graceful in character, often with an upbeat on the fourth beat.
 
-Where it appears:
-In suites by Bach, Handel.
-In classical music — as an instrumental piece.
-In guitar arrangements — as an old dance.
+Where it appears: In suites by Bach, Handel. In guitar music — in arrangements. In pedagogical repertoire.
 
-Guitarist-Specific Tips:
-First — gavotte requires clear rhythmic pulsation.
-Second — accent on the strong beat is important.
-Third — often used in pedagogical repertoire.
-Fourth — requires elegant articulation and lightness.
+Guitarist-Specific Tips: Requires elegant articulation and clear rhythmic pulsation.
 """
     ),
 
@@ -115,20 +109,15 @@ Third — often used in salon music.
 """
     ),
 
+    
     "GALLIARD": Term(
         name="Galliard",
         description="""
-An old Italian dance in 3/4 or 6/8 time, fast and cheerful. Often performed after a pavan.
+An old fast Italian dance in 3/4 or 6/8 time, cheerful and energetic.
 
-Where it appears:
-In dance suites of the Renaissance and Baroque.
-In music for lute and harpsichord.
-In guitar arrangements — as an old piece.
+Where it appears: In dance suites of the Renaissance and Baroque. In guitar arrangements.
 
-Guitarist-Specific Tips:
-First — galliard requires light and agile technique.
-Second — rhythmic clarity and dotted rhythm are important.
-Third — often used in pedagogical repertoire.
+Guitarist-Specific Tips: Requires light and agile technique, rhythmic clarity.
 """
     ),
 
@@ -200,20 +189,15 @@ Third — useful for general musical development.
 """
     ),
 
+    
     "GENERAL PAUSE": Term(
         name="General pause",
         description="""
-A complete stop in the sound of the entire orchestra or ensemble at a specific point. Marked in the score and lasts one or several measures.
+A complete stop of the entire orchestra or ensemble for one or several measures. Marked in the score.
 
-Where it appears:
-In orchestral music — as a dramatic device.
-In jazz — as a pause in improvisation.
-In rock music — as a break in arrangement.
+Where it appears: In orchestral music — as a dramatic device. In jazz — as a pause. In guitar music — in ensembles.
 
-Guitarist-Specific Tips:
-First — important to hold the pause accurately.
-Second — creates a dramatic effect.
-Third — requires synchronization with the ensemble.
+Guitarist-Specific Tips: Requires precise holding of the pause and synchronization.
 """
     ),
 
@@ -297,20 +281,15 @@ Guitarist-Specific Tips: Guitarron requires powerful technique due to thick stri
 """
     ),
 
+    
     "GLISSANDO": Term(
         name="Glissando",
         description="""
-A playing technique where a finger slides along a string, passing through all intermediate pitches. Creates an effect of continuous transition between notes.
+A smooth slide from one note to another, passing through all intermediate pitches. An important expressive technique.
 
-Where it appears:
-In string music — as an expressive technique.
-In jazz — in improvisation.
-In guitar music — in solos and transitions.
+Where it appears: In string music. In jazz improvisation. In guitar technique — in bends and slides.
 
-Guitarist-Specific Tips:
-First — an important technique in electric guitar.
-Second — requires accuracy and intonation control.
-Third — often used in blues and rock.
+Guitarist-Specific Tips: Achieved by sliding the finger along the string.
 """
     ),
 

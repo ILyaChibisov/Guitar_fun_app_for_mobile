@@ -1,7 +1,8 @@
 # screens/tuner_screen.py
 """
 Экран гитарного тюнера - с реальным определением частоты
-Работает на Android через JNI AudioRecord, на Windows через pyaudio
+Windows: sounddevice (с автоматическим выбором устройства)
+Android: JNI AudioRecord
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Ellipse
@@ -17,6 +18,7 @@ import random
 import threading
 import struct
 import time
+import sys
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -33,6 +35,10 @@ from screens.base_screen import BaseScreen
 from utils.notifications import notify
 
 logger = screen_logger('Tuner')
+
+# ============ ПРОВЕРКА ПЛАТФОРМЫ ============
+IS_WINDOWS = sys.platform == 'win32' or sys.platform == 'win64'
+IS_ANDROID = platform == 'android'
 
 try:
     from data import load_asset_as_bytes
@@ -54,6 +60,17 @@ try:
 except ImportError:
     HAS_AUDIO_RECORDER = False
     logger.warning("⚠️ Модуль android_audio не найден, JNI AudioRecord недоступен")
+
+# ============ ПОПЫТКА ИМПОРТА SOUNDDEVICE ============
+try:
+    import sounddevice as sd
+    import numpy as np
+
+    HAS_SOUNDDEVICE = True
+    logger.info("✅ sounddevice загружен")
+except ImportError:
+    HAS_SOUNDDEVICE = False
+    logger.warning("⚠️ sounddevice не найден")
 
 # ============ НАСТРОЙКИ АУДИО ============
 SAMPLE_RATE = 44100
@@ -116,12 +133,10 @@ NOTES = {
 def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
     """
     Определяет частоту через автокорреляцию
-    Работает с аудио данными из микрофона
     """
     if not audio_data or len(audio_data) < 100:
         return 0
 
-    # Преобразуем байты в список целых чисел
     try:
         if isinstance(audio_data, bytes):
             if len(audio_data) % 2 == 0:
@@ -133,7 +148,7 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
     except:
         return 0
 
-    # Находим среднее значение для центрирования
+    # Центрируем сигнал
     mean = sum(samples) / len(samples) if samples else 0
     samples = [s - mean for s in samples]
 
@@ -141,18 +156,15 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
     max_corr = 0
     max_lag = 0
 
-    # Ищем только в диапазоне 80-800 Гц (гитарный диапазон)
     min_lag = int(sample_rate / 800)
     max_lag = int(sample_rate / 80)
 
-    # Ограничиваем для производительности
     if max_lag > len(samples) // 2:
         max_lag = len(samples) // 2
 
     if min_lag >= max_lag:
         return 0
 
-    # Вычисляем автокорреляцию
     for lag in range(min_lag, max_lag):
         corr = sum(samples[i] * samples[i + lag] for i in range(len(samples) - lag))
         if corr > max_corr:
@@ -161,7 +173,6 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
 
     if max_lag > 0:
         freq = sample_rate / max_lag
-        # Проверяем, что частота в диапазоне 80-800 Гц
         if 80 < freq < 800:
             return freq
 
@@ -181,7 +192,7 @@ def freq_to_note(freq):
             closest_note = note
             closest_freq = note_freq
 
-    if min_diff < 30:  # Допустимое отклонение
+    if min_diff < 30:
         return closest_note, closest_freq, min_diff
     return None, None, None
 
@@ -219,21 +230,18 @@ class NoteScale(Widget):
             return
 
         with self.canvas:
-            # Фон
             Color(0.1, 0.1, 0.1, 0.3)
             Rectangle(
                 pos=(self.x, self.y),
                 size=(self.width, self.height)
             )
 
-            # Рамка
             Color(0.46, 0.70, 0.71, 0.2)
             Line(
                 rectangle=(self.x, self.y, self.width, self.height),
                 width=1
             )
 
-            # Рисуем ноты
             note_width = self.width / len(self.notes)
             note_height = self.height * 0.7
             note_y = self.y + self.height * 0.15
@@ -264,7 +272,6 @@ class NoteScale(Widget):
                 else:
                     Color(0.5, 0.5, 0.5, 0.4)
 
-                # Кружок для текущей ноты
                 if is_current:
                     Color(0.46, 0.70, 0.71, 0.2)
                     Ellipse(
@@ -306,14 +313,12 @@ class TunerDial(Widget):
     def _update(self, *args):
         self.canvas.clear()
         with self.canvas:
-            # Фон
             Color(0.1, 0.1, 0.1, 0.4)
             Ellipse(
                 pos=(self.x + self.width * 0.02, self.y + self.height * 0.02),
                 size=(self.width * 0.96, self.height * 0.96)
             )
 
-            # Внешний круг
             Color(0.46, 0.70, 0.71, 0.3)
             Line(
                 circle=(self.center_x, self.center_y, min(self.width, self.height) * 0.45, 0, 360),
@@ -322,7 +327,6 @@ class TunerDial(Widget):
 
             self._draw_scale()
 
-            # Центр
             Color(0.46, 0.70, 0.71, 0.8)
             Ellipse(
                 pos=(self.center_x - dp(3), self.center_y - dp(3)),
@@ -334,14 +338,12 @@ class TunerDial(Widget):
     def _draw_scale(self):
         radius = min(self.width, self.height) * 0.40
 
-        # Зелёная зона
         Color(0.3, 0.8, 0.3, 0.4)
         Line(
             circle=(self.center_x, self.center_y, radius, -12, 12),
             width=dp(6)
         )
 
-        # Жёлтая зона
         Color(0.9, 0.8, 0.2, 0.3)
         Line(
             circle=(self.center_x, self.center_y, radius, -30, -12),
@@ -352,7 +354,6 @@ class TunerDial(Widget):
             width=dp(4)
         )
 
-        # Красная зона
         Color(0.8, 0.2, 0.2, 0.25)
         Line(
             circle=(self.center_x, self.center_y, radius, -50, -30),
@@ -363,7 +364,6 @@ class TunerDial(Widget):
             width=dp(3)
         )
 
-        # Центральная метка
         Color(0.46, 0.70, 0.71, 0.8)
         Line(
             circle=(self.center_x, self.center_y, radius * 1.05, -1, 1),
@@ -371,7 +371,7 @@ class TunerDial(Widget):
         )
 
     def _draw_needle(self):
-        angle_deg = self.deviation * 45 / 50  # -50..50 центов -> -45..45 градусов
+        angle_deg = self.deviation * 45 / 50
         angle_rad = math.radians(angle_deg)
         radius = min(self.width, self.height) * 0.35
 
@@ -437,6 +437,8 @@ class TunerScreen(BaseScreen):
         self._running = False
         self._audio_backend = 'emulation'
         self._audio_recorder = None
+        self._sounddevice_stream = None
+        self._checked_microphone = False
 
         # Текущий строй
         self.current_tuning = 'standard_6'
@@ -445,13 +447,11 @@ class TunerScreen(BaseScreen):
         self.tuning_note_names = TUNINGS[self.current_tuning]['note_names']
         self.strings_count = TUNINGS[self.current_tuning]['strings']
 
-        # Все ноты для шкалы
         self.all_notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
         self.init_ui()
         self.load_background()
 
-        # Инициализируем аудио
         Clock.schedule_once(self._init_audio, 0.5)
 
         logger.info('Экран тюнера создан')
@@ -482,10 +482,52 @@ class TunerScreen(BaseScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
+    def _check_microphone(self):
+        """Проверяет, доступен ли микрофон на Windows"""
+        if self._checked_microphone:
+            return True
+
+        if IS_ANDROID:
+            self._checked_microphone = True
+            return True
+
+        try:
+            import sounddevice as sd
+            devices = sd.query_devices()
+            input_devices = [i for i, d in enumerate(devices) if d['max_input_channels'] > 0]
+
+            if not input_devices:
+                logger.warning("⚠️ Микрофон не найден!")
+                self._show_temporary_hint("Микрофон не найден!", 2.0)
+                return False
+
+            # Пробуем открыть тестовый поток
+            try:
+                test_stream = sd.InputStream(
+                    samplerate=44100,
+                    channels=1,
+                    duration=0.1,
+                    device=input_devices[0]
+                )
+                test_stream.start()
+                test_stream.stop()
+                test_stream.close()
+                logger.info("✅ Микрофон доступен")
+                self._checked_microphone = True
+                return True
+            except Exception as e:
+                logger.warning(f"⚠️ Микрофон недоступен: {e}")
+                self._show_temporary_hint("Микрофон недоступен!", 2.0)
+                return False
+
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка проверки микрофона: {e}")
+            return False
+
     def _init_audio(self, dt):
         """Инициализация аудио для всех платформ"""
         try:
-            if platform == 'android':
+            if IS_ANDROID:
                 # ============ ANDROID ============
                 try:
                     from android.permissions import request_permissions, Permission
@@ -494,7 +536,6 @@ class TunerScreen(BaseScreen):
                 except Exception as e:
                     logger.error(f"Ошибка запроса разрешений: {e}")
 
-                # Используем JNI AudioRecord через наш модуль
                 if HAS_AUDIO_RECORDER:
                     try:
                         self._audio_recorder = get_audio_recorder()
@@ -504,22 +545,33 @@ class TunerScreen(BaseScreen):
                     except Exception as e:
                         logger.error(f"❌ Ошибка JNI AudioRecord: {e}")
 
-                # Если ничего не работает - эмуляция
                 logger.warning("⚠️ Аудио не доступно на Android, используем эмуляцию")
                 self._audio_backend = 'emulation'
 
             else:
                 # ============ WINDOWS / MACOS / LINUX ============
-                # Пробуем pyaudio (лучший вариант для десктопа)
-                try:
-                    import pyaudio
-                    self._audio_backend = 'pyaudio'
-                    logger.info("✅ pyaudio загружен (Desktop)")
-                    return
-                except ImportError:
-                    logger.warning("⚠️ pyaudio не найден")
+                if HAS_SOUNDDEVICE:
+                    try:
+                        import sounddevice as sd
 
-                # Эмуляция
+                        # Проверяем наличие устройств ввода
+                        devices = sd.query_devices()
+                        input_devices = [i for i, d in enumerate(devices) if d['max_input_channels'] > 0]
+
+                        if input_devices:
+                            logger.info(f"🎤 Найдено устройств ввода: {len(input_devices)}")
+                            for idx in input_devices:
+                                logger.info(f"   - {devices[idx]['name']}")
+
+                            self._audio_backend = 'sounddevice'
+                            logger.info("✅ sounddevice загружен (Desktop)")
+                            return
+                        else:
+                            logger.warning("⚠️ Нет устройств ввода! Проверьте подключение микрофона.")
+                    except Exception as e:
+                        logger.error(f"❌ Ошибка инициализации sounddevice: {e}")
+
+                # Если sounddevice не работает - эмуляция
                 logger.warning("⚠️ Аудио не доступно, используем эмуляцию")
                 self._audio_backend = 'emulation'
 
@@ -535,7 +587,6 @@ class TunerScreen(BaseScreen):
         self._running = True
 
         if self._audio_backend == 'android_jni':
-            # Используем JNI AudioRecord
             if self._audio_recorder:
                 self._audio_recorder.start_recording(
                     callback=self._on_audio_data,
@@ -545,11 +596,17 @@ class TunerScreen(BaseScreen):
                 logger.info("🎤 Android JNI AudioRecord запущен")
             else:
                 self._audio_loop_emulation()
-        elif self._audio_backend == 'pyaudio':
-            self._audio_thread = threading.Thread(target=self._audio_loop_pyaudio)
+        elif self._audio_backend == 'sounddevice':
+            # Проверяем микрофон перед запуском
+            if IS_WINDOWS and not self._check_microphone():
+                self._show_temporary_hint("Микрофон не найден!", 2.0)
+                self._running = False
+                return
+
+            self._audio_thread = threading.Thread(target=self._audio_loop_sounddevice)
             self._audio_thread.daemon = True
             self._audio_thread.start()
-            logger.info("🎤 pyaudio поток запущен")
+            logger.info("🎤 sounddevice поток запущен")
         else:
             self._audio_thread = threading.Thread(target=self._audio_loop_emulation)
             self._audio_thread.daemon = True
@@ -566,49 +623,156 @@ class TunerScreen(BaseScreen):
             if freq > 0:
                 Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
 
-    def _audio_loop_pyaudio(self):
-        """Захват через pyaudio (Windows/Desktop)"""
+    def _audio_loop_sounddevice(self):
+        """Захват через sounddevice (Windows/Desktop) с умным выбором устройства"""
         try:
-            import pyaudio
+            import sounddevice as sd
+            import numpy as np
 
-            p = pyaudio.PyAudio()
-            stream = p.open(
-                format=pyaudio.paInt16,
-                channels=1,
-                rate=SAMPLE_RATE,
-                input=True,
-                frames_per_buffer=CHUNK_SIZE
-            )
+            logger.info("🔍 Поиск аудио-устройств ввода...")
 
-            logger.info("✅ pyaudio захват запущен")
+            # ============ ПОЛУЧАЕМ СПИСОК УСТРОЙСТВ ============
+            devices = sd.query_devices()
+            input_devices = []
 
-            while self._running:
-                try:
-                    data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
-                    if data:
-                        freq = detect_pitch(data, SAMPLE_RATE)
-                        if freq > 0:
-                            Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
-                except Exception as e:
-                    logger.error(f"Ошибка чтения аудио: {e}")
+            for i, device in enumerate(devices):
+                if device['max_input_channels'] > 0:
+                    input_devices.append({
+                        'index': i,
+                        'name': device['name'],
+                        'channels': device['max_input_channels'],
+                        'sample_rates': device.get('default_samplerate', 0)
+                    })
+                    logger.info(f"   Устройство {i}: {device['name']} (каналов: {device['max_input_channels']})")
+
+            if not input_devices:
+                logger.warning("⚠️ Нет устройств ввода! Проверьте подключение микрофона.")
+                self._audio_loop_emulation()
+                return
+
+            # ============ ВЫБИРАЕМ ЛУЧШЕЕ УСТРОЙСТВО ============
+            selected_device = None
+            priority_keywords = ['microphone', 'mic', 'input', 'audio', 'usb', 'cable']
+
+            # Сначала ищем по ключевым словам
+            for dev in input_devices:
+                name_lower = dev['name'].lower()
+                for keyword in priority_keywords:
+                    if keyword in name_lower:
+                        if selected_device is None:
+                            selected_device = dev
+                        if keyword in ['microphone', 'mic']:
+                            selected_device = dev
+                            logger.info(f"✅ Найдено устройство с '{keyword}': {dev['name']}")
+                            break
+                if selected_device and 'microphone' in selected_device['name'].lower():
                     break
 
-            stream.stop_stream()
-            stream.close()
-            p.terminate()
+            # Если не нашли по ключевым словам - берем первое
+            if selected_device is None:
+                selected_device = input_devices[0]
+                logger.info(f"✅ Используем устройство по умолчанию: {selected_device['name']}")
 
-        except ImportError:
-            logger.warning("⚠️ pyaudio не установлен")
-            self._audio_loop_emulation()
+            device_index = selected_device['index']
+            device_name = selected_device['name']
+            max_channels = selected_device['channels']
+
+            # ============ ОПРЕДЕЛЯЕМ ПОДДЕРЖИВАЕМУЮ ЧАСТОТУ ============
+            sample_rates_to_try = [44100, 48000, 22050, 16000, 11025, 8000]
+            selected_rate = None
+
+            for rate in sample_rates_to_try:
+                try:
+                    sd.check_input_settings(
+                        device=device_index,
+                        samplerate=rate,
+                        channels=min(1, max_channels)
+                    )
+                    selected_rate = rate
+                    logger.info(f"✅ Устройство поддерживает {rate}Hz")
+                    break
+                except Exception as e:
+                    logger.debug(f"   {rate}Hz не поддерживается: {e}")
+                    continue
+
+            if selected_rate is None:
+                logger.warning("⚠️ Не удалось найти поддерживаемую частоту, используем 44100")
+                selected_rate = 44100
+
+            # ============ ОТКРЫВАЕМ ПОТОК ============
+            logger.info(f"🎤 Открываем поток: {device_name}, {selected_rate}Hz, {min(1, max_channels)} канал(а)")
+
+            def callback(indata, frames, time_info, status):
+                if status:
+                    logger.warning(f"Статус звука: {status}")
+
+                if not self._running or not self.is_listening:
+                    return
+
+                try:
+                    if indata is None or len(indata) == 0:
+                        return
+
+                    if indata.shape[1] > 0:
+                        audio_int16 = (indata[:, 0] * 32767).astype(np.int16)
+                        data_bytes = audio_int16.tobytes()
+
+                        if len(data_bytes) > 0:
+                            freq = detect_pitch(data_bytes, selected_rate)
+                            if freq > 0:
+                                Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
+                except Exception as e:
+                    logger.error(f"Ошибка обработки аудио: {e}")
+
+            # Создаем поток с правильными параметрами
+            try:
+                self._sounddevice_stream = sd.InputStream(
+                    device=device_index,
+                    samplerate=selected_rate,
+                    channels=min(1, max_channels),
+                    callback=callback,
+                    blocksize=CHUNK_SIZE,
+                    dtype='float32',
+                    latency='low'
+                )
+            except Exception as e:
+                logger.error(f"❌ Не удалось создать поток: {e}")
+                try:
+                    logger.info("🔄 Пробуем с устройством по умолчанию...")
+                    self._sounddevice_stream = sd.InputStream(
+                        samplerate=selected_rate,
+                        channels=1,
+                        callback=callback,
+                        blocksize=CHUNK_SIZE,
+                        dtype='float32'
+                    )
+                except Exception as e2:
+                    logger.error(f"❌ Не удалось создать поток с устройством по умолчанию: {e2}")
+                    self._audio_loop_emulation()
+                    return
+
+            self._sounddevice_stream.start()
+            logger.info(f"✅ sounddevice поток запущен (устройство: {device_name})")
+
+            # Ждем завершения
+            while self._running:
+                time.sleep(0.1)
+
+            # Закрываем поток
+            if self._sounddevice_stream:
+                self._sounddevice_stream.stop()
+                self._sounddevice_stream.close()
+                self._sounddevice_stream = None
+
         except Exception as e:
-            logger.error(f"Ошибка pyaudio: {e}")
+            logger.error(f"❌ Ошибка sounddevice: {e}")
+            logger.info("🔄 Переключаемся на эмуляцию...")
             self._audio_loop_emulation()
 
     def _audio_loop_emulation(self):
         """Эмуляция для тестирования"""
         logger.info("🎵 Эмуляция аудио")
         while self._running:
-            import time
             if self.tuning_freqs:
                 freq = random.choice(self.tuning_freqs)
                 freq += (random.random() - 0.5) * 10
@@ -623,6 +787,15 @@ class TunerScreen(BaseScreen):
             self._audio_recorder.stop_recording()
             logger.info("⏹ JNI AudioRecord остановлен")
 
+        if self._audio_backend == 'sounddevice' and self._sounddevice_stream:
+            try:
+                self._sounddevice_stream.stop()
+                self._sounddevice_stream.close()
+                self._sounddevice_stream = None
+                logger.info("⏹ sounddevice остановлен")
+            except:
+                pass
+
         if self._audio_thread and self._audio_thread.is_alive():
             self._audio_thread.join(timeout=1)
         self._audio_thread = None
@@ -634,26 +807,21 @@ class TunerScreen(BaseScreen):
         if not self.is_listening:
             return
 
-        # Находим ближайшую ноту
         note, note_freq, diff = freq_to_note(freq)
 
         if note:
-            # Вычисляем отклонение в центах
             cents = cents_deviation(freq, note_freq)
-            deviation = cents / 50  # -1..1
+            deviation = cents / 50
 
-            # Обновляем круговой индикатор
             if hasattr(self, 'tuner_dial'):
                 self.tuner_dial.deviation = deviation
                 self.tuner_dial.note_name = note
                 self.tuner_dial.note_frequency = note_freq
 
-            # Обновляем шкалу нот
             if hasattr(self, 'note_scale'):
                 self.note_scale.set_current_note(note)
                 self.note_scale.set_highlighted(self.tuning_note_names)
 
-            # Обновляем информацию
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.1f} Hz"
 
@@ -729,15 +897,12 @@ class TunerScreen(BaseScreen):
         self.tuning_note_names = tuning['note_names']
         self.strings_count = tuning['strings']
 
-        # Обновляем название строя
         if hasattr(self, 'tuning_name_label'):
             self.tuning_name_label.text = tuning['name']
 
-        # Обновляем шкалу
         if hasattr(self, 'note_scale'):
             self.note_scale.set_highlighted(self.tuning_note_names)
 
-        # Сбрасываем индикаторы
         if hasattr(self, 'tuner_dial'):
             self.tuner_dial.deviation = 0
             self.tuner_dial.note_name = '--'
@@ -754,11 +919,9 @@ class TunerScreen(BaseScreen):
 
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Верхний отступ
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # Нижний отступ
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
@@ -776,7 +939,6 @@ class TunerScreen(BaseScreen):
             adaptive_height=True
         )
 
-        # ============ ЗАГОЛОВОК ============
         title_label = MDLabel(
             text="ТЮНЕР",
             font_size=sp(18),
@@ -789,7 +951,6 @@ class TunerScreen(BaseScreen):
         )
         content.add_widget(title_label)
 
-        # ============ ШКАЛА НОТ ============
         scale_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -801,7 +962,6 @@ class TunerScreen(BaseScreen):
         scale_container.add_widget(self.note_scale)
         content.add_widget(scale_container)
 
-        # ============ ИНФОРМАЦИЯ О СТРОЕ ============
         tuning_info = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -821,7 +981,6 @@ class TunerScreen(BaseScreen):
         tuning_info.add_widget(self.tuning_name_label)
         content.add_widget(tuning_info)
 
-        # ============ КРУГОВОЙ ИНДИКАТОР ============
         dial_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -832,7 +991,6 @@ class TunerScreen(BaseScreen):
         dial_container.add_widget(self.tuner_dial)
         content.add_widget(dial_container)
 
-        # ============ НОТА И ЧАСТОТА ============
         info_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -865,7 +1023,6 @@ class TunerScreen(BaseScreen):
         info_container.add_widget(self.note_label)
         content.add_widget(info_container)
 
-        # ============ МЕНЮ УПРАВЛЕНИЯ ============
         menu_card = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -926,7 +1083,6 @@ class TunerScreen(BaseScreen):
 
         content.add_widget(menu_card)
 
-        # ============ ПОДСКАЗКА ============
         self._hint_label = MDLabel(
             text="",
             font_size=sp(11),
@@ -950,6 +1106,11 @@ class TunerScreen(BaseScreen):
     def toggle_tuner(self, instance):
         """Включает/выключает тюнер"""
         if not self.is_listening:
+            # Проверяем микрофон перед запуском
+            if self._audio_backend == 'sounddevice' and IS_WINDOWS:
+                if not self._check_microphone():
+                    return
+
             self.is_listening = True
             self.play_btn.icon = "stop"
             self.play_btn.icon_color = [0.8, 0.3, 0.3, 1]
@@ -962,7 +1123,6 @@ class TunerScreen(BaseScreen):
             self._show_temporary_hint("Тюнер остановлен")
             self._stop_audio_thread()
 
-            # Сбрасываем индикаторы
             if hasattr(self, 'tuner_dial'):
                 self.tuner_dial.deviation = 0
                 self.tuner_dial.note_name = '--'
@@ -1007,7 +1167,6 @@ class TunerScreen(BaseScreen):
                 self._hint_timer = None
 
     def on_enter(self):
-        """При входе на экран"""
         logger.info("Вход в экран тюнера")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
@@ -1015,7 +1174,6 @@ class TunerScreen(BaseScreen):
             app.top_nav.set_custom_back_callback(self.go_back)
 
     def go_back(self, instance=None):
-        """Возврат на главный экран"""
         logger.info("🔙 Возврат на home")
         if self.is_listening:
             self.toggle_tuner(None)
@@ -1027,7 +1185,6 @@ class TunerScreen(BaseScreen):
             self.manager.current = 'home'
 
     def on_leave(self):
-        """При выходе с экрана"""
         logger.info("Выход из экрана тюнера")
         if self.is_listening:
             self.toggle_tuner(None)

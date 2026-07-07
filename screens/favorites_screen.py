@@ -454,8 +454,7 @@ class FavoritesScreen(BaseScreen):
             md_bg_color=[0, 0, 0, 0.06],
             elevation=0,
             line_color=[1, 1, 1, 0.15],
-            line_width=0.5,
-            clip=True
+            line_width=0.5
         )
 
         icon_label = MDLabel(

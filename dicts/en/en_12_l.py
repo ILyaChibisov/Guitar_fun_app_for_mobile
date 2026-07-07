@@ -661,14 +661,15 @@ Guitarist-Specific Tips: Left-hand technique is the foundation of guitar techniq
     ),
 
     
+    
     "LIBRETTO": Term(
         name="Libretto",
         description="""
-The literary text of an opera, operetta, musical, or cantata. The foundation of a vocal work, determining the plot and dramaturgy.
+The literary text of an opera, operetta, musical, or cantata. Determines the plot and dramaturgy.
 
-Where it appears: In opera — as text. In musicals — as a script. In guitar music — in accompaniment.
+Where it appears: In opera — as text. In musicals — as a script.
 
-Guitarist-Specific Tips: The libretto is important for understanding operatic dramaturgy. Guitar can accompany opera arias.
+Guitarist-Specific Tips: Important for understanding operatic dramaturgy when accompanying.
 """
     ),
 
@@ -1274,6 +1275,17 @@ Guitar slang for a slight noise, a light noise effect.
 Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in noise.
 
 Guitarist-Specific Tips: Little noise is a light noise effect on guitar.
+"""
+    ),
+
+    "LITTLE PLUCKS": Term(
+        name="Little plucks",
+        description="""
+Guitar slang for small, light plucks of strings, often used in arpeggios and fingerpicking.
+
+Where it appears: In guitar slang — as plucks. In guitar circles — in colloquial speech. In performance — in gentle playing.
+
+Guitarist-Specific Tips: Little plucks are light, gentle plucks of strings on guitar.
 """
     ),
 }

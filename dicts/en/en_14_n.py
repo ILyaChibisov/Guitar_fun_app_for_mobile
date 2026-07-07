@@ -237,14 +237,15 @@ Guitarist-Specific Tips: Non-chord tones enliven guitar solos and accompaniment.
 """
     ),
 
+    
     "NEUME": Term(
         name="Neume",
         description="""
 A sign in early notation denoting one or several notes. Used in Gregorian chant and znamenny chant.
 
-Where it appears: In church music — as notation. In history — as a stage. In guitar music — in arrangements.
+Where it appears: In church music — as notation. In history — as a stage.
 
-Guitarist-Specific Tips: A neume is a historical notation. Knowledge of neumes helps understand early music.
+Guitarist-Specific Tips: Knowledge of neumes helps understand early music.
 """
     ),
 

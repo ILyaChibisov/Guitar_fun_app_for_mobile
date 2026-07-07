@@ -279,4 +279,59 @@ Where it appears: In music — as humor. In guitar music — in humorous pieces.
 Guitarist-Specific Tips: A joke is a humorous guitar piece.
 """
     ),
+
+    "JUBILEE MUSIC": Term(
+        name="Jubilee music",
+        description="""
+Music written or performed in honor of an anniversary, a solemn event or celebration. Often has a major, joyful character.
+
+Where it appears: In ceremonial music — as a genre. At celebrations — in jubilee events. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Jubilee music requires a solemn and joyful character.
+"""
+    ),
+
+    "JUBILATION": Term(
+        name="Jubilation",
+        description="""
+In church music — a rejoicing chant glorifying God. In a broader sense — a joyful, solemn musical greeting.
+
+Where it appears: In church music — as a chant. In choral music — in jubilations. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Jubilation requires a solemn and rejoicing character.
+"""
+    ),
+
+    "JURGENSON": Term(
+        name="Jurgenson",
+        description="""
+The name of a famous music publisher and composer associated with the history of Russian music. In guitar terminology — rarely.
+
+Where it appears: In music history — as a publisher. In culture — in Russian music. In guitar music — in a historical context.
+
+Guitarist-Specific Tips: Jurgenson is a historical figure in Russian music.
+"""
+    ),
+
+    "JACOBSON": Term(
+        name="Jacobson",
+        description="""
+The name of a famous musician or composer, as well as the name of guitar models.
+
+Where it appears: In the guitar industry — as a brand. In music — as a performer's name. In guitar culture — as a famous personality.
+
+Guitarist-Specific Tips: Jacobson can be a guitar brand or the name of a famous guitarist.
+"""
+    ),
+
+    "JAPANESE QUADRILLE": Term(
+        name="Japanese quadrille",
+        description="""
+A Japanese version of the French quadrille dance, adapted to Japanese musical tradition.
+
+Where it appears: In Japanese music — as a dance. In ethnic ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: The Japanese quadrille requires a combination of European and Japanese styles.
+"""
+    ),
 }

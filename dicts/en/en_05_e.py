@@ -182,6 +182,8 @@ Guitarist-Specific Tips: European rock has produced many outstanding guitarists.
 """
     ),
 
+    
+    
     "EUPHONY": Term(
         name="Euphony",
         description="""
@@ -189,7 +191,7 @@ Pleasant, harmonious sounding, a harmonious combination of sounds. Contrasted wi
 
 Where it appears: In musical aesthetics — as a quality of sound. In acoustics — as a pleasant timbre. In guitar music — as the goal of sound production.
 
-Guitarist-Specific Tips: Euphony is achieved through proper hand positioning and high-quality sound production. Important to choose the right chords and their combinations. Soft attack and clean string sound are used.
+Guitarist-Specific Tips: Euphony is achieved through proper hand positioning and high-quality sound production. Important to choose the right chords and their combinations.
 """
     ),
 
@@ -358,25 +360,28 @@ Guitarist-Specific Tips: An eye is a pickup or sound hole.
 """
     ),
 
+    
+    
     "EXPOSITION": Term(
         name="Exposition",
         description="""
-The development and repetition of a theme in various voices or keys. Used in polyphony and sonata form.
+The first section of sonata form, where the main themes are presented. Used in classical music.
 
-Where it appears: In polyphony — as development. In classical music — in theme exposition. In guitar music — in variations.
+Where it appears: In classical music — in sonata form. In guitar music — in sonatas. In education — in form analysis.
 
-Guitarist-Specific Tips: Exposition is the development of a theme in different voices.
+Guitarist-Specific Tips: The exposition is the presentation of themes in a guitar sonata.
 """
     ),
 
+    
     "EQUAL TEMPERAMENT": Term(
         name="Equal temperament",
         description="""
-A tuning system for musical instruments where the octave is divided into 12 equal semitones. The basis of modern musical tuning.
+A tuning system where the octave is divided into 12 equal semitones. The basis of modern musical tuning.
 
-Where it appears: In music theory — as a system. In tuning — as the foundation. In guitar music — in standard tuning.
+Where it appears: In music theory — as a system. In tuning — as the foundation.
 
-Guitarist-Specific Tips: Equal temperament allows playing in any key. The basis of modern guitar tuning.
+Guitarist-Specific Tips: Allows playing in any key on guitar.
 """
     ),
 
@@ -479,14 +484,16 @@ Guitarist-Specific Tips: An eleventh chord requires complex fingering on guitar.
 """
     ),
 
+    
+    
     "EXERCISE": Term(
         name="Exercise",
         description="""
-Systematic repetition of musical material to develop technique and playing skills on guitar.
+A musical exercise for developing technique. In guitar terminology — an exercise for the fingers.
 
-Where it appears: In education — as a method. In performance — in training. In guitar practice — in exercises.
+Where it appears: In education — as an exercise. In guitar practice — in études. In pedagogy — in training.
 
-Guitarist-Specific Tips: Exercises are the foundation of developing guitar technique.
+Guitarist-Specific Tips: An exercise is a practice piece for developing guitar technique.
 """
     ),
 
@@ -553,6 +560,233 @@ Guitar slang for writing music using symbols or abbreviations.
 Where it appears: In guitar slang — as a recording. In guitar circles — in colloquial speech. In sound recording — in encoding.
 
 Guitarist-Specific Tips: Encoding is an abbreviated recording of guitar music.
+"""
+    ),
+
+    
+    "EQUIRHYTHMIC TRANSLATION": Term(
+        name="Equirhythmic translation",
+        description="""
+A translation of poetic text that preserves the rhythmic structure of the original. Used in vocal music and opera.
+
+Where it appears: In vocal music — as text translation. In opera — in librettos. In guitar music — in songs.
+
+Guitarist-Specific Tips: Equirhythmic translation is important for preserving the rhythm of a song when accompanying on guitar.
+"""
+    ),
+
+    
+    "EKVODIN": Term(
+        name="Ekvodin",
+        description="""
+A folk instrument or musical term associated with Eastern tradition. In guitar terminology — rarely.
+
+Where it appears: In folk music — as a term. In ethnic music — in traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Ekvodin is an exotic term for general knowledge.
+"""
+    ),
+
+    
+    "EXOTIC MUSIC": Term(
+        name="Exotic music",
+        description="""
+Music based on non-European traditions, using unusual instruments, modes, and rhythms.
+
+Where it appears: In ethnic music — as a genre. In guitar music — in exotic arrangements. In culture — in ethnomusic.
+
+Guitarist-Specific Tips: Exotic music inspires guitarists to use non-standard modes and techniques.
+"""
+    ),
+
+    
+    "ECOSSAISE": Term(
+        name="Ecossaise",
+        description="""
+A Scottish folk dance in fast tempo, in 2/4 or 6/8 time. Used in folk and classical music.
+
+Where it appears: In Scottish folk music — as a dance. In classical music — in écossaises. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: An écossaise requires fast and rhythmic playing on guitar.
+"""
+    ),
+
+    
+    "ECOPHONETIC NOTATION": Term(
+        name="Ecophonetic notation",
+        description="""
+A system for recording environmental sounds for musical purposes. Used in contemporary and experimental music.
+
+Where it appears: In contemporary music — as notation. In experimental music — in ecophonetics. In guitar music — in avant-garde compositions.
+
+Guitarist-Specific Tips: Ecophonetic notation is rarely used in guitar music.
+"""
+    ),
+
+    
+    "EXTEMPORE": Term(
+        name="Extempore",
+        description="""
+A short musical work written as if "on the spot," without prior preparation.
+
+Where it appears: In classical music — as a genre. In guitar music — in extempores. In Romantic music — in improvisations.
+
+Guitarist-Specific Tips: An extempore requires free and expressive performance on guitar.
+"""
+    ),
+
+    
+    "ELEGY": Term(
+        name="Elegy",
+        description="""
+A musical or poetic work of a sad, thoughtful character. Used in Romantic music.
+
+Where it appears: In classical music — as a genre. In guitar music — in elegies. In poetry — in elegies.
+
+Guitarist-Specific Tips: An elegy requires singing and melancholic performance on guitar.
+"""
+    ),
+
+    
+    "ELEMENTARY MUSIC THEORY": Term(
+        name="Elementary music theory",
+        description="""
+The basics of music theory, including note literacy, rhythm, intervals, and chords.
+
+Where it appears: In education — as the foundation. In pedagogy — in theory. In guitar music — in the theoretical foundation.
+
+Guitarist-Specific Tips: Elementary music theory is the foundation of guitar education.
+"""
+    ),
+
+    
+    "EMIRITON": Term(
+        name="Emiriton",
+        description="""
+An electronic musical instrument invented in the USSR in the 1930s. One of the first electronic instruments.
+
+Where it appears: In music history — as an electronic instrument. In contemporary music — in retro sound. In guitar music — rarely.
+
+Guitarist-Specific Tips: The emiriton is an early electronic instrument, a predecessor of the synthesizer.
+"""
+    ),
+
+    
+    "ENHARMONICISM": Term(
+        name="Enharmonicism",
+        description="""
+A phenomenon where notes that sound the same have different names (e.g., C-sharp and D-flat). Used in music theory.
+
+Where it appears: In music theory — as a phenomenon. In harmony — in enharmonicism. In guitar music — in chords.
+
+Guitarist-Specific Tips: Enharmonicism expands understanding of notes and chords on guitar.
+"""
+    ),
+
+    
+    "ENHARMONIC MODULATION": Term(
+        name="Enharmonic modulation",
+        description="""
+A modulation where the transition to a new key occurs through enharmonic substitution of a chord.
+
+Where it appears: In classical music — as a technique. In harmony — in modulations. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: Enharmonic modulation requires knowledge of enharmonic substitutions on guitar.
+"""
+    ),
+
+    
+    "EPISODE": Term(
+        name="Episode",
+        description="""
+A section of a musical work that contrasts with the main theme. Used in rondo and other forms.
+
+Where it appears: In music — as a structural element. In guitar music — in rondos. In education — in form analysis.
+
+Guitarist-Specific Tips: An episode is a contrasting section in a guitar work.
+"""
+    ),
+
+    
+    "EPILOGUE": Term(
+        name="Epilogue",
+        description="""
+The concluding part of a musical work or cycle. Used in large forms.
+
+Where it appears: In music — as a conclusion. In guitar music — in cycles. In literature — in epilogues.
+
+Guitarist-Specific Tips: An epilogue is the concluding part of a guitar cycle.
+"""
+    ),
+
+    
+    "EPITHALAMIUM": Term(
+        name="Epithalamium",
+        description="""
+A wedding song or musical work dedicated to marriage. Used in folk and classical music.
+
+Where it appears: In folk music — as a wedding song. In classical music — in epithalamiums. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: An epithalamium requires a solemn and joyful character.
+"""
+    ),
+
+    
+    "EPITAPH": Term(
+        name="Epitaph",
+        description="""
+A musical work dedicated to the memory of the deceased. Characterized by a mournful, sorrowful character.
+
+Where it appears: In mourning music — as a genre. In classical music — in epitaphs. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: An epitaph requires a mournful and sorrowful character.
+"""
+    ),
+
+    
+    "ERHU": Term(
+        name="Erhu",
+        description="""
+A Chinese folk stringed bowed instrument with two strings. Has a characteristic timbre.
+
+Where it appears: In Chinese folk music — as an instrument. In ethnic ensembles. In guitar music — rarely.
+
+Guitarist-Specific Tips: The erhu is a Chinese instrument rarely combined with guitar.
+"""
+    ),
+
+    
+    "ES": Term(
+        name="Es",
+        description="""
+In solfège — a designation for the note E-flat in some solmization systems. In guitar terminology — rarely.
+
+Where it appears: In solfège — as a syllable. In education — in singing. In guitar practice — rarely.
+
+Guitarist-Specific Tips: Es is a historical syllable for the note E-flat.
+"""
+    ),
+
+    
+    "ESTAMPIE": Term(
+        name="Estampie",
+        description="""
+An old dance form popular in the 13th–14th centuries. Characterized by repeating melodic and rhythmic patterns.
+
+Where it appears: In early music — as a dance. In history — in estampies. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: An estampie is an old dance arranged for guitar.
+"""
+    ),
+
+    "ETUDE": Term(
+        name="Etude",
+        description="""
+An instrumental piece designed to develop technique. Used in education and performance.
+
+Where it appears: In classical music — as a genre. In guitar music — in études. In education — in repertoire.
+
+Guitarist-Specific Tips: An etude is a technical piece for developing guitar technique.
 """
     ),
 }

@@ -189,14 +189,15 @@ Guitarist-Specific Tips: Mirror technique is playing a melody in reverse order. 
     
     
     
+    
     "MODE": Term(
         name="Mode",
         description="""
 A mode, a system of pitch relationships. In medieval theory — one of the eight church modes.
 
-Where it appears: In music theory — as a mode. In medieval music — in church modes. In guitar music — in modal compositions.
+Where it appears: In music theory — as a mode. In medieval music — in church modes.
 
-Guitarist-Specific Tips: Mode is the basis of modal harmony.
+Guitarist-Specific Tips: The basis of modal harmony used in jazz and folk.
 """
     ),
 
@@ -834,14 +835,15 @@ Guitarist-Specific Tips: Meistersingers are German masters of song.
 """
     ),
 
+    
     "MELISMAS": Term(
         name="Melismas",
         description="""
-Musical ornaments: trills, grace notes, mordents, gruppettos, and others. Used to embellish and add expressiveness to the melody.
+Musical ornaments: trills, grace notes, mordents, gruppettos. Used to embellish and add expressiveness to the melody.
 
-Where it appears: In classical music — as ornamentation. In Baroque music — as a style. In guitar music — in embellishments.
+Where it appears: In classical music — as ornamentation. In guitar music — in embellishments.
 
-Guitarist-Specific Tips: Melismas require fast and precise technique. Add elegance and expressiveness.
+Guitarist-Specific Tips: Require fast and precise technique.
 """
     ),
 
@@ -1186,12 +1188,13 @@ Guitarist-Specific Tips: Mezza voce requires restrained dynamics and soft attack
 """
     ),
 
+    
     "MEZZO-SOPRANO": Term(
         name="Mezzo-soprano",
         description="""
-A medium female singing voice, between soprano and contralto. Has a warm, rich timbre.
+A medium female singing voice. Has a warm, rich timbre.
 
-Where it appears: In choir — as a medium female voice. In opera — in parts. In guitar music — in accompaniment.
+Where it appears: In choir — as a middle female voice. In opera — in parts. In guitar music — in accompaniment.
 
 Guitarist-Specific Tips: Mezzo-soprano requires accompaniment in a key comfortable for this voice.
 """
@@ -1208,14 +1211,15 @@ Guitarist-Specific Tips: Metsukha is a jazz guitarist.
 """
     ),
 
+    
     "MICROINTERVALLICS": Term(
         name="Microintervallics",
         description="""
-A system of intervals smaller than a semitone, used in some musical cultures. Found in Arabic, Indian, and contemporary academic music.
+A system of intervals smaller than a semitone, used in some musical cultures, especially in Arabic and Indian music.
 
-Where it appears: In Arabic music — as the foundation. In Indian music — as microtonality. In guitar music — in experimental compositions.
+Where it appears: In Arabic and Indian music. In experimental compositions.
 
-Guitarist-Specific Tips: Microintervallics requires the use of bends, slides, and special guitar settings.
+Guitarist-Specific Tips: Requires using bends and slides to imitate micro-intervals.
 """
     ),
 
@@ -1473,14 +1477,15 @@ Guitarist-Specific Tips: Molto concitato requires bright dynamics and emotional 
     ),
 
     
+    
     "MONOPHONY": Term(
         name="Monophony",
         description="""
-A type of musical texture in which only one voice sounds without accompaniment. The basis of monody and early music.
+A one-voiced musical texture in which a single voice sounds without accompaniment. The basis of early and folk music.
 
-Where it appears: In early music — as the foundation. In folk music — in monophonic songs. In guitar music — in solo melodies.
+Where it appears: In early music — as the foundation. In folk music — in monophonic songs.
 
-Guitarist-Specific Tips: Monophony requires an expressive and clean melodic line. Guitar should "sing" the melody without accompaniment.
+Guitarist-Specific Tips: Guitar can perform monophonic melodies.
 """
     ),
 
@@ -1517,10 +1522,11 @@ Guitarist-Specific Tips: Monothematism requires development of a single theme.
 """
     ),
 
+    
     "MONOCHORD": Term(
         name="Monochord",
         description="""
-A one-string instrument used in ancient times for studying acoustics and intervals. Also — an exercise for hearing development.
+A one-string instrument used for studying intervals and tuning.
 
 Where it appears: In music history — as an instrument. In acoustics — as a teaching tool. In guitar music — rarely.
 
@@ -1837,6 +1843,8 @@ Guitarist-Specific Tips: A music box inspires the creation of tender and dreamy 
 """
     ),
 
+    
+    
     "MUSICAL ECCENTRICITY": Term(
         name="Musical eccentricity",
         description="""
@@ -1844,16 +1852,18 @@ A direction in music characterized by grotesque, unconventional techniques, and 
 
 Where it appears: In avant-garde music — as a style. In variety — as a show. In guitar music — in experimental compositions.
 
-Guitarist-Specific Tips: Musical eccentricity requires an unconventional approach to playing.
+Guitarist-Specific Tips: Musical eccentricity requires an unconventional approach to playing guitar.
 """
     ),
 
+    
+    
     "MUSICAL AESTHETICS": Term(
         name="Musical aesthetics",
         description="""
 A branch of philosophy that studies the nature of music, its beauty, and expressiveness.
 
-Where it appears: In philosophy — as a discipline. In musicology — as a branch. In guitar music — in performance concept.
+Where it appears: In philosophy — as a discipline. In musicology — as a branch. In guitar music — in the performance concept.
 
 Guitarist-Specific Tips: Musical aesthetics helps understand the beauty of guitar sound.
 """

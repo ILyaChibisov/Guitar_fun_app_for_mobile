@@ -309,14 +309,15 @@ Guitarist-Specific Tips: Tape is an old method of recording. Important to know t
     ),
 
     
+    
     "TIMPANI": Term(
         name="Timpani",
         description="""
-A percussion instrument in the form of kettles with a membrane, tunable to a specific pitch. Used in orchestra for accents and rhythmic figures.
+A percussion instrument in the form of kettles with a membrane, tunable to a specific pitch. Used in orchestra for accents.
 
-Where it appears: In orchestra — as a percussion instrument. In classical music — for accents. In guitar music — rarely.
+Where it appears: In orchestra — as a percussion instrument. In classical music — for accents.
 
-Guitarist-Specific Tips: Timpani can be used in ensemble with guitar. Guitar can imitate timpani with rhythmic accents.
+Guitarist-Specific Tips: A rhythmic reference point for the guitarist in orchestra.
 """
     ),
 

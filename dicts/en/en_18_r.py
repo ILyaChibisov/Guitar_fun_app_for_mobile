@@ -1425,12 +1425,13 @@ Guitarist-Specific Tips: A rattle is a percussion instrument used in folk music.
 """
     ),
 
+    
     "REED": Term(
         name="Reed",
         description="""
 Part of a wind instrument (the reed) that produces sound. In guitar terminology — rarely.
 
-Where it appears: On wind instruments — as a part. In guitar music — rarely. In orchestra — in woodwinds.
+Where it appears: On wind instruments — as a part. In orchestra — in woodwinds. In guitar music — rarely.
 
 Guitarist-Specific Tips: A reed is part of wind instruments, not related to guitar.
 """
@@ -1521,6 +1522,29 @@ Guitar slang for a fast, rustling sound or effect.
 Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in effects.
 
 Guitarist-Specific Tips: A rustle is a rustling guitar sound.
+"""
+    ),
+
+    
+    "R&B": Term(
+        name="R&b",
+        description="""
+An abbreviation for Rhythm and Blues. A musical genre combining blues, jazz, and rock elements.
+
+Where it appears: In American music — as a genre. In guitar music — in rhythm and blues. In history — as a predecessor of rock and roll.
+
+Guitarist-Specific Tips: Rhythm and blues is the foundation of rock guitar technique.
+"""
+    ),
+
+    "REED INSTRUMENTS": Term(
+        name="Reed instruments",
+        description="""
+Instruments where sound is produced by the vibration of a reed. These include the oboe, clarinet, bassoon, and saxophone.
+
+Where it appears: In orchestra — as woodwinds. In jazz — in saxophones. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Reed instruments are rarely combined with guitar but can be used in ensembles.
 """
     ),
 }

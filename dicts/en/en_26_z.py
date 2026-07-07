@@ -58,14 +58,15 @@ Guitarist-Specific Tips: Zimmer is achieved through reverb, chorus, and harmonic
 """
     ),
 
+    
     "ZNAMENNY CHANT": Term(
         name="Znamenny chant",
         description="""
-Old Russian church singing based on znamenny notation. Characterized by monophony, smooth melodies, and spiritual content.
+The main type of Old Russian church singing, based on znamenny notation.
 
 Where it appears: In the Orthodox Church — as tradition. In music history — as a stage. In guitar music — in arrangements.
 
-Guitarist-Specific Tips: Znamenny chant provides material for guitar arrangements. Requires soft, singing sound.
+Guitarist-Specific Tips: Znamenny chant provides material for guitar arrangements. Requires a soft, singing sound.
 """
     ),
 
@@ -91,6 +92,7 @@ Guitarist-Specific Tips: Zones on the fretboard are positions convenient for pla
 """
     ),
 
+    
     "ZONAL THEORY": Term(
         name="Zonal theory",
         description="""
@@ -98,7 +100,7 @@ A theory of musical perception based on zonal hearing, where sound is perceived 
 
 Where it appears: In psychoacoustics — as a theory. In education — as an approach. In guitar practice — in pedagogy.
 
-Guitarist-Specific Tips: Zonal theory is important for hearing and intonation development. Helps understand that musical sound is not a point but a range.
+Guitarist-Specific Tips: Important for developing hearing and intonation, especially when playing fretless.
 """
     ),
 

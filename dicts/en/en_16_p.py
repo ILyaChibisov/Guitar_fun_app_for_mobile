@@ -234,14 +234,15 @@ Guitarist-Specific Tips: A pedalboard is an organ pedal.
 """
     ),
 
+    
     "PEDAL POINT": Term(
         name="Pedal point",
         description="""
-A sustained note in the bass, against which upper voices change. Used in polyphonic and organ music.
+A sustained note in the bass, against which upper voices change. Used in polyphony.
 
-Where it appears: In organ music — as a technique. In polyphony — in voice leading. In guitar music — in bass ostinatos.
+Where it appears: In organ music — as a technique. In polyphony — in voice leading.
 
-Guitarist-Specific Tips: A pedal point creates a foundation for guitar accompaniment. Used in bass lines.
+Guitarist-Specific Tips: Creates a foundation for guitar accompaniment.
 """
     ),
 
@@ -577,10 +578,11 @@ Guitarist-Specific Tips: Paspie requires fast and rhythmic playing.
 """
     ),
 
+    
     "PASSACAGLIA": Term(
         name="Passacaglia",
         description="""
-An old dance form in triple meter with a repeating bass theme (ostinato). Used in Baroque music.
+An old dance form in triple meter with a repeating bass theme (ostinato).
 
 Where it appears: In Baroque music — by Bach, Handel. In guitar music — in arrangements. In organ music — as a form.
 
@@ -787,14 +789,15 @@ Guitarist-Specific Tips: Percussion can be used in ensemble with guitar.
 """
     ),
 
+    
     "PERPETUUM MOBILE": Term(
         name="Perpetuum mobile",
         description="""
-A musical work with continuous fast motion, "perpetual motion." Characterized by virtuosity and continuity.
+A musical work with continuous fast motion, "perpetual motion." Characterized by virtuosity.
 
-Where it appears: In classical music — by Paganini, Weber. In guitar music — in virtuosic pieces. In Romantic music — as a genre.
+Where it appears: In classical music — by Paganini, Weber. In guitar music — in virtuosic pieces.
 
-Guitarist-Specific Tips: Perpetuum mobile requires fast and continuous technique.
+Guitarist-Specific Tips: Requires fast and continuous technique.
 """
     ),
 
@@ -2161,6 +2164,182 @@ Guitar slang for a mistake in playing or an inaccuracy.
 Where it appears: In guitar slang — as a mistake. In guitar circles — in colloquial speech. In education — in inaccuracies.
 
 Guitarist-Specific Tips: A penalty is a mistake in guitar playing.
+"""
+    ),
+
+    "PLUCKED KEYBOARD INSTRUMENTS": Term(
+        name="Plucked keyboard instruments",
+        description="""
+Instruments where sound is produced by plucking strings, controlled by a keyboard (harpsichord, spinet, virginal).
+
+Where it appears: In early music — as instruments. In orchestra — in Baroque music. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Plucked keyboard instruments are predecessors of the piano, and their music is often arranged for guitar.
+"""
+    ),
+
+    "PLUCKED-PERCUSSION INSTRUMENTS": Term(
+        name="Plucked-percussion instruments",
+        description="""
+Instruments where sound is produced by striking or plucking strings (dulcimer, clavichord). Combine elements of plucked and percussion instruments.
+
+Where it appears: In folk music — as instruments. In orchestra — in dulcimers. In guitar music — rarely.
+
+Guitarist-Specific Tips: Plucked-percussion instruments are rarely combined with guitar but can be used in ethnic ensembles.
+"""
+    ),
+
+    "PLUCKED INSTRUMENTS": Term(
+        name="Plucked instruments",
+        description="""
+Instruments where sound is produced by plucking strings with fingers or a plectrum (guitar, harp, mandolin, balalaika).
+
+Where it appears: In music — as a group. In orchestra — in plucked instruments. In guitar music — in guitar instruments.
+
+Guitarist-Specific Tips: Guitar is one of the main plucked instruments in the world.
+"""
+    ),
+
+    "PLUCKED SOUND": Term(
+        name="Plucked sound",
+        description="""
+Sound produced by plucking a string. Characterized by fast attack and decay. Contrasted with bowed and percussive sound.
+
+Where it appears: In guitar music — as the main sound. In harp — in plucked sound. In orchestra — in plucked instruments.
+
+Guitarist-Specific Tips: Plucked sound is the basis of guitar sound production.
+"""
+    ),
+
+    "PLUCKING MECHANISM": Term(
+        name="Plucking mechanism",
+        description="""
+A mechanism in instruments that sets the string in motion to produce a plucked sound. On guitar — fingers or a pick.
+
+Where it appears: In guitar construction — as a mechanism. In harp — in plucking mechanism. In harpsichord — in plectrum.
+
+Guitarist-Specific Tips: The plucking mechanism is fingers or a pick used to play guitar.
+"""
+    ),
+
+    "PLUCKED ORCHESTRA": Term(
+        name="Plucked orchestra",
+        description="""
+An orchestra consisting of plucked instruments (guitars, mandolins, balalaikas, domras). Popular in folk music.
+
+Where it appears: In folk music — as a lineup. In orchestras — in plucked orchestras. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A plucked orchestra often includes guitar as a primary instrument.
+"""
+    ),
+
+    "PLUCKED REGISTER": Term(
+        name="Plucked register",
+        description="""
+A register of an instrument where sound is produced by plucking (on organ — a special register imitating plucked instruments).
+
+Where it appears: In organ music — as a register. In guitar music — in plucked sound. In orchestra — in timbre.
+
+Guitarist-Specific Tips: The plucked register is a plucked sound characteristic of guitar.
+"""
+    ),
+
+    "PLUCKED CHOIR": Term(
+        name="Plucked choir",
+        description="""
+An ensemble or group of plucked instruments performing together. In guitar terminology — a guitar ensemble.
+
+Where it appears: In folk music — as an ensemble. In orchestra — in plucked groups. In guitar music — in guitar ensembles.
+
+Guitarist-Specific Tips: A plucked choir is a guitar ensemble.
+"""
+    ),
+
+    "PLUCK WITH RING FINGER": Term(
+        name="Pluck with ring finger",
+        description="""
+A guitar technique where the string is plucked with the ring finger of the right hand. Used in arpeggios and solos.
+
+Where it appears: In guitar technique — as a technique. In classical guitar — in arpeggios. In education — in right-hand positioning.
+
+Guitarist-Specific Tips: Plucking with the ring finger is denoted by the letter "a" (anular).
+"""
+    ),
+
+    "PLUCK WITH THUMB": Term(
+        name="Pluck with thumb",
+        description="""
+A guitar technique where the string is plucked with the thumb of the right hand. Used for bass strings and chords.
+
+Where it appears: In guitar technique — as a technique. In classical guitar — in bass lines. In education — in right-hand positioning.
+
+Guitarist-Specific Tips: Plucking with the thumb is denoted by the letter "p" (pulgar).
+"""
+    ),
+
+    "PLUCK WITH PICK": Term(
+        name="Pluck with pick",
+        description="""
+A guitar technique where the string is plucked with a pick (plectrum). Used in electric and acoustic guitar.
+
+Where it appears: In electric guitar — as the main technique. In acoustic guitar — in strumming. In education — in pick technique.
+
+Guitarist-Specific Tips: Plucking with a pick produces a bright, sharp sound characteristic of rock and pop music.
+"""
+    ),
+
+    "PLUCK WITH NAIL": Term(
+        name="Pluck with nail",
+        description="""
+A guitar technique where the string is plucked with the nail of the right-hand finger. Used in classical and flamenco guitar.
+
+Where it appears: In classical guitar — as a technique. In flamenco — in rasgueado. In education — in right-hand positioning.
+
+Guitarist-Specific Tips: Plucking with the nail produces a bright, ringing sound characteristic of flamenco and classical guitar.
+"""
+    ),
+
+    "PLUCK WITH FINGERPAD": Term(
+        name="Pluck with fingerpad",
+        description="""
+A guitar technique where the string is plucked with the pad of the right-hand finger. Produces a soft, warm sound.
+
+Where it appears: In classical guitar — as a technique. In acoustic guitar — in soft passages. In education — in right-hand positioning.
+
+Guitarist-Specific Tips: Plucking with the fingerpad produces a soft, warm sound used in lyrical pieces.
+"""
+    ),
+
+    "PLUCK WITH MIDDLE FINGER": Term(
+        name="Pluck with middle finger",
+        description="""
+A guitar technique where the string is plucked with the middle finger of the right hand. Used in arpeggios and solos.
+
+Where it appears: In guitar technique — as a technique. In classical guitar — in arpeggios. In education — in right-hand positioning.
+
+Guitarist-Specific Tips: Plucking with the middle finger is denoted by the letter "m" (medio).
+"""
+    ),
+
+    "PLUCK WITH INDEX FINGER": Term(
+        name="Pluck with index finger",
+        description="""
+A guitar technique where the string is plucked with the index finger of the right hand. Used in arpeggios and solos.
+
+Where it appears: In guitar technique — as a technique. In classical guitar — in arpeggios. In education — in right-hand positioning.
+
+Guitarist-Specific Tips: Plucking with the index finger is denoted by the letter "i" (indice).
+"""
+    ),
+
+    "PLUCK": Term(
+        name="Pluck",
+        description="""
+The main technique on guitar and other plucked instruments, where the string is plucked with a finger or pick.
+
+Where it appears: In guitar technique — as the foundation. In harp — in plucking. In mandolin — in plucking.
+
+Guitarist-Specific Tips: Plucking is the main way of producing sound on guitar.
 """
     ),
 }

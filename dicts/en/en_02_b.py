@@ -1346,14 +1346,15 @@ Guitarist-Specific Tips: A broadcast is a transmission of a guitar performance i
 """
     ),
 
+    
     "BASSOON": Term(
         name="Bassoon",
         description="""
-A woodwind instrument with a double reed, having a low, rich timbre. Used in orchestra.
+A woodwind instrument with a low, rich timbre. Used in orchestra.
 
 Where it appears: In orchestra — as a woodwind instrument. In chamber music — in ensembles. In guitar music — in arrangements.
 
-Guitarist-Specific Tips: Bassoon and guitar can be combined in ensembles.
+Guitarist-Specific Tips: Bassoon and guitar can be combined in ensembles. Knowledge of its timbre helps in arrangement.
 """
     ),
 
@@ -1508,6 +1509,52 @@ Guitar slang for a rod or part of a tremolo system.
 Where it appears: In guitar slang — as a rod. In guitar circles — in colloquial speech. In construction — in mechanics.
 
 Guitarist-Specific Tips: A bar is a rod of the tremolo system on guitar.
+"""
+    ),
+
+    "BRASS INSTRUMENTS": Term(
+        name="Brass instruments",
+        description="""
+Brass instruments where sound is produced by the vibration of the performer's lips (trumpet, trombone, French horn).
+
+Where it appears: In orchestra — as brass. In jazz — in trumpets and trombones. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Brass instruments and guitar can be combined in jazz ensembles.
+"""
+    ),
+
+    "BACCHANALIA": Term(
+        name="Bacchanalia",
+        description="""
+A wild, spontaneous dance scene in opera or ballet depicting frenzied revelry. Characterized by fast tempo and passionate character.
+
+Where it appears: In opera and ballet. In program music. In guitar arrangements.
+
+Guitarist-Specific Tips: Requires energetic, impetuous playing on guitar.
+"""
+    ),
+
+    "BARCAROLLE": Term(
+        name="Barcarolle",
+        description="""
+A song of Venetian gondoliers, also the name of vocal and instrumental pieces of a contemplative, singing character with a smooth accompaniment in 6/8 time.
+
+Where it appears: In classical music — by Mendelssohn, Chopin. In guitar music — in lyrical pieces.
+
+Guitarist-Specific Tips: Requires a smooth, rocking rhythm and a singing sound.
+"""
+    ),
+
+    "BYLINA": Term(
+        name="Bylina",
+        description="""
+A work of Russian folk epic, narration about the deeds of heroic warriors. Performed as recitative, sometimes with musical accompaniment.
+
+Where it appears: In Russian folklore. In guitar arrangements of folk songs.
+
+Guitarist-Specific Tips: Inspires the creation of epic guitar compositions.
+
+Часть 2: Буквы F–Z (Пропущенные термины)
 """
     ),
 }

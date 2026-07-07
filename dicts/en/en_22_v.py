@@ -64,20 +64,15 @@ Third — often used in pedagogical repertoire.
 """
     ),
 
+    
     "VIRGINAL": Term(
         name="Virginal",
         description="""
-A keyboard instrument of the Renaissance and Baroque eras, a type of harpsichord. Has a plucking mechanism and is usually small in size.
+A small rectangular harpsichord, popular in England and the Netherlands in the 16th–17th centuries for domestic music-making.
 
-Where it appears:
-In 16th-17th century music — English virginal music.
-In ensembles — as basso continuo.
-In guitar music — in arrangements.
+Where it appears: In early English music. In ensembles. In guitar arrangements.
 
-Guitarist-Specific Tips:
-First — arrangements of virginal music require clear voice leading.
-Second — important to convey the dance-like character.
-Third — ornaments and embellishments are used.
+Guitarist-Specific Tips: Music for virginal is often arranged for guitar.
 """
     ),
 
@@ -163,20 +158,15 @@ Fourth — the foundation for bends and sustained notes.
 """
     ),
 
+    
     "VIBRAPHONE": Term(
         name="Vibraphone",
         description="""
-A percussion idiophone with metal bars, under which are resonators with rotating disks creating a vibrato effect. Used in jazz and orchestral music.
+A percussion instrument with metal bars and resonator tubes that create a vibrato effect. Used in jazz and popular music.
 
-Where it appears:
-In jazz — as a solo instrument.
-In orchestra — as a timbral accent.
-In popular music — as an effect.
+Where it appears: In jazz ensembles. In orchestra. In guitar music — in ensembles.
 
-Guitarist-Specific Tips:
-First — vibraphone can be combined with guitar.
-Second — guitar can imitate the vibraphone sound (effects).
-Third — joint performance in jazz ensembles.
+Guitarist-Specific Tips: Combines with guitar in jazz and pop groups.
 """
     ),
 
@@ -333,20 +323,15 @@ Third — important to master accompaniment for vocals.
 """
     ),
 
+    
     "VOCALISE": Term(
         name="Vocalise",
         description="""
-A vocal exercise or work without words, performed on vowels or syllables. Develops vocal technique, breathing, and diction.
+A musical piece for singing without words, often used as a study exercise or an artistic work.
 
-Where it appears:
-In vocal pedagogy — as a training exercise.
-In concert repertoire — as an independent work.
-In guitar music — as an arrangement of a vocal melody.
+Where it appears: In vocal pedagogy. In concert repertoire. In guitar arrangements.
 
-Guitarist-Specific Tips:
-First — guitar can perform vocalises as instrumental pieces.
-Second — requires a singing, melodic sound.
-Third — often used for developing cantilena.
+Guitarist-Specific Tips: Arrangements of vocalises require a singing, "vocal" sound.
 """
     ),
 
@@ -614,6 +599,107 @@ Material for covering or finishing a guitar, used for decoration and protection.
 Where it appears: In guitar craftsmanship — as a material. In design — in finishing. In guitar practice — in repair.
 
 Guitarist-Specific Tips: Veneer is a decorative covering for a guitar.
+"""
+    ),
+
+    
+    "VARIETY STAGE": Term(
+        name="Variety stage",
+        description="""
+A stage platform for concert performances. Also — a genre of light, entertainment music.
+
+Where it appears: In concert activity — as a stage. In music — in variety genres. In guitar music — in performances.
+
+Guitarist-Specific Tips: The variety stage is a place for a guitarist's concert performances.
+"""
+    ),
+
+    "VAGANTES": Term(
+        name="Vagantes",
+        description="""
+Wandering poet-singers in medieval Western Europe. Performed parodic and satirical songs glorifying earthly joys.
+
+Where it appears: In medieval music. In historical reconstructions. In guitar arrangements of early music.
+
+Guitarist-Specific Tips: Inspire guitarists to perform old songs with guitar.
+"""
+    ),
+
+    "VALIHA": Term(
+        name="Valiha",
+        description="""
+A Madagascan stringed plucked instrument with a bamboo body, where strips of bark serve as strings.
+
+Where it appears: In folk music of Madagascar. In ethnic ensembles. In guitar music — rarely.
+
+Guitarist-Specific Tips: An exotic instrument that broadens understanding of string instruments.
+"""
+    ),
+
+    "VERISMO": Term(
+        name="Verismo",
+        description="""
+A movement in late 19th-century Italian art striving to show life "as it is" with heightened emotionality.
+
+Where it appears: In operas by Mascagni, Leoncavallo, Puccini. In guitar arrangements of opera arias.
+
+Guitarist-Specific Tips: Requires conveying a passionate, emotional character.
+"""
+    ),
+
+    "VERTEP": Term(
+        name="Vertep",
+        description="""
+An old Ukrainian folk puppet theater, performances of which were accompanied by songs and dances.
+
+Where it appears: In Ukrainian folk music. In folklore arrangements. In guitar music — in ethnic compositions.
+
+Guitarist-Specific Tips: Inspires the creation of folk arrangements.
+"""
+    ),
+
+    "VESNYANKI": Term(
+        name="Vesnyanki",
+        description="""
+Ancient Russian, Ukrainian, and Belarusian folk ritual songs associated with the arrival of spring.
+
+Where it appears: In Slavic folklore. In ethnic music. In guitar arrangements of folk songs.
+
+Guitarist-Specific Tips: Require a bright, joyful character in performance.
+"""
+    ),
+
+    "VAUDEVILLE": Term(
+        name="Vaudeville",
+        description="""
+A cheerful theatrical play of comic content, including individual vocal and dance numbers.
+
+Where it appears: In musical theater. In operetta. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: Requires light and playful accompaniment.
+"""
+    ),
+
+    "VOCODER": Term(
+        name="Vocoder",
+        description="""
+A device for encoding and synthesizing the voice, used in electronic music to create characteristic "robotic" vocal effects.
+
+Where it appears: In electronic and pop music. In sound recording. In guitar music — in experimental processing.
+
+Guitarist-Specific Tips: A specific effect sometimes used with guitar through pedals.
+"""
+    ),
+
+    
+    "VIOLA DA GAMBA": Term(
+        name="Viola da gamba",
+        description="""
+A bowed instrument of the Renaissance and Baroque eras, a predecessor of the cello. Has a soft, "domestic" timbre.
+
+Where it appears: In early music — in ensembles and chamber works. In historical reconstructions. In guitar arrangements.
+
+Guitarist-Specific Tips: A predecessor of modern bowed instruments, often arranged for guitar. Knowledge of its timbre helps in arranging early music.
 """
     ),
 }

@@ -232,21 +232,15 @@ Fourth — combining accents with muting and rhythmic patterns.
 """
     ),
 
+    
     "ALEATORICS": Term(
         name="Aleatorics",
         description="""
-A method of composing music where part of the musical material depends on chance, performer choice, or dice rolls. Assumes uncertainty in one or more elements (pitch, duration, order of sections).
+A method of composition where part of the process depends on chance (dice roll, performer choice).
 
-Where it appears:
-In 20th century music — works of Cage, Boulez, Stockhausen.
-In indie music — improvisational inserts, form variations.
-In jazz — free improvisation, open sections (solos).
+Where it appears: In contemporary music — by Cage, Boulez, Stockhausen. In jazz — in free improvisation.
 
-Guitarist-Specific Tips:
-First — ability to create random sounds using pedals.
-Second — use of alternative techniques (playing with objects, prepared guitar).
-Third — open forms for solo improvisation.
-Fourth — creation of unique sound textures.
+Guitarist-Specific Tips: Use of alternative techniques, random sounds, and open forms for improvisation.
 """
     ),
 
@@ -1333,6 +1327,42 @@ Guitar slang for the upper part of the guitar body.
 Where it appears: In guitar slang — as part of the guitar. In guitar circles — in colloquial speech. In construction — in the body.
 
 Guitarist-Specific Tips: An attic is the upper part of the guitar body.
+"""
+    ),
+
+    
+    "AEOLIAN MODE": Term(
+        name="Aeolian mode",
+        description="""
+A church mode corresponding to natural minor. Has a dark, minor character.
+
+Where it appears: In church music — as a mode. In classical music — in minor works. In guitar music — in minor scales.
+
+Guitarist-Specific Tips: The Aeolian mode is the basis of minor scales on guitar.
+"""
+    ),
+
+    
+    "AEOLIAN HARP": Term(
+        name="Aeolian harp",
+        description="""
+An instrument that sounds under the action of the wind. A symbol of natural music and inspiration.
+
+Where it appears: In music history — as an instrument. In poetry — in images. In guitar music — in program music.
+
+Guitarist-Specific Tips: The Aeolian harp is a symbol of natural music, inspiring guitarists to create descriptive pieces.
+"""
+    ),
+
+    
+    "A TEMPO": Term(
+        name="A tempo",
+        description="""
+Return to the main tempo after a deviation (e.g., after rubato or ritardando). In guitar practice, helps restore even rhythmic pulse.
+
+Where it appears: In Classical and Romantic music. In guitar arrangements. In musical notation.
+
+Guitarist-Specific Tips: After expressive slowing down, it's important to return to tempo accurately.
 """
     ),
 }

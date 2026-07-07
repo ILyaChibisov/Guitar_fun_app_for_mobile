@@ -1174,6 +1174,7 @@ Guitarist-Specific Tips: A French suite requires elegant and dance-like playing.
 """
     ),
 
+    
     "FRENCH HORN": Term(
         name="French horn",
         description="""
@@ -1181,7 +1182,7 @@ A brass instrument with a soft, singing timbre. Used in orchestra and chamber mu
 
 Where it appears: In orchestra — as a brass instrument. In chamber music — in ensembles. In guitar music — in arrangements.
 
-Guitarist-Specific Tips: French horn and guitar can be combined in ensembles.
+Guitarist-Specific Tips: French horn and guitar can be combined in ensembles. Knowledge of its timbre helps in arrangement.
 """
     ),
 
@@ -1251,10 +1252,11 @@ Guitarist-Specific Tips: Fteron is a material for the fingerboard.
 """
     ),
 
+    
     "FUGUE": Term(
         name="Fugue",
         description="""
-A polyphonic form in which a theme is successively presented in different voices. One of the main genres of polyphony.
+The highest form of polyphonic music, where a theme is successively presented in all voices.
 
 Where it appears: In classical music — as a form. In guitar music — in polyphonic pieces. In education — in form analysis.
 
@@ -1589,6 +1591,19 @@ Guitar slang for a style of writing or designation in notation.
 Where it appears: In guitar slang — as a font. In guitar circles — in colloquial speech. In notation — in design.
 
 Guitarist-Specific Tips: A font is a style of designations in guitar sheet music.
+"""
+    ),
+
+    "FEELER GAUGE": Term(
+        name="Feeler gauge",
+        description="""
+Guitar slang for a thin tool for checking string height or adjusting a guitar.
+
+Where it appears: In guitar slang — as a tool. In guitar circles — in colloquial speech. In repair — in setup.
+
+Guitarist-Specific Tips: A feeler gauge is a tool for measuring string height and setting up a guitar.
+
+Всего терминов: 19 🎸
 """
     ),
 }

@@ -175,6 +175,7 @@ class TermDetailScreen(BaseScreen):
     def _set_green_theme(self):
         """Зелёная тема - фон из ассета, текст белый"""
         self.is_light_theme = False
+        self.term_title_label.text_color = [1, 1, 1, 0.95]
         self.content_label.text_color = [1, 1, 1, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [0, 0, 0, 0]
@@ -185,6 +186,7 @@ class TermDetailScreen(BaseScreen):
     def _set_light_theme(self):
         """Светлая тема - фон белый, текст чёрный"""
         self.is_light_theme = True
+        self.term_title_label.text_color = [0, 0, 0, 0.95]
         self.content_label.text_color = [0, 0, 0, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [1, 1, 1, 1]
@@ -195,6 +197,7 @@ class TermDetailScreen(BaseScreen):
     def _set_dark_theme(self):
         """Тёмная тема - фон чёрный, текст белый"""
         self.is_light_theme = False
+        self.term_title_label.text_color = [1, 1, 1, 0.95]
         self.content_label.text_color = [1, 1, 1, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
             self._text_container.md_bg_color = [0.05, 0.05, 0.05, 1]
@@ -291,6 +294,21 @@ class TermDetailScreen(BaseScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
+        # ============ НАЗВАНИЕ ТЕРМИНА (ЖИРНЫЙ ЗАГОЛОВОК ПО ЦЕНТРУ) ============
+        self.term_title_label = MDLabel(
+            text="",
+            font_size=self.current_font_size + dp(6),  # чуть крупнее основного текста
+            size_hint_y=None,
+            height=dp(50),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95],
+            bold=True,
+            valign="middle",
+            halign="center",  # ← центрируем по горизонтали
+            shorten=False
+        )
+        self._text_container.add_widget(self.term_title_label)
+
         # ============ ОПИСАНИЕ ТЕРМИНА ============
         self.content_label = MDLabel(
             text="",
@@ -299,6 +317,7 @@ class TermDetailScreen(BaseScreen):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             valign="top",
+            halign="left",
             line_height=1.6
         )
         self.content_label.bind(texture_size=self._update_content_height)
@@ -443,6 +462,8 @@ class TermDetailScreen(BaseScreen):
                 self.current_font_size = new_size
                 self.font_value_label.text = self._get_font_multiplier(new_size)
 
+                if hasattr(self, 'term_title_label'):
+                    self.term_title_label.font_size = self.current_font_size + dp(6)
                 if hasattr(self, 'content_label'):
                     self.content_label.font_size = self.current_font_size
                     self._update_content_height()
@@ -507,12 +528,17 @@ class TermDetailScreen(BaseScreen):
             return
 
         text_height = self.content_label.texture_size[1]
+        title_height = self.term_title_label.texture_size[1] if self.term_title_label.text else dp(20)
+
         self.content_label.height = max(dp(50), text_height + dp(8))
+        self.term_title_label.height = max(dp(40), title_height + dp(8))
+
+        total_height = self.term_title_label.height + self.content_label.height + dp(16)
 
         if self.content_label.parent:
-            self.content_label.parent.height = text_height + dp(16)
+            self.content_label.parent.height = total_height
             if hasattr(self.content_label.parent, 'minimum_height'):
-                self.content_label.parent.minimum_height = text_height + dp(16)
+                self.content_label.parent.minimum_height = total_height
 
         self.content_scroll.scroll_y = 1.0
 
@@ -520,6 +546,8 @@ class TermDetailScreen(BaseScreen):
         """Сбрасывает настройки к стандартным"""
         # Сброс шрифта
         self.current_font_size = self.STANDARD_FONT_SIZE
+        if hasattr(self, 'term_title_label'):
+            self.term_title_label.font_size = self.current_font_size + dp(6)
         if hasattr(self, 'content_label'):
             self.content_label.font_size = self.current_font_size
             self._update_content_height()
@@ -540,6 +568,10 @@ class TermDetailScreen(BaseScreen):
         if hasattr(self, 'theme_btn'):
             self.theme_btn.icon = "weather-sunny"
             self.theme_btn.icon_color = [0.46, 0.70, 0.71, 1]
+
+        # Очищаем название термина
+        if hasattr(self, 'term_title_label'):
+            self.term_title_label.text = ""
 
         logger.info("🔄 Настройки сброшены к стандартным")
 
@@ -565,13 +597,17 @@ class TermDetailScreen(BaseScreen):
 
         logger.info(f"Установлен термин: {term_name}")
 
+        # Устанавливаем название термина жирным шрифтом по центру
+        formatted_title = term_name.capitalize() if term_name else "Термин"
+        self.term_title_label.text = formatted_title
+
         # Описание - очищаем от пустых строк в начале/конце
         description = term_data.get('description', 'Описание отсутствует')
         description = self._clean_description(description)
         self.content_label.text = description
 
-        # Обновляем TopNav
-        self._update_top_nav(term_name)
+        # Обновляем TopNav с заголовком "Термин"
+        self._update_top_nav()
 
         # Прокручиваем вверх после загрузки
         Clock.schedule_once(self._scroll_to_top, 0.1)
@@ -582,48 +618,14 @@ class TermDetailScreen(BaseScreen):
         if hasattr(self, 'content_scroll'):
             self.content_scroll.scroll_y = 1.0
 
-    def _update_top_nav(self, title):
-        """Обновляет заголовок в TopNav с переносом длинных названий"""
+    def _update_top_nav(self):
+        """Обновляет заголовок в TopNav — всегда показывает 'Термин'"""
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
-                formatted_title = title.capitalize() if title else "Термин"
-
-                from kivymd.uix.boxlayout import MDBoxLayout
-                from kivymd.uix.label import MDLabel
-                from kivy.metrics import dp, sp
-
-                title_container = MDBoxLayout(
-                    orientation='vertical',
-                    size_hint=(1, 1),
-                    spacing=dp(2),
-                    padding=[dp(8), dp(4), dp(8), dp(4)]
-                )
-
-                font_size = sp(18) if len(formatted_title) <= 20 else sp(15)
-
-                title_label = MDLabel(
-                    text=formatted_title,
-                    font_size=font_size,
-                    halign="center",
-                    valign="middle",
-                    theme_text_color="Custom",
-                    text_color=[1, 1, 1, 1],
-                    bold=True,
-                    text_size=(dp(250), None),
-                    shorten=False,
-                    size_hint_y=None,
-                    height=dp(60)
-                )
-
-                title_container.add_widget(title_label)
-
-                app.top_nav.set_custom_title_widget(title_container)
-                # Убираем _show_back_button() - логика в TopNav
-                # app.top_nav._show_back_button()
+                app.top_nav.set_custom_title("Термин")
                 app.top_nav.back_btn.on_release = self.go_back
-
-                logger.info(f"✅ TopNav обновлён: {formatted_title}")
+                logger.info("✅ TopNav обновлён: Термин")
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
 
@@ -642,12 +644,9 @@ class TermDetailScreen(BaseScreen):
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Убираем _show_back_button() - логика в TopNav
-            # app.top_nav._show_back_button()
-            if self.term_name:
-                self._update_top_nav(self.term_name)
-            else:
-                app.top_nav.set_custom_title("Термин")
+            # Всегда показываем "Термин"
+            app.top_nav.set_custom_title("Термин")
+            app.top_nav.back_btn.on_release = self.go_back
 
         if self.term_name:
             Clock.schedule_once(self._scroll_to_top, 0.2)

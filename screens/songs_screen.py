@@ -554,6 +554,126 @@ class SongsMenu(MDCard):
         self.alphabet_menu.set_current(letter)
 
 
+# ============ МЕНЮ С ПЕСНЯМИ ИСПОЛНИТЕЛЯ ============
+
+class ArtistSongsMenu(MDCard):
+    """Меню с горизонтальным списком песен исполнителя"""
+
+    def __init__(self,
+                 songs=None,
+                 on_song_select=None,
+                 on_back_press=None,
+                 **kwargs):
+        super().__init__(**kwargs)
+
+        self.songs = songs or []
+        self.on_song_select = on_song_select
+        self.on_back_press = on_back_press
+
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(56)
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
+        self.md_bg_color = [0, 0, 0, 0.08]
+        self.elevation = 0
+        self.line_color = [1, 1, 1, 0.15]
+        self.line_width = 0.8
+        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.spacing = dp(0)
+
+        self._build_ui()
+
+    def _build_ui(self):
+        # Стрелка назад (слева)
+        self.back_btn = MDIconButton(
+            icon="arrow-left",
+            size_hint=(None, 1),
+            width=dp(44),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 0.9],
+            md_bg_color=[0, 0, 0, 0],
+            on_release=self._on_back,
+            ripple_scale=0
+        )
+
+        # Контейнер с песнями
+        scroll = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=True,
+            do_scroll_y=False,
+            bar_width=0,
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0],
+            bar_margin=0
+        )
+
+        container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_x=None,
+            spacing=dp(6),
+            padding=[dp(4), dp(4), dp(4), dp(4)]
+        )
+        container.bind(minimum_width=container.setter('width'))
+
+        for song in self.songs:
+            btn = MDRaisedButton(
+                text=song.get('title', ''),
+                size_hint=(None, 1),
+                width=self._get_button_width(song.get('title', '')),
+                md_bg_color=[0, 0, 0, 0],
+                text_color=[1, 1, 1, 0.8],
+                font_size=sp(12),
+                elevation=0,
+                on_release=lambda x, s=song: self._on_song_select(s)
+            )
+            container.add_widget(btn)
+
+        # Добавляем ширину контейнера
+        if self.songs:
+            container.width = sum(btn.width + dp(6) for btn in container.children) + dp(8)
+
+        scroll.add_widget(container)
+
+        # Собираем UI
+        self.add_widget(self.back_btn)
+        self.add_widget(self._create_divider())
+        self.add_widget(scroll)
+
+    def _create_divider(self):
+        return MDBoxLayout(
+            size_hint_x=None,
+            width=dp(1),
+            md_bg_color=[1, 1, 1, 0.1]
+        )
+
+    def _get_button_width(self, text):
+        base_width = dp(30)
+        char_width = dp(7)
+        padding = dp(16)
+        min_width = dp(36)
+        max_width = dp(120)
+
+        width = base_width + len(text) * char_width + padding
+        width = max(min_width, min(width, max_width))
+        return width
+
+    def _on_back(self, instance):
+        if self.on_back_press:
+            self.on_back_press()
+
+    def _on_song_select(self, song):
+        if self.on_song_select:
+            song_id = song.get('song_id', 0)
+            title = song.get('title', '')
+            self.on_song_select(song_id, title)
+
+    def update_songs(self, songs):
+        """Обновляет список песен"""
+        self.songs = songs
+        self.clear_widgets()
+        self._build_ui()
+
+
 # ============ RECYCLEVIEW КАРТОЧКИ ============
 
 class ArtistCard(RecycleDataViewBehavior, MDCard):
@@ -915,6 +1035,9 @@ class SongsScreen(BaseScreen):
         self._lang_index = 0
         self._selected_song_id = None
         self._temp_scroll_position = None
+        self._is_restoring = False
+        self._saved_scroll_position = 1.0  # позиция скролла в списке исполнителей
+        self._is_artist_songs_mode = False  # режим отображения песен исполнителя
 
         # Для загрузки исполнителей
         self._all_artists = []
@@ -936,9 +1059,11 @@ class SongsScreen(BaseScreen):
         self._main_label = None
         self._result_label = None
         self.songs_menu = None
+        self._songs_menu_widget = None  # для хранения меню с песнями
         self._hint_timer = None
         self.recycle_view = None
         self._main_layout = None
+        self._menu_container = None  # контейнер для меню
 
         load_shared_icons_sync()
 
@@ -1022,6 +1147,7 @@ class SongsScreen(BaseScreen):
             md_bg_color=[0, 0, 0, 0],
             padding=[padding[0], 0, padding[2], 0]
         )
+        self._menu_container = menu_container
 
         self.songs_menu = SongsMenu(
             on_language_toggle=self._toggle_language,
@@ -1102,6 +1228,8 @@ class SongsScreen(BaseScreen):
             self._hint_timer = None
         if self.is_search_mode:
             self._main_label.text = "Результаты поиска песен"
+        elif self.current_artist and self._is_artist_songs_mode:
+            self._main_label.text = f"Песни исполнителя: {self.current_artist}"
         elif self.current_artist:
             self._main_label.text = f"Песни исполнителя: {self.current_artist}"
         else:
@@ -1135,6 +1263,99 @@ class SongsScreen(BaseScreen):
         """Скрывает текст загрузки - восстанавливает подсказку"""
         self._restore_hint()
 
+    # ============ ПЕРЕКЛЮЧЕНИЕ МЕЖДУ РЕЖИМАМИ ============
+
+    def switch_to_artist_songs(self):
+        """Переключает меню на список песен исполнителя"""
+        if not self.current_artist or not self._all_songs:
+            return
+
+        logger.info(f"🎵 Переключение на меню песен исполнителя: {self.current_artist}")
+
+        # Сохраняем текущую позицию скролла в списке исполнителей
+        if self.recycle_view and not self.is_search_mode:
+            self._saved_scroll_position = self.recycle_view.scroll_y
+            logger.info(f"📜 Сохранена позиция скролла исполнителей: {self._saved_scroll_position:.2f}")
+
+        # Создаём меню с песнями
+        self._songs_menu_widget = ArtistSongsMenu(
+            songs=self._all_songs,
+            on_song_select=self.on_song_selected,
+            on_back_press=self.switch_to_artists_mode
+        )
+
+        # Заменяем меню
+        if self.songs_menu and self._menu_container:
+            if self.songs_menu in self._menu_container.children:
+                self._menu_container.remove_widget(self.songs_menu)
+            if self._songs_menu_widget not in self._menu_container.children:
+                self._menu_container.add_widget(self._songs_menu_widget)
+
+        self._is_artist_songs_mode = True
+
+        # Обновляем лейбл
+        self._main_label.text = f"Песни исполнителя: {self.current_artist}"
+
+        # Скрываем результат
+        self._hide_result_label()
+
+        # Обновляем TopNav — показываем настройки
+        try:
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'top_nav'):
+                app.top_nav.set_custom_title("Песни")
+        except Exception as e:
+            logger.error(f"Ошибка обновления TopNav: {e}")
+
+    def switch_to_artists_mode(self):
+        """Возвращает меню к алфавиту"""
+        logger.info("🔙 Возврат к меню алфавита")
+
+        # Удаляем меню с песнями
+        if self._songs_menu_widget and self._menu_container:
+            if self._songs_menu_widget in self._menu_container.children:
+                self._menu_container.remove_widget(self._songs_menu_widget)
+            self._songs_menu_widget = None
+
+        # Восстанавливаем стандартное меню
+        if self.songs_menu and self._menu_container:
+            if self.songs_menu not in self._menu_container.children:
+                self._menu_container.add_widget(self.songs_menu)
+
+        # Восстанавливаем текущую букву в меню
+        if self.songs_menu and self.current_letter:
+            self.songs_menu.set_current_letter(self.current_letter)
+
+        self._is_artist_songs_mode = False
+
+        # Восстанавливаем лейбл
+        if self.is_search_mode:
+            self._main_label.text = "Результаты поиска песен"
+        elif self.current_letter:
+            self._main_label.text = "Поиск исполнителей по алфавиту"
+        else:
+            self._main_label.text = "Поиск исполнителей по алфавиту"
+
+        # Восстанавливаем позицию скролла в списке исполнителей
+        def restore_artists_scroll(dt):
+            if self.recycle_view and self._saved_scroll_position is not None:
+                self.recycle_view.scroll_y = self._saved_scroll_position
+                logger.info(f"📜 Восстановлена позиция скролла исполнителей: {self._saved_scroll_position:.2f}")
+
+        Clock.schedule_once(restore_artists_scroll, 0.1)
+        Clock.schedule_once(restore_artists_scroll, 0.2)
+
+        # Скрываем результат
+        self._hide_result_label()
+
+        # Обновляем TopNav — показываем настройки
+        try:
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'top_nav'):
+                app.top_nav.set_custom_title("Песни")
+        except Exception as e:
+            logger.error(f"Ошибка обновления TopNav: {e}")
+
     # ============ ЗАГРУЗКА ИСПОЛНИТЕЛЕЙ ============
 
     def _load_artists(self, letter):
@@ -1143,6 +1364,10 @@ class SongsScreen(BaseScreen):
 
         self.current_artist = None
         self.current_letter = letter
+
+        # Если мы в режиме песен — возвращаемся к алфавиту
+        if self._is_artist_songs_mode:
+            self.switch_to_artists_mode()
 
         # Для цифр показываем специальную подсказку
         if self.current_language == 'digits':
@@ -1200,10 +1425,6 @@ class SongsScreen(BaseScreen):
             if name:
                 first_char = name[0] if name else ''
                 if self.current_letter == '#':
-                    # Показываем всё, что НЕ является:
-                    # - Русскими буквами (кириллица)
-                    # - Английскими буквами (латиница)
-                    # - Цифрами (0-9)
                     is_cyrillic = ('А' <= first_char <= 'Я') or ('а' <= first_char <= 'я') or first_char in ['Ё', 'ё']
                     is_latin = ('A' <= first_char <= 'Z') or ('a' <= first_char <= 'z')
                     is_digit = first_char.isdigit()
@@ -1211,7 +1432,6 @@ class SongsScreen(BaseScreen):
                     if not is_cyrillic and not is_latin and not is_digit:
                         filtered_artists.append(a)
                 else:
-                    # Показываем тех, кто начинается с нужной цифры
                     if first_char == self.current_letter:
                         filtered_artists.append(a)
 
@@ -1231,7 +1451,6 @@ class SongsScreen(BaseScreen):
             self._display_artists()
             return
 
-        # Загружаем остальные страницы
         self._load_next_digits_pages()
 
     def _load_next_digits_pages(self):
@@ -1383,6 +1602,10 @@ class SongsScreen(BaseScreen):
         """Показывает список исполнителей"""
         self._hide_loading()
 
+        # Если мы в режиме песен — возвращаемся к алфавиту
+        if self._is_artist_songs_mode:
+            self.switch_to_artists_mode()
+
         if not self._all_artists:
             self._show_empty("Нет исполнителей")
             self.recycle_view.clear()
@@ -1393,6 +1616,9 @@ class SongsScreen(BaseScreen):
         self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
         Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
         self._show_result_label(f"Исполнители: {len(self._all_artists)}")
+
+        # Привязываем отслеживание скролла для дозагрузки
+        self._bind_scroll_for_load()
 
     def _on_artists_page_failed(self, req, error):
         """Обработчик ошибки загрузки исполнителей"""
@@ -1409,7 +1635,8 @@ class SongsScreen(BaseScreen):
 
         self.current_artist = artist
         self.current_letter = None
-        self.songs_menu.set_current_letter(None)
+        if self.songs_menu:
+            self.songs_menu.set_current_letter(None)
         self._show_loading("Идёт загрузка данных...")
         self._hide_result_label()
 
@@ -1517,7 +1744,7 @@ class SongsScreen(BaseScreen):
         Clock.schedule_once(lambda dt: self._load_next_songs_pages(), 0.1)
 
     def _display_songs(self):
-        """Показывает список песен"""
+        """Показывает список песен и переключает меню"""
         self._hide_loading()
 
         if not self._all_songs:
@@ -1531,6 +1758,12 @@ class SongsScreen(BaseScreen):
         Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
         self._show_result_label(f"Песни: {len(self._all_songs)}")
 
+        # ✅ Переключаем меню на песни исполнителя
+        self.switch_to_artist_songs()
+
+        # Привязываем отслеживание скролла для дозагрузки
+        self._bind_scroll_for_load()
+
     def _on_songs_page_failed(self, req, error):
         """Обработчик ошибки загрузки песен"""
         self._is_loading_more_songs = False
@@ -1538,23 +1771,59 @@ class SongsScreen(BaseScreen):
         logger.error(f"❌ Ошибка загрузки песен: {error}")
         self._show_empty("Ошибка загрузки\nПроверьте интернет")
 
+    # ============ ОТСЛЕЖИВАНИЕ СКРОЛЛА ДЛЯ ДОГРУЗКИ ============
+
+    def _bind_scroll_for_load(self):
+        """Привязывает отслеживание скролла для дозагрузки"""
+        if self.recycle_view:
+            try:
+                self.recycle_view.unbind(scroll_y=self._check_scroll_for_load)
+            except:
+                pass
+            self.recycle_view.bind(scroll_y=self._check_scroll_for_load)
+
+    def _check_scroll_for_load(self, instance, value):
+        """Проверяет скролл и при необходимости догружает данные"""
+        if value > 0.05:
+            return
+
+        if self._is_loading_more or self._is_loading_more_songs or self._is_restoring:
+            return
+
+        if self.current_artist and self._has_more_songs and len(self._all_songs) < self._total_songs:
+            logger.info(f"🔄 Догружаем песни при скролле (scroll_y={value:.2f})...")
+            self._load_remaining_songs()
+        elif self.current_letter and self._has_more and len(self._all_artists) < self._total_artists:
+            logger.info(f"🔄 Догружаем исполнителей при скролле (scroll_y={value:.2f})...")
+            self._load_remaining_artists()
+
     # ============ ОБРАБОТЧИКИ ============
 
     def on_letter_press(self, letter):
         """Обработчик выбора буквы - загружает исполнителей"""
         logger.info(f"Выбрана буква: {letter}")
+
+        # Если мы в режиме песен — возвращаемся к алфавиту
+        if self._is_artist_songs_mode:
+            self.switch_to_artists_mode()
+
         self.is_search_mode = False
         self.current_artist = None
         self.search_bar.clear()
-        self.songs_menu.set_current_letter(letter)
+        if self.songs_menu:
+            self.songs_menu.set_current_letter(letter)
         self._load_artists(letter)
 
     def on_artist_selected(self, artist, songs_count):
-        """Обработчик выбора исполнителя - загружает его песни"""
+        """Обработчик выбора исполнителя - загружает песни и переключает меню"""
         logger.info(f"Выбран исполнитель: {artist}")
+
+        # Загружаем песни
+        self.current_artist = artist
         self.is_search_mode = False
         self.search_bar.clear()
-        self.songs_menu.set_current_letter(None)
+        if self.songs_menu:
+            self.songs_menu.set_current_letter(None)
         self._load_artist_songs(artist)
 
     def on_song_selected(self, song_id, title):
@@ -1595,10 +1864,15 @@ class SongsScreen(BaseScreen):
             self._show_temporary_hint("Введите минимум 2 символа", 1.5)
             return
 
+        # Если мы в режиме песен — возвращаемся к алфавиту
+        if self._is_artist_songs_mode:
+            self.switch_to_artists_mode()
+
         self.is_search_mode = True
         self.current_letter = None
         self.current_artist = None
-        self.songs_menu.set_current_letter(None)
+        if self.songs_menu:
+            self.songs_menu.set_current_letter(None)
         self._show_loading("Идёт загрузка данных...")
         self.recycle_view.clear()
         self.recycle_view.viewclass = 'SearchSongCard'
@@ -1657,11 +1931,143 @@ class SongsScreen(BaseScreen):
         self._hide_empty()
         self.current_letter = None
         self.current_artist = None
-        self.songs_menu.set_current_letter(None)
+        if self.songs_menu:
+            self.songs_menu.set_current_letter(None)
+
+        # Если мы в режиме песен — возвращаемся к алфавиту
+        if self._is_artist_songs_mode:
+            self.switch_to_artists_mode()
+
         self._show_hint("Поиск исполнителей по алфавиту")
 
     def on_item_selected(self, item_type, *args):
         pass
+
+    # ============ ДОГРУЗКА ДАННЫХ ============
+
+    def _load_remaining_artists(self):
+        """Догружает остальных исполнителей в фоне"""
+        if not self.current_letter:
+            return
+
+        if self._is_loading_more:
+            return
+
+        if len(self._all_artists) >= self._total_artists:
+            self._has_more = False
+            return
+
+        self._is_loading_more = True
+
+        next_page = self._page + 1
+        offset = next_page * self._limit
+
+        logger.info(f"🔄 Догружаем исполнителей: страница {next_page + 1}, offset={offset}")
+
+        if self.current_language == 'digits':
+            api.get_artists_by_digits(
+                limit=self._limit,
+                offset=offset,
+                on_success=lambda data: self._append_artists(data, next_page),
+                on_failure=self._on_artists_page_failed
+            )
+        else:
+            api.get_artists_by_letter(
+                letter=self.current_letter,
+                limit=self._limit,
+                offset=offset,
+                on_success=lambda data: self._append_artists(data, next_page),
+                on_failure=self._on_artists_page_failed
+            )
+
+    def _append_artists(self, data, page):
+        """Добавляет загруженных исполнителей и обновляет UI"""
+        self._is_loading_more = False
+
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            return
+
+        artists = data.get('artists', [])
+        if not artists:
+            self._has_more = False
+            return
+
+        for artist in artists:
+            name = artist.get('artist') if isinstance(artist, dict) else None
+            count = artist.get('songs_count', 0) if isinstance(artist, dict) else 0
+            if name:
+                self._all_artists.append({'artist': name, 'songs_count': count})
+
+        self._page = page
+        self._has_more = len(self._all_artists) < self._total_artists
+
+        self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
+        self._show_result_label(f"Исполнители: {len(self._all_artists)} из {self._total_artists}")
+        logger.info(f"📄 Загружено {len(self._all_artists)} из {self._total_artists} исполнителей")
+
+        if not self._has_more:
+            self._hide_loading()
+
+    def _load_remaining_songs(self):
+        """Догружает остальные песни в фоне"""
+        if not self.current_artist:
+            return
+
+        if self._is_loading_more_songs:
+            return
+
+        if len(self._all_songs) >= self._total_songs:
+            self._has_more_songs = False
+            return
+
+        self._is_loading_more_songs = True
+
+        next_page = self._page_songs + 1
+        offset = next_page * self._limit
+
+        logger.info(f"🔄 Догружаем песни: страница {next_page + 1}, offset={offset}")
+
+        api.get_songs_by_artist(
+            artist=self.current_artist,
+            limit=self._limit,
+            offset=offset,
+            on_success=lambda data: self._append_songs(data, next_page),
+            on_failure=self._on_songs_page_failed
+        )
+
+    def _append_songs(self, data, page):
+        """Добавляет загруженные песни и обновляет UI"""
+        self._is_loading_more_songs = False
+
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            return
+
+        songs = data.get('songs', [])
+        if not songs:
+            self._has_more_songs = False
+            return
+
+        for song in songs:
+            self._all_songs.append({
+                'song_id': song.get('song_id', 0),
+                'title': song.get('title', ''),
+                'tabs_count': song.get('tabs_count', 1),
+                'on_click': self.on_song_selected
+            })
+
+        self._page_songs = page
+        self._has_more_songs = len(self._all_songs) < self._total_songs
+
+        self.recycle_view.set_items(self._all_songs, self.on_song_selected)
+        self._show_result_label(f"Песни: {len(self._all_songs)} из {self._total_songs}")
+        logger.info(f"📄 Загружено {len(self._all_songs)} из {self._total_songs} песен")
+
+        if not self._has_more_songs:
+            self._hide_loading()
 
     # ============ СОХРАНЕНИЕ СОСТОЯНИЯ ============
 
@@ -1689,9 +2095,6 @@ class SongsScreen(BaseScreen):
             scroll_position = self.recycle_view.scroll_y
             logger.info(f"📜 Текущая позиция скролла: {scroll_position:.2f}")
 
-        # Максимальное количество элементов для сохранения (100 для быстрого старта)
-        MAX_CACHED_ITEMS = 100
-
         state = {
             'mode': mode,
             'current_letter': self.current_letter,
@@ -1699,8 +2102,8 @@ class SongsScreen(BaseScreen):
             'is_search_mode': self.is_search_mode,
             'current_language': self.current_language,
             'search_query': self.search_bar.current_query if self.search_bar else '',
-            'all_artists': self._all_artists[:MAX_CACHED_ITEMS],
-            'all_songs': self._all_songs[:MAX_CACHED_ITEMS],
+            'all_artists': self._all_artists,
+            'all_songs': self._all_songs,
             'total_artists': self._total_artists,
             'total_songs': self._total_songs,
             'page': self._page,
@@ -1711,12 +2114,15 @@ class SongsScreen(BaseScreen):
             'has_more_songs': self._has_more_songs,
             'scroll_position': scroll_position,
             'selected_song_id': self._selected_song_id if hasattr(self, '_selected_song_id') else None,
+            'is_artist_songs_mode': self._is_artist_songs_mode,
+            'saved_scroll_position': self._saved_scroll_position,
         }
 
         logger.info(f"📦 Сохраняем: mode={mode}, artist={state.get('current_artist')}, "
                     f"artists={len(state.get('all_artists', []))}/{self._total_artists}, "
                     f"songs={len(state.get('all_songs', []))}/{self._total_songs}, "
-                    f"scroll={state.get('scroll_position', 1.0):.2f}")
+                    f"scroll={state.get('scroll_position', 1.0):.2f}, "
+                    f"songs_mode={state.get('is_artist_songs_mode')}")
 
         screen_state.save_screen_state('songs', state)
         logger.info("=" * 50)
@@ -1736,6 +2142,8 @@ class SongsScreen(BaseScreen):
         try:
             logger.info(f"📦 Получено состояние: {list(state.keys())}")
 
+            self._is_restoring = True
+
             # Восстанавливаем базовые данные
             self.current_letter = state.get('current_letter')
             self.current_artist = state.get('current_artist')
@@ -1748,13 +2156,18 @@ class SongsScreen(BaseScreen):
             self._has_more = state.get('has_more_artists', True)
             self._has_more_songs = state.get('has_more_songs', True)
 
-            # Восстанавливаем частичные данные
-            partial_artists = state.get('all_artists', [])
-            partial_songs = state.get('all_songs', [])
+            # Восстанавливаем ВСЕ данные
+            restored_artists = state.get('all_artists', [])
+            restored_songs = state.get('all_songs', [])
 
             # Получаем режим и позицию скролла
             mode = state.get('mode', 'empty')
             scroll_position = state.get('scroll_position', 1.0)
+            saved_scroll_position = state.get('saved_scroll_position', 1.0)
+            is_artist_songs_mode = state.get('is_artist_songs_mode', False)
+
+            # Сохраняем позицию скролла для исполнителей
+            self._saved_scroll_position = saved_scroll_position
 
             # Восстанавливаем язык
             if self.current_language in ['ru', 'en', 'digits']:
@@ -1770,31 +2183,34 @@ class SongsScreen(BaseScreen):
 
             # ============ ВОССТАНАВЛИВАЕМ ОТОБРАЖЕНИЕ ============
             if mode == 'songs' and self.current_artist:
-                # Показываем то, что есть, и догружаем остальное
-                if partial_songs:
-                    self._all_songs = partial_songs
+                if restored_songs:
+                    self._all_songs = restored_songs
                     self.recycle_view.viewclass = 'SongCard'
                     self.recycle_view.set_items(self._all_songs, self.on_song_selected)
                     self._show_result_label(f"Песни: {len(self._all_songs)} из {self._total_songs}")
                     logger.info(f"🎵 Восстановлено {len(self._all_songs)} песен исполнителя {self.current_artist}")
 
+                    # Переключаем меню на песни, если был в этом режиме
+                    if is_artist_songs_mode:
+                        self.switch_to_artist_songs()
+                    else:
+                        # Если не были в режиме песен, но есть песни — переключаем
+                        self.switch_to_artist_songs()
+
                     # Если есть ещё страницы — догружаем
                     if self._has_more_songs and len(self._all_songs) < self._total_songs:
                         logger.info(f"🔄 Догружаем остальные песни...")
-                        self._load_remaining_songs()
+                        Clock.schedule_once(lambda dt: self._load_remaining_songs(), 0.3)
                 else:
-                    # Нет сохранённых песен — загружаем заново
                     self._load_artist_songs(self.current_artist)
 
             elif mode == 'search' and search_query:
-                # Результаты поиска — перезапускаем поиск
                 self.do_search(search_query)
                 logger.info(f"🔍 Восстановлен поиск: {search_query}")
 
             elif mode == 'artists' and self.current_letter:
-                # Показываем то, что есть, и догружаем остальное
-                if partial_artists:
-                    self._all_artists = partial_artists
+                if restored_artists:
+                    self._all_artists = restored_artists
                     self.recycle_view.viewclass = 'ArtistCard'
                     self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
                     self._show_result_label(f"Исполнители: {len(self._all_artists)} из {self._total_artists}")
@@ -1802,12 +2218,14 @@ class SongsScreen(BaseScreen):
                         self.songs_menu.set_current_letter(self.current_letter)
                     logger.info(f"🎤 Восстановлено {len(self._all_artists)} исполнителей на букву {self.current_letter}")
 
-                    # Если есть ещё страницы — догружаем
+                    # Если были в режиме песен — возвращаемся к алфавиту
+                    if is_artist_songs_mode:
+                        self.switch_to_artists_mode()
+
                     if self._has_more and len(self._all_artists) < self._total_artists:
                         logger.info(f"🔄 Догружаем остальных исполнителей...")
-                        self._load_remaining_artists()
+                        Clock.schedule_once(lambda dt: self._load_remaining_artists(), 0.3)
                 else:
-                    # Нет сохранённых исполнителей — загружаем заново
                     self._load_artists(self.current_letter)
 
             else:
@@ -1815,6 +2233,7 @@ class SongsScreen(BaseScreen):
                 self._show_hint("Поиск исполнителей по алфавиту")
                 self._hide_result_label()
                 logger.info("📄 Пустое состояние")
+                self._is_restoring = False
                 logger.info("=" * 50)
                 return True
 
@@ -1823,12 +2242,13 @@ class SongsScreen(BaseScreen):
                 if self.recycle_view:
                     self.recycle_view.scroll_y = scroll_position
                     logger.info(f"📜 Восстановлена позиция скролла: {scroll_position:.2f}")
+                    self._bind_scroll_for_load()
 
-            # Запускаем с задержкой, чтобы RecycleView успел отрисоваться
             Clock.schedule_once(restore_scroll, 0.1)
             Clock.schedule_once(restore_scroll, 0.2)
             Clock.schedule_once(restore_scroll, 0.3)
 
+            self._is_restoring = False
             logger.info("✅ Восстановление завершено")
             logger.info("=" * 50)
             return True
@@ -1837,121 +2257,9 @@ class SongsScreen(BaseScreen):
             logger.error(f"❌ Ошибка восстановления: {e}")
             import traceback
             traceback.print_exc()
+            self._is_restoring = False
             logger.info("=" * 50)
             return False
-
-    # ============ ДОГРУЗКА ДАННЫХ ============
-
-    def _load_remaining_artists(self):
-        """Догружает остальных исполнителей в фоне"""
-        if not self.current_letter:
-            return
-
-        # Проверяем, все ли уже загружены
-        if len(self._all_artists) >= self._total_artists:
-            return
-
-        # Загружаем следующую страницу
-        next_page = self._page + 1
-        offset = next_page * self._limit
-
-        logger.info(f"🔄 Догружаем исполнителей: страница {next_page + 1}, offset={offset}")
-
-        if self.current_language == 'digits':
-            api.get_artists_by_digits(
-                limit=self._limit,
-                offset=offset,
-                on_success=lambda data: self._append_artists(data, next_page),
-                on_failure=lambda req, err: logger.warning(f"⚠️ Ошибка дозагрузки исполнителей: {err}")
-            )
-        else:
-            api.get_artists_by_letter(
-                letter=self.current_letter,
-                limit=self._limit,
-                offset=offset,
-                on_success=lambda data: self._append_artists(data, next_page),
-                on_failure=lambda req, err: logger.warning(f"⚠️ Ошибка дозагрузки исполнителей: {err}")
-            )
-
-    def _append_artists(self, data, page):
-        """Добавляет загруженных исполнителей и обновляет UI"""
-        if data is None:
-            return
-        if not isinstance(data, dict):
-            return
-
-        artists = data.get('artists', [])
-        if not artists:
-            return
-
-        for artist in artists:
-            name = artist.get('artist') if isinstance(artist, dict) else None
-            count = artist.get('songs_count', 0) if isinstance(artist, dict) else 0
-            if name:
-                self._all_artists.append({'artist': name, 'songs_count': count})
-
-        self._page = page
-        self._has_more = len(self._all_artists) < self._total_artists
-
-        # Обновляем UI
-        self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
-        self._show_result_label(f"Исполнители: {len(self._all_artists)} из {self._total_artists}")
-        logger.info(f"📄 Загружено {len(self._all_artists)} из {self._total_artists} исполнителей")
-
-        # Если есть ещё — догружаем
-        if self._has_more and len(self._all_artists) < self._total_artists:
-            Clock.schedule_once(lambda dt: self._load_remaining_artists(), 0.2)
-
-    def _load_remaining_songs(self):
-        """Догружает остальные песни в фоне"""
-        if not self.current_artist:
-            return
-
-        if len(self._all_songs) >= self._total_songs:
-            return
-
-        next_page = self._page_songs + 1
-        offset = next_page * self._limit
-
-        logger.info(f"🔄 Догружаем песни: страница {next_page + 1}, offset={offset}")
-
-        api.get_songs_by_artist(
-            artist=self.current_artist,
-            limit=self._limit,
-            offset=offset,
-            on_success=lambda data: self._append_songs(data, next_page),
-            on_failure=lambda req, err: logger.warning(f"⚠️ Ошибка дозагрузки песен: {err}")
-        )
-
-    def _append_songs(self, data, page):
-        """Добавляет загруженные песни и обновляет UI"""
-        if data is None:
-            return
-        if not isinstance(data, dict):
-            return
-
-        songs = data.get('songs', [])
-        if not songs:
-            return
-
-        for song in songs:
-            self._all_songs.append({
-                'song_id': song.get('song_id', 0),
-                'title': song.get('title', ''),
-                'tabs_count': song.get('tabs_count', 1),
-                'on_click': self.on_song_selected
-            })
-
-        self._page_songs = page
-        self._has_more_songs = len(self._all_songs) < self._total_songs
-
-        # Обновляем UI
-        self.recycle_view.set_items(self._all_songs, self.on_song_selected)
-        self._show_result_label(f"Песни: {len(self._all_songs)} из {self._total_songs}")
-        logger.info(f"📄 Загружено {len(self._all_songs)} из {self._total_songs} песен")
-
-        if self._has_more_songs and len(self._all_songs) < self._total_songs:
-            Clock.schedule_once(lambda dt: self._load_remaining_songs(), 0.2)
 
     # ============ on_enter, on_pre_leave, on_leave ============
 
@@ -1959,7 +2267,6 @@ class SongsScreen(BaseScreen):
         """Вызывается перед тем, как экран будет покинут"""
         logger.info("🚪 on_pre_leave: сохранение состояния перед выходом")
 
-        # Сохраняем позицию скролла непосредственно перед выходом
         if self.recycle_view:
             self._temp_scroll_position = self.recycle_view.scroll_y
             logger.info(f"📜 on_pre_leave: позиция скролла: {self._temp_scroll_position:.2f}")
@@ -1970,21 +2277,17 @@ class SongsScreen(BaseScreen):
     def on_enter(self):
         logger.info("🚪 Вход в экран песен")
 
-        # Обновляем TopNav — НЕ устанавливаем back_btn!
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
                 app.top_nav.set_custom_title("Песни")
-                # ❌ НЕ УСТАНАВЛИВАЕМ back_btn.on_release — на songs должна быть настройки
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
 
-        # Пробуем восстановить состояние
         restored = self.restore_state()
         logger.info(f"📊 Результат восстановления: {restored}")
 
         if not restored:
-            # Нет сохранённого состояния — показываем начальное
             self._show_hint("Поиск исполнителей по алфавиту")
             self._hide_result_label()
             self.recycle_view.clear()
@@ -1994,7 +2297,6 @@ class SongsScreen(BaseScreen):
         logger.info("🚪 Выход из экрана песен")
         logger.info("=" * 50)
 
-        # Сохраняем позицию скролла перед выходом (на случай, если on_pre_leave не сработал)
         if self.recycle_view:
             self._temp_scroll_position = self.recycle_view.scroll_y
             logger.info(f"📜 on_leave: позиция скролла: {self._temp_scroll_position:.2f}")
@@ -2012,10 +2314,6 @@ class SongsScreen(BaseScreen):
         logger.info("=" * 50)
 
     def go_back(self, instance=None):
-        """
-        На экране песен нет стрелки назад, этот метод не должен вызываться.
-        Если всё-таки вызван — переходим на home.
-        """
         logger.warning("⚠️ go_back вызван на songs_screen, но здесь не должно быть стрелки назад")
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'

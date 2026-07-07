@@ -556,14 +556,15 @@ Guitarist-Specific Tips: Cromorne is rarely found in contemporary music. Knowled
 """
     ),
 
+    
     "CANON": Term(
         name="Canon",
         description="""
 A polyphonic form where a melody is repeated in different voices with a delay. Based on imitation.
 
-Where it appears: In classical music — in polyphony. In folk music — in canonic songs. In guitar music — in polyphonic pieces.
+Where it appears: In classical music — in polyphony. In guitar music — in polyphonic pieces.
 
-Guitarist-Specific Tips: Canon requires precise voice leading and imitation. Guitar should clearly highlight each voice and maintain rhythmic accuracy.
+Guitarist-Specific Tips: Requires precise voice leading and imitation.
 """
     ),
 
@@ -666,14 +667,15 @@ Guitarist-Specific Tips: Capo allows playing in different keys with open chords.
 """
     ),
 
+    
     "CAPRICE": Term(
         name="Caprice",
         description="""
-A virtuosic instrumental piece of free form, often with an improvisational character. Characteristic of violin and guitar literature.
+A virtuosic instrumental piece of free form, often with an improvisational character.
 
-Where it appears: In classical music — by Paganini, Tárrega. In guitar music — as a virtuosic piece. In Romantic music — as a genre.
+Where it appears: In classical music — by Paganini, Tárrega. In guitar music — as a virtuosic piece.
 
-Guitarist-Specific Tips: Caprice requires virtuosic technique and expressiveness. Guitar should showcase all its technical capabilities.
+Guitarist-Specific Tips: Requires virtuosic technique and expressiveness.
 """
     ),
 
@@ -798,25 +800,27 @@ Guitarist-Specific Tips: A cluster on guitar is achieved by pressing adjacent st
 """
     ),
 
+    
     "CODA": Term(
         name="Coda",
         description="""
-The concluding section of a musical work, following the main part. Reinforces the key and creates a sense of completion.
+The concluding section of a musical work following the main part. Reinforces the key and creates a sense of completion.
 
-Where it appears: In classical music — in sonatas and symphonies. In jazz — in standards. In guitar music — in finales.
+Where it appears: In classical music — in sonatas and symphonies. In guitar music — in finales.
 
-Guitarist-Specific Tips: The coda should be convincing and complete. Guitar often uses powerful chords or arpeggios in the coda.
+Guitarist-Specific Tips: Should be convincing and complete.
 """
     ),
 
+    
     "COLORATURA": Term(
         name="Coloratura",
         description="""
-Virtuosic, fast passages in vocal music, often using trills, grace notes, and scale-like runs. Used to embellish the melody and demonstrate technique.
+Virtuosic, fast passages in vocal music, often using trills and scale-like runs.
 
-Where it appears: In opera — in coloratura arias. In vocal music — as a virtuosic technique. In guitar music — in arrangements.
+Where it appears: In opera — in coloratura arias. In guitar music — in arrangements.
 
-Guitarist-Specific Tips: Coloratura can be arranged for guitar as fast passages and arpeggios. Requires virtuosic technique.
+Guitarist-Specific Tips: Requires virtuosic technique and finger fluency.
 """
     ),
 
@@ -921,14 +925,15 @@ Guitarist-Specific Tips: Consonance is the foundation of a beautiful and harmoni
 """
     ),
 
+    
     "CONTRALTO": Term(
         name="Contralto",
         description="""
 The lowest female singing voice. Has a warm, rich timbre and a wide range in the lower register.
 
-Where it appears: In choir — as a low female voice. In opera — as contralto parts. In guitar music — in accompaniment.
+Where it appears: In choir — as a low female voice. In opera — in contralto parts.
 
-Guitarist-Specific Tips: Contralto requires accompaniment in a key comfortable for this voice. Guitar should support the low register of the voice.
+Guitarist-Specific Tips: Requires accompaniment in a key comfortable for this voice.
 """
     ),
 
@@ -998,14 +1003,15 @@ Guitarist-Specific Tips: Concertino is often used in the educational repertoire.
 """
     ),
 
+    
     "CONCERTMASTER": Term(
         name="Concertmaster",
         description="""
-The first violinist of an orchestra, performing solo parts and leading the string group. Also — an accompanist helping soloists learn parts.
+The first violinist of an orchestra, performing solo parts and leading the string group.
 
-Where it appears: In orchestra — as the leader of the string group. In opera — as a tutor. In guitar music — as an accompanist.
+Where it appears: In orchestra — as the leader of the string group. In opera — as a tutor.
 
-Guitarist-Specific Tips: The concertmaster can accompany the guitarist in duets or help in learning parts.
+Guitarist-Specific Tips: Can accompany the guitarist in duets.
 """
     ),
 
@@ -1594,10 +1600,11 @@ Guitarist-Specific Tips: A cold sound is a distant, "cold" guitar timbre.
 """
     ),
 
+    
     "CHORALE": Term(
         name="Chorale",
         description="""
-A church hymn in the Protestant tradition. Performed by choir or congregation.
+A Protestant church hymn, performed by choir or congregation.
 
 Where it appears: In church music — as a genre. In classical music — by Bach. In guitar music — in arrangements.
 
@@ -1891,14 +1898,15 @@ Guitarist-Specific Tips: A compass man is a master of guitar decoration.
 """
     ),
 
+    
     "CISTERN": Term(
         name="Cistern",
         description="""
-An early stringed plucked instrument, a predecessor of the guitar. Used in early music.
+An early stringed plucked instrument with metal strings, popular in the Renaissance era.
 
-Where it appears: In early music — as an instrument. In history — as a predecessor. In guitar music — in arrangements.
+Where it appears: In early music — in Renaissance ensembles. In historical reconstructions. In guitar music — in arrangements.
 
-Guitarist-Specific Tips: A cistern is an early string instrument, a predecessor of the guitar.
+Guitarist-Specific Tips: A predecessor of the guitar. Knowledge of the cistern helps understand the development of string instruments.
 """
     ),
 
@@ -2185,6 +2193,17 @@ Guitar slang for a brief note of chords or music for quick reference.
 Where it appears: In guitar slang — as a brief note. In guitar circles — in colloquial speech. In education — in hints.
 
 Guitarist-Specific Tips: A cheat sheet is a brief note of guitar chords.
+"""
+    ),
+
+    "COMBINED PLUCK": Term(
+        name="Combined pluck",
+        description="""
+A playing technique where several fingers of the right hand are used simultaneously. The basis of guitar finger technique.
+
+Where it appears: In guitar technique — as the foundation. In classical guitar — in arpeggios. In education — in right-hand positioning.
+
+Guitarist-Specific Tips: Combined pluck is the basis of guitar technique (p, i, m, a).
 """
     ),
 }

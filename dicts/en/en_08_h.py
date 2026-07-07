@@ -367,14 +367,15 @@ Guitarist-Specific Tips: A hook should immediately attract attention. Bright rif
     ),
 
     
+    
     "HARPSICHORD": Term(
         name="Harpsichord",
         description="""
-A keyboard instrument, a type of harpsichord. In guitar terminology — rarely.
+A plucked keyboard instrument of the Baroque era, where sound is produced by a plectrum. Its music is often arranged for guitar.
 
-Where it appears: In early music — as an instrument. In orchestra — in Baroque music. In guitar music — in arrangements.
+Where it appears: In Baroque music — by Bach, Handel, Scarlatti. In orchestra — as an instrument. In guitar music — in arrangements.
 
-Guitarist-Specific Tips: A harpsichord is an early keyboard instrument.
+Guitarist-Specific Tips: Guitar often performs arrangements of harpsichord music. Important to convey Baroque style and ornamentation.
 """
     ),
 
@@ -828,6 +829,17 @@ A song with humorous content, often performed on guitar.
 Where it appears: In folk music — as a humorous song. In variety — in humorous performances. In guitar music — in accompaniment.
 
 Guitarist-Specific Tips: A humorous song is often performed on guitar with simple chords.
+"""
+    ),
+
+    "HUMORESQUE": Term(
+        name="Humoresque",
+        description="""
+A short musical piece of a humorous, jocular character. Used in classical and variety music.
+
+Where it appears: In classical music — as a genre. In guitar music — in humor esques. In variety — in light pieces.
+
+Guitarist-Specific Tips: A humoresque requires light and playful performance on guitar.
 """
     ),
 }
