@@ -1413,4 +1413,114 @@ Where it appears: In sound recording — as a characteristic. In guitar music �
 Guitarist-Specific Tips: Raw sound is a natural, unprocessed guitar sound.
 """
     ),
+
+    "RATTLE": Term(
+        name="Rattle",
+        description="""
+A folk percussion instrument that produces a rattling sound. Used in folk music.
+
+Where it appears: In folk music — as a percussion instrument. In orchestra — in noise effects. In guitar music — rarely.
+
+Guitarist-Specific Tips: A rattle is a percussion instrument used in folk music.
+"""
+    ),
+
+    "REED": Term(
+        name="Reed",
+        description="""
+Part of a wind instrument (the reed) that produces sound. In guitar terminology — rarely.
+
+Where it appears: On wind instruments — as a part. In guitar music — rarely. In orchestra — in woodwinds.
+
+Guitarist-Specific Tips: A reed is part of wind instruments, not related to guitar.
+"""
+    ),
+
+    "ROUND DANCE": Term(
+        name="Round dance",
+        description="""
+A Russian folk dance performed with singing. Characterized by circular movement and smoothness.
+
+Where it appears: In Russian folk music — as a dance. In folklore ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A round dance requires smooth and rhythmic performance on guitar.
+"""
+    ),
+
+    "RASP": Term(
+        name="Rasp",
+        description="""
+Guitar slang for a raspy, noisy sound or timbre.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: A rasp is a raspy, noisy guitar sound.
+"""
+    ),
+
+    "RASPBOX": Term(
+        name="Raspbox",
+        description="""
+Guitar slang for a guitar with a raspy, buzzing sound.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Raspbox is a guitar with a raspy sound.
+"""
+    ),
+
+    "RETAINUE": Term(
+        name="Retainue",
+        description="""
+Guitar slang for a musician's support team or crew.
+
+Where it appears: In guitar slang — as a team. In guitar circles — in colloquial speech. In concerts — in staff.
+
+Guitarist-Specific Tips: A retinue is a guitarist's support team.
+"""
+    ),
+
+    "READER": Term(
+        name="Reader",
+        description="""
+Guitar slang for sheet music or tablature for reading.
+
+Where it appears: In guitar slang — as sheet music. In guitar circles — in colloquial speech. In education — in reading music.
+
+Guitarist-Specific Tips: A reader is sheet music or tablature for guitar.
+"""
+    ),
+
+    "READING": Term(
+        name="Reading",
+        description="""
+Reading notation from sight. Used in education and performance.
+
+Where it appears: In education — as a skill. In performance — in sight-reading. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Reading is reading guitar notation from sight.
+"""
+    ),
+
+    "ROD": Term(
+        name="Rod",
+        description="""
+Guitar slang for a rod of the truss rod or part of a mechanism.
+
+Where it appears: In guitar slang — as a rod. In guitar circles — in colloquial speech. In construction — in mechanics.
+
+Guitarist-Specific Tips: A rod is the truss rod on a guitar.
+"""
+    ),
+
+    "RUSTLE": Term(
+        name="Rustle",
+        description="""
+Guitar slang for a fast, rustling sound or effect.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in effects.
+
+Guitarist-Specific Tips: A rustle is a rustling guitar sound.
+"""
+    ),
 }

@@ -127,4 +127,114 @@ Where it appears: In guitar slang — as a characteristic. In guitar circles —
 Guitarist-Specific Tips: A quarrel is a sound with many harmonics.
 """
     ),
+
+    "QUIET": Term(
+        name="Quiet",
+        description="""
+A dynamic level indicating quiet sound. Contrasted with loud.
+
+Where it appears: In music — as dynamics. In guitar playing — in quiet pieces. In orchestra — in quiet moments.
+
+Guitarist-Specific Tips: Quiet requires soft attack and control over sound.
+"""
+    ),
+
+    "QUIETER": Term(
+        name="Quieter",
+        description="""
+The comparative degree of "quiet," indicating a quieter performance.
+
+Where it appears: In music — as dynamics. In guitar playing — in quiet pieces. In education — in dynamics.
+
+Guitarist-Specific Tips: Quieter means a quieter performance on guitar.
+"""
+    ),
+
+    "QUOTATION": Term(
+        name="Quotation",
+        description="""
+A musical quotation — borrowing a fragment from another work. Used as a compositional technique.
+
+Where it appears: In music — as borrowing. In composition — in quotations. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A quotation is borrowing a fragment from another work in guitar music.
+"""
+    ),
+
+    "QUOTER": Term(
+        name="Quoter",
+        description="""
+Guitar slang for a musician who uses quotations from other works.
+
+Where it appears: In guitar slang — as a performer. In guitar circles — in colloquial speech. In music — in quoting.
+
+Guitarist-Specific Tips: A quoter is a musician who uses quotations in guitar playing.
+"""
+    ),
+
+    "QUOTING": Term(
+        name="Quoting",
+        description="""
+The use of musical quotations in a work. A technique that allows creating associations and context.
+
+Where it appears: In composition — as a technique. In jazz — in quoting. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Quoting is the use of quotations in guitar music.
+"""
+    ),
+
+    "QUARTER NOTE": Term(
+        name="Quarter note",
+        description="""
+A note duration equal to one quarter of a whole note. Used in rhythm.
+
+Where it appears: In notation — as a duration. In education — as the foundation. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A quarter note is the basis of rhythmic pulsation in guitar music.
+"""
+    ),
+
+    "QUARTER REST": Term(
+        name="Quarter rest",
+        description="""
+A rest equal in duration to a quarter note. Used in rhythm.
+
+Where it appears: In notation — as a rest. In education — as a duration. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A quarter rest requires accurate observance of duration.
+"""
+    ),
+
+    "QUARTER TONE": Term(
+        name="Quarter tone",
+        description="""
+A micro-interval equal to a quarter of a tone. Used in some musical systems.
+
+Where it appears: In contemporary music — in microtonality. In Eastern music — in quarter tones. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: A quarter tone requires the use of bends and slides on guitar.
+"""
+    ),
+
+    "QUARTER": Term(
+        name="Quarter",
+        description="""
+A quarter of a measure or a quarter-note duration. In guitar terminology — a rhythmic unit.
+
+Where it appears: In rhythm — as a duration. In education — as the foundation. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A quarter is the basis of rhythmic pulsation in guitar music.
+"""
+    ),
+
+    "QUICK SLIDE": Term(
+        name="Quick slide",
+        description="""
+Guitar slang for a fast, sliding sound or technique.
+
+Where it appears: In guitar slang — as a technique. In guitar circles — in colloquial speech. In performance — in slides.
+
+Guitarist-Specific Tips: A quick slide is a fast sliding guitar technique.
+"""
+    ),
 }

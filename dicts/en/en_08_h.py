@@ -29,20 +29,15 @@ Third — helps better hear nuances and intonation.
 """
     ),
 
+    
     "HARP": Term(
         name="Harp",
         description="""
-A stringed plucked instrument with a large number of strings (up to 47), arranged in a vertical frame. Sound is soft, delicate, and shimmering. Widely used in orchestra and as a solo instrument.
+Guitar slang for a harmonica.
 
-Where it appears:
-In symphony orchestra.
-In folk music.
-In solo works.
+Where it appears: In guitar slang — as a harmonica. In guitar circles — in colloquial speech. In sound recording — in equipment.
 
-Guitarist-Specific Tips:
-First — harp and guitar can perform together in ensemble.
-Second — guitar technique (arpeggios) often imitates harp sound.
-Third — arrangements of harp music for guitar.
+Guitarist-Specific Tips: A harp is a harmonica often used in blues together with guitar.
 """
     ),
 
@@ -371,25 +366,27 @@ Guitarist-Specific Tips: A hook should immediately attract attention. Bright rif
 """
     ),
 
+    
     "HARPSICHORD": Term(
         name="Harpsichord",
         description="""
-A stringed keyboard instrument popular in the Baroque era. Sound is produced by plucking the string with a plectrum. Has a characteristic, slightly metallic timbre.
+A keyboard instrument, a type of harpsichord. In guitar terminology — rarely.
 
-Where it appears: In Baroque music — by Bach, Handel, Scarlatti. In orchestra — as an instrument. In guitar music — in arrangements.
+Where it appears: In early music — as an instrument. In orchestra — in Baroque music. In guitar music — in arrangements.
 
-Guitarist-Specific Tips: Guitar often performs arrangements of harpsichord music. Important to convey Baroque style and ornamentation.
+Guitarist-Specific Tips: A harpsichord is an early keyboard instrument.
 """
     ),
 
+    
     "HEADPHONES": Term(
         name="Headphones",
         description="""
-Devices for listening to sound, used in studio work and for rehearsals.
+Guitar slang for headphones.
 
-Where it appears: In sound recording — as monitors. In guitar practice — for rehearsals. In education — in audio equipment.
+Where it appears: In guitar slang — as headphones. In guitar circles — in colloquial speech. In sound recording — in equipment.
 
-Guitarist-Specific Tips: Headphones are used for quiet rehearsals and studio recording of guitar.
+Guitarist-Specific Tips: Headphones are headphones for playing guitar.
 """
     ),
 
@@ -511,6 +508,326 @@ Part of the body used for playing guitar. The left hand frets the strings, the r
 Where it appears: In guitar technique — as the foundation. In education — as a skill. In performance — in technique.
 
 Guitarist-Specific Tips: The hand is the main instrument of the guitarist.
+"""
+    ),
+
+    "HEAVY ROCK": Term(
+        name="Heavy rock",
+        description="""
+A genre of rock music characterized by powerful guitar sound, overdrive, and aggressive rhythm. A predecessor of heavy metal.
+
+Where it appears: In rock music — as a genre. In guitar music — in powerful riffs. In culture — in heavy music.
+
+Guitarist-Specific Tips: Heavy rock requires a powerful overdriven sound and aggressive technique.
+"""
+    ),
+
+    "HEAVINESS": Term(
+        name="Heaviness",
+        description="""
+In music — power, richness, and density of sound. Characteristic of heavy rock and metal.
+
+Where it appears: In rock music — as a characteristic. In guitar music — in powerful sound. In sound recording — in density.
+
+Guitarist-Specific Tips: Heaviness is a powerful, dense guitar sound.
+"""
+    ),
+
+    "HARMONIC": Term(
+        name="Harmonic",
+        description="""
+A technique on string instruments where an overtone sound is produced. On guitar — harmonics produce a clean, ringing sound.
+
+Where it appears: In guitar music — as a technique. In violin music — in harmonics. In classical music — in cadenzas.
+
+Guitarist-Specific Tips: A harmonic requires precise string touch for a clean sound.
+"""
+    ),
+
+    "HABANERA": Term(
+        name="Habanera",
+        description="""
+A Cuban dance and musical style characterized by 2/4 time and syncopated rhythm. Widely used in classical music (Bizet, "Carmen").
+
+Where it appears: In Cuban music — as a dance. In classical music — in habaneras. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Habanera requires syncopated rhythm and expressive performance.
+"""
+    ),
+
+    "HI-HAT": Term(
+        name="Hi-hat",
+        description="""
+A cymbal in a drum kit consisting of two metal disks controlled by a foot pedal. Used to create rhythmic pulsation.
+
+Where it appears: In a drum kit — as an element. In rock music — in the rhythm section. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: The hi-hat is a drum kit element synchronized with the guitar.
+"""
+    ),
+
+    "HUMBUCKER": Term(
+        name="Humbucker",
+        description="""
+A type of pickup for electric guitar consisting of two coils wired in opposition. Produces a powerful, rich sound with minimal noise.
+
+Where it appears: In electric guitars — as a pickup. In rock music — in powerful riffs. In guitar practice — in pickups.
+
+Guitarist-Specific Tips: A humbucker produces a powerful and rich sound used in rock and blues.
+"""
+    ),
+
+    "HANUNU": Term(
+        name="Hanunu",
+        description="""
+A folk instrument or musical term associated with Eastern tradition.
+
+Where it appears: In folk music — as a term. In ethnic music — in traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Hanunu is an exotic term for general knowledge.
+"""
+    ),
+
+    "HARD BOP": Term(
+        name="Hard bop",
+        description="""
+A jazz direction that emerged in the 1950s as a continuation of bebop. Characterized by a harder sound and the use of blues elements.
+
+Where it appears: In jazz — as a direction. In guitar music — in jazz compositions. In history — in hard bop.
+
+Guitarist-Specific Tips: Hard bop requires virtuosic technique and a sense of swing.
+"""
+    ),
+
+    "HARD ROCK": Term(
+        name="Hard rock",
+        description="""
+A genre of rock music characterized by powerful guitar sound, overdrive, and aggressive rhythm. A predecessor of heavy metal.
+
+Where it appears: In rock music — as a genre. In guitar music — in powerful riffs. In culture — in heavy music.
+
+Guitarist-Specific Tips: Hard rock requires a powerful overdriven sound and aggressive technique.
+"""
+    ),
+
+    "HARPER": Term(
+        name="Harper",
+        description="""
+A musician who plays the harmonica. In guitar terminology — rarely.
+
+Where it appears: In blues — as a performer. In jazz — in ensembles. In guitar music — in blues compositions.
+
+Guitarist-Specific Tips: A harper is a harmonica player, a partner of the guitarist in blues ensembles.
+"""
+    ),
+
+    "HUSTLER": Term(
+        name="Hustler",
+        description="""
+Guitar slang for a musician who works hard and actively.
+
+Where it appears: In guitar slang — as a worker. In guitar circles — in colloquial speech. In culture — in active musicians.
+
+Guitarist-Specific Tips: A hustler is an active, hard-working guitarist.
+"""
+    ),
+
+    "HEDGE": Term(
+        name="Hedge",
+        description="""
+Guitar slang for a technique or method to avoid mistakes.
+
+Where it appears: In guitar slang — as a technique. In guitar circles — in colloquial speech. In performance — in technique.
+
+Guitarist-Specific Tips: A hedge is a technical technique for avoiding mistakes.
+"""
+    ),
+
+    
+    "HEADLINER": Term(
+        name="Headliner",
+        description="""
+The main performer or band at a concert or festival. Closes the event program.
+
+Where it appears: In concert activity — as the main performer. In festivals — in headliners. In guitar music — in performances.
+
+Guitarist-Specific Tips: A headliner is the main performer at a guitar festival.
+"""
+    ),
+
+    "HISS": Term(
+        name="Hiss",
+        description="""
+Guitar slang for a sound or technique with a characteristic hissing.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in effects.
+
+Guitarist-Specific Tips: Hiss is a hissing sound on guitar.
+"""
+    ),
+
+    "HESH": Term(
+        name="Hesh",
+        description="""
+Guitar slang for a sound with a characteristic rasp or noise.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Hesh is a raspy, noisy guitar sound.
+"""
+    ),
+
+    "HIBLA": Term(
+        name="Hibla",
+        description="""
+Guitar slang for a type or model of guitar.
+
+Where it appears: In guitar slang — as a model. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: Hibla is a guitar model.
+"""
+    ),
+
+    "HIP-HOP": Term(
+        name="Hip-hop",
+        description="""
+A musical genre that emerged in African American culture, including rap, DJing, and beatboxing. Popular since the 1970s.
+
+Where it appears: In African American culture — as a genre. In pop music — in hip-hop. In guitar music — rarely.
+
+Guitarist-Specific Tips: Hip-hop is rarely associated with guitar, but guitar can be used in hip-hop arrangements.
+"""
+    ),
+
+    "HIT": Term(
+        name="Hit",
+        description="""
+A popular musical work that is very successful with listeners. Often tops the charts.
+
+Where it appears: In music — as a popular song. In charts — in hits. In guitar music — in hit compositions.
+
+Guitarist-Specific Tips: A hit is a popular guitar composition.
+"""
+    ),
+
+    "HIT PARADE": Term(
+        name="Hit parade",
+        description="""
+A chart, a list of the most popular musical works. Used in the music industry.
+
+Where it appears: In music — as a chart. In the industry — in hit parades. In guitar music — in ratings.
+
+Guitarist-Specific Tips: A hit parade is a list of popular guitar compositions.
+"""
+    ),
+
+    "HLUST": Term(
+        name="Hlust",
+        description="""
+Guitar slang for a fast, sliding sound or technique.
+
+Where it appears: In guitar slang — as a technique. In guitar circles — in colloquial speech. In performance — in slides.
+
+Guitarist-Specific Tips: Hlust is a fast sliding technique on guitar.
+"""
+    ),
+
+    "HILL": Term(
+        name="Hill",
+        description="""
+Guitar slang for a rise, an increase in tempo or dynamics.
+
+Where it appears: In guitar slang — as a rise. In guitar circles — in colloquial speech. In performance — in dynamics.
+
+Guitarist-Specific Tips: A hill is a rise in dynamics or tempo in guitar playing.
+"""
+    ),
+
+    "HOMOS": Term(
+        name="Homos",
+        description="""
+Guitar slang for a sound with a characteristic hum or resonance.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Homos is a humming, resonating guitar sound.
+"""
+    ),
+
+    "HOSTESS": Term(
+        name="Hostess",
+        description="""
+Guitar slang for a hostess at a concert or event.
+
+Where it appears: In guitar slang — as staff. In guitar circles — in colloquial speech. In concerts — at the event.
+
+Guitarist-Specific Tips: A hostess is a girl at a concert.
+"""
+    ),
+
+    "HOARSENESS": Term(
+        name="Hoarseness",
+        description="""
+A raspy, noisy timbre. Used to create special effects.
+
+Where it appears: In sound recording — as a characteristic. In guitar music — in hoarse sound. In acoustics — in timbre.
+
+Guitarist-Specific Tips: Hoarseness is a raspy, noisy guitar timbre.
+"""
+    ),
+
+    "HEAVY METAL": Term(
+        name="Heavy metal",
+        description="""
+A genre of rock music characterized by powerful guitar sound, aggressive rhythm, and virtuosic solos.
+
+Where it appears: In rock music — as a genre. In guitar music — in metal. In culture — in heavy music.
+
+Guitarist-Specific Tips: Heavy metal requires a powerful overdriven sound and aggressive technique.
+"""
+    ),
+
+    "HELMET": Term(
+        name="Helmet",
+        description="""
+Guitar slang for headphones or protective gear for a musician.
+
+Where it appears: In guitar slang — as headphones. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A helmet is headphones for a guitarist.
+"""
+    ),
+
+    "HIT SONG": Term(
+        name="Hit song",
+        description="""
+A popular song or melody that has become a hit. In guitar terminology — a hit of guitar music.
+
+Where it appears: In music — as a hit. In variety — in hit songs. In guitar music — in popular compositions.
+
+Guitarist-Specific Tips: A hit song is a popular guitar melody.
+"""
+    ),
+
+    "HAT": Term(
+        name="Hat",
+        description="""
+Guitar slang for an old, cheap guitar or a low-quality instrument.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: A hat is a humorous name for a cheap guitar.
+"""
+    ),
+
+    "HUMOROUS SONG": Term(
+        name="Humorous song",
+        description="""
+A song with humorous content, often performed on guitar.
+
+Where it appears: In folk music — as a humorous song. In variety — in humorous performances. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: A humorous song is often performed on guitar with simple chords.
 """
     ),
 }

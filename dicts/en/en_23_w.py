@@ -325,4 +325,70 @@ Where it appears: In performance — as an approach. In education — as a metho
 Guitarist-Specific Tips: Work style is a guitarist's approach to practice and performances.
 """
     ),
+
+    "WARMTH": Term(
+        name="Warmth",
+        description="""
+In music — a warm, soft timbre that creates a feeling of comfort and coziness.
+
+Where it appears: In performance — as a characteristic. In guitar music — in warm sound. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Warmth is a warm, soft guitar timbre.
+"""
+    ),
+
+    "WHOLE-TONE SCALE": Term(
+        name="Whole-tone scale",
+        description="""
+A scale consisting of six notes separated by whole tones. Used in contemporary music and jazz.
+
+Where it appears: In contemporary music — as a scale. In jazz — in improvisation. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: The whole-tone scale gives an unusual, "floating" sound on guitar.
+"""
+    ),
+
+    "WHOLE TONE": Term(
+        name="Whole tone",
+        description="""
+An interval equal to two semitones. The basis of the whole-tone scale and many intervals.
+
+Where it appears: In music theory — as an interval. In guitar music — in chords and scales. In education — in intervals.
+
+Guitarist-Specific Tips: A whole tone is the distance between two frets on guitar.
+"""
+    ),
+
+    "WIDTH": Term(
+        name="Width",
+        description="""
+In music — the width of an interval, timbre, or dynamic range. In guitar terminology — the width of sound.
+
+Where it appears: In acoustics — as a characteristic. In music — in timbre. In guitar music — in sound.
+
+Guitarist-Specific Tips: Width is the width of guitar timbre.
+"""
+    ),
+
+    "WIDE TUNING": Term(
+        name="Wide tuning",
+        description="""
+A non-standard guitar tuning with wide intervals between strings. Used in experimental music.
+
+Where it appears: In experimental music — as a tuning. In guitar practice — in non-standard tunings. In folk music — in traditions.
+
+Guitarist-Specific Tips: Wide tuning is a non-standard guitar tuning.
+"""
+    ),
+
+    "WHEEL": Term(
+        name="Wheel",
+        description="""
+Guitar slang for a volume control or knob on an amplifier.
+
+Where it appears: In guitar slang — as a control. In guitar circles — in colloquial speech. In sound recording — in control.
+
+Guitarist-Specific Tips: A wheel is a control on a guitar amplifier.
+"""
+    ),
 }

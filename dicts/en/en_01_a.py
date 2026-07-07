@@ -709,21 +709,15 @@ Third — creates a more singing sound.
 """
     ),
 
+    
     "ARTICULATION": Term(
         name="Articulation",
         description="""
-The manner of sounding, producing sound in music (staccato, legato, portamento, etc.). Determines the character of sound, clarity, and expressiveness of musical speech. Important for conveying meaning and mood.
+Clarity and precision of text delivery in vocal music. In guitar terminology — rarely.
 
-Where it appears:
-In any music — as the foundation of performance technique.
-In guitar playing — as a key element of style.
-In ensemble — for unified touch.
+Where it appears: In vocal music — as articulation. In education — in diction. In guitar music — in accompaniment.
 
-Guitarist-Specific Tips:
-First — includes legato, staccato, portamento, marcato.
-Second — depends on right and left hand work.
-Third — in electric guitar — use of effects for articulation.
-Fourth — changing articulation changes the character of music.
+Guitarist-Specific Tips: Articulation is the clarity of vocal diction.
 """
     ),
 
@@ -1251,6 +1245,94 @@ A scholarly or journalistic work about music. Used in musicology and journalism.
 Where it appears: In musicology — as an article. In journalism — as a publication. In guitar music — in research.
 
 Guitarist-Specific Tips: An article is a piece about guitar music.
+"""
+    ),
+
+    "AXE": Term(
+        name="Axe",
+        description="""
+Guitar slang for a cheap guitar or an instrument with poor sound.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: An axe is a humorous name for a cheap guitar.
+"""
+    ),
+
+    "ATTRACTION": Term(
+        name="Attraction",
+        description="""
+The tendency of unstable notes to move to stable ones in a mode. The basis of harmonic development.
+
+Where it appears: In harmony — as a principle. In melody — in attraction. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: Attraction is the basis of harmonic motion in guitar music.
+"""
+    ),
+
+    "AUGMENTATION": Term(
+        name="Augmentation",
+        description="""
+A musical technique where note durations are doubled. Used in variations and polyphony.
+
+Where it appears: In polyphony — as a technique. In classical music — in variations. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Augmentation of durations changes the character of a guitar part.
+"""
+    ),
+
+    "AUGMENTED TRIAD": Term(
+        name="Augmented triad",
+        description="""
+A triad consisting of two major thirds. Sounds tense and unstable.
+
+Where it appears: In harmony — as a chord. In classical music — in modulations. In guitar music — in jazz chords.
+
+Guitarist-Specific Tips: An augmented triad creates a tense sound on guitar.
+"""
+    ),
+
+    "AUGMENTED INTERVALS": Term(
+        name="Augmented intervals",
+        description="""
+Intervals increased by a semitone compared to perfect or major intervals.
+
+Where it appears: In music theory — as intervals. In harmony — in chords. In guitar music — in jazz harmonies.
+
+Guitarist-Specific Tips: Augmented intervals create a tense sound on guitar.
+"""
+    ),
+
+    "AUGMENTED MODE": Term(
+        name="Augmented mode",
+        description="""
+A mode in which one or more degrees are raised by a semitone, creating a tense sound.
+
+Where it appears: In contemporary music — as a mode. In jazz — in improvisation. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: An augmented mode expands the harmonic possibilities of the guitar.
+"""
+    ),
+
+    "ANTHOLOGY": Term(
+        name="Anthology",
+        description="""
+A collection of musical works used for education and analysis.
+
+Where it appears: In education — as a collection. In culture — in anthologies. In guitar music — in educational materials.
+
+Guitarist-Specific Tips: An anthology is a collection of guitar works for education.
+"""
+    ),
+
+    "ATTIC": Term(
+        name="Attic",
+        description="""
+Guitar slang for the upper part of the guitar body.
+
+Where it appears: In guitar slang — as part of the guitar. In guitar circles — in colloquial speech. In construction — in the body.
+
+Guitarist-Specific Tips: An attic is the upper part of the guitar body.
 """
     ),
 }

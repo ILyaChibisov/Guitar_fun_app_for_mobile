@@ -353,4 +353,26 @@ Where it appears: In guitar slang — as an effect. In guitar circles — in col
 Guitarist-Specific Tips: A knocker is a percussive effect on guitar.
 """
     ),
+
+    "KEY": Term(
+        name="Key",
+        description="""
+The pitch position of a mode, determined by the tonic. The key sets the character and mood of music.
+
+Where it appears: In music theory — as a system. In harmony — in keys. In guitar music — in chords.
+
+Guitarist-Specific Tips: The key determines the character and tuning of guitar music.
+"""
+    ),
+
+    "KHOKHLOMA": Term(
+        name="Khokhloma",
+        description="""
+A Russian folk craft used for painting guitars and other instruments. A symbol of Russian folk art.
+
+Where it appears: In guitar craftsmanship — as painting. In culture — as a folk craft. In guitar music — in design.
+
+Guitarist-Specific Tips: Khokhloma is a painting of a guitar in Russian folk style.
+"""
+    ),
 }

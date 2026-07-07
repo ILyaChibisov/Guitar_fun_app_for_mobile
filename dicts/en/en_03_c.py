@@ -41,21 +41,15 @@ Third — for a guitarist-composer, this is an opportunity to present their work
 """
     ),
 
+    
     "CHORD": Term(
         name="Chord",
         description="""
-The simultaneous combination of three or more sounds, arranged in thirds or other order. Forms the basis of harmony and tonal structure in music.
+Guitar slang for a chord.
 
-Where it appears:
-In any music — from classical to rock, jazz, and pop.
-In accompaniment — the basis of harmonic support.
-In solo — arpeggios and chord progressions.
+Where it appears: In guitar slang — as a chord. In guitar circles — in colloquial speech. In sound recording — in harmony.
 
-Guitarist-Specific Tips:
-First — guitar is one of the main chordal instruments.
-Second — knowledge of chord fingerings across the entire fretboard.
-Third — ability to substitute chords (barre, open positions, power chords).
-Fourth — use of chord embellishments: adding ninths, thirds, fourths.
+Guitarist-Specific Tips: A chord is a chord on guitar.
 """
     ),
 
@@ -826,14 +820,15 @@ Guitarist-Specific Tips: Coloratura can be arranged for guitar as fast passages 
 """
     ),
 
+    
     "COLOR": Term(
         name="Color",
         description="""
-A characteristic timbral shade, the color of sound that creates a specific mood or image. An important element of expressiveness.
+The color of sound, timbre. In guitar terminology — the color of sound, its timbral characteristic.
 
-Where it appears: In orchestra — as timbral coloring. In guitar music — as timbre. In acoustics — as a sound characteristic.
+Where it appears: In acoustics — as a characteristic. In music — in timbre. In guitar music — in sound.
 
-Guitarist-Specific Tips: Color depends on the instrument, technique, and effects. Important to be able to create the right timbre for each piece.
+Guitarist-Specific Tips: Color is the timbral coloring of guitar sound.
 """
     ),
 
@@ -1179,14 +1174,15 @@ Guitarist-Specific Tips: Characteristics help determine style and manner of play
 """
     ),
 
+    
     "CHORUS": Term(
         name="Chorus",
         description="""
-The repeating part of a song with constant lyrics and melody. Contrasted with the verse.
+An effect that creates a "choral" sound, thickening and enriching the tone.
 
-Where it appears: In songs — as a repeating part. In pop music — in hits. In guitar music — in accompaniment.
+Where it appears: In guitar music — as an effect. In sound recording — in processing. In electronic music — in choruses.
 
-Guitarist-Specific Tips: A chorus requires a bright and memorable accompaniment.
+Guitarist-Specific Tips: Chorus is a "choral" effect used on guitar.
 """
     ),
 
@@ -1485,6 +1481,710 @@ A short rhythmic phrase for counting beats. Used in rhythm education.
 Where it appears: In education — as an exercise. In rhythm — in counting rhymes. In guitar music — in rhythm development.
 
 Guitarist-Specific Tips: A counting rhyme is an exercise for developing rhythm.
+"""
+    ),
+
+    "CYMBALS": Term(
+        name="Cymbals",
+        description="""
+Percussion instruments in the form of metal disks. Used in orchestra, jazz, and rock music.
+
+Where it appears: In orchestra — as percussion. In jazz — in the rhythm section. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Cymbals are an important element of the rhythm section, synchronized with the guitar.
+"""
+    ),
+
+    "CREATIVITY": Term(
+        name="Creativity",
+        description="""
+The process of creating musical works, including composition, improvisation, and arrangement.
+
+Where it appears: In music — as a process. In education — as a goal. In guitar music — in composition and performance.
+
+Guitarist-Specific Tips: Creativity is the foundation of guitar art.
+"""
+    ),
+
+    "CART": Term(
+        name="Cart",
+        description="""
+Guitar slang for a vehicle or transport for moving equipment.
+
+Where it appears: In guitar slang — as transport. In guitar circles — in colloquial speech. In concerts — in logistics.
+
+Guitarist-Specific Tips: A cart is transport for moving guitar equipment.
+"""
+    ),
+
+    "CLOSE SPACING": Term(
+        name="Close spacing",
+        description="""
+The arrangement of chord voices with small intervals between them, creating a dense, rich texture.
+
+Where it appears: In harmony — as texture. In guitar music — in dense chords. In education — in voice leading.
+
+Guitarist-Specific Tips: Close spacing creates a dense and rich guitar sound.
+"""
+    ),
+
+    "CURRENT": Term(
+        name="Current",
+        description="""
+Guitar slang for electric current or signal in guitar equipment.
+
+Where it appears: In guitar slang — as a signal. In guitar circles — in colloquial speech. In sound recording — in electricity.
+
+Guitarist-Specific Tips: Current is the electrical signal in guitar equipment.
+"""
+    ),
+
+    "CURRICULUM": Term(
+        name="Curriculum",
+        description="""
+A systematic plan for learning to play guitar, including techniques, repertoire, and theoretical knowledge.
+
+Where it appears: In education — as a plan. In pedagogy — in programs. In guitar music — in education.
+
+Guitarist-Specific Tips: A curriculum is the basis of systematic guitar education.
+"""
+    ),
+
+    "CHAOS": Term(
+        name="Chaos",
+        description="""
+In music — chaotic, disordered sound, dissonance. Used in avant-garde music.
+
+Where it appears: In contemporary music — as an effect. In avant-garde — in chaos. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: Chaos is chaotic sound used in experimental guitar music.
+"""
+    ),
+
+    "CHARACTER": Term(
+        name="Character",
+        description="""
+The emotional content and mood of a musical work. Determines the manner of performance.
+
+Where it appears: In music — as content. In performance — as mood. In guitar music — in interpretation.
+
+Guitarist-Specific Tips: Character is the emotional content of a guitar work.
+"""
+    ),
+
+    "CHEMISTRY": Term(
+        name="Chemistry",
+        description="""
+Guitar slang for the interaction between musicians in an ensemble, creative chemistry.
+
+Where it appears: In guitar slang — as interaction. In guitar circles — in colloquial speech. In ensembles — in the creative process.
+
+Guitarist-Specific Tips: Chemistry is creative interaction in a guitar ensemble.
+"""
+    ),
+
+    "COLD SOUND": Term(
+        name="Cold sound",
+        description="""
+A sound with minimal warmth and overtones, a "cold," distant timbre. Used in some styles.
+
+Where it appears: In sound recording — as a characteristic. In guitar music — in cold sound. In acoustics — in timbre.
+
+Guitarist-Specific Tips: A cold sound is a distant, "cold" guitar timbre.
+"""
+    ),
+
+    "CHORALE": Term(
+        name="Chorale",
+        description="""
+A church hymn in the Protestant tradition. Performed by choir or congregation.
+
+Where it appears: In church music — as a genre. In classical music — by Bach. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A chorale requires a spiritual and solemn character.
+"""
+    ),
+
+    "CHORDAL TEXTURE": Term(
+        name="Chordal texture",
+        description="""
+A type of texture based on chordal harmony. Contrasted with polyphonic texture.
+
+Where it appears: In harmony — as texture. In guitar music — in chordal pieces. In education — in analysis.
+
+Guitarist-Specific Tips: Chordal texture is the chordal texture of guitar music.
+"""
+    ),
+
+    "CHOREOGRAPHY": Term(
+        name="Choreography",
+        description="""
+The art of dance, closely connected with music. In guitar terminology — rarely.
+
+Where it appears: In dance — as an art. In theater — in choreography. In guitar music — in dance pieces.
+
+Guitarist-Specific Tips: Choreography is the art of dance, often accompanied by guitar.
+"""
+    ),
+
+    "CHORUS SINGER": Term(
+        name="Chorus singer",
+        description="""
+Guitar slang for a musician singing in a choir or choral ensemble.
+
+Where it appears: In guitar slang — as a choir singer. In guitar circles — in colloquial speech. In culture — in choirs.
+
+Guitarist-Specific Tips: A chorus singer is a musician in a choral ensemble.
+"""
+    ),
+
+    "CHRIST": Term(
+        name="Christ",
+        description="""
+An image in music associated with religious themes. Used in spiritual and classical music.
+
+Where it appears: In church music — as an image. In classical music — in sacred works. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Christ is a religious image in guitar music.
+"""
+    ),
+
+    "CHROMATICISM": Term(
+        name="Chromaticism",
+        description="""
+The use of chromatic notes in music to create tension and expressiveness.
+
+Where it appears: In harmony — as a technique. In melody — in chromaticisms. In guitar music — in jazz improvisations.
+
+Guitarist-Specific Tips: Chromaticism is the use of chromatic notes in guitar music.
+"""
+    ),
+
+    "CHROMATIC SCALE": Term(
+        name="Chromatic scale",
+        description="""
+A scale consisting of 12 semitones in an octave. Used in contemporary music and jazz.
+
+Where it appears: In music theory — as a scale. In jazz — in improvisation. In guitar music — in chromatic passages.
+
+Guitarist-Specific Tips: The chromatic scale is the basis of chromatic technique on guitar.
+"""
+    ),
+
+    "CHROMATIC INTERVALS": Term(
+        name="Chromatic intervals",
+        description="""
+Intervals that include chromatic notes. Used in contemporary music.
+
+Where it appears: In music theory — as intervals. In guitar music — in chords and melodies. In jazz — in improvisation.
+
+Guitarist-Specific Tips: Chromatic intervals create a tense sound.
+"""
+    ),
+
+    "CHROMATIC SEMITONES": Term(
+        name="Chromatic semitones",
+        description="""
+Semitones that form the chromatic scale. Used in contemporary music.
+
+Where it appears: In music theory — as semitones. In guitar music — in chromatic passages. In jazz — in improvisation.
+
+Guitarist-Specific Tips: Chromatic semitones are the basis of chromatic technique.
+"""
+    ),
+
+    "CHROMATIC NOTE": Term(
+        name="Chromatic note",
+        description="""
+A note not belonging to the diatonic scale, used to create tension.
+
+Where it appears: In music — as an altered sound. In guitar music — in chromatic passages. In jazz — in improvisation.
+
+Guitarist-Specific Tips: A chromatic note creates tension in a guitar melody.
+"""
+    ),
+
+    "CHROMATIC MOTION": Term(
+        name="Chromatic motion",
+        description="""
+Melodic movement in semitones upward or downward. Used to create tension.
+
+Where it appears: In melody — as motion. In guitar music — in chromatic passages. In jazz — in improvisation.
+
+Guitarist-Specific Tips: Chromatic motion is movement in semitones on guitar.
+"""
+    ),
+
+    "CHRONOMETER": Term(
+        name="Chronometer",
+        description="""
+Guitar slang for a device for measuring time or tempo.
+
+Where it appears: In guitar slang — as a device. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A chronometer is a device for measuring tempo.
+"""
+    ),
+
+    "CRUNCH": Term(
+        name="Crunch",
+        description="""
+Guitar slang for a sound with a characteristic crunch or noise.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Crunch is a crunchy, noisy guitar sound.
+"""
+    ),
+
+    "COLORED FOLDER": Term(
+        name="Colored folder",
+        description="""
+Guitar slang for a folder with sheet music or materials.
+
+Where it appears: In guitar slang — as a folder. In guitar circles — in colloquial speech. In education — in materials.
+
+Guitarist-Specific Tips: A colored folder is a folder with guitar sheet music.
+"""
+    ),
+
+    "COLORFULNESS": Term(
+        name="Colorfulness",
+        description="""
+The richness and brightness of sound timbre. In guitar terminology — timbral richness.
+
+Where it appears: In acoustics — as a characteristic. In music — in timbre. In guitar music — in sound.
+
+Guitarist-Specific Tips: Colorfulness is the richness of guitar timbre.
+"""
+    ),
+
+    "CAESURA": Term(
+        name="Caesura",
+        description="""
+A pause or stop in music that separates parts of a work or phrases. Used for breathing and contrast.
+
+Where it appears: In music — as a pause. In performance — in caesuras. In guitar music — in phrasing.
+
+Guitarist-Specific Tips: A caesura is a pause for breathing in a guitar phrase.
+"""
+    ),
+
+    "CELESTA": Term(
+        name="Celesta",
+        description="""
+A percussion instrument with metal plates that are struck with hammers. Has a bright, delicate timbre.
+
+Where it appears: In orchestra — as a percussion instrument. In classical music — in celesta. In guitar music — rarely.
+
+Guitarist-Specific Tips: The celesta is a percussion instrument with a delicate sound.
+"""
+    ),
+
+    "CENSORSHIP": Term(
+        name="Censorship",
+        description="""
+In music — the restriction or removal of certain elements for censorship reasons. In guitar terminology — rarely.
+
+Where it appears: In music — in censorship. In culture — in restrictions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Censorship is a restriction in music.
+"""
+    ),
+
+    "CENTER": Term(
+        name="Center",
+        description="""
+The main note or point of reference in music. In guitar terminology — the tonic center.
+
+Where it appears: In music theory — as a center. In harmony — in the tonic. In guitar music — in key.
+
+Guitarist-Specific Tips: The center is the tonic center of guitar harmony.
+"""
+    ),
+
+    "CHAIN": Term(
+        name="Chain",
+        description="""
+Guitar slang for a sequence of chords or rhythmic figures.
+
+Where it appears: In guitar slang — as a sequence. In guitar circles — in colloquial speech. In performance — in chord chains.
+
+Guitarist-Specific Tips: A chain is a sequence of guitar chords.
+"""
+    ),
+
+    "CHURCH MUSIC": Term(
+        name="Church music",
+        description="""
+Music created for church services. The foundation of the spiritual musical tradition.
+
+Where it appears: In church tradition — as a genre. In classical music — in sacred works. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Church music requires a spiritual and prayerful character.
+"""
+    ),
+
+    "CHURCH MODES": Term(
+        name="Church modes",
+        description="""
+Diatonic modes used in church music: Dorian, Phrygian, Lydian, Mixolydian, and others.
+
+Where it appears: In church music — as modes. In classical music — in chorales. In guitar music — in modal improvisation.
+
+Guitarist-Specific Tips: Church modes are used in jazz and folk music.
+"""
+    ),
+
+    "CEPHALUS": Term(
+        name="Cephalus",
+        description="""
+Guitar slang for the headstock or upper part of the instrument.
+
+Where it appears: In guitar slang — as the headstock. In guitar circles — in colloquial speech. In construction — as a part.
+
+Guitarist-Specific Tips: Cephalus is the headstock of the guitar.
+"""
+    ),
+
+    "CYCLE": Term(
+        name="Cycle",
+        description="""
+A musical cycle — several works united by a common concept (sonata cycle, song cycle).
+
+Where it appears: In classical music — as a form. In guitar music — in cycles. In education — in form analysis.
+
+Guitarist-Specific Tips: A cycle is several guitar works united by a common concept.
+"""
+    ),
+
+    "CYCLIC FORM": Term(
+        name="Cyclic form",
+        description="""
+A musical form consisting of several movements united by a common concept (sonata, symphony, suite).
+
+Where it appears: In classical music — as a form. In guitar music — in cycles. In education — in form analysis.
+
+Guitarist-Specific Tips: A cyclic form is a form with several movements in guitar music.
+"""
+    ),
+
+    "COMPASS": Term(
+        name="Compass",
+        description="""
+Guitar slang for a compass — a tool for drawing circles, sometimes used in guitar decoration.
+
+Where it appears: In guitar slang — as a tool. In guitar circles — in colloquial speech. In sound recording — in design.
+
+Guitarist-Specific Tips: A compass is a tool for guitar decoration.
+"""
+    ),
+
+    "COMPASS MAN": Term(
+        name="Compass man",
+        description="""
+Guitar slang for a master of guitar decoration or an artist who paints instruments.
+
+Where it appears: In guitar slang — as a master. In guitar circles — in colloquial speech. In culture — in design.
+
+Guitarist-Specific Tips: A compass man is a master of guitar decoration.
+"""
+    ),
+
+    "CISTERN": Term(
+        name="Cistern",
+        description="""
+An early stringed plucked instrument, a predecessor of the guitar. Used in early music.
+
+Where it appears: In early music — as an instrument. In history — as a predecessor. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A cistern is an early string instrument, a predecessor of the guitar.
+"""
+    ),
+
+    "CLICKING": Term(
+        name="Clicking",
+        description="""
+Guitar slang for a sound with a characteristic click or clicking.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in effects.
+
+Guitarist-Specific Tips: Clicking is a clicking, snapping guitar sound.
+"""
+    ),
+
+    "CHICKEN BREAST": Term(
+        name="Chicken breast",
+        description="""
+Guitar slang for a delicate, "chicken-like" sound with soft attack and warm timbre.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Chicken breast is a delicate, soft guitar sound.
+"""
+    ),
+
+    "CHACONNE": Term(
+        name="Chaconne",
+        description="""
+An old Spanish dance form in triple meter, based on a repeating bass theme (ostinato). Used in Baroque music.
+
+Where it appears: In Baroque music — by Bach, Handel. In guitar music — in arrangements. In organ music — as a form.
+
+Guitarist-Specific Tips: A chaconne requires clear bass and expressive variations.
+"""
+    ),
+
+    "CSÁRDÁS": Term(
+        name="Csárdás",
+        description="""
+A Hungarian folk dance characterized by a contrast between slow and fast sections. Used in folk and classical music.
+
+Where it appears: In Hungarian folk music — as a dance. In classical music — in csárdás. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Csárdás requires contrast between slow and fast sections.
+"""
+    ),
+
+    "CLOCK": Term(
+        name="Clock",
+        description="""
+Guitar slang for time — a metronome or rhythmic pulse.
+
+Where it appears: In guitar slang — as time. In guitar circles — in colloquial speech. In rhythm — in pulse.
+
+Guitarist-Specific Tips: A clock is a metronome or rhythmic pulse in guitar playing.
+"""
+    ),
+
+    "CHA-CHA": Term(
+        name="Cha-cha",
+        description="""
+A Cuban dance and musical style characterized by syncopated rhythm and bright character.
+
+Where it appears: In Cuban music — as a dance. In Latin American music — in cha-cha. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Cha-cha requires syncopated rhythm and a bright character.
+"""
+    ),
+
+    "CZECH GUITAR": Term(
+        name="Czech guitar",
+        description="""
+A historical guitar common in the Czech Republic in the 19th century. Distinguished by its construction and tuning.
+
+Where it appears: In guitar history — as a type. In early music — in Czech arrangements. In guitar music — in historical reconstructions.
+
+Guitarist-Specific Tips: The Czech guitar is a historical instrument that influenced the modern guitar.
+"""
+    ),
+
+    "CHIZHIK": Term(
+        name="Chizhik",
+        description="""
+Guitar slang for a small guitar or ukulele.
+
+Where it appears: In guitar slang — as a small guitar. In guitar circles — in colloquial speech. In culture — in songs.
+
+Guitarist-Specific Tips: Chizhik is a humorous name for a small guitar.
+"""
+    ),
+
+    "CAST IRON": Term(
+        name="Cast iron",
+        description="""
+Guitar slang for a heavy, powerful sound.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Cast iron is a heavy, powerful guitar sound.
+"""
+    ),
+
+    "CAST IRON SOUND": Term(
+        name="Cast iron sound",
+        description="""
+A heavy, powerful, dense sound. Characteristic of heavy metal and hard rock.
+
+Where it appears: In rock music — as a characteristic. In guitar music — in powerful sound. In sound recording — in timbre.
+
+Guitarist-Specific Tips: A cast iron sound is a powerful, dense guitar sound.
+"""
+    ),
+
+    "CAST IRON (Small)": Term(
+        name="Cast iron (small)",
+        description="""
+Guitar slang for a small amplifier or pedal with a powerful sound.
+
+Where it appears: In guitar slang — as equipment. In guitar circles — in colloquial speech. In sound recording — in amplifiers.
+
+Guitarist-Specific Tips: Cast iron is a small amplifier or pedal.
+"""
+    ),
+
+    "CHUNGA-CHANGA": Term(
+        name="Chunga-changa",
+        description="""
+A humorous name for a musical piece or song, often associated with children's or entertainment music.
+
+Where it appears: In children's music — as a humorous song. In entertainment music — in light pieces. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Chunga-changa is a humorous guitar piece.
+"""
+    ),
+
+    "CHURBAN": Term(
+        name="Churban",
+        description="""
+Guitar slang for a crude, rough musician or guitarist.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In culture — in musicians.
+
+Guitarist-Specific Tips: Churban is a crude, rough guitarist.
+"""
+    ),
+
+    "CHALIAPIN GUITAR": Term(
+        name="Chaliapin guitar",
+        description="""
+A guitar associated with the name of the great Russian singer Fyodor Chaliapin. Used for accompanying Russian folk songs.
+
+Where it appears: In Russian music — as a historical guitar. In culture — in Chaliapin arrangements. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: The Chaliapin guitar is a historical instrument associated with Russian romance.
+"""
+    ),
+
+    "CHANSON": Term(
+        name="Chanson",
+        description="""
+A French song, as well as a genre of Russian song with criminal or lyrical themes. Performed with guitar.
+
+Where it appears: In French culture — as a song. In Russian music — in chanson. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: Chanson is often performed on guitar with simple chords and fingerpicking.
+"""
+    ),
+
+    "CHANSONNIER": Term(
+        name="Chansonnier",
+        description="""
+A performer of chanson, a French or Russian singer-songwriter. In guitar terminology — a singer-songwriter.
+
+Where it appears: In French culture — as a performer. In Russian music — in chanson. In guitar music — in songs.
+
+Guitarist-Specific Tips: A chansonnier is a singer who accompanies themselves on guitar.
+"""
+    ),
+
+    "CARICATURE": Term(
+        name="Caricature",
+        description="""
+A humorous, grotesque musical work or parody. In guitar terminology — a humorous arrangement.
+
+Where it appears: In music — as a joke. In guitar music — in humorous arrangements. In variety — in caricatures.
+
+Guitarist-Specific Tips: A caricature is a humorous guitar piece.
+"""
+    ),
+
+    "CHIEF": Term(
+        name="Chief",
+        description="""
+Guitar slang for the leader or head of a band.
+
+Where it appears: In guitar slang — as a leader. In guitar circles — in colloquial speech. In ensembles — in leaders.
+
+Guitarist-Specific Tips: A chief is the leader of a guitar band.
+"""
+    ),
+
+    "CIPHER": Term(
+        name="Cipher",
+        description="""
+Guitar slang for a code or designation in notation or tablature.
+
+Where it appears: In guitar slang — as a designation. In guitar circles — in colloquial speech. In education — in notation.
+
+Guitarist-Specific Tips: A cipher is a designation in guitar tablature.
+"""
+    ),
+
+    "CABINET": Term(
+        name="Cabinet",
+        description="""
+Guitar slang for a large amplifier cabinet or speaker.
+
+Where it appears: In guitar slang — as equipment. In guitar circles — in colloquial speech. In sound recording — in amplifiers.
+
+Guitarist-Specific Tips: A cabinet is a large amplifier or speaker.
+"""
+    ),
+
+    "CABLE": Term(
+        name="Cable",
+        description="""
+A guitar cable for connecting the instrument to an amplifier or pedals.
+
+Where it appears: In guitar equipment — as a cable. In sound recording — in connections. In guitar practice — in equipment.
+
+Guitarist-Specific Tips: A cable is a cord for connecting a guitar.
+"""
+    ),
+
+    "CABLE SYSTEM": Term(
+        name="Cable system",
+        description="""
+Guitar slang for the system of cables in a guitar rig.
+
+Where it appears: In guitar slang — as a system. In guitar circles — in colloquial speech. In sound recording — in connections.
+
+Guitarist-Specific Tips: A cable system is the system of cables in guitar equipment.
+"""
+    ),
+
+    "CABLES": Term(
+        name="Cables",
+        description="""
+Guitar cables and cords for connecting equipment.
+
+Where it appears: In guitar equipment — as cables. In sound recording — in connections. In guitar practice — in equipment.
+
+Guitarist-Specific Tips: Cables are cords for guitar equipment.
+"""
+    ),
+
+    "CHAUVINISM": Term(
+        name="Chauvinism",
+        description="""
+Guitar slang for exaggerated admiration for one instrument or style.
+
+Where it appears: In guitar slang — as fanaticism. In guitar circles — in colloquial speech. In culture — in preferences.
+
+Guitarist-Specific Tips: Chauvinism is fanatical admiration for one guitar style.
+"""
+    ),
+
+    "CHOPINIST": Term(
+        name="Chopinist",
+        description="""
+Guitar slang for a fan of Frédéric Chopin's work.
+
+Where it appears: In guitar slang — as a fan. In guitar circles — in colloquial speech. In culture — in musicology.
+
+Guitarist-Specific Tips: A Chopinist is a fan of Chopin's music.
+"""
+    ),
+
+    "CHEAT SHEET": Term(
+        name="Cheat sheet",
+        description="""
+Guitar slang for a brief note of chords or music for quick reference.
+
+Where it appears: In guitar slang — as a brief note. In guitar circles — in colloquial speech. In education — in hints.
+
+Guitarist-Specific Tips: A cheat sheet is a brief note of guitar chords.
 """
     ),
 }

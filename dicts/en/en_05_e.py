@@ -456,4 +456,103 @@ Where it appears: In music — as an ability. In education — in solfège. In g
 Guitarist-Specific Tips: Ear is the foundation of guitar playing and improvisation.
 """
     ),
+
+    "ELEVENTH": Term(
+        name="Eleventh",
+        description="""
+An interval equal to eleven degrees of a diatonic scale (octave + fourth). Used in jazz chords.
+
+Where it appears: In music theory — as an interval. In jazz — in chords. In guitar music — in jazz chords.
+
+Guitarist-Specific Tips: An eleventh is used in jazz chords on guitar.
+"""
+    ),
+
+    "ELEVENTH CHORD": Term(
+        name="Eleventh chord",
+        description="""
+A chord consisting of five notes: triad + seventh + ninth + eleventh. Used in jazz.
+
+Where it appears: In jazz — as an extended chord. In contemporary music — in harmony. In guitar music — in jazz chords.
+
+Guitarist-Specific Tips: An eleventh chord requires complex fingering on guitar.
+"""
+    ),
+
+    "EXERCISE": Term(
+        name="Exercise",
+        description="""
+Systematic repetition of musical material to develop technique and playing skills on guitar.
+
+Where it appears: In education — as a method. In performance — in training. In guitar practice — in exercises.
+
+Guitarist-Specific Tips: Exercises are the foundation of developing guitar technique.
+"""
+    ),
+
+    "EVEN NUMBER": Term(
+        name="Even number",
+        description="""
+An even number of beats, measures, or voices in music. Used in meter and harmony.
+
+Where it appears: In music theory — as meter. In guitar music — in rhythmic patterns. In education — in counting.
+
+Guitarist-Specific Tips: An even number is the basis of metric organization in guitar music.
+"""
+    ),
+
+    "EVEN METERS": Term(
+        name="Even meters",
+        description="""
+Time signatures with an even number of beats (2/4, 4/4, 6/8). Used in most musical styles.
+
+Where it appears: In music — as time signatures. In guitar music — in rhythmic patterns. In education — in meter.
+
+Guitarist-Specific Tips: Even meters are the basis of rhythmic organization in guitar music.
+"""
+    ),
+
+    "EXTREME DYNAMICS": Term(
+        name="Extreme dynamics",
+        description="""
+Extreme dynamic contrasts — from pianissimo to fortissimo. Used in Romantic and contemporary music.
+
+Where it appears: In Romantic music — in dynamics. In contemporary music — in contrasts. In guitar music — in expressiveness.
+
+Guitarist-Specific Tips: Extreme dynamics require maximum control over attack.
+"""
+    ),
+
+    "EXTREME DYNAMIC RANGE": Term(
+        name="Extreme dynamic range",
+        description="""
+A very wide dynamic range, from the quietest to the loudest sound. Used in orchestral and contemporary music.
+
+Where it appears: In orchestra — in dynamics. In contemporary music — in contrasts. In guitar music — in expressiveness.
+
+Guitarist-Specific Tips: Extreme dynamic range requires maximum control over sound.
+"""
+    ),
+
+    "ECCENTRIC": Term(
+        name="Eccentric",
+        description="""
+Guitar slang for an unusual, eccentric musician.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In culture — in musicians.
+
+Guitarist-Specific Tips: An eccentric is an unusual, eccentric guitarist.
+"""
+    ),
+
+    "ENCODING": Term(
+        name="Encoding",
+        description="""
+Guitar slang for writing music using symbols or abbreviations.
+
+Where it appears: In guitar slang — as a recording. In guitar circles — in colloquial speech. In sound recording — in encoding.
+
+Guitarist-Specific Tips: Encoding is an abbreviated recording of guitar music.
+"""
+    ),
 }

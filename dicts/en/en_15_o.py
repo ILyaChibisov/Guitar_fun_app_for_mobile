@@ -753,4 +753,48 @@ Where it appears: In harmony — as texture. In guitar music — in open chords.
 Guitarist-Specific Tips: Open spacing creates a bright and transparent sound.
 """
     ),
+
+    "ONE-STEP": Term(
+        name="One-step",
+        description="""
+A dance style and musical genre based on rhythmic pulsation with an accent on weak beats. Used in electronic and dance music.
+
+Where it appears: In electronic music — as a style. In dance music — in rhythmic patterns. In guitar music — rarely.
+
+Guitarist-Specific Tips: One-step is a rhythmic style rarely used in guitar music.
+"""
+    ),
+
+    "OVERTURE": Term(
+        name="Overture",
+        description="""
+An orchestral introduction to an opera, ballet, or theatrical performance. Often contains the main themes of the work.
+
+Where it appears: In opera — as an introduction. In classical music — in overtures. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: An overture requires expressive and contrasting performance on guitar.
+"""
+    ),
+
+    "OINK": Term(
+        name="Oink",
+        description="""
+Guitar slang for a sound with a characteristic oinking timbre.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Oink is a noisy guitar sound.
+"""
+    ),
+
+    "ONE-MAN BAND": Term(
+        name="One-man band",
+        description="""
+A musician playing several instruments simultaneously or using loops and effects to create an orchestral sound.
+
+Where it appears: In contemporary music — as a performer. In guitar music — in loop pedals. In shows — in live performances.
+
+Guitarist-Specific Tips: A one-man band is a guitarist using loops and effects to create multi-layered sound.
+"""
+    ),
 }

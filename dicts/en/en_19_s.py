@@ -30,14 +30,15 @@ Third — on sitar and dulcimer, such strings add characteristic drone sound.
     ),
 
     
+    
     "SILENCE": Term(
         name="Silence",
         description="""
-In music — the absence of sound, a pause or silence. Used as an expressive device.
+The absence of sound, a pause. Used as an expressive device in music.
 
-Where it appears: In performance — as a pause. In composition — as a technique. In guitar music — in dramatic moments.
+Where it appears: In music — as a pause. In performance — as a dramatic technique. In guitar music — in quiet moments.
 
-Guitarist-Specific Tips: Silence is an important pause in music, creating tension.
+Guitarist-Specific Tips: Silence is an important element of musical expressiveness.
 """
     ),
 
@@ -409,14 +410,15 @@ Guitarist-Specific Tips: Guitar wood should have good sound conductivity for a r
 """
     ),
 
+    
     "SCALE": Term(
         name="Scale",
         description="""
-A series of sounds arranged by pitch, as the basis for building scales and modes. Can be diatonic, chromatic, or pentatonic.
+A system of measurement in music, such as a volume or pitch scale.
 
-Where it appears: In music theory — as the foundation. In education — as material for exercises. In guitar practice — as the basis of scales.
+Where it appears: In acoustics — as a scale. In sound recording — in settings. In guitar music — in parameters.
 
-Guitarist-Specific Tips: Knowledge of scales helps in improvisation and understanding harmony. The foundation for building scales and chords.
+Guitarist-Specific Tips: A scale is a measurement system in guitar settings.
 """
     ),
 
@@ -1684,14 +1686,15 @@ Guitarist-Specific Tips: A sequence is the repetition of a phrase at different p
 """
     ),
 
+    
     "SIXTH": Term(
         name="Sixth",
         description="""
-An interval equal to six degrees of a diatonic scale. Can be minor or major.
+A degree of a diatonic scale (submediant). In guitar terminology — the sixth degree of a mode.
 
-Where it appears: In music theory — as an interval. In guitar music — in chords and melodies. In education — in intervals.
+Where it appears: In music theory — as a degree. In harmony — in chords. In guitar music — in scales.
 
-Guitarist-Specific Tips: A sixth is often used in guitar chords and melodies.
+Guitarist-Specific Tips: A sixth is the sixth degree of a mode in guitar music.
 """
     ),
 
@@ -2322,10 +2325,11 @@ Guitarist-Specific Tips: Slang is the language of communication for guitarists.
 """
     ),
 
+    
     "SONG LYRICS": Term(
         name="Song lyrics",
         description="""
-The poetic text of a song performed with music. An important element of the song genre.
+The poetic text performed with music. An important element of the song genre.
 
 Where it appears: In songs — as text. In poetry — in lyrics. In guitar music — in accompaniment.
 
@@ -2344,14 +2348,15 @@ Guitarist-Specific Tips: A Slovak is a performer of Slovak music.
 """
     ),
 
+    
     "SLAP": Term(
         name="Slap",
         description="""
-A technique on bass guitar where the string is struck against the fretboard. Used in funk and rock music.
+Guitar slang for a playing technique where the string is struck against the fretboard.
 
-Where it appears: On bass guitar — as a technique. In funk — in rhythmic patterns. In guitar music — in slap.
+Where it appears: In guitar slang — as a technique. In guitar circles — in colloquial speech. In performance — in slap.
 
-Guitarist-Specific Tips: Slap is a technique on bass guitar used in funk.
+Guitarist-Specific Tips: A slap is a slap, striking the string against the fretboard.
 """
     ),
 
@@ -2565,12 +2570,13 @@ Guitarist-Specific Tips: The sound spectrum determines the timbre of the guitar.
 """
     ),
 
+    
     "SPINET": Term(
         name="Spinet",
         description="""
 An early keyboard instrument, a type of harpsichord. In guitar terminology — rarely.
 
-Where it appears: In early music — as an instrument. In history — in keyboard instruments. In guitar music — rarely.
+Where it appears: In early music — as an instrument. In history — in keyboards. In guitar music — in arrangements.
 
 Guitarist-Specific Tips: A spinet is an early keyboard instrument.
 """
@@ -2699,14 +2705,16 @@ Guitarist-Specific Tips: A start is the beginning of a guitar performance.
     ),
 
     
+    
+    
     "STAND": Term(
         name="Stand",
         description="""
-Guitar slang for a stand or stand for a guitar or equipment.
+A stand for a microphone, music stand, or guitar equipment.
 
-Where it appears: In guitar slang — as a stand. In guitar circles — in colloquial speech. In sound recording — in equipment.
+Where it appears: In concert activity — as equipment. In sound recording — in stands. In guitar practice — in accessories.
 
-Guitarist-Specific Tips: A stand is a stand for a guitar.
+Guitarist-Specific Tips: A stand is a stand for guitar equipment.
 """
     ),
 
@@ -2721,14 +2729,15 @@ Guitarist-Specific Tips: Stealth is a smooth, unnoticeable transition in a guita
 """
     ),
 
+    
     "STEP": Term(
         name="Step",
         description="""
-Guitar slang for step dance or a style of playing with accents on weak beats.
+A musical step — movement by one tone or semitone in a melody. Used in music theory.
 
-Where it appears: In guitar slang — as a style. In guitar circles — in colloquial speech. In performance — in rhythmic patterns.
+Where it appears: In music theory — as movement. In guitar music — in scales. In education — in intervals.
 
-Guitarist-Specific Tips: Step is a style of playing with accents on weak beats.
+Guitarist-Specific Tips: A step is movement by one tone or semitone in a guitar melody.
 """
     ),
 
@@ -2972,6 +2981,623 @@ Music written for theatrical productions. Includes music for dramatic performanc
 Where it appears: In theater — as music. In drama — in performances. In guitar music — in theatrical arrangements.
 
 Guitarist-Specific Tips: Stage music is music for theatrical productions.
+"""
+    ),
+
+    "SLIPPERS": Term(
+        name="Slippers",
+        description="""
+Guitar slang for soft, quiet strikes on the strings.
+
+Where it appears: In guitar slang — as a technique. In guitar circles — in colloquial speech. In performance — in percussive techniques.
+
+Guitarist-Specific Tips: Slippers are soft percussive strikes on guitar.
+"""
+    ),
+
+    "STOMPING": Term(
+        name="Stomping",
+        description="""
+Guitar slang for a rhythmic, "stomping" sound or bass.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in rhythm.
+
+Guitarist-Specific Tips: Stomping is a rhythmic, powerful guitar sound.
+"""
+    ),
+
+    "STOMPER": Term(
+        name="Stomper",
+        description="""
+Guitar slang for a guitarist who plays monotonously and without expressiveness.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in monotonous playing.
+
+Guitarist-Specific Tips: A stomper is a guitarist with monotonous playing.
+"""
+    ),
+
+    "STRAP": Term(
+        name="Strap",
+        description="""
+Guitar slang for a guitar strap or crossbar.
+
+Where it appears: In guitar slang — as a strap. In guitar circles — in colloquial speech. In sound recording — in accessories.
+
+Guitarist-Specific Tips: A strap is a guitar strap.
+"""
+    ),
+
+    "SIGNAL PATH": Term(
+        name="Signal path",
+        description="""
+Guitar slang for the signal path from the guitar to the amplifier.
+
+Where it appears: In guitar slang — as a signal path. In guitar circles — in colloquial speech. In sound recording — in the path.
+
+Guitarist-Specific Tips: The signal path is the sound signal path in guitar equipment.
+"""
+    ),
+
+    "SMALL CABLE": Term(
+        name="Small cable",
+        description="""
+Guitar slang for a small cable or cord for guitar.
+
+Where it appears: In guitar slang — as a cable. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A small cable is a small guitar cable.
+"""
+    ),
+
+    "STABLE DEGREES OF THE MODE": Term(
+        name="Stable degrees of the mode",
+        description="""
+Degrees of the mode that do not require resolution (tonic, mediant, dominant). Create a feeling of peace and completion.
+
+Where it appears: In music theory — as degrees. In harmony — in chords. In guitar music — in the tonic.
+
+Guitarist-Specific Tips: Stable degrees are the basis of harmonic peace in guitar music.
+"""
+    ),
+
+    "SOUND SHAPING": Term(
+        name="Sound shaping",
+        description="""
+A technique of smoothly changing volume and timbre to create expressiveness.
+
+Where it appears: In vocal music — as a technique. In guitar music — in dynamics. In performance — in expressiveness.
+
+Guitarist-Specific Tips: Sound shaping requires control over dynamics and timbre.
+"""
+    ),
+
+    "SOLID WOOD GUITAR": Term(
+        name="Solid wood guitar",
+        description="""
+A guitar whose body is made from a single piece of wood. Produces a more resonant and higher quality sound than plywood.
+
+Where it appears: In guitar craftsmanship — as a type. In acoustics — in sound. In guitar practice — in instrument selection.
+
+Guitarist-Specific Tips: A solid wood guitar produces a richer and more resonant sound.
+"""
+    ),
+
+    "SOUND CENTER": Term(
+        name="Sound center",
+        description="""
+The main frequency or key around which a musical work is built. In guitar terminology — the tonic.
+
+Where it appears: In music theory — as a center. In harmony — in the tonic. In guitar music — in key.
+
+Guitarist-Specific Tips: The sound center is the tonic center of guitar music.
+"""
+    ),
+
+    "SIGHT-READING": Term(
+        name="Sight-reading",
+        description="""
+Performing music from notation without prior preparation. An important skill for musicians.
+
+Where it appears: In education — as a skill. In performance — in sight-reading. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Sight-reading is an important skill for a guitarist.
+"""
+    ),
+
+    "SENSE OF RHYTHM": Term(
+        name="Sense of rhythm",
+        description="""
+The ability to feel and reproduce rhythmic pulsation. The most important quality for a musician.
+
+Where it appears: In education — as a skill. In performance — as the foundation. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A sense of rhythm is the foundation of guitar playing.
+"""
+    ),
+
+    "SENSE OF TEMPO": Term(
+        name="Sense of tempo",
+        description="""
+The ability to feel and maintain tempo. An important quality for a performer.
+
+Where it appears: In education — as a skill. In performance — as the foundation. In guitar music — in performance.
+
+Guitarist-Specific Tips: A sense of tempo is the foundation of guitar performance.
+"""
+    ),
+
+    "SENSE OF KEY": Term(
+        name="Sense of key",
+        description="""
+The ability to feel the tonal center and harmonic development. An important quality for a musician.
+
+Where it appears: In education — as a skill. In performance — as the foundation. In guitar music — in harmony.
+
+Guitarist-Specific Tips: A sense of key is the foundation of a guitarist's harmonic thinking.
+"""
+    ),
+
+    "SENSE OF FORM": Term(
+        name="Sense of form",
+        description="""
+The ability to feel the structure and development of a musical work. An important quality for a performer and composer.
+
+Where it appears: In education — as a skill. In performance — as the foundation. In guitar music — in interpretation.
+
+Guitarist-Specific Tips: A sense of form is the foundation of interpreting guitar works.
+"""
+    ),
+
+    "SENSE OF PHRASE": Term(
+        name="Sense of phrase",
+        description="""
+The ability to feel and expressively perform musical phrases. An important quality for a performer.
+
+Where it appears: In education — as a skill. In performance — as the foundation. In guitar music — in phrasing.
+
+Guitarist-Specific Tips: A sense of phrase is the foundation of expressive guitar playing.
+"""
+    ),
+
+    "SHAWM": Term(
+        name="Shawm",
+        description="""
+An early woodwind instrument, a predecessor of the oboe. Had a soft, slightly nasal timbre.
+
+Where it appears: In early music — as an instrument. In history — as a predecessor. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A shawm is an early woodwind instrument.
+"""
+    ),
+
+    "SHUTTLE": Term(
+        name="Shuttle",
+        description="""
+Guitar slang for a fast, rhythmic passage or riff.
+
+Where it appears: In guitar slang — as a passage. In guitar circles — in colloquial speech. In performance — in fast playing.
+
+Guitarist-Specific Tips: A shuttle is a fast, rhythmic guitar riff.
+"""
+    ),
+
+    "SHUFFLE": Term(
+        name="Shuffle",
+        description="""
+Guitar slang for a rhythmic style with a "swinging" feel, close to swing.
+
+Where it appears: In guitar slang — as rhythm. In guitar circles — in colloquial speech. In jazz — in shuffle.
+
+Guitarist-Specific Tips: A shuffle is a rhythmic style with a "swinging" feel.
+"""
+    ),
+
+    "SCHWANK": Term(
+        name="Schwank",
+        description="""
+Guitar slang for a joke or humorous musical episode.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — in humor.
+
+Guitarist-Specific Tips: A schwank is a humorous musical episode.
+"""
+    ),
+
+    "SWELLER": Term(
+        name="Sweller",
+        description="""
+A device or technique for changing sound volume, "swelling" the sound. Used in organ music.
+
+Where it appears: In organ music — as a device. In sound recording — in dynamics. In guitar music — in effects.
+
+Guitarist-Specific Tips: A sweller is a device for changing guitar sound volume.
+"""
+    ),
+
+    "SCHWELWERK": Term(
+        name="Schwelwerk",
+        description="""
+Guitar slang for a mechanism for changing volume or an effect.
+
+Where it appears: In guitar slang — as a mechanism. In guitar circles — in colloquial speech. In sound recording — in effects.
+
+Guitarist-Specific Tips: Schwellwerk is a mechanism for changing volume on guitar.
+"""
+    ),
+
+    "SCHWIND": Term(
+        name="Schwind",
+        description="""
+Guitar slang for a fast, light passage or transition.
+
+Where it appears: In guitar slang — as a passage. In guitar circles — in colloquial speech. In performance — in fast transitions.
+
+Guitarist-Specific Tips: Schwind is a fast, light guitar passage.
+"""
+    ),
+
+    "SHEBI-TEMPLATE": Term(
+        name="Shebi-template",
+        description="""
+Guitar slang for a standard, overused riff or chord progression.
+
+Where it appears: In guitar slang — as a template. In guitar circles — in colloquial speech. In education — in standard schemes.
+
+Guitarist-Specific Tips: Shebi-template is an overused, standard guitar riff.
+"""
+    ),
+
+    "SHAKE": Term(
+        name="Shake",
+        description="""
+Guitar slang for a shaking or vibrating sound effect.
+
+Where it appears: In guitar slang — as an effect. In guitar circles — in colloquial speech. In sound recording — in processing.
+
+Guitarist-Specific Tips: A shake is a vibration or shaking effect on guitar.
+"""
+    ),
+
+    "SIX-BEAT METER": Term(
+        name="Six-beat meter",
+        description="""
+A time signature with six beats (6/8, 6/4). Used in folk and dance music.
+
+Where it appears: In folk music — as a meter. In dance music — in six-beat meters. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A six-beat meter requires six-beat pulsation.
+"""
+    ),
+
+    "SIX-STRING GUITAR": Term(
+        name="Six-string guitar",
+        description="""
+A classic guitar with six strings. The most common type of guitar in the world.
+
+Where it appears: In guitar music — as a standard. In education — in classical guitar. In popular music — in accompaniment.
+
+Guitarist-Specific Tips: The six-string guitar is the foundation of guitar art.
+"""
+    ),
+
+    "SIXTEENTH REST": Term(
+        name="Sixteenth rest",
+        description="""
+A rest equal in duration to a sixteenth note. Used in rhythm.
+
+Where it appears: In notation — as a rest. In education — as a duration. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A sixteenth rest requires accurate observance of duration.
+"""
+    ),
+
+    "SIXTEENTH NOTE": Term(
+        name="Sixteenth note",
+        description="""
+A note duration equal to 1/16 of a whole note. Used in rhythm.
+
+Where it appears: In notation — as a duration. In education — as the foundation. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A sixteenth note is an important rhythmic duration in guitar music.
+"""
+    ),
+
+    "SQUALL": Term(
+        name="Squall",
+        description="""
+Guitar slang for a powerful, dense sound with great force.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: A squall is a powerful, dense guitar sound.
+"""
+    ),
+
+    "SKIPPER": Term(
+        name="Skipper",
+        description="""
+Guitar slang for the leader of a music project.
+
+Where it appears: In guitar slang — as a leader. In guitar circles — in colloquial speech. In projects — in leaders.
+
+Guitarist-Specific Tips: A skipper is the leader of a music project.
+"""
+    ),
+
+    "SKIPPER STYLE": Term(
+        name="Skipper style",
+        description="""
+Guitar slang for a style or manner of playing characteristic of a skipper.
+
+Where it appears: In guitar slang — as a style. In guitar circles — in colloquial speech. In performance — in a leadership manner.
+
+Guitarist-Specific Tips: Skipper style is a leadership manner of guitar playing.
+"""
+    ),
+
+    "SCHOOL": Term(
+        name="School",
+        description="""
+A music school or pedagogical tradition. In guitar terminology — a school of guitar playing.
+
+Where it appears: In education — as an institution. In pedagogy — in schools. In guitar music — in guitar schools.
+
+Guitarist-Specific Tips: A school is a system of teaching guitar playing.
+"""
+    ),
+
+    "SCHOOLBOY": Term(
+        name="Schoolboy",
+        description="""
+Guitar slang for a beginner guitarist, a student.
+
+Where it appears: In guitar slang — as a student. In guitar circles — in colloquial speech. In education — in schools.
+
+Guitarist-Specific Tips: A schoolboy is a beginner guitarist.
+"""
+    ),
+
+    "SCHNELL": Term(
+        name="Schnell",
+        description="""
+A German tempo marking meaning fast. In guitar terminology — speed playing.
+
+Where it appears: In classical music — as a tempo. In guitar music — in fast pieces. In education — in tempo.
+
+Guitarist-Specific Tips: Schnell is a fast tempo in guitar music.
+"""
+    ),
+
+    "SNOBEL": Term(
+        name="Snobel",
+        description="""
+Guitar slang for the guitar neck or part of it.
+
+Where it appears: In guitar slang — as the neck. In guitar circles — in colloquial speech. In construction — as a part.
+
+Guitarist-Specific Tips: Snobel is the guitar neck.
+"""
+    ),
+
+    "SHOCK": Term(
+        name="Shock",
+        description="""
+Guitar slang for a powerful, stunning sound or effect.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Shock is a stunning guitar sound.
+"""
+    ),
+
+    "SHOW": Term(
+        name="Show",
+        description="""
+A concert performance with music, light, and stage action. In guitar terminology — a show program.
+
+Where it appears: In concert activity — as a performance. In music — in shows. In guitar music — in performances.
+
+Guitarist-Specific Tips: A show is a concert performance with guitar.
+"""
+    ),
+
+    "SHOW BUSINESS": Term(
+        name="Show business",
+        description="""
+The entertainment industry, including music, concerts, and artists. In guitar terminology — the music business.
+
+Where it appears: In culture — as an industry. In music — in business. In guitar music — in a career.
+
+Guitarist-Specific Tips: Show business is the music industry in which a guitarist works.
+"""
+    ),
+
+    "SHOW PROGRAM": Term(
+        name="Show program",
+        description="""
+The program of a concert performance, including music and stage effects.
+
+Where it appears: In concerts — as a program. In music — in shows. In guitar music — in performances.
+
+Guitarist-Specific Tips: A show program is a program for a guitar concert.
+"""
+    ),
+
+    "SPIKE": Term(
+        name="Spike",
+        description="""
+Guitar slang for a sharp, piercing note or sound.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: A spike is a piercing guitar sound.
+"""
+    ),
+
+    "SPINGALET": Term(
+        name="Spingalet",
+        description="""
+Guitar slang for a mechanism for fastening or adjustment.
+
+Where it appears: In guitar slang — as a mechanism. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A spingalet is an adjustment mechanism on guitar.
+"""
+    ),
+
+    "SPINDLE": Term(
+        name="Spindle",
+        description="""
+Guitar slang for the rotating part of a tremolo system or tuning peg.
+
+Where it appears: In guitar slang — as a part. In guitar circles — in colloquial speech. In construction — in mechanics.
+
+Guitarist-Specific Tips: A spindle is the rotating part of guitar mechanics.
+"""
+    ),
+
+    "SPINDET": Term(
+        name="Spindet",
+        description="""
+Guitar slang for a type or model of guitar mechanism.
+
+Where it appears: In guitar slang — as a model. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A spindet is a type of guitar mechanism.
+"""
+    ),
+
+    "SPINEL": Term(
+        name="Spinel",
+        description="""
+Guitar slang for a decorative element or ornament on a guitar.
+
+Where it appears: In guitar slang — as an ornament. In guitar circles — in colloquial speech. In design — in decoration.
+
+Guitarist-Specific Tips: A spinel is a decorative element of a guitar.
+"""
+    ),
+
+    "SPITZ": Term(
+        name="Spitz",
+        description="""
+Guitar slang for a sharp, piercing sound with high frequencies.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
+
+Guitarist-Specific Tips: Spitz is a sharp, piercing guitar sound.
+"""
+    ),
+
+    "SPURS": Term(
+        name="Spurs",
+        description="""
+Guitar slang for tuning pegs or fasteners on a guitar.
+
+Where it appears: In guitar slang — as tuning pegs. In guitar circles — in colloquial speech. In construction — in mechanics.
+
+Guitarist-Specific Tips: Spurs are tuning pegs on a guitar.
+"""
+    ),
+
+    
+    "SCREW": Term(
+        name="Screw",
+        description="""
+Guitar slang for a screw for fastening guitar parts.
+
+Where it appears: In guitar slang — as a screw. In guitar circles — in colloquial speech. In construction — in mechanics.
+
+Guitarist-Specific Tips: A screw is a screw for fastening guitar parts.
+"""
+    ),
+
+    "STACK": Term(
+        name="Stack",
+        description="""
+Guitar slang for a stack of equipment or instruments.
+
+Where it appears: In guitar slang — as a stack. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A stack is a stack of guitar equipment.
+"""
+    ),
+
+    "STAFF CONDUCTOR": Term(
+        name="Staff conductor",
+        description="""
+Guitar slang for the chief conductor or director of an orchestra.
+
+Where it appears: In guitar slang — as a conductor. In guitar circles — in colloquial speech. In orchestra — in conductors.
+
+Guitarist-Specific Tips: A staff conductor is the chief director of a music ensemble.
+"""
+    ),
+
+    "STEM SPACING": Term(
+        name="Stem spacing",
+        description="""
+The distance between stems in musical notation. In guitar terminology — the vertical distance between notes.
+
+Where it appears: In notation — as distance. In education — in musical notation. In guitar music — in design.
+
+Guitarist-Specific Tips: Stem spacing is the distance between stems in sheet music.
+"""
+    ),
+
+    "STEM": Term(
+        name="Stem",
+        description="""
+The vertical line of a note indicating its duration. Used in musical notation.
+
+Where it appears: In notation — as a line. In education — in musical notation. In guitar music — in notes.
+
+Guitarist-Specific Tips: A stem is the vertical line of a note.
+"""
+    ),
+
+    "STROKE": Term(
+        name="Stroke",
+        description="""
+A method of playing a note that determines its character (legato, staccato, marcato, etc.). An important element of articulation.
+
+Where it appears: In music — as articulation. In guitar music — in strokes. In education — in performance.
+
+Guitarist-Specific Tips: A stroke is a method of playing a note on guitar.
+"""
+    ),
+
+    "STROKING": Term(
+        name="Stroking",
+        description="""
+Guitar slang for a manner or way of performing strokes.
+
+Where it appears: In guitar slang — as a manner. In guitar circles — in colloquial speech. In performance — in strokes.
+
+Guitarist-Specific Tips: Stroking is a manner of performing strokes on guitar.
+"""
+    ),
+
+    "STROBOSCOPE": Term(
+        name="Stroboscope",
+        description="""
+A device for visual guitar tuning, showing frequency deviation. Used for accurate tuning.
+
+Where it appears: In guitar tuning — as a device. In sound recording — in tuning. In guitar practice — in tuners.
+
+Guitarist-Specific Tips: A stroboscope is a device for accurate guitar tuning.
+"""
+    ),
+
+    "SHUNT": Term(
+        name="Shunt",
+        description="""
+Guitar slang for an element of an electrical circuit for signal regulation.
+
+Where it appears: In guitar slang — as an element. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A shunt is an element of the electrical circuit of guitar equipment.
 """
     ),
 }

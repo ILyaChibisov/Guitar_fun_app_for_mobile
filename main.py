@@ -98,7 +98,8 @@ if platform == 'android':
             Permission.ACCESS_WIFI_STATE,
             Permission.MODIFY_AUDIO_SETTINGS,
             Permission.READ_EXTERNAL_STORAGE,
-            Permission.WRITE_EXTERNAL_STORAGE
+            Permission.WRITE_EXTERNAL_STORAGE,
+            Permission.RECORD_AUDIO
         ])
         print("✅ Разрешения запрошены")
 

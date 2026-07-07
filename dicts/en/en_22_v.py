@@ -594,4 +594,26 @@ Where it appears: In orchestra — as a primary instrument. In chamber music —
 Guitarist-Specific Tips: Violin and guitar are often combined in duets and ensembles.
 """
     ),
+
+    "VERY": Term(
+        name="Very",
+        description="""
+Guitar slang for very, strongly, with great energy.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in energy.
+
+Guitarist-Specific Tips: Very means playing with great energy and strength.
+"""
+    ),
+
+    "VENEER": Term(
+        name="Veneer",
+        description="""
+Material for covering or finishing a guitar, used for decoration and protection.
+
+Where it appears: In guitar craftsmanship — as a material. In design — in finishing. In guitar practice — in repair.
+
+Guitarist-Specific Tips: Veneer is a decorative covering for a guitar.
+"""
+    ),
 }

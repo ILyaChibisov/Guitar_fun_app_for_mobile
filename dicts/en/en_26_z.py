@@ -179,4 +179,15 @@ Where it appears: In guitar slang — as a string. In guitar circles — in coll
 Guitarist-Specific Tips: A zero string is the open first string E.
 """
     ),
+
+    "ZITHER": Term(
+        name="Zither",
+        description="""
+A folk string instrument common in Central Europe. Has many strings and is used in folk music.
+
+Where it appears: In folk music — as an instrument. In orchestra — in zithers. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A zither is a folk string instrument rarely combined with guitar.
+"""
+    ),
 }

@@ -2751,4 +2751,59 @@ Where it appears: In music — as a register. In guitar music — in middle posi
 Guitarist-Specific Tips: The middle register is the most comfortable for playing guitar.
 """
     ),
+
+    "MEASURE": Term(
+        name="Measure",
+        description="""
+A metric unit in music, bounded by bar lines. Contains a specific number of beats.
+
+Where it appears: In music — as a structural element. In notation — in measures. In guitar music — in rhythmic patterns.
+
+Guitarist-Specific Tips: A measure is the basis of rhythmic organization in guitar music.
+"""
+    ),
+
+    "MUSIC THEORY": Term(
+        name="Music theory",
+        description="""
+A science that studies the fundamentals of music: sound, intervals, chords, rhythm, harmony, form, and notation.
+
+Where it appears: In education — as a discipline. In musicology — as a branch. In guitar music — as a theoretical foundation.
+
+Guitarist-Specific Tips: Music theory is the foundation of guitar education.
+"""
+    ),
+
+    "MOVEMENT": Term(
+        name="Movement",
+        description="""
+A musical movement — a sequence of sounds or chords creating motion in music.
+
+Where it appears: In music — as motion. In harmony — in movements. In guitar music — in chord progressions.
+
+Guitarist-Specific Tips: Movement is the motion of a guitar part.
+"""
+    ),
+
+    "MIRACLE": Term(
+        name="Miracle",
+        description="""
+Guitar slang for something amazing, outstanding in music.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in outstanding playing.
+
+Guitarist-Specific Tips: A miracle is outstanding guitar performance.
+"""
+    ),
+
+    "MASTERPIECE": Term(
+        name="Masterpiece",
+        description="""
+An outstanding musical work recognized as a model of mastery. In guitar terminology — a masterpiece of guitar music.
+
+Where it appears: In music — as an outstanding work. In culture — in masterpieces. In guitar music — in repertoire.
+
+Guitarist-Specific Tips: A masterpiece is an outstanding guitar work.
+"""
+    ),
 }

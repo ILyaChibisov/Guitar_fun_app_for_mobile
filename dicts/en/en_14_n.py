@@ -325,14 +325,15 @@ Guitarist-Specific Tips: Nitro is a classic finish for guitars, affecting sound 
 """
     ),
 
+    
     "NOTHING": Term(
         name="Nothing",
         description="""
-Guitar slang for the absence of sound or a pause in playing.
+Guitar slang for nothing, the absence of sound or result.
 
-Where it appears: In guitar slang — as a pause. In guitar circles — in colloquial speech. In music — as silence.
+Where it appears: In guitar slang — as nothing. In guitar circles — in colloquial speech. In performance — in the absence of sound.
 
-Guitarist-Specific Tips: Nothing is a pause, absence of sound.
+Guitarist-Specific Tips: Nothing is the absence of sound or result.
 """
     ),
 
@@ -697,6 +698,94 @@ A sound that the guitarist considers their own, natural, and comfortable for the
 Where it appears: In performance — as a characteristic. In guitar music — in individual sound. In education — in finding one's sound.
 
 Guitarist-Specific Tips: Native sound is an individual guitar timbre.
+"""
+    ),
+
+    "NUMBERS": Term(
+        name="Numbers",
+        description="""
+Numerical designations in music: degree numbers, fret numbers, fingering, durations.
+
+Where it appears: In notation — as designations. In education — in numbers. In guitar music — in tablature.
+
+Guitarist-Specific Tips: Numbers are designations in guitar tablature and notation.
+"""
+    ),
+
+    "NONSENSE": Term(
+        name="Nonsense",
+        description="""
+Guitar slang for empty, meaningless music or passages.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in empty passages.
+
+Guitarist-Specific Tips: Nonsense is empty, meaningless guitar passages.
+"""
+    ),
+
+    "NOISE": Term(
+        name="Noise",
+        description="""
+Unwanted sounds, extraneous noise in sound recording or playing. In guitar terminology — noise in the signal.
+
+Where it appears: In sound recording — as interference. In guitar music — in noise. In acoustics — in noise.
+
+Guitarist-Specific Tips: Noise is extraneous sounds in the guitar signal.
+"""
+    ),
+
+    "NOISEMAKER": Term(
+        name="Noisemaker",
+        description="""
+Guitar slang for a device or effect that creates noise.
+
+Where it appears: In guitar slang — as an effect. In guitar circles — in colloquial speech. In sound recording — in processing.
+
+Guitarist-Specific Tips: A noisemaker is a device for creating noise effects.
+"""
+    ),
+
+    "NOISE PLAYER": Term(
+        name="Noise player",
+        description="""
+Guitar slang for a musician playing noise instruments.
+
+Where it appears: In guitar slang — as a performer. In guitar circles — in colloquial speech. In orchestra — in percussion.
+
+Guitarist-Specific Tips: A noise player is a musician playing noise instruments.
+"""
+    ),
+
+    "NOISE INSTRUMENT": Term(
+        name="Noise instrument",
+        description="""
+An instrument whose sound is based on noise (drums, cymbals, rattles). Used in orchestra and folk music.
+
+Where it appears: In orchestra — as percussion. In folk music — in percussion. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A noise instrument is an instrument with a noise sound.
+"""
+    ),
+
+    "NOISE ORCHESTRA": Term(
+        name="Noise orchestra",
+        description="""
+An orchestra consisting of noise instruments. Used in contemporary and experimental music.
+
+Where it appears: In contemporary music — as a lineup. In experimental music — in noise orchestras. In guitar music — rarely.
+
+Guitarist-Specific Tips: A noise orchestra is an orchestra of noise instruments.
+"""
+    ),
+
+    "NIFTY": Term(
+        name="Nifty",
+        description="""
+Guitar slang for fast, agile, with good technique.
+
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In performance — in fast playing.
+
+Guitarist-Specific Tips: Nifty means playing fast and agile on guitar.
 """
     ),
 }

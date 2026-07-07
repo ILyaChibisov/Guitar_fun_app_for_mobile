@@ -23,8 +23,8 @@ orientation = portrait
 icon.filename = android_res/drawable/icon.png
 
 # --- ЗАВИСИМОСТИ ---
-# audiostream - для работы с микрофоном на Android
-requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,audiostream
+# УБРАЛИ audiostream - используем JNI напрямую через jnius (уже есть в kivy)
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui
 
 # --- ПРАВА ---
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,RECORD_AUDIO

@@ -1322,4 +1322,192 @@ Where it appears: In guitar slang — as the neck. In guitar circles — in coll
 Guitarist-Specific Tips: A barrel is the guitar neck.
 """
     ),
+
+    
+    "BAR LINE": Term(
+        name="Bar line",
+        description="""
+A vertical line on the staff that separates measures. Used to organize musical time.
+
+Where it appears: In notation — as a separator. In education — as the foundation. In guitar music — in musical notation.
+
+Guitarist-Specific Tips: A bar line helps navigate the musical text.
+"""
+    ),
+
+    "BROADCAST": Term(
+        name="Broadcast",
+        description="""
+A live transmission of sound or video of a concert via radio, television, or the internet.
+
+Where it appears: In concerts — as a broadcast. In media — in live streams. In guitar music — in performances.
+
+Guitarist-Specific Tips: A broadcast is a transmission of a guitar performance in real time.
+"""
+    ),
+
+    "BASSOON": Term(
+        name="Bassoon",
+        description="""
+A woodwind instrument with a double reed, having a low, rich timbre. Used in orchestra.
+
+Where it appears: In orchestra — as a woodwind instrument. In chamber music — in ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Bassoon and guitar can be combined in ensembles.
+"""
+    ),
+
+    "BRANCH": Term(
+        name="Branch",
+        description="""
+Guitar slang for a branch or department of a music school or organization.
+
+Where it appears: In guitar slang — as a department. In guitar circles — in colloquial speech. In culture — in organizations.
+
+Guitarist-Specific Tips: A branch is a department of a music school.
+"""
+    ),
+
+    "BACKGROUND": Term(
+        name="Background",
+        description="""
+Sound background or musical accompaniment that creates atmosphere. Used in film, theater, and stage.
+
+Where it appears: In sound recording — as a background. In film — in musical design. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: Background is guitar accompaniment that creates atmosphere.
+"""
+    ),
+
+    "BREAD": Term(
+        name="Bread",
+        description="""
+Guitar slang for a musician's earnings from performances and recordings.
+
+Where it appears: In guitar slang — as income. In guitar circles — in colloquial speech. In culture — in earnings.
+
+Guitarist-Specific Tips: Bread is a guitarist's earnings from music.
+"""
+    ),
+
+    "BASS MOVEMENT": Term(
+        name="Bass movement",
+        description="""
+A bass line moving through the degrees of a mode. The basis of harmonic development.
+
+Where it appears: In harmony — as a bass line. In classical music — in bass movements. In guitar music — in bass parts.
+
+Guitarist-Specific Tips: Bass movement is a bass line that determines the harmony of guitar music.
+"""
+    ),
+
+    "BASE SOUND": Term(
+        name="Base sound",
+        description="""
+A sound with a characteristic "base" — the lower part of the sound spectrum. In guitar terminology — a sound with an accent on the bass.
+
+Where it appears: In sound recording — as a characteristic. In guitar music — in bass sound. In acoustics — in timbre.
+
+Guitarist-Specific Tips: A base sound is a sound with an accent on low frequencies.
+"""
+    ),
+
+    "BLACK MARK": Term(
+        name="Black mark",
+        description="""
+Guitar slang for a mark on the fretboard or in notation.
+
+Where it appears: In guitar slang — as a mark. In guitar circles — in colloquial speech. In education — in notation.
+
+Guitarist-Specific Tips: A black mark is a mark on the guitar fretboard.
+"""
+    ),
+
+    "BLACK NOTE": Term(
+        name="Black note",
+        description="""
+A note with a filled oval and stem (quarter note, eighth note, etc.). Contrasted with a white note.
+
+Where it appears: In notation — as a duration. In education — in rhythm. In guitar music — in musical notation.
+
+Guitarist-Specific Tips: A black note indicates short durations in guitar music.
+"""
+    ),
+
+    "BLACK KEYS": Term(
+        name="Black keys",
+        description="""
+The black keys on the piano, corresponding to sharps and flats. In guitar terminology — rarely.
+
+Where it appears: On the piano — as keys. In theory — in chromaticism. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Black keys are sharps and flats on the piano.
+"""
+    ),
+
+    "BLUEPRINT": Term(
+        name="Blueprint",
+        description="""
+Guitar slang for a diagram or plan of a guitar's construction.
+
+Where it appears: In guitar slang — as a diagram. In guitar circles — in colloquial speech. In construction — in blueprints.
+
+Guitarist-Specific Tips: A blueprint is a diagram of a guitar's construction.
+"""
+    ),
+
+    "BAKER'S DOZEN": Term(
+        name="Baker's dozen",
+        description="""
+Guitar slang for thirteen, often used in musicians' superstitions.
+
+Where it appears: In guitar slang — as a number. In guitar circles — in colloquial speech. In culture — in superstitions.
+
+Guitarist-Specific Tips: A baker's dozen is the number 13 in guitar superstitions.
+"""
+    ),
+
+    "BARREL ORGAN": Term(
+        name="Barrel organ",
+        description="""
+An early mechanical instrument that reproduces music using a rotating cylinder. A symbol of street music.
+
+Where it appears: In music history — as a mechanical instrument. In culture — in barrel organs. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A barrel organ is a mechanical instrument inspiring guitar pieces.
+"""
+    ),
+
+    "BARREL ORGAN GRINDER": Term(
+        name="Barrel organ grinder",
+        description="""
+A performer on the barrel organ. In guitar terminology — a street musician.
+
+Where it appears: In music history — as a performer. In culture — as a street musician. In guitar music — in images.
+
+Guitarist-Specific Tips: A barrel organ grinder is a street musician, an image in guitar music.
+"""
+    ),
+
+    "BROADLY": Term(
+        name="Broadly",
+        description="""
+A performance indication requiring broad, free, sweeping performance.
+
+Where it appears: In classical music — as an articulation. In guitar music — in free pieces. In education — in performance.
+
+Guitarist-Specific Tips: Broadly means free, sweeping performance on guitar.
+"""
+    ),
+
+    "BAR": Term(
+        name="Bar",
+        description="""
+Guitar slang for a rod or part of a tremolo system.
+
+Where it appears: In guitar slang — as a rod. In guitar circles — in colloquial speech. In construction — in mechanics.
+
+Guitarist-Specific Tips: A bar is a rod of the tremolo system on guitar.
+"""
+    ),
 }

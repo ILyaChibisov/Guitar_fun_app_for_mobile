@@ -205,14 +205,15 @@ Guitarist-Specific Tips: Inch is used for describing scale length (25.5", 24.75"
 """
     ),
 
+    
     "IRON": Term(
         name="Iron",
         description="""
-The metal parts of a guitar or musical equipment. In a figurative sense — heavy music, metal.
+Guitar slang for a heavy, powerful sound or equipment.
 
-Where it appears: In guitar construction — as metal elements (tuning pegs, bridge, frets). In music — as a designation for metal. In guitar terminology — as professional jargon.
+Where it appears: In guitar slang — as a characteristic. In guitar circles — in colloquial speech. In sound recording — in timbre.
 
-Guitarist-Specific Tips: The quality of metal affects the sound and durability of the guitar. Metal strings produce a bright and ringing sound. Important to choose quality metal components.
+Guitarist-Specific Tips: Iron is a powerful, heavy guitar sound.
 """
     ),
 
@@ -631,6 +632,17 @@ An instrument where sound is produced by the vibration of the material itself. E
 Where it appears: In orchestra — as percussion instruments. In folk music — in percussion. In guitar music — rarely.
 
 Guitarist-Specific Tips: Idiophones are rarely combined with guitar but can be used in percussive effects.
+"""
+    ),
+
+    "INTEGRITY": Term(
+        name="Integrity",
+        description="""
+The unity and harmony of a musical work, where all elements are interconnected. The basis of artistic value.
+
+Where it appears: In music — as a quality. In education — in analysis. In guitar music — in interpretation.
+
+Guitarist-Specific Tips: Integrity is the unity of all elements in a guitar work.
 """
     ),
 }

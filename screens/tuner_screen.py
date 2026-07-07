@@ -1,7 +1,7 @@
 # screens/tuner_screen.py
 """
 Экран гитарного тюнера - с реальным определением частоты
-Работает на Android через audiostream, на Windows через pyaudio
+Работает на Android через JNI AudioRecord, на Windows через pyaudio
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Ellipse
@@ -16,6 +16,7 @@ import math
 import random
 import threading
 import struct
+import time
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -43,6 +44,16 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
+
+# ============ ПОПЫТКА ИМПОРТА ANDROID AUDIO ============
+try:
+    from utils.android_audio import get_audio_recorder
+
+    HAS_AUDIO_RECORDER = True
+    logger.info("✅ Модуль android_audio загружен")
+except ImportError:
+    HAS_AUDIO_RECORDER = False
+    logger.warning("⚠️ Модуль android_audio не найден, JNI AudioRecord недоступен")
 
 # ============ НАСТРОЙКИ АУДИО ============
 SAMPLE_RATE = 44100
@@ -425,6 +436,7 @@ class TunerScreen(BaseScreen):
         self._audio_thread = None
         self._running = False
         self._audio_backend = 'emulation'
+        self._audio_recorder = None
 
         # Текущий строй
         self.current_tuning = 'standard_6'
@@ -482,16 +494,17 @@ class TunerScreen(BaseScreen):
                 except Exception as e:
                     logger.error(f"Ошибка запроса разрешений: {e}")
 
-                # Пробуем audiostream (единственное что работает на Android)
-                try:
-                    import audiostream
-                    self._audio_backend = 'audiostream'
-                    logger.info("✅ audiostream загружен (Android)")
-                    return
-                except ImportError:
-                    logger.warning("⚠️ audiostream не найден на Android")
+                # Используем JNI AudioRecord через наш модуль
+                if HAS_AUDIO_RECORDER:
+                    try:
+                        self._audio_recorder = get_audio_recorder()
+                        self._audio_backend = 'android_jni'
+                        logger.info("✅ Android JNI AudioRecord готов")
+                        return
+                    except Exception as e:
+                        logger.error(f"❌ Ошибка JNI AudioRecord: {e}")
 
-                # Если ничего нет - эмуляция
+                # Если ничего не работает - эмуляция
                 logger.warning("⚠️ Аудио не доступно на Android, используем эмуляцию")
                 self._audio_backend = 'emulation'
 
@@ -505,15 +518,6 @@ class TunerScreen(BaseScreen):
                     return
                 except ImportError:
                     logger.warning("⚠️ pyaudio не найден")
-
-                # Пробуем plyer.microphone
-                try:
-                    from plyer import microphone
-                    self._audio_backend = 'plyer'
-                    logger.info("✅ plyer.microphone загружен (Desktop)")
-                    return
-                except ImportError:
-                    logger.warning("⚠️ plyer.microphone не найден")
 
                 # Эмуляция
                 logger.warning("⚠️ Аудио не доступно, используем эмуляцию")
@@ -530,53 +534,37 @@ class TunerScreen(BaseScreen):
 
         self._running = True
 
-        if self._audio_backend == 'audiostream':
-            self._audio_thread = threading.Thread(target=self._audio_loop_audiostream)
+        if self._audio_backend == 'android_jni':
+            # Используем JNI AudioRecord
+            if self._audio_recorder:
+                self._audio_recorder.start_recording(
+                    callback=self._on_audio_data,
+                    sample_rate=SAMPLE_RATE,
+                    chunk_size=CHUNK_SIZE
+                )
+                logger.info("🎤 Android JNI AudioRecord запущен")
+            else:
+                self._audio_loop_emulation()
         elif self._audio_backend == 'pyaudio':
             self._audio_thread = threading.Thread(target=self._audio_loop_pyaudio)
-        elif self._audio_backend == 'plyer':
-            self._audio_thread = threading.Thread(target=self._audio_loop_plyer)
+            self._audio_thread.daemon = True
+            self._audio_thread.start()
+            logger.info("🎤 pyaudio поток запущен")
         else:
             self._audio_thread = threading.Thread(target=self._audio_loop_emulation)
+            self._audio_thread.daemon = True
+            self._audio_thread.start()
+            logger.info("🎵 Эмуляция запущена")
 
-        self._audio_thread.daemon = True
-        self._audio_thread.start()
-        logger.info(f"🎤 Аудио поток запущен (бэкенд: {self._audio_backend})")
+    def _on_audio_data(self, data):
+        """Callback от Android AudioRecord"""
+        if not self.is_listening or not self._running:
+            return
 
-    def _audio_loop_audiostream(self):
-        """Захват через audiostream (Android)"""
-        try:
-            import audiostream
-
-            def callback(data):
-                if data and self._running:
-                    freq = detect_pitch(data, SAMPLE_RATE)
-                    if freq > 0:
-                        Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
-
-            stream = audiostream.get_input_stream(
-                callback=callback,
-                rate=SAMPLE_RATE,
-                channels=1,
-                buffersize=CHUNK_SIZE
-            )
-
-            if stream:
-                stream.start()
-                logger.info("✅ audiostream захват запущен")
-
-                while self._running:
-                    import time
-                    time.sleep(0.1)
-
-                stream.stop()
-            else:
-                logger.error("❌ Не удалось создать аудио поток")
-                self._audio_loop_emulation()
-
-        except Exception as e:
-            logger.error(f"Ошибка audiostream: {e}")
-            self._audio_loop_emulation()
+        if data:
+            freq = detect_pitch(data, SAMPLE_RATE)
+            if freq > 0:
+                Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
 
     def _audio_loop_pyaudio(self):
         """Захват через pyaudio (Windows/Desktop)"""
@@ -616,30 +604,6 @@ class TunerScreen(BaseScreen):
             logger.error(f"Ошибка pyaudio: {e}")
             self._audio_loop_emulation()
 
-    def _audio_loop_plyer(self):
-        """Захват через plyer.microphone (Desktop)"""
-        try:
-            from plyer import microphone
-
-            def callback(data):
-                if data and self._running:
-                    freq = detect_pitch(data, SAMPLE_RATE)
-                    if freq > 0:
-                        Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
-
-            microphone.start_recording(callback, SAMPLE_RATE, CHUNK_SIZE)
-            logger.info("✅ plyer.microphone захват запущен")
-
-            while self._running:
-                import time
-                time.sleep(0.1)
-
-            microphone.stop_recording()
-
-        except Exception as e:
-            logger.error(f"Ошибка plyer.microphone: {e}")
-            self._audio_loop_emulation()
-
     def _audio_loop_emulation(self):
         """Эмуляция для тестирования"""
         logger.info("🎵 Эмуляция аудио")
@@ -654,9 +618,15 @@ class TunerScreen(BaseScreen):
     def _stop_audio_thread(self):
         """Останавливает аудио поток"""
         self._running = False
+
+        if self._audio_backend == 'android_jni' and self._audio_recorder:
+            self._audio_recorder.stop_recording()
+            logger.info("⏹ JNI AudioRecord остановлен")
+
         if self._audio_thread and self._audio_thread.is_alive():
             self._audio_thread.join(timeout=1)
         self._audio_thread = None
+
         logger.info("⏹ Аудио поток остановлен")
 
     def _process_frequency(self, freq):
@@ -1037,22 +1007,27 @@ class TunerScreen(BaseScreen):
                 self._hint_timer = None
 
     def on_enter(self):
+        """При входе на экран"""
         logger.info("Вход в экран тюнера")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.set_custom_title("Тюнер")
-            # app.top_nav._show_back_button()  # ← УДАЛИТЬ
-            app.top_nav.back_btn.on_release = self.go_back
+            app.top_nav.set_custom_back_callback(self.go_back)
 
     def go_back(self, instance=None):
+        """Возврат на главный экран"""
         logger.info("🔙 Возврат на home")
         if self.is_listening:
             self.toggle_tuner(None)
         self._stop_audio_thread()
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.clear_custom_back_callback()
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
 
     def on_leave(self):
+        """При выходе с экрана"""
         logger.info("Выход из экрана тюнера")
         if self.is_listening:
             self.toggle_tuner(None)

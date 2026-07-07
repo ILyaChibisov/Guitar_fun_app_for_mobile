@@ -749,4 +749,59 @@ Where it appears: In solfège — as a note. In guitar practice — in chords an
 Guitarist-Specific Tips: The note G is the open third string of the guitar.
 """
     ),
+
+    "GRACE NOTE": Term(
+        name="Grace note",
+        description="""
+A musical ornament consisting of one or several short auxiliary notes before the main note. Used in classical music.
+
+Where it appears: In classical music — as an ornament. In guitar music — in melismas. In Baroque music — in embellishments.
+
+Guitarist-Specific Tips: A grace note requires fast and precise technique.
+"""
+    ),
+
+    "GYPSY MUSIC": Term(
+        name="Gypsy music",
+        description="""
+The musical tradition of the Roma, characterized by virtuosity, emotionality, and improvisational character.
+
+Where it appears: In folk music — as a tradition. In classical music — in Gypsy themes. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Gypsy music requires virtuosic and emotional guitar playing.
+"""
+    ),
+
+    "GYPSY JAZZ": Term(
+        name="Gypsy jazz",
+        description="""
+A direction of jazz based on the music of Gypsy musicians, especially known through Django Reinhardt.
+
+Where it appears: In jazz — as a style. In guitar music — in Gypsy jazz. At jazz festivals.
+
+Guitarist-Specific Tips: Gypsy jazz requires fast and virtuosic guitar technique.
+"""
+    ),
+
+    "GYPSY MODE": Term(
+        name="Gypsy mode",
+        description="""
+A mode characteristic of Gypsy music, with an augmented second between the II and III degrees. Gives an Eastern, tense sound.
+
+Where it appears: In Gypsy music — as a mode. In jazz — in improvisation. In guitar music — in ethnic compositions.
+
+Guitarist-Specific Tips: The Gypsy mode gives an Eastern, tense sound on guitar.
+"""
+    ),
+
+    "GYPSY ROMANCE": Term(
+        name="Gypsy romance",
+        description="""
+A vocal genre based on Gypsy musical tradition. Characterized by emotionality and virtuosity.
+
+Where it appears: In Gypsy music — as a genre. In guitar music — in Gypsy romances. In folk music — in romances.
+
+Guitarist-Specific Tips: A Gypsy romance requires expressive and virtuosic accompaniment.
+"""
+    ),
 }

@@ -240,14 +240,15 @@ Guitarist-Specific Tips: Lazhban is a humorous nickname. Important not to take c
     
     
     
+    
     "LINE": Term(
         name="Line",
         description="""
-A staff line — a horizontal line on the musical staff. Also — an exercise for developing technique.
+A line in musical notation that separates measures or marks the boundaries of musical phrases.
 
-Where it appears: In notation — as part of the staff. In education — as an exercise. In guitar practice — in scales.
+Where it appears: In notation — as a line. In education — as the foundation. In guitar music — in musical notation.
 
-Guitarist-Specific Tips: A line is the foundation of musical notation. On guitar, lines correspond to strings.
+Guitarist-Specific Tips: A line is a dividing line in sheet music.
 """
     ),
 
@@ -1240,6 +1241,39 @@ A group of musicians, an ensemble, or an orchestra lineup. In guitar terminology
 Where it appears: In music — as a group. In orchestra — as a lineup. In guitar music — in ensembles.
 
 Guitarist-Specific Tips: A lineup is a group of guitarists in an ensemble.
+"""
+    ),
+
+    "LANTERN": Term(
+        name="Lantern",
+        description="""
+Guitar slang for a pickup on an electric guitar.
+
+Where it appears: In guitar slang — as a pickup. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A lantern is a humorous name for a pickup.
+"""
+    ),
+
+    "LITTLE THING": Term(
+        name="Little thing",
+        description="""
+Guitar slang for a small part or accessory for a guitar.
+
+Where it appears: In guitar slang — as a part. In guitar circles — in colloquial speech. In sound recording — in accessories.
+
+Guitarist-Specific Tips: A little thing is a small guitar accessory.
+"""
+    ),
+
+    "LITTLE NOISE": Term(
+        name="Little noise",
+        description="""
+Guitar slang for a slight noise, a light noise effect.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In sound recording — in noise.
+
+Guitarist-Specific Tips: Little noise is a light noise effect on guitar.
 """
     ),
 }

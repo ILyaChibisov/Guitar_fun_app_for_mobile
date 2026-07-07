@@ -1001,4 +1001,191 @@ Where it appears: In music — as a structure. In sound recording — in diagram
 Guitarist-Specific Tips: A diagram is the structure of a guitar work or equipment.
 """
     ),
+
+    "DANCER": Term(
+        name="Dancer",
+        description="""
+A performer of dance. In guitar terminology — rarely.
+
+Where it appears: In dance music — as a performer. In culture — in dances. In guitar music — in accompaniment.
+
+Guitarist-Specific Tips: A dancer is a dance performer accompanied by guitar.
+"""
+    ),
+
+    "DOT": Term(
+        name="Dot",
+        description="""
+Guitar slang for a dot, a mark on the fretboard or staff.
+
+Where it appears: In guitar slang — as a mark. In guitar circles — in colloquial speech. In musical notation — in dots.
+
+Guitarist-Specific Tips: A dot is a mark on the fretboard or in notation.
+"""
+    ),
+
+    "DRUMMER": Term(
+        name="Drummer",
+        description="""
+A musician who plays percussion instruments. In guitar terminology — a drummer.
+
+Where it appears: In ensemble — as the rhythmic foundation. In a rock band — in the rhythm section. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A drummer is a partner of the guitarist in the rhythm section.
+"""
+    ),
+
+    "DIMINUTION": Term(
+        name="Diminution",
+        description="""
+A musical technique where note durations are halved. Used in variations and polyphony.
+
+Where it appears: In polyphony — as a technique. In classical music — in variations. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Diminution of durations changes the character of a guitar part.
+"""
+    ),
+
+    "DIMINISHED TRIAD": Term(
+        name="Diminished triad",
+        description="""
+A triad consisting of two minor thirds. Sounds compressed and tense.
+
+Where it appears: In harmony — as a chord. In classical music — in modulations. In guitar music — in jazz chords.
+
+Guitarist-Specific Tips: A diminished triad creates a tense sound on guitar.
+"""
+    ),
+
+    "DIMINISHED INTERVALS": Term(
+        name="Diminished intervals",
+        description="""
+Intervals decreased by a semitone compared to perfect or minor intervals.
+
+Where it appears: In music theory — as intervals. In harmony — in chords. In guitar music — in jazz harmonies.
+
+Guitarist-Specific Tips: Diminished intervals create a tense sound on guitar.
+"""
+    ),
+
+    "DIMINISHED MODE": Term(
+        name="Diminished mode",
+        description="""
+A mode in which one or more degrees are lowered by a semitone, creating a tense sound.
+
+Where it appears: In contemporary music — as a mode. In jazz — in improvisation. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: A diminished mode expands the harmonic possibilities of the guitar.
+"""
+    ),
+
+    "DIMINISHED SEVENTH CHORD": Term(
+        name="Diminished seventh chord",
+        description="""
+A seventh chord consisting of a diminished triad and a minor third. Creates a tense, unstable sound.
+
+Where it appears: In jazz — as a chord. In contemporary music — in harmony. In guitar music — in jazz chords.
+
+Guitarist-Specific Tips: A diminished seventh chord requires complex fingering on guitar.
+"""
+    ),
+
+    "DULCIMER PLAYER": Term(
+        name="Dulcimer player",
+        description="""
+A performer on the dulcimer. In guitar terminology — rarely.
+
+Where it appears: In folk music — as a performer. In orchestra — in dulcimer players. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: A dulcimer player is a performer on the dulcimer.
+"""
+    ),
+
+    "DULCIMER": Term(
+        name="Dulcimer",
+        description="""
+A folk stringed percussion instrument consisting of a set of strings struck with mallets. Used in folk music.
+
+Where it appears: In folk music — as an instrument. In orchestra — in dulcimers. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Dulcimer and guitar can be combined in folk ensembles.
+"""
+    ),
+
+    "DIGITAL RECORDING": Term(
+        name="Digital recording",
+        description="""
+Sound recording in digital format. The basis of modern sound recording and music production.
+
+Where it appears: In sound recording — as a method. In guitar music — in recording. In the industry — in production.
+
+Guitarist-Specific Tips: Digital recording is the basis of modern guitar sound recording.
+"""
+    ),
+
+    "DIGITAL PROCESSOR": Term(
+        name="Digital processor",
+        description="""
+A device for digital sound processing. Used in guitar effects and sound recording.
+
+Where it appears: In guitar equipment — as a processor. In sound recording — in processing. In guitar practice — in effects.
+
+Guitarist-Specific Tips: A digital processor is a device for processing guitar sound.
+"""
+    ),
+
+    "DIGITAL SIGNAL": Term(
+        name="Digital signal",
+        description="""
+A signal represented in digital form. Used in modern sound recording and electronics.
+
+Where it appears: In sound recording — as a signal. In electronics — in digital systems. In guitar music — in processing.
+
+Guitarist-Specific Tips: A digital signal is the basis of modern guitar sound recording.
+"""
+    ),
+
+    "DIGITAL FORMAT": Term(
+        name="Digital format",
+        description="""
+A format for recording sound in digital form (WAV, MP3, FLAC). Used in sound recording and music distribution.
+
+Where it appears: In sound recording — as a format. In guitar music — in recording. In the industry — in distribution.
+
+Guitarist-Specific Tips: A digital format is a format for recording guitar music.
+"""
+    ),
+
+    "DESIGNATING NUMBERS": Term(
+        name="Designating numbers",
+        description="""
+Numbers used to designate fingering, frets, or durations in musical notation.
+
+Where it appears: In notation — as designations. In education — in numbers. In guitar music — in tablature.
+
+Guitarist-Specific Tips: Designating numbers indicate frets and fingering in guitar music.
+"""
+    ),
+
+    "DECLAMATORY STYLE": Term(
+        name="Declamatory style",
+        description="""
+Guitar slang for a style of playing close to declamation.
+
+Where it appears: In guitar slang — as a style. In guitar circles — in colloquial speech. In performance — in expressive playing.
+
+Guitarist-Specific Tips: Declamatory style is expressive, declamatory playing on guitar.
+"""
+    ),
+
+    "DOWEL": Term(
+        name="Dowel",
+        description="""
+Guitar slang for a fastening element or retainer.
+
+Where it appears: In guitar slang — as a fastener. In guitar circles — in colloquial speech. In construction — in mechanics.
+
+Guitarist-Specific Tips: A dowel is a fastening element of a guitar.
+"""
+    ),
 }

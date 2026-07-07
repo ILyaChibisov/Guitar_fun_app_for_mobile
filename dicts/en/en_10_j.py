@@ -257,4 +257,26 @@ Where it appears: In guitar slang — as a meeting. In guitar circles — in col
 Guitarist-Specific Tips: A jam session is an informal meeting of guitarists.
 """
     ),
+
+    "JAB": Term(
+        name="Jab",
+        description="""
+Guitar slang for a sharp, abrupt sound or accent.
+
+Where it appears: In guitar slang — as a sound. In guitar circles — in colloquial speech. In performance — in accents.
+
+Guitarist-Specific Tips: A jab is a sharp, abrupt guitar sound.
+"""
+    ),
+
+    "JOKE": Term(
+        name="Joke",
+        description="""
+A musical work of a humorous, light character. In guitar terminology — a humorous piece.
+
+Where it appears: In music — as humor. In guitar music — in humorous pieces. In variety — in humorous arrangements.
+
+Guitarist-Specific Tips: A joke is a humorous guitar piece.
+"""
+    ),
 }

@@ -543,6 +543,7 @@ Guitarist-Specific Tips: A part is part of a guitar ensemble.
 """
     ),
 
+    
     "PARTIAL TONES": Term(
         name="Partial tones",
         description="""
@@ -1424,14 +1425,15 @@ Guitarist-Specific Tips: A postlude requires completeness and expressiveness.
 """
     ),
 
+    
     "PHRASE": Term(
         name="Phrase",
         description="""
-A musical construction, a completed section of a work. The basis of form.
+A complete musical thought consisting of several motifs. The basis of phrasing.
 
-Where it appears: In music — as a structural element. In education — as the foundation. In guitar music — in periods and phrases.
+Where it appears: In music — as a structural element. In education — as the foundation. In guitar music — in melodies.
 
-Guitarist-Specific Tips: A phrase is a completed musical construction.
+Guitarist-Specific Tips: A phrase is the basis of a guitar melody.
 """
     ),
 
@@ -1688,14 +1690,15 @@ Guitarist-Specific Tips: A path is the development of musical material.
 """
     ),
 
+    
     "PIECE": Term(
         name="Piece",
         description="""
-A short musical work, often instrumental. Used in different genres.
+Guitar slang for a unit of measurement for equipment or instruments.
 
-Where it appears: In classical music — as a miniature. In guitar music — in repertoire. In education — as material.
+Where it appears: In guitar slang — as a unit. In guitar circles — in colloquial speech. In sound recording — in quantity.
 
-Guitarist-Specific Tips: A piece is the main form of guitar repertoire.
+Guitarist-Specific Tips: A piece is a unit of guitar equipment.
 """
     ),
 
@@ -1806,6 +1809,358 @@ In theater — an assistant who prompts actors with lines. In guitar terminology
 Where it appears: In theater — as an assistant. In opera — in prompter boxes. In guitar music — rarely.
 
 Guitarist-Specific Tips: A prompter is an assistant in theater, rarely associated with guitar.
+"""
+    ),
+
+    "PACKAGING": Term(
+        name="Packaging",
+        description="""
+Guitar slang for packaging or a case for a guitar.
+
+Where it appears: In guitar slang — as packaging. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: Packaging is a case for a guitar or equipment.
+"""
+    ),
+
+    "PUMPKIN": Term(
+        name="Pumpkin",
+        description="""
+Guitar slang for a pickup on an electric guitar.
+
+Where it appears: In guitar slang — as a pickup. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: A pumpkin is a humorous name for a pickup.
+"""
+    ),
+
+    "PERCUSSION INSTRUMENTS": Term(
+        name="Percussion instruments",
+        description="""
+Instruments where sound is produced by striking. Divided into membranophones, idiophones, and others.
+
+Where it appears: In orchestra — as a group. In jazz — in the rhythm section. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Percussion instruments are the basis of rhythmic pulsation in guitar music.
+"""
+    ),
+
+    "PHASE": Term(
+        name="Phase",
+        description="""
+The position of a sound wave in time. In guitar terminology — the phase of a signal affecting timbre.
+
+Where it appears: In acoustics — as a physical phenomenon. In sound recording — in processing. In guitar music — in effects.
+
+Guitarist-Specific Tips: Phase affects guitar sound and effects.
+"""
+    ),
+
+    "PHASE INVERTER": Term(
+        name="Phase inverter",
+        description="""
+A device or effect that changes the phase of the audio signal. Used to create specific timbres.
+
+Where it appears: In sound recording — as processing. In guitar music — in effects. In the studio — in equipment.
+
+Guitarist-Specific Tips: A phase inverter is an effect used to change guitar sound.
+"""
+    ),
+
+    "PHASE SHIFTER": Term(
+        name="Phase shifter",
+        description="""
+A device that changes the phase of a signal. In guitar terminology — a phase control in effects.
+
+Where it appears: In sound recording — as a device. In guitar music — in pedals. In the studio — in equipment.
+
+Guitarist-Specific Tips: A phase shifter is a phase control used in guitar effects.
+"""
+    ),
+
+    "PLYWOOD": Term(
+        name="Plywood",
+        description="""
+Guitar slang for a cheap guitar with a plywood body.
+
+Where it appears: In guitar slang — as a joke. In guitar circles — in colloquial speech. In culture — as an image.
+
+Guitarist-Specific Tips: Plywood is a humorous name for a cheap guitar.
+"""
+    ),
+
+    "PHILHARMONIC": Term(
+        name="Philharmonic",
+        description="""
+A concert hall or organization that organizes symphonic and chamber concerts.
+
+Where it appears: In culture — as an institution. In music — in concerts. In guitar music — in performances.
+
+Guitarist-Specific Tips: A philharmonic is a venue for a guitarist's concert performances.
+"""
+    ),
+
+    "PAN FLUTE": Term(
+        name="Pan flute",
+        description="""
+A folk wind instrument consisting of several tubes of different lengths. Used in folk music.
+
+Where it appears: In folk music — as an instrument. In ethnic music — in traditions. In guitar music — in ensembles.
+
+Guitarist-Specific Tips: Pan flute and guitar can be combined in ethnic ensembles.
+"""
+    ),
+
+    "PHONETICIAN": Term(
+        name="Phonetician",
+        description="""
+Guitar slang for a sound specialist or sound engineer.
+
+Where it appears: In guitar slang — as a specialist. In guitar circles — in colloquial speech. In sound recording — in a profession.
+
+Guitarist-Specific Tips: A phonetician is a sound engineer or sound specialist.
+"""
+    ),
+
+    "PHONIATRIST": Term(
+        name="Phoniatrist",
+        description="""
+A doctor specializing in voice and vocal cord treatment. In guitar terminology — rarely.
+
+Where it appears: In medicine — as a doctor. In vocal pedagogy — as a specialist. In guitar music — rarely.
+
+Guitarist-Specific Tips: A phoniatrist is a doctor for singers, not related to guitar.
+"""
+    ),
+
+    "PHONICS": Term(
+        name="Phonics",
+        description="""
+A branch of acoustics that studies sound and its characteristics. In guitar terminology — rarely.
+
+Where it appears: In acoustics — as a branch. In science — in phonics. In guitar music — in acoustics.
+
+Guitarist-Specific Tips: Phonics is the science of sound.
+"""
+    ),
+
+    "PHONOGRAM": Term(
+        name="Phonogram",
+        description="""
+A sound recording fixed on a medium. Used in sound recording and phonography.
+
+Where it appears: In sound recording — as a recording. In culture — in phonograms. In guitar music — in recordings.
+
+Guitarist-Specific Tips: A phonogram is a recording of guitar music.
+"""
+    ),
+
+    "PHONOGRAPH": Term(
+        name="Phonograph",
+        description="""
+A device for reproducing sound from mechanical media. A predecessor of the gramophone.
+
+Where it appears: In sound recording history — as a device. In culture — as a retro image. In guitar music — rarely.
+
+Guitarist-Specific Tips: A phonograph is an old way of reproducing sound.
+"""
+    ),
+
+    "PHONOLOGY": Term(
+        name="Phonology",
+        description="""
+A branch of musicology that studies sound and its structure. In guitar terminology — rarely.
+
+Where it appears: In science — as a branch. In musicology — in phonology. In guitar music — in acoustics.
+
+Guitarist-Specific Tips: Phonology is the science of sound.
+"""
+    ),
+
+    "PHONOMETER": Term(
+        name="Phonometer",
+        description="""
+A device for measuring sound volume. Used in acoustics and sound recording.
+
+Where it appears: In acoustics — as a device. In sound recording — in measurement. In guitar music — in sound engineering.
+
+Guitarist-Specific Tips: A phonometer is a device for measuring volume.
+"""
+    ),
+
+    "PHONOTHEQUE": Term(
+        name="Phonotheque",
+        description="""
+A collection of sound recordings, a music library. Used for storing and studying music.
+
+Where it appears: In culture — as a collection. In education — in phonotheques. In guitar music — in recordings.
+
+Guitarist-Specific Tips: A phonotheque is a collection of guitar recordings.
+"""
+    ),
+
+    "PHOTO": Term(
+        name="Photo",
+        description="""
+Guitar slang for a photo or image of a guitar.
+
+Where it appears: In guitar slang — as a photo. In guitar circles — in colloquial speech. In culture — in media.
+
+Guitarist-Specific Tips: A photo is a photograph of a guitar.
+"""
+    ),
+
+    "PHRASING": Term(
+        name="Phrasing",
+        description="""
+Expressive performance of musical phrases using dynamics, agogics, and articulation. An important element of interpretation.
+
+Where it appears: In performance — as expressiveness. In education — as a skill. In guitar music — in playing.
+
+Guitarist-Specific Tips: Phrasing is the basis of expressiveness in guitar playing.
+"""
+    ),
+
+    "PHRYGIAN MODE": Term(
+        name="Phrygian mode",
+        description="""
+A church mode characterized by a minor inclination with a lowered II degree. Used in jazz and folk music.
+
+Where it appears: In jazz — in modal improvisation. In folk music — in some traditions. In guitar music — in modal compositions.
+
+Guitarist-Specific Tips: The Phrygian mode gives a dark, Spanish sound.
+"""
+    ),
+
+    "PRICE TAG": Term(
+        name="Price tag",
+        description="""
+Guitar slang for the price of a guitar or equipment.
+
+Where it appears: In guitar slang — as price. In guitar circles — in colloquial speech. In sound recording — in cost.
+
+Guitarist-Specific Tips: A price tag is the cost of guitar equipment.
+"""
+    ),
+
+    "PERFECT FOURTH": Term(
+        name="Perfect fourth",
+        description="""
+An interval equal to four degrees of a diatonic scale (two and a half tones). Considered a consonance.
+
+Where it appears: In music theory — as an interval. In guitar music — in chords and melodies. In education — in intervals.
+
+Guitarist-Specific Tips: A perfect fourth is often used in guitar chords and melodies.
+"""
+    ),
+
+    "PERFECT FIFTH": Term(
+        name="Perfect fifth",
+        description="""
+An interval equal to five degrees of a diatonic scale (three and a half tones). Considered a consonance.
+
+Where it appears: In music theory — as an interval. In guitar music — in power chords. In education — in intervals.
+
+Guitarist-Specific Tips: A perfect fifth is the basis of power chords in rock music.
+"""
+    ),
+
+    "PERFECT OCTAVE": Term(
+        name="Perfect octave",
+        description="""
+An interval equal to eight degrees of a diatonic scale. Considered a perfect consonance.
+
+Where it appears: In music theory — as an interval. In guitar music — in chords and melodies. In education — in intervals.
+
+Guitarist-Specific Tips: A perfect octave is the basis of guitar riffs and bass lines.
+"""
+    ),
+
+    "PERFECT UNISON": Term(
+        name="Perfect unison",
+        description="""
+An interval equal to zero semitones (the repetition of the same note). Considered a perfect consonance.
+
+Where it appears: In music theory — as an interval. In guitar music — in unisons. In education — in intervals.
+
+Guitarist-Specific Tips: A perfect unison is a unison in guitar music.
+"""
+    ),
+
+    "PERFECT INTERVALS": Term(
+        name="Perfect intervals",
+        description="""
+Intervals that are neither major nor minor: unison, fourth, fifth, octave.
+
+Where it appears: In music theory — as intervals. In guitar music — in chords and melodies. In education — in intervals.
+
+Guitarist-Specific Tips: Perfect intervals are the basis of the harmonic structure of guitar music.
+"""
+    ),
+
+    "PURE TUNING": Term(
+        name="Pure tuning",
+        description="""
+A tuning system based on pure intervals. Used in early and folk music.
+
+Where it appears: In early music — as a tuning. In folk music — in traditions. In guitar music — in historical reconstructions.
+
+Guitarist-Specific Tips: Pure tuning requires a special approach to guitar tuning.
+"""
+    ),
+
+    "PROCESSION": Term(
+        name="Procession",
+        description="""
+A solemn musical work accompanying a procession. Characterized by clear rhythm and a march-like character.
+
+Where it appears: In military music — as a genre. In ceremonial music — in processions. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: A procession requires clear rhythm and a solemn character.
+"""
+    ),
+
+    "PATRONAGE": Term(
+        name="Patronage",
+        description="""
+Guitar slang for patronage or support of young musicians.
+
+Where it appears: In guitar slang — as support. In guitar circles — in colloquial speech. In culture — in mentoring.
+
+Guitarist-Specific Tips: Patronage is support for young guitarists.
+"""
+    ),
+
+    "PLUG": Term(
+        name="Plug",
+        description="""
+A connector for a guitar cable to the instrument or amplifier.
+
+Where it appears: In guitar equipment — as a connector. In sound recording — in connections. In guitar practice — in accessories.
+
+Guitarist-Specific Tips: A plug is a connector for a guitar cable.
+"""
+    ),
+
+    "PIN": Term(
+        name="Pin",
+        description="""
+Guitar slang for a fastening element or retainer.
+
+Where it appears: In guitar slang — as a fastener. In guitar circles — in colloquial speech. In construction — in mechanics.
+
+Guitarist-Specific Tips: A pin is a fastening element of a guitar.
+"""
+    ),
+
+    "PENALTY": Term(
+        name="Penalty",
+        description="""
+Guitar slang for a mistake in playing or an inaccuracy.
+
+Where it appears: In guitar slang — as a mistake. In guitar circles — in colloquial speech. In education — in inaccuracies.
+
+Guitarist-Specific Tips: A penalty is a mistake in guitar playing.
 """
     ),
 }

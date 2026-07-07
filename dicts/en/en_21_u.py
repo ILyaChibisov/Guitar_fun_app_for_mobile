@@ -217,4 +217,114 @@ Where it appears: In guitar slang — as a style. In guitar circles — in collo
 Guitarist-Specific Tips: Under style is playing in the style of a particular guitarist.
 """
     ),
+
+    "UD": Term(
+        name="Ud",
+        description="""
+Guitar slang for a percussion instrument or drum kit.
+
+Where it appears: In guitar slang — as drums. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: Ud is a drum kit synchronized with the guitar.
+"""
+    ),
+
+    "UZUNDURA": Term(
+        name="Uzundura",
+        description="""
+An Azerbaijani folk musical instrument, a type of tar. Has a characteristic timbre.
+
+Where it appears: In Azerbaijani folk music — as an instrument. In ethnic ensembles. In guitar music — rarely.
+
+Guitarist-Specific Tips: Uzundura is an Azerbaijani instrument rarely combined with guitar.
+"""
+    ),
+
+    "UZUN-KUY": Term(
+        name="Uzun-kuy",
+        description="""
+A Tatar or Bashkir musical work characterized by a long, drawn-out form.
+
+Where it appears: In Tatar and Bashkir folk music. In ethnic ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Uzun-kuy requires a drawn-out and expressive performance on guitar.
+"""
+    ),
+
+    "UKULELE": Term(
+        name="Ukulele",
+        description="""
+A small Hawaiian four-string guitar with a soft, bright sound. Popular in folk and popular music.
+
+Where it appears: In Hawaiian music — as the primary instrument. In popular music — in songs. In guitar music — as a small guitar.
+
+Guitarist-Specific Tips: The ukulele is a small guitar with a soft sound, often used as a guitarist's second instrument.
+"""
+    ),
+
+    "ULIGER": Term(
+        name="Uliger",
+        description="""
+Guitar slang for an amplifier or sound equipment.
+
+Where it appears: In guitar slang — as an amplifier. In guitar circles — in colloquial speech. In sound recording — in equipment.
+
+Guitarist-Specific Tips: Uliger is an amplifier for guitar.
+"""
+    ),
+
+    "UNISON": Term(
+        name="Unison",
+        description="""
+The simultaneous sounding of two or more voices at the same pitch. Creates an effect of unity and density.
+
+Where it appears: In music — as unison. In orchestra — in unisons. In guitar music — in duets.
+
+Guitarist-Specific Tips: Unison is simultaneous sounding at the same pitch, used in duets.
+"""
+    ),
+
+    "UNDERTONES": Term(
+        name="Undertones",
+        description="""
+Overtones located below the fundamental tone. Unlike overtones, undertones are rarely used in music.
+
+Where it appears: In acoustics — as a physical phenomenon. In music — rarely. In guitar music — in experimental compositions.
+
+Guitarist-Specific Tips: Undertones are a rare acoustic phenomenon not used in guitar practice.
+"""
+    ),
+
+    "URMULI": Term(
+        name="Urmuli",
+        description="""
+A Georgian folk song or dance characterized by lively rhythm and bright character.
+
+Where it appears: In Georgian folk music — as a genre. In ethnic ensembles. In guitar music — in arrangements.
+
+Guitarist-Specific Tips: Urmuli requires bright and rhythmic performance on guitar.
+"""
+    ),
+
+    "USUL": Term(
+        name="Usul",
+        description="""
+A folk musical term associated with traditional culture. In guitar terminology — rarely.
+
+Where it appears: In folk music — as a term. In ethnic music — in traditions. In guitar music — rarely.
+
+Guitarist-Specific Tips: Usul is a rare ethnic term for general knowledge.
+"""
+    ),
+
+    "UT": Term(
+        name="Ut",
+        description="""
+In solfège — a designation for the note C in some solmization systems (by Guido of Arezzo). In guitar terminology — rarely.
+
+Where it appears: In solfège — as a syllable. In education — in singing. In guitar practice — rarely.
+
+Guitarist-Specific Tips: Ut is a historical syllable for the note C, rarely used in guitar practice.
+"""
+    ),
 }
