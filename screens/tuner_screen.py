@@ -493,6 +493,8 @@ class TunerScreen(BaseScreen):
 
         try:
             import sounddevice as sd
+
+            # Проверяем наличие устройств ввода
             devices = sd.query_devices()
             input_devices = [i for i, d in enumerate(devices) if d['max_input_channels'] > 0]
 
@@ -501,12 +503,11 @@ class TunerScreen(BaseScreen):
                 self._show_temporary_hint("Микрофон не найден!", 2.0)
                 return False
 
-            # Пробуем открыть тестовый поток
+            # Пробуем открыть тестовый поток (без duration)
             try:
                 test_stream = sd.InputStream(
                     samplerate=44100,
                     channels=1,
-                    duration=0.1,
                     device=input_devices[0]
                 )
                 test_stream.start()
