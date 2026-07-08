@@ -287,7 +287,10 @@ class Sidebar(FloatLayout):
         # ============ НАСТРОЙКИ ПАНЕЛИ ============
         self.size_hint = (1, 1)
         self.pos = (0, 0)
+        # ✅ ДЕЛАЕМ ПРОЗРАЧНЫМ ДЛЯ КЛИКОВ
         self.md_bg_color = [0, 0, 0, 0]
+        # ✅ ОТКЛЮЧАЕМ ПЕРЕХВАТ КАСАНИЙ, КОГДА ЗАКРЫТ
+        self.disabled = True
 
         # ============ ОВЕРЛЕЙ (затемнение) ============
         self.overlay = SidebarOverlay(self)
@@ -398,6 +401,7 @@ class Sidebar(FloatLayout):
         self.panel.pos = (-self.panel_width, 0)
         self.panel_x = -self.panel_width
         self.overlay.hide()
+        self.disabled = True  # ✅ ОТКЛЮЧАЕМ ПЕРЕХВАТ КАСАНИЙ
 
         # Привязываемся к изменению размера окна
         Window.bind(on_resize=self._on_window_resize)
@@ -478,6 +482,8 @@ class Sidebar(FloatLayout):
             return
 
         self.is_open = True
+        # ✅ ВКЛЮЧАЕМ ПЕРЕХВАТ КАСАНИЙ
+        self.disabled = False
         # Показываем оверлей
         self.overlay.show()
         # Анимация панели: от -panel_width до 0
@@ -492,6 +498,8 @@ class Sidebar(FloatLayout):
             return
 
         self.is_open = False
+        # ✅ ОТКЛЮЧАЕМ ПЕРЕХВАТ КАСАНИЙ
+        self.disabled = True
         # Скрываем оверлей
         self.overlay.hide()
         # Анимация панели: от 0 до -panel_width
@@ -522,6 +530,10 @@ class Sidebar(FloatLayout):
 
     def on_touch_down(self, touch):
         """Обработка начала касания - определяем, можно ли перетаскивать панель"""
+        # ✅ ЕСЛИ ПАНЕЛЬ ЗАКРЫТА И НЕ В РЕЖИМЕ ПЕРЕТАСКИВАНИЯ - НЕ БЛОКИРУЕМ
+        if self.disabled and not self._is_dragging:
+            return False
+
         # Если панель закрыта - проверяем, не начали ли мы свайп с левого края
         if not self.is_open:
             # Проверяем, что касание в левой части экрана (для свайпа)
@@ -529,17 +541,14 @@ class Sidebar(FloatLayout):
                 self._touch_start_x = touch.x
                 self._touch_start_panel_x = self.panel_x
                 self._is_dragging = True
-                # Захватываем touch, чтобы не передавать дальше
                 touch.grab(self)
                 return True
-            # Если панель закрыта - не блокируем касания
             return False
 
         # Если панель открыта - проверяем, не кликнули ли по ней или оверлею
         if self.overlay and not self.overlay.disabled:
             # Если клик вне панели - оверлей закроет
             if not self.panel.collide_point(*touch.pos):
-                # Передаём касание оверлею
                 return self.overlay.on_touch_down(touch)
 
         # Клик по панели - начинаем перетаскивание
@@ -557,15 +566,12 @@ class Sidebar(FloatLayout):
         if not self._is_dragging:
             return False
 
-        # Проверяем, что touch принадлежит нам
         if touch.grab_current is not self:
             return False
 
-        # Вычисляем новую позицию панели
         delta_x = touch.x - self._touch_start_x
         new_x = self._touch_start_panel_x + delta_x
 
-        # Ограничиваем: от -panel_width до 0
         if new_x > 0:
             new_x = 0
         elif new_x < -self.panel_width:
@@ -574,11 +580,10 @@ class Sidebar(FloatLayout):
         # Если панель была закрыта и мы тянем вправо - открываем
         if not self.is_open and new_x > -self.panel_width * 0.8:
             self.is_open = True
+            self.disabled = False
             self.overlay.show()
 
-        # Обновляем позицию
         self.panel_x = new_x
-
         return True
 
     def on_touch_up(self, touch):
@@ -586,15 +591,13 @@ class Sidebar(FloatLayout):
         if not self._is_dragging:
             return False
 
-        # Проверяем, что touch принадлежит нам
         if touch.grab_current is not self:
             return False
 
-        # Отпускаем touch
         touch.ungrab(self)
         self._is_dragging = False
 
-        # Если панель была закрыта и мы её тащили - открываем только если она достаточно выехала
+        # Если панель была закрыта и мы её тащили
         if not self.is_open:
             if self.panel_x > -self.panel_width * 0.5:
                 self.open()
@@ -602,22 +605,17 @@ class Sidebar(FloatLayout):
                 self.close()
             return True
 
-        # Панель открыта - определяем, закрывать или оставлять
+        # Панель открыта - определяем
         current_x = self.panel_x
-
-        # Проверяем, был ли это свайп (короткое быстрое движение)
         delta_x = touch.x - self._touch_start_x
         is_swipe = abs(delta_x) > self._swipe_threshold
 
         if is_swipe:
-            # Свайп вправо - оставляем открытой
             if delta_x > 0:
                 self.open()
-            # Свайп влево - закрываем
             else:
                 self.close()
         else:
-            # Не свайп - определяем по позиции
             threshold = -self.panel_width * 0.5
             if current_x > threshold:
                 self.open()
