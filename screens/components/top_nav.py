@@ -41,10 +41,10 @@ class TopNav(MDCard):
         'akkordbard_parser',
         'domhve_parser',
         'rushsound_parser',
-        'settings',      # ← добавляем
-        'help',          # ← добавляем
-        'promo',         # ← добавляем
-        'feedback',      # ← добавляем
+        'settings',
+        'help',
+        'promo',
+        'feedback',
     ]
 
     # Список экранов с кастомным заголовком
@@ -122,7 +122,8 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
-        # Обработчик будет установлен из main.py
+        # ❌ УБИРАЕМ bind - обработчик будет установлен из main.py
+        # self.settings_btn.bind(on_release=self._on_settings_press)
 
         # Кнопка назад (стрелка) - возврат на предыдущий экран
         self.back_btn = MDIconButton(
@@ -337,11 +338,13 @@ class TopNav(MDCard):
                 return
             else:
                 self.left_container.add_widget(self.settings_btn)
+                # ❌ НЕ добавляем bind здесь
                 logger.info("   → Установлена иконка настроек")
                 return
 
         # 3. Все остальные экраны — показываем настройки
         self.left_container.add_widget(self.settings_btn)
+        # ❌ НЕ добавляем bind здесь
         logger.info("   → Установлена иконка настроек")
 
     def _update_right_buttons(self, screen_name):

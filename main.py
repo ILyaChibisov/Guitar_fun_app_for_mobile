@@ -141,7 +141,7 @@ from api.client import api
 from api.network_handler import network_manager
 from screens.components.bottom_nav import BottomNav
 from screens.components.top_nav import TopNav
-from screens.components.sidebar import Sidebar  # ← ДОБАВЛЯЕМ
+from screens.components.sidebar import Sidebar
 from screens.components.blocking_layer import BlockingLayer
 from config.system_bars import get_navigation_bar_height, get_status_bar_height, get_screen_density, get_all_system_info
 
@@ -221,7 +221,7 @@ class GuitarFunsApp(MDApp):
         self.screen_manager = None
         self.bottom_nav = None
         self.top_nav = None
-        self.sidebar = None  # ← ДОБАВЛЯЕМ
+        self.sidebar = None
         self.blocking_layer = None
         self.current_auth_modal = None
         self.is_auth_blocking = False
@@ -422,10 +422,9 @@ class GuitarFunsApp(MDApp):
 
         # ============ SIDEBAR ============
         self.sidebar = Sidebar(self.screen_manager)
-        # ============ ВАЖНО: СКРЫВАЕМ SIDEBAR С ПОМОЩЬЮ pos_hint ============
-        self.sidebar.pos_hint = {'x': -1.0, 'y': 0}
-        self.sidebar.is_open = False
-        logger.info("✅ Sidebar создан и скрыт (pos_hint x=-1.0)")
+        # ✅ ПРИНУДИТЕЛЬНО ЗАКРЫВАЕМ САЙДБАР (убеждаемся, что скрыт)
+        self.sidebar.close()
+        logger.info("✅ Sidebar создан и принудительно скрыт")
 
         # ============ BLOCKING LAYER ============
         self.blocking_layer = BlockingLayer()
@@ -439,8 +438,10 @@ class GuitarFunsApp(MDApp):
         root.add_widget(self.sidebar)
         root.add_widget(self.blocking_layer)
 
-        # ============ ПЕРЕОПРЕДЕЛЯЕМ КНОПКУ НАСТРОЕК ============
+        # ============ УСТАНАВЛИВАЕМ ОБРАБОТЧИК ДЛЯ КНОПКИ НАСТРОЕК ============
+        # ✅ ТОЛЬКО ОДИН РАЗ - через on_release
         self.top_nav.settings_btn.on_release = self._on_settings_press
+        # ❌ НЕ используем bind
 
         network_manager.start_monitoring()
         Window.bind(on_resize=self.on_window_resize)
@@ -452,7 +453,11 @@ class GuitarFunsApp(MDApp):
         """Обработчик нажатия на иконку настроек (шестерёнка) - открывает Sidebar"""
         logger.info("⚙️ Нажата иконка настроек → открываем Sidebar")
         if hasattr(self, 'sidebar') and self.sidebar:
+            logger.info(f"   Sidebar exists, is_open={self.sidebar.is_open}")
             self.sidebar.toggle()
+            logger.info(f"   После toggle, is_open={self.sidebar.is_open}")
+        else:
+            logger.error("❌ Sidebar не найден!")
 
     def on_window_resize(self, window, width, height):
         from config.layout_config import layout_config

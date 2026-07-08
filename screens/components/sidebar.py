@@ -2,6 +2,7 @@
 """
 Выдвижная боковая панель (Navigation Drawer)
 с аватаром пользователя и пунктами меню
+Поддержка свайпа для закрытия и перетаскивания
 """
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
@@ -15,6 +16,8 @@ from io import BytesIO
 from kivy.utils import platform
 from kivy.core.window import Window
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.widget import Widget
+from kivy.properties import NumericProperty
 
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
@@ -218,8 +221,55 @@ class SidebarHeader(MDBoxLayout):
         self.status_label.text = self._get_status_text()
 
 
+class SidebarOverlay(Widget):
+    """
+    Полупрозрачный оверлей, который перехватывает клики вне панели
+    и закрывает её
+    """
+
+    def __init__(self, sidebar, **kwargs):
+        super().__init__(**kwargs)
+        self.sidebar = sidebar
+        self.size_hint = (1, 1)
+        self.pos = (0, 0)
+        self.disabled = True
+
+        with self.canvas.before:
+            # Сохраняем ссылку на Color для изменения прозрачности
+            self.bg_color = Color(0, 0, 0, 0)
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+
+        self.bind(pos=self._update_rect, size=self._update_rect)
+
+    def _update_rect(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+
+    def show(self):
+        """Показывает оверлей с затемнением"""
+        self.disabled = False
+        self.bg_color.rgba = (0, 0, 0, 0.5)
+
+    def hide(self):
+        """Скрывает оверлей"""
+        self.disabled = True
+        self.bg_color.rgba = (0, 0, 0, 0)
+
+    def on_touch_down(self, touch):
+        if self.disabled:
+            return False
+        # Клик вне панели - закрываем
+        if not self.sidebar.collide_point(*touch.pos):
+            self.sidebar.close()
+            return True
+        return False
+
+
 class Sidebar(FloatLayout):
-    """Выдвижная боковая панель - используем FloatLayout для точного позиционирования"""
+    """Выдвижная боковая панель - с поддержкой свайпа и перетаскивания"""
+
+    # Свойство для отслеживания позиции панели
+    panel_x = NumericProperty(0)
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -228,23 +278,34 @@ class Sidebar(FloatLayout):
         self.anim_duration = 0.25
         self.panel_width = dp(300)
 
-        # ============ НАСТРОЙКИ ПАНЕЛИ ============
-        self.size_hint = (None, 1)
-        self.width = self.panel_width
-        self.height = Window.height
+        # Для отслеживания свайпа/перетаскивания
+        self._touch_start_x = 0
+        self._touch_start_panel_x = 0
+        self._is_dragging = False
+        self._swipe_threshold = dp(30)
 
-        # ============ СКРЫВАЕМ ПАНЕЛЬ ЗА ЛЕВЫМ КРАЕМ ============
-        self.pos = (-self.panel_width, 0)
+        # ============ НАСТРОЙКИ ПАНЕЛИ ============
+        self.size_hint = (1, 1)
+        self.pos = (0, 0)
+        self.md_bg_color = [0, 0, 0, 0]
+
+        # ============ ОВЕРЛЕЙ (затемнение) ============
+        self.overlay = SidebarOverlay(self)
+        self.add_widget(self.overlay)
 
         # ============ ОСНОВНАЯ КАРТОЧКА ПАНЕЛИ ============
-        self.panel_card = MDCard(
+        self.panel = MDCard(
             orientation='vertical',
-            size_hint=(1, 1),
-            radius=[0, 0, 0, 0],
-            elevation=4,
+            size_hint=(None, 1),
+            width=self.panel_width,
+            radius=[0, dp(16), dp(16), 0],
+            elevation=6,
             md_bg_color=[0.08, 0.08, 0.08, 0.98],
             padding=[0, 0, 0, 0]
         )
+        # Позиционируем панель за левым краем
+        self.panel.pos = (-self.panel_width, 0)
+        self.panel_x = -self.panel_width
 
         # Основной контейнер
         self.main_container = MDBoxLayout(
@@ -288,7 +349,7 @@ class Sidebar(FloatLayout):
         self.add_menu_item('login', 'Авторизация', 'auth')
 
         # 3. Настройки
-        self.add_menu_item('cog', 'Settings', 'settings')
+        self.add_menu_item('cog', 'Настройки', 'settings')
 
         # 4. Помощь
         self.add_menu_item('help-circle', 'Помощь', 'help')
@@ -329,33 +390,43 @@ class Sidebar(FloatLayout):
         self.scroll.add_widget(self.menu_container)
         self.main_container.add_widget(self.scroll)
 
-        self.panel_card.add_widget(self.main_container)
-        self.add_widget(self.panel_card)
+        self.panel.add_widget(self.main_container)
+        self.add_widget(self.panel)
 
         # ============ ПРИНУДИТЕЛЬНО СКРЫВАЕМ ============
         self.is_open = False
-        self.pos = (-self.panel_width, 0)
+        self.panel.pos = (-self.panel_width, 0)
+        self.panel_x = -self.panel_width
+        self.overlay.hide()
 
         # Привязываемся к изменению размера окна
         Window.bind(on_resize=self._on_window_resize)
 
-        # Дополнительно через 0.1 секунды убеждаемся, что панель скрыта
-        Clock.schedule_once(lambda dt: self._ensure_hidden(), 0.1)
+        # Привязываем panel_x для синхронизации позиции
+        self.bind(panel_x=self._on_panel_x_changed)
 
-        logger.info(f"✅ Sidebar создан, ширина={self.panel_width}dp, позиция=({self.pos[0]}, {self.pos[1]})")
+        logger.info(f"✅ Sidebar создан, ширина={self.panel_width}dp")
         logger.info("✅ Sidebar скрыт при создании")
 
-    def _ensure_hidden(self):
-        """Гарантирует, что панель скрыта"""
-        if not self.is_open:
-            self.pos = (-self.panel_width, 0)
-            logger.info(f"🔒 Sidebar принудительно скрыт: pos=({self.pos[0]}, {self.pos[1]})")
+    def _on_panel_x_changed(self, instance, value):
+        """Обновляет позицию панели при изменении panel_x"""
+        self.panel.pos = (value, 0)
+        # Обновляем прозрачность оверлея в зависимости от положения панели
+        if self.is_open:
+            progress = (value + self.panel_width) / self.panel_width
+            alpha = 0.5 * progress
+            if alpha < 0:
+                alpha = 0
+            elif alpha > 0.5:
+                alpha = 0.5
+            self.overlay.bg_color.rgba = (0, 0, 0, alpha)
 
     def _on_window_resize(self, window, width, height):
         """При изменении размера окна обновляем размер и позицию"""
         self.height = height
         if not self.is_open:
-            self.pos = (-self.panel_width, 0)
+            self.panel.pos = (-self.panel_width, 0)
+            self.panel_x = -self.panel_width
 
     def add_menu_item(self, icon, title, screen_name, is_admin=False):
         """Добавляет пункт меню"""
@@ -384,6 +455,7 @@ class Sidebar(FloatLayout):
         # Переход на экран
         if self.sm and self.sm.has_screen(screen_name):
             self.sm.current = screen_name
+            logger.info(f"✅ Переход на экран: {screen_name}")
         else:
             logger.warning(f"⚠️ Экран {screen_name} не найден")
 
@@ -402,27 +474,34 @@ class Sidebar(FloatLayout):
     def open(self):
         """Открывает панель"""
         if self.is_open:
+            logger.debug("Sidebar уже открыта")
             return
 
         self.is_open = True
-        # Анимация от -panel_width до 0
-        anim = Animation(x=0, duration=self.anim_duration, t='out_quad')
+        # Показываем оверлей
+        self.overlay.show()
+        # Анимация панели: от -panel_width до 0
+        anim = Animation(panel_x=0, duration=self.anim_duration, t='out_quad')
         anim.start(self)
         logger.info("📂 Sidebar открыта")
 
     def close(self):
         """Закрывает панель"""
         if not self.is_open:
+            logger.debug("Sidebar уже закрыта")
             return
 
         self.is_open = False
-        # Анимация от 0 до -panel_width
-        anim = Animation(x=-self.panel_width, duration=self.anim_duration, t='in_quad')
+        # Скрываем оверлей
+        self.overlay.hide()
+        # Анимация панели: от 0 до -panel_width
+        anim = Animation(panel_x=-self.panel_width, duration=self.anim_duration, t='in_quad')
         anim.start(self)
         logger.info("📂 Sidebar закрыта")
 
     def toggle(self):
         """Переключает состояние панели"""
+        logger.info(f"🔄 Sidebar toggle: is_open={self.is_open}")
         if self.is_open:
             self.close()
         else:
@@ -439,11 +518,110 @@ class Sidebar(FloatLayout):
             self.admin_item.opacity = 1 if is_admin else 0
             self.admin_item.disabled = not is_admin
 
+    # ============ ОБРАБОТКА СВАЙПА И ПЕРЕТАСКИВАНИЯ ============
+
     def on_touch_down(self, touch):
-        """Обработка касаний - закрытие при клике вне панели"""
-        if self.is_open:
-            # Если клик вне панели - закрываем
-            if not self.collide_point(*touch.pos):
-                self.close()
+        """Обработка начала касания - определяем, можно ли перетаскивать панель"""
+        # Если панель закрыта - проверяем, не начали ли мы свайп с левого края
+        if not self.is_open:
+            # Проверяем, что касание в левой части экрана (для свайпа)
+            if touch.x < dp(30):
+                self._touch_start_x = touch.x
+                self._touch_start_panel_x = self.panel_x
+                self._is_dragging = True
+                # Захватываем touch, чтобы не передавать дальше
+                touch.grab(self)
                 return True
-        return super().on_touch_down(touch)
+            # Если панель закрыта - не блокируем касания
+            return False
+
+        # Если панель открыта - проверяем, не кликнули ли по ней или оверлею
+        if self.overlay and not self.overlay.disabled:
+            # Если клик вне панели - оверлей закроет
+            if not self.panel.collide_point(*touch.pos):
+                # Передаём касание оверлею
+                return self.overlay.on_touch_down(touch)
+
+        # Клик по панели - начинаем перетаскивание
+        if self.panel.collide_point(*touch.pos):
+            self._touch_start_x = touch.x
+            self._touch_start_panel_x = self.panel_x
+            self._is_dragging = True
+            touch.grab(self)
+            return True
+
+        return False
+
+    def on_touch_move(self, touch):
+        """Обработка движения - перетаскивание панели"""
+        if not self._is_dragging:
+            return False
+
+        # Проверяем, что touch принадлежит нам
+        if touch.grab_current is not self:
+            return False
+
+        # Вычисляем новую позицию панели
+        delta_x = touch.x - self._touch_start_x
+        new_x = self._touch_start_panel_x + delta_x
+
+        # Ограничиваем: от -panel_width до 0
+        if new_x > 0:
+            new_x = 0
+        elif new_x < -self.panel_width:
+            new_x = -self.panel_width
+
+        # Если панель была закрыта и мы тянем вправо - открываем
+        if not self.is_open and new_x > -self.panel_width * 0.8:
+            self.is_open = True
+            self.overlay.show()
+
+        # Обновляем позицию
+        self.panel_x = new_x
+
+        return True
+
+    def on_touch_up(self, touch):
+        """Обработка завершения касания - определяем, открывать или закрывать"""
+        if not self._is_dragging:
+            return False
+
+        # Проверяем, что touch принадлежит нам
+        if touch.grab_current is not self:
+            return False
+
+        # Отпускаем touch
+        touch.ungrab(self)
+        self._is_dragging = False
+
+        # Если панель была закрыта и мы её тащили - открываем только если она достаточно выехала
+        if not self.is_open:
+            if self.panel_x > -self.panel_width * 0.5:
+                self.open()
+            else:
+                self.close()
+            return True
+
+        # Панель открыта - определяем, закрывать или оставлять
+        current_x = self.panel_x
+
+        # Проверяем, был ли это свайп (короткое быстрое движение)
+        delta_x = touch.x - self._touch_start_x
+        is_swipe = abs(delta_x) > self._swipe_threshold
+
+        if is_swipe:
+            # Свайп вправо - оставляем открытой
+            if delta_x > 0:
+                self.open()
+            # Свайп влево - закрываем
+            else:
+                self.close()
+        else:
+            # Не свайп - определяем по позиции
+            threshold = -self.panel_width * 0.5
+            if current_x > threshold:
+                self.open()
+            else:
+                self.close()
+
+        return True
