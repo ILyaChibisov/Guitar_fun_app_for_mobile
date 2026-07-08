@@ -104,8 +104,12 @@ class SidebarItem(CircularRippleBehavior, MDCard):
         self.add_widget(self.icon)
         self.add_widget(self.title_label)
 
+        # ✅ ПРИВЯЗЫВАЕМ on_release ДЛЯ КЛИКА ПО КАРТОЧКЕ
         self.bind(on_release=self._on_click)
         self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
+
+        # ✅ ДОБАВЛЯЕМ ОБРАБОТЧИК ДЛЯ КАСАНИЙ
+        self.bind(on_touch_down=self._on_touch)
 
     def _on_enter(self, *args):
         self.md_bg_color = [1, 1, 1, 0.05]
@@ -115,7 +119,18 @@ class SidebarItem(CircularRippleBehavior, MDCard):
 
     def _on_click(self, instance):
         if self.on_click_callback:
+            logger.info(f"🖱️ Клик по пункту меню: {self.screen_name}")
             self.on_click_callback(self.screen_name)
+
+    def _on_touch(self, instance, touch):
+        """Обработчик касания - срабатывает при клике по пункту"""
+        if self.collide_point(*touch.pos):
+            if self.on_click_callback:
+                logger.info(f"🖱️ Touch по пункту меню: {self.screen_name}")
+                # Небольшая задержка, чтобы анимация успела сработать
+                Clock.schedule_once(lambda dt: self.on_click_callback(self.screen_name), 0.05)
+                return True
+        return False
 
 
 class SidebarHeader(MDBoxLayout):
@@ -259,7 +274,7 @@ class SidebarOverlay(Widget):
         if self.disabled:
             return False
         # Клик вне панели - закрываем
-        if not self.sidebar.collide_point(*touch.pos):
+        if not self.sidebar.panel.collide_point(*touch.pos):
             self.sidebar.close()
             return True
         return False
@@ -287,9 +302,7 @@ class Sidebar(FloatLayout):
         # ============ НАСТРОЙКИ ПАНЕЛИ ============
         self.size_hint = (1, 1)
         self.pos = (0, 0)
-        # ✅ ДЕЛАЕМ ПРОЗРАЧНЫМ ДЛЯ КЛИКОВ
         self.md_bg_color = [0, 0, 0, 0]
-        # ✅ ОТКЛЮЧАЕМ ПЕРЕХВАТ КАСАНИЙ, КОГДА ЗАКРЫТ
         self.disabled = True
 
         # ============ ОВЕРЛЕЙ (затемнение) ============
@@ -401,7 +414,7 @@ class Sidebar(FloatLayout):
         self.panel.pos = (-self.panel_width, 0)
         self.panel_x = -self.panel_width
         self.overlay.hide()
-        self.disabled = True  # ✅ ОТКЛЮЧАЕМ ПЕРЕХВАТ КАСАНИЙ
+        self.disabled = True
 
         # Привязываемся к изменению размера окна
         Window.bind(on_resize=self._on_window_resize)
@@ -482,11 +495,8 @@ class Sidebar(FloatLayout):
             return
 
         self.is_open = True
-        # ✅ ВКЛЮЧАЕМ ПЕРЕХВАТ КАСАНИЙ
         self.disabled = False
-        # Показываем оверлей
         self.overlay.show()
-        # Анимация панели: от -panel_width до 0
         anim = Animation(panel_x=0, duration=self.anim_duration, t='out_quad')
         anim.start(self)
         logger.info("📂 Sidebar открыта")
@@ -498,11 +508,8 @@ class Sidebar(FloatLayout):
             return
 
         self.is_open = False
-        # ✅ ОТКЛЮЧАЕМ ПЕРЕХВАТ КАСАНИЙ
         self.disabled = True
-        # Скрываем оверлей
         self.overlay.hide()
-        # Анимация панели: от 0 до -panel_width
         anim = Animation(panel_x=-self.panel_width, duration=self.anim_duration, t='in_quad')
         anim.start(self)
         logger.info("📂 Sidebar закрыта")
@@ -520,7 +527,6 @@ class Sidebar(FloatLayout):
         if hasattr(self, 'header') and self.header:
             self.header.update_user_info()
 
-        # Обновляем видимость админки
         if hasattr(self, 'admin_item'):
             is_admin = api.is_admin()
             self.admin_item.opacity = 1 if is_admin else 0
@@ -529,14 +535,13 @@ class Sidebar(FloatLayout):
     # ============ ОБРАБОТКА СВАЙПА И ПЕРЕТАСКИВАНИЯ ============
 
     def on_touch_down(self, touch):
-        """Обработка начала касания - определяем, можно ли перетаскивать панель"""
-        # ✅ ЕСЛИ ПАНЕЛЬ ЗАКРЫТА И НЕ В РЕЖИМЕ ПЕРЕТАСКИВАНИЯ - НЕ БЛОКИРУЕМ
+        """Обработка начала касания"""
+        # Если панель отключена - не блокируем
         if self.disabled and not self._is_dragging:
             return False
 
-        # Если панель закрыта - проверяем, не начали ли мы свайп с левого края
+        # Если панель закрыта - проверяем свайп с левого края
         if not self.is_open:
-            # Проверяем, что касание в левой части экрана (для свайпа)
             if touch.x < dp(30):
                 self._touch_start_x = touch.x
                 self._touch_start_panel_x = self.panel_x
@@ -545,14 +550,21 @@ class Sidebar(FloatLayout):
                 return True
             return False
 
-        # Если панель открыта - проверяем, не кликнули ли по ней или оверлею
+        # Панель открыта - проверяем клик по оверлею
         if self.overlay and not self.overlay.disabled:
             # Если клик вне панели - оверлей закроет
             if not self.panel.collide_point(*touch.pos):
                 return self.overlay.on_touch_down(touch)
 
-        # Клик по панели - начинаем перетаскивание
+        # Клик по панели - начинаем перетаскивание или передаём дальше
         if self.panel.collide_point(*touch.pos):
+            # Проверяем, не кликнули ли по пункту меню
+            for child in self.menu_container.children:
+                if child.collide_point(*touch.pos):
+                    # Передаём касание пункту меню
+                    return False
+
+            # Если клик по пустому месту панели - начинаем перетаскивание
             self._touch_start_x = touch.x
             self._touch_start_panel_x = self.panel_x
             self._is_dragging = True
@@ -577,7 +589,6 @@ class Sidebar(FloatLayout):
         elif new_x < -self.panel_width:
             new_x = -self.panel_width
 
-        # Если панель была закрыта и мы тянем вправо - открываем
         if not self.is_open and new_x > -self.panel_width * 0.8:
             self.is_open = True
             self.disabled = False
@@ -587,7 +598,7 @@ class Sidebar(FloatLayout):
         return True
 
     def on_touch_up(self, touch):
-        """Обработка завершения касания - определяем, открывать или закрывать"""
+        """Обработка завершения касания"""
         if not self._is_dragging:
             return False
 
@@ -597,7 +608,6 @@ class Sidebar(FloatLayout):
         touch.ungrab(self)
         self._is_dragging = False
 
-        # Если панель была закрыта и мы её тащили
         if not self.is_open:
             if self.panel_x > -self.panel_width * 0.5:
                 self.open()
@@ -605,7 +615,6 @@ class Sidebar(FloatLayout):
                 self.close()
             return True
 
-        # Панель открыта - определяем
         current_x = self.panel_x
         delta_x = touch.x - self._touch_start_x
         is_swipe = abs(delta_x) > self._swipe_threshold
