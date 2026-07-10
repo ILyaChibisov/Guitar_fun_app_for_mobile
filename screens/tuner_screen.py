@@ -1,8 +1,8 @@
 # screens/tuner_screen.py
 """
-Экран гитарного тюнера - с реальным определением частоты
-Windows: sounddevice (с автоматическим выбором устройства)
-Android: JNI AudioRecord
+Экран гитарного тюнера - универсальный
+Windows: максимальное количество попыток (sounddevice, pyaudio, WASAPI, MME)
+Android: JNI AudioRecord (будет донастроен)
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Ellipse
@@ -14,7 +14,6 @@ from kivy.properties import NumericProperty, StringProperty, ListProperty
 from kivy.utils import platform
 from io import BytesIO
 import math
-import random
 import threading
 import struct
 import time
@@ -61,7 +60,18 @@ except ImportError:
     HAS_AUDIO_RECORDER = False
     logger.warning("⚠️ Модуль android_audio не найден, JNI AudioRecord недоступен")
 
-# ============ ПОПЫТКА ИМПОРТА SOUNDDEVICE ============
+# ============ ПОПЫТКА ИМПОРТА PYTHON AUDIO БИБЛИОТЕК ============
+HAS_PYAUDIO = False
+HAS_SOUNDDEVICE = False
+
+try:
+    import pyaudio
+
+    HAS_PYAUDIO = True
+    logger.info("✅ pyaudio загружен")
+except ImportError:
+    logger.warning("⚠️ pyaudio не найден")
+
 try:
     import sounddevice as sd
     import numpy as np
@@ -69,7 +79,6 @@ try:
     HAS_SOUNDDEVICE = True
     logger.info("✅ sounddevice загружен")
 except ImportError:
-    HAS_SOUNDDEVICE = False
     logger.warning("⚠️ sounddevice не найден")
 
 # ============ НАСТРОЙКИ АУДИО ============
@@ -422,7 +431,7 @@ class NoteLabel(MDLabel):
 # ============ ОСНОВНОЙ ЭКРАН ============
 
 class TunerScreen(BaseScreen):
-    """Гитарный тюнер с реальным определением частоты"""
+    """Гитарный тюнер - универсальный, с максимальными попытками"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -435,10 +444,14 @@ class TunerScreen(BaseScreen):
         self.detected_freq = 0
         self._audio_thread = None
         self._running = False
-        self._audio_backend = 'emulation'
+        self._audio_backend = 'none'
         self._audio_recorder = None
         self._sounddevice_stream = None
-        self._checked_microphone = False
+        self._pyaudio_stream = None
+        self._pyaudio = None
+        self._error_message = ""
+        self._attempts = []
+        self._device_checked = False
 
         # Текущий строй
         self.current_tuning = 'standard_6'
@@ -482,137 +495,359 @@ class TunerScreen(BaseScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
-    def _check_microphone(self):
-        """Проверяет, доступен ли микрофон на Windows"""
-        if self._checked_microphone:
-            return True
+    def _show_error(self, message):
+        """Показывает ошибку в интерфейсе"""
 
-        if IS_ANDROID:
-            self._checked_microphone = True
-            return True
+        def _update_ui():
+            self._error_message = message
+            if hasattr(self, '_hint_label'):
+                self._hint_label.text = f"❌ {message}"
+                self._hint_label.opacity = 1
+                self._hint_label.text_color = [0.8, 0.2, 0.2, 1]
+            logger.error(f"❌ {message}")
 
-        try:
-            import sounddevice as sd
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
 
-            # Проверяем наличие устройств ввода
-            devices = sd.query_devices()
-            input_devices = [i for i, d in enumerate(devices) if d['max_input_channels'] > 0]
+    def _clear_error(self):
+        """Очищает сообщение об ошибке"""
 
-            if not input_devices:
-                logger.warning("⚠️ Микрофон не найден!")
-                self._show_temporary_hint("Микрофон не найден!", 2.0)
-                return False
+        def _update_ui():
+            self._error_message = ""
+            if hasattr(self, '_hint_label'):
+                self._hint_label.text = ""
+                self._hint_label.opacity = 0
+                self._hint_label.text_color = [1, 1, 1, 0.5]
 
-            # Пробуем открыть тестовый поток (без duration)
-            try:
-                test_stream = sd.InputStream(
-                    samplerate=44100,
-                    channels=1,
-                    device=input_devices[0]
-                )
-                test_stream.start()
-                test_stream.stop()
-                test_stream.close()
-                logger.info("✅ Микрофон доступен")
-                self._checked_microphone = True
-                return True
-            except Exception as e:
-                logger.warning(f"⚠️ Микрофон недоступен: {e}")
-                self._show_temporary_hint("Микрофон недоступен!", 2.0)
-                return False
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
 
-        except Exception as e:
-            logger.warning(f"⚠️ Ошибка проверки микрофона: {e}")
-            return False
+    def _show_attempt(self, attempt_text):
+        """Показывает текущую попытку в интерфейсе"""
+
+        def _update_ui():
+            if hasattr(self, '_hint_label') and not self._error_message:
+                self._hint_label.text = f"🔄 {attempt_text}"
+                self._hint_label.opacity = 1
+                self._hint_label.text_color = [0.46, 0.70, 0.71, 1]
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
 
     def _init_audio(self, dt):
-        """Инициализация аудио для всех платформ"""
-        try:
-            if IS_ANDROID:
-                # ============ ANDROID ============
+        """Инициализация аудио - МАКСИМАЛЬНОЕ КОЛИЧЕСТВО ПОПЫТОК"""
+        self._attempts = []
+
+        if IS_ANDROID:
+            # ============ ANDROID ============
+            try:
+                from android.permissions import request_permissions, Permission
+                request_permissions([Permission.RECORD_AUDIO])
+                logger.info("✅ Запрошено разрешение RECORD_AUDIO")
+            except Exception as e:
+                self._show_error(f"Ошибка разрешений Android: {str(e)[:100]}")
+                return
+
+            if HAS_AUDIO_RECORDER:
                 try:
-                    from android.permissions import request_permissions, Permission
-                    request_permissions([Permission.RECORD_AUDIO])
-                    logger.info("✅ Запрошено разрешение RECORD_AUDIO")
+                    self._audio_recorder = get_audio_recorder()
+                    self._audio_backend = 'android_jni'
+                    logger.info("✅ Android JNI AudioRecord готов")
+                    self._show_attempt("Android AudioRecord готов")
+                    return
                 except Exception as e:
-                    logger.error(f"Ошибка запроса разрешений: {e}")
+                    self._show_error(f"JNI AudioRecord: {str(e)[:100]}")
+                    return
 
-                if HAS_AUDIO_RECORDER:
-                    try:
-                        self._audio_recorder = get_audio_recorder()
-                        self._audio_backend = 'android_jni'
-                        logger.info("✅ Android JNI AudioRecord готов")
+            self._show_error("Аудио не доступно на Android. Проверьте разрешения.")
+            self._audio_backend = 'none'
+
+        else:
+            # ============ WINDOWS / MACOS / LINUX ============
+            logger.info("=" * 60)
+            logger.info("🔍 НАЧАЛО ПОИСКА МИКРОФОНА (Windows)")
+            logger.info("=" * 60)
+
+            # ===== ПОПЫТКА 1: SOUNDDEVICE с WASAPI =====
+            if HAS_SOUNDDEVICE:
+                try:
+                    import sounddevice as sd
+                    self._show_attempt("Попытка 1: sounddevice (WASAPI)...")
+                    logger.info("🔹 Попытка 1: sounddevice (WASAPI)...")
+
+                    devices = sd.query_devices()
+                    input_devices = []
+
+                    for i, device in enumerate(devices):
+                        if device['max_input_channels'] > 0:
+                            name = device['name']
+                            input_devices.append({'index': i, 'name': name})
+                            logger.info(f"   Устройство {i}: {name}")
+
+                    if input_devices:
+                        # Ищем WASAPI или микрофон
+                        selected = None
+                        for dev in input_devices:
+                            if 'wasapi' in dev['name'].lower() or 'loopback' in dev['name'].lower():
+                                selected = dev
+                                logger.info(f"   ✅ Найдено WASAPI: {dev['name']}")
+                                break
+
+                        if selected is None:
+                            for dev in input_devices:
+                                if 'mic' in dev['name'].lower() or 'микрофон' in dev['name'].lower():
+                                    selected = dev
+                                    logger.info(f"   ✅ Найдено устройство с микрофоном: {dev['name']}")
+                                    break
+
+                        if selected is None:
+                            selected = input_devices[0]
+                            logger.info(f"   ✅ Используем первое устройство: {selected['name']}")
+
+                        self._audio_backend = 'sounddevice'
+                        logger.info(f"✅ sounddevice выбран: {selected['name']}")
+                        self._show_attempt(f"sounddevice OK: {selected['name'][:30]}")
                         return
-                    except Exception as e:
-                        logger.error(f"❌ Ошибка JNI AudioRecord: {e}")
+                    else:
+                        logger.warning("⚠️ sounddevice: нет устройств ввода")
+                        self._attempts.append("sounddevice: устройства ввода не найдены")
 
-                logger.warning("⚠️ Аудио не доступно на Android, используем эмуляцию")
-                self._audio_backend = 'emulation'
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.error(f"❌ sounddevice ошибка: {error_msg}")
+                    self._attempts.append(f"sounddevice: {error_msg[:100]}")
 
-            else:
-                # ============ WINDOWS / MACOS / LINUX ============
-                if HAS_SOUNDDEVICE:
-                    try:
-                        import sounddevice as sd
+            # ===== ПОПЫТКА 2: SOUNDDEVICE с MME (без WASAPI) =====
+            if HAS_SOUNDDEVICE:
+                try:
+                    import sounddevice as sd
+                    self._show_attempt("Попытка 2: sounddevice (MME)...")
+                    logger.info("🔹 Попытка 2: sounddevice (MME)...")
 
-                        # Проверяем наличие устройств ввода
-                        devices = sd.query_devices()
-                        input_devices = [i for i, d in enumerate(devices) if d['max_input_channels'] > 0]
+                    # Пробуем с host_api='MME'
+                    devices = sd.query_devices()
+                    input_devices = [i for i, d in enumerate(devices) if d['max_input_channels'] > 0]
 
-                        if input_devices:
-                            logger.info(f"🎤 Найдено устройств ввода: {len(input_devices)}")
-                            for idx in input_devices:
-                                logger.info(f"   - {devices[idx]['name']}")
+                    if input_devices:
+                        # Пробуем разные частоты
+                        for rate in [48000, 44100, 22050, 16000]:
+                            try:
+                                test_stream = sd.InputStream(
+                                    device=input_devices[0],
+                                    samplerate=rate,
+                                    channels=1,
+                                    blocksize=CHUNK_SIZE,
+                                    dtype='float32',
+                                    latency='high'
+                                )
+                                test_stream.start()
+                                test_stream.stop()
+                                test_stream.close()
 
-                            self._audio_backend = 'sounddevice'
-                            logger.info("✅ sounddevice загружен (Desktop)")
+                                self._audio_backend = 'sounddevice_mme'
+                                logger.info(f"✅ sounddevice (MME) работает с частотой {rate}Hz")
+                                self._show_attempt(f"sounddevice MME OK ({rate}Hz)")
+                                return
+                            except:
+                                continue
+                    else:
+                        logger.warning("⚠️ sounddevice MME: нет устройств ввода")
+                        self._attempts.append("sounddevice MME: устройства ввода не найдены")
+
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.error(f"❌ sounddevice MME ошибка: {error_msg}")
+                    self._attempts.append(f"sounddevice MME: {error_msg[:100]}")
+
+            # ===== ПОПЫТКА 3: PYAUDIO с разными форматами =====
+            if HAS_PYAUDIO:
+                try:
+                    import pyaudio
+                    self._show_attempt("Попытка 3: PyAudio...")
+                    logger.info("🔹 Попытка 3: PyAudio...")
+
+                    p = pyaudio.PyAudio()
+                    input_devices = []
+
+                    for i in range(p.get_device_count()):
+                        info = p.get_device_info_by_index(i)
+                        if info.get('maxInputChannels', 0) > 0:
+                            input_devices.append({
+                                'index': i,
+                                'name': info.get('name', 'Unknown'),
+                                'channels': info.get('maxInputChannels', 0)
+                            })
+                            logger.info(f"   Устройство {i}: {info.get('name')}")
+
+                    p.terminate()
+
+                    if input_devices:
+                        # Пробуем разные форматы и частоты
+                        formats = [
+                            (pyaudio.paInt16, 'paInt16'),
+                            (pyaudio.paInt32, 'paInt32'),
+                            (pyaudio.paFloat32, 'paFloat32'),
+                        ]
+                        rates = [48000, 44100, 22050, 16000, 11025, 8000]
+
+                        for fmt, fmt_name in formats:
+                            for rate in rates:
+                                try:
+                                    p = pyaudio.PyAudio()
+                                    test_stream = p.open(
+                                        format=fmt,
+                                        channels=1,
+                                        rate=rate,
+                                        input=True,
+                                        input_device_index=input_devices[0]['index'],
+                                        frames_per_buffer=CHUNK_SIZE,
+                                        start=False
+                                    )
+                                    test_stream.start_stream()
+                                    test_stream.stop_stream()
+                                    test_stream.close()
+                                    p.terminate()
+
+                                    self._audio_backend = 'pyaudio'
+                                    logger.info(f"✅ PyAudio работает: {fmt_name}, {rate}Hz")
+                                    self._show_attempt(f"PyAudio OK ({fmt_name}, {rate}Hz)")
+                                    return
+                                except:
+                                    try:
+                                        p.terminate()
+                                    except:
+                                        pass
+                                    continue
+                    else:
+                        logger.warning("⚠️ PyAudio: нет устройств ввода")
+                        self._attempts.append("PyAudio: устройства ввода не найдены")
+
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.error(f"❌ PyAudio ошибка: {error_msg}")
+                    self._attempts.append(f"PyAudio: {error_msg[:100]}")
+
+            # ===== ПОПЫТКА 4: PYAUDIO с другим устройством =====
+            if HAS_PYAUDIO:
+                try:
+                    import pyaudio
+                    self._show_attempt("Попытка 4: PyAudio (другие устройства)...")
+                    logger.info("🔹 Попытка 4: PyAudio (другие устройства)...")
+
+                    p = pyaudio.PyAudio()
+                    input_devices = []
+
+                    for i in range(p.get_device_count()):
+                        info = p.get_device_info_by_index(i)
+                        if info.get('maxInputChannels', 0) > 0:
+                            input_devices.append({
+                                'index': i,
+                                'name': info.get('name', 'Unknown')
+                            })
+
+                    p.terminate()
+
+                    # Пробуем каждое устройство
+                    for dev in input_devices:
+                        try:
+                            p = pyaudio.PyAudio()
+                            test_stream = p.open(
+                                format=pyaudio.paInt16,
+                                channels=1,
+                                rate=44100,
+                                input=True,
+                                input_device_index=dev['index'],
+                                frames_per_buffer=CHUNK_SIZE,
+                                start=False
+                            )
+                            test_stream.start_stream()
+                            test_stream.stop_stream()
+                            test_stream.close()
+                            p.terminate()
+
+                            self._audio_backend = 'pyaudio'
+                            logger.info(f"✅ PyAudio работает с устройством: {dev['name']}")
+                            self._show_attempt(f"PyAudio OK: {dev['name'][:30]}")
                             return
-                        else:
-                            logger.warning("⚠️ Нет устройств ввода! Проверьте подключение микрофона.")
-                    except Exception as e:
-                        logger.error(f"❌ Ошибка инициализации sounddevice: {e}")
+                        except:
+                            try:
+                                p.terminate()
+                            except:
+                                pass
+                            continue
 
-                # Если sounddevice не работает - эмуляция
-                logger.warning("⚠️ Аудио не доступно, используем эмуляцию")
-                self._audio_backend = 'emulation'
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.error(f"❌ PyAudio (другие) ошибка: {error_msg}")
+                    self._attempts.append(f"PyAudio (другие): {error_msg[:100]}")
 
-        except Exception as e:
-            logger.error(f"Ошибка инициализации аудио: {e}")
-            self._audio_backend = 'emulation'
+            # ===== ВСЕ ПОПЫТКИ НЕ УДАЛИСЬ =====
+            logger.error("=" * 60)
+            logger.error("❌ ВСЕ ПОПЫТКИ НЕ УДАЛИСЬ")
+            logger.error("=" * 60)
+
+            # Формируем подробное сообщение об ошибке
+            error_lines = []
+            error_lines.append("Не удалось найти рабочий микрофон.")
+            error_lines.append("")
+            error_lines.append("Проверьте:")
+            error_lines.append("1. Подключен ли микрофон к компьютеру")
+            error_lines.append("2. Разрешён ли доступ к микрофону в Windows Settings")
+            error_lines.append("3. Закрыты ли другие программы (Discord, Zoom, Skype)")
+            error_lines.append("")
+            error_lines.append("Попытки:")
+            for i, attempt in enumerate(self._attempts[:5], 1):
+                error_lines.append(f"  {i}. {attempt}")
+
+            if not self._attempts:
+                error_lines.append("  - Нет попыток (возможно, библиотеки не установлены)")
+
+            error_lines.append("")
+            error_lines.append("Установите sounddevice: pip install sounddevice numpy")
+
+            full_error = "\n".join(error_lines)
+            self._show_error(full_error)
+            self._audio_backend = 'none'
 
     def _start_audio_thread(self):
         """Запускает поток захвата аудио"""
         if self._running:
             return
 
+        if self._audio_backend == 'none':
+            self._show_error("Аудио не инициализировано")
+            return
+
         self._running = True
+        self._clear_error()
 
         if self._audio_backend == 'android_jni':
             if self._audio_recorder:
-                self._audio_recorder.start_recording(
-                    callback=self._on_audio_data,
-                    sample_rate=SAMPLE_RATE,
-                    chunk_size=CHUNK_SIZE
-                )
-                logger.info("🎤 Android JNI AudioRecord запущен")
+                try:
+                    self._audio_recorder.start_recording(
+                        callback=self._on_audio_data,
+                        sample_rate=SAMPLE_RATE,
+                        chunk_size=CHUNK_SIZE
+                    )
+                    logger.info("🎤 Android JNI AudioRecord запущен")
+                except Exception as e:
+                    self._show_error(f"JNI AudioRecord: {str(e)[:100]}")
+                    self._running = False
             else:
-                self._audio_loop_emulation()
-        elif self._audio_backend == 'sounddevice':
-            # Проверяем микрофон перед запуском
-            if IS_WINDOWS and not self._check_microphone():
-                self._show_temporary_hint("Микрофон не найден!", 2.0)
+                self._show_error("JNI AudioRecord не инициализирован")
                 self._running = False
-                return
 
+        elif self._audio_backend == 'sounddevice' or self._audio_backend == 'sounddevice_mme':
             self._audio_thread = threading.Thread(target=self._audio_loop_sounddevice)
             self._audio_thread.daemon = True
             self._audio_thread.start()
             logger.info("🎤 sounddevice поток запущен")
-        else:
-            self._audio_thread = threading.Thread(target=self._audio_loop_emulation)
+
+        elif self._audio_backend == 'pyaudio':
+            self._audio_thread = threading.Thread(target=self._audio_loop_pyaudio)
             self._audio_thread.daemon = True
             self._audio_thread.start()
-            logger.info("🎵 Эмуляция запущена")
+            logger.info("🎤 pyaudio поток запущен")
+        else:
+            self._show_error(f"Неизвестный бэкенд: {self._audio_backend}")
+            self._running = False
 
     def _on_audio_data(self, data):
         """Callback от Android AudioRecord"""
@@ -625,14 +860,13 @@ class TunerScreen(BaseScreen):
                 Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
 
     def _audio_loop_sounddevice(self):
-        """Захват через sounddevice (Windows/Desktop) с умным выбором устройства"""
+        """Захват через sounddevice"""
         try:
             import sounddevice as sd
             import numpy as np
 
-            logger.info("🔍 Поиск аудио-устройств ввода...")
+            logger.info("🔍 sounddevice: поиск устройств...")
 
-            # ============ ПОЛУЧАЕМ СПИСОК УСТРОЙСТВ ============
             devices = sd.query_devices()
             input_devices = []
 
@@ -641,154 +875,236 @@ class TunerScreen(BaseScreen):
                     input_devices.append({
                         'index': i,
                         'name': device['name'],
-                        'channels': device['max_input_channels'],
-                        'sample_rates': device.get('default_samplerate', 0)
+                        'channels': device['max_input_channels']
                     })
-                    logger.info(f"   Устройство {i}: {device['name']} (каналов: {device['max_input_channels']})")
+                    logger.info(f"   Устройство {i}: {device['name']}")
 
             if not input_devices:
-                logger.warning("⚠️ Нет устройств ввода! Проверьте подключение микрофона.")
-                self._audio_loop_emulation()
+                self._show_error("sounddevice: нет устройств ввода")
+                self._running = False
                 return
 
-            # ============ ВЫБИРАЕМ ЛУЧШЕЕ УСТРОЙСТВО ============
-            selected_device = None
-            priority_keywords = ['microphone', 'mic', 'input', 'audio', 'usb', 'cable']
+            # Выбираем устройство
+            selected_dev = None
 
-            # Сначала ищем по ключевым словам
+            # Ищем с микрофоном
             for dev in input_devices:
                 name_lower = dev['name'].lower()
-                for keyword in priority_keywords:
-                    if keyword in name_lower:
-                        if selected_device is None:
-                            selected_device = dev
-                        if keyword in ['microphone', 'mic']:
-                            selected_device = dev
-                            logger.info(f"✅ Найдено устройство с '{keyword}': {dev['name']}")
-                            break
-                if selected_device and 'microphone' in selected_device['name'].lower():
+                if 'mic' in name_lower or 'микрофон' in name_lower:
+                    selected_dev = dev
+                    logger.info(f"✅ Выбрано устройство с микрофоном: {dev['name']}")
                     break
 
-            # Если не нашли по ключевым словам - берем первое
-            if selected_device is None:
-                selected_device = input_devices[0]
-                logger.info(f"✅ Используем устройство по умолчанию: {selected_device['name']}")
+            if selected_dev is None:
+                selected_dev = input_devices[0]
+                logger.info(f"✅ Используем устройство по умолчанию: {selected_dev['name']}")
 
-            device_index = selected_device['index']
-            device_name = selected_device['name']
-            max_channels = selected_device['channels']
+            device_index = selected_dev['index']
+            device_name = selected_dev['name']
 
-            # ============ ОПРЕДЕЛЯЕМ ПОДДЕРЖИВАЕМУЮ ЧАСТОТУ ============
-            sample_rates_to_try = [44100, 48000, 22050, 16000, 11025, 8000]
-            selected_rate = None
+            # Пробуем разные частоты
+            rates = [48000, 44100, 22050, 16000]
+            selected_rate = 44100
 
-            for rate in sample_rates_to_try:
+            for rate in rates:
                 try:
-                    sd.check_input_settings(
+                    test_stream = sd.InputStream(
                         device=device_index,
                         samplerate=rate,
-                        channels=min(1, max_channels)
+                        channels=1,
+                        blocksize=CHUNK_SIZE,
+                        dtype='float32',
+                        latency='high'
                     )
+                    test_stream.start()
+                    test_stream.stop()
+                    test_stream.close()
                     selected_rate = rate
-                    logger.info(f"✅ Устройство поддерживает {rate}Hz")
+                    logger.info(f"✅ Устройство работает с частотой {rate}Hz")
                     break
-                except Exception as e:
-                    logger.debug(f"   {rate}Hz не поддерживается: {e}")
+                except:
                     continue
-
-            if selected_rate is None:
-                logger.warning("⚠️ Не удалось найти поддерживаемую частоту, используем 44100")
-                selected_rate = 44100
-
-            # ============ ОТКРЫВАЕМ ПОТОК ============
-            logger.info(f"🎤 Открываем поток: {device_name}, {selected_rate}Hz, {min(1, max_channels)} канал(а)")
 
             def callback(indata, frames, time_info, status):
                 if status:
-                    logger.warning(f"Статус звука: {status}")
+                    logger.warning(f"Статус: {status}")
 
                 if not self._running or not self.is_listening:
                     return
 
                 try:
-                    if indata is None or len(indata) == 0:
-                        return
-
-                    if indata.shape[1] > 0:
+                    if indata is not None and len(indata) > 0:
                         audio_int16 = (indata[:, 0] * 32767).astype(np.int16)
                         data_bytes = audio_int16.tobytes()
-
                         if len(data_bytes) > 0:
                             freq = detect_pitch(data_bytes, selected_rate)
                             if freq > 0:
                                 Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
                 except Exception as e:
-                    logger.error(f"Ошибка обработки аудио: {e}")
+                    logger.error(f"Ошибка обработки: {e}")
 
-            # Создаем поток с правильными параметрами
-            try:
-                self._sounddevice_stream = sd.InputStream(
-                    device=device_index,
-                    samplerate=selected_rate,
-                    channels=min(1, max_channels),
-                    callback=callback,
-                    blocksize=CHUNK_SIZE,
-                    dtype='float32',
-                    latency='low'
-                )
-            except Exception as e:
-                logger.error(f"❌ Не удалось создать поток: {e}")
-                try:
-                    logger.info("🔄 Пробуем с устройством по умолчанию...")
-                    self._sounddevice_stream = sd.InputStream(
-                        samplerate=selected_rate,
-                        channels=1,
-                        callback=callback,
-                        blocksize=CHUNK_SIZE,
-                        dtype='float32'
-                    )
-                except Exception as e2:
-                    logger.error(f"❌ Не удалось создать поток с устройством по умолчанию: {e2}")
-                    self._audio_loop_emulation()
-                    return
+            self._sounddevice_stream = sd.InputStream(
+                device=device_index,
+                samplerate=selected_rate,
+                channels=1,
+                callback=callback,
+                blocksize=CHUNK_SIZE,
+                dtype='float32',
+                latency='high'
+            )
 
             self._sounddevice_stream.start()
-            logger.info(f"✅ sounddevice поток запущен (устройство: {device_name})")
+            logger.info(f"✅ sounddevice захват запущен ({device_name}, {selected_rate}Hz)")
 
-            # Ждем завершения
             while self._running:
                 time.sleep(0.1)
 
-            # Закрываем поток
             if self._sounddevice_stream:
                 self._sounddevice_stream.stop()
                 self._sounddevice_stream.close()
                 self._sounddevice_stream = None
 
         except Exception as e:
-            logger.error(f"❌ Ошибка sounddevice: {e}")
-            logger.info("🔄 Переключаемся на эмуляцию...")
-            self._audio_loop_emulation()
+            self._show_error(f"sounddevice: {str(e)[:150]}")
+            self._running = False
 
-    def _audio_loop_emulation(self):
-        """Эмуляция для тестирования"""
-        logger.info("🎵 Эмуляция аудио")
-        while self._running:
-            if self.tuning_freqs:
-                freq = random.choice(self.tuning_freqs)
-                freq += (random.random() - 0.5) * 10
-                Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
-            time.sleep(0.3)
+    def _audio_loop_pyaudio(self):
+        """Захват через pyaudio"""
+        try:
+            import pyaudio
+
+            self._pyaudio = pyaudio.PyAudio()
+
+            input_devices = []
+            for i in range(self._pyaudio.get_device_count()):
+                info = self._pyaudio.get_device_info_by_index(i)
+                if info.get('maxInputChannels', 0) > 0:
+                    input_devices.append({
+                        'index': i,
+                        'name': info.get('name', 'Unknown')
+                    })
+                    logger.info(f"🎤 Найдено устройство: {info.get('name')}")
+
+            if not input_devices:
+                self._show_error("pyaudio: нет устройств ввода")
+                self._running = False
+                return
+
+            # Выбираем устройство с микрофоном
+            selected_dev = None
+            for dev in input_devices:
+                name_lower = dev['name'].lower()
+                if 'mic' in name_lower or 'микрофон' in name_lower:
+                    selected_dev = dev
+                    logger.info(f"✅ Выбрано устройство: {dev['name']}")
+                    break
+
+            if selected_dev is None:
+                selected_dev = input_devices[0]
+                logger.info(f"✅ Используем устройство по умолчанию: {selected_dev['name']}")
+
+            # Пробуем разные форматы и частоты
+            formats = [
+                (pyaudio.paInt16, 'paInt16'),
+                (pyaudio.paInt32, 'paInt32'),
+                (pyaudio.paFloat32, 'paFloat32'),
+            ]
+            rates = [48000, 44100, 22050, 16000, 8000]
+
+            stream = None
+            selected_format = None
+            selected_rate = None
+
+            for fmt, fmt_name in formats:
+                for rate in rates:
+                    try:
+                        test_stream = self._pyaudio.open(
+                            format=fmt,
+                            channels=1,
+                            rate=rate,
+                            input=True,
+                            input_device_index=selected_dev['index'],
+                            frames_per_buffer=CHUNK_SIZE,
+                            start=False
+                        )
+                        test_stream.start_stream()
+                        test_stream.stop_stream()
+                        test_stream.close()
+
+                        selected_format = fmt
+                        selected_rate = rate
+                        logger.info(f"✅ PyAudio работает: {fmt_name}, {rate}Hz")
+                        break
+                    except:
+                        continue
+                if selected_format is not None:
+                    break
+
+            if selected_format is None:
+                self._show_error("pyaudio: не удалось открыть поток ни с одним параметром")
+                self._running = False
+                return
+
+            stream = self._pyaudio.open(
+                format=selected_format,
+                channels=1,
+                rate=selected_rate,
+                input=True,
+                input_device_index=selected_dev['index'],
+                frames_per_buffer=CHUNK_SIZE,
+                start=True
+            )
+
+            self._pyaudio_stream = stream
+            logger.info(f"✅ pyaudio захват запущен ({selected_dev['name']}, {selected_rate}Hz)")
+
+            while self._running:
+                try:
+                    if stream.is_active():
+                        data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
+                        if data:
+                            freq = detect_pitch(data, selected_rate)
+                            if freq > 0:
+                                Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
+                except IOError as e:
+                    if e.errno == pyaudio.paInputOverflowed:
+                        continue
+                    else:
+                        self._show_error(f"pyaudio: {str(e)[:100]}")
+                        break
+                except Exception as e:
+                    self._show_error(f"pyaudio: {str(e)[:100]}")
+                    break
+
+            if stream:
+                try:
+                    stream.stop_stream()
+                    stream.close()
+                except:
+                    pass
+            if self._pyaudio:
+                try:
+                    self._pyaudio.terminate()
+                except:
+                    pass
+                self._pyaudio = None
+
+        except Exception as e:
+            self._show_error(f"pyaudio: {str(e)[:150]}")
+            self._running = False
 
     def _stop_audio_thread(self):
         """Останавливает аудио поток"""
         self._running = False
 
         if self._audio_backend == 'android_jni' and self._audio_recorder:
-            self._audio_recorder.stop_recording()
-            logger.info("⏹ JNI AudioRecord остановлен")
+            try:
+                self._audio_recorder.stop_recording()
+                logger.info("⏹ JNI AudioRecord остановлен")
+            except:
+                pass
 
-        if self._audio_backend == 'sounddevice' and self._sounddevice_stream:
+        if self._audio_backend in ['sounddevice', 'sounddevice_mme'] and self._sounddevice_stream:
             try:
                 self._sounddevice_stream.stop()
                 self._sounddevice_stream.close()
@@ -797,10 +1113,27 @@ class TunerScreen(BaseScreen):
             except:
                 pass
 
+        if self._audio_backend == 'pyaudio':
+            if self._pyaudio_stream:
+                try:
+                    self._pyaudio_stream.stop_stream()
+                    self._pyaudio_stream.close()
+                except:
+                    pass
+                self._pyaudio_stream = None
+            if self._pyaudio:
+                try:
+                    self._pyaudio.terminate()
+                except:
+                    pass
+                self._pyaudio = None
+            logger.info("⏹ pyaudio остановлен")
+
         if self._audio_thread and self._audio_thread.is_alive():
             self._audio_thread.join(timeout=1)
         self._audio_thread = None
 
+        self._clear_error()
         logger.info("⏹ Аудио поток остановлен")
 
     def _process_frequency(self, freq):
@@ -1084,12 +1417,13 @@ class TunerScreen(BaseScreen):
 
         content.add_widget(menu_card)
 
+        # ============ ЛЕЙБЛ ДЛЯ ОШИБОК И ПОДСКАЗОК ============
         self._hint_label = MDLabel(
             text="",
-            font_size=sp(11),
+            font_size=sp(12),
             halign="center",
             size_hint_y=None,
-            height=dp(22),
+            height=dp(30),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
             opacity=0
@@ -1107,21 +1441,18 @@ class TunerScreen(BaseScreen):
     def toggle_tuner(self, instance):
         """Включает/выключает тюнер"""
         if not self.is_listening:
-            # Проверяем микрофон перед запуском
-            if self._audio_backend == 'sounddevice' and IS_WINDOWS:
-                if not self._check_microphone():
-                    return
+            if self._audio_backend == 'none':
+                self._show_error("Аудио не инициализировано. Проверьте настройки.")
+                return
 
             self.is_listening = True
             self.play_btn.icon = "stop"
             self.play_btn.icon_color = [0.8, 0.3, 0.3, 1]
-            self._show_temporary_hint("Тюнер запущен")
             self._start_audio_thread()
         else:
             self.is_listening = False
             self.play_btn.icon = "play"
             self.play_btn.icon_color = [0.46, 0.70, 0.71, 1]
-            self._show_temporary_hint("Тюнер остановлен")
             self._stop_audio_thread()
 
             if hasattr(self, 'tuner_dial'):
@@ -1149,23 +1480,35 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'note_scale'):
             self.note_scale.set_current_note('--')
 
-        self._show_temporary_hint("Сброшено")
+        self._clear_error()
         logger.info("🔄 Тюнер сброшен")
 
     def _show_temporary_hint(self, text, duration=1.5):
-        if hasattr(self, '_hint_label') and self._hint_label:
-            self._hint_label.text = text
-            self._hint_label.opacity = 1
-            if hasattr(self, '_hint_timer') and self._hint_timer:
-                Clock.unschedule(self._hint_timer)
-            self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), duration)
+        def _update_ui():
+            if hasattr(self, '_hint_label') and self._hint_label:
+                if self._error_message:
+                    return
+                self._hint_label.text = text
+                self._hint_label.opacity = 1
+                self._hint_label.text_color = [1, 1, 1, 0.7]
+                if hasattr(self, '_hint_timer') and self._hint_timer:
+                    Clock.unschedule(self._hint_timer)
+                self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), duration)
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
 
     def _hide_hint(self):
-        if hasattr(self, '_hint_label') and self._hint_label:
-            self._hint_label.text = ""
-            self._hint_label.opacity = 0
-            if hasattr(self, '_hint_timer'):
-                self._hint_timer = None
+        def _update_ui():
+            if hasattr(self, '_hint_label') and self._hint_label:
+                if self._error_message:
+                    return
+                self._hint_label.text = ""
+                self._hint_label.opacity = 0
+                self._hint_label.text_color = [1, 1, 1, 0.5]
+                if hasattr(self, '_hint_timer'):
+                    self._hint_timer = None
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
 
     def on_enter(self):
         logger.info("Вход в экран тюнера")
