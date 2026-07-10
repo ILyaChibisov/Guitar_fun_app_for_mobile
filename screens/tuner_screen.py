@@ -41,19 +41,15 @@ IS_ANDROID = platform == 'android'
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
 # ============ ПОПЫТКА ИМПОРТА ANDROID AUDIO ============
 try:
     from utils.android_audio import get_audio_recorder, set_debug_callback
-
     HAS_AUDIO_RECORDER = True
     logger.info("✅ Модуль android_audio загружен")
 except ImportError:
@@ -66,7 +62,6 @@ HAS_SOUNDDEVICE = False
 
 try:
     import pyaudio
-
     HAS_PYAUDIO = True
     logger.info("✅ pyaudio загружен")
 except ImportError:
@@ -75,7 +70,6 @@ except ImportError:
 try:
     import sounddevice as sd
     import numpy as np
-
     HAS_SOUNDDEVICE = True
     logger.info("✅ sounddevice загружен")
 except ImportError:
@@ -108,12 +102,40 @@ TUNINGS = {
         'freqs': [73.42, 98.00, 146.83, 196.00, 246.94, 293.66],
         'note_names': ['D', 'G', 'D', 'G', 'B', 'D'],
     },
+    'open_d': {
+        'name': 'Open D',
+        'strings': 6,
+        'notes': ['D2', 'A2', 'D3', 'F#3', 'A3', 'D4'],
+        'freqs': [73.42, 110.00, 146.83, 185.00, 220.00, 293.66],
+        'note_names': ['D', 'A', 'D', 'F#', 'A', 'D'],
+    },
+    'dadgad': {
+        'name': 'DADGAD',
+        'strings': 6,
+        'notes': ['D2', 'A2', 'D3', 'G3', 'A3', 'D4'],
+        'freqs': [73.42, 110.00, 146.83, 196.00, 220.00, 293.66],
+        'note_names': ['D', 'A', 'D', 'G', 'A', 'D'],
+    },
+    'half_step_down': {
+        'name': 'На полтона ниже',
+        'strings': 6,
+        'notes': ['Eb2', 'Ab2', 'Db3', 'Gb3', 'Bb3', 'Eb4'],
+        'freqs': [77.78, 103.83, 138.59, 185.00, 233.08, 311.13],
+        'note_names': ['Eb', 'Ab', 'Db', 'Gb', 'Bb', 'Eb'],
+    },
     'bass_4': {
         'name': 'Бас 4-струнный',
         'strings': 4,
         'notes': ['E1', 'A1', 'D2', 'G2'],
         'freqs': [41.20, 55.00, 73.42, 98.00],
         'note_names': ['E', 'A', 'D', 'G'],
+    },
+    'bass_5': {
+        'name': 'Бас 5-струнный',
+        'strings': 5,
+        'notes': ['B0', 'E1', 'A1', 'D2', 'G2'],
+        'freqs': [30.87, 41.20, 55.00, 73.42, 98.00],
+        'note_names': ['B', 'E', 'A', 'D', 'G'],
     },
     'ukulele': {
         'name': 'Укулеле',
@@ -124,26 +146,63 @@ TUNINGS = {
     },
 }
 
-# Все ноты для определения
+# ============ ВСЕ НОТЫ ДЛЯ ОПРЕДЕЛЕНИЯ (ПОЛНЫЙ ДИАПАЗОН) ============
 NOTES = {
-    'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13,
-    'E': 329.63, 'F': 349.23, 'F#': 369.99, 'G': 392.00,
-    'G#': 415.30, 'A': 440.00, 'A#': 466.16, 'B': 493.88,
-    'C1': 32.70, 'C#1': 34.65, 'D1': 36.71, 'D#1': 38.89,
-    'E1': 41.20, 'F1': 43.65, 'F#1': 46.25, 'G1': 49.00,
-    'G#1': 51.91, 'A1': 55.00, 'A#1': 58.27, 'B1': 61.74,
-    'C2': 65.41, 'C#2': 69.30, 'D2': 73.42, 'D#2': 77.78,
-    'E2': 82.41, 'F2': 87.31, 'F#2': 92.50, 'G2': 98.00,
-    'G#2': 103.83, 'A2': 110.00, 'A#2': 116.54, 'B2': 123.47,
+    # Ноты для баса (0-2 октава)
+    'B0': 30.87,
+    'C1': 32.70, 'C#1': 34.65,
+    'D1': 36.71, 'D#1': 38.89,
+    'E1': 41.20,
+    'F1': 43.65, 'F#1': 46.25,
+    'G1': 49.00, 'G#1': 51.91,
+    'A1': 55.00, 'A#1': 58.27,
+    'B1': 61.74,
+    'C2': 65.41, 'C#2': 69.30,
+    'D2': 73.42, 'D#2': 77.78,
+    'E2': 82.41,
+    'F2': 87.31, 'F#2': 92.50,
+    'G2': 98.00, 'G#2': 103.83,
+    'A2': 110.00, 'A#2': 116.54,
+    'B2': 123.47,
+    # Ноты для гитары (3-4 октава)
+    'C3': 130.81, 'C#3': 138.59,
+    'D3': 146.83, 'D#3': 155.56,
+    'E3': 164.81,
+    'F3': 174.61, 'F#3': 185.00,
+    'G3': 196.00, 'G#3': 207.65,
+    'A3': 220.00, 'A#3': 233.08,
+    'B3': 246.94,
+    'C4': 261.63, 'C#4': 277.18,
+    'D4': 293.66, 'D#4': 311.13,
+    'E4': 329.63,
+    'F4': 349.23, 'F#4': 369.99,
+    'G4': 392.00, 'G#4': 415.30,
+    'A4': 440.00, 'A#4': 466.16,
+    'B4': 493.88,
+    # Ноты для укулеле и высоких позиций (5-6 октава)
+    'C5': 523.25, 'C#5': 554.37,
+    'D5': 587.33, 'D#5': 622.25,
+    'E5': 659.25,
+    'F5': 698.46, 'F#5': 739.99,
+    'G5': 783.99, 'G#5': 830.61,
+    'A5': 880.00, 'A#5': 932.33,
+    'B5': 987.77,
+    'C6': 1046.50, 'C#6': 1108.73,
+    'D6': 1174.66, 'D#6': 1244.51,
+    'E6': 1318.51,
+    'F6': 1396.91, 'F#6': 1479.98,
+    'G6': 1567.98, 'G#6': 1661.22,
+    'A6': 1760.00, 'A#6': 1864.66,
+    'B6': 1975.53,
 }
 
 
 # ============ ОПРЕДЕЛЕНИЕ ЧАСТОТЫ ============
 def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
     """
-    Определяет частоту через автокорреляцию
+    Определяет частоту через автокорреляцию с параболической интерполяцией
     """
-    if not audio_data or len(audio_data) < 100:
+    if not audio_data or len(audio_data) < 200:
         return 0
 
     try:
@@ -157,13 +216,19 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
     except:
         return 0
 
-    # Центрируем сигнал
+    # 1. Центрируем сигнал
     mean = sum(samples) / len(samples) if samples else 0
     samples = [s - mean for s in samples]
 
-    # Автокорреляция
+    # 2. Проверяем уровень сигнала
+    max_amp = max(abs(s) for s in samples) if samples else 0
+    if max_amp < 50:  # Слишком тихо
+        return 0
+
+    # 3. Автокорреляция
     max_corr = 0
     max_lag = 0
+    corr_values = []
 
     min_lag = int(sample_rate / 800)
     max_lag = int(sample_rate / 80)
@@ -174,11 +239,27 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
     if min_lag >= max_lag:
         return 0
 
+    # Вычисляем автокорреляцию
     for lag in range(min_lag, max_lag):
         corr = sum(samples[i] * samples[i + lag] for i in range(len(samples) - lag))
+        corr_values.append((lag, corr))
         if corr > max_corr:
             max_corr = corr
             max_lag = lag
+
+    if max_lag == 0:
+        return 0
+
+    # 4. Параболическая интерполяция для повышения точности
+    if max_lag > min_lag and max_lag < max_lag - 1:
+        prev_corr = next((c for l, c in corr_values if l == max_lag - 1), 0)
+        next_corr = next((c for l, c in corr_values if l == max_lag + 1), 0)
+
+        if prev_corr > 0 and next_corr > 0:
+            denom = prev_corr - 2 * max_corr + next_corr
+            if denom != 0:
+                offset = (prev_corr - next_corr) / (2 * denom)
+                max_lag += offset
 
     if max_lag > 0:
         freq = sample_rate / max_lag
@@ -188,8 +269,35 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
     return 0
 
 
-def freq_to_note(freq):
-    """Преобразует частоту в ближайшую ноту"""
+def freq_to_note(freq, tuning_note_names=None, tuning_freqs=None):
+    """
+    Преобразует частоту в ближайшую ноту.
+    Если передан строй - ищем только среди нот строя.
+    """
+    if freq <= 0:
+        return None, None, None
+
+    # Если передан строй - сначала ищем среди нот строя
+    if tuning_note_names and tuning_freqs:
+        closest_note = None
+        closest_freq = None
+        min_diff = float('inf')
+
+        for i, note in enumerate(tuning_note_names):
+            if i < len(tuning_freqs):
+                note_freq = tuning_freqs[i]
+                diff = abs(freq - note_freq)
+                if diff < min_diff:
+                    min_diff = diff
+                    closest_note = note
+                    closest_freq = note_freq
+
+        # Допуск для нот строя: 5% или минимум 3 Гц
+        max_diff = max(3, freq * 0.05)
+        if min_diff < max_diff and closest_note is not None:
+            return closest_note, closest_freq, min_diff
+
+    # Если не нашли в строе - ищем среди всех нот
     closest_note = None
     closest_freq = None
     min_diff = float('inf')
@@ -201,14 +309,17 @@ def freq_to_note(freq):
             closest_note = note
             closest_freq = note_freq
 
-    if min_diff < 30:
+    # Допуск для всех нот: 30 Гц или 3%
+    max_diff = max(30, freq * 0.03)
+    if min_diff < max_diff and closest_note is not None:
         return closest_note, closest_freq, min_diff
+
     return None, None, None
 
 
 def cents_deviation(freq, target_freq):
     """Отклонение в центах (-50..50)"""
-    if target_freq == 0:
+    if target_freq == 0 or freq == 0:
         return 0
     cents = 1200 * math.log2(freq / target_freq)
     return max(-50, min(50, cents))
@@ -552,11 +663,11 @@ class TunerScreen(BaseScreen):
 
     def _show_status(self, message, color=None):
         """Показывает статус в интерфейсе"""
+        if color is None:
+            color = [0.46, 0.70, 0.71, 1]
 
         def _update_ui():
             if hasattr(self, '_hint_label'):
-                if color is None:
-                    color = [0.46, 0.70, 0.71, 1]
                 self._hint_label.text = message
                 self._hint_label.opacity = 1
                 self._hint_label.text_color = color
@@ -1037,18 +1148,29 @@ class TunerScreen(BaseScreen):
         logger.info("⏹ Аудио поток остановлен")
 
     def _process_frequency(self, freq):
-        """Обрабатывает обнаруженную частоту с отладкой"""
+        """Обрабатывает обнаруженную частоту с отображением отклонения"""
         if not self.is_listening:
             return
 
-        note, note_freq, diff = freq_to_note(freq)
+        # Ищем ноту среди нот строя
+        note, note_freq, diff = freq_to_note(freq, self.tuning_note_names, self.tuning_freqs)
 
         if note:
-            self._show_debug(f"Нота: {note}, частота: {note_freq}Hz, отклонение: {diff:.1f}")
-
+            # Вычисляем отклонение в центах
             cents = cents_deviation(freq, note_freq)
-            deviation = cents / 50
 
+            # Определяем статус настройки
+            if abs(cents) < 5:
+                self._show_success(f"🎵 {note} - В СТРОЕ!")
+            elif abs(cents) < 20:
+                self._show_status(f"🎵 {note}  {cents:+.1f} цент", [0.9, 0.8, 0.2, 1])
+            else:
+                self._show_status(f"🎵 {note}  {cents:+.1f} цент", [0.8, 0.2, 0.2, 1])
+
+            deviation = cents / 50
+            deviation = max(-1, min(1, deviation))
+
+            # Обновляем круговой индикатор
             if hasattr(self, 'tuner_dial'):
                 self.tuner_dial.deviation = deviation
                 self.tuner_dial.note_name = note
@@ -1065,9 +1187,16 @@ class TunerScreen(BaseScreen):
                 is_in_tuning = note in self.tuning_note_names
                 self.note_label.set_note(note, is_in_tuning)
 
-            self._show_success(f"Нота {note} ({freq:.1f}Hz)")
         else:
-            self._show_debug(f"Частота {freq:.1f}Hz не соответствует ноте")
+            # Если нота не найдена - показываем только частоту
+            self._show_debug(f"Частота {freq:.1f}Hz не соответствует ноте строя")
+            if hasattr(self, 'freq_label'):
+                self.freq_label.text = f"{freq:.1f} Hz"
+            if hasattr(self, 'tuner_dial'):
+                self.tuner_dial.deviation = 0
+                self.tuner_dial.note_name = '--'
+            if hasattr(self, 'note_label'):
+                self.note_label.text = "--"
 
     def _show_tuning_dialog(self):
         content = MDBoxLayout(
@@ -1079,8 +1208,8 @@ class TunerScreen(BaseScreen):
         )
 
         categories = {
-            '🎸 Гитара': ['standard_6', 'drop_d', 'open_g'],
-            '🎸 Бас': ['bass_4'],
+            '🎸 Гитара': ['standard_6', 'drop_d', 'open_g', 'open_d', 'dadgad', 'half_step_down'],
+            '🎸 Бас': ['bass_4', 'bass_5'],
             '🎵 Укулеле': ['ukulele'],
         }
 
