@@ -24,6 +24,43 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 
+def create_empty_init_files(base_path: str, verbose: bool = True):
+    """
+    Создает пустые __init__.py во всех подпапках
+
+    Args:
+        base_path: Корневая папка, начиная с которой нужно создать __init__.py
+        verbose: Выводить ли информацию о созданных файлах
+
+    Returns:
+        List[str]: Список созданных файлов
+    """
+    created_files = []
+
+    if not os.path.exists(base_path):
+        print(f"❌ Path does not exist: {base_path}")
+        return created_files
+
+    # Проходим по всем папкам рекурсивно
+    for root, dirs, files in os.walk(base_path):
+        # Проверяем, есть ли уже __init__.py в папке
+        init_file = os.path.join(root, '__init__.py')
+        if not os.path.exists(init_file):
+            # Создаем пустой __init__.py
+            try:
+                with open(init_file, 'w', encoding='utf-8') as f:
+                    pass  # Создаем пустой файл
+
+                created_files.append(init_file)
+                if verbose:
+                    print(f"   ✅ Created: {init_file}")
+
+            except Exception as e:
+                print(f"   ❌ Error creating {init_file}: {str(e)}")
+
+    return created_files
+
+
 def import_module_from_file(file_path: str):
     """
     Импортирует модуль из файла различными способами
@@ -108,6 +145,13 @@ class ChordIndexBuilder:
         if not os.path.exists(self.chords_root):
             print(f"❌ Error: Chords folder not found at: {self.chords_root}")
             return {}
+
+        # Создаем пустые __init__.py файлы
+        print(f"\n📦 Creating empty __init__.py files...")
+        created = create_empty_init_files(self.chords_root)
+        print(f"   Created {len(created)} __init__.py files")
+
+        print(f"\n📂 Scanning chord files...")
 
         # Проходим по всем подпапкам в chords
         for root, dirs, files in os.walk(self.chords_root):
@@ -325,7 +369,7 @@ def build_chords_index():
     # Создаем билдер
     builder = ChordIndexBuilder()
 
-    # Строим индекс
+    # Строим индекс (автоматически создает пустые __init__.py)
     index = builder.build_index()
 
     if not index:
