@@ -5,7 +5,7 @@
 С меню выбора тональности, типа и аккорда
 СТАТИЧНЫЙ ЭКРАН - БЕЗ ПРОКРУТКИ
 С КЭШИРОВАНИЕМ МЕНЮ
-С ПОДДЕРЖКОЙ СВАЙПА ДЛЯ СМЕНЫ ТОНАЛЬНОСТИ И ТИПА АККОРДА
+С ПОДДЕРЖКОЙ СВАЙПА ДЛЯ СМЕНЫ ТОНАЛЬНОСТИ И ПОДВИДА АККОРДА
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -64,23 +64,8 @@ CHORD_TYPES = [
     "sus2sus4", "-5", "5"
 ]
 
-# Для отображения в описании
-TYPE_DISPLAY = {
-    "Major": "мажор",
-    "Minor": "минор",
-    "7": "септаккорд",
-    "m7": "минорный септ",
-    "maj7": "мажорный септ",
-    "sus2": "sus2",
-    "sus4": "sus4",
-    "Dim": "уменьш",
-    "Aug": "увелич",
-    "Dim7": "ум.7",
-    "m7b5": "m7-5",
-}
 
-
-# ============ КОНТЕЙНЕР ДЛЯ СВАЙПА ============
+# ============ КОНТЕЙНЕР ДЛЯ СВАЙПА (ПРОСТАЯ ВЕРСИЯ) ============
 class SwipeContainer(MDBoxLayout):
     """Контейнер для грифа и названия аккорда с поддержкой свайпа"""
 
@@ -119,7 +104,6 @@ class SwipeContainer(MDBoxLayout):
             dx = touch.x - self._touch_start[0]
             dy = touch.y - self._touch_start[1]
 
-            # Определяем направление свайпа
             abs_dx = abs(dx)
             abs_dy = abs(dy)
 
@@ -846,6 +830,7 @@ class ChordsScreen(BaseScreen):
         padding = layout_config.get_content_padding()
         horizontal_padding = [padding[0], 0, padding[2], 0]
 
+        # ============ ОСНОВНОЙ КОНТЕЙНЕР ============
         content = MDBoxLayout(
             orientation='vertical',
             spacing=0,
@@ -985,8 +970,8 @@ class ChordsScreen(BaseScreen):
         self._change_tonality(step)
 
     def _on_swipe_vertical(self, step):
-        """Обработчик вертикального свайпа - смена типа аккорда"""
-        self._change_chord_type(step)
+        """Обработчик вертикального свайпа - смена подвида аккорда"""
+        self._change_chord_variant(step)
 
     def _change_tonality(self, step):
         """Изменяет тональность на указанный шаг"""
@@ -1049,68 +1034,35 @@ class ChordsScreen(BaseScreen):
 
         logger.info(f"🎵 Тональность изменена: {old_tonality} → {new_tonality}")
 
-    def _change_chord_type(self, step):
-        """Изменяет тип аккорда на указанный шаг"""
+    def _change_chord_variant(self, step):
+        """Изменяет подвид аккорда (переключается между разными вариантами)"""
         if not self.available_chords:
             self._show_temporary_hint("Нет доступных аккордов", 1.0)
             return
 
-        old_type = self.current_type
         old_chord_name = self.current_chord_name
-        old_tonality = self.current_tonality
 
-        # Находим суффикс аккорда (часть после тональности)
-        chord_suffix = old_chord_name[len(old_tonality):]
-
-        # Находим индекс текущего типа
+        # Находим индекс текущего аккорда в списке
         try:
-            current_index = self.CHORD_TYPES.index(old_type)
+            current_index = self.available_chords.index(old_chord_name)
         except ValueError:
             current_index = 0
 
-        total = len(self.CHORD_TYPES)
+        total = len(self.available_chords)
         new_index = (current_index + step) % total
-        new_type = self.CHORD_TYPES[new_index]
+        new_chord_name = self.available_chords[new_index]
 
-        if new_type == old_type:
-            self._show_temporary_hint("Конец списка типов аккордов", 1.0)
+        if new_chord_name == old_chord_name:
+            self._show_temporary_hint("Конец списка аккордов", 1.0)
             return
 
-        # Обновляем тип
-        self.current_type = new_type
-        self.current_type_index = new_index
+        # Меняем аккорд
+        self.current_chord_name = new_chord_name
+        self.current_chord_index = new_index
+        self._load_variants_for_chord(self.current_chord_name)
+        self.load_current_variant()
 
-        # Обновляем доступные аккорды для новой тональности и типа
-        self.update_available_chords()
-
-        # Ищем аккорд с той же тональностью и новым типом
-        target_chord = None
-        # Пробуем найти точное совпадение
-        for chord in self.available_chords:
-            if chord.startswith(old_tonality) and chord.endswith(chord_suffix):
-                target_chord = chord
-                break
-
-        # Если не нашли, ищем любой аккорд с новой тональностью
-        if target_chord is None and self.available_chords:
-            for chord in self.available_chords:
-                if chord.startswith(old_tonality):
-                    target_chord = chord
-                    break
-
-        # Если всё ещё не нашли, берём первый
-        if target_chord is None and self.available_chords:
-            target_chord = self.available_chords[0]
-
-        if target_chord:
-            self.current_chord_name = target_chord
-            self.current_chord_index = self.available_chords.index(target_chord)
-            self._load_variants_for_chord(self.current_chord_name)
-            self.load_current_variant()
-
-            # Показываем подсказку с новым типом
-            type_display = TYPE_DISPLAY.get(new_type, new_type)
-            self._show_temporary_hint(f"{old_tonality} {type_display}", 1.2)
+        self._show_temporary_hint(f"{new_chord_name}", 1.2)
 
         if self.unified_menu:
             self.unified_menu.update_chord(len(self.available_chords))
@@ -1118,7 +1070,7 @@ class ChordsScreen(BaseScreen):
         if self.chord_selector and self._menu_cache_initialized:
             self.chord_selector.update_chords(self.available_chords, self.current_chord_name)
 
-        logger.info(f"🎵 Тип аккорда изменён: {old_type} → {new_type}")
+        logger.info(f"🎵 Подвид аккорда изменён: {old_chord_name} → {new_chord_name}")
 
     def _find_chord_data(self, chord_name):
         for chord in self.all_chords:
@@ -1129,7 +1081,7 @@ class ChordsScreen(BaseScreen):
     # ============ ОСТАЛЬНЫЕ МЕТОДЫ ============
 
     def _show_description(self):
-        """Показывает описание аккорда в информационном лейбле."""
+        """Показывает описание аккорда из метаданных"""
         if not self.current_variants:
             return
 
@@ -1137,6 +1089,7 @@ class ChordsScreen(BaseScreen):
         description = variant.get('description', '')
 
         if description:
+            # Очищаем описание от лишних символов
             desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
             unique_parts = []
             for part in desc_parts:
@@ -1156,9 +1109,11 @@ class ChordsScreen(BaseScreen):
 
                 self._info_label.text = formatted_desc
             else:
-                self._info_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
+                chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
+                self._info_label.text = chord_name
         else:
-            self._info_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
+            chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
+            self._info_label.text = chord_name
 
     def _show_hint(self, text):
         if hasattr(self, '_hint_timer') and self._hint_timer:
