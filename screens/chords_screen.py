@@ -5,7 +5,7 @@
 С меню выбора тональности, типа и аккорда
 СТАТИЧНЫЙ ЭКРАН - БЕЗ ПРОКРУТКИ
 С КЭШИРОВАНИЕМ МЕНЮ
-ИДЕНТИЧНЫЙ ПОИСК И ОТСТУПЫ КАК В SONGS_SCREEN
+С ПОДДЕРЖКОЙ СВАЙПА ДЛЯ СМЕНЫ ТОНАЛЬНОСТИ И ТИПА АККОРДА
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -23,6 +23,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
 from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
+from kivy.animation import Animation
 from io import BytesIO
 import pkgutil
 import importlib
@@ -79,9 +80,101 @@ TYPE_DISPLAY = {
 }
 
 
-# ============ ПОИСКОВАЯ СТРОКА - ИДЕНТИЧНАЯ SONGS_SCREEN ============
+# ============ КОНТЕЙНЕР ДЛЯ СВАЙПА ============
+class SwipeContainer(MDBoxLayout):
+    """Контейнер для грифа и названия аккорда с поддержкой свайпа"""
+
+    def __init__(self, on_swipe_horizontal=None, on_swipe_vertical=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_swipe_horizontal = on_swipe_horizontal
+        self.on_swipe_vertical = on_swipe_vertical
+        self._touch_start = None
+        self._touch_moved = False
+        self._swipe_threshold = 50
+        self._animating = False
+
+        self.orientation = 'vertical'
+        self.size_hint = (1, None)
+        self.adaptive_height = True
+        self.md_bg_color = [0, 0, 0, 0]
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos) and not self._animating:
+            self._touch_start = touch.pos
+            self._touch_moved = False
+            return True
+        return super().on_touch_down(touch)
+
+    def on_touch_move(self, touch):
+        if self._touch_start and not self._animating:
+            dx = touch.x - self._touch_start[0]
+            dy = touch.y - self._touch_start[1]
+            if abs(dx) > 20 or abs(dy) > 20:
+                self._touch_moved = True
+            return True
+        return super().on_touch_move(touch)
+
+    def on_touch_up(self, touch):
+        if self._touch_start and self._touch_moved and not self._animating:
+            dx = touch.x - self._touch_start[0]
+            dy = touch.y - self._touch_start[1]
+
+            # Определяем направление свайпа
+            abs_dx = abs(dx)
+            abs_dy = abs(dy)
+
+            if abs_dx > self._swipe_threshold and abs_dy < self._swipe_threshold * 0.8:
+                # Горизонтальный свайп
+                if dx > 0:
+                    self._animate_transition('right')
+                else:
+                    self._animate_transition('left')
+            elif abs_dy > self._swipe_threshold and abs_dx < self._swipe_threshold * 0.8:
+                # Вертикальный свайп
+                if dy > 0:
+                    self._animate_transition('down')
+                else:
+                    self._animate_transition('up')
+
+        self._touch_start = None
+        self._touch_moved = False
+        return super().on_touch_up(touch)
+
+    def _animate_transition(self, direction):
+        """Анимация перехода с затуханием и появлением"""
+        if self._animating:
+            return
+
+        self._animating = True
+
+        # Плавное исчезновение
+        anim_out = Animation(opacity=0, duration=0.15, t='out_quad')
+        anim_out.bind(on_complete=lambda *args: self._on_fade_out_complete(direction))
+        anim_out.start(self)
+
+    def _on_fade_out_complete(self, direction):
+        """После исчезновения - меняем аккорд и показываем"""
+        # Вызываем соответствующий обработчик
+        if direction in ['left', 'right'] and self.on_swipe_horizontal:
+            step = -1 if direction == 'right' else 1
+            self.on_swipe_horizontal(step)
+        elif direction in ['up', 'down'] and self.on_swipe_vertical:
+            step = -1 if direction == 'down' else 1
+            self.on_swipe_vertical(step)
+
+        # Плавное появление
+        anim_in = Animation(opacity=1, duration=0.15, t='in_quad')
+        anim_in.bind(on_complete=lambda *args: self._finish_animation())
+        anim_in.start(self)
+
+    def _finish_animation(self):
+        """Завершает анимацию"""
+        self._animating = False
+
+
+# ============ ПОИСКОВАЯ СТРОКА ============
 class SearchBar(MDCard):
-    """Поисковая строка - ИДЕНТИЧНАЯ songs_screen"""
+    """Поисковая строка"""
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
@@ -92,11 +185,11 @@ class SearchBar(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)  # ТОЧНО КАК В SONGS_SCREEN
+        self.height = dp(44)
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.md_bg_color = [1, 1, 1, 1]
         self.elevation = 0
-        self.padding = [dp(12), dp(4), dp(8), dp(4)]  # ТОЧНО КАК В SONGS_SCREEN
+        self.padding = [dp(12), dp(4), dp(8), dp(4)]
         self.spacing = dp(4)
 
         self.line_color = [0.1, 0.1, 0.1, 0.3]
@@ -145,7 +238,6 @@ class SearchBar(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
-        # ПОРЯДОК: ИКОНКА ЛУПЫ -> ПОЛЕ -> КРЕСТИК (КАК В SONGS_SCREEN)
         self.add_widget(self.search_icon)
         self.add_widget(self.search_field)
         self.add_widget(self.clear_btn)
@@ -215,7 +307,7 @@ class SearchBar(MDCard):
 
 
 class IconMenuItem(ButtonBehavior, MDBoxLayout):
-    """Пункт меню с иконкой (ТОН, ТИП, АККОРД, ВАРИАНТЫ или ПАЛЬЦЫ/НОТЫ) - без подписи"""
+    """Пункт меню с иконкой"""
 
     def __init__(self, icon_name, on_press=None, is_active=False, icon_color=None, fixed_color=False, **kwargs):
         super().__init__(**kwargs)
@@ -314,7 +406,6 @@ class BaseSelectorMenu(MDCard):
         self._build_ui()
 
     def _build_ui(self):
-        """Создаёт UI меню"""
         self.scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=True,
@@ -339,7 +430,6 @@ class BaseSelectorMenu(MDCard):
         self.add_widget(self.scroll)
 
     def _populate_items(self):
-        """Переопределяется в дочерних классах"""
         pass
 
     def _get_button_width(self, text):
@@ -370,22 +460,18 @@ class BaseSelectorMenu(MDCard):
             self.on_confirm(value)
 
     def show(self):
-        """Показывает меню"""
         self.is_visible = True
         self.opacity = 1
         self.disabled = False
         self._highlight_current()
 
     def hide(self):
-        """Скрывает меню"""
         self.is_visible = False
         self.opacity = 0
         self.disabled = True
 
 
 class TonalitySelectorMenu(BaseSelectorMenu):
-    """Меню выбора тональности - кэшируется"""
-
     def __init__(self, current_tonality, on_confirm, on_cancel, **kwargs):
         self.current_tonality = current_tonality
         super().__init__(on_confirm, on_cancel, **kwargs)
@@ -409,14 +495,11 @@ class TonalitySelectorMenu(BaseSelectorMenu):
         self.current_selection = self.current_tonality
 
     def set_current(self, tonality):
-        """Обновляет текущую тональность без пересоздания"""
         self.current_selection = tonality
         self._highlight_current()
 
 
 class TypeSelectorMenu(BaseSelectorMenu):
-    """Меню выбора типа аккорда - кэшируется"""
-
     def __init__(self, current_type, on_confirm, on_cancel, **kwargs):
         self.current_type = current_type
         super().__init__(on_confirm, on_cancel, **kwargs)
@@ -440,14 +523,11 @@ class TypeSelectorMenu(BaseSelectorMenu):
         self.current_selection = self.current_type
 
     def set_current(self, chord_type):
-        """Обновляет текущий тип без пересоздания"""
         self.current_selection = chord_type
         self._highlight_current()
 
 
 class ChordSelectorMenu(BaseSelectorMenu):
-    """Меню выбора аккорда - кэшируется"""
-
     def __init__(self, available_chords, current_chord, on_confirm, on_cancel, **kwargs):
         self.available_chords = available_chords or ["A"]
         self.current_chord = current_chord
@@ -472,7 +552,6 @@ class ChordSelectorMenu(BaseSelectorMenu):
         self.current_selection = self.current_chord
 
     def update_chords(self, available_chords, current_chord):
-        """Обновляет список аккордов без пересоздания всего меню"""
         self.available_chords = available_chords or ["A"]
         self.current_chord = current_chord
 
@@ -500,8 +579,6 @@ class ChordSelectorMenu(BaseSelectorMenu):
 
 
 class UnifiedMenu(MDCard):
-    """Единое меню 5 в 1: ТОН | ТИП | АККОРД | ВАРИАНТЫ | ПАЛЬЦЫ/НОТЫ"""
-
     def __init__(self,
                  tonality_value, type_value, chord_value,
                  on_tonality_press=None, on_type_press=None,
@@ -523,7 +600,6 @@ class UnifiedMenu(MDCard):
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
         self.spacing = dp(0)
 
-        # 1. ТОН (иконка music-note-eighth) - ФИОЛЕТОВЫЙ
         self.tonality_item = IconMenuItem(
             icon_name="music-note-eighth",
             on_press=on_tonality_press,
@@ -532,7 +608,6 @@ class UnifiedMenu(MDCard):
             fixed_color=True
         )
 
-        # 2. ТИП (иконка tag) - БИРЮЗОВЫЙ
         self.type_item = IconMenuItem(
             icon_name="tag",
             on_press=on_type_press,
@@ -541,7 +616,6 @@ class UnifiedMenu(MDCard):
             fixed_color=True
         )
 
-        # 3. АККОРД (иконка music-circle) - активен только если есть > 1 аккорда
         has_chords = chord_count > 1
         self.chord_item = IconMenuItem(
             icon_name="music-circle",
@@ -550,7 +624,6 @@ class UnifiedMenu(MDCard):
             icon_color=[1.0, 0.7, 0.0, 1] if has_chords else [1, 1, 1, 0.3]
         )
 
-        # 4. ВАРИАНТЫ (иконка format-list-numbered) - СИНИЙ
         self.variants_item = IconMenuItem(
             icon_name="format-list-numbered",
             on_press=on_variants_press,
@@ -558,7 +631,6 @@ class UnifiedMenu(MDCard):
             icon_color=[0.13, 0.59, 0.95, 1] if (variants_count > 1) else [1, 1, 1, 0.3]
         )
 
-        # 5. ПАЛЬЦЫ/НОТЫ (иконка-тогл) - ОРАНЖЕВЫЙ / КРАСНЫЙ
         mode_icon = "gesture-tap" if current_mode == "finger" else "music-note"
         mode_color = [0.9, 0.55, 0.0, 1] if current_mode == "finger" else [0.8, 0.3, 0.3, 1]
         self.mode_item = IconMenuItem(
@@ -622,7 +694,6 @@ class UnifiedMenu(MDCard):
 class ChordsScreen(BaseScreen):
     TONALITIES = TONALITIES
     CHORD_TYPES = CHORD_TYPES
-    """Экран аккордов с единым меню 5 в 1 под грифом - СТАТИЧНЫЙ, БЕЗ ПРОКРУТКИ"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -660,16 +731,16 @@ class ChordsScreen(BaseScreen):
 
         self.bg_image = None
 
-        # ============ КЭШИРОВАННЫЕ МЕНЮ ============
         self.tonality_selector = None
         self.type_selector = None
         self.chord_selector = None
         self._menu_cache_initialized = False
 
-        # ============ ДЛЯ РАСТЯГИВАНИЯ ГРИФА ============
         self._griff_container = None
         self._griff_height = dp(280)
         self._update_griff_timer = None
+
+        self.swipe_container = None
 
         self.init_ui()
         self.load_background()
@@ -678,10 +749,9 @@ class ChordsScreen(BaseScreen):
 
         self.scan_chords()
 
-        logger.info('Экран аккордов создан (статичный, с растянутым грифом)')
+        logger.info('Экран аккордов создан (с поддержкой свайпа)')
 
     def _create_cached_menus(self, dt=None):
-        """Создаёт кэшированные меню сразу при инициализации"""
         if self._menu_cache_initialized:
             return
 
@@ -745,23 +815,19 @@ class ChordsScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def _update_desc_height(self, instance, texture_size):
-        """Обновляет высоту лейбла в зависимости от размера текстуры."""
         if texture_size:
             new_height = texture_size[1] + dp(8)
             if self._info_label.height != new_height:
                 self._info_label.height = new_height
 
     def _update_griff_size(self, *args):
-        """Обновляет размер грифа при изменении размера окна"""
         if hasattr(self, '_griff_container') and self._griff_container:
             window_width = Window.width
 
-            # Вычисляем высоту с учётом отступов как в songs_screen
-            padding_total = dp(24)  # left + right из layout_config
+            padding_total = dp(24)
             available_width = window_width - padding_total
             griff_height = available_width * 0.45
 
-            # Ограничения
             min_height = dp(200)
             max_height = window_width * 0.6
 
@@ -776,15 +842,10 @@ class ChordsScreen(BaseScreen):
                 self._griff_container.height = griff_height
                 logger.info(f"📐 Гриф обновлён: {griff_height}dp")
 
-    # screens/chords_screen.py - АЛЬТЕРНАТИВНЫЙ ПОДХОД
-
     def init_ui(self):
-        """Инициализирует UI - с отступами через padding контейнера"""
-
         padding = layout_config.get_content_padding()
-        horizontal_padding = [padding[0], 0, padding[2], 0]  # [12, 0, 12, 0]
+        horizontal_padding = [padding[0], 0, padding[2], 0]
 
-        # ============ 1. КОНТЕЙНЕР С ВЕРТИКАЛЬНЫМИ ОТСТУПАМИ ============
         content = MDBoxLayout(
             orientation='vertical',
             spacing=0,
@@ -792,7 +853,7 @@ class ChordsScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
-        # ============ 2. ПОИСК ============
+        # ============ ПОИСК ============
         search_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -806,22 +867,29 @@ class ChordsScreen(BaseScreen):
         search_container.add_widget(self.search_bar)
         content.add_widget(search_container)
 
-        # ============ 3. НАЗВАНИЕ АККОРДА (С ВЕРХНИМ ОТСТУПОМ) ============
-        # Добавляем отступ через padding самого лейбла
+        # ============ SWIPE КОНТЕЙНЕР (НАЗВАНИЕ + ГРИФ) ============
+        self.swipe_container = SwipeContainer(
+            on_swipe_horizontal=self._on_swipe_horizontal,
+            on_swipe_vertical=self._on_swipe_vertical
+        )
+        self.swipe_container.size_hint = (1, None)
+        self.swipe_container.adaptive_height = True
+
+        # Название аккорда
         self.chord_name_label = MDLabel(
             text="A | Amaj",
             font_size=sp(22),
             halign="center",
             bold=True,
             size_hint_y=None,
-            height=dp(32 + 16),  # высота + отступ сверху
-            padding=[0, dp(16), 0, 0],  # ← отступ сверху 16dp
+            height=dp(32 + 16),
+            padding=[0, dp(16), 0, 0],
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95]
         )
-        content.add_widget(self.chord_name_label)
+        self.swipe_container.add_widget(self.chord_name_label)
 
-        # ============ 4. ГРИФ (С ОТСТУПАМИ ПО БОКАМ) ============
+        # Гриф
         griff_wrapper = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -836,11 +904,13 @@ class ChordsScreen(BaseScreen):
         self.chord_renderer = ChordRenderer()
         self._griff_container.add_widget(self.chord_renderer)
         griff_wrapper.add_widget(self._griff_container)
-        content.add_widget(griff_wrapper)
+        self.swipe_container.add_widget(griff_wrapper)
+
+        content.add_widget(self.swipe_container)
 
         Window.bind(on_resize=self._on_window_resize)
 
-        # ============ 5. МЕНЮ (С ОТСТУПАМИ ПО БОКАМ) ============
+        # ============ МЕНЮ ============
         menu_wrapper = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -871,7 +941,7 @@ class ChordsScreen(BaseScreen):
         )
         self._menu_container.add_widget(self.unified_menu)
 
-        # ============ 6. ИНФОРМАЦИОННЫЙ ЛЕЙБЛ ============
+        # ============ ИНФОРМАЦИОННЫЙ ЛЕЙБЛ ============
         self._info_label = MDLabel(
             text="",
             font_size=sp(12),
@@ -908,27 +978,156 @@ class ChordsScreen(BaseScreen):
 
         self.load_current_variant()
 
-    def set_fret_color(self, color="white"):
-        """
-        Устанавливает цвет ладов на экране аккордов.
+    # ============ ОБРАБОТЧИКИ СВАЙПА ============
 
-        Args:
-            color: "black" или "white"
-        """
-        if self.chord_renderer:
-            self.chord_renderer.set_fret_color(color)
-            logger.info(f"ChordsScreen: Цвет ладов изменён на {color}")
-        else:
-            logger.warning("ChordsScreen: chord_renderer не инициализирован")
+    def _on_swipe_horizontal(self, step):
+        """Обработчик горизонтального свайпа - смена тональности"""
+        self._change_tonality(step)
 
-    def _on_window_resize(self, window, width, height):
-        """Обработчик изменения размера окна"""
-        if hasattr(self, '_update_griff_timer') and self._update_griff_timer:
-            Clock.unschedule(self._update_griff_timer)
-        self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.1)
+    def _on_swipe_vertical(self, step):
+        """Обработчик вертикального свайпа - смена типа аккорда"""
+        self._change_chord_type(step)
 
-    # ============ ВСЕ ОСТАЛЬНЫЕ МЕТОДЫ БЕЗ ИЗМЕНЕНИЙ ============
-    # (они такие же как в твоём файле, я их не менял)
+    def _change_tonality(self, step):
+        """Изменяет тональность на указанный шаг"""
+        if not self.available_chords:
+            self._show_temporary_hint("Нет доступных аккордов", 1.0)
+            return
+
+        old_tonality = self.current_tonality
+        old_chord_name = self.current_chord_name
+        chord_type = self.current_type
+
+        chord_suffix = old_chord_name[len(old_tonality):]
+
+        try:
+            current_index = self.TONALITIES.index(old_tonality)
+        except ValueError:
+            current_index = 0
+
+        total = len(self.TONALITIES)
+        new_index = (current_index + step) % total
+        new_tonality = self.TONALITIES[new_index]
+
+        if new_tonality == old_tonality:
+            self._show_temporary_hint("Конец списка тональностей", 1.0)
+            return
+
+        self.current_tonality = new_tonality
+        self.current_tonality_index = new_index
+
+        self.update_available_chords()
+
+        target_chord = None
+        for chord in self.available_chords:
+            if chord.startswith(new_tonality) and chord.endswith(chord_suffix):
+                target_chord = chord
+                break
+
+        if target_chord is None and self.available_chords:
+            for chord in self.available_chords:
+                chord_data = self._find_chord_data(chord)
+                if chord_data and chord_data.get('type') == chord_type:
+                    target_chord = chord
+                    break
+
+        if target_chord is None and self.available_chords:
+            target_chord = self.available_chords[0]
+
+        if target_chord:
+            self.current_chord_name = target_chord
+            self.current_chord_index = self.available_chords.index(target_chord)
+            self._load_variants_for_chord(self.current_chord_name)
+            self.load_current_variant()
+            self._show_temporary_hint(f"{new_tonality} {chord_type}", 1.2)
+
+        if self.unified_menu:
+            self.unified_menu.update_chord(len(self.available_chords))
+
+        if self.chord_selector and self._menu_cache_initialized:
+            self.chord_selector.update_chords(self.available_chords, self.current_chord_name)
+
+        logger.info(f"🎵 Тональность изменена: {old_tonality} → {new_tonality}")
+
+    def _change_chord_type(self, step):
+        """Изменяет тип аккорда на указанный шаг"""
+        if not self.available_chords:
+            self._show_temporary_hint("Нет доступных аккордов", 1.0)
+            return
+
+        old_type = self.current_type
+        old_chord_name = self.current_chord_name
+        old_tonality = self.current_tonality
+
+        # Находим суффикс аккорда (часть после тональности)
+        chord_suffix = old_chord_name[len(old_tonality):]
+
+        # Находим индекс текущего типа
+        try:
+            current_index = self.CHORD_TYPES.index(old_type)
+        except ValueError:
+            current_index = 0
+
+        total = len(self.CHORD_TYPES)
+        new_index = (current_index + step) % total
+        new_type = self.CHORD_TYPES[new_index]
+
+        if new_type == old_type:
+            self._show_temporary_hint("Конец списка типов аккордов", 1.0)
+            return
+
+        # Обновляем тип
+        self.current_type = new_type
+        self.current_type_index = new_index
+
+        # Обновляем доступные аккорды для новой тональности и типа
+        self.update_available_chords()
+
+        # Ищем аккорд с той же тональностью и новым типом
+        target_chord = None
+        # Пробуем найти точное совпадение
+        for chord in self.available_chords:
+            if chord.startswith(old_tonality) and chord.endswith(chord_suffix):
+                target_chord = chord
+                break
+
+        # Если не нашли, ищем любой аккорд с новой тональностью
+        if target_chord is None and self.available_chords:
+            for chord in self.available_chords:
+                if chord.startswith(old_tonality):
+                    target_chord = chord
+                    break
+
+        # Если всё ещё не нашли, берём первый
+        if target_chord is None and self.available_chords:
+            target_chord = self.available_chords[0]
+
+        if target_chord:
+            self.current_chord_name = target_chord
+            self.current_chord_index = self.available_chords.index(target_chord)
+            self._load_variants_for_chord(self.current_chord_name)
+            self.load_current_variant()
+
+            # Показываем подсказку с новым типом
+            type_display = TYPE_DISPLAY.get(new_type, new_type)
+            self._show_temporary_hint(f"{old_tonality} {type_display}", 1.2)
+
+        if self.unified_menu:
+            self.unified_menu.update_chord(len(self.available_chords))
+
+        if self.chord_selector and self._menu_cache_initialized:
+            self.chord_selector.update_chords(self.available_chords, self.current_chord_name)
+
+        logger.info(f"🎵 Тип аккорда изменён: {old_type} → {new_type}")
+
+    def _find_chord_data(self, chord_name):
+        for chord in self.all_chords:
+            if chord['short_name'] == chord_name:
+                return chord
+        return None
+
+    # ============ ОСТАЛЬНЫЕ МЕТОДЫ ============
+
     def _show_description(self):
         """Показывает описание аккорда в информационном лейбле."""
         if not self.current_variants:
@@ -962,14 +1161,12 @@ class ChordsScreen(BaseScreen):
             self._info_label.text = TYPE_DISPLAY.get(self.current_type, self.current_type)
 
     def _show_hint(self, text):
-        """Показывает подсказку в информационном лейбле."""
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
         self._info_label.text = text
 
     def _show_temporary_hint(self, text, duration=1.5):
-        """Показывает временную подсказку."""
         if self._info_label:
             self._info_label.text = text
             if hasattr(self, '_hint_timer') and self._hint_timer:
@@ -977,12 +1174,9 @@ class ChordsScreen(BaseScreen):
             self._hint_timer = Clock.schedule_once(lambda dt: self._restore_description(), duration)
 
     def _restore_description(self):
-        """Восстанавливает описание аккорда после подсказки."""
         if hasattr(self, '_hint_timer'):
             self._hint_timer = None
         self._show_description()
-
-    # ============ МЕТОДЫ ОТКРЫТИЯ/ЗАКРЫТИЯ МЕНЮ ============
 
     def _open_tonality_selector(self):
         logger.info("Открытие меню выбора тональности (кешированное)")
@@ -1143,10 +1337,7 @@ class ChordsScreen(BaseScreen):
         self._show_temporary_hint(f"Изменена позиция аккорда: {self.current_position}", 1.2)
         logger.info(f"Вариант {self.current_position}/{total}")
 
-    # ============ ПОИСК ============
-
     def do_search(self, query):
-        """Поиск аккордов по точному совпадению названия или описания"""
         query_original = query.strip()
         query_lower = query_original.lower()
 
@@ -1229,8 +1420,6 @@ class ChordsScreen(BaseScreen):
         self.search_results = []
         self.search_bar.search_field.hint_text = "Поиск аккордов..."
         self.update_available_chords()
-
-    # ============ ЗАГРУЗКА АККОРДОВ ============
 
     def scan_chords(self):
         print("\n" + "=" * 60)
@@ -1349,7 +1538,6 @@ class ChordsScreen(BaseScreen):
         self.load_current_variant()
 
     def load_current_variant(self):
-        """Загружает текущий вариант аккорда и обновляет UI."""
         if not self.current_variants:
             return
         variant = self.current_variants[self.current_variant_index]
@@ -1379,63 +1567,6 @@ class ChordsScreen(BaseScreen):
         if self.chord_renderer:
             self.chord_renderer.load_chord(self.current_chord_module)
             self.chord_renderer.set_mode(self.current_mode)
-
-    def _compact_description(self, parts):
-        if len(parts) == 1:
-            return parts[0]
-
-        def find_longest_common_substring(strings):
-            if not strings:
-                return ""
-            shortest = min(strings, key=len)
-            longest_common = ""
-            for i in range(len(shortest)):
-                for j in range(i + 1, len(shortest) + 1):
-                    substring = shortest[i:j]
-                    if all(substring in s for s in strings):
-                        if len(substring) > len(longest_common):
-                            longest_common = substring
-            return longest_common
-
-        common_substring = find_longest_common_substring(parts)
-
-        if common_substring:
-            unique_parts = []
-            for part in parts:
-                unique = part.replace(common_substring, '').strip()
-                if unique:
-                    unique_parts.append(unique)
-
-            unique_parts_unique = []
-            for up in unique_parts:
-                if up not in unique_parts_unique:
-                    unique_parts_unique.append(up)
-
-            first_unique = unique_parts_unique[0] if unique_parts_unique else ""
-            other_uniques = unique_parts_unique[1:] if len(unique_parts_unique) > 1 else []
-
-            if other_uniques:
-                return f"{first_unique} ({', '.join(other_uniques)}) {common_substring}".strip()
-            else:
-                return f"{first_unique} {common_substring}".strip()
-        else:
-            return ', '.join(parts)
-
-    def load_chord_by_name(self, chord_name):
-        for chord in self.all_chords:
-            if chord['short_name'].lower() == chord_name.lower():
-                tonality = self.extract_tonality(chord['name'])
-                if tonality in TONALITIES:
-                    self.current_tonality = tonality
-                    self.current_tonality_index = TONALITIES.index(tonality)
-                    self.update_available_chords()
-
-                    if self.current_chord_name != chord_name:
-                        if chord_name in self.available_chords:
-                            self.current_chord_name = chord_name
-                            self.current_chord_index = self.available_chords.index(chord_name)
-                            self._load_variants_for_chord(self.current_chord_name)
-                break
 
     def _load_variants_for_chord(self, chord_name):
         variants = []
@@ -1550,16 +1681,6 @@ class ChordsScreen(BaseScreen):
             logger.error(f"❌ Не найдено вариантов для {target_chord['short_name']}")
             return False
 
-    def _extract_tonality(self, chord_name):
-        if not chord_name:
-            return ""
-        match = re.match(r'^([A-H][#b]?)', chord_name)
-        if match:
-            return match.group(1)
-        return chord_name[0] if chord_name else ""
-
-    # ============ МЕТОДЫ ДЛЯ ВОЗВРАТА НА ПРЕДЫДУЩИЙ ЭКРАН ============
-
     def on_enter(self):
         logger.info("🚪 Вход в экран аккордов")
 
@@ -1617,5 +1738,4 @@ class ChordsScreen(BaseScreen):
                 self.manager.current = 'home'
 
     def on_size(self, *args):
-        """При изменении размера окна обновляем гриф"""
         Clock.schedule_once(self._update_griff_size, 0.05)
