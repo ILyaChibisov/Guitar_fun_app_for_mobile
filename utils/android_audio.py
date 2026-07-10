@@ -24,7 +24,6 @@ def debug_log(message, level="INFO"):
     if _debug_callback:
         Clock.schedule_once(lambda dt: _debug_callback(message, level), 0)
 
-    # Также пишем в консоль
     prefix = {
         "INFO": "ℹ️",
         "SUCCESS": "✅",
@@ -95,12 +94,22 @@ class AndroidAudioRecorder:
             debug_log("📱 Загрузка JNI классов...", "DEBUG")
             self._AudioRecord = autoclass('android.media.AudioRecord')
             self._AudioFormat = autoclass('android.media.AudioFormat')
-            self._MediaRecorder = autoclass('android.media.MediaRecorder')
 
-            # Константы
+            # ============ ИСПРАВЛЕННАЯ ЧАСТЬ ============
+            # Вместо MediaRecorder.AudioSource используем константы напрямую
+            # MIC = 1 (это стандартная константа в Android)
+            self._SOURCE = 1  # MediaRecorder.AudioSource.MIC = 1
+
+            # Альтернативный способ - использовать MediaRecorder.AudioSource
+            # Но на некоторых устройствах это вызывает ошибку
+            # self._MediaRecorder = autoclass('android.media.MediaRecorder')
+            # self._SOURCE = self._MediaRecorder.AudioSource.MIC
+
+            debug_log(f"📱 AudioSource.MIC = {self._SOURCE}", "DEBUG")
+
+            # Константы AudioFormat
             self._CHANNEL_CONFIG = self._AudioFormat.CHANNEL_IN_MONO
             self._ENCODING = self._AudioFormat.ENCODING_PCM_16BIT
-            self._SOURCE = self._MediaRecorder.AudioSource.MIC
 
             debug_log("✅ JNI AudioRecord инициализирован", "SUCCESS")
             logger = get_logger()
@@ -175,10 +184,10 @@ class AndroidAudioRecorder:
             # Создаем AudioRecord
             debug_log("📱 Создание AudioRecord...", "DEBUG")
             audio_record = self._AudioRecord(
-                self._SOURCE,
-                self._sample_rate,
-                self._CHANNEL_CONFIG,
-                self._ENCODING,
+                self._SOURCE,  # MIC
+                self._sample_rate,  # частота
+                self._CHANNEL_CONFIG,  # CHANNEL_IN_MONO
+                self._ENCODING,  # ENCODING_PCM_16BIT
                 buffer_size
             )
 
