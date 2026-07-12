@@ -1,8 +1,7 @@
 # screens/tuner_screen.py
 """
-Экран гитарного тюнера - с полной отладкой в интерфейсе
-Windows: перебор всех устройств (sounddevice, pyaudio)
-Android: JNI AudioRecord с детальной отладкой
+Экран гитарного тюнера — полукруг от 0 до 180 градусов
+Цветные сегменты: зелёный (центр), жёлтый, оранжевый, красный
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Ellipse
@@ -41,15 +40,19 @@ IS_ANDROID = platform == 'android'
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
 # ============ ПОПЫТКА ИМПОРТА ANDROID AUDIO ============
 try:
     from utils.android_audio import get_audio_recorder, set_debug_callback
+
     HAS_AUDIO_RECORDER = True
     logger.info("✅ Модуль android_audio загружен")
 except ImportError:
@@ -62,6 +65,7 @@ HAS_SOUNDDEVICE = False
 
 try:
     import pyaudio
+
     HAS_PYAUDIO = True
     logger.info("✅ pyaudio загружен")
 except ImportError:
@@ -70,6 +74,7 @@ except ImportError:
 try:
     import sounddevice as sd
     import numpy as np
+
     HAS_SOUNDDEVICE = True
     logger.info("✅ sounddevice загружен")
 except ImportError:
@@ -146,9 +151,8 @@ TUNINGS = {
     },
 }
 
-# ============ ВСЕ НОТЫ ДЛЯ ОПРЕДЕЛЕНИЯ (ПОЛНЫЙ ДИАПАЗОН) ============
+# Все ноты для определения
 NOTES = {
-    # Ноты для баса (0-2 октава)
     'B0': 30.87,
     'C1': 32.70, 'C#1': 34.65,
     'D1': 36.71, 'D#1': 38.89,
@@ -164,7 +168,6 @@ NOTES = {
     'G2': 98.00, 'G#2': 103.83,
     'A2': 110.00, 'A#2': 116.54,
     'B2': 123.47,
-    # Ноты для гитары (3-4 октава)
     'C3': 130.81, 'C#3': 138.59,
     'D3': 146.83, 'D#3': 155.56,
     'E3': 164.81,
@@ -179,7 +182,6 @@ NOTES = {
     'G4': 392.00, 'G#4': 415.30,
     'A4': 440.00, 'A#4': 466.16,
     'B4': 493.88,
-    # Ноты для укулеле и высоких позиций (5-6 октава)
     'C5': 523.25, 'C#5': 554.37,
     'D5': 587.33, 'D#5': 622.25,
     'E5': 659.25,
@@ -199,12 +201,8 @@ NOTES = {
 
 # ============ ОПРЕДЕЛЕНИЕ ЧАСТОТЫ ============
 def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
-    """
-    Определяет частоту через автокорреляцию с параболической интерполяцией
-    """
     if not audio_data or len(audio_data) < 200:
         return 0
-
     try:
         if isinstance(audio_data, bytes):
             if len(audio_data) % 2 == 0:
@@ -215,74 +213,50 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
             samples = audio_data
     except:
         return 0
-
-    # 1. Центрируем сигнал
     mean = sum(samples) / len(samples) if samples else 0
     samples = [s - mean for s in samples]
-
-    # 2. Проверяем уровень сигнала
     max_amp = max(abs(s) for s in samples) if samples else 0
-    if max_amp < 50:  # Слишком тихо
+    if max_amp < 50:
         return 0
-
-    # 3. Автокорреляция
     max_corr = 0
     max_lag = 0
     corr_values = []
-
     min_lag = int(sample_rate / 800)
     max_lag = int(sample_rate / 80)
-
     if max_lag > len(samples) // 2:
         max_lag = len(samples) // 2
-
     if min_lag >= max_lag:
         return 0
-
-    # Вычисляем автокорреляцию
     for lag in range(min_lag, max_lag):
         corr = sum(samples[i] * samples[i + lag] for i in range(len(samples) - lag))
         corr_values.append((lag, corr))
         if corr > max_corr:
             max_corr = corr
             max_lag = lag
-
     if max_lag == 0:
         return 0
-
-    # 4. Параболическая интерполяция для повышения точности
     if max_lag > min_lag and max_lag < max_lag - 1:
         prev_corr = next((c for l, c in corr_values if l == max_lag - 1), 0)
         next_corr = next((c for l, c in corr_values if l == max_lag + 1), 0)
-
         if prev_corr > 0 and next_corr > 0:
             denom = prev_corr - 2 * max_corr + next_corr
             if denom != 0:
                 offset = (prev_corr - next_corr) / (2 * denom)
                 max_lag += offset
-
     if max_lag > 0:
         freq = sample_rate / max_lag
         if 80 < freq < 800:
             return freq
-
     return 0
 
 
 def freq_to_note(freq, tuning_note_names=None, tuning_freqs=None):
-    """
-    Преобразует частоту в ближайшую ноту.
-    Если передан строй - ищем только среди нот строя.
-    """
     if freq <= 0:
         return None, None, None
-
-    # Если передан строй - сначала ищем среди нот строя
     if tuning_note_names and tuning_freqs:
         closest_note = None
         closest_freq = None
         min_diff = float('inf')
-
         for i, note in enumerate(tuning_note_names):
             if i < len(tuning_freqs):
                 note_freq = tuning_freqs[i]
@@ -291,247 +265,177 @@ def freq_to_note(freq, tuning_note_names=None, tuning_freqs=None):
                     min_diff = diff
                     closest_note = note
                     closest_freq = note_freq
-
-        # Допуск для нот строя: 5% или минимум 3 Гц
         max_diff = max(3, freq * 0.05)
         if min_diff < max_diff and closest_note is not None:
             return closest_note, closest_freq, min_diff
-
-    # Если не нашли в строе - ищем среди всех нот
     closest_note = None
     closest_freq = None
     min_diff = float('inf')
-
     for note, note_freq in NOTES.items():
         diff = abs(freq - note_freq)
         if diff < min_diff:
             min_diff = diff
             closest_note = note
             closest_freq = note_freq
-
-    # Допуск для всех нот: 30 Гц или 3%
     max_diff = max(30, freq * 0.03)
     if min_diff < max_diff and closest_note is not None:
         return closest_note, closest_freq, min_diff
-
     return None, None, None
 
 
 def cents_deviation(freq, target_freq):
-    """Отклонение в центах (-50..50)"""
     if target_freq == 0 or freq == 0:
         return 0
     cents = 1200 * math.log2(freq / target_freq)
     return max(-50, min(50, cents))
 
 
-# ============ КОМПОНЕНТЫ UI ============
-
-class NoteScale(Widget):
-    """Шкала нот"""
-
-    current_note = StringProperty('--')
-    highlighted_notes = ListProperty([])
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-        self.highlighted_notes = []
-        self.current_note = '--'
-
-        self.bind(pos=self.redraw, size=self.redraw)
-        self.bind(current_note=self.redraw)
-        self.bind(highlighted_notes=self.redraw)
-
-    def redraw(self, *args):
-        self.canvas.clear()
-
-        if self.width <= 0 or self.height <= 0:
-            return
-
-        with self.canvas:
-            Color(0.1, 0.1, 0.1, 0.3)
-            Rectangle(
-                pos=(self.x, self.y),
-                size=(self.width, self.height)
-            )
-
-            Color(0.46, 0.70, 0.71, 0.2)
-            Line(
-                rectangle=(self.x, self.y, self.width, self.height),
-                width=1
-            )
-
-            note_width = self.width / len(self.notes)
-            note_height = self.height * 0.7
-            note_y = self.y + self.height * 0.15
-
-            for i, note in enumerate(self.notes):
-                x = self.x + i * note_width + note_width / 2
-
-                is_highlighted = note in self.highlighted_notes
-                is_current = note == self.current_note
-
-                if is_current:
-                    Color(0.46, 0.70, 0.71, 0.3)
-                    Ellipse(
-                        pos=(x - note_width * 0.3, note_y - note_height * 0.1),
-                        size=(note_width * 0.6, note_height * 0.8)
-                    )
-                elif is_highlighted:
-                    Color(0.46, 0.70, 0.71, 0.15)
-                    Ellipse(
-                        pos=(x - note_width * 0.25, note_y - note_height * 0.05),
-                        size=(note_width * 0.5, note_height * 0.6)
-                    )
-
-                if is_current:
-                    Color(0.46, 0.70, 0.71, 1)
-                elif is_highlighted:
-                    Color(0.46, 0.70, 0.71, 0.6)
-                else:
-                    Color(0.5, 0.5, 0.5, 0.4)
-
-                if is_current:
-                    Color(0.46, 0.70, 0.71, 0.2)
-                    Ellipse(
-                        pos=(x - dp(14), note_y - dp(10)),
-                        size=(dp(28), dp(20))
-                    )
-
-    def set_current_note(self, note):
-        self.current_note = note
-        self.redraw()
-
-    def set_highlighted(self, notes):
-        self.highlighted_notes = notes
-        self.redraw()
-
+# ===================================================================
+# ============ ПОЛУКРУГ С ЦВЕТНЫМИ СЕГМЕНТАМИ ============
+# ===================================================================
 
 class TunerDial(Widget):
-    """Круговой индикатор отклонения"""
+    """
+    Полукруг от 0 до 180 градусов
+    Цветные сегменты: зелёный (центр), жёлтый, оранжевый, красный
+    Стрелка чёрная, тонкая
+    """
 
     deviation = NumericProperty(0)
-    note_name = StringProperty('--')
-    note_frequency = NumericProperty(0)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.deviation = 0
-        self.note_name = '--'
-        self.note_frequency = 0
-
-        self.colors = {
-            'green': [0.3, 0.8, 0.3, 1],
-            'yellow': [0.9, 0.8, 0.2, 1],
-            'red': [0.8, 0.2, 0.2, 1],
-        }
-
         self.bind(pos=self._update, size=self._update)
         self.bind(deviation=self._update_needle)
 
     def _update(self, *args):
         self.canvas.clear()
+
+        cx = self.center_x
+        cy = self.center_y + dp(15)
+        r = min(self.width, self.height) * 0.48
+
         with self.canvas:
-            Color(0.1, 0.1, 0.1, 0.4)
-            Ellipse(
-                pos=(self.x + self.width * 0.02, self.y + self.height * 0.02),
-                size=(self.width * 0.96, self.height * 0.96)
-            )
+            # ============ 1. ДУГА С ЦВЕТНЫМИ СЕГМЕНТАМИ ============
+            # Каждый сегмент — 10 градусов в дуге от 0 до 180
 
-            Color(0.46, 0.70, 0.71, 0.3)
-            Line(
-                circle=(self.center_x, self.center_y, min(self.width, self.height) * 0.45, 0, 360),
-                width=dp(2)
-            )
+            # Полукруглая дуга — основа
+            Color(0.15, 0.15, 0.2, 1)
+            Line(circle=(cx, cy, r * 0.92, 0, 180), width=dp(14))
 
-            self._draw_scale()
+            # Зелёный сегмент (центр, -3..+3 градуса от 90)
+            Color(0.1, 0.85, 0.2, 0.95)
+            Line(circle=(cx, cy, r * 0.92, 87, 93), width=dp(14))
 
-            Color(0.46, 0.70, 0.71, 0.8)
-            Ellipse(
-                pos=(self.center_x - dp(3), self.center_y - dp(3)),
-                size=(dp(6), dp(6))
-            )
+            # Жёлтый сегмент (ближе к центру)
+            Color(0.95, 0.9, 0.1, 0.85)
+            Line(circle=(cx, cy, r * 0.92, 80, 87), width=dp(14))
+            Line(circle=(cx, cy, r * 0.92, 93, 100), width=dp(14))
 
+            # Оранжевый сегмент
+            Color(0.95, 0.6, 0.1, 0.75)
+            Line(circle=(cx, cy, r * 0.92, 70, 80), width=dp(14))
+            Line(circle=(cx, cy, r * 0.92, 100, 110), width=dp(14))
+
+            # Красный сегмент (края)
+            Color(0.85, 0.15, 0.15, 0.75)
+            Line(circle=(cx, cy, r * 0.92, 55, 70), width=dp(14))
+            Line(circle=(cx, cy, r * 0.92, 110, 125), width=dp(14))
+
+            # Тёмно-красный (самые края)
+            Color(0.6, 0.05, 0.05, 0.6)
+            Line(circle=(cx, cy, r * 0.92, 40, 55), width=dp(14))
+            Line(circle=(cx, cy, r * 0.92, 125, 140), width=dp(14))
+
+            # ============ 2. ДЕЛЕНИЯ (ШАГ 5 ГРАДУСОВ) ============
+            for angle in range(40, 141, 5):
+                angle_rad = math.radians(angle)
+
+                # Длинные риски каждые 10 градусов
+                if angle % 10 == 0:
+                    tick_len = r * 0.08
+                    Color(0.9, 0.9, 0.9, 0.9)
+                    width = 2
+
+                    # Цифры с шагом 10
+                    if angle != 90:
+                        value = round((angle - 90) * 1.25)  # Пересчёт в центы
+                        text_r = r * 0.68
+                        x = cx + text_r * math.sin(angle_rad)
+                        y = cy + text_r * math.cos(angle_rad)
+                        Color(0.6, 0.6, 0.6, 0.4)
+                        Ellipse(pos=(x - dp(4), y - dp(4)), size=(dp(8), dp(8)))
+                else:
+                    tick_len = r * 0.05
+                    Color(0.5, 0.5, 0.5, 0.4)
+                    width = 1.5
+
+                x1 = cx + (r * 0.84 - tick_len) * math.sin(angle_rad)
+                y1 = cy + (r * 0.84 - tick_len) * math.cos(angle_rad)
+                x2 = cx + r * 0.84 * math.sin(angle_rad)
+                y2 = cy + r * 0.84 * math.cos(angle_rad)
+                Line(points=[x1, y1, x2, y2], width=width)
+
+            # ============ 3. СТРЕЛКА ============
             self._draw_needle()
 
-    def _draw_scale(self):
-        radius = min(self.width, self.height) * 0.40
-
-        Color(0.3, 0.8, 0.3, 0.4)
-        Line(
-            circle=(self.center_x, self.center_y, radius, -12, 12),
-            width=dp(6)
-        )
-
-        Color(0.9, 0.8, 0.2, 0.3)
-        Line(
-            circle=(self.center_x, self.center_y, radius, -30, -12),
-            width=dp(4)
-        )
-        Line(
-            circle=(self.center_x, self.center_y, radius, 12, 30),
-            width=dp(4)
-        )
-
-        Color(0.8, 0.2, 0.2, 0.25)
-        Line(
-            circle=(self.center_x, self.center_y, radius, -50, -30),
-            width=dp(3)
-        )
-        Line(
-            circle=(self.center_x, self.center_y, radius, 30, 50),
-            width=dp(3)
-        )
-
-        Color(0.46, 0.70, 0.71, 0.8)
-        Line(
-            circle=(self.center_x, self.center_y, radius * 1.05, -1, 1),
-            width=dp(2)
-        )
+            # ============ 4. ЦЕНТРАЛЬНАЯ ТОЧКА ============
+            Color(0.3, 0.3, 0.3, 0.8)
+            Ellipse(pos=(cx - dp(5), cy - dp(5)), size=(dp(10), dp(10)))
+            Color(0.5, 0.5, 0.5, 0.3)
+            Line(circle=(cx, cy, dp(5)), width=1)
 
     def _draw_needle(self):
-        angle_deg = self.deviation * 45 / 50
+        cx = self.center_x
+        cy = self.center_y + dp(15)
+        r = min(self.width, self.height) * 0.48
+
+        # Отклонение в градусах (от 40 до 140)
+        # -50..+50 центов -> 40..140 градусов
+        angle_deg = 90 + self.deviation * 0.9
+        angle_deg = max(40, min(140, angle_deg))
         angle_rad = math.radians(angle_deg)
-        radius = min(self.width, self.height) * 0.35
 
-        x_end = self.center_x + radius * math.sin(angle_rad)
-        y_end = self.center_y + radius * math.cos(angle_rad)
+        needle_len = r * 0.68
 
-        abs_dev = abs(self.deviation)
-        if abs_dev < 5:
-            color = self.colors['green']
-        elif abs_dev < 15:
-            color = self.colors['yellow']
-        else:
-            color = self.colors['red']
+        x_end = cx + needle_len * math.sin(angle_rad)
+        y_end = cy + needle_len * math.cos(angle_rad)
 
-        Color(*color)
-        Line(
-            points=[self.center_x, self.center_y, x_end, y_end],
-            width=dp(3),
-            cap='round'
-        )
+        # ============ ЧЁРНАЯ ТОНКАЯ СТРЕЛКА ============
+        # Тень стрелки
+        Color(0, 0, 0, 0.2)
+        Line(points=[cx + 1, cy - 1, x_end + 1, y_end - 1], width=dp(2), cap='round')
+
+        # Основная стрелка
+        Color(0.05, 0.05, 0.05, 0.95)
+        Line(points=[cx, cy, x_end, y_end], width=dp(2.5), cap='round')
+
+        # Маленькая точка на конце
+        Color(0.05, 0.05, 0.05, 0.9)
+        head_radius = r * 0.022
+        Ellipse(pos=(x_end - head_radius, y_end - head_radius), size=(head_radius * 2, head_radius * 2))
+
+        # Слабое свечение
+        Color(0.2, 0.2, 0.2, 0.08)
+        Line(points=[cx, cy, x_end, y_end], width=dp(6), cap='round')
 
     def _update_needle(self, *args):
         self._update()
 
 
+# ============ ЛЕЙБЛ ДЛЯ НОТЫ ============
 class NoteLabel(MDLabel):
-    """Лейбл для отображения ноты с анимацией"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._anim = None
 
     def set_note(self, note, is_in_tuning=True):
         self.text = note
-
         if is_in_tuning:
             self.text_color = [0.46, 0.70, 0.71, 1]
         else:
             self.text_color = [0.9, 0.7, 0.2, 1]
-
         if self._anim:
             self._anim.cancel(self)
         self.opacity = 0
@@ -539,11 +443,11 @@ class NoteLabel(MDLabel):
         self._anim.start(self)
 
 
+# ===================================================================
 # ============ ОСНОВНОЙ ЭКРАН ============
+# ===================================================================
 
 class TunerScreen(BaseScreen):
-    """Гитарный тюнер - с полной отладкой в интерфейсе"""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'tuner'
@@ -564,130 +468,17 @@ class TunerScreen(BaseScreen):
         self._attempts = []
         self._working_params = None
 
-        # Текущий строй
         self.current_tuning = 'standard_6'
         self.tuning_notes = TUNINGS[self.current_tuning]['notes']
         self.tuning_freqs = TUNINGS[self.current_tuning]['freqs']
         self.tuning_note_names = TUNINGS[self.current_tuning]['note_names']
         self.strings_count = TUNINGS[self.current_tuning]['strings']
 
-        self.all_notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-
         self.init_ui()
         self.load_background()
-
-        # Устанавливаем callback для отладки
         self._set_debug_callback()
-
         Clock.schedule_once(self._init_audio, 0.5)
-
         logger.info('Экран тюнера создан')
-
-    def _set_debug_callback(self):
-        """Устанавливает callback для отладки из android_audio"""
-        try:
-            if HAS_AUDIO_RECORDER:
-                from utils.android_audio import set_debug_callback
-                set_debug_callback(self._debug_log)
-                logger.info("✅ Debug callback установлен для android_audio")
-        except Exception as e:
-            logger.error(f"❌ Ошибка установки debug callback: {e}")
-
-    def _debug_log(self, message, level="INFO"):
-        """Отображает отладочное сообщение в интерфейсе"""
-
-        def _update_ui():
-            if hasattr(self, '_hint_label'):
-                if not self._error_message:
-                    prefix = {
-                        "INFO": "ℹ️",
-                        "SUCCESS": "✅",
-                        "WARNING": "⚠️",
-                        "ERROR": "❌",
-                        "DEBUG": "🔍"
-                    }.get(level, "🔍")
-                    self._hint_label.text = f"{prefix} {message}"
-                    self._hint_label.opacity = 1
-
-                    if level == "ERROR":
-                        self._hint_label.text_color = [0.8, 0.2, 0.2, 1]
-                    elif level == "SUCCESS":
-                        self._hint_label.text_color = [0.3, 0.8, 0.3, 1]
-                    elif level == "WARNING":
-                        self._hint_label.text_color = [0.9, 0.7, 0.2, 1]
-                    else:
-                        self._hint_label.text_color = [0.46, 0.70, 0.71, 1]
-
-        Clock.schedule_once(lambda dt: _update_ui(), 0)
-        print(f"[DEBUG] {message}")
-
-    def _show_error(self, message):
-        """Показывает ошибку в интерфейсе"""
-
-        def _update_ui():
-            self._error_message = message
-            if hasattr(self, '_hint_label'):
-                self._hint_label.text = f"❌ {message}"
-                self._hint_label.opacity = 1
-                self._hint_label.text_color = [0.8, 0.2, 0.2, 1]
-            logger.error(f"❌ {message}")
-
-        Clock.schedule_once(lambda dt: _update_ui(), 0)
-
-    def _show_success(self, message):
-        """Показывает успешное сообщение в интерфейсе"""
-
-        def _update_ui():
-            if hasattr(self, '_hint_label'):
-                self._hint_label.text = f"✅ {message}"
-                self._hint_label.opacity = 1
-                self._hint_label.text_color = [0.3, 0.8, 0.3, 1]
-                if hasattr(self, '_hint_timer') and self._hint_timer:
-                    Clock.unschedule(self._hint_timer)
-                self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), 3.0)
-
-        Clock.schedule_once(lambda dt: _update_ui(), 0)
-        logger.info(f"✅ {message}")
-
-    def _show_debug(self, message):
-        """Показывает отладочное сообщение"""
-
-        def _update_ui():
-            if hasattr(self, '_hint_label') and not self._error_message:
-                self._hint_label.text = f"🔍 {message}"
-                self._hint_label.opacity = 1
-                self._hint_label.text_color = [0.46, 0.70, 0.71, 1]
-
-        Clock.schedule_once(lambda dt: _update_ui(), 0)
-        logger.debug(f"🔍 {message}")
-
-    def _show_status(self, message, color=None):
-        """Показывает статус в интерфейсе"""
-        if color is None:
-            color = [0.46, 0.70, 0.71, 1]
-
-        def _update_ui():
-            if hasattr(self, '_hint_label'):
-                self._hint_label.text = message
-                self._hint_label.opacity = 1
-                self._hint_label.text_color = color
-
-        Clock.schedule_once(lambda dt: _update_ui(), 0)
-
-    def _hide_hint(self):
-        """Скрывает подсказку"""
-
-        def _update_ui():
-            if hasattr(self, '_hint_label') and self._hint_label:
-                if self._error_message:
-                    return
-                self._hint_label.text = ""
-                self._hint_label.opacity = 0
-                self._hint_label.text_color = [1, 1, 1, 0.5]
-                if hasattr(self, '_hint_timer'):
-                    self._hint_timer = None
-
-        Clock.schedule_once(lambda dt: _update_ui(), 0)
 
     def load_background(self):
         try:
@@ -699,7 +490,6 @@ class TunerScreen(BaseScreen):
                     if bg_data:
                         logger.info(f"Фон загружен из ассета: {name}")
                         break
-
                 if bg_data:
                     img = CoreImage(BytesIO(bg_data), ext="jpg")
                     with self.canvas.before:
@@ -715,23 +505,110 @@ class TunerScreen(BaseScreen):
             self.bg_image.pos = self.pos
             self.bg_image.size = self.size
 
+    # ============ ОТЛАДКА ============
+    def _set_debug_callback(self):
+        try:
+            if HAS_AUDIO_RECORDER:
+                from utils.android_audio import set_debug_callback
+                set_debug_callback(self._debug_log)
+        except Exception as e:
+            pass
+
+    def _debug_log(self, message, level="INFO"):
+        def _update_ui():
+            if hasattr(self, '_hint_label') and not self._error_message:
+                prefix = {"INFO": "ℹ️", "SUCCESS": "✅", "WARNING": "⚠️", "ERROR": "❌", "DEBUG": "🔍"}.get(level, "🔍")
+                self._hint_label.text = f"{prefix} {message}"
+                self._hint_label.opacity = 1
+                if level == "ERROR":
+                    self._hint_label.text_color = [0.8, 0.2, 0.2, 1]
+                elif level == "SUCCESS":
+                    self._hint_label.text_color = [0.3, 0.8, 0.3, 1]
+                elif level == "WARNING":
+                    self._hint_label.text_color = [0.9, 0.7, 0.2, 1]
+                else:
+                    self._hint_label.text_color = [0.46, 0.70, 0.71, 1]
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
+        print(f"[DEBUG] {message}")
+
+    def _show_error(self, message):
+        def _update_ui():
+            self._error_message = message
+            if hasattr(self, '_hint_label'):
+                self._hint_label.text = f"❌ {message}"
+                self._hint_label.opacity = 1
+                self._hint_label.text_color = [0.8, 0.2, 0.2, 1]
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
+
+    def _show_success(self, message):
+        def _update_ui():
+            if hasattr(self, '_hint_label'):
+                self._hint_label.text = f"✅ {message}"
+                self._hint_label.opacity = 1
+                self._hint_label.text_color = [0.3, 0.8, 0.3, 1]
+                if hasattr(self, '_hint_timer'):
+                    Clock.unschedule(self._hint_timer)
+                self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), 3.0)
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
+
+    def _show_debug(self, message):
+        def _update_ui():
+            if hasattr(self, '_hint_label') and not self._error_message:
+                self._hint_label.text = f"🔍 {message}"
+                self._hint_label.opacity = 1
+                self._hint_label.text_color = [0.46, 0.70, 0.71, 1]
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
+
+    def _show_status(self, message, color=None):
+        if color is None:
+            color = [0.46, 0.70, 0.71, 1]
+
+        def _update_ui():
+            if hasattr(self, '_hint_label'):
+                self._hint_label.text = message
+                self._hint_label.opacity = 1
+                self._hint_label.text_color = color
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
+
+    def _hide_hint(self):
+        def _update_ui():
+            if hasattr(self, '_hint_label') and self._hint_label:
+                if self._error_message:
+                    return
+                self._hint_label.text = ""
+                self._hint_label.opacity = 0
+                if hasattr(self, '_hint_timer'):
+                    self._hint_timer = None
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
+
+    def _clear_error(self):
+        def _update_ui():
+            self._error_message = ""
+            if hasattr(self, '_hint_label'):
+                self._hint_label.text = ""
+                self._hint_label.opacity = 0
+
+        Clock.schedule_once(lambda dt: _update_ui(), 0)
+
+    # ============ АУДИО ============
     def _init_audio(self, dt):
-        """Инициализация аудио с отладкой"""
         self._attempts = []
-
         if IS_ANDROID:
-            # ============ ANDROID ============
             self._show_debug("Инициализация аудио на Android...")
-
             try:
                 from android.permissions import request_permissions, Permission
                 self._show_debug("Запрос разрешения RECORD_AUDIO...")
                 request_permissions([Permission.RECORD_AUDIO])
                 self._show_success("Разрешение RECORD_AUDIO получено")
             except Exception as e:
-                self._show_error(f"Ошибка разрешений Android: {str(e)[:100]}")
+                self._show_error(f"Ошибка разрешений: {str(e)[:100]}")
                 return
-
             if HAS_AUDIO_RECORDER:
                 try:
                     self._show_debug("Инициализация JNI AudioRecord...")
@@ -742,204 +619,113 @@ class TunerScreen(BaseScreen):
                 except Exception as e:
                     self._show_error(f"JNI AudioRecord: {str(e)[:100]}")
                     return
-
-            self._show_error("Аудио не доступно на Android. Проверьте разрешения.")
+            self._show_error("Аудио не доступно на Android")
             self._audio_backend = 'none'
-
         else:
-            # ============ WINDOWS ============
-            logger.info("=" * 70)
-            logger.info("🔍 ПОЛНЫЙ ПЕРЕБОР ВСЕХ ВАРИАНТОВ (Windows)")
-            logger.info("=" * 70)
+            self._init_audio_windows()
 
-            # Собираем все устройства из всех библиотек
-            all_devices = []
-
-            if HAS_SOUNDDEVICE:
-                try:
-                    import sounddevice as sd
-                    devices = sd.query_devices()
-                    for i, device in enumerate(devices):
-                        if device['max_input_channels'] > 0:
-                            all_devices.append({
-                                'library': 'sounddevice',
-                                'index': i,
-                                'name': device['name'],
-                                'channels': device['max_input_channels'],
-                                'rate': int(device.get('default_samplerate', 0))
-                            })
-                            logger.info(f"   sounddevice [{i}]: {device['name']}")
-                except Exception as e:
-                    logger.error(f"Ошибка sounddevice: {e}")
-
-            if HAS_PYAUDIO:
-                try:
-                    import pyaudio
-                    p = pyaudio.PyAudio()
-                    for i in range(p.get_device_count()):
-                        info = p.get_device_info_by_index(i)
-                        if info.get('maxInputChannels', 0) > 0:
-                            all_devices.append({
-                                'library': 'pyaudio',
-                                'index': i,
-                                'name': info.get('name', 'Unknown'),
-                                'channels': info.get('maxInputChannels', 0),
-                                'rate': int(info.get('defaultSampleRate', 0))
-                            })
-                            logger.info(f"   pyaudio [{i}]: {info.get('name')}")
-                    p.terminate()
-                except Exception as e:
-                    logger.error(f"Ошибка pyaudio: {e}")
-
-            if not all_devices:
-                self._show_error("Нет аудио устройств! Проверьте подключение микрофона.")
-                self._audio_backend = 'none'
-                return
-
-            logger.info(f"📋 Всего найдено устройств: {len(all_devices)}")
-
-            # Сортируем по приоритету
-            def device_priority(dev):
-                name_lower = dev['name'].lower()
-                if 'realtek' in name_lower and 'mic' in name_lower:
-                    return 0
-                if 'микрофон' in name_lower or 'mic' in name_lower:
-                    return 1
-                if 'набор' in name_lower:
-                    return 3
-                if 'технология' in name_lower:
-                    return 4
-                return 2
-
-            all_devices.sort(key=device_priority)
-
-            # Перебираем все устройства
-            total_attempts = len(all_devices)
-            attempt_count = 0
-
-            for dev in all_devices:
-                attempt_count += 1
-                device_name = dev['name']
-                library = dev['library']
-                device_index = dev['index']
-                max_channels = min(1, dev['channels'])
-
-                logger.info(f"\n{'=' * 50}")
-                logger.info(f"🔹 ПРОВЕРКА {attempt_count}/{total_attempts}: {library} -> {device_name}")
-                logger.info(f"{'=' * 50}")
-
-                self._show_debug(f"{attempt_count}/{total_attempts}: {library} -> {device_name[:30]}")
-
-                rates_to_try = [48000, 44100, 22050, 16000, 11025, 8000]
-                if dev['rate'] > 0:
-                    default_rate = int(dev['rate'])
-                    if default_rate in rates_to_try:
-                        rates_to_try.remove(default_rate)
-                    rates_to_try.insert(0, default_rate)
-
-                if library == 'pyaudio':
-                    formats = [
-                        (pyaudio.paInt16, 'paInt16'),
-                        (pyaudio.paInt32, 'paInt32'),
-                        (pyaudio.paFloat32, 'paFloat32'),
-                    ]
-                else:
-                    formats = [('float32', 'float32')]
-
-                for fmt, fmt_name in formats:
-                    for rate in rates_to_try:
-                        try:
-                            if library == 'sounddevice':
-                                import sounddevice as sd
-                                test_stream = sd.InputStream(
-                                    device=device_index,
-                                    samplerate=rate,
-                                    channels=max_channels,
-                                    blocksize=CHUNK_SIZE,
-                                    dtype='float32',
-                                    latency='high'
-                                )
-                            else:
-                                import pyaudio
-                                p = pyaudio.PyAudio()
-                                test_stream = p.open(
-                                    format=fmt,
-                                    channels=max_channels,
-                                    rate=rate,
-                                    input=True,
-                                    input_device_index=device_index,
-                                    frames_per_buffer=CHUNK_SIZE,
-                                    start=False
-                                )
-
-                            test_stream.start()
-                            test_stream.stop()
-                            test_stream.close()
-
-                            self._working_params = {
-                                'library': library,
-                                'device_index': device_index,
-                                'device_name': device_name,
-                                'rate': rate,
-                                'channels': max_channels,
-                                'format': fmt if library == 'pyaudio' else None,
-                                'fmt_name': fmt_name
-                            }
-                            self._audio_backend = library
-                            logger.info(f"✅✅✅ РАБОТАЕТ: {library} -> {device_name} ({fmt_name}, {rate}Hz)")
-                            self._show_success(f"{library}: {device_name[:30]} ({rate}Hz)")
-                            return
-
-                        except Exception as e:
-                            error_msg = str(e)[:80]
-                            logger.debug(f"   ✗ {library} -> {device_name} @ {fmt_name}/{rate}Hz: {error_msg}")
-                            continue
-
-            logger.error("=" * 70)
-            logger.error("❌ ВСЕ УСТРОЙСТВА ПРОВЕРЕНЫ - НИ ОДНО НЕ РАБОТАЕТ")
-            logger.error("=" * 70)
-
-            error_lines = []
-            error_lines.append("❌ НИ ОДНО УСТРОЙСТВО НЕ РАБОТАЕТ")
-            error_lines.append("")
-            error_lines.append("Проверьте:")
-            error_lines.append("1. Подключен ли микрофон к компьютеру")
-            error_lines.append("2. Разрешён ли доступ к микрофону в Windows Settings")
-            error_lines.append("3. Закрыты ли другие программы (Discord, Zoom, Skype)")
-            error_lines.append("")
-            error_lines.append("Проверенные устройства:")
-            for i, dev in enumerate(all_devices[:10], 1):
-                error_lines.append(f"  {i}. {dev['library']}: {dev['name']}")
-
-            if len(all_devices) > 10:
-                error_lines.append(f"  ... и еще {len(all_devices) - 10} устройств")
-
-            error_lines.append("")
-            error_lines.append("Установите: pip install sounddevice numpy")
-
-            full_error = "\n".join(error_lines)
-            self._show_error(full_error)
+    def _init_audio_windows(self):
+        logger.info("=" * 70)
+        logger.info("🔍 ПОИСК МИКРОФОНА (Windows)")
+        logger.info("=" * 70)
+        all_devices = []
+        if HAS_SOUNDDEVICE:
+            try:
+                import sounddevice as sd
+                for i, d in enumerate(sd.query_devices()):
+                    if d['max_input_channels'] > 0:
+                        all_devices.append({
+                            'library': 'sounddevice',
+                            'index': i,
+                            'name': d['name'],
+                            'channels': d['max_input_channels'],
+                            'rate': int(d.get('default_samplerate', 0))
+                        })
+                        logger.info(f"   sounddevice [{i}]: {d['name']}")
+            except Exception as e:
+                logger.error(f"sounddevice: {e}")
+        if HAS_PYAUDIO:
+            try:
+                import pyaudio
+                p = pyaudio.PyAudio()
+                for i in range(p.get_device_count()):
+                    info = p.get_device_info_by_index(i)
+                    if info.get('maxInputChannels', 0) > 0:
+                        all_devices.append({
+                            'library': 'pyaudio',
+                            'index': i,
+                            'name': info.get('name', 'Unknown'),
+                            'channels': info.get('maxInputChannels', 0),
+                            'rate': int(info.get('defaultSampleRate', 0))
+                        })
+                        logger.info(f"   pyaudio [{i}]: {info.get('name')}")
+                p.terminate()
+            except Exception as e:
+                logger.error(f"pyaudio: {e}")
+        if not all_devices:
+            self._show_error("Нет аудио устройств!")
             self._audio_backend = 'none'
+            return
+        logger.info(f"📋 Найдено устройств: {len(all_devices)}")
+        all_devices.sort(key=lambda d: 0 if 'realtek' in d['name'].lower() and 'mic' in d['name'].lower() else 1)
+        for dev in all_devices:
+            library = dev['library']
+            device_index = dev['index']
+            device_name = dev['name']
+            max_channels = min(1, dev['channels'])
+            rates_to_try = [48000, 44100, 22050, 16000, 11025, 8000]
+            if dev['rate'] > 0 and dev['rate'] in rates_to_try:
+                rates_to_try.remove(dev['rate'])
+                rates_to_try.insert(0, dev['rate'])
+            if library == 'pyaudio':
+                formats = [(pyaudio.paInt16, 'paInt16'), (pyaudio.paInt32, 'paInt32')]
+            else:
+                formats = [('float32', 'float32')]
+            for fmt, fmt_name in formats:
+                for rate in rates_to_try:
+                    try:
+                        if library == 'sounddevice':
+                            import sounddevice as sd
+                            s = sd.InputStream(device=device_index, samplerate=rate,
+                                               channels=max_channels, blocksize=CHUNK_SIZE,
+                                               dtype='float32', latency='high')
+                        else:
+                            import pyaudio
+                            p = pyaudio.PyAudio()
+                            s = p.open(format=fmt, channels=max_channels, rate=rate,
+                                       input=True, input_device_index=device_index,
+                                       frames_per_buffer=CHUNK_SIZE, start=False)
+                        s.start()
+                        s.stop()
+                        s.close()
+                        self._working_params = {
+                            'library': library, 'device_index': device_index,
+                            'device_name': device_name, 'rate': rate,
+                            'channels': max_channels,
+                            'format': fmt if library == 'pyaudio' else None,
+                            'fmt_name': fmt_name
+                        }
+                        self._audio_backend = library
+                        logger.info(f"✅ РАБОТАЕТ: {library} -> {device_name} ({fmt_name}, {rate}Hz)")
+                        self._show_success(f"{library}: {device_name[:30]} ({rate}Hz)")
+                        return
+                    except Exception as e:
+                        continue
+        self._show_error("Не удалось найти рабочий микрофон. Проверьте подключение.")
+        self._audio_backend = 'none'
 
     def _start_audio_thread(self):
-        """Запускает поток захвата аудио с отладкой"""
         if self._running:
-            self._show_debug("Поток уже запущен")
             return
-
         if self._audio_backend == 'none':
             self._show_error("Аудио не инициализировано")
             return
-
         self._running = True
         self._clear_error()
-
         self._show_debug(f"Запуск бэкенда: {self._audio_backend}")
-
         if self._audio_backend == 'android_jni':
             if self._audio_recorder:
                 try:
-                    self._show_debug("Запуск JNI AudioRecord...")
                     self._audio_recorder.start_recording(
                         callback=self._on_audio_data,
                         sample_rate=SAMPLE_RATE,
@@ -949,62 +735,40 @@ class TunerScreen(BaseScreen):
                 except Exception as e:
                     self._show_error(f"JNI AudioRecord: {str(e)[:100]}")
                     self._running = False
-            else:
-                self._show_error("JNI AudioRecord не инициализирован")
-                self._running = False
-
         elif self._audio_backend == 'sounddevice':
-            self._show_debug("Запуск sounddevice...")
             self._audio_thread = threading.Thread(target=self._audio_loop_sounddevice)
             self._audio_thread.daemon = True
             self._audio_thread.start()
-            self._show_success("sounddevice поток запущен")
-
+            self._show_success("sounddevice запущен")
         elif self._audio_backend == 'pyaudio':
-            self._show_debug("Запуск pyaudio...")
             self._audio_thread = threading.Thread(target=self._audio_loop_pyaudio)
             self._audio_thread.daemon = True
             self._audio_thread.start()
-            self._show_success("pyaudio поток запущен")
+            self._show_success("pyaudio запущен")
         else:
             self._show_error(f"Неизвестный бэкенд: {self._audio_backend}")
             self._running = False
 
     def _on_audio_data(self, data):
-        """Callback от Android AudioRecord"""
         if not self.is_listening or not self._running:
             return
-
         if data:
-            self._show_debug(f"Получено {len(data)} байт")
-
             freq = detect_pitch(data, SAMPLE_RATE)
             if freq > 0:
-                self._show_debug(f"Частота: {freq:.1f} Hz")
                 Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
-            else:
-                self._show_debug("Данные есть, но частота не определена")
 
     def _audio_loop_sounddevice(self):
-        """Захват через sounddevice с найденными параметрами"""
         try:
             import sounddevice as sd
             import numpy as np
-
             params = self._working_params
-            device_name = params['device_name']
             selected_rate = params['rate']
             device_index = params['device_index']
-
-            logger.info(f"🎤 Запуск sounddevice: {device_name} ({selected_rate}Hz)")
+            device_name = params['device_name']
 
             def callback(indata, frames, time_info, status):
-                if status:
-                    logger.warning(f"Статус: {status}")
-
                 if not self._running or not self.is_listening:
                     return
-
                 try:
                     if indata is not None and len(indata) > 0:
                         audio_int16 = (indata[:, 0] * 32767).astype(np.int16)
@@ -1014,61 +778,41 @@ class TunerScreen(BaseScreen):
                             if freq > 0:
                                 Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
                 except Exception as e:
-                    logger.error(f"Ошибка обработки: {e}")
+                    pass
 
             self._sounddevice_stream = sd.InputStream(
-                device=device_index,
-                samplerate=selected_rate,
-                channels=1,
-                callback=callback,
-                blocksize=CHUNK_SIZE,
-                dtype='float32',
-                latency='high'
+                device=device_index, samplerate=selected_rate,
+                channels=1, callback=callback, blocksize=CHUNK_SIZE,
+                dtype='float32', latency='high'
             )
-
             self._sounddevice_stream.start()
-            logger.info(f"✅ sounddevice захват запущен ({device_name}, {selected_rate}Hz)")
-
+            logger.info(f"✅ sounddevice запущен ({device_name})")
             while self._running:
                 time.sleep(0.1)
-
             if self._sounddevice_stream:
                 self._sounddevice_stream.stop()
                 self._sounddevice_stream.close()
                 self._sounddevice_stream = None
-
         except Exception as e:
             self._show_error(f"sounddevice: {str(e)[:150]}")
             self._running = False
 
     def _audio_loop_pyaudio(self):
-        """Захват через pyaudio с найденными параметрами"""
         try:
             import pyaudio
-
             params = self._working_params
-            device_name = params['device_name']
             selected_rate = params['rate']
             device_index = params['device_index']
+            device_name = params['device_name']
             selected_format = params['format']
-
-            logger.info(f"🎤 Запуск pyaudio: {device_name} ({selected_rate}Hz)")
-
             self._pyaudio = pyaudio.PyAudio()
-
             stream = self._pyaudio.open(
-                format=selected_format,
-                channels=1,
-                rate=selected_rate,
-                input=True,
-                input_device_index=device_index,
-                frames_per_buffer=CHUNK_SIZE,
-                start=True
+                format=selected_format, channels=1, rate=selected_rate,
+                input=True, input_device_index=device_index,
+                frames_per_buffer=CHUNK_SIZE, start=True
             )
-
             self._pyaudio_stream = stream
-            logger.info(f"✅ pyaudio захват запущен ({device_name}, {selected_rate}Hz)")
-
+            logger.info(f"✅ pyaudio запущен ({device_name})")
             while self._running:
                 try:
                     if stream.is_active():
@@ -1077,53 +821,32 @@ class TunerScreen(BaseScreen):
                             freq = detect_pitch(data, selected_rate)
                             if freq > 0:
                                 Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
-                except IOError as e:
-                    if e.errno == pyaudio.paInputOverflowed:
-                        continue
-                    else:
-                        self._show_error(f"pyaudio: {str(e)[:100]}")
-                        break
-                except Exception as e:
-                    self._show_error(f"pyaudio: {str(e)[:100]}")
+                except:
                     break
-
             if stream:
-                try:
-                    stream.stop_stream()
-                    stream.close()
-                except:
-                    pass
+                stream.stop_stream()
+                stream.close()
             if self._pyaudio:
-                try:
-                    self._pyaudio.terminate()
-                except:
-                    pass
+                self._pyaudio.terminate()
                 self._pyaudio = None
-
         except Exception as e:
             self._show_error(f"pyaudio: {str(e)[:150]}")
             self._running = False
 
     def _stop_audio_thread(self):
-        """Останавливает аудио поток"""
         self._running = False
-
         if self._audio_backend == 'android_jni' and self._audio_recorder:
             try:
                 self._audio_recorder.stop_recording()
-                logger.info("⏹ JNI AudioRecord остановлен")
             except:
                 pass
-
         if self._audio_backend == 'sounddevice' and self._sounddevice_stream:
             try:
                 self._sounddevice_stream.stop()
                 self._sounddevice_stream.close()
                 self._sounddevice_stream = None
-                logger.info("⏹ sounddevice остановлен")
             except:
                 pass
-
         if self._audio_backend == 'pyaudio':
             if self._pyaudio_stream:
                 try:
@@ -1138,159 +861,101 @@ class TunerScreen(BaseScreen):
                 except:
                     pass
                 self._pyaudio = None
-            logger.info("⏹ pyaudio остановлен")
-
         if self._audio_thread and self._audio_thread.is_alive():
             self._audio_thread.join(timeout=1)
         self._audio_thread = None
-
         self._clear_error()
-        logger.info("⏹ Аудио поток остановлен")
 
     def _process_frequency(self, freq):
-        """Обрабатывает обнаруженную частоту с отображением отклонения"""
         if not self.is_listening:
             return
-
-        # Ищем ноту среди нот строя
         note, note_freq, diff = freq_to_note(freq, self.tuning_note_names, self.tuning_freqs)
-
         if note:
-            # Вычисляем отклонение в центах
             cents = cents_deviation(freq, note_freq)
 
-            # Определяем статус настройки
-            if abs(cents) < 5:
-                self._show_success(f"🎵 {note} - В СТРОЕ!")
-            elif abs(cents) < 20:
-                self._show_status(f"🎵 {note}  {cents:+.1f} цент", [0.9, 0.8, 0.2, 1])
-            else:
-                self._show_status(f"🎵 {note}  {cents:+.1f} цент", [0.8, 0.2, 0.2, 1])
-
-            deviation = cents / 50
-            deviation = max(-1, min(1, deviation))
-
-            # Обновляем круговой индикатор
-            if hasattr(self, 'tuner_dial'):
-                self.tuner_dial.deviation = deviation
-                self.tuner_dial.note_name = note
-                self.tuner_dial.note_frequency = note_freq
-
-            if hasattr(self, 'note_scale'):
-                self.note_scale.set_current_note(note)
-                self.note_scale.set_highlighted(self.tuning_note_names)
-
+            # Отображаем ноту и частоту
+            if hasattr(self, 'note_label'):
+                self.note_label.text = note
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.1f} Hz"
 
-            if hasattr(self, 'note_label'):
-                is_in_tuning = note in self.tuning_note_names
-                self.note_label.set_note(note, is_in_tuning)
+            # Статус
+            if abs(cents) < 3:
+                self._show_success("В СТРОЕ!")
+            elif abs(cents) < 10:
+                self._show_status(f"{cents:+.1f} цент", [0.95, 0.85, 0.1, 1])
+            elif abs(cents) < 25:
+                self._show_status(f"{cents:+.1f} цент", [0.95, 0.5, 0.1, 1])
+            else:
+                self._show_status(f"{cents:+.1f} цент", [0.85, 0.15, 0.15, 1])
 
+            if hasattr(self, 'tuner_dial'):
+                self.tuner_dial.deviation = cents
         else:
-            # Если нота не найдена - показываем только частоту
-            self._show_debug(f"Частота {freq:.1f}Hz не соответствует ноте строя")
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.1f} Hz"
             if hasattr(self, 'tuner_dial'):
                 self.tuner_dial.deviation = 0
-                self.tuner_dial.note_name = '--'
-            if hasattr(self, 'note_label'):
-                self.note_label.text = "--"
 
+    # ============ ДИАЛОГ ВЫБОРА СТРОЯ ============
     def _show_tuning_dialog(self):
-        content = MDBoxLayout(
-            orientation='vertical',
-            spacing=dp(8),
-            padding=dp(16),
-            size_hint_y=None,
-            adaptive_height=True
-        )
-
+        content = MDBoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16),
+                              size_hint_y=None, adaptive_height=True)
         categories = {
             '🎸 Гитара': ['standard_6', 'drop_d', 'open_g', 'open_d', 'dadgad', 'half_step_down'],
             '🎸 Бас': ['bass_4', 'bass_5'],
             '🎵 Укулеле': ['ukulele'],
         }
-
         for category, tuning_ids in categories.items():
-            cat_label = MDLabel(
-                text=category,
-                font_size=sp(14),
-                bold=True,
-                size_hint_y=None,
-                height=dp(32),
-                theme_text_color="Custom",
-                text_color=[0.46, 0.70, 0.71, 1]
-            )
+            cat_label = MDLabel(text=category, font_size=sp(14), bold=True,
+                                size_hint_y=None, height=dp(32),
+                                theme_text_color="Custom", text_color=[0.46, 0.70, 0.71, 1])
             content.add_widget(cat_label)
-
-            for tuning_id in tuning_ids:
-                if tuning_id in TUNINGS:
-                    tuning = TUNINGS[tuning_id]
-                    is_active = tuning_id == self.current_tuning
+            for tid in tuning_ids:
+                if tid in TUNINGS:
+                    t = TUNINGS[tid]
+                    is_active = tid == self.current_tuning
                     btn = MDRaisedButton(
-                        text=tuning['name'],
-                        size_hint=(1, None),
-                        height=dp(44),
+                        text=t['name'],
+                        size_hint=(1, None), height=dp(44),
                         md_bg_color=[0.46, 0.70, 0.71, 1] if is_active else [0.2, 0.2, 0.2, 0.6],
                         text_color=[1, 1, 1, 1],
-                        on_release=lambda x, tid=tuning_id: self._select_tuning(tid)
+                        on_release=lambda x, tid2=tid: self._select_tuning(tid2)
                     )
                     content.add_widget(btn)
-
-        self.tuning_dialog = MDDialog(
-            title="Выберите строй",
-            type="custom",
-            content_cls=content,
-            buttons=[
-                MDRaisedButton(
-                    text="Закрыть",
-                    on_release=lambda x: self.tuning_dialog.dismiss()
-                )
-            ]
-        )
+        self.tuning_dialog = MDDialog(title="Выберите строй", type="custom",
+                                      content_cls=content,
+                                      buttons=[MDRaisedButton(text="Закрыть",
+                                                              on_release=lambda x: self.tuning_dialog.dismiss())])
         self.tuning_dialog.open()
 
     def _select_tuning(self, tuning_id):
         if self.tuning_dialog:
             self.tuning_dialog.dismiss()
-
         if tuning_id == self.current_tuning:
             return
-
         self.current_tuning = tuning_id
-        tuning = TUNINGS[tuning_id]
-        self.tuning_notes = tuning['notes']
-        self.tuning_freqs = tuning['freqs']
-        self.tuning_note_names = tuning['note_names']
-        self.strings_count = tuning['strings']
-
+        t = TUNINGS[tuning_id]
+        self.tuning_notes = t['notes']
+        self.tuning_freqs = t['freqs']
+        self.tuning_note_names = t['note_names']
+        self.strings_count = t['strings']
         if hasattr(self, 'tuning_name_label'):
-            self.tuning_name_label.text = tuning['name']
-
-        if hasattr(self, 'note_scale'):
-            self.note_scale.set_highlighted(self.tuning_note_names)
-
+            self.tuning_name_label.text = t['name']
         if hasattr(self, 'tuner_dial'):
             self.tuner_dial.deviation = 0
-            self.tuner_dial.note_name = '--'
         if hasattr(self, 'freq_label'):
             self.freq_label.text = "--"
         if hasattr(self, 'note_label'):
             self.note_label.text = "--"
+        notify.success(f"Строй: {t['name']}")
+        logger.info(f"🎸 Выбран строй: {t['name']}")
 
-        notify.success(f"Строй: {tuning['name']}")
-        logger.info(f"🎸 Выбран строй: {tuning['name']}")
-
+    # ============ UI ============
     def init_ui(self):
-        """Инициализирует UI"""
-
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
-
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
-
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
         total_bottom = bottom_nav_height + nav_bar_height + dp(16)
@@ -1298,110 +963,93 @@ class TunerScreen(BaseScreen):
         content_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(4), dp(12), total_bottom]
+            padding=[dp(8), dp(4), dp(8), total_bottom]
         )
 
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(6),
+            spacing=dp(4),
             size_hint=(1, None),
             adaptive_height=True
         )
 
-        title_label = MDLabel(
-            text="ТЮНЕР",
-            font_size=sp(18),
-            halign="center",
-            size_hint_y=None,
-            height=dp(32),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.8],
-            bold=True
-        )
-        content.add_widget(title_label)
-
-        scale_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(50),
-            padding=[dp(4), dp(2), dp(4), dp(2)]
-        )
-        self.note_scale = NoteScale()
-        self.note_scale.set_highlighted(self.tuning_note_names)
-        scale_container.add_widget(self.note_scale)
-        content.add_widget(scale_container)
-
+        # ============ СТРОЙ (маленький) ============
         tuning_info = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(24),
+            height=dp(18),
             spacing=dp(8),
-            padding=[dp(8), dp(2), dp(8), dp(2)]
+            padding=[dp(8), dp(0), dp(8), dp(0)]
         )
-
         self.tuning_name_label = MDLabel(
             text=TUNINGS[self.current_tuning]['name'],
-            font_size=sp(11),
+            font_size=sp(9),
             halign="center",
             size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.4]
+            text_color=[1, 1, 1, 0.2],
+            bold=False
         )
         tuning_info.add_widget(self.tuning_name_label)
         content.add_widget(tuning_info)
 
+        # ============ ПОЛУКРУГЛАЯ ШКАЛА ============
         dial_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(180),
-            padding=[dp(32), dp(4), dp(32), dp(4)]
+            height=dp(360),
+            padding=[dp(4), dp(2), dp(4), dp(2)]
         )
         self.tuner_dial = TunerDial()
         dial_container.add_widget(self.tuner_dial)
         content.add_widget(dial_container)
 
+        # ============ НОТА И ЧАСТОТА ============
         info_container = MDBoxLayout(
-            orientation='horizontal',
+            orientation='vertical',
             size_hint=(1, None),
-            height=dp(50),
-            spacing=dp(16),
+            height=dp(70),
+            spacing=dp(2),
             padding=[dp(16), dp(4), dp(16), dp(4)]
+        )
+
+        self.note_label = MDLabel(
+            text="--",
+            font_size=sp(32),
+            halign="center",
+            size_hint_y=None,
+            height=dp(40),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95],
+            bold=True
         )
 
         self.freq_label = MDLabel(
             text="--",
             font_size=sp(14),
             halign="center",
-            size_hint_x=0.5,
+            size_hint_y=None,
+            height=dp(22),
             theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 1],
+            text_color=[0.46, 0.70, 0.71, 0.7],
             bold=True
         )
 
-        self.note_label = NoteLabel(
-            text="--",
-            font_size=sp(24),
-            halign="center",
-            size_hint_x=0.5,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
-            bold=True
-        )
-
-        info_container.add_widget(self.freq_label)
         info_container.add_widget(self.note_label)
+        info_container.add_widget(self.freq_label)
         content.add_widget(info_container)
 
+        # ============ МЕНЮ ============
         menu_card = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(52),
+            height=dp(48),
             padding=[dp(4), dp(4), dp(4), dp(4)],
             radius=[dp(12), dp(12), dp(12), dp(12)],
-            md_bg_color=[0, 0, 0, 0.08],
+            md_bg_color=[0, 0, 0, 0.06],
             elevation=0,
-            line_color=[1, 1, 1, 0.15],
-            line_width=0.8,
+            line_color=[1, 1, 1, 0.08],
+            line_width=0.5,
             spacing=0
         )
 
@@ -1413,33 +1061,21 @@ class TunerScreen(BaseScreen):
             md_bg_color=[0, 0, 0, 0],
             on_release=self.toggle_tuner
         )
-
-        divider1 = MDBoxLayout(
-            size_hint_x=None,
-            width=dp(1),
-            md_bg_color=[1, 1, 1, 0.1]
-        )
-
+        divider1 = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[1, 1, 1, 0.08])
         self.tuning_btn = MDIconButton(
             icon="tune",
             size_hint=(1, 1),
             theme_icon_color="Custom",
-            icon_color=[0.9, 0.7, 0.2, 0.9],
+            icon_color=[0.9, 0.7, 0.2, 0.8],
             md_bg_color=[0, 0, 0, 0],
             on_release=lambda x: self._show_tuning_dialog()
         )
-
-        divider2 = MDBoxLayout(
-            size_hint_x=None,
-            width=dp(1),
-            md_bg_color=[1, 1, 1, 0.1]
-        )
-
+        divider2 = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[1, 1, 1, 0.08])
         self.reset_btn = MDIconButton(
             icon="refresh",
             size_hint=(1, 1),
             theme_icon_color="Custom",
-            icon_color=[0.8, 0.3, 0.3, 0.9],
+            icon_color=[0.7, 0.3, 0.3, 0.7],
             md_bg_color=[0, 0, 0, 0],
             on_release=self.reset_tuner
         )
@@ -1449,16 +1085,15 @@ class TunerScreen(BaseScreen):
         menu_card.add_widget(self.tuning_btn)
         menu_card.add_widget(divider2)
         menu_card.add_widget(self.reset_btn)
-
         content.add_widget(menu_card)
 
-        # ============ ЛЕЙБЛ ДЛЯ ОШИБОК И ПОДСКАЗОК ============
+        # ============ СТАТУС ============
         self._hint_label = MDLabel(
             text="",
-            font_size=sp(12),
+            font_size=sp(10),
             halign="center",
             size_hint_y=None,
-            height=dp(30),
+            height=dp(22),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
             opacity=0
@@ -1467,19 +1102,15 @@ class TunerScreen(BaseScreen):
 
         content_container.add_widget(content)
         content_container.add_widget(Widget(size_hint_y=1))
-
         main_layout.add_widget(content_container)
         self.add_widget(main_layout)
-
         logger.info("UI тюнера построен")
 
     def toggle_tuner(self, instance):
-        """Включает/выключает тюнер с отладкой"""
         if not self.is_listening:
             if self._audio_backend == 'none':
-                self._show_error("Аудио не инициализировано. Проверьте настройки.")
+                self._show_error("Аудио не инициализировано")
                 return
-
             self._show_debug("Запуск тюнера...")
             self.is_listening = True
             self.play_btn.icon = "stop"
@@ -1491,54 +1122,37 @@ class TunerScreen(BaseScreen):
             self.play_btn.icon = "play"
             self.play_btn.icon_color = [0.46, 0.70, 0.71, 1]
             self._stop_audio_thread()
-
             if hasattr(self, 'tuner_dial'):
                 self.tuner_dial.deviation = 0
-                self.tuner_dial.note_name = '--'
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = "--"
             if hasattr(self, 'note_label'):
                 self.note_label.text = "--"
-            if hasattr(self, 'note_scale'):
-                self.note_scale.set_current_note('--')
-
+            if hasattr(self, '_hint_label'):
+                self._hint_label.text = ""
+                self._hint_label.opacity = 0
             self._show_debug("Тюнер остановлен")
 
     def reset_tuner(self, instance):
-        """Сброс тюнера"""
         if self.is_listening:
             self.toggle_tuner(None)
-
         if hasattr(self, 'tuner_dial'):
             self.tuner_dial.deviation = 0
-            self.tuner_dial.note_name = '--'
         if hasattr(self, 'freq_label'):
             self.freq_label.text = "--"
         if hasattr(self, 'note_label'):
             self.note_label.text = "--"
-        if hasattr(self, 'note_scale'):
-            self.note_scale.set_current_note('--')
-
+        if hasattr(self, '_hint_label'):
+            self._hint_label.text = ""
+            self._hint_label.opacity = 0
         self._clear_error()
         logger.info("🔄 Тюнер сброшен")
-
-    def _clear_error(self):
-        """Очищает сообщение об ошибке"""
-
-        def _update_ui():
-            self._error_message = ""
-            if hasattr(self, '_hint_label'):
-                self._hint_label.text = ""
-                self._hint_label.opacity = 0
-                self._hint_label.text_color = [1, 1, 1, 0.5]
-
-        Clock.schedule_once(lambda dt: _update_ui(), 0)
 
     def on_enter(self):
         logger.info("Вход в экран тюнера")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            app.top_nav.set_custom_title("Тюнер")
+            app.top_nav.set_custom_title("")
             app.top_nav.set_custom_back_callback(self.go_back)
 
     def go_back(self, instance=None):

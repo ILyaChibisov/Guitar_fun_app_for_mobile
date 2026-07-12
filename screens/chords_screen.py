@@ -6,7 +6,7 @@
 СТАТИЧНЫЙ ЭКРАН - БЕЗ ПРОКРУТКИ
 С КЭШИРОВАНИЕМ МЕНЮ
 С ПОДДЕРЖКОЙ СВАЙПА ДЛЯ СМЕНЫ ТОНАЛЬНОСТИ И ТИПА АККОРДА
-С АНИМАЦИЕЙ КАК В КАРУСЕЛИ
+С АНИМАЦИЕЙ КАК В КАРУСЕЛИ (song_detail)
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -49,6 +49,7 @@ try:
 except ImportError:
     HAS_ASSETS = False
 
+
     def load_asset_as_bytes(name):
         return None
 
@@ -66,22 +67,44 @@ CHORD_TYPES = [
 ]
 
 
-# ============ КОНТЕЙНЕР С КАРУСЕЛЬЮ ============
+# ============ КОНТЕЙНЕР С КАРУСЕЛЬЮ (ПОЛНАЯ ВЕРСИЯ) ============
 class SwipeContainer(MDBoxLayout):
-    """Контейнер с Carousel для аккордов"""
+    """
+    Контейнер с Carousel для аккордов.
+    Поддерживает как сенсорные свайпы, так и перетаскивание мышью.
+    """
 
     def __init__(self, on_swipe_horizontal=None, on_swipe_vertical=None, **kwargs):
         super().__init__(**kwargs)
         self.on_swipe_horizontal = on_swipe_horizontal
         self.on_swipe_vertical = on_swipe_vertical
-        self._is_swipe = False
+        self._touch_start_x = 0
+        self._touch_start_y = 0
+        self._touch_moved = False
+        self._is_dragging = False
+        self._drag_threshold = 20
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
-        self.height = dp(380)  # Фиксированная высота
+        self.height = dp(420)
         self.md_bg_color = [0, 0, 0, 0]
+        self.spacing = 0
 
-        # ============ КАРУСЕЛЬ ============
+        # ============ НАЗВАНИЕ АККОРДА (СНАРУЖИ КАРУСЕЛИ) ============
+        self.chord_name_label = MDLabel(
+            text="A | Amaj",
+            font_size=sp(22),
+            halign="center",
+            bold=True,
+            size_hint_y=None,
+            height=dp(32 + 16),
+            padding=[0, dp(8), 0, 0],
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95]
+        )
+        self.add_widget(self.chord_name_label)
+
+        # ============ КАРУСЕЛЬ ДЛЯ ГРИФОВ ============
         self.carousel = Carousel(
             direction='right',
             loop=True,
@@ -92,34 +115,61 @@ class SwipeContainer(MDBoxLayout):
         self.add_widget(self.carousel)
 
         self.slides = []
+        self.renderers = []
         self.current_index = 0
 
-    def add_slide(self, widget):
-        """Добавляет слайд в карусель"""
+    def _build_griff_wrapper(self):
+        wrapper = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[dp(8), dp(12), dp(8), dp(4)],
+            md_bg_color=[0, 0, 0, 0]
+        )
+        return wrapper
+
+    def add_slide(self, chord_module):
         slide = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             md_bg_color=[0, 0, 0, 0]
         )
-        slide.add_widget(widget)
+
+        wrapper = self._build_griff_wrapper()
+
+        renderer = ChordRenderer()
+
+        try:
+            bg_data = load_asset_as_bytes("griff_png")
+            if bg_data:
+                img = CoreImage(BytesIO(bg_data), ext="png")
+                if img and img.texture:
+                    renderer.set_background(img.texture)
+        except Exception as e:
+            logger.error(f"Ошибка загрузки фона грифа: {e}")
+
+        if chord_module:
+            renderer.load_chord(chord_module)
+            renderer.set_mode("finger")
+
+        wrapper.add_widget(renderer)
+        slide.add_widget(wrapper)
         self.carousel.add_widget(slide)
         self.slides.append(slide)
-        return slide
+        self.renderers.append(renderer)
+        return slide, renderer
 
     def clear_slides(self):
-        """Очищает все слайды"""
         self.carousel.clear_widgets()
         self.slides = []
+        self.renderers = []
         self.current_index = 0
 
     def set_current_slide(self, index):
-        """Устанавливает текущий слайд"""
         if 0 <= index < len(self.slides):
             self.carousel.load_slide(self.slides[index])
             self.current_index = index
 
     def _on_carousel_slide(self, instance, slide):
-        """Обработчик смены слайда"""
         if not self.slides:
             return
 
@@ -127,45 +177,88 @@ class SwipeContainer(MDBoxLayout):
             index = self.slides.index(slide)
             if index != self.current_index:
                 self.current_index = index
-                if self._is_swipe and self.on_swipe_horizontal:
-                    if index > self.current_index:
-                        self.on_swipe_horizontal(1)
-                    else:
-                        self.on_swipe_horizontal(-1)
-                self._is_swipe = False
         except ValueError:
             pass
 
+    # ============ ОБРАБОТКА КАСАНИЙ И МЫШИ ============
+
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
-            self._is_swipe = False
+            self._touch_start_x = touch.x
+            self._touch_start_y = touch.y
+            self._touch_moved = False
+            self._is_dragging = False
+            touch.grab(self)
             return True
         return super().on_touch_down(touch)
 
     def on_touch_move(self, touch):
-        if self.collide_point(*touch.pos):
-            dx = touch.x - touch.ox
-            if abs(dx) > 20:
-                self._is_swipe = True
+        if touch.grab_current is self:
+            dx = touch.x - self._touch_start_x
+            dy = touch.y - self._touch_start_y
+
+            if abs(dx) > self._drag_threshold or abs(dy) > self._drag_threshold:
+                self._touch_moved = True
+                self._is_dragging = True
+
+                # Передаём движение в карусель для визуального отклика
+                if abs(dx) > abs(dy):
+                    self.carousel.on_touch_move(touch)
+
             return True
         return super().on_touch_move(touch)
 
     def on_touch_up(self, touch):
-        if self.collide_point(*touch.pos):
-            dx = touch.x - touch.ox
-            dy = touch.y - touch.oy
+        if touch.grab_current is self:
+            if self._touch_moved:
+                dx = touch.x - self._touch_start_x
+                dy = touch.y - self._touch_start_y
 
-            abs_dx = abs(dx)
-            abs_dy = abs(dy)
+                abs_dx = abs(dx)
+                abs_dy = abs(dy)
 
-            if abs_dy > 50 and abs_dx < 50:
-                if self.on_swipe_vertical:
-                    if dy > 0:
-                        self.on_swipe_vertical(-1)
-                    else:
-                        self.on_swipe_vertical(1)
+                # Горизонтальный свайп (влево/вправо) - смена тональности
+                if abs_dx > 50 and abs_dx > abs_dy:
+                    if self.on_swipe_horizontal:
+                        if dx > 0:
+                            # Свайп вправо - ПОВЫШАЕМ тональность
+                            self.on_swipe_horizontal(1)
+                            self.carousel.load_next()
+                        else:
+                            # Свайп влево - ПОНИЖАЕМ тональность
+                            self.on_swipe_horizontal(-1)
+                            self.carousel.load_previous()
+
+                # Вертикальный свайп (вверх/вниз) - смена типа аккорда
+                elif abs_dy > 50 and abs_dy > abs_dx:
+                    if self.on_swipe_vertical:
+                        if dy > 0:
+                            # Свайп вниз - ПРЕДЫДУЩИЙ тип
+                            self.on_swipe_vertical(-1)
+                        else:
+                            # Свайп вверх - СЛЕДУЮЩИЙ тип
+                            self.on_swipe_vertical(1)
+
+                        self._animate_vertical_swipe()
+
+            touch.ungrab(self)
+            self._touch_moved = False
+            self._is_dragging = False
             return True
         return super().on_touch_up(touch)
+
+    def _animate_vertical_swipe(self):
+        anim_out = Animation(opacity=0, duration=0.15, t='out_quad')
+        anim_out.bind(on_complete=lambda *args: self._on_vertical_anim_complete())
+        anim_out.start(self.carousel)
+
+    def _on_vertical_anim_complete(self):
+        anim_in = Animation(opacity=1, duration=0.15, t='in_quad')
+        anim_in.start(self.carousel)
+
+    def update_renderer_mode(self, mode):
+        for renderer in self.renderers:
+            renderer.set_mode(mode)
 
 
 # ============ ПОИСКОВАЯ СТРОКА ============
@@ -667,9 +760,6 @@ class ChordsScreen(BaseScreen):
 
         self.search_bar = None
         self.unified_menu = None
-        self.chord_name_label = None
-        self.chord_desc_label = None
-        self.chord_renderer = None
         self._menu_container = None
         self._info_label = None
         self._hint_timer = None
@@ -696,7 +786,7 @@ class ChordsScreen(BaseScreen):
         # Сканируем аккорды после создания UI
         Clock.schedule_once(lambda dt: self.scan_chords(), 0.1)
 
-        logger.info('Экран аккордов создан (с Carousel)')
+        logger.info('Экран аккордов создан (с Carousel и поддержкой перетаскивания)')
 
     def _create_cached_menus(self, dt=None):
         if self._menu_cache_initialized:
@@ -758,6 +848,7 @@ class ChordsScreen(BaseScreen):
                 self._info_label.height = new_height
 
     def _update_griff_size(self, *args):
+        """Обновляет размер грифа"""
         if hasattr(self, 'swipe_container') and self.swipe_container:
             window_width = Window.width
 
@@ -776,79 +867,21 @@ class ChordsScreen(BaseScreen):
             griff_height = int(griff_height)
             self._griff_height = griff_height
 
-            # Обновляем высоту контейнера
-            self.swipe_container.height = griff_height + dp(60)
+            # Обновляем высоту контейнера с учётом отступов
+            self.swipe_container.height = griff_height + dp(80)
 
             logger.info(f"📐 Гриф обновлён: {griff_height}dp")
 
-    def _build_chord_slide(self, chord_name=None, chord_module=None):
-        """Создаёт слайд с названием аккорда и грифом"""
-        if chord_name is None:
-            chord_name = self.current_chord_name if self.current_chord_name else "A | Amaj"
-        if chord_module is None:
-            chord_module = self.current_chord_module
-
-        container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0]
-        )
-
-        # Название аккорда
-        name_label = MDLabel(
-            text=chord_name,
-            font_size=sp(22),
-            halign="center",
-            bold=True,
-            size_hint_y=None,
-            height=dp(32 + 16),
-            padding=[0, dp(8), 0, 0],
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95]
-        )
-        container.add_widget(name_label)
-        self.chord_name_label = name_label
-
-        # Гриф
-        padding = layout_config.get_content_padding()
-        horizontal_padding = [padding[0], 0, padding[2], 0]
-
-        griff_wrapper = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=horizontal_padding
-        )
-
-        griff_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=[0, 0, 0, 0]
-        )
-
-        renderer = ChordRenderer()
-        # Загружаем фон грифа
-        try:
-            bg_data = load_asset_as_bytes("griff_png")
-            if bg_data:
-                img = CoreImage(BytesIO(bg_data), ext="png")
-                if img and img.texture:
-                    renderer.set_background(img.texture)
-        except Exception as e:
-            logger.error(f"Ошибка загрузки фона грифа: {e}")
-
-        if chord_module:
-            renderer.load_chord(chord_module)
-            renderer.set_mode(self.current_mode)
-
-        griff_container.add_widget(renderer)
-        griff_wrapper.add_widget(griff_container)
-        container.add_widget(griff_wrapper)
-        self.chord_renderer = renderer
-
-        return container
+    def _add_chord_slide(self, chord_module):
+        """Добавляет слайд с грифом в карусель"""
+        if self.swipe_container:
+            self.swipe_container.add_slide(chord_module)
+            # Показываем последний добавленный слайд
+            if self.swipe_container.slides:
+                self.swipe_container.set_current_slide(len(self.swipe_container.slides) - 1)
 
     def _update_display(self):
-        """Обновляет отображение аккорда - добавляет новый слайд в карусель"""
+        """Обновляет отображение аккорда"""
         if not self.current_variants:
             return
 
@@ -874,14 +907,12 @@ class ChordsScreen(BaseScreen):
 
         logger.info(f"🎸 Обновление отображения аккорда: {display_name}")
 
-        # Создаём новый слайд
-        new_slide = self._build_chord_slide(display_name, self.current_chord_module)
-
-        # Добавляем в карусель
+        # Обновляем название (снаружи карусели)
         if self.swipe_container:
-            self.swipe_container.clear_slides()
-            self.swipe_container.add_slide(new_slide)
-            self.swipe_container.set_current_slide(0)
+            self.swipe_container.chord_name_label.text = display_name
+
+        # Добавляем новый слайд с грифом в карусель
+        self._add_chord_slide(self.current_chord_module)
 
         # Обновляем описание
         self._show_description()
@@ -923,11 +954,10 @@ class ChordsScreen(BaseScreen):
             on_swipe_vertical=self._on_swipe_vertical
         )
         self.swipe_container.size_hint = (1, None)
-        self.swipe_container.height = self._griff_height + dp(60)
+        self.swipe_container.height = self._griff_height + dp(80)
         content.add_widget(self.swipe_container)
 
         Window.bind(on_resize=self._on_window_resize)
-        Window.bind(on_mousewheel=self._on_mousewheel)
 
         # ============ ОТСТУП ПОСЛЕ ГРИФА ============
         content.add_widget(Widget(size_hint_y=None, height=dp(4)))
@@ -993,14 +1023,6 @@ class ChordsScreen(BaseScreen):
 
         # Показываем начальный аккорд после загрузки данных
         Clock.schedule_once(lambda dt: self._update_display(), 0.2)
-
-    def _on_mousewheel(self, window, x, y, dx, dy):
-        """Обработчик колесика мыши"""
-        if self.swipe_container and self.swipe_container.collide_point(x, y):
-            if dy > 0:
-                self.swipe_container.carousel.load_next()
-            elif dy < 0:
-                self.swipe_container.carousel.load_previous()
 
     # ============ ОБРАБОТЧИКИ СВАЙПА ============
 
@@ -1325,8 +1347,8 @@ class ChordsScreen(BaseScreen):
 
         self.unified_menu.update_mode(self.current_mode)
 
-        if self.current_chord_module and self.chord_renderer:
-            self.chord_renderer.set_mode(self.current_mode)
+        if self.swipe_container:
+            self.swipe_container.update_renderer_mode(self.current_mode)
 
         logger.info(f"Режим отображения: {self.current_mode}")
 
@@ -1655,7 +1677,6 @@ class ChordsScreen(BaseScreen):
             return False
 
     def _on_window_resize(self, window, width, height):
-        """Обработчик изменения размера окна"""
         if hasattr(self, '_update_griff_timer') and self._update_griff_timer:
             Clock.unschedule(self._update_griff_timer)
         self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.1)
