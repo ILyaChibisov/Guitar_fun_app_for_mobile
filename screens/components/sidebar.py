@@ -279,47 +279,6 @@ class SidebarOverlay(Widget):
         return False
 
 
-class SidebarScrollView(ScrollView):
-    """ScrollView который правильно передаёт касания дочерним виджетам"""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.do_scroll_x = False
-        self.bar_width = 0
-        self.bar_color = [0, 0, 0, 0]
-        self.bar_inactive_color = [0, 0, 0, 0]
-        self.scroll_type = ['content']
-        self.effect_cls = 'ScrollEffect'
-
-    def on_touch_down(self, touch):
-        # Проверяем, попали ли в дочерний виджет (пункт меню)
-        if self.collide_point(*touch.pos):
-            for child in self.children:
-                if child.collide_point(*touch.pos):
-                    # Передаём касание дочернему виджету
-                    return child.on_touch_down(touch)
-
-        # Если не попали в дочерний виджет - пробуем скролл
-        if self._can_scroll():
-            return super().on_touch_down(touch)
-
-        return False
-
-    def on_touch_move(self, touch):
-        if self._can_scroll():
-            return super().on_touch_move(touch)
-        return False
-
-    def _can_scroll(self):
-        if not self.children:
-            return False
-        child = self.children[0]
-        # Если контент помещается - отключаем скролл
-        if child.height <= self.height:
-            return False
-        return True
-
-
 class Sidebar(FloatLayout):
     """
     Выдвижная боковая панель
@@ -389,9 +348,15 @@ class Sidebar(FloatLayout):
         self.main_container.add_widget(self.header)
 
         # ============ СКРОЛЛ С ПУНКТАМИ МЕНЮ ============
-        self.scroll = SidebarScrollView(
+        # Используем обычный ScrollView с отключенным скроллбаром
+        self.scroll = ScrollView(
             size_hint=(1, 1),
-            do_scroll_x=False
+            do_scroll_x=False,
+            bar_width=0,
+            bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0],
+            scroll_type=['content'],
+            effect_cls='ScrollEffect'
         )
 
         self.menu_container = MDBoxLayout(
@@ -494,8 +459,6 @@ class Sidebar(FloatLayout):
             if hasattr(item, 'set_active'):
                 is_active = (screen_name == current_screen)
                 item.set_active(is_active)
-                if is_active:
-                    logger.info(f"   ✅ Активен: {screen_name}")
 
         self._update_auth_state()
 
@@ -545,7 +508,6 @@ class Sidebar(FloatLayout):
             is_admin=is_admin
         )
         self.menu_container.add_widget(item)
-        logger.info(f"➕ Добавлен пункт меню: {screen_name} -> {title}")
         return item
 
     def _on_item_click(self, screen_name):
