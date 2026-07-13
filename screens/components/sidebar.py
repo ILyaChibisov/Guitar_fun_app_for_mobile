@@ -348,7 +348,6 @@ class Sidebar(FloatLayout):
         self.main_container.add_widget(self.header)
 
         # ============ СКРОЛЛ С ПУНКТАМИ МЕНЮ ============
-        # Используем обычный ScrollView с отключенным скроллбаром
         self.scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
@@ -368,16 +367,16 @@ class Sidebar(FloatLayout):
         )
         self.menu_container.bind(minimum_height=self.menu_container.setter('height'))
 
-        # ============ ПУНКТЫ МЕНЮ ============
+        # ============ ПУНКТЫ МЕНЮ (НОВЫЙ ПОРЯДОК) ============
         self.menu_item_refs = {}
 
-        # 1. Профиль
-        item = self.add_menu_item('account', 'Профиль', 'profile')
-        self.menu_item_refs['profile'] = item
-
-        # 2. Авторизация (специальный пункт)
+        # 1. Войти / Выйти из аккаунта (первый пункт)
         self.auth_item = self.add_menu_item('login', 'Войти', 'auth')
         self.menu_item_refs['auth'] = self.auth_item
+
+        # 2. Аккаунт (второй пункт)
+        item = self.add_menu_item('account', 'Аккаунт', 'profile')
+        self.menu_item_refs['profile'] = item
 
         # 3. Настройки
         item = self.add_menu_item('cog', 'Настройки', 'settings')
@@ -441,7 +440,6 @@ class Sidebar(FloatLayout):
 
         Clock.schedule_once(self._update_menu_state, 0.3)
 
-        # Выводим список доступных экранов для диагностики
         if self.sm:
             logger.info(f"✅ Sidebar создан, ширина={self.panel_width}dp")
             logger.info(f"📋 Доступные экраны в ScreenManager: {self.sm.screen_names}")
@@ -466,10 +464,10 @@ class Sidebar(FloatLayout):
         is_auth = api.is_authenticated()
 
         if is_auth:
-            self.auth_item.title_label.text = "Выйти"
+            self.auth_item.title_label.text = "Выйти из аккаунта"
             self.auth_item.icon.icon = "logout"
         else:
-            self.auth_item.title_label.text = "Войти"
+            self.auth_item.title_label.text = "Авторизоваться"
             self.auth_item.icon.icon = "login"
 
     def _on_panel_x_changed(self, instance, value):
@@ -514,31 +512,25 @@ class Sidebar(FloatLayout):
         """Обработчик клика по пункту меню"""
         logger.info(f"📍 ВЫЗВАН _on_item_click для: {screen_name}")
 
-        # Закрываем панель
         self.close()
 
-        # Специальная обработка для авторизации
         if screen_name == 'auth':
             Clock.schedule_once(lambda dt: self._handle_auth(), 0.1)
             return
 
-        # Проверяем, существует ли экран
         if not self.sm:
             logger.error("❌ ScreenManager не найден!")
             return
 
-        # Проверяем, есть ли экран в ScreenManager
         if not self.sm.has_screen(screen_name):
             logger.error(f"❌ Экран '{screen_name}' не найден в ScreenManager!")
             logger.info(f"📋 Доступные экраны: {self.sm.screen_names}")
             return
 
-        # Если уже на этом экране - ничего не делаем
         if self.sm.current == screen_name:
             logger.info(f"ℹ️ Уже на экране {screen_name}")
             return
 
-        # Переход с задержкой, чтобы панель успела закрыться
         def do_navigation(dt):
             try:
                 logger.info(f"🚀 Переход на экран: {screen_name}")
@@ -587,9 +579,15 @@ class Sidebar(FloatLayout):
             logger.error("❌ Экран 'profile' не найден!")
 
     def _show_auth(self):
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'open_profile'):
-            app.open_profile()
+        """Показывает экран авторизации"""
+        if self.sm and self.sm.has_screen('auth_screen'):
+            self.close()
+            Clock.schedule_once(lambda dt: setattr(self.sm, 'current', 'auth_screen'), 0.15)
+        else:
+            # Если экрана нет, используем старый метод
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'open_profile'):
+                app.open_profile()
 
     def open(self):
         if self.is_open:

@@ -25,7 +25,7 @@ from .parsers_screens.rushsound_parser_screen import RushSoundParserScreen
 from .term_detail_screen import TermDetailScreen
 from .tasks_screen import TasksScreen
 from .task_detail_screen import TaskDetailScreen
-
+from .auth_screen import AuthScreen
 # ============ НОВЫЕ ЭКРАНЫ ============
 from .settings_screen import SettingsScreen
 from .help_screen import HelpScreen
@@ -58,6 +58,7 @@ def setup_screen_manager():
     sm.add_widget(FeedbackScreen(name='feedback'))
     sm.add_widget(TasksScreen(name='tasks'))
     sm.add_widget(TaskDetailScreen(name='task_detail'))
+    sm.add_widget(AuthScreen(name='auth_screen'))
 
     # Парсеры
     sm.add_widget(AMDMParserScreen(name='amdm_parser'))
