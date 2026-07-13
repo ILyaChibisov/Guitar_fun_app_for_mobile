@@ -23,6 +23,8 @@ from .parsers_screens.akkordbard_parser_screen import AkkordBardParserScreen
 from .parsers_screens.domhve_parser_screen import DomhveParserScreen
 from .parsers_screens.rushsound_parser_screen import RushSoundParserScreen
 from .term_detail_screen import TermDetailScreen
+from .tasks_screen import TasksScreen
+from .task_detail_screen import TaskDetailScreen
 
 # ============ НОВЫЕ ЭКРАНЫ ============
 from .settings_screen import SettingsScreen
@@ -54,6 +56,8 @@ def setup_screen_manager():
     sm.add_widget(HelpScreen(name='help'))
     sm.add_widget(PromoScreen(name='promo'))
     sm.add_widget(FeedbackScreen(name='feedback'))
+    sm.add_widget(TasksScreen(name='tasks'))
+    sm.add_widget(TaskDetailScreen(name='task_detail'))
 
     # Парсеры
     sm.add_widget(AMDMParserScreen(name='amdm_parser'))

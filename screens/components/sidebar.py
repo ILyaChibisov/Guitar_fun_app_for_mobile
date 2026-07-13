@@ -18,6 +18,7 @@ from kivy.core.window import Window
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty
+from kivy.uix.scrollview import ScrollView
 
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
@@ -79,7 +80,7 @@ class SidebarItem(CircularRippleBehavior, MDCard):
             icon_color=[1, 1, 1, 0.7],
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5},
-            ripple_scale=0  # Отключаем ripple у иконки
+            ripple_scale=0
         )
 
         # Название
@@ -111,7 +112,6 @@ class SidebarItem(CircularRippleBehavior, MDCard):
         self.add_widget(self.icon)
         self.add_widget(self.title_label)
 
-        # ============ ВАЖНО: Привязываем on_release ============
         self.bind(on_release=self._on_click)
         self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
 
@@ -122,7 +122,6 @@ class SidebarItem(CircularRippleBehavior, MDCard):
         self.md_bg_color = [0, 0, 0, 0]
 
     def _on_click(self, instance):
-        """Обработчик клика по пункту меню"""
         if self.on_click_callback:
             logger.info(f"🖱️ Клик по пункту меню: {self.screen_name} ({self.title})")
             self.on_click_callback(self.screen_name)
@@ -170,7 +169,6 @@ class SidebarHeader(MDBoxLayout):
             keep_ratio=True
         )
 
-        # Загружаем логотип из ассета
         self._load_logo()
 
         logo_container.add_widget(self.logo_image)
@@ -199,7 +197,6 @@ class SidebarHeader(MDBoxLayout):
             bold=False
         )
 
-        # Клик по шапке
         self.bind(on_touch_down=self._on_header_click)
 
         self.add_widget(logo_container)
@@ -219,7 +216,6 @@ class SidebarHeader(MDBoxLayout):
             except Exception as e:
                 logger.error(f"Ошибка загрузки логотипа: {e}")
 
-        # Если логотип не загрузился, показываем текст
         self.logo_image.text = "🎸"
         self.logo_image.color = [0.46, 0.70, 0.71, 1]
         self.logo_image.font_size = sp(48)
@@ -283,11 +279,51 @@ class SidebarOverlay(Widget):
         return False
 
 
+class SidebarScrollView(ScrollView):
+    """ScrollView который правильно передаёт касания дочерним виджетам"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.do_scroll_x = False
+        self.bar_width = 0
+        self.bar_color = [0, 0, 0, 0]
+        self.bar_inactive_color = [0, 0, 0, 0]
+        self.scroll_type = ['content']
+        self.effect_cls = 'ScrollEffect'
+
+    def on_touch_down(self, touch):
+        # Проверяем, попали ли в дочерний виджет (пункт меню)
+        if self.collide_point(*touch.pos):
+            for child in self.children:
+                if child.collide_point(*touch.pos):
+                    # Передаём касание дочернему виджету
+                    return child.on_touch_down(touch)
+
+        # Если не попали в дочерний виджет - пробуем скролл
+        if self._can_scroll():
+            return super().on_touch_down(touch)
+
+        return False
+
+    def on_touch_move(self, touch):
+        if self._can_scroll():
+            return super().on_touch_move(touch)
+        return False
+
+    def _can_scroll(self):
+        if not self.children:
+            return False
+        child = self.children[0]
+        # Если контент помещается - отключаем скролл
+        if child.height <= self.height:
+            return False
+        return True
+
+
 class Sidebar(FloatLayout):
     """
     Выдвижная боковая панель
     ПОЛНАЯ ВЫСОТА: от верхней до нижней системной панели
-    С прозрачными областями для статус-бара и навигации
     """
 
     panel_x = NumericProperty(0)
@@ -314,20 +350,16 @@ class Sidebar(FloatLayout):
         self.overlay = SidebarOverlay(self)
         self.add_widget(self.overlay)
 
-        # ============ ВЫЧИСЛЯЕМ ОТСТУПЫ ДЛЯ СИСТЕМНЫХ ПАНЕЛЕЙ ============
+        # ============ ВЫЧИСЛЯЕМ ОТСТУПЫ ============
         status_h = get_status_bar_height()
         nav_h = get_navigation_bar_height()
 
-        # Верхний отступ: статус-бар (системная панель)
         self._top_system_offset = status_h
-
-        # Нижний отступ: системная навигация
         self._bottom_system_offset = nav_h
 
         logger.info(f"📐 Системные отступы: сверху={self._top_system_offset}dp, снизу={self._bottom_system_offset}dp")
 
         # ============ ОСНОВНАЯ ПАНЕЛЬ ============
-        # Панель занимает ВСЮ высоту экрана
         self.panel = MDCard(
             orientation='vertical',
             size_hint=(None, 1),
@@ -338,11 +370,10 @@ class Sidebar(FloatLayout):
             padding=[0, 0, 0, 0]
         )
 
-        # Панель начинается с самого верха (от статус-бара)
         self.panel.pos = (-self.panel_width, 0)
         self.panel_x = -self.panel_width
 
-        # ============ ВНУТРЕННИЙ КОНТЕЙНЕР С ПРОЗРАЧНЫМИ ОБЛАСТЯМИ ============
+        # ============ ВНУТРЕННИЙ КОНТЕЙНЕР ============
         self.main_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -351,21 +382,16 @@ class Sidebar(FloatLayout):
             padding=[0, self._top_system_offset, 0, self._bottom_system_offset]
         )
 
-        # ============ ШАПКА С ЛОГОТИПОМ ============
+        # ============ ШАПКА ============
         self.header = SidebarHeader(
             on_profile_click=self._on_profile_click
         )
         self.main_container.add_widget(self.header)
 
-        # ============ ПУНКТЫ МЕНЮ ============
-        from kivy.uix.scrollview import ScrollView
-
-        self.scroll = ScrollView(
+        # ============ СКРОЛЛ С ПУНКТАМИ МЕНЮ ============
+        self.scroll = SidebarScrollView(
             size_hint=(1, 1),
-            do_scroll_x=False,
-            bar_width=0,
-            bar_color=[0, 0, 0, 0],
-            bar_inactive_color=[0, 0, 0, 0]
+            do_scroll_x=False
         )
 
         self.menu_container = MDBoxLayout(
@@ -378,7 +404,6 @@ class Sidebar(FloatLayout):
         self.menu_container.bind(minimum_height=self.menu_container.setter('height'))
 
         # ============ ПУНКТЫ МЕНЮ ============
-        # Сохраняем ссылки на пункты меню для обновления состояния
         self.menu_item_refs = {}
 
         # 1. Профиль
@@ -449,30 +474,32 @@ class Sidebar(FloatLayout):
         Window.bind(on_resize=self._on_window_resize)
         self.bind(panel_x=self._on_panel_x_changed)
 
-        # Обновляем состояние пунктов меню
         Clock.schedule_once(self._update_menu_state, 0.3)
 
-        logger.info(f"✅ Sidebar создан, ширина={self.panel_width}dp")
-        logger.info(
-            f"   Полная высота, прозрачные области: сверху={self._top_system_offset}dp, снизу={self._bottom_system_offset}dp")
+        # Выводим список доступных экранов для диагностики
+        if self.sm:
+            logger.info(f"✅ Sidebar создан, ширина={self.panel_width}dp")
+            logger.info(f"📋 Доступные экраны в ScreenManager: {self.sm.screen_names}")
+        else:
+            logger.error("❌ ScreenManager не передан в Sidebar!")
 
     def _update_menu_state(self, dt=None):
-        """Обновляет состояние пунктов меню в зависимости от текущего экрана"""
         if not self.sm:
             return
 
         current_screen = self.sm.current
+        logger.info(f"🔄 Обновление состояния меню, текущий экран: {current_screen}")
 
-        # Обновляем активное состояние для всех пунктов меню
         for screen_name, item in self.menu_item_refs.items():
             if hasattr(item, 'set_active'):
-                item.set_active(screen_name == current_screen)
+                is_active = (screen_name == current_screen)
+                item.set_active(is_active)
+                if is_active:
+                    logger.info(f"   ✅ Активен: {screen_name}")
 
-        # Обновляем состояние авторизации
         self._update_auth_state()
 
     def _update_auth_state(self):
-        """Обновляет состояние пункта авторизации"""
         is_auth = api.is_authenticated()
 
         if is_auth:
@@ -483,7 +510,6 @@ class Sidebar(FloatLayout):
             self.auth_item.icon.icon = "login"
 
     def _on_panel_x_changed(self, instance, value):
-        """Обновляет позицию панели и прозрачность оверлея"""
         self.panel.pos = (value, 0)
 
         if self.is_open:
@@ -496,28 +522,21 @@ class Sidebar(FloatLayout):
             self.overlay.bg_color.rgba = (0, 0, 0, alpha)
 
     def _on_window_resize(self, window, width, height):
-        """При изменении размера окна обновляем отступы"""
         self.height = height
 
-        # Обновляем системные отступы
         status_h = get_status_bar_height()
         nav_h = get_navigation_bar_height()
 
         self._top_system_offset = status_h
         self._bottom_system_offset = nav_h
 
-        # Обновляем padding контейнера
         self.main_container.padding = [0, self._top_system_offset, 0, self._bottom_system_offset]
 
         if not self.is_open:
             self.panel.pos = (-self.panel_width, 0)
             self.panel_x = -self.panel_width
 
-        logger.debug(
-            f"🔄 Window resize: top_offset={self._top_system_offset}dp, bottom_offset={self._bottom_system_offset}dp")
-
     def add_menu_item(self, icon, title, screen_name, is_admin=False):
-        """Добавляет пункт меню"""
         item = SidebarItem(
             icon_name=icon,
             title=title,
@@ -526,42 +545,59 @@ class Sidebar(FloatLayout):
             is_admin=is_admin
         )
         self.menu_container.add_widget(item)
+        logger.info(f"➕ Добавлен пункт меню: {screen_name} -> {title}")
         return item
 
     def _on_item_click(self, screen_name):
         """Обработчик клика по пункту меню"""
-        logger.info(f"📍 Выбран пункт меню: {screen_name}")
+        logger.info(f"📍 ВЫЗВАН _on_item_click для: {screen_name}")
 
         # Закрываем панель
         self.close()
 
-        # Обрабатываем специальные пункты
+        # Специальная обработка для авторизации
         if screen_name == 'auth':
-            self._handle_auth()
+            Clock.schedule_once(lambda dt: self._handle_auth(), 0.1)
             return
 
-        # Переход на обычный экран
-        if self.sm and self.sm.has_screen(screen_name):
-            # Если текущий экран совпадает с выбранным - ничего не делаем
-            if self.sm.current == screen_name:
-                logger.info(f"ℹ️ Уже на экране {screen_name}")
-                return
-            self.sm.current = screen_name
-            logger.info(f"✅ Переход на экран: {screen_name}")
-        else:
-            logger.warning(f"⚠️ Экран {screen_name} не найден")
+        # Проверяем, существует ли экран
+        if not self.sm:
+            logger.error("❌ ScreenManager не найден!")
+            return
+
+        # Проверяем, есть ли экран в ScreenManager
+        if not self.sm.has_screen(screen_name):
+            logger.error(f"❌ Экран '{screen_name}' не найден в ScreenManager!")
+            logger.info(f"📋 Доступные экраны: {self.sm.screen_names}")
+            return
+
+        # Если уже на этом экране - ничего не делаем
+        if self.sm.current == screen_name:
+            logger.info(f"ℹ️ Уже на экране {screen_name}")
+            return
+
+        # Переход с задержкой, чтобы панель успела закрыться
+        def do_navigation(dt):
+            try:
+                logger.info(f"🚀 Переход на экран: {screen_name}")
+                self.sm.current = screen_name
+                logger.info(f"✅ Переход выполнен на: {screen_name}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка перехода: {e}")
+                import traceback
+                traceback.print_exc()
+
+        Clock.schedule_once(do_navigation, 0.15)
 
     def _handle_auth(self):
         """Обрабатывает клик по пункту авторизации"""
         if api.is_authenticated():
-            # Если авторизован - выходим
             def on_logout_success(result):
                 logger.info("✅ Выход выполнен")
                 self._update_auth_state()
                 if hasattr(self, 'header'):
                     self.header.update_user_info()
                 self._update_menu_state()
-                self.close()
 
             def on_logout_failure(req, error):
                 logger.error(f"❌ Ошибка выхода: {error}")
@@ -571,17 +607,24 @@ class Sidebar(FloatLayout):
                 on_failure=on_logout_failure
             )
         else:
-            # Если не авторизован - показываем окно входа
             self._show_auth()
 
     def _on_profile_click(self):
-        """Обработчик клика по шапке - переход в профиль"""
+        logger.info("👤 Клик по шапке -> переход в профиль")
         self.close()
         if self.sm and self.sm.has_screen('profile'):
-            self.sm.current = 'profile'
+            def do_navigation(dt):
+                try:
+                    self.sm.current = 'profile'
+                    logger.info("✅ Переход в профиль выполнен")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка перехода в профиль: {e}")
+
+            Clock.schedule_once(do_navigation, 0.15)
+        else:
+            logger.error("❌ Экран 'profile' не найден!")
 
     def _show_auth(self):
-        """Показывает модальное окно авторизации"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'open_profile'):
             app.open_profile()
@@ -616,7 +659,6 @@ class Sidebar(FloatLayout):
             self.open()
 
     def update_user_info(self):
-        """Обновляет информацию о пользователе в шапке и меню"""
         if hasattr(self, 'header') and self.header:
             self.header.update_user_info()
 
@@ -644,12 +686,10 @@ class Sidebar(FloatLayout):
                 return True
             return False
 
-        # Если панель открыта - проверяем клик по оверлею
         if self.overlay and not self.overlay.disabled:
             if not self.panel.collide_point(*touch.pos):
                 return self.overlay.on_touch_down(touch)
 
-        # Если клик по панели - передаём дочерним виджетам
         if self.panel.collide_point(*touch.pos):
             return super().on_touch_down(touch)
 

@@ -67,11 +67,12 @@ CHORD_TYPES = [
 ]
 
 
-# ============ КОНТЕЙНЕР С КАРУСЕЛЬЮ (ПОЛНАЯ ВЕРСИЯ) ============
+# ============ КОНТЕЙНЕР С КАРУСЕЛЬЮ ============
 class SwipeContainer(MDBoxLayout):
     """
     Контейнер с Carousel для аккордов.
-    Поддерживает как сенсорные свайпы, так и перетаскивание мышью.
+    Горизонтальный свайп - через Carousel (скольжение).
+    Вертикальный свайп - через затухание/появление.
     """
 
     def __init__(self, on_swipe_horizontal=None, on_swipe_vertical=None, **kwargs):
@@ -83,6 +84,7 @@ class SwipeContainer(MDBoxLayout):
         self._touch_moved = False
         self._is_dragging = False
         self._drag_threshold = 20
+        self._is_vertical_swipe = False
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
@@ -188,6 +190,7 @@ class SwipeContainer(MDBoxLayout):
             self._touch_start_y = touch.y
             self._touch_moved = False
             self._is_dragging = False
+            self._is_vertical_swipe = False
             touch.grab(self)
             return True
         return super().on_touch_down(touch)
@@ -201,9 +204,13 @@ class SwipeContainer(MDBoxLayout):
                 self._touch_moved = True
                 self._is_dragging = True
 
-                # Передаём движение в карусель для визуального отклика
                 if abs(dx) > abs(dy):
+                    # Горизонтальный - передаём в карусель
+                    self._is_vertical_swipe = False
                     self.carousel.on_touch_move(touch)
+                else:
+                    # Вертикальный - запоминаем
+                    self._is_vertical_swipe = True
 
             return True
         return super().on_touch_move(touch)
@@ -217,42 +224,47 @@ class SwipeContainer(MDBoxLayout):
                 abs_dx = abs(dx)
                 abs_dy = abs(dy)
 
-                # Горизонтальный свайп (влево/вправо) - смена тональности
+                # Горизонтальный свайп
                 if abs_dx > 50 and abs_dx > abs_dy:
                     if self.on_swipe_horizontal:
-                        if dx > 0:
-                            # Свайп вправо - ПОВЫШАЕМ тональность
+                        if dx < 0:
+                            # Свайп ВЛЕВО - ПОВЫШАЕМ тональность
                             self.on_swipe_horizontal(1)
                             self.carousel.load_next()
                         else:
-                            # Свайп влево - ПОНИЖАЕМ тональность
+                            # Свайп ВПРАВО - ПОНИЖАЕМ тональность
                             self.on_swipe_horizontal(-1)
                             self.carousel.load_previous()
 
-                # Вертикальный свайп (вверх/вниз) - смена типа аккорда
+                # Вертикальный свайп - только затухание/появление
                 elif abs_dy > 50 and abs_dy > abs_dx:
                     if self.on_swipe_vertical:
-                        if dy > 0:
-                            # Свайп вниз - ПРЕДЫДУЩИЙ тип
-                            self.on_swipe_vertical(-1)
-                        else:
-                            # Свайп вверх - СЛЕДУЮЩИЙ тип
+                        if dy < 0:
+                            # Свайп ВВЕРХ - СЛЕДУЮЩИЙ тип
                             self.on_swipe_vertical(1)
+                        else:
+                            # Свайп ВНИЗ - ПРЕДЫДУЩИЙ тип
+                            self.on_swipe_vertical(-1)
 
+                        # Анимация затухания/появления
                         self._animate_vertical_swipe()
 
             touch.ungrab(self)
             self._touch_moved = False
             self._is_dragging = False
+            self._is_vertical_swipe = False
             return True
         return super().on_touch_up(touch)
 
     def _animate_vertical_swipe(self):
+        """Анимация вертикального свайпа - затухание/появление"""
+        # Затухание
         anim_out = Animation(opacity=0, duration=0.15, t='out_quad')
         anim_out.bind(on_complete=lambda *args: self._on_vertical_anim_complete())
         anim_out.start(self.carousel)
 
     def _on_vertical_anim_complete(self):
+        """После затухания - показываем снова"""
         anim_in = Animation(opacity=1, duration=0.15, t='in_quad')
         anim_in.start(self.carousel)
 
@@ -786,7 +798,7 @@ class ChordsScreen(BaseScreen):
         # Сканируем аккорды после создания UI
         Clock.schedule_once(lambda dt: self.scan_chords(), 0.1)
 
-        logger.info('Экран аккордов создан (с Carousel и поддержкой перетаскивания)')
+        logger.info('Экран аккордов создан (с Carousel)')
 
     def _create_cached_menus(self, dt=None):
         if self._menu_cache_initialized:
@@ -848,7 +860,6 @@ class ChordsScreen(BaseScreen):
                 self._info_label.height = new_height
 
     def _update_griff_size(self, *args):
-        """Обновляет размер грифа"""
         if hasattr(self, 'swipe_container') and self.swipe_container:
             window_width = Window.width
 
@@ -867,21 +878,17 @@ class ChordsScreen(BaseScreen):
             griff_height = int(griff_height)
             self._griff_height = griff_height
 
-            # Обновляем высоту контейнера с учётом отступов
             self.swipe_container.height = griff_height + dp(80)
 
             logger.info(f"📐 Гриф обновлён: {griff_height}dp")
 
     def _add_chord_slide(self, chord_module):
-        """Добавляет слайд с грифом в карусель"""
         if self.swipe_container:
             self.swipe_container.add_slide(chord_module)
-            # Показываем последний добавленный слайд
             if self.swipe_container.slides:
                 self.swipe_container.set_current_slide(len(self.swipe_container.slides) - 1)
 
     def _update_display(self):
-        """Обновляет отображение аккорда"""
         if not self.current_variants:
             return
 
@@ -907,14 +914,11 @@ class ChordsScreen(BaseScreen):
 
         logger.info(f"🎸 Обновление отображения аккорда: {display_name}")
 
-        # Обновляем название (снаружи карусели)
         if self.swipe_container:
             self.swipe_container.chord_name_label.text = display_name
 
-        # Добавляем новый слайд с грифом в карусель
         self._add_chord_slide(self.current_chord_module)
 
-        # Обновляем описание
         self._show_description()
 
         self._data_loaded = True
@@ -923,7 +927,6 @@ class ChordsScreen(BaseScreen):
         padding = layout_config.get_content_padding()
         horizontal_padding = [padding[0], 0, padding[2], 0]
 
-        # ============ ОСНОВНОЙ КОНТЕЙНЕР ============
         content = MDBoxLayout(
             orientation='vertical',
             spacing=0,
@@ -931,7 +934,6 @@ class ChordsScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
-        # ============ ПОИСК ============
         search_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -945,10 +947,8 @@ class ChordsScreen(BaseScreen):
         search_container.add_widget(self.search_bar)
         content.add_widget(search_container)
 
-        # ============ ОТСТУП ПОСЛЕ ПОИСКА ============
         content.add_widget(Widget(size_hint_y=None, height=dp(6)))
 
-        # ============ SWIPE КОНТЕЙНЕР С КАРУСЕЛЬЮ ============
         self.swipe_container = SwipeContainer(
             on_swipe_horizontal=self._on_swipe_horizontal,
             on_swipe_vertical=self._on_swipe_vertical
@@ -959,10 +959,8 @@ class ChordsScreen(BaseScreen):
 
         Window.bind(on_resize=self._on_window_resize)
 
-        # ============ ОТСТУП ПОСЛЕ ГРИФА ============
         content.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
-        # ============ МЕНЮ ============
         menu_wrapper = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -993,10 +991,8 @@ class ChordsScreen(BaseScreen):
         )
         self._menu_container.add_widget(self.unified_menu)
 
-        # ============ ОТСТУП ПОСЛЕ МЕНЮ ============
         content.add_widget(Widget(size_hint_y=None, height=dp(2)))
 
-        # ============ ИНФОРМАЦИОННЫЙ ЛЕЙБЛ ============
         self._info_label = MDLabel(
             text="",
             font_size=sp(12),
@@ -1021,21 +1017,17 @@ class ChordsScreen(BaseScreen):
         Clock.schedule_once(self._update_griff_size, 0.3)
         Clock.schedule_once(self._update_griff_size, 0.5)
 
-        # Показываем начальный аккорд после загрузки данных
         Clock.schedule_once(lambda dt: self._update_display(), 0.2)
 
     # ============ ОБРАБОТЧИКИ СВАЙПА ============
 
     def _on_swipe_horizontal(self, step):
-        """Обработчик горизонтального свайпа - смена тональности"""
         self._change_tonality(step)
 
     def _on_swipe_vertical(self, step):
-        """Обработчик вертикального свайпа - смена ТИПА аккорда"""
         self._change_chord_type(step)
 
     def _change_tonality(self, step):
-        """Изменяет тональность на указанный шаг"""
         if not self.available_chords:
             self._show_temporary_hint("Нет доступных аккордов", 1.0)
             return
@@ -1093,7 +1085,6 @@ class ChordsScreen(BaseScreen):
         logger.info(f"🎵 Тональность изменена: {old_tonality} → {new_tonality}")
 
     def _change_chord_type(self, step):
-        """Изменяет ТИП аккорда на указанный шаг"""
         if not self.available_chords:
             self._show_temporary_hint("Нет доступных аккордов", 1.0)
             return
@@ -1167,7 +1158,6 @@ class ChordsScreen(BaseScreen):
     # ============ МЕТОД ДЛЯ ТРЕТЬЕЙ ИКОНКИ ============
 
     def _open_chord_selector(self):
-        """Переключает на следующий подвид аккорда (третья иконка)"""
         if len(self.available_chords) <= 1:
             self._show_temporary_hint("Нет других подвидов аккорда", 1.0)
             return
@@ -1194,7 +1184,6 @@ class ChordsScreen(BaseScreen):
     # ============ ОСТАЛЬНЫЕ МЕТОДЫ ============
 
     def _show_description(self):
-        """Показывает описание аккорда из метаданных"""
         if not self.current_variants:
             return
 

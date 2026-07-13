@@ -31,6 +31,7 @@ class TopNav(MDCard):
         'song_detail',
         'term_detail',
         'admin',
+        'task_detail',
         'amdm_parser',
         'mytabs_parser',
         'accord_pro_parser',

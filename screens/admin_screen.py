@@ -19,6 +19,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.behaviors import CircularRippleBehavior
 from kivymd.app import MDApp
+
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
@@ -158,13 +159,14 @@ class ParserCard(CircularRippleBehavior, MDCard):
 
 class ActionCard(CircularRippleBehavior, MDCard):
     """
-    Карточка действия (очистка кэша, статистика) - цветные иконки
+    Карточка действия (очистка кэша, статистика, задачи) - цветные иконки
     """
 
     # Цвета для действий
     ACTION_COLORS = {
         'clear_cache': ('#FF6B35', '#E55A2B'),  # Оранжевый
         'statistics': ('#4CAF50', '#388E3C'),   # Зелёный
+        'tasks': ('#2196F3', '#1976D2'),        # Синий
     }
 
     def __init__(self, action_id, title, icon, on_click=None, **kwargs):
@@ -312,7 +314,7 @@ class AdminScreen(BaseScreen):
             height=dp(130),
             do_scroll_x=True,
             do_scroll_y=False,
-            bar_width=0,  # ← СКРЫВАЕМ ПОЛОСУ ПРОКРУТКИ
+            bar_width=0,
             bar_color=[0, 0, 0, 0],
             bar_inactive_color=[0, 0, 0, 0],
             bar_margin=0
@@ -371,7 +373,7 @@ class AdminScreen(BaseScreen):
             height=dp(130),
             do_scroll_x=True,
             do_scroll_y=False,
-            bar_width=0,  # ← СКРЫВАЕМ ПОЛОСУ ПРОКРУТКИ
+            bar_width=0,
             bar_color=[0, 0, 0, 0],
             bar_inactive_color=[0, 0, 0, 0],
             bar_margin=0
@@ -402,6 +404,15 @@ class AdminScreen(BaseScreen):
             on_click=self.on_action_selected
         )
         actions_layout.add_widget(stats_card)
+
+        # Задачи (синий)
+        tasks_card = ActionCard(
+            action_id='tasks',
+            title='Задачи',
+            icon='format-list-checks',
+            on_click=self.on_action_selected
+        )
+        actions_layout.add_widget(tasks_card)
 
         scroll_actions.add_widget(actions_layout)
         content.add_widget(scroll_actions)
@@ -445,6 +456,8 @@ class AdminScreen(BaseScreen):
             self.clear_cache()
         elif action_id == 'statistics':
             self.show_statistics()
+        elif action_id == 'tasks':
+            self.open_tasks()
 
     def clear_cache(self):
         """Очищает кэш API"""
@@ -460,6 +473,17 @@ class AdminScreen(BaseScreen):
     def show_statistics(self):
         """Показывает статистику (заглушка)"""
         notify.info("Статистика будет доступна в следующей версии")
+
+    def open_tasks(self):
+        """Открывает экран задач"""
+        logger.info("📋 Открытие экрана задач")
+
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('tasks'):
+                self.manager.current = 'tasks'
+            else:
+                logger.error("Экран tasks не найден")
+                notify.error("Ошибка навигации")
 
     def on_enter(self):
         """При входе на экран"""

@@ -633,6 +633,295 @@ class APIClient:
             Logger.error(f"❌ Ошибка синхронного поиска: {e}")
             return {"results": [], "total": 0}
 
+        # api/client.py - добавляем методы для работы с задачами
+
+    # ============ МЕТОДЫ ДЛЯ РАБОТЫ С ЗАДАЧАМИ ============
+
+    def _get_tasks_cache_path(self):
+        """Возвращает путь к файлу кэша задач"""
+        cache_dir = config.CACHE_DIR
+        return os.path.join(cache_dir, 'tasks_cache.json')
+
+    def _load_tasks_cache(self):
+        """Загружает кэш задач из памяти или файла"""
+        # Проверяем память
+        if hasattr(self, '_tasks_cache') and self._tasks_cache is not None:
+            if time.time() - self._tasks_cache_timestamp < 60:  # 1 минута
+                return self._tasks_cache
+
+        # Пробуем загрузить из файла
+        try:
+            cache_path = self._get_tasks_cache_path()
+            if os.path.exists(cache_path):
+                with open(cache_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if time.time() - data.get('timestamp', 0) < 60:
+                        self._tasks_cache = data.get('tasks', [])
+                        self._tasks_cache_timestamp = data.get('timestamp', 0)
+                        return self._tasks_cache
+        except Exception as e:
+            Logger.error(f"Ошибка загрузки кэша задач: {e}")
+
+        return None
+
+    def _save_tasks_cache(self, tasks):
+        """Сохраняет кэш задач в память и файл"""
+        try:
+            self._tasks_cache = tasks
+            self._tasks_cache_timestamp = time.time()
+
+            cache_path = self._get_tasks_cache_path()
+            data = {
+                'tasks': tasks,
+                'timestamp': time.time()
+            }
+
+            cache_dir = os.path.dirname(cache_path)
+            if not os.path.exists(cache_dir):
+                os.makedirs(cache_dir, mode=0o755)
+
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            Logger.error(f"Ошибка сохранения кэша задач: {e}")
+
+    def _clear_tasks_cache(self):
+        """Очищает кэш задач"""
+        self._tasks_cache = None
+        self._tasks_cache_timestamp = 0
+        try:
+            cache_path = self._get_tasks_cache_path()
+            if os.path.exists(cache_path):
+                os.remove(cache_path)
+        except Exception as e:
+            Logger.error(f"Ошибка очистки кэша задач: {e}")
+
+    def get_tasks(self, on_success=None, on_failure=None, force_refresh=False, status=None):
+        """
+        Получить список задач с кэшированием
+
+        Args:
+            on_success: колбэк при успехе
+            on_failure: колбэк при ошибке
+            force_refresh: принудительно обновить с сервера
+            status: фильтр по статусу
+        """
+        # Проверяем кэш
+        if not force_refresh:
+            cached = self._load_tasks_cache()
+            if cached is not None:
+                # Фильтруем по статусу если нужно
+                if status:
+                    filtered = [t for t in cached if t.get('status') == status]
+                else:
+                    filtered = cached
+
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(filtered), 0)
+                return
+
+        Logger.info("🔄 Загрузка задач с сервера...")
+
+        url = f"{self.config.API_BASE_URL}/tasks/"
+        if status:
+            url += f"?status={status}"
+
+        def _on_success(result):
+            tasks = result.get('tasks', []) if isinstance(result, dict) else result
+            self._save_tasks_cache(tasks)
+            if on_success:
+                on_success(tasks)
+
+        def _on_failure(req, error):
+            # При ошибке пробуем показать кэш
+            cached = self._load_tasks_cache()
+            if cached is not None:
+                Logger.warning(f"⚠️ Ошибка сервера, показываем кэш задач ({len(cached)} шт)")
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(cached), 0)
+                return
+            if on_failure:
+                on_failure(req, error)
+
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=_on_success,
+            on_failure=_on_failure,
+            include_auth=True
+        )
+
+    def get_task(self, task_id, on_success=None, on_failure=None, force_refresh=False):
+        """Получить задачу по ID"""
+        if not force_refresh:
+            # Проверяем в кэше
+            cached = self._load_tasks_cache()
+            if cached is not None:
+                for task in cached:
+                    if task.get('id') == task_id:
+                        if on_success:
+                            Clock.schedule_once(lambda dt: on_success(task), 0)
+                        return
+
+        Logger.info(f"🔄 Загрузка задачи {task_id} с сервера...")
+
+        url = f"{self.config.API_BASE_URL}/tasks/{task_id}"
+
+        def _on_success(result):
+            # Обновляем кэш
+            cached = self._load_tasks_cache()
+            if cached is not None:
+                # Обновляем задачу в кэше
+                for i, task in enumerate(cached):
+                    if task.get('id') == task_id:
+                        cached[i] = result
+                        break
+                self._save_tasks_cache(cached)
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def create_task(self, task_data, on_success=None, on_failure=None):
+        """Создать новую задачу"""
+        Logger.info(f"📝 Создание задачи: {task_data.get('title')}")
+
+        url = f"{self.config.API_BASE_URL}/tasks/"
+
+        def _on_success(result):
+            # Очищаем кэш при создании
+            self._clear_tasks_cache()
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='POST',
+            data=task_data,
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def update_task(self, task_id, task_data, on_success=None, on_failure=None):
+        """Обновить задачу"""
+        Logger.info(f"📝 Обновление задачи {task_id}")
+
+        url = f"{self.config.API_BASE_URL}/tasks/{task_id}"
+
+        def _on_success(result):
+            # Очищаем кэш при обновлении
+            self._clear_tasks_cache()
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='PUT',
+            data=task_data,
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def delete_task(self, task_id, hard=False, on_success=None, on_failure=None):
+        """Удалить задачу"""
+        Logger.info(f"🗑️ Удаление задачи {task_id}")
+
+        url = f"{self.config.API_BASE_URL}/tasks/{task_id}?hard={str(hard).lower()}"
+
+        def _on_success(result):
+            # Очищаем кэш при удалении
+            self._clear_tasks_cache()
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='DELETE',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def add_task_comment(self, task_id, comment, on_success=None, on_failure=None):
+        """Добавить комментарий к задаче"""
+        Logger.info(f"💬 Добавление комментария к задаче {task_id}")
+
+        url = f"{self.config.API_BASE_URL}/tasks/{task_id}/comment"
+        data = {'comment': comment}
+
+        def _on_success(result):
+            # Очищаем кэш при добавлении комментария
+            self._clear_tasks_cache()
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='POST',
+            data=data,
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    # api/client.py
+
+    def change_task_status(self, task_id, status, completed_at=None, on_success=None, on_failure=None):
+        """Изменить статус задачи"""
+        Logger.info(f"🔄 Изменение статуса задачи {task_id} на {status}")
+
+        url = f"{self.config.API_BASE_URL}/tasks/{task_id}/status"
+        data = {'status': status}
+        if completed_at:
+            data['completed_at'] = completed_at
+            Logger.info(f"   с completed_at={completed_at}")
+
+        def _on_success(result):
+            self._clear_tasks_cache()
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='PATCH',
+            data=data,
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
+    def get_task_statuses(self, on_success=None, on_failure=None):
+        """Получить список статусов задач"""
+        # Используем кэш статусов
+        if hasattr(self, '_statuses_cache') and self._statuses_cache is not None:
+            if on_success:
+                Clock.schedule_once(lambda dt: on_success(self._statuses_cache), 0)
+            return
+
+        url = f"{self.config.API_BASE_URL}/tasks/statuses/list"
+
+        def _on_success(result):
+            statuses = result.get('statuses', []) if isinstance(result, dict) else result
+            self._statuses_cache = statuses
+            if on_success:
+                on_success(statuses)
+
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=True
+        )
+
     # ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
 
     def _encode_letter(self, letter: str) -> str:
