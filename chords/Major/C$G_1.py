@@ -1,6 +1,6 @@
-# Chord: C$G (variant 1)
+# Chord: C/G (variant 1)
 # Type: Major
-# Description: До-мажор с чистой квинтой в басу
+# Description: До-мажор с басом Соль
 
 BACKGROUND_NAME = "griff"
 
@@ -2044,29 +2044,29 @@ BARRES = { '1BAR1-2': { 'color': [139, 69, 19],
                'x': 1120,
                'y': 590}}
 
-SELECTED_FINGER = [ 'title1E',
-  'title2B',
-  '35finger4',
-  '24finger2',
-  'title3G',
-  'title5A',
+SELECTED_FINGER = [ '12finger1',
   'title4D',
+  '24finger2',
+  'title1E',
+  'title3G',
+  'title2B',
   'title6E',
-  '12finger1',
-  '36finger3']
+  'title5A',
+  '36finger3',
+  '35finger4']
 
-SELECTED_NOTE = [ 'title1E',
+SELECTED_NOTE = [ '24noteE',
+  'title4D',
+  '12noteC',
+  'title1E',
+  'title3G',
+  '35noteC',
   '36noteG',
   'title2B',
-  '24noteE',
-  '12noteC',
-  '35noteC',
-  'title3G',
-  'title5A',
-  'title4D',
-  'title6E']
+  'title6E',
+  'title5A']
 
-METADATA = { 'description': 'До-мажор с чистой квинтой в басу',
-  'name': 'C$G',
+METADATA = { 'description': 'До-мажор с басом Соль',
+  'name': 'C\\G',
   'type': 'Major',
   'variant': 1}

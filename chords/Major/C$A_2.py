@@ -1,6 +1,6 @@
-# Chord: C$A (variant 2)
+# Chord: C/A (variant 2)
 # Type: Major
-# Description: До мажор с басом Ля
+# Description: До-мажор с басом Ля
 
 BACKGROUND_NAME = "griff"
 
@@ -2044,29 +2044,29 @@ BARRES = { '1BAR1-2': { 'color': [139, 69, 19],
                'x': 1120,
                'y': 590}}
 
-SELECTED_FINGER = [ 'title1E',
-  'title2B',
-  '6X',
-  '24finger2',
+SELECTED_FINGER = [ '24finger2',
+  'title3G',
   '23finger3',
+  'title5A',
   '31finger4',
-  'title5A',
-  'title3G',
-  'title4D',
-  '12finger1']
-
-SELECTED_NOTE = [ 'title1E',
-  '23noteA',
-  'title2B',
-  '24noteE',
   '6X',
-  '12noteC',
-  'title5A',
-  'title3G',
+  'title1E',
+  '12finger1',
   'title4D',
-  '31noteG']
+  'title2B']
 
-METADATA = { 'description': 'До мажор с басом Ля',
-  'name': 'C$A',
+SELECTED_NOTE = [ 'title3G',
+  'title5A',
+  '6X',
+  '31noteG',
+  'title1E',
+  '24noteE',
+  'title4D',
+  'title2B',
+  '12noteC',
+  '23noteA']
+
+METADATA = { 'description': 'До-мажор с басом Ля',
+  'name': 'C\\A',
   'type': 'Major',
   'variant': 2}

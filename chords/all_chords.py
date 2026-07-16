@@ -1,8 +1,8 @@
 """
 Автоматически сгенерированный индекс всех аккордов
-Создан: 2026-07-10 16:12:12
-Всего аккордов: 940
-Всего конфигураций: 4370
+Создан: 2026-07-16 10:45:17
+Всего аккордов: 1362
+Всего конфигураций: 5790
 """
 
 # ALL_CHORDS - словарь всех аккордов
@@ -6162,6 +6162,514 @@ ALL_CHORDS = {
       "B7!H7_9": {
         "variant": 9,
         "file": "7/B7!H7_9.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\A#": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Ля-диез",
+    "variants": [
+      "C7$Asharp!C7$Bb_1",
+      "C7$Asharp!C7$Bb_2",
+      "C7$Asharp!C7$Bb_3",
+      "C7$Asharp!C7$Bb_4",
+      "C7$Asharp!C7$Bb_5"
+    ],
+    "configs": {
+      "C7$Asharp!C7$Bb_1": {
+        "variant": 1,
+        "file": "7/C7$Asharp!C7$Bb_1.py",
+        "chord_type": "7"
+      },
+      "C7$Asharp!C7$Bb_2": {
+        "variant": 2,
+        "file": "7/C7$Asharp!C7$Bb_2.py",
+        "chord_type": "7"
+      },
+      "C7$Asharp!C7$Bb_3": {
+        "variant": 3,
+        "file": "7/C7$Asharp!C7$Bb_3.py",
+        "chord_type": "7"
+      },
+      "C7$Asharp!C7$Bb_4": {
+        "variant": 4,
+        "file": "7/C7$Asharp!C7$Bb_4.py",
+        "chord_type": "7"
+      },
+      "C7$Asharp!C7$Bb_5": {
+        "variant": 5,
+        "file": "7/C7$Asharp!C7$Bb_5.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\Bb": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Си-бемоль",
+    "variants": [
+      "C7$Asharp!C7$Bb_1",
+      "C7$Asharp!C7$Bb_2",
+      "C7$Asharp!C7$Bb_3",
+      "C7$Asharp!C7$Bb_4",
+      "C7$Asharp!C7$Bb_5"
+    ],
+    "configs": {
+      "C7$Asharp!C7$Bb_1": {
+        "variant": 1,
+        "file": "7/C7$Asharp!C7$Bb_1.py",
+        "chord_type": "7"
+      },
+      "C7$Asharp!C7$Bb_2": {
+        "variant": 2,
+        "file": "7/C7$Asharp!C7$Bb_2.py",
+        "chord_type": "7"
+      },
+      "C7$Asharp!C7$Bb_3": {
+        "variant": 3,
+        "file": "7/C7$Asharp!C7$Bb_3.py",
+        "chord_type": "7"
+      },
+      "C7$Asharp!C7$Bb_4": {
+        "variant": 4,
+        "file": "7/C7$Asharp!C7$Bb_4.py",
+        "chord_type": "7"
+      },
+      "C7$Asharp!C7$Bb_5": {
+        "variant": 5,
+        "file": "7/C7$Asharp!C7$Bb_5.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\A": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Ля",
+    "variants": [
+      "C7$A_1",
+      "C7$A_2",
+      "C7$A_3",
+      "C7$A_4"
+    ],
+    "configs": {
+      "C7$A_1": {
+        "variant": 1,
+        "file": "7/C7$A_1.py",
+        "chord_type": "7"
+      },
+      "C7$A_2": {
+        "variant": 2,
+        "file": "7/C7$A_2.py",
+        "chord_type": "7"
+      },
+      "C7$A_3": {
+        "variant": 3,
+        "file": "7/C7$A_3.py",
+        "chord_type": "7"
+      },
+      "C7$A_4": {
+        "variant": 4,
+        "file": "7/C7$A_4.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\B": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Си",
+    "variants": [
+      "C7$B!C7$H_1"
+    ],
+    "configs": {
+      "C7$B!C7$H_1": {
+        "variant": 1,
+        "file": "7/C7$B!C7$H_1.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\H": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Си",
+    "variants": [
+      "C7$B!C7$H_1"
+    ],
+    "configs": {
+      "C7$B!C7$H_1": {
+        "variant": 1,
+        "file": "7/C7$B!C7$H_1.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\C#": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом До-диез",
+    "variants": [
+      "C7$Csharp!C7$Db_1",
+      "C7$Csharp!C7$Db_2"
+    ],
+    "configs": {
+      "C7$Csharp!C7$Db_1": {
+        "variant": 1,
+        "file": "7/C7$Csharp!C7$Db_1.py",
+        "chord_type": "7"
+      },
+      "C7$Csharp!C7$Db_2": {
+        "variant": 2,
+        "file": "7/C7$Csharp!C7$Db_2.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\Db": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Ре-бемоль",
+    "variants": [
+      "C7$Csharp!C7$Db_1",
+      "C7$Csharp!C7$Db_2"
+    ],
+    "configs": {
+      "C7$Csharp!C7$Db_1": {
+        "variant": 1,
+        "file": "7/C7$Csharp!C7$Db_1.py",
+        "chord_type": "7"
+      },
+      "C7$Csharp!C7$Db_2": {
+        "variant": 2,
+        "file": "7/C7$Csharp!C7$Db_2.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\D#": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Ре-диез",
+    "variants": [
+      "C7$Dsharp!C7$Eb_1",
+      "C7$Dsharp!C7$Eb_2",
+      "C7$Dsharp!C7$Eb_3"
+    ],
+    "configs": {
+      "C7$Dsharp!C7$Eb_1": {
+        "variant": 1,
+        "file": "7/C7$Dsharp!C7$Eb_1.py",
+        "chord_type": "7"
+      },
+      "C7$Dsharp!C7$Eb_2": {
+        "variant": 2,
+        "file": "7/C7$Dsharp!C7$Eb_2.py",
+        "chord_type": "7"
+      },
+      "C7$Dsharp!C7$Eb_3": {
+        "variant": 3,
+        "file": "7/C7$Dsharp!C7$Eb_3.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\Eb": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Ми-бемоль",
+    "variants": [
+      "C7$Dsharp!C7$Eb_1",
+      "C7$Dsharp!C7$Eb_2",
+      "C7$Dsharp!C7$Eb_3"
+    ],
+    "configs": {
+      "C7$Dsharp!C7$Eb_1": {
+        "variant": 1,
+        "file": "7/C7$Dsharp!C7$Eb_1.py",
+        "chord_type": "7"
+      },
+      "C7$Dsharp!C7$Eb_2": {
+        "variant": 2,
+        "file": "7/C7$Dsharp!C7$Eb_2.py",
+        "chord_type": "7"
+      },
+      "C7$Dsharp!C7$Eb_3": {
+        "variant": 3,
+        "file": "7/C7$Dsharp!C7$Eb_3.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\D": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Ре",
+    "variants": [
+      "C7$D_1",
+      "C7$D_2",
+      "C7$D_3",
+      "C7$D_4"
+    ],
+    "configs": {
+      "C7$D_1": {
+        "variant": 1,
+        "file": "7/C7$D_1.py",
+        "chord_type": "7"
+      },
+      "C7$D_2": {
+        "variant": 2,
+        "file": "7/C7$D_2.py",
+        "chord_type": "7"
+      },
+      "C7$D_3": {
+        "variant": 3,
+        "file": "7/C7$D_3.py",
+        "chord_type": "7"
+      },
+      "C7$D_4": {
+        "variant": 4,
+        "file": "7/C7$D_4.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\E": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Ми",
+    "variants": [
+      "C7$E_1",
+      "C7$E_2",
+      "C7$E_3",
+      "C7$E_4"
+    ],
+    "configs": {
+      "C7$E_1": {
+        "variant": 1,
+        "file": "7/C7$E_1.py",
+        "chord_type": "7"
+      },
+      "C7$E_2": {
+        "variant": 2,
+        "file": "7/C7$E_2.py",
+        "chord_type": "7"
+      },
+      "C7$E_3": {
+        "variant": 3,
+        "file": "7/C7$E_3.py",
+        "chord_type": "7"
+      },
+      "C7$E_4": {
+        "variant": 4,
+        "file": "7/C7$E_4.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\F#": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Фа-диез",
+    "variants": [
+      "C7$Fsharp!C7$Gb_1",
+      "C7$Fsharp!C7$Gb_2",
+      "C7$Fsharp!C7$Gb_3",
+      "C7$Fsharp!C7$Gb_4"
+    ],
+    "configs": {
+      "C7$Fsharp!C7$Gb_1": {
+        "variant": 1,
+        "file": "7/C7$Fsharp!C7$Gb_1.py",
+        "chord_type": "7"
+      },
+      "C7$Fsharp!C7$Gb_2": {
+        "variant": 2,
+        "file": "7/C7$Fsharp!C7$Gb_2.py",
+        "chord_type": "7"
+      },
+      "C7$Fsharp!C7$Gb_3": {
+        "variant": 3,
+        "file": "7/C7$Fsharp!C7$Gb_3.py",
+        "chord_type": "7"
+      },
+      "C7$Fsharp!C7$Gb_4": {
+        "variant": 4,
+        "file": "7/C7$Fsharp!C7$Gb_4.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\Gb": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Соль-бемоль",
+    "variants": [
+      "C7$Fsharp!C7$Gb_1",
+      "C7$Fsharp!C7$Gb_2",
+      "C7$Fsharp!C7$Gb_3",
+      "C7$Fsharp!C7$Gb_4"
+    ],
+    "configs": {
+      "C7$Fsharp!C7$Gb_1": {
+        "variant": 1,
+        "file": "7/C7$Fsharp!C7$Gb_1.py",
+        "chord_type": "7"
+      },
+      "C7$Fsharp!C7$Gb_2": {
+        "variant": 2,
+        "file": "7/C7$Fsharp!C7$Gb_2.py",
+        "chord_type": "7"
+      },
+      "C7$Fsharp!C7$Gb_3": {
+        "variant": 3,
+        "file": "7/C7$Fsharp!C7$Gb_3.py",
+        "chord_type": "7"
+      },
+      "C7$Fsharp!C7$Gb_4": {
+        "variant": 4,
+        "file": "7/C7$Fsharp!C7$Gb_4.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\F": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Фа",
+    "variants": [
+      "C7$F_1",
+      "C7$F_2",
+      "C7$F_3",
+      "C7$F_4",
+      "C7$F_5"
+    ],
+    "configs": {
+      "C7$F_1": {
+        "variant": 1,
+        "file": "7/C7$F_1.py",
+        "chord_type": "7"
+      },
+      "C7$F_2": {
+        "variant": 2,
+        "file": "7/C7$F_2.py",
+        "chord_type": "7"
+      },
+      "C7$F_3": {
+        "variant": 3,
+        "file": "7/C7$F_3.py",
+        "chord_type": "7"
+      },
+      "C7$F_4": {
+        "variant": 4,
+        "file": "7/C7$F_4.py",
+        "chord_type": "7"
+      },
+      "C7$F_5": {
+        "variant": 5,
+        "file": "7/C7$F_5.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\G#": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Соль-диез",
+    "variants": [
+      "C7$Gsharp!C7$Ab_1",
+      "C7$Gsharp!C7$Ab_2",
+      "C7$Gsharp!C7$Ab_3",
+      "C7$Gsharp!C7$Ab_4",
+      "C7$Gsharp!C7$Ab_5"
+    ],
+    "configs": {
+      "C7$Gsharp!C7$Ab_1": {
+        "variant": 1,
+        "file": "7/C7$Gsharp!C7$Ab_1.py",
+        "chord_type": "7"
+      },
+      "C7$Gsharp!C7$Ab_2": {
+        "variant": 2,
+        "file": "7/C7$Gsharp!C7$Ab_2.py",
+        "chord_type": "7"
+      },
+      "C7$Gsharp!C7$Ab_3": {
+        "variant": 3,
+        "file": "7/C7$Gsharp!C7$Ab_3.py",
+        "chord_type": "7"
+      },
+      "C7$Gsharp!C7$Ab_4": {
+        "variant": 4,
+        "file": "7/C7$Gsharp!C7$Ab_4.py",
+        "chord_type": "7"
+      },
+      "C7$Gsharp!C7$Ab_5": {
+        "variant": 5,
+        "file": "7/C7$Gsharp!C7$Ab_5.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\Ab": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Ля-бемоль",
+    "variants": [
+      "C7$Gsharp!C7$Ab_1",
+      "C7$Gsharp!C7$Ab_2",
+      "C7$Gsharp!C7$Ab_3",
+      "C7$Gsharp!C7$Ab_4",
+      "C7$Gsharp!C7$Ab_5"
+    ],
+    "configs": {
+      "C7$Gsharp!C7$Ab_1": {
+        "variant": 1,
+        "file": "7/C7$Gsharp!C7$Ab_1.py",
+        "chord_type": "7"
+      },
+      "C7$Gsharp!C7$Ab_2": {
+        "variant": 2,
+        "file": "7/C7$Gsharp!C7$Ab_2.py",
+        "chord_type": "7"
+      },
+      "C7$Gsharp!C7$Ab_3": {
+        "variant": 3,
+        "file": "7/C7$Gsharp!C7$Ab_3.py",
+        "chord_type": "7"
+      },
+      "C7$Gsharp!C7$Ab_4": {
+        "variant": 4,
+        "file": "7/C7$Gsharp!C7$Ab_4.py",
+        "chord_type": "7"
+      },
+      "C7$Gsharp!C7$Ab_5": {
+        "variant": 5,
+        "file": "7/C7$Gsharp!C7$Ab_5.py",
+        "chord_type": "7"
+      }
+    }
+  },
+  "C7\\G": {
+    "type": "7",
+    "description": "До-доминантсептаккорд с басом Соль",
+    "variants": [
+      "C7$G_1",
+      "C7$G_2",
+      "C7$G_3",
+      "C7$G_4",
+      "C7$G_5"
+    ],
+    "configs": {
+      "C7$G_1": {
+        "variant": 1,
+        "file": "7/C7$G_1.py",
+        "chord_type": "7"
+      },
+      "C7$G_2": {
+        "variant": 2,
+        "file": "7/C7$G_2.py",
+        "chord_type": "7"
+      },
+      "C7$G_3": {
+        "variant": 3,
+        "file": "7/C7$G_3.py",
+        "chord_type": "7"
+      },
+      "C7$G_4": {
+        "variant": 4,
+        "file": "7/C7$G_4.py",
+        "chord_type": "7"
+      },
+      "C7$G_5": {
+        "variant": 5,
+        "file": "7/C7$G_5.py",
         "chord_type": "7"
       }
     }
@@ -15934,6 +16442,364 @@ ALL_CHORDS = {
       }
     }
   },
+  "Cdim\\A#": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Ля-диез",
+    "variants": [
+      "Cdim$Asharp!Cdim$Bb_1",
+      "Cdim$Asharp!Cdim$Bb_2",
+      "Cdim$Asharp!Cdim$Bb_3"
+    ],
+    "configs": {
+      "Cdim$Asharp!Cdim$Bb_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Asharp!Cdim$Bb_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Asharp!Cdim$Bb_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$Asharp!Cdim$Bb_2.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Asharp!Cdim$Bb_3": {
+        "variant": 3,
+        "file": "Dim/Cdim$Asharp!Cdim$Bb_3.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\Bb": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Си-бемоль",
+    "variants": [
+      "Cdim$Asharp!Cdim$Bb_1",
+      "Cdim$Asharp!Cdim$Bb_2",
+      "Cdim$Asharp!Cdim$Bb_3"
+    ],
+    "configs": {
+      "Cdim$Asharp!Cdim$Bb_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Asharp!Cdim$Bb_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Asharp!Cdim$Bb_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$Asharp!Cdim$Bb_2.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Asharp!Cdim$Bb_3": {
+        "variant": 3,
+        "file": "Dim/Cdim$Asharp!Cdim$Bb_3.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\A": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Ля",
+    "variants": [
+      "Cdim$A_1",
+      "Cdim$A_2",
+      "Cdim$A_3",
+      "Cdim$A_4"
+    ],
+    "configs": {
+      "Cdim$A_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$A_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$A_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$A_2.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$A_3": {
+        "variant": 3,
+        "file": "Dim/Cdim$A_3.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$A_4": {
+        "variant": 4,
+        "file": "Dim/Cdim$A_4.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\B": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Си",
+    "variants": [
+      "Cdim$B!Cdim$H_1",
+      "Cdim$B!Cdim$H_2"
+    ],
+    "configs": {
+      "Cdim$B!Cdim$H_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$B!Cdim$H_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$B!Cdim$H_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$B!Cdim$H_2.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\H": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Си",
+    "variants": [
+      "Cdim$B!Cdim$H_1",
+      "Cdim$B!Cdim$H_2"
+    ],
+    "configs": {
+      "Cdim$B!Cdim$H_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$B!Cdim$H_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$B!Cdim$H_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$B!Cdim$H_2.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\C#": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом До-диез",
+    "variants": [
+      "Cdim$Csharp!Cdim$Db_1",
+      "Cdim$Csharp!Cdim$Db_2"
+    ],
+    "configs": {
+      "Cdim$Csharp!Cdim$Db_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Csharp!Cdim$Db_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Csharp!Cdim$Db_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$Csharp!Cdim$Db_2.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\Db": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Ре-бемоль",
+    "variants": [
+      "Cdim$Csharp!Cdim$Db_1",
+      "Cdim$Csharp!Cdim$Db_2"
+    ],
+    "configs": {
+      "Cdim$Csharp!Cdim$Db_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Csharp!Cdim$Db_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Csharp!Cdim$Db_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$Csharp!Cdim$Db_2.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\D#": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Ре-диез",
+    "variants": [
+      "Cdim$Dsharp!Cdim$Eb_1"
+    ],
+    "configs": {
+      "Cdim$Dsharp!Cdim$Eb_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Dsharp!Cdim$Eb_1.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\Eb": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Ми-бемоль",
+    "variants": [
+      "Cdim$Dsharp!Cdim$Eb_1"
+    ],
+    "configs": {
+      "Cdim$Dsharp!Cdim$Eb_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Dsharp!Cdim$Eb_1.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\D": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Ре",
+    "variants": [
+      "Cdim$D_1"
+    ],
+    "configs": {
+      "Cdim$D_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$D_1.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\E": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Ми",
+    "variants": [
+      "Cdim$E_1",
+      "Cdim$E_2"
+    ],
+    "configs": {
+      "Cdim$E_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$E_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$E_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$E_2.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\F#": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Фа-диез",
+    "variants": [
+      "Cdim$Fsharp!Cdim$Gb_1"
+    ],
+    "configs": {
+      "Cdim$Fsharp!Cdim$Gb_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Fsharp!Cdim$Gb_1.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\Gb": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Соль-бемоль",
+    "variants": [
+      "Cdim$Fsharp!Cdim$Gb_1"
+    ],
+    "configs": {
+      "Cdim$Fsharp!Cdim$Gb_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Fsharp!Cdim$Gb_1.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\F": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Фа",
+    "variants": [
+      "Cdim$F_1"
+    ],
+    "configs": {
+      "Cdim$F_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$F_1.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\G#": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Соль-диез",
+    "variants": [
+      "Cdim$Gsharp!Cdim$Ab_1",
+      "Cdim$Gsharp!Cdim$Ab_2",
+      "Cdim$Gsharp!Cdim$Ab_3",
+      "Cdim$Gsharp!Cdim$Ab_4"
+    ],
+    "configs": {
+      "Cdim$Gsharp!Cdim$Ab_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Gsharp!Cdim$Ab_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Gsharp!Cdim$Ab_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$Gsharp!Cdim$Ab_2.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Gsharp!Cdim$Ab_3": {
+        "variant": 3,
+        "file": "Dim/Cdim$Gsharp!Cdim$Ab_3.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Gsharp!Cdim$Ab_4": {
+        "variant": 4,
+        "file": "Dim/Cdim$Gsharp!Cdim$Ab_4.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\Ab": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Ля-бемоль",
+    "variants": [
+      "Cdim$Gsharp!Cdim$Ab_1",
+      "Cdim$Gsharp!Cdim$Ab_2",
+      "Cdim$Gsharp!Cdim$Ab_3",
+      "Cdim$Gsharp!Cdim$Ab_4"
+    ],
+    "configs": {
+      "Cdim$Gsharp!Cdim$Ab_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$Gsharp!Cdim$Ab_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Gsharp!Cdim$Ab_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$Gsharp!Cdim$Ab_2.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Gsharp!Cdim$Ab_3": {
+        "variant": 3,
+        "file": "Dim/Cdim$Gsharp!Cdim$Ab_3.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$Gsharp!Cdim$Ab_4": {
+        "variant": 4,
+        "file": "Dim/Cdim$Gsharp!Cdim$Ab_4.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
+  "Cdim\\G": {
+    "type": "Dim",
+    "description": "До-уменьшенный с басом Соль",
+    "variants": [
+      "Cdim$G_1",
+      "Cdim$G_2",
+      "Cdim$G_3"
+    ],
+    "configs": {
+      "Cdim$G_1": {
+        "variant": 1,
+        "file": "Dim/Cdim$G_1.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$G_2": {
+        "variant": 2,
+        "file": "Dim/Cdim$G_2.py",
+        "chord_type": "Dim"
+      },
+      "Cdim$G_3": {
+        "variant": 3,
+        "file": "Dim/Cdim$G_3.py",
+        "chord_type": "Dim"
+      }
+    }
+  },
   "Cdim": {
     "type": "Dim",
     "description": "Уменьшенный аккорд от ноты До",
@@ -16542,6 +17408,406 @@ ALL_CHORDS = {
       "Bdim7!Hdim7_9": {
         "variant": 9,
         "file": "Dim7/Bdim7!Hdim7_9.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\A#": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Ля-диез",
+    "variants": [
+      "Cdim7$Asharp!Cdim7$Bb_1"
+    ],
+    "configs": {
+      "Cdim7$Asharp!Cdim7$Bb_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Asharp!Cdim7$Bb_1.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\Bb": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Си-бемоль",
+    "variants": [
+      "Cdim7$Asharp!Cdim7$Bb_1"
+    ],
+    "configs": {
+      "Cdim7$Asharp!Cdim7$Bb_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Asharp!Cdim7$Bb_1.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\A": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Ля",
+    "variants": [
+      "Cdim7$A_1",
+      "Cdim7$A_2",
+      "Cdim7$A_3"
+    ],
+    "configs": {
+      "Cdim7$A_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$A_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$A_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$A_2.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$A_3": {
+        "variant": 3,
+        "file": "Dim7/Cdim7$A_3.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\B": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Си",
+    "variants": [
+      "Cdim7$B!Cdim7$H_1",
+      "Cdim7$B!Cdim7$H_2"
+    ],
+    "configs": {
+      "Cdim7$B!Cdim7$H_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$B!Cdim7$H_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$B!Cdim7$H_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$B!Cdim7$H_2.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\H": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Си",
+    "variants": [
+      "Cdim7$B!Cdim7$H_1",
+      "Cdim7$B!Cdim7$H_2"
+    ],
+    "configs": {
+      "Cdim7$B!Cdim7$H_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$B!Cdim7$H_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$B!Cdim7$H_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$B!Cdim7$H_2.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\C#": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом До-диез",
+    "variants": [
+      "Cdim7$Csharp!Cdim7$Db_1",
+      "Cdim7$Csharp!Cdim7$Db_2"
+    ],
+    "configs": {
+      "Cdim7$Csharp!Cdim7$Db_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Csharp!Cdim7$Db_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Csharp!Cdim7$Db_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$Csharp!Cdim7$Db_2.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\Db": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Ре-бемоль",
+    "variants": [
+      "Cdim7$Csharp!Cdim7$Db_1",
+      "Cdim7$Csharp!Cdim7$Db_2"
+    ],
+    "configs": {
+      "Cdim7$Csharp!Cdim7$Db_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Csharp!Cdim7$Db_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Csharp!Cdim7$Db_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$Csharp!Cdim7$Db_2.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\D#": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Ре-диез",
+    "variants": [
+      "Cdim7$Dsharp!Cdim7$Eb_1",
+      "Cdim7$Dsharp!Cdim7$Eb_2",
+      "Cdim7$Dsharp!Cdim7$Eb_3",
+      "Cdim7$Dsharp!Cdim7$Eb_4",
+      "Cdim7$Dsharp!Cdim7$Eb_5"
+    ],
+    "configs": {
+      "Cdim7$Dsharp!Cdim7$Eb_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Dsharp!Cdim7$Eb_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_2.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Dsharp!Cdim7$Eb_3": {
+        "variant": 3,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_3.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Dsharp!Cdim7$Eb_4": {
+        "variant": 4,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_4.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Dsharp!Cdim7$Eb_5": {
+        "variant": 5,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_5.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\Eb": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Ми-бемоль",
+    "variants": [
+      "Cdim7$Dsharp!Cdim7$Eb_1",
+      "Cdim7$Dsharp!Cdim7$Eb_2",
+      "Cdim7$Dsharp!Cdim7$Eb_3",
+      "Cdim7$Dsharp!Cdim7$Eb_4",
+      "Cdim7$Dsharp!Cdim7$Eb_5"
+    ],
+    "configs": {
+      "Cdim7$Dsharp!Cdim7$Eb_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Dsharp!Cdim7$Eb_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_2.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Dsharp!Cdim7$Eb_3": {
+        "variant": 3,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_3.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Dsharp!Cdim7$Eb_4": {
+        "variant": 4,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_4.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Dsharp!Cdim7$Eb_5": {
+        "variant": 5,
+        "file": "Dim7/Cdim7$Dsharp!Cdim7$Eb_5.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\D": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Ре",
+    "variants": [
+      "Cdim7$D_1",
+      "Cdim7$D_2"
+    ],
+    "configs": {
+      "Cdim7$D_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$D_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$D_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$D_2.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\E": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Ми",
+    "variants": [
+      "Cdim7$E_1",
+      "Cdim7$E_2",
+      "Cdim7$E_3",
+      "Cdim7$E_4",
+      "Cdim7$E_5"
+    ],
+    "configs": {
+      "Cdim7$E_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$E_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$E_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$E_2.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$E_3": {
+        "variant": 3,
+        "file": "Dim7/Cdim7$E_3.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$E_4": {
+        "variant": 4,
+        "file": "Dim7/Cdim7$E_4.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$E_5": {
+        "variant": 5,
+        "file": "Dim7/Cdim7$E_5.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\F#": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Фа-диез",
+    "variants": [
+      "Cdim7$Fsharp!Cdim7$Gb_1",
+      "Cdim7$Fsharp!Cdim7$Gb_2",
+      "Cdim7$Fsharp!Cdim7$Gb_3"
+    ],
+    "configs": {
+      "Cdim7$Fsharp!Cdim7$Gb_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Fsharp!Cdim7$Gb_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Fsharp!Cdim7$Gb_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$Fsharp!Cdim7$Gb_2.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Fsharp!Cdim7$Gb_3": {
+        "variant": 3,
+        "file": "Dim7/Cdim7$Fsharp!Cdim7$Gb_3.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\Gb": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Соль-бемоль",
+    "variants": [
+      "Cdim7$Fsharp!Cdim7$Gb_1",
+      "Cdim7$Fsharp!Cdim7$Gb_2",
+      "Cdim7$Fsharp!Cdim7$Gb_3"
+    ],
+    "configs": {
+      "Cdim7$Fsharp!Cdim7$Gb_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Fsharp!Cdim7$Gb_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Fsharp!Cdim7$Gb_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$Fsharp!Cdim7$Gb_2.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Fsharp!Cdim7$Gb_3": {
+        "variant": 3,
+        "file": "Dim7/Cdim7$Fsharp!Cdim7$Gb_3.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\F": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Фа",
+    "variants": [
+      "Cdim7$F_1",
+      "Cdim7$F_2"
+    ],
+    "configs": {
+      "Cdim7$F_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$F_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$F_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$F_2.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\G#": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Соль-диез",
+    "variants": [
+      "Cdim7$Gsharp!Cdim7$Ab_1",
+      "Cdim7$Gsharp!Cdim7$Ab_2"
+    ],
+    "configs": {
+      "Cdim7$Gsharp!Cdim7$Ab_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Gsharp!Cdim7$Ab_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Gsharp!Cdim7$Ab_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$Gsharp!Cdim7$Ab_2.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\Ab": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Ля-бемоль",
+    "variants": [
+      "Cdim7$Gsharp!Cdim7$Ab_1",
+      "Cdim7$Gsharp!Cdim7$Ab_2"
+    ],
+    "configs": {
+      "Cdim7$Gsharp!Cdim7$Ab_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$Gsharp!Cdim7$Ab_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$Gsharp!Cdim7$Ab_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$Gsharp!Cdim7$Ab_2.py",
+        "chord_type": "Dim7"
+      }
+    }
+  },
+  "Cdim7\\G": {
+    "type": "Dim7",
+    "description": "До-уменьшенный септаккорд с басом Соль",
+    "variants": [
+      "Cdim7$G_1",
+      "Cdim7$G_2"
+    ],
+    "configs": {
+      "Cdim7$G_1": {
+        "variant": 1,
+        "file": "Dim7/Cdim7$G_1.py",
+        "chord_type": "Dim7"
+      },
+      "Cdim7$G_2": {
+        "variant": 2,
+        "file": "Dim7/Cdim7$G_2.py",
         "chord_type": "Dim7"
       }
     }
@@ -20388,6 +21654,514 @@ ALL_CHORDS = {
       "Bm7!Hm7_9": {
         "variant": 9,
         "file": "m7/Bm7!Hm7_9.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\A#": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Ля-диез",
+    "variants": [
+      "Cm7$Asharp!Cm7$Bb_1",
+      "Cm7$Asharp!Cm7$Bb_2",
+      "Cm7$Asharp!Cm7$Bb_3",
+      "Cm7$Asharp!Cm7$Bb_4"
+    ],
+    "configs": {
+      "Cm7$Asharp!Cm7$Bb_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Asharp!Cm7$Bb_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Asharp!Cm7$Bb_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Asharp!Cm7$Bb_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Asharp!Cm7$Bb_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Asharp!Cm7$Bb_3.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Asharp!Cm7$Bb_4": {
+        "variant": 4,
+        "file": "m7/Cm7$Asharp!Cm7$Bb_4.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\Bb": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Си-бемоль",
+    "variants": [
+      "Cm7$Asharp!Cm7$Bb_1",
+      "Cm7$Asharp!Cm7$Bb_2",
+      "Cm7$Asharp!Cm7$Bb_3",
+      "Cm7$Asharp!Cm7$Bb_4"
+    ],
+    "configs": {
+      "Cm7$Asharp!Cm7$Bb_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Asharp!Cm7$Bb_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Asharp!Cm7$Bb_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Asharp!Cm7$Bb_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Asharp!Cm7$Bb_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Asharp!Cm7$Bb_3.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Asharp!Cm7$Bb_4": {
+        "variant": 4,
+        "file": "m7/Cm7$Asharp!Cm7$Bb_4.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\A": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Ля",
+    "variants": [
+      "Cm7$A_1",
+      "Cm7$A_2",
+      "Cm7$A_3",
+      "Cm7$A_4"
+    ],
+    "configs": {
+      "Cm7$A_1": {
+        "variant": 1,
+        "file": "m7/Cm7$A_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$A_2": {
+        "variant": 2,
+        "file": "m7/Cm7$A_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$A_3": {
+        "variant": 3,
+        "file": "m7/Cm7$A_3.py",
+        "chord_type": "m7"
+      },
+      "Cm7$A_4": {
+        "variant": 4,
+        "file": "m7/Cm7$A_4.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\B": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Си",
+    "variants": [
+      "Cm7$B!Cm7$H_1"
+    ],
+    "configs": {
+      "Cm7$B!Cm7$H_1": {
+        "variant": 1,
+        "file": "m7/Cm7$B!Cm7$H_1.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\H": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Си",
+    "variants": [
+      "Cm7$B!Cm7$H_1"
+    ],
+    "configs": {
+      "Cm7$B!Cm7$H_1": {
+        "variant": 1,
+        "file": "m7/Cm7$B!Cm7$H_1.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\C#": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом До-диез",
+    "variants": [
+      "Cm7$Csharp!Cm7$Db_1",
+      "Cm7$Csharp!Cm7$Db_2",
+      "Cm7$Csharp!Cm7$Db_3"
+    ],
+    "configs": {
+      "Cm7$Csharp!Cm7$Db_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Csharp!Cm7$Db_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Csharp!Cm7$Db_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Csharp!Cm7$Db_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Csharp!Cm7$Db_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Csharp!Cm7$Db_3.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\Db": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Ре-бемоль",
+    "variants": [
+      "Cm7$Csharp!Cm7$Db_1",
+      "Cm7$Csharp!Cm7$Db_2",
+      "Cm7$Csharp!Cm7$Db_3"
+    ],
+    "configs": {
+      "Cm7$Csharp!Cm7$Db_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Csharp!Cm7$Db_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Csharp!Cm7$Db_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Csharp!Cm7$Db_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Csharp!Cm7$Db_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Csharp!Cm7$Db_3.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\D#": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Ре-диез",
+    "variants": [
+      "Cm7$Dsharp!Cm7$Eb_1",
+      "Cm7$Dsharp!Cm7$Eb_2",
+      "Cm7$Dsharp!Cm7$Eb_3"
+    ],
+    "configs": {
+      "Cm7$Dsharp!Cm7$Eb_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Dsharp!Cm7$Eb_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Dsharp!Cm7$Eb_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Dsharp!Cm7$Eb_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Dsharp!Cm7$Eb_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Dsharp!Cm7$Eb_3.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\Eb": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Ми-бемоль",
+    "variants": [
+      "Cm7$Dsharp!Cm7$Eb_1",
+      "Cm7$Dsharp!Cm7$Eb_2",
+      "Cm7$Dsharp!Cm7$Eb_3"
+    ],
+    "configs": {
+      "Cm7$Dsharp!Cm7$Eb_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Dsharp!Cm7$Eb_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Dsharp!Cm7$Eb_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Dsharp!Cm7$Eb_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Dsharp!Cm7$Eb_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Dsharp!Cm7$Eb_3.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\D": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Ре",
+    "variants": [
+      "Cm7$D_1",
+      "Cm7$D_2",
+      "Cm7$D_3"
+    ],
+    "configs": {
+      "Cm7$D_1": {
+        "variant": 1,
+        "file": "m7/Cm7$D_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$D_2": {
+        "variant": 2,
+        "file": "m7/Cm7$D_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$D_3": {
+        "variant": 3,
+        "file": "m7/Cm7$D_3.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\E": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Ми",
+    "variants": [
+      "Cm7$E_1",
+      "Cm7$E_2",
+      "Cm7$E_3",
+      "Cm7$E_4"
+    ],
+    "configs": {
+      "Cm7$E_1": {
+        "variant": 1,
+        "file": "m7/Cm7$E_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$E_2": {
+        "variant": 2,
+        "file": "m7/Cm7$E_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$E_3": {
+        "variant": 3,
+        "file": "m7/Cm7$E_3.py",
+        "chord_type": "m7"
+      },
+      "Cm7$E_4": {
+        "variant": 4,
+        "file": "m7/Cm7$E_4.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\F#": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Фа-диез",
+    "variants": [
+      "Cm7$Fsharp!Cm7$Gb_1",
+      "Cm7$Fsharp!Cm7$Gb_2",
+      "Cm7$Fsharp!Cm7$Gb_3"
+    ],
+    "configs": {
+      "Cm7$Fsharp!Cm7$Gb_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Fsharp!Cm7$Gb_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Fsharp!Cm7$Gb_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Fsharp!Cm7$Gb_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Fsharp!Cm7$Gb_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Fsharp!Cm7$Gb_3.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\Gb": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Соль-бемоль",
+    "variants": [
+      "Cm7$Fsharp!Cm7$Gb_1",
+      "Cm7$Fsharp!Cm7$Gb_2",
+      "Cm7$Fsharp!Cm7$Gb_3"
+    ],
+    "configs": {
+      "Cm7$Fsharp!Cm7$Gb_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Fsharp!Cm7$Gb_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Fsharp!Cm7$Gb_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Fsharp!Cm7$Gb_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Fsharp!Cm7$Gb_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Fsharp!Cm7$Gb_3.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\F": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Фа",
+    "variants": [
+      "Cm7$F_1",
+      "Cm7$F_2",
+      "Cm7$F_3",
+      "Cm7$F_4",
+      "Cm7$F_5",
+      "Cm7$F_6"
+    ],
+    "configs": {
+      "Cm7$F_1": {
+        "variant": 1,
+        "file": "m7/Cm7$F_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$F_2": {
+        "variant": 2,
+        "file": "m7/Cm7$F_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$F_3": {
+        "variant": 3,
+        "file": "m7/Cm7$F_3.py",
+        "chord_type": "m7"
+      },
+      "Cm7$F_4": {
+        "variant": 4,
+        "file": "m7/Cm7$F_4.py",
+        "chord_type": "m7"
+      },
+      "Cm7$F_5": {
+        "variant": 5,
+        "file": "m7/Cm7$F_5.py",
+        "chord_type": "m7"
+      },
+      "Cm7$F_6": {
+        "variant": 6,
+        "file": "m7/Cm7$F_6.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\G#": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Соль-диез",
+    "variants": [
+      "Cm7$Gsharp!Cm7$Ab_1",
+      "Cm7$Gsharp!Cm7$Ab_2",
+      "Cm7$Gsharp!Cm7$Ab_3",
+      "Cm7$Gsharp!Cm7$Ab_4",
+      "Cm7$Gsharp!Cm7$Ab_5"
+    ],
+    "configs": {
+      "Cm7$Gsharp!Cm7$Ab_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Gsharp!Cm7$Ab_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Gsharp!Cm7$Ab_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_3.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Gsharp!Cm7$Ab_4": {
+        "variant": 4,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_4.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Gsharp!Cm7$Ab_5": {
+        "variant": 5,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_5.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\Ab": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Ля-бемоль",
+    "variants": [
+      "Cm7$Gsharp!Cm7$Ab_1",
+      "Cm7$Gsharp!Cm7$Ab_2",
+      "Cm7$Gsharp!Cm7$Ab_3",
+      "Cm7$Gsharp!Cm7$Ab_4",
+      "Cm7$Gsharp!Cm7$Ab_5"
+    ],
+    "configs": {
+      "Cm7$Gsharp!Cm7$Ab_1": {
+        "variant": 1,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Gsharp!Cm7$Ab_2": {
+        "variant": 2,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Gsharp!Cm7$Ab_3": {
+        "variant": 3,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_3.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Gsharp!Cm7$Ab_4": {
+        "variant": 4,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_4.py",
+        "chord_type": "m7"
+      },
+      "Cm7$Gsharp!Cm7$Ab_5": {
+        "variant": 5,
+        "file": "m7/Cm7$Gsharp!Cm7$Ab_5.py",
+        "chord_type": "m7"
+      }
+    }
+  },
+  "Cm7\\G": {
+    "type": "m7",
+    "description": "До-минорный септаккорд с басом Соль",
+    "variants": [
+      "Cm7$G_1",
+      "Cm7$G_2",
+      "Cm7$G_3",
+      "Cm7$G_4",
+      "Cm7$G_5",
+      "Cm7$G_6",
+      "Cm7$G_7"
+    ],
+    "configs": {
+      "Cm7$G_1": {
+        "variant": 1,
+        "file": "m7/Cm7$G_1.py",
+        "chord_type": "m7"
+      },
+      "Cm7$G_2": {
+        "variant": 2,
+        "file": "m7/Cm7$G_2.py",
+        "chord_type": "m7"
+      },
+      "Cm7$G_3": {
+        "variant": 3,
+        "file": "m7/Cm7$G_3.py",
+        "chord_type": "m7"
+      },
+      "Cm7$G_4": {
+        "variant": 4,
+        "file": "m7/Cm7$G_4.py",
+        "chord_type": "m7"
+      },
+      "Cm7$G_5": {
+        "variant": 5,
+        "file": "m7/Cm7$G_5.py",
+        "chord_type": "m7"
+      },
+      "Cm7$G_6": {
+        "variant": 6,
+        "file": "m7/Cm7$G_6.py",
+        "chord_type": "m7"
+      },
+      "Cm7$G_7": {
+        "variant": 7,
+        "file": "m7/Cm7$G_7.py",
         "chord_type": "m7"
       }
     }
@@ -28834,6 +30608,474 @@ ALL_CHORDS = {
       }
     }
   },
+  "A\\B": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Си",
+    "variants": [
+      "A$B!A$H_1",
+      "A$B!A$H_2",
+      "A$B!A$H_3"
+    ],
+    "configs": {
+      "A$B!A$H_1": {
+        "variant": 1,
+        "file": "Major/A$B!A$H_1.py",
+        "chord_type": "Major"
+      },
+      "A$B!A$H_2": {
+        "variant": 2,
+        "file": "Major/A$B!A$H_2.py",
+        "chord_type": "Major"
+      },
+      "A$B!A$H_3": {
+        "variant": 3,
+        "file": "Major/A$B!A$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\H": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Си",
+    "variants": [
+      "A$B!A$H_1",
+      "A$B!A$H_2",
+      "A$B!A$H_3"
+    ],
+    "configs": {
+      "A$B!A$H_1": {
+        "variant": 1,
+        "file": "Major/A$B!A$H_1.py",
+        "chord_type": "Major"
+      },
+      "A$B!A$H_2": {
+        "variant": 2,
+        "file": "Major/A$B!A$H_2.py",
+        "chord_type": "Major"
+      },
+      "A$B!A$H_3": {
+        "variant": 3,
+        "file": "Major/A$B!A$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\C#": {
+    "type": "Major",
+    "description": "Ля-мажор с басом До-диез",
+    "variants": [
+      "A$Csharp!A$Db_1",
+      "A$Csharp!A$Db_2",
+      "A$Csharp!A$Db_3"
+    ],
+    "configs": {
+      "A$Csharp!A$Db_1": {
+        "variant": 1,
+        "file": "Major/A$Csharp!A$Db_1.py",
+        "chord_type": "Major"
+      },
+      "A$Csharp!A$Db_2": {
+        "variant": 2,
+        "file": "Major/A$Csharp!A$Db_2.py",
+        "chord_type": "Major"
+      },
+      "A$Csharp!A$Db_3": {
+        "variant": 3,
+        "file": "Major/A$Csharp!A$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\Db": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Ре-бемоль",
+    "variants": [
+      "A$Csharp!A$Db_1",
+      "A$Csharp!A$Db_2",
+      "A$Csharp!A$Db_3"
+    ],
+    "configs": {
+      "A$Csharp!A$Db_1": {
+        "variant": 1,
+        "file": "Major/A$Csharp!A$Db_1.py",
+        "chord_type": "Major"
+      },
+      "A$Csharp!A$Db_2": {
+        "variant": 2,
+        "file": "Major/A$Csharp!A$Db_2.py",
+        "chord_type": "Major"
+      },
+      "A$Csharp!A$Db_3": {
+        "variant": 3,
+        "file": "Major/A$Csharp!A$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\C": {
+    "type": "Major",
+    "description": "Ля-мажор с басом До",
+    "variants": [
+      "A$C_1",
+      "A$C_2"
+    ],
+    "configs": {
+      "A$C_1": {
+        "variant": 1,
+        "file": "Major/A$C_1.py",
+        "chord_type": "Major"
+      },
+      "A$C_2": {
+        "variant": 2,
+        "file": "Major/A$C_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\D#": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Ре-диез",
+    "variants": [
+      "A$Dsharp!A$Eb_1",
+      "A$Dsharp!A$Eb_2"
+    ],
+    "configs": {
+      "A$Dsharp!A$Eb_1": {
+        "variant": 1,
+        "file": "Major/A$Dsharp!A$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "A$Dsharp!A$Eb_2": {
+        "variant": 2,
+        "file": "Major/A$Dsharp!A$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\Eb": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Ми-бемоль",
+    "variants": [
+      "A$Dsharp!A$Eb_1",
+      "A$Dsharp!A$Eb_2"
+    ],
+    "configs": {
+      "A$Dsharp!A$Eb_1": {
+        "variant": 1,
+        "file": "Major/A$Dsharp!A$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "A$Dsharp!A$Eb_2": {
+        "variant": 2,
+        "file": "Major/A$Dsharp!A$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\D": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Ре",
+    "variants": [
+      "A$D_1",
+      "A$D_2",
+      "A$D_3",
+      "A$D_4"
+    ],
+    "configs": {
+      "A$D_1": {
+        "variant": 1,
+        "file": "Major/A$D_1.py",
+        "chord_type": "Major"
+      },
+      "A$D_2": {
+        "variant": 2,
+        "file": "Major/A$D_2.py",
+        "chord_type": "Major"
+      },
+      "A$D_3": {
+        "variant": 3,
+        "file": "Major/A$D_3.py",
+        "chord_type": "Major"
+      },
+      "A$D_4": {
+        "variant": 4,
+        "file": "Major/A$D_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\E": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Ми",
+    "variants": [
+      "A$E_1",
+      "A$E_2",
+      "A$E_3",
+      "A$E_4"
+    ],
+    "configs": {
+      "A$E_1": {
+        "variant": 1,
+        "file": "Major/A$E_1.py",
+        "chord_type": "Major"
+      },
+      "A$E_2": {
+        "variant": 2,
+        "file": "Major/A$E_2.py",
+        "chord_type": "Major"
+      },
+      "A$E_3": {
+        "variant": 3,
+        "file": "Major/A$E_3.py",
+        "chord_type": "Major"
+      },
+      "A$E_4": {
+        "variant": 4,
+        "file": "Major/A$E_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\F#": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Фа-диез",
+    "variants": [
+      "A$Fsharp!A$Gb_1",
+      "A$Fsharp!A$Gb_2",
+      "A$Fsharp!A$Gb_3",
+      "A$Fsharp!A$Gb_4",
+      "A$Fsharp!A$Gb_5",
+      "A$Fsharp!A$Gb_6",
+      "A$Fsharp!A$Gb_7"
+    ],
+    "configs": {
+      "A$Fsharp!A$Gb_1": {
+        "variant": 1,
+        "file": "Major/A$Fsharp!A$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_2": {
+        "variant": 2,
+        "file": "Major/A$Fsharp!A$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_3": {
+        "variant": 3,
+        "file": "Major/A$Fsharp!A$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_4": {
+        "variant": 4,
+        "file": "Major/A$Fsharp!A$Gb_4.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_5": {
+        "variant": 5,
+        "file": "Major/A$Fsharp!A$Gb_5.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_6": {
+        "variant": 6,
+        "file": "Major/A$Fsharp!A$Gb_6.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_7": {
+        "variant": 7,
+        "file": "Major/A$Fsharp!A$Gb_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\Gb": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Соль-бемоль",
+    "variants": [
+      "A$Fsharp!A$Gb_1",
+      "A$Fsharp!A$Gb_2",
+      "A$Fsharp!A$Gb_3",
+      "A$Fsharp!A$Gb_4",
+      "A$Fsharp!A$Gb_5",
+      "A$Fsharp!A$Gb_6",
+      "A$Fsharp!A$Gb_7"
+    ],
+    "configs": {
+      "A$Fsharp!A$Gb_1": {
+        "variant": 1,
+        "file": "Major/A$Fsharp!A$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_2": {
+        "variant": 2,
+        "file": "Major/A$Fsharp!A$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_3": {
+        "variant": 3,
+        "file": "Major/A$Fsharp!A$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_4": {
+        "variant": 4,
+        "file": "Major/A$Fsharp!A$Gb_4.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_5": {
+        "variant": 5,
+        "file": "Major/A$Fsharp!A$Gb_5.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_6": {
+        "variant": 6,
+        "file": "Major/A$Fsharp!A$Gb_6.py",
+        "chord_type": "Major"
+      },
+      "A$Fsharp!A$Gb_7": {
+        "variant": 7,
+        "file": "Major/A$Fsharp!A$Gb_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\F": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Фа",
+    "variants": [
+      "A$F_1",
+      "A$F_2"
+    ],
+    "configs": {
+      "A$F_1": {
+        "variant": 1,
+        "file": "Major/A$F_1.py",
+        "chord_type": "Major"
+      },
+      "A$F_2": {
+        "variant": 2,
+        "file": "Major/A$F_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\G#": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Соль-диез",
+    "variants": [
+      "A$Gsharp!A$Ab_1",
+      "A$Gsharp!A$Ab_2",
+      "A$Gsharp!A$Ab_3",
+      "A$Gsharp!A$Ab_4",
+      "A$Gsharp!A$Ab_5"
+    ],
+    "configs": {
+      "A$Gsharp!A$Ab_1": {
+        "variant": 1,
+        "file": "Major/A$Gsharp!A$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "A$Gsharp!A$Ab_2": {
+        "variant": 2,
+        "file": "Major/A$Gsharp!A$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "A$Gsharp!A$Ab_3": {
+        "variant": 3,
+        "file": "Major/A$Gsharp!A$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "A$Gsharp!A$Ab_4": {
+        "variant": 4,
+        "file": "Major/A$Gsharp!A$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "A$Gsharp!A$Ab_5": {
+        "variant": 5,
+        "file": "Major/A$Gsharp!A$Ab_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\Ab": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Ля-бемоль",
+    "variants": [
+      "A$Gsharp!A$Ab_1",
+      "A$Gsharp!A$Ab_2",
+      "A$Gsharp!A$Ab_3",
+      "A$Gsharp!A$Ab_4",
+      "A$Gsharp!A$Ab_5"
+    ],
+    "configs": {
+      "A$Gsharp!A$Ab_1": {
+        "variant": 1,
+        "file": "Major/A$Gsharp!A$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "A$Gsharp!A$Ab_2": {
+        "variant": 2,
+        "file": "Major/A$Gsharp!A$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "A$Gsharp!A$Ab_3": {
+        "variant": 3,
+        "file": "Major/A$Gsharp!A$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "A$Gsharp!A$Ab_4": {
+        "variant": 4,
+        "file": "Major/A$Gsharp!A$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "A$Gsharp!A$Ab_5": {
+        "variant": 5,
+        "file": "Major/A$Gsharp!A$Ab_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A\\G": {
+    "type": "Major",
+    "description": "Ля-мажор с басом Соль",
+    "variants": [
+      "A$G_1",
+      "A$G_2",
+      "A$G_3",
+      "A$G_4",
+      "A$G_5",
+      "A$G_6"
+    ],
+    "configs": {
+      "A$G_1": {
+        "variant": 1,
+        "file": "Major/A$G_1.py",
+        "chord_type": "Major"
+      },
+      "A$G_2": {
+        "variant": 2,
+        "file": "Major/A$G_2.py",
+        "chord_type": "Major"
+      },
+      "A$G_3": {
+        "variant": 3,
+        "file": "Major/A$G_3.py",
+        "chord_type": "Major"
+      },
+      "A$G_4": {
+        "variant": 4,
+        "file": "Major/A$G_4.py",
+        "chord_type": "Major"
+      },
+      "A$G_5": {
+        "variant": 5,
+        "file": "Major/A$G_5.py",
+        "chord_type": "Major"
+      },
+      "A$G_6": {
+        "variant": 6,
+        "file": "Major/A$G_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
   "A#": {
     "type": "Major",
     "description": "Ля-диез мажор",
@@ -29010,6 +31252,934 @@ ALL_CHORDS = {
       }
     }
   },
+  "A#\\A": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Ля",
+    "variants": [
+      "Asharp$A!Bb$A_1",
+      "Asharp$A!Bb$A_2",
+      "Asharp$A!Bb$A_3",
+      "Asharp$A!Bb$A_4",
+      "Asharp$A!Bb$A_5"
+    ],
+    "configs": {
+      "Asharp$A!Bb$A_1": {
+        "variant": 1,
+        "file": "Major/Asharp$A!Bb$A_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$A!Bb$A_2": {
+        "variant": 2,
+        "file": "Major/Asharp$A!Bb$A_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$A!Bb$A_3": {
+        "variant": 3,
+        "file": "Major/Asharp$A!Bb$A_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$A!Bb$A_4": {
+        "variant": 4,
+        "file": "Major/Asharp$A!Bb$A_4.py",
+        "chord_type": "Major"
+      },
+      "Asharp$A!Bb$A_5": {
+        "variant": 5,
+        "file": "Major/Asharp$A!Bb$A_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\A": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Ля",
+    "variants": [
+      "Asharp$A!Bb$A_1",
+      "Asharp$A!Bb$A_2",
+      "Asharp$A!Bb$A_3",
+      "Asharp$A!Bb$A_4",
+      "Asharp$A!Bb$A_5"
+    ],
+    "configs": {
+      "Asharp$A!Bb$A_1": {
+        "variant": 1,
+        "file": "Major/Asharp$A!Bb$A_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$A!Bb$A_2": {
+        "variant": 2,
+        "file": "Major/Asharp$A!Bb$A_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$A!Bb$A_3": {
+        "variant": 3,
+        "file": "Major/Asharp$A!Bb$A_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$A!Bb$A_4": {
+        "variant": 4,
+        "file": "Major/Asharp$A!Bb$A_4.py",
+        "chord_type": "Major"
+      },
+      "Asharp$A!Bb$A_5": {
+        "variant": 5,
+        "file": "Major/Asharp$A!Bb$A_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\B": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Си",
+    "variants": [
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_1",
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_2"
+    ],
+    "configs": {
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_1": {
+        "variant": 1,
+        "file": "Major/Asharp$B!Bb$B!Asharp$H!Bb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_2": {
+        "variant": 2,
+        "file": "Major/Asharp$B!Bb$B!Asharp$H!Bb$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\B": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Си",
+    "variants": [
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_1",
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_2"
+    ],
+    "configs": {
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_1": {
+        "variant": 1,
+        "file": "Major/Asharp$B!Bb$B!Asharp$H!Bb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_2": {
+        "variant": 2,
+        "file": "Major/Asharp$B!Bb$B!Asharp$H!Bb$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\H": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Си",
+    "variants": [
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_1",
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_2"
+    ],
+    "configs": {
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_1": {
+        "variant": 1,
+        "file": "Major/Asharp$B!Bb$B!Asharp$H!Bb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_2": {
+        "variant": 2,
+        "file": "Major/Asharp$B!Bb$B!Asharp$H!Bb$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\H": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Си",
+    "variants": [
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_1",
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_2"
+    ],
+    "configs": {
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_1": {
+        "variant": 1,
+        "file": "Major/Asharp$B!Bb$B!Asharp$H!Bb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$B!Bb$B!Asharp$H!Bb$H_2": {
+        "variant": 2,
+        "file": "Major/Asharp$B!Bb$B!Asharp$H!Bb$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\C": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом До",
+    "variants": [
+      "Asharp$C!Bb$C_1",
+      "Asharp$C!Bb$C_2",
+      "Asharp$C!Bb$C_3",
+      "Asharp$C!Bb$C_4"
+    ],
+    "configs": {
+      "Asharp$C!Bb$C_1": {
+        "variant": 1,
+        "file": "Major/Asharp$C!Bb$C_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$C!Bb$C_2": {
+        "variant": 2,
+        "file": "Major/Asharp$C!Bb$C_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$C!Bb$C_3": {
+        "variant": 3,
+        "file": "Major/Asharp$C!Bb$C_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$C!Bb$C_4": {
+        "variant": 4,
+        "file": "Major/Asharp$C!Bb$C_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\C": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом До",
+    "variants": [
+      "Asharp$C!Bb$C_1",
+      "Asharp$C!Bb$C_2",
+      "Asharp$C!Bb$C_3",
+      "Asharp$C!Bb$C_4"
+    ],
+    "configs": {
+      "Asharp$C!Bb$C_1": {
+        "variant": 1,
+        "file": "Major/Asharp$C!Bb$C_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$C!Bb$C_2": {
+        "variant": 2,
+        "file": "Major/Asharp$C!Bb$C_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$C!Bb$C_3": {
+        "variant": 3,
+        "file": "Major/Asharp$C!Bb$C_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$C!Bb$C_4": {
+        "variant": 4,
+        "file": "Major/Asharp$C!Bb$C_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\C#": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом До-диез",
+    "variants": [
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1",
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2",
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3"
+    ],
+    "configs": {
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\C#": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом До-диез",
+    "variants": [
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1",
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2",
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3"
+    ],
+    "configs": {
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\Db": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Ре-бемоль",
+    "variants": [
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1",
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2",
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3"
+    ],
+    "configs": {
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\Db": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Ре-бемоль",
+    "variants": [
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1",
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2",
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3"
+    ],
+    "configs": {
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Csharp!Bb$Csharp!Asharp$Db!Bb$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\D": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Ре",
+    "variants": [
+      "Asharp$D!Bb$D_1",
+      "Asharp$D!Bb$D_2"
+    ],
+    "configs": {
+      "Asharp$D!Bb$D_1": {
+        "variant": 1,
+        "file": "Major/Asharp$D!Bb$D_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$D!Bb$D_2": {
+        "variant": 2,
+        "file": "Major/Asharp$D!Bb$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\D": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Ре",
+    "variants": [
+      "Asharp$D!Bb$D_1",
+      "Asharp$D!Bb$D_2"
+    ],
+    "configs": {
+      "Asharp$D!Bb$D_1": {
+        "variant": 1,
+        "file": "Major/Asharp$D!Bb$D_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$D!Bb$D_2": {
+        "variant": 2,
+        "file": "Major/Asharp$D!Bb$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\D#": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Ре-диез",
+    "variants": [
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4"
+    ],
+    "configs": {
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4": {
+        "variant": 4,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\D#": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Ре-диез",
+    "variants": [
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4"
+    ],
+    "configs": {
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4": {
+        "variant": 4,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\Eb": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Ми-бемоль",
+    "variants": [
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4"
+    ],
+    "configs": {
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4": {
+        "variant": 4,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\Eb": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Ми-бемоль",
+    "variants": [
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3",
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4"
+    ],
+    "configs": {
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4": {
+        "variant": 4,
+        "file": "Major/Asharp$Dsharp!Bb$Dsharp!Asharp$Eb!Bb$Eb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\E": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Ми",
+    "variants": [
+      "Asharp$E!Bb$E_1",
+      "Asharp$E!Bb$E_2",
+      "Asharp$E!Bb$E_3"
+    ],
+    "configs": {
+      "Asharp$E!Bb$E_1": {
+        "variant": 1,
+        "file": "Major/Asharp$E!Bb$E_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$E!Bb$E_2": {
+        "variant": 2,
+        "file": "Major/Asharp$E!Bb$E_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$E!Bb$E_3": {
+        "variant": 3,
+        "file": "Major/Asharp$E!Bb$E_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\E": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Ми",
+    "variants": [
+      "Asharp$E!Bb$E_1",
+      "Asharp$E!Bb$E_2",
+      "Asharp$E!Bb$E_3"
+    ],
+    "configs": {
+      "Asharp$E!Bb$E_1": {
+        "variant": 1,
+        "file": "Major/Asharp$E!Bb$E_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$E!Bb$E_2": {
+        "variant": 2,
+        "file": "Major/Asharp$E!Bb$E_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$E!Bb$E_3": {
+        "variant": 3,
+        "file": "Major/Asharp$E!Bb$E_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\F": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Фа",
+    "variants": [
+      "Asharp$F!Bb$F_1",
+      "Asharp$F!Bb$F_2",
+      "Asharp$F!Bb$F_3"
+    ],
+    "configs": {
+      "Asharp$F!Bb$F_1": {
+        "variant": 1,
+        "file": "Major/Asharp$F!Bb$F_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$F!Bb$F_2": {
+        "variant": 2,
+        "file": "Major/Asharp$F!Bb$F_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$F!Bb$F_3": {
+        "variant": 3,
+        "file": "Major/Asharp$F!Bb$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\F": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Фа",
+    "variants": [
+      "Asharp$F!Bb$F_1",
+      "Asharp$F!Bb$F_2",
+      "Asharp$F!Bb$F_3"
+    ],
+    "configs": {
+      "Asharp$F!Bb$F_1": {
+        "variant": 1,
+        "file": "Major/Asharp$F!Bb$F_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$F!Bb$F_2": {
+        "variant": 2,
+        "file": "Major/Asharp$F!Bb$F_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$F!Bb$F_3": {
+        "variant": 3,
+        "file": "Major/Asharp$F!Bb$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\F#": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Фа-диез",
+    "variants": [
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1",
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2"
+    ],
+    "configs": {
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\F#": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Фа-диез",
+    "variants": [
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1",
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2"
+    ],
+    "configs": {
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\Gb": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Соль-бемоль",
+    "variants": [
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1",
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2"
+    ],
+    "configs": {
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\Gb": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Соль-бемоль",
+    "variants": [
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1",
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2"
+    ],
+    "configs": {
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Fsharp!Bb$Fsharp!Asharp$Gb!Bb$Gb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\G": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Соль",
+    "variants": [
+      "Asharp$G!Bb$G_1",
+      "Asharp$G!Bb$G_2",
+      "Asharp$G!Bb$G_3",
+      "Asharp$G!Bb$G_4",
+      "Asharp$G!Bb$G_5",
+      "Asharp$G!Bb$G_6",
+      "Asharp$G!Bb$G_7"
+    ],
+    "configs": {
+      "Asharp$G!Bb$G_1": {
+        "variant": 1,
+        "file": "Major/Asharp$G!Bb$G_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_2": {
+        "variant": 2,
+        "file": "Major/Asharp$G!Bb$G_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_3": {
+        "variant": 3,
+        "file": "Major/Asharp$G!Bb$G_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_4": {
+        "variant": 4,
+        "file": "Major/Asharp$G!Bb$G_4.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_5": {
+        "variant": 5,
+        "file": "Major/Asharp$G!Bb$G_5.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_6": {
+        "variant": 6,
+        "file": "Major/Asharp$G!Bb$G_6.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_7": {
+        "variant": 7,
+        "file": "Major/Asharp$G!Bb$G_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\G": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Соль",
+    "variants": [
+      "Asharp$G!Bb$G_1",
+      "Asharp$G!Bb$G_2",
+      "Asharp$G!Bb$G_3",
+      "Asharp$G!Bb$G_4",
+      "Asharp$G!Bb$G_5",
+      "Asharp$G!Bb$G_6",
+      "Asharp$G!Bb$G_7"
+    ],
+    "configs": {
+      "Asharp$G!Bb$G_1": {
+        "variant": 1,
+        "file": "Major/Asharp$G!Bb$G_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_2": {
+        "variant": 2,
+        "file": "Major/Asharp$G!Bb$G_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_3": {
+        "variant": 3,
+        "file": "Major/Asharp$G!Bb$G_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_4": {
+        "variant": 4,
+        "file": "Major/Asharp$G!Bb$G_4.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_5": {
+        "variant": 5,
+        "file": "Major/Asharp$G!Bb$G_5.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_6": {
+        "variant": 6,
+        "file": "Major/Asharp$G!Bb$G_6.py",
+        "chord_type": "Major"
+      },
+      "Asharp$G!Bb$G_7": {
+        "variant": 7,
+        "file": "Major/Asharp$G!Bb$G_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\G#": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Соль-диез",
+    "variants": [
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5"
+    ],
+    "configs": {
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4": {
+        "variant": 4,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5": {
+        "variant": 5,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\G#": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Соль-диез",
+    "variants": [
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5"
+    ],
+    "configs": {
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4": {
+        "variant": 4,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5": {
+        "variant": 5,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "A#\\Ab": {
+    "type": "Major",
+    "description": "Ля-диез-мажор с басом Ля-бемоль",
+    "variants": [
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5"
+    ],
+    "configs": {
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4": {
+        "variant": 4,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5": {
+        "variant": 5,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Bb\\Ab": {
+    "type": "Major",
+    "description": "Си-бемоль-мажор с басом Ля-бемоль",
+    "variants": [
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4",
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5"
+    ],
+    "configs": {
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3": {
+        "variant": 3,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4": {
+        "variant": 4,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5": {
+        "variant": 5,
+        "file": "Major/Asharp$Gsharp!Bb$Gsharp!Asharp$Ab!Bb$Ab_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
   "B": {
     "type": "Major",
     "description": "Си мажор",
@@ -29162,6 +32332,970 @@ ALL_CHORDS = {
       }
     }
   },
+  "B\\A": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ля",
+    "variants": [
+      "B$A!H$A_1",
+      "B$A!H$A_2",
+      "B$A!H$A_3",
+      "B$A!H$A_4",
+      "B$A!H$A_5",
+      "B$A!H$A_6"
+    ],
+    "configs": {
+      "B$A!H$A_1": {
+        "variant": 1,
+        "file": "Major/B$A!H$A_1.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_2": {
+        "variant": 2,
+        "file": "Major/B$A!H$A_2.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_3": {
+        "variant": 3,
+        "file": "Major/B$A!H$A_3.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_4": {
+        "variant": 4,
+        "file": "Major/B$A!H$A_4.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_5": {
+        "variant": 5,
+        "file": "Major/B$A!H$A_5.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_6": {
+        "variant": 6,
+        "file": "Major/B$A!H$A_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\A": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ля",
+    "variants": [
+      "B$A!H$A_1",
+      "B$A!H$A_2",
+      "B$A!H$A_3",
+      "B$A!H$A_4",
+      "B$A!H$A_5",
+      "B$A!H$A_6"
+    ],
+    "configs": {
+      "B$A!H$A_1": {
+        "variant": 1,
+        "file": "Major/B$A!H$A_1.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_2": {
+        "variant": 2,
+        "file": "Major/B$A!H$A_2.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_3": {
+        "variant": 3,
+        "file": "Major/B$A!H$A_3.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_4": {
+        "variant": 4,
+        "file": "Major/B$A!H$A_4.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_5": {
+        "variant": 5,
+        "file": "Major/B$A!H$A_5.py",
+        "chord_type": "Major"
+      },
+      "B$A!H$A_6": {
+        "variant": 6,
+        "file": "Major/B$A!H$A_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\A#": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ля-диез",
+    "variants": [
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_1",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_2",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_3",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_4"
+    ],
+    "configs": {
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_1": {
+        "variant": 1,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_2": {
+        "variant": 2,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_3": {
+        "variant": 3,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_4": {
+        "variant": 4,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\A#": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ля-диез",
+    "variants": [
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_1",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_2",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_3",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_4"
+    ],
+    "configs": {
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_1": {
+        "variant": 1,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_2": {
+        "variant": 2,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_3": {
+        "variant": 3,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_4": {
+        "variant": 4,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\Bb": {
+    "type": "Major",
+    "description": "Си-мажор с басом Си-бемоль",
+    "variants": [
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_1",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_2",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_3",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_4"
+    ],
+    "configs": {
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_1": {
+        "variant": 1,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_2": {
+        "variant": 2,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_3": {
+        "variant": 3,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_4": {
+        "variant": 4,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\Bb": {
+    "type": "Major",
+    "description": "Си-мажор с басом Си-бемоль",
+    "variants": [
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_1",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_2",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_3",
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_4"
+    ],
+    "configs": {
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_1": {
+        "variant": 1,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_2": {
+        "variant": 2,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_3": {
+        "variant": 3,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "B$Asharp!H$Asharp!B$Bb!H$Bb_4": {
+        "variant": 4,
+        "file": "Major/B$Asharp!H$Asharp!B$Bb!H$Bb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\C": {
+    "type": "Major",
+    "description": "Си-мажор с басом До",
+    "variants": [
+      "B$C!H$C_1",
+      "B$C!H$C_2"
+    ],
+    "configs": {
+      "B$C!H$C_1": {
+        "variant": 1,
+        "file": "Major/B$C!H$C_1.py",
+        "chord_type": "Major"
+      },
+      "B$C!H$C_2": {
+        "variant": 2,
+        "file": "Major/B$C!H$C_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\C": {
+    "type": "Major",
+    "description": "Си-мажор с басом До",
+    "variants": [
+      "B$C!H$C_1",
+      "B$C!H$C_2"
+    ],
+    "configs": {
+      "B$C!H$C_1": {
+        "variant": 1,
+        "file": "Major/B$C!H$C_1.py",
+        "chord_type": "Major"
+      },
+      "B$C!H$C_2": {
+        "variant": 2,
+        "file": "Major/B$C!H$C_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\C#": {
+    "type": "Major",
+    "description": "Си-мажор с басом До-диез",
+    "variants": [
+      "B$Csharp!H$Csharp!B$Db!H$Db_1",
+      "B$Csharp!H$Csharp!B$Db!H$Db_2",
+      "B$Csharp!H$Csharp!B$Db!H$Db_3",
+      "B$Csharp!H$Csharp!B$Db!H$Db_4"
+    ],
+    "configs": {
+      "B$Csharp!H$Csharp!B$Db!H$Db_1": {
+        "variant": 1,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_1.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_2": {
+        "variant": 2,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_2.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_3": {
+        "variant": 3,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_3.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_4": {
+        "variant": 4,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\C#": {
+    "type": "Major",
+    "description": "Си-мажор с басом До-диез",
+    "variants": [
+      "B$Csharp!H$Csharp!B$Db!H$Db_1",
+      "B$Csharp!H$Csharp!B$Db!H$Db_2",
+      "B$Csharp!H$Csharp!B$Db!H$Db_3",
+      "B$Csharp!H$Csharp!B$Db!H$Db_4"
+    ],
+    "configs": {
+      "B$Csharp!H$Csharp!B$Db!H$Db_1": {
+        "variant": 1,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_1.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_2": {
+        "variant": 2,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_2.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_3": {
+        "variant": 3,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_3.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_4": {
+        "variant": 4,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\Db": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ре-бемоль",
+    "variants": [
+      "B$Csharp!H$Csharp!B$Db!H$Db_1",
+      "B$Csharp!H$Csharp!B$Db!H$Db_2",
+      "B$Csharp!H$Csharp!B$Db!H$Db_3",
+      "B$Csharp!H$Csharp!B$Db!H$Db_4"
+    ],
+    "configs": {
+      "B$Csharp!H$Csharp!B$Db!H$Db_1": {
+        "variant": 1,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_1.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_2": {
+        "variant": 2,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_2.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_3": {
+        "variant": 3,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_3.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_4": {
+        "variant": 4,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\Db": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ре-бемоль",
+    "variants": [
+      "B$Csharp!H$Csharp!B$Db!H$Db_1",
+      "B$Csharp!H$Csharp!B$Db!H$Db_2",
+      "B$Csharp!H$Csharp!B$Db!H$Db_3",
+      "B$Csharp!H$Csharp!B$Db!H$Db_4"
+    ],
+    "configs": {
+      "B$Csharp!H$Csharp!B$Db!H$Db_1": {
+        "variant": 1,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_1.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_2": {
+        "variant": 2,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_2.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_3": {
+        "variant": 3,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_3.py",
+        "chord_type": "Major"
+      },
+      "B$Csharp!H$Csharp!B$Db!H$Db_4": {
+        "variant": 4,
+        "file": "Major/B$Csharp!H$Csharp!B$Db!H$Db_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\D": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ре",
+    "variants": [
+      "B$D!H$D_1",
+      "B$D!H$D_2"
+    ],
+    "configs": {
+      "B$D!H$D_1": {
+        "variant": 1,
+        "file": "Major/B$D!H$D_1.py",
+        "chord_type": "Major"
+      },
+      "B$D!H$D_2": {
+        "variant": 2,
+        "file": "Major/B$D!H$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\D": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ре",
+    "variants": [
+      "B$D!H$D_1",
+      "B$D!H$D_2"
+    ],
+    "configs": {
+      "B$D!H$D_1": {
+        "variant": 1,
+        "file": "Major/B$D!H$D_1.py",
+        "chord_type": "Major"
+      },
+      "B$D!H$D_2": {
+        "variant": 2,
+        "file": "Major/B$D!H$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\D#": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ре-диез",
+    "variants": [
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_1",
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_2"
+    ],
+    "configs": {
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_1": {
+        "variant": 1,
+        "file": "Major/B$Dsharp!H$Dsharp!B$Eb!H$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_2": {
+        "variant": 2,
+        "file": "Major/B$Dsharp!H$Dsharp!B$Eb!H$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\D#": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ре-диез",
+    "variants": [
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_1",
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_2"
+    ],
+    "configs": {
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_1": {
+        "variant": 1,
+        "file": "Major/B$Dsharp!H$Dsharp!B$Eb!H$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_2": {
+        "variant": 2,
+        "file": "Major/B$Dsharp!H$Dsharp!B$Eb!H$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\Eb": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ми-бемоль",
+    "variants": [
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_1",
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_2"
+    ],
+    "configs": {
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_1": {
+        "variant": 1,
+        "file": "Major/B$Dsharp!H$Dsharp!B$Eb!H$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_2": {
+        "variant": 2,
+        "file": "Major/B$Dsharp!H$Dsharp!B$Eb!H$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\Eb": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ми-бемоль",
+    "variants": [
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_1",
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_2"
+    ],
+    "configs": {
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_1": {
+        "variant": 1,
+        "file": "Major/B$Dsharp!H$Dsharp!B$Eb!H$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Dsharp!H$Dsharp!B$Eb!H$Eb_2": {
+        "variant": 2,
+        "file": "Major/B$Dsharp!H$Dsharp!B$Eb!H$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\E": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ми",
+    "variants": [
+      "B$E!H$E_1",
+      "B$E!H$E_2",
+      "B$E!H$E_3",
+      "B$E!H$E_4",
+      "B$E!H$E_5"
+    ],
+    "configs": {
+      "B$E!H$E_1": {
+        "variant": 1,
+        "file": "Major/B$E!H$E_1.py",
+        "chord_type": "Major"
+      },
+      "B$E!H$E_2": {
+        "variant": 2,
+        "file": "Major/B$E!H$E_2.py",
+        "chord_type": "Major"
+      },
+      "B$E!H$E_3": {
+        "variant": 3,
+        "file": "Major/B$E!H$E_3.py",
+        "chord_type": "Major"
+      },
+      "B$E!H$E_4": {
+        "variant": 4,
+        "file": "Major/B$E!H$E_4.py",
+        "chord_type": "Major"
+      },
+      "B$E!H$E_5": {
+        "variant": 5,
+        "file": "Major/B$E!H$E_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\E": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ми",
+    "variants": [
+      "B$E!H$E_1",
+      "B$E!H$E_2",
+      "B$E!H$E_3",
+      "B$E!H$E_4",
+      "B$E!H$E_5"
+    ],
+    "configs": {
+      "B$E!H$E_1": {
+        "variant": 1,
+        "file": "Major/B$E!H$E_1.py",
+        "chord_type": "Major"
+      },
+      "B$E!H$E_2": {
+        "variant": 2,
+        "file": "Major/B$E!H$E_2.py",
+        "chord_type": "Major"
+      },
+      "B$E!H$E_3": {
+        "variant": 3,
+        "file": "Major/B$E!H$E_3.py",
+        "chord_type": "Major"
+      },
+      "B$E!H$E_4": {
+        "variant": 4,
+        "file": "Major/B$E!H$E_4.py",
+        "chord_type": "Major"
+      },
+      "B$E!H$E_5": {
+        "variant": 5,
+        "file": "Major/B$E!H$E_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\F": {
+    "type": "Major",
+    "description": "Си-мажор с басом Фа",
+    "variants": [
+      "B$F!H$F_1",
+      "B$F!H$F_2",
+      "B$F!H$F_3"
+    ],
+    "configs": {
+      "B$F!H$F_1": {
+        "variant": 1,
+        "file": "Major/B$F!H$F_1.py",
+        "chord_type": "Major"
+      },
+      "B$F!H$F_2": {
+        "variant": 2,
+        "file": "Major/B$F!H$F_2.py",
+        "chord_type": "Major"
+      },
+      "B$F!H$F_3": {
+        "variant": 3,
+        "file": "Major/B$F!H$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\F": {
+    "type": "Major",
+    "description": "Си-мажор с басом Фа",
+    "variants": [
+      "B$F!H$F_1",
+      "B$F!H$F_2",
+      "B$F!H$F_3"
+    ],
+    "configs": {
+      "B$F!H$F_1": {
+        "variant": 1,
+        "file": "Major/B$F!H$F_1.py",
+        "chord_type": "Major"
+      },
+      "B$F!H$F_2": {
+        "variant": 2,
+        "file": "Major/B$F!H$F_2.py",
+        "chord_type": "Major"
+      },
+      "B$F!H$F_3": {
+        "variant": 3,
+        "file": "Major/B$F!H$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\F#": {
+    "type": "Major",
+    "description": "Си-мажор с басом Фа-диез",
+    "variants": [
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_1",
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_2",
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_3"
+    ],
+    "configs": {
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_1": {
+        "variant": 1,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_2": {
+        "variant": 2,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_3": {
+        "variant": 3,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\F#": {
+    "type": "Major",
+    "description": "Си-мажор с басом Фа-диез",
+    "variants": [
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_1",
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_2",
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_3"
+    ],
+    "configs": {
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_1": {
+        "variant": 1,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_2": {
+        "variant": 2,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_3": {
+        "variant": 3,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\Gb": {
+    "type": "Major",
+    "description": "Си-мажор с басом Соль-бемоль",
+    "variants": [
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_1",
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_2",
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_3"
+    ],
+    "configs": {
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_1": {
+        "variant": 1,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_2": {
+        "variant": 2,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_3": {
+        "variant": 3,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\Gb": {
+    "type": "Major",
+    "description": "Си-мажор с басом Соль-бемоль",
+    "variants": [
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_1",
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_2",
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_3"
+    ],
+    "configs": {
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_1": {
+        "variant": 1,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_2": {
+        "variant": 2,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "B$Fsharp!H$Fsharp!B$Gb!H$Gb_3": {
+        "variant": 3,
+        "file": "Major/B$Fsharp!H$Fsharp!B$Gb!H$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\G": {
+    "type": "Major",
+    "description": "Си-мажор с басом Соль",
+    "variants": [
+      "B$G!H$G_1",
+      "B$G!H$G_2",
+      "B$G!H$G_3"
+    ],
+    "configs": {
+      "B$G!H$G_1": {
+        "variant": 1,
+        "file": "Major/B$G!H$G_1.py",
+        "chord_type": "Major"
+      },
+      "B$G!H$G_2": {
+        "variant": 2,
+        "file": "Major/B$G!H$G_2.py",
+        "chord_type": "Major"
+      },
+      "B$G!H$G_3": {
+        "variant": 3,
+        "file": "Major/B$G!H$G_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\G": {
+    "type": "Major",
+    "description": "Си-мажор с басом Соль",
+    "variants": [
+      "B$G!H$G_1",
+      "B$G!H$G_2",
+      "B$G!H$G_3"
+    ],
+    "configs": {
+      "B$G!H$G_1": {
+        "variant": 1,
+        "file": "Major/B$G!H$G_1.py",
+        "chord_type": "Major"
+      },
+      "B$G!H$G_2": {
+        "variant": 2,
+        "file": "Major/B$G!H$G_2.py",
+        "chord_type": "Major"
+      },
+      "B$G!H$G_3": {
+        "variant": 3,
+        "file": "Major/B$G!H$G_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\G#": {
+    "type": "Major",
+    "description": "Си-мажор с басом Соль-диез",
+    "variants": [
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_1",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_2",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_3",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_4",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_5",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_6"
+    ],
+    "configs": {
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_1": {
+        "variant": 1,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_2": {
+        "variant": 2,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_3": {
+        "variant": 3,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_4": {
+        "variant": 4,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_5": {
+        "variant": 5,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_5.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_6": {
+        "variant": 6,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\G#": {
+    "type": "Major",
+    "description": "Си-мажор с басом Соль-диез",
+    "variants": [
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_1",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_2",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_3",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_4",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_5",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_6"
+    ],
+    "configs": {
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_1": {
+        "variant": 1,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_2": {
+        "variant": 2,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_3": {
+        "variant": 3,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_4": {
+        "variant": 4,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_5": {
+        "variant": 5,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_5.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_6": {
+        "variant": 6,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "B\\Ab": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ля-бемоль",
+    "variants": [
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_1",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_2",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_3",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_4",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_5",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_6"
+    ],
+    "configs": {
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_1": {
+        "variant": 1,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_2": {
+        "variant": 2,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_3": {
+        "variant": 3,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_4": {
+        "variant": 4,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_5": {
+        "variant": 5,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_5.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_6": {
+        "variant": 6,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "H\\Ab": {
+    "type": "Major",
+    "description": "Си-мажор с басом Ля-бемоль",
+    "variants": [
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_1",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_2",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_3",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_4",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_5",
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_6"
+    ],
+    "configs": {
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_1": {
+        "variant": 1,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_2": {
+        "variant": 2,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_3": {
+        "variant": 3,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_4": {
+        "variant": 4,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_4.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_5": {
+        "variant": 5,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_5.py",
+        "chord_type": "Major"
+      },
+      "B$Gsharp!H$Gsharp!B$Ab!H$Ab_6": {
+        "variant": 6,
+        "file": "Major/B$Gsharp!H$Gsharp!B$Ab!H$Ab_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
   "C": {
     "type": "Major",
     "description": "До мажор",
@@ -29238,15 +33372,80 @@ ALL_CHORDS = {
       }
     }
   },
-  "C$A": {
+  "C\\A#": {
     "type": "Major",
-    "description": "До мажор с басом Ля",
+    "description": "До-мажор с басом Си-бемоль",
+    "variants": [
+      "C$Asharp!C$Bb_1",
+      "C$Asharp!C$Bb_2",
+      "C$Asharp!C$Bb_3",
+      "C$Asharp!C$Bb_4"
+    ],
+    "configs": {
+      "C$Asharp!C$Bb_1": {
+        "variant": 1,
+        "file": "Major/C$Asharp!C$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "C$Asharp!C$Bb_2": {
+        "variant": 2,
+        "file": "Major/C$Asharp!C$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "C$Asharp!C$Bb_3": {
+        "variant": 3,
+        "file": "Major/C$Asharp!C$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "C$Asharp!C$Bb_4": {
+        "variant": 4,
+        "file": "Major/C$Asharp!C$Bb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\Bb": {
+    "type": "Major",
+    "description": "До-мажор с басом Ля-диез",
+    "variants": [
+      "C$Asharp!C$Bb_1",
+      "C$Asharp!C$Bb_2",
+      "C$Asharp!C$Bb_3",
+      "C$Asharp!C$Bb_4"
+    ],
+    "configs": {
+      "C$Asharp!C$Bb_1": {
+        "variant": 1,
+        "file": "Major/C$Asharp!C$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "C$Asharp!C$Bb_2": {
+        "variant": 2,
+        "file": "Major/C$Asharp!C$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "C$Asharp!C$Bb_3": {
+        "variant": 3,
+        "file": "Major/C$Asharp!C$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "C$Asharp!C$Bb_4": {
+        "variant": 4,
+        "file": "Major/C$Asharp!C$Bb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\A": {
+    "type": "Major",
+    "description": "До-мажор с басом Ля",
     "variants": [
       "C$A_1",
       "C$A_2",
       "C$A_3",
       "C$A_4",
-      "C$A_5"
+      "C$A_5",
+      "C$A_6"
     ],
     "configs": {
       "C$A_1": {
@@ -29273,44 +33472,181 @@ ALL_CHORDS = {
         "variant": 5,
         "file": "Major/C$A_5.py",
         "chord_type": "Major"
+      },
+      "C$A_6": {
+        "variant": 6,
+        "file": "Major/C$A_6.py",
+        "chord_type": "Major"
       }
     }
   },
-  "C$B": {
+  "C\\B": {
     "type": "Major",
-    "description": "До мажор с басом си-бемоль",
+    "description": "До-мажор с басом Си",
     "variants": [
-      "C$B_1",
-      "C$B_2",
-      "C$B_3",
-      "C$B_4"
+      "C$B!C$H_1",
+      "C$B!C$H_2",
+      "C$B!C$H_3",
+      "C$B!C$H_4"
     ],
     "configs": {
-      "C$B_1": {
+      "C$B!C$H_1": {
         "variant": 1,
-        "file": "Major/C$B_1.py",
+        "file": "Major/C$B!C$H_1.py",
         "chord_type": "Major"
       },
-      "C$B_2": {
+      "C$B!C$H_2": {
         "variant": 2,
-        "file": "Major/C$B_2.py",
+        "file": "Major/C$B!C$H_2.py",
         "chord_type": "Major"
       },
-      "C$B_3": {
+      "C$B!C$H_3": {
         "variant": 3,
-        "file": "Major/C$B_3.py",
+        "file": "Major/C$B!C$H_3.py",
         "chord_type": "Major"
       },
-      "C$B_4": {
+      "C$B!C$H_4": {
         "variant": 4,
-        "file": "Major/C$B_4.py",
+        "file": "Major/C$B!C$H_4.py",
         "chord_type": "Major"
       }
     }
   },
-  "C$E": {
+  "C\\H": {
     "type": "Major",
-    "description": "До-мажор с большой терцией в басу",
+    "description": "До-мажор с басом Си",
+    "variants": [
+      "C$B!C$H_1",
+      "C$B!C$H_2",
+      "C$B!C$H_3",
+      "C$B!C$H_4"
+    ],
+    "configs": {
+      "C$B!C$H_1": {
+        "variant": 1,
+        "file": "Major/C$B!C$H_1.py",
+        "chord_type": "Major"
+      },
+      "C$B!C$H_2": {
+        "variant": 2,
+        "file": "Major/C$B!C$H_2.py",
+        "chord_type": "Major"
+      },
+      "C$B!C$H_3": {
+        "variant": 3,
+        "file": "Major/C$B!C$H_3.py",
+        "chord_type": "Major"
+      },
+      "C$B!C$H_4": {
+        "variant": 4,
+        "file": "Major/C$B!C$H_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\C#": {
+    "type": "Major",
+    "description": "До-мажор с басом До-диез",
+    "variants": [
+      "C$Csharp!C$Db_1",
+      "C$Csharp!C$Db_2"
+    ],
+    "configs": {
+      "C$Csharp!C$Db_1": {
+        "variant": 1,
+        "file": "Major/C$Csharp!C$Db_1.py",
+        "chord_type": "Major"
+      },
+      "C$Csharp!C$Db_2": {
+        "variant": 2,
+        "file": "Major/C$Csharp!C$Db_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\Db": {
+    "type": "Major",
+    "description": "До-мажор с басом Ре-бемоль",
+    "variants": [
+      "C$Csharp!C$Db_1",
+      "C$Csharp!C$Db_2"
+    ],
+    "configs": {
+      "C$Csharp!C$Db_1": {
+        "variant": 1,
+        "file": "Major/C$Csharp!C$Db_1.py",
+        "chord_type": "Major"
+      },
+      "C$Csharp!C$Db_2": {
+        "variant": 2,
+        "file": "Major/C$Csharp!C$Db_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\D#": {
+    "type": "Major",
+    "description": "До-мажор с басом Ре-диез",
+    "variants": [
+      "C$Dsharp!C$Eb_1",
+      "C$Dsharp!C$Eb_2"
+    ],
+    "configs": {
+      "C$Dsharp!C$Eb_1": {
+        "variant": 1,
+        "file": "Major/C$Dsharp!C$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "C$Dsharp!C$Eb_2": {
+        "variant": 2,
+        "file": "Major/C$Dsharp!C$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\Eb": {
+    "type": "Major",
+    "description": "До-мажор с басом Ми-бемоль",
+    "variants": [
+      "C$Dsharp!C$Eb_1",
+      "C$Dsharp!C$Eb_2"
+    ],
+    "configs": {
+      "C$Dsharp!C$Eb_1": {
+        "variant": 1,
+        "file": "Major/C$Dsharp!C$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "C$Dsharp!C$Eb_2": {
+        "variant": 2,
+        "file": "Major/C$Dsharp!C$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\D": {
+    "type": "Major",
+    "description": "До-мажор с басом Ре",
+    "variants": [
+      "C$D_1",
+      "C$D_2"
+    ],
+    "configs": {
+      "C$D_1": {
+        "variant": 1,
+        "file": "Major/C$D_1.py",
+        "chord_type": "Major"
+      },
+      "C$D_2": {
+        "variant": 2,
+        "file": "Major/C$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\E": {
+    "type": "Major",
+    "description": "До-мажор с басом Ми",
     "variants": [
       "C$E_1",
       "C$E_2"
@@ -29328,9 +33664,145 @@ ALL_CHORDS = {
       }
     }
   },
-  "C$G": {
+  "C\\F#": {
     "type": "Major",
-    "description": "До-мажор с чистой квинтой в басу",
+    "description": "До-мажор с басом Фа-диез",
+    "variants": [
+      "C$Fsharp!C$Gb_1",
+      "C$Fsharp!C$Gb_2",
+      "C$Fsharp!C$Gb_3"
+    ],
+    "configs": {
+      "C$Fsharp!C$Gb_1": {
+        "variant": 1,
+        "file": "Major/C$Fsharp!C$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "C$Fsharp!C$Gb_2": {
+        "variant": 2,
+        "file": "Major/C$Fsharp!C$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "C$Fsharp!C$Gb_3": {
+        "variant": 3,
+        "file": "Major/C$Fsharp!C$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\Gb": {
+    "type": "Major",
+    "description": "До-мажор с басом Соль-бемоль",
+    "variants": [
+      "C$Fsharp!C$Gb_1",
+      "C$Fsharp!C$Gb_2",
+      "C$Fsharp!C$Gb_3"
+    ],
+    "configs": {
+      "C$Fsharp!C$Gb_1": {
+        "variant": 1,
+        "file": "Major/C$Fsharp!C$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "C$Fsharp!C$Gb_2": {
+        "variant": 2,
+        "file": "Major/C$Fsharp!C$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "C$Fsharp!C$Gb_3": {
+        "variant": 3,
+        "file": "Major/C$Fsharp!C$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\F": {
+    "type": "Major",
+    "description": "До-мажор с басом Фа",
+    "variants": [
+      "C$F_1",
+      "C$F_2",
+      "C$F_3",
+      "C$F_4"
+    ],
+    "configs": {
+      "C$F_1": {
+        "variant": 1,
+        "file": "Major/C$F_1.py",
+        "chord_type": "Major"
+      },
+      "C$F_2": {
+        "variant": 2,
+        "file": "Major/C$F_2.py",
+        "chord_type": "Major"
+      },
+      "C$F_3": {
+        "variant": 3,
+        "file": "Major/C$F_3.py",
+        "chord_type": "Major"
+      },
+      "C$F_4": {
+        "variant": 4,
+        "file": "Major/C$F_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\G#": {
+    "type": "Major",
+    "description": "До-мажор с басом Соль-диез",
+    "variants": [
+      "C$Gsharp!C$Ab_1",
+      "C$Gsharp!C$Ab_2",
+      "C$Gsharp!C$Ab_3"
+    ],
+    "configs": {
+      "C$Gsharp!C$Ab_1": {
+        "variant": 1,
+        "file": "Major/C$Gsharp!C$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "C$Gsharp!C$Ab_2": {
+        "variant": 2,
+        "file": "Major/C$Gsharp!C$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "C$Gsharp!C$Ab_3": {
+        "variant": 3,
+        "file": "Major/C$Gsharp!C$Ab_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\Ab": {
+    "type": "Major",
+    "description": "До-мажор с басом Ля-бемоль",
+    "variants": [
+      "C$Gsharp!C$Ab_1",
+      "C$Gsharp!C$Ab_2",
+      "C$Gsharp!C$Ab_3"
+    ],
+    "configs": {
+      "C$Gsharp!C$Ab_1": {
+        "variant": 1,
+        "file": "Major/C$Gsharp!C$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "C$Gsharp!C$Ab_2": {
+        "variant": 2,
+        "file": "Major/C$Gsharp!C$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "C$Gsharp!C$Ab_3": {
+        "variant": 3,
+        "file": "Major/C$Gsharp!C$Ab_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C\\G": {
+    "type": "Major",
+    "description": "До-мажор с басом Соль",
     "variants": [
       "C$G_1",
       "C$G_2",
@@ -29512,6 +33984,934 @@ ALL_CHORDS = {
       }
     }
   },
+  "C#\\A": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Ля",
+    "variants": [
+      "Csharp$A!Db$A_1",
+      "Csharp$A!Db$A_2",
+      "Csharp$A!Db$A_3"
+    ],
+    "configs": {
+      "Csharp$A!Db$A_1": {
+        "variant": 1,
+        "file": "Major/Csharp$A!Db$A_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$A!Db$A_2": {
+        "variant": 2,
+        "file": "Major/Csharp$A!Db$A_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$A!Db$A_3": {
+        "variant": 3,
+        "file": "Major/Csharp$A!Db$A_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\A": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Ля",
+    "variants": [
+      "Csharp$A!Db$A_1",
+      "Csharp$A!Db$A_2",
+      "Csharp$A!Db$A_3"
+    ],
+    "configs": {
+      "Csharp$A!Db$A_1": {
+        "variant": 1,
+        "file": "Major/Csharp$A!Db$A_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$A!Db$A_2": {
+        "variant": 2,
+        "file": "Major/Csharp$A!Db$A_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$A!Db$A_3": {
+        "variant": 3,
+        "file": "Major/Csharp$A!Db$A_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\A#": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Ля-диез",
+    "variants": [
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5"
+    ],
+    "configs": {
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5": {
+        "variant": 5,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\A#": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Ля-диез",
+    "variants": [
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5"
+    ],
+    "configs": {
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5": {
+        "variant": 5,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\Bb": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Си-бемоль",
+    "variants": [
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5"
+    ],
+    "configs": {
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5": {
+        "variant": 5,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\Bb": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Си-бемоль",
+    "variants": [
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4",
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5"
+    ],
+    "configs": {
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_4.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5": {
+        "variant": 5,
+        "file": "Major/Csharp$Asharp!Db$Asharp!Csharp$Bb!Db$Bb_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\B": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Си",
+    "variants": [
+      "Csharp$B!Db$B!Csharp$H!Db$H_1",
+      "Csharp$B!Db$B!Csharp$H!Db$H_2",
+      "Csharp$B!Db$B!Csharp$H!Db$H_3",
+      "Csharp$B!Db$B!Csharp$H!Db$H_4",
+      "Csharp$B!Db$B!Csharp$H!Db$H_5"
+    ],
+    "configs": {
+      "Csharp$B!Db$B!Csharp$H!Db$H_1": {
+        "variant": 1,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_2": {
+        "variant": 2,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_3": {
+        "variant": 3,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_4": {
+        "variant": 4,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_4.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_5": {
+        "variant": 5,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\B": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Си",
+    "variants": [
+      "Csharp$B!Db$B!Csharp$H!Db$H_1",
+      "Csharp$B!Db$B!Csharp$H!Db$H_2",
+      "Csharp$B!Db$B!Csharp$H!Db$H_3",
+      "Csharp$B!Db$B!Csharp$H!Db$H_4",
+      "Csharp$B!Db$B!Csharp$H!Db$H_5"
+    ],
+    "configs": {
+      "Csharp$B!Db$B!Csharp$H!Db$H_1": {
+        "variant": 1,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_2": {
+        "variant": 2,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_3": {
+        "variant": 3,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_4": {
+        "variant": 4,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_4.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_5": {
+        "variant": 5,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\H": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Си",
+    "variants": [
+      "Csharp$B!Db$B!Csharp$H!Db$H_1",
+      "Csharp$B!Db$B!Csharp$H!Db$H_2",
+      "Csharp$B!Db$B!Csharp$H!Db$H_3",
+      "Csharp$B!Db$B!Csharp$H!Db$H_4",
+      "Csharp$B!Db$B!Csharp$H!Db$H_5"
+    ],
+    "configs": {
+      "Csharp$B!Db$B!Csharp$H!Db$H_1": {
+        "variant": 1,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_2": {
+        "variant": 2,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_3": {
+        "variant": 3,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_4": {
+        "variant": 4,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_4.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_5": {
+        "variant": 5,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\H": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Си",
+    "variants": [
+      "Csharp$B!Db$B!Csharp$H!Db$H_1",
+      "Csharp$B!Db$B!Csharp$H!Db$H_2",
+      "Csharp$B!Db$B!Csharp$H!Db$H_3",
+      "Csharp$B!Db$B!Csharp$H!Db$H_4",
+      "Csharp$B!Db$B!Csharp$H!Db$H_5"
+    ],
+    "configs": {
+      "Csharp$B!Db$B!Csharp$H!Db$H_1": {
+        "variant": 1,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_2": {
+        "variant": 2,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_3": {
+        "variant": 3,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_4": {
+        "variant": 4,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_4.py",
+        "chord_type": "Major"
+      },
+      "Csharp$B!Db$B!Csharp$H!Db$H_5": {
+        "variant": 5,
+        "file": "Major/Csharp$B!Db$B!Csharp$H!Db$H_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\C": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом До",
+    "variants": [
+      "Csharp$C!Db$C_1",
+      "Csharp$C!Db$C_2",
+      "Csharp$C!Db$C_3",
+      "Csharp$C!Db$C_4"
+    ],
+    "configs": {
+      "Csharp$C!Db$C_1": {
+        "variant": 1,
+        "file": "Major/Csharp$C!Db$C_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$C!Db$C_2": {
+        "variant": 2,
+        "file": "Major/Csharp$C!Db$C_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$C!Db$C_3": {
+        "variant": 3,
+        "file": "Major/Csharp$C!Db$C_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$C!Db$C_4": {
+        "variant": 4,
+        "file": "Major/Csharp$C!Db$C_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\C": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом До",
+    "variants": [
+      "Csharp$C!Db$C_1",
+      "Csharp$C!Db$C_2",
+      "Csharp$C!Db$C_3",
+      "Csharp$C!Db$C_4"
+    ],
+    "configs": {
+      "Csharp$C!Db$C_1": {
+        "variant": 1,
+        "file": "Major/Csharp$C!Db$C_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$C!Db$C_2": {
+        "variant": 2,
+        "file": "Major/Csharp$C!Db$C_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$C!Db$C_3": {
+        "variant": 3,
+        "file": "Major/Csharp$C!Db$C_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$C!Db$C_4": {
+        "variant": 4,
+        "file": "Major/Csharp$C!Db$C_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\D": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Ре",
+    "variants": [
+      "Csharp$D!Db$D_1"
+    ],
+    "configs": {
+      "Csharp$D!Db$D_1": {
+        "variant": 1,
+        "file": "Major/Csharp$D!Db$D_1.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\D": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Ре",
+    "variants": [
+      "Csharp$D!Db$D_1"
+    ],
+    "configs": {
+      "Csharp$D!Db$D_1": {
+        "variant": 1,
+        "file": "Major/Csharp$D!Db$D_1.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\D#": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Ре-диез",
+    "variants": [
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1",
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2"
+    ],
+    "configs": {
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\D#": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Ре-диез",
+    "variants": [
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1",
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2"
+    ],
+    "configs": {
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\Eb": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Ми-бемоль",
+    "variants": [
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1",
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2"
+    ],
+    "configs": {
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\Eb": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Ми-бемоль",
+    "variants": [
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1",
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2"
+    ],
+    "configs": {
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Dsharp!Db$Dsharp!Csharp$Eb!Db$Eb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\E": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Ми",
+    "variants": [
+      "Csharp$E!Db$E_1",
+      "Csharp$E!Db$E_2",
+      "Csharp$E!Db$E_3"
+    ],
+    "configs": {
+      "Csharp$E!Db$E_1": {
+        "variant": 1,
+        "file": "Major/Csharp$E!Db$E_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$E!Db$E_2": {
+        "variant": 2,
+        "file": "Major/Csharp$E!Db$E_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$E!Db$E_3": {
+        "variant": 3,
+        "file": "Major/Csharp$E!Db$E_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\E": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Ми",
+    "variants": [
+      "Csharp$E!Db$E_1",
+      "Csharp$E!Db$E_2",
+      "Csharp$E!Db$E_3"
+    ],
+    "configs": {
+      "Csharp$E!Db$E_1": {
+        "variant": 1,
+        "file": "Major/Csharp$E!Db$E_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$E!Db$E_2": {
+        "variant": 2,
+        "file": "Major/Csharp$E!Db$E_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$E!Db$E_3": {
+        "variant": 3,
+        "file": "Major/Csharp$E!Db$E_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\F": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Фа",
+    "variants": [
+      "Csharp$F!Db$F_1",
+      "Csharp$F!Db$F_2"
+    ],
+    "configs": {
+      "Csharp$F!Db$F_1": {
+        "variant": 1,
+        "file": "Major/Csharp$F!Db$F_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$F!Db$F_2": {
+        "variant": 2,
+        "file": "Major/Csharp$F!Db$F_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\F": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Фа",
+    "variants": [
+      "Csharp$F!Db$F_1",
+      "Csharp$F!Db$F_2"
+    ],
+    "configs": {
+      "Csharp$F!Db$F_1": {
+        "variant": 1,
+        "file": "Major/Csharp$F!Db$F_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$F!Db$F_2": {
+        "variant": 2,
+        "file": "Major/Csharp$F!Db$F_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\F#": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Фа-диез",
+    "variants": [
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4"
+    ],
+    "configs": {
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\F#": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Фа-диез",
+    "variants": [
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4"
+    ],
+    "configs": {
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\Gb": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Соль-бемоль",
+    "variants": [
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4"
+    ],
+    "configs": {
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\Gb": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Соль-бемоль",
+    "variants": [
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3",
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4"
+    ],
+    "configs": {
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Fsharp!Db$Fsharp!Csharp$Gb!Db$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\G": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Соль",
+    "variants": [
+      "Csharp$G!Db$G_1",
+      "Csharp$G!Db$G_2",
+      "Csharp$G!Db$G_3"
+    ],
+    "configs": {
+      "Csharp$G!Db$G_1": {
+        "variant": 1,
+        "file": "Major/Csharp$G!Db$G_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$G!Db$G_2": {
+        "variant": 2,
+        "file": "Major/Csharp$G!Db$G_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$G!Db$G_3": {
+        "variant": 3,
+        "file": "Major/Csharp$G!Db$G_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\G": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Соль",
+    "variants": [
+      "Csharp$G!Db$G_1",
+      "Csharp$G!Db$G_2",
+      "Csharp$G!Db$G_3"
+    ],
+    "configs": {
+      "Csharp$G!Db$G_1": {
+        "variant": 1,
+        "file": "Major/Csharp$G!Db$G_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$G!Db$G_2": {
+        "variant": 2,
+        "file": "Major/Csharp$G!Db$G_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$G!Db$G_3": {
+        "variant": 3,
+        "file": "Major/Csharp$G!Db$G_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\G#": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Соль-диез",
+    "variants": [
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4"
+    ],
+    "configs": {
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\G#": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Соль-диез",
+    "variants": [
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4"
+    ],
+    "configs": {
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "C#\\Ab": {
+    "type": "Major",
+    "description": "До-диез-мажор с басом Ля-бемоль",
+    "variants": [
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4"
+    ],
+    "configs": {
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Db\\Ab": {
+    "type": "Major",
+    "description": "Ре-бемоль-мажор с басом Ля-бемоль",
+    "variants": [
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3",
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4"
+    ],
+    "configs": {
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1": {
+        "variant": 1,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2": {
+        "variant": 2,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3": {
+        "variant": 3,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4": {
+        "variant": 4,
+        "file": "Major/Csharp$Gsharp!Db$Gsharp!Csharp$Ab!Db$Ab_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
   "D": {
     "type": "Major",
     "description": "Ре мажор",
@@ -29596,6 +34996,514 @@ ALL_CHORDS = {
       "D!Dmaj_6": {
         "variant": 6,
         "file": "Major/D!Dmaj_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\A#": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Ля-диез",
+    "variants": [
+      "D$Asharp!D$Bb_1",
+      "D$Asharp!D$Bb_2"
+    ],
+    "configs": {
+      "D$Asharp!D$Bb_1": {
+        "variant": 1,
+        "file": "Major/D$Asharp!D$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "D$Asharp!D$Bb_2": {
+        "variant": 2,
+        "file": "Major/D$Asharp!D$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\Bb": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Си-бемоль",
+    "variants": [
+      "D$Asharp!D$Bb_1",
+      "D$Asharp!D$Bb_2"
+    ],
+    "configs": {
+      "D$Asharp!D$Bb_1": {
+        "variant": 1,
+        "file": "Major/D$Asharp!D$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "D$Asharp!D$Bb_2": {
+        "variant": 2,
+        "file": "Major/D$Asharp!D$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\A": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Ля",
+    "variants": [
+      "D$A_1",
+      "D$A_2"
+    ],
+    "configs": {
+      "D$A_1": {
+        "variant": 1,
+        "file": "Major/D$A_1.py",
+        "chord_type": "Major"
+      },
+      "D$A_2": {
+        "variant": 2,
+        "file": "Major/D$A_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\B": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Си",
+    "variants": [
+      "D$B!D$H_1",
+      "D$B!D$H_2",
+      "D$B!D$H_3",
+      "D$B!D$H_4",
+      "D$B!D$H_5",
+      "D$B!D$H_6",
+      "D$B!D$H_7"
+    ],
+    "configs": {
+      "D$B!D$H_1": {
+        "variant": 1,
+        "file": "Major/D$B!D$H_1.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_2": {
+        "variant": 2,
+        "file": "Major/D$B!D$H_2.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_3": {
+        "variant": 3,
+        "file": "Major/D$B!D$H_3.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_4": {
+        "variant": 4,
+        "file": "Major/D$B!D$H_4.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_5": {
+        "variant": 5,
+        "file": "Major/D$B!D$H_5.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_6": {
+        "variant": 6,
+        "file": "Major/D$B!D$H_6.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_7": {
+        "variant": 7,
+        "file": "Major/D$B!D$H_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\H": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Си",
+    "variants": [
+      "D$B!D$H_1",
+      "D$B!D$H_2",
+      "D$B!D$H_3",
+      "D$B!D$H_4",
+      "D$B!D$H_5",
+      "D$B!D$H_6",
+      "D$B!D$H_7"
+    ],
+    "configs": {
+      "D$B!D$H_1": {
+        "variant": 1,
+        "file": "Major/D$B!D$H_1.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_2": {
+        "variant": 2,
+        "file": "Major/D$B!D$H_2.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_3": {
+        "variant": 3,
+        "file": "Major/D$B!D$H_3.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_4": {
+        "variant": 4,
+        "file": "Major/D$B!D$H_4.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_5": {
+        "variant": 5,
+        "file": "Major/D$B!D$H_5.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_6": {
+        "variant": 6,
+        "file": "Major/D$B!D$H_6.py",
+        "chord_type": "Major"
+      },
+      "D$B!D$H_7": {
+        "variant": 7,
+        "file": "Major/D$B!D$H_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\C#": {
+    "type": "Major",
+    "description": "Ре-мажор с басом До-диез",
+    "variants": [
+      "D$Csharp!D$Db_1",
+      "D$Csharp!D$Db_2",
+      "D$Csharp!D$Db_3",
+      "D$Csharp!D$Db_4",
+      "D$Csharp!D$Db_5"
+    ],
+    "configs": {
+      "D$Csharp!D$Db_1": {
+        "variant": 1,
+        "file": "Major/D$Csharp!D$Db_1.py",
+        "chord_type": "Major"
+      },
+      "D$Csharp!D$Db_2": {
+        "variant": 2,
+        "file": "Major/D$Csharp!D$Db_2.py",
+        "chord_type": "Major"
+      },
+      "D$Csharp!D$Db_3": {
+        "variant": 3,
+        "file": "Major/D$Csharp!D$Db_3.py",
+        "chord_type": "Major"
+      },
+      "D$Csharp!D$Db_4": {
+        "variant": 4,
+        "file": "Major/D$Csharp!D$Db_4.py",
+        "chord_type": "Major"
+      },
+      "D$Csharp!D$Db_5": {
+        "variant": 5,
+        "file": "Major/D$Csharp!D$Db_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\Db": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Ре-бемоль",
+    "variants": [
+      "D$Csharp!D$Db_1",
+      "D$Csharp!D$Db_2",
+      "D$Csharp!D$Db_3",
+      "D$Csharp!D$Db_4",
+      "D$Csharp!D$Db_5"
+    ],
+    "configs": {
+      "D$Csharp!D$Db_1": {
+        "variant": 1,
+        "file": "Major/D$Csharp!D$Db_1.py",
+        "chord_type": "Major"
+      },
+      "D$Csharp!D$Db_2": {
+        "variant": 2,
+        "file": "Major/D$Csharp!D$Db_2.py",
+        "chord_type": "Major"
+      },
+      "D$Csharp!D$Db_3": {
+        "variant": 3,
+        "file": "Major/D$Csharp!D$Db_3.py",
+        "chord_type": "Major"
+      },
+      "D$Csharp!D$Db_4": {
+        "variant": 4,
+        "file": "Major/D$Csharp!D$Db_4.py",
+        "chord_type": "Major"
+      },
+      "D$Csharp!D$Db_5": {
+        "variant": 5,
+        "file": "Major/D$Csharp!D$Db_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\C": {
+    "type": "Major",
+    "description": "Ре-мажор с басом До",
+    "variants": [
+      "D$C_1",
+      "D$C_2",
+      "D$C_3",
+      "D$C_4",
+      "D$C_5"
+    ],
+    "configs": {
+      "D$C_1": {
+        "variant": 1,
+        "file": "Major/D$C_1.py",
+        "chord_type": "Major"
+      },
+      "D$C_2": {
+        "variant": 2,
+        "file": "Major/D$C_2.py",
+        "chord_type": "Major"
+      },
+      "D$C_3": {
+        "variant": 3,
+        "file": "Major/D$C_3.py",
+        "chord_type": "Major"
+      },
+      "D$C_4": {
+        "variant": 4,
+        "file": "Major/D$C_4.py",
+        "chord_type": "Major"
+      },
+      "D$C_5": {
+        "variant": 5,
+        "file": "Major/D$C_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\D#": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Ре-диез",
+    "variants": [
+      "D$Dsharp!D$Eb_1"
+    ],
+    "configs": {
+      "D$Dsharp!D$Eb_1": {
+        "variant": 1,
+        "file": "Major/D$Dsharp!D$Eb_1.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\Eb": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Ми-бемоль",
+    "variants": [
+      "D$Dsharp!D$Eb_1"
+    ],
+    "configs": {
+      "D$Dsharp!D$Eb_1": {
+        "variant": 1,
+        "file": "Major/D$Dsharp!D$Eb_1.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\E": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Ми",
+    "variants": [
+      "D$E_1",
+      "D$E_2",
+      "D$E_3"
+    ],
+    "configs": {
+      "D$E_1": {
+        "variant": 1,
+        "file": "Major/D$E_1.py",
+        "chord_type": "Major"
+      },
+      "D$E_2": {
+        "variant": 2,
+        "file": "Major/D$E_2.py",
+        "chord_type": "Major"
+      },
+      "D$E_3": {
+        "variant": 3,
+        "file": "Major/D$E_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\F#": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Фа-диез",
+    "variants": [
+      "D$Fsharp!D$Gb_1",
+      "D$Fsharp!D$Gb_2",
+      "D$Fsharp!D$Gb_3"
+    ],
+    "configs": {
+      "D$Fsharp!D$Gb_1": {
+        "variant": 1,
+        "file": "Major/D$Fsharp!D$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "D$Fsharp!D$Gb_2": {
+        "variant": 2,
+        "file": "Major/D$Fsharp!D$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "D$Fsharp!D$Gb_3": {
+        "variant": 3,
+        "file": "Major/D$Fsharp!D$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\Gb": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Соль-бемоль",
+    "variants": [
+      "D$Fsharp!D$Gb_1",
+      "D$Fsharp!D$Gb_2",
+      "D$Fsharp!D$Gb_3"
+    ],
+    "configs": {
+      "D$Fsharp!D$Gb_1": {
+        "variant": 1,
+        "file": "Major/D$Fsharp!D$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "D$Fsharp!D$Gb_2": {
+        "variant": 2,
+        "file": "Major/D$Fsharp!D$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "D$Fsharp!D$Gb_3": {
+        "variant": 3,
+        "file": "Major/D$Fsharp!D$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\F": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Фа",
+    "variants": [
+      "D$F_1",
+      "D$F_2",
+      "D$F_3"
+    ],
+    "configs": {
+      "D$F_1": {
+        "variant": 1,
+        "file": "Major/D$F_1.py",
+        "chord_type": "Major"
+      },
+      "D$F_2": {
+        "variant": 2,
+        "file": "Major/D$F_2.py",
+        "chord_type": "Major"
+      },
+      "D$F_3": {
+        "variant": 3,
+        "file": "Major/D$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\G#": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Соль-диез",
+    "variants": [
+      "D$Gsharp!D$Ab_1",
+      "D$Gsharp!D$Ab_2",
+      "D$Gsharp!D$Ab_3"
+    ],
+    "configs": {
+      "D$Gsharp!D$Ab_1": {
+        "variant": 1,
+        "file": "Major/D$Gsharp!D$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "D$Gsharp!D$Ab_2": {
+        "variant": 2,
+        "file": "Major/D$Gsharp!D$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "D$Gsharp!D$Ab_3": {
+        "variant": 3,
+        "file": "Major/D$Gsharp!D$Ab_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\Ab": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Ля-бемоль",
+    "variants": [
+      "D$Gsharp!D$Ab_1",
+      "D$Gsharp!D$Ab_2",
+      "D$Gsharp!D$Ab_3"
+    ],
+    "configs": {
+      "D$Gsharp!D$Ab_1": {
+        "variant": 1,
+        "file": "Major/D$Gsharp!D$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "D$Gsharp!D$Ab_2": {
+        "variant": 2,
+        "file": "Major/D$Gsharp!D$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "D$Gsharp!D$Ab_3": {
+        "variant": 3,
+        "file": "Major/D$Gsharp!D$Ab_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D\\G": {
+    "type": "Major",
+    "description": "Ре-мажор с басом Соль",
+    "variants": [
+      "D$G_1",
+      "D$G_2",
+      "D$G_3",
+      "D$G_4",
+      "D$G_5",
+      "D$G_6",
+      "D$G_7"
+    ],
+    "configs": {
+      "D$G_1": {
+        "variant": 1,
+        "file": "Major/D$G_1.py",
+        "chord_type": "Major"
+      },
+      "D$G_2": {
+        "variant": 2,
+        "file": "Major/D$G_2.py",
+        "chord_type": "Major"
+      },
+      "D$G_3": {
+        "variant": 3,
+        "file": "Major/D$G_3.py",
+        "chord_type": "Major"
+      },
+      "D$G_4": {
+        "variant": 4,
+        "file": "Major/D$G_4.py",
+        "chord_type": "Major"
+      },
+      "D$G_5": {
+        "variant": 5,
+        "file": "Major/D$G_5.py",
+        "chord_type": "Major"
+      },
+      "D$G_6": {
+        "variant": 6,
+        "file": "Major/D$G_6.py",
+        "chord_type": "Major"
+      },
+      "D$G_7": {
+        "variant": 7,
+        "file": "Major/D$G_7.py",
         "chord_type": "Major"
       }
     }
@@ -29752,6 +35660,934 @@ ALL_CHORDS = {
       }
     }
   },
+  "D#\\A": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Ля",
+    "variants": [
+      "Dsharp$A!Eb$A_1",
+      "Dsharp$A!Eb$A_2",
+      "Dsharp$A!Eb$A_3"
+    ],
+    "configs": {
+      "Dsharp$A!Eb$A_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$A!Eb$A_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$A!Eb$A_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$A!Eb$A_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$A!Eb$A_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$A!Eb$A_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\A": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Ля",
+    "variants": [
+      "Dsharp$A!Eb$A_1",
+      "Dsharp$A!Eb$A_2",
+      "Dsharp$A!Eb$A_3"
+    ],
+    "configs": {
+      "Dsharp$A!Eb$A_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$A!Eb$A_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$A!Eb$A_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$A!Eb$A_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$A!Eb$A_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$A!Eb$A_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\A#": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Ля-диез",
+    "variants": [
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1",
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2",
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3"
+    ],
+    "configs": {
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\A#": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Ля-диез",
+    "variants": [
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1",
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2",
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3"
+    ],
+    "configs": {
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\Bb": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Си-бемоль",
+    "variants": [
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1",
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2",
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3"
+    ],
+    "configs": {
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\Bb": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Си-бемоль",
+    "variants": [
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1",
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2",
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3"
+    ],
+    "configs": {
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Asharp!Eb$Asharp!Dsharp$Bb!Eb$Bb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\B": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Си",
+    "variants": [
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_1",
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_2"
+    ],
+    "configs": {
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$B!Eb$B!Dsharp$H!Eb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$B!Eb$B!Dsharp$H!Eb$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\B": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Си",
+    "variants": [
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_1",
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_2"
+    ],
+    "configs": {
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$B!Eb$B!Dsharp$H!Eb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$B!Eb$B!Dsharp$H!Eb$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\H": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Си",
+    "variants": [
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_1",
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_2"
+    ],
+    "configs": {
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$B!Eb$B!Dsharp$H!Eb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$B!Eb$B!Dsharp$H!Eb$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\H": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Си",
+    "variants": [
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_1",
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_2"
+    ],
+    "configs": {
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$B!Eb$B!Dsharp$H!Eb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$B!Eb$B!Dsharp$H!Eb$H_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$B!Eb$B!Dsharp$H!Eb$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\C": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом До",
+    "variants": [
+      "Dsharp$C!Eb$C_1",
+      "Dsharp$C!Eb$C_2",
+      "Dsharp$C!Eb$C_3",
+      "Dsharp$C!Eb$C_4",
+      "Dsharp$C!Eb$C_5",
+      "Dsharp$C!Eb$C_6"
+    ],
+    "configs": {
+      "Dsharp$C!Eb$C_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$C!Eb$C_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$C!Eb$C_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$C!Eb$C_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$C!Eb$C_4.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_5": {
+        "variant": 5,
+        "file": "Major/Dsharp$C!Eb$C_5.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_6": {
+        "variant": 6,
+        "file": "Major/Dsharp$C!Eb$C_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\C": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом До",
+    "variants": [
+      "Dsharp$C!Eb$C_1",
+      "Dsharp$C!Eb$C_2",
+      "Dsharp$C!Eb$C_3",
+      "Dsharp$C!Eb$C_4",
+      "Dsharp$C!Eb$C_5",
+      "Dsharp$C!Eb$C_6"
+    ],
+    "configs": {
+      "Dsharp$C!Eb$C_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$C!Eb$C_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$C!Eb$C_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$C!Eb$C_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$C!Eb$C_4.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_5": {
+        "variant": 5,
+        "file": "Major/Dsharp$C!Eb$C_5.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$C!Eb$C_6": {
+        "variant": 6,
+        "file": "Major/Dsharp$C!Eb$C_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\C#": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом До-диез",
+    "variants": [
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5"
+    ],
+    "configs": {
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5": {
+        "variant": 5,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\C#": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом До-диез",
+    "variants": [
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5"
+    ],
+    "configs": {
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5": {
+        "variant": 5,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\Db": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Ре-бемоль",
+    "variants": [
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5"
+    ],
+    "configs": {
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5": {
+        "variant": 5,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\Db": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Ре-бемоль",
+    "variants": [
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4",
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5"
+    ],
+    "configs": {
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_4.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5": {
+        "variant": 5,
+        "file": "Major/Dsharp$Csharp!Eb$Csharp!Dsharp$Db!Eb$Db_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\D": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Ре",
+    "variants": [
+      "Dsharp$D!Eb$D_1",
+      "Dsharp$D!Eb$D_2",
+      "Dsharp$D!Eb$D_3",
+      "Dsharp$D!Eb$D_4"
+    ],
+    "configs": {
+      "Dsharp$D!Eb$D_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$D!Eb$D_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$D!Eb$D_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$D!Eb$D_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$D!Eb$D_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$D!Eb$D_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$D!Eb$D_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$D!Eb$D_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\D": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Ре",
+    "variants": [
+      "Dsharp$D!Eb$D_1",
+      "Dsharp$D!Eb$D_2",
+      "Dsharp$D!Eb$D_3",
+      "Dsharp$D!Eb$D_4"
+    ],
+    "configs": {
+      "Dsharp$D!Eb$D_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$D!Eb$D_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$D!Eb$D_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$D!Eb$D_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$D!Eb$D_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$D!Eb$D_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$D!Eb$D_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$D!Eb$D_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\E": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Ми",
+    "variants": [
+      "Dsharp$E!Eb$E_1",
+      "Dsharp$E!Eb$E_2",
+      "Dsharp$E!Eb$E_3"
+    ],
+    "configs": {
+      "Dsharp$E!Eb$E_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$E!Eb$E_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$E!Eb$E_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$E!Eb$E_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$E!Eb$E_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$E!Eb$E_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\E": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Ми",
+    "variants": [
+      "Dsharp$E!Eb$E_1",
+      "Dsharp$E!Eb$E_2",
+      "Dsharp$E!Eb$E_3"
+    ],
+    "configs": {
+      "Dsharp$E!Eb$E_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$E!Eb$E_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$E!Eb$E_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$E!Eb$E_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$E!Eb$E_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$E!Eb$E_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\F": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Фа",
+    "variants": [
+      "Dsharp$F!Eb$F_1",
+      "Dsharp$F!Eb$F_2",
+      "Dsharp$F!Eb$F_3"
+    ],
+    "configs": {
+      "Dsharp$F!Eb$F_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$F!Eb$F_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$F!Eb$F_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$F!Eb$F_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$F!Eb$F_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$F!Eb$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\F": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Фа",
+    "variants": [
+      "Dsharp$F!Eb$F_1",
+      "Dsharp$F!Eb$F_2",
+      "Dsharp$F!Eb$F_3"
+    ],
+    "configs": {
+      "Dsharp$F!Eb$F_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$F!Eb$F_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$F!Eb$F_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$F!Eb$F_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$F!Eb$F_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$F!Eb$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\F#": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Фа-диез",
+    "variants": [
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1",
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2",
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3"
+    ],
+    "configs": {
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\F#": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Фа-диез",
+    "variants": [
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1",
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2",
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3"
+    ],
+    "configs": {
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\Gb": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Соль-бемоль",
+    "variants": [
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1",
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2",
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3"
+    ],
+    "configs": {
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\Gb": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Соль-бемоль",
+    "variants": [
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1",
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2",
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3"
+    ],
+    "configs": {
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Fsharp!Eb$Fsharp!Dsharp$Gb!Eb$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\G": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Соль",
+    "variants": [
+      "Dsharp$G!Eb$G_1",
+      "Dsharp$G!Eb$G_2",
+      "Dsharp$G!Eb$G_3"
+    ],
+    "configs": {
+      "Dsharp$G!Eb$G_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$G!Eb$G_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$G!Eb$G_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$G!Eb$G_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$G!Eb$G_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$G!Eb$G_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\G": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Соль",
+    "variants": [
+      "Dsharp$G!Eb$G_1",
+      "Dsharp$G!Eb$G_2",
+      "Dsharp$G!Eb$G_3"
+    ],
+    "configs": {
+      "Dsharp$G!Eb$G_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$G!Eb$G_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$G!Eb$G_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$G!Eb$G_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$G!Eb$G_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$G!Eb$G_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\G#": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Соль-диез",
+    "variants": [
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4"
+    ],
+    "configs": {
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\G#": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Соль-диез",
+    "variants": [
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4"
+    ],
+    "configs": {
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "D#\\Ab": {
+    "type": "Major",
+    "description": "Ре-диез-мажор с басом Ля-бемоль",
+    "variants": [
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4"
+    ],
+    "configs": {
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Eb\\Ab": {
+    "type": "Major",
+    "description": "Ми-бемоль-мажор с басом Ля-бемоль",
+    "variants": [
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3",
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4"
+    ],
+    "configs": {
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3": {
+        "variant": 3,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_3.py",
+        "chord_type": "Major"
+      },
+      "Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4": {
+        "variant": 4,
+        "file": "Major/Dsharp$Gsharp!Eb$Gsharp!Dsharp$Ab!Eb$Ab_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
   "E": {
     "type": "Major",
     "description": "Ми мажор",
@@ -29836,6 +36672,568 @@ ALL_CHORDS = {
       "E!Emaj_6": {
         "variant": 6,
         "file": "Major/E!Emaj_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\A#": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Ля-диез",
+    "variants": [
+      "E$Asharp!E$Bb_1",
+      "E$Asharp!E$Bb_2",
+      "E$Asharp!E$Bb_3",
+      "E$Asharp!E$Bb_4"
+    ],
+    "configs": {
+      "E$Asharp!E$Bb_1": {
+        "variant": 1,
+        "file": "Major/E$Asharp!E$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "E$Asharp!E$Bb_2": {
+        "variant": 2,
+        "file": "Major/E$Asharp!E$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "E$Asharp!E$Bb_3": {
+        "variant": 3,
+        "file": "Major/E$Asharp!E$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "E$Asharp!E$Bb_4": {
+        "variant": 4,
+        "file": "Major/E$Asharp!E$Bb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\Bb": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Си-бемоль",
+    "variants": [
+      "E$Asharp!E$Bb_1",
+      "E$Asharp!E$Bb_2",
+      "E$Asharp!E$Bb_3",
+      "E$Asharp!E$Bb_4"
+    ],
+    "configs": {
+      "E$Asharp!E$Bb_1": {
+        "variant": 1,
+        "file": "Major/E$Asharp!E$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "E$Asharp!E$Bb_2": {
+        "variant": 2,
+        "file": "Major/E$Asharp!E$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "E$Asharp!E$Bb_3": {
+        "variant": 3,
+        "file": "Major/E$Asharp!E$Bb_3.py",
+        "chord_type": "Major"
+      },
+      "E$Asharp!E$Bb_4": {
+        "variant": 4,
+        "file": "Major/E$Asharp!E$Bb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\A": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Ля",
+    "variants": [
+      "E$A_1",
+      "E$A_2",
+      "E$A_3",
+      "E$A_4",
+      "E$A_5"
+    ],
+    "configs": {
+      "E$A_1": {
+        "variant": 1,
+        "file": "Major/E$A_1.py",
+        "chord_type": "Major"
+      },
+      "E$A_2": {
+        "variant": 2,
+        "file": "Major/E$A_2.py",
+        "chord_type": "Major"
+      },
+      "E$A_3": {
+        "variant": 3,
+        "file": "Major/E$A_3.py",
+        "chord_type": "Major"
+      },
+      "E$A_4": {
+        "variant": 4,
+        "file": "Major/E$A_4.py",
+        "chord_type": "Major"
+      },
+      "E$A_5": {
+        "variant": 5,
+        "file": "Major/E$A_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\B": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Си",
+    "variants": [
+      "E$B!E$H_1",
+      "E$B!E$H_2",
+      "E$B!E$H_3",
+      "E$B!E$H_4"
+    ],
+    "configs": {
+      "E$B!E$H_1": {
+        "variant": 1,
+        "file": "Major/E$B!E$H_1.py",
+        "chord_type": "Major"
+      },
+      "E$B!E$H_2": {
+        "variant": 2,
+        "file": "Major/E$B!E$H_2.py",
+        "chord_type": "Major"
+      },
+      "E$B!E$H_3": {
+        "variant": 3,
+        "file": "Major/E$B!E$H_3.py",
+        "chord_type": "Major"
+      },
+      "E$B!E$H_4": {
+        "variant": 4,
+        "file": "Major/E$B!E$H_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\H": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Си",
+    "variants": [
+      "E$B!E$H_1",
+      "E$B!E$H_2",
+      "E$B!E$H_3",
+      "E$B!E$H_4"
+    ],
+    "configs": {
+      "E$B!E$H_1": {
+        "variant": 1,
+        "file": "Major/E$B!E$H_1.py",
+        "chord_type": "Major"
+      },
+      "E$B!E$H_2": {
+        "variant": 2,
+        "file": "Major/E$B!E$H_2.py",
+        "chord_type": "Major"
+      },
+      "E$B!E$H_3": {
+        "variant": 3,
+        "file": "Major/E$B!E$H_3.py",
+        "chord_type": "Major"
+      },
+      "E$B!E$H_4": {
+        "variant": 4,
+        "file": "Major/E$B!E$H_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\C#": {
+    "type": "Major",
+    "description": "Ми-мажор с басом До-диез",
+    "variants": [
+      "E$Csharp!E$Db_1",
+      "E$Csharp!E$Db_2",
+      "E$Csharp!E$Db_3",
+      "E$Csharp!E$Db_4",
+      "E$Csharp!E$Db_5",
+      "E$Csharp!E$Db_6",
+      "E$Csharp!E$Db_7",
+      "E$Csharp!E$Db_8"
+    ],
+    "configs": {
+      "E$Csharp!E$Db_1": {
+        "variant": 1,
+        "file": "Major/E$Csharp!E$Db_1.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_2": {
+        "variant": 2,
+        "file": "Major/E$Csharp!E$Db_2.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_3": {
+        "variant": 3,
+        "file": "Major/E$Csharp!E$Db_3.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_4": {
+        "variant": 4,
+        "file": "Major/E$Csharp!E$Db_4.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_5": {
+        "variant": 5,
+        "file": "Major/E$Csharp!E$Db_5.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_6": {
+        "variant": 6,
+        "file": "Major/E$Csharp!E$Db_6.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_7": {
+        "variant": 7,
+        "file": "Major/E$Csharp!E$Db_7.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_8": {
+        "variant": 8,
+        "file": "Major/E$Csharp!E$Db_8.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\Db": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Ре-бемоль",
+    "variants": [
+      "E$Csharp!E$Db_1",
+      "E$Csharp!E$Db_2",
+      "E$Csharp!E$Db_3",
+      "E$Csharp!E$Db_4",
+      "E$Csharp!E$Db_5",
+      "E$Csharp!E$Db_6",
+      "E$Csharp!E$Db_7",
+      "E$Csharp!E$Db_8"
+    ],
+    "configs": {
+      "E$Csharp!E$Db_1": {
+        "variant": 1,
+        "file": "Major/E$Csharp!E$Db_1.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_2": {
+        "variant": 2,
+        "file": "Major/E$Csharp!E$Db_2.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_3": {
+        "variant": 3,
+        "file": "Major/E$Csharp!E$Db_3.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_4": {
+        "variant": 4,
+        "file": "Major/E$Csharp!E$Db_4.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_5": {
+        "variant": 5,
+        "file": "Major/E$Csharp!E$Db_5.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_6": {
+        "variant": 6,
+        "file": "Major/E$Csharp!E$Db_6.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_7": {
+        "variant": 7,
+        "file": "Major/E$Csharp!E$Db_7.py",
+        "chord_type": "Major"
+      },
+      "E$Csharp!E$Db_8": {
+        "variant": 8,
+        "file": "Major/E$Csharp!E$Db_8.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\C": {
+    "type": "Major",
+    "description": "Ми-мажор с басом До",
+    "variants": [
+      "E$C_1",
+      "E$C_2",
+      "E$C_3"
+    ],
+    "configs": {
+      "E$C_1": {
+        "variant": 1,
+        "file": "Major/E$C_1.py",
+        "chord_type": "Major"
+      },
+      "E$C_2": {
+        "variant": 2,
+        "file": "Major/E$C_2.py",
+        "chord_type": "Major"
+      },
+      "E$C_3": {
+        "variant": 3,
+        "file": "Major/E$C_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\D#": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Ре-диез",
+    "variants": [
+      "E$Dsharp!E$Eb_1",
+      "E$Dsharp!E$Eb_2",
+      "E$Dsharp!E$Eb_3",
+      "E$Dsharp!E$Eb_4"
+    ],
+    "configs": {
+      "E$Dsharp!E$Eb_1": {
+        "variant": 1,
+        "file": "Major/E$Dsharp!E$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "E$Dsharp!E$Eb_2": {
+        "variant": 2,
+        "file": "Major/E$Dsharp!E$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "E$Dsharp!E$Eb_3": {
+        "variant": 3,
+        "file": "Major/E$Dsharp!E$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "E$Dsharp!E$Eb_4": {
+        "variant": 4,
+        "file": "Major/E$Dsharp!E$Eb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\Eb": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Ми-бемоль",
+    "variants": [
+      "E$Dsharp!E$Eb_1",
+      "E$Dsharp!E$Eb_2",
+      "E$Dsharp!E$Eb_3",
+      "E$Dsharp!E$Eb_4"
+    ],
+    "configs": {
+      "E$Dsharp!E$Eb_1": {
+        "variant": 1,
+        "file": "Major/E$Dsharp!E$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "E$Dsharp!E$Eb_2": {
+        "variant": 2,
+        "file": "Major/E$Dsharp!E$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "E$Dsharp!E$Eb_3": {
+        "variant": 3,
+        "file": "Major/E$Dsharp!E$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "E$Dsharp!E$Eb_4": {
+        "variant": 4,
+        "file": "Major/E$Dsharp!E$Eb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\D": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Ре",
+    "variants": [
+      "E$D_1",
+      "E$D_2",
+      "E$D_3",
+      "E$D_4",
+      "E$D_5"
+    ],
+    "configs": {
+      "E$D_1": {
+        "variant": 1,
+        "file": "Major/E$D_1.py",
+        "chord_type": "Major"
+      },
+      "E$D_2": {
+        "variant": 2,
+        "file": "Major/E$D_2.py",
+        "chord_type": "Major"
+      },
+      "E$D_3": {
+        "variant": 3,
+        "file": "Major/E$D_3.py",
+        "chord_type": "Major"
+      },
+      "E$D_4": {
+        "variant": 4,
+        "file": "Major/E$D_4.py",
+        "chord_type": "Major"
+      },
+      "E$D_5": {
+        "variant": 5,
+        "file": "Major/E$D_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\F#": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Фа-диез",
+    "variants": [
+      "E$Fsharp!E$Gb_1",
+      "E$Fsharp!E$Gb_2",
+      "E$Fsharp!E$Gb_3",
+      "E$Fsharp!E$Gb_4"
+    ],
+    "configs": {
+      "E$Fsharp!E$Gb_1": {
+        "variant": 1,
+        "file": "Major/E$Fsharp!E$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "E$Fsharp!E$Gb_2": {
+        "variant": 2,
+        "file": "Major/E$Fsharp!E$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "E$Fsharp!E$Gb_3": {
+        "variant": 3,
+        "file": "Major/E$Fsharp!E$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "E$Fsharp!E$Gb_4": {
+        "variant": 4,
+        "file": "Major/E$Fsharp!E$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\Gb": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Соль-бемоль",
+    "variants": [
+      "E$Fsharp!E$Gb_1",
+      "E$Fsharp!E$Gb_2",
+      "E$Fsharp!E$Gb_3",
+      "E$Fsharp!E$Gb_4"
+    ],
+    "configs": {
+      "E$Fsharp!E$Gb_1": {
+        "variant": 1,
+        "file": "Major/E$Fsharp!E$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "E$Fsharp!E$Gb_2": {
+        "variant": 2,
+        "file": "Major/E$Fsharp!E$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "E$Fsharp!E$Gb_3": {
+        "variant": 3,
+        "file": "Major/E$Fsharp!E$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "E$Fsharp!E$Gb_4": {
+        "variant": 4,
+        "file": "Major/E$Fsharp!E$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\F": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Фа",
+    "variants": [
+      "E$F_1",
+      "E$F_2"
+    ],
+    "configs": {
+      "E$F_1": {
+        "variant": 1,
+        "file": "Major/E$F_1.py",
+        "chord_type": "Major"
+      },
+      "E$F_2": {
+        "variant": 2,
+        "file": "Major/E$F_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\G#": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Соль-диез",
+    "variants": [
+      "E$Gsharp!E$Ab_1",
+      "E$Gsharp!E$Ab_2"
+    ],
+    "configs": {
+      "E$Gsharp!E$Ab_1": {
+        "variant": 1,
+        "file": "Major/E$Gsharp!E$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "E$Gsharp!E$Ab_2": {
+        "variant": 2,
+        "file": "Major/E$Gsharp!E$Ab_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\Ab": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Ля-бемоль",
+    "variants": [
+      "E$Gsharp!E$Ab_1",
+      "E$Gsharp!E$Ab_2"
+    ],
+    "configs": {
+      "E$Gsharp!E$Ab_1": {
+        "variant": 1,
+        "file": "Major/E$Gsharp!E$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "E$Gsharp!E$Ab_2": {
+        "variant": 2,
+        "file": "Major/E$Gsharp!E$Ab_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "E\\G": {
+    "type": "Major",
+    "description": "Ми-мажор с басом Соль",
+    "variants": [
+      "E$G_1",
+      "E$G_2",
+      "E$G_3",
+      "E$G_4"
+    ],
+    "configs": {
+      "E$G_1": {
+        "variant": 1,
+        "file": "Major/E$G_1.py",
+        "chord_type": "Major"
+      },
+      "E$G_2": {
+        "variant": 2,
+        "file": "Major/E$G_2.py",
+        "chord_type": "Major"
+      },
+      "E$G_3": {
+        "variant": 3,
+        "file": "Major/E$G_3.py",
+        "chord_type": "Major"
+      },
+      "E$G_4": {
+        "variant": 4,
+        "file": "Major/E$G_4.py",
         "chord_type": "Major"
       }
     }
@@ -29936,6 +37334,484 @@ ALL_CHORDS = {
       "F!Fmaj_7": {
         "variant": 7,
         "file": "Major/F!Fmaj_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\A#": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Ля-диез",
+    "variants": [
+      "F$Asharp!F$Bb_1",
+      "F$Asharp!F$Bb_2",
+      "F$Asharp!F$Bb_3"
+    ],
+    "configs": {
+      "F$Asharp!F$Bb_1": {
+        "variant": 1,
+        "file": "Major/F$Asharp!F$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "F$Asharp!F$Bb_2": {
+        "variant": 2,
+        "file": "Major/F$Asharp!F$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "F$Asharp!F$Bb_3": {
+        "variant": 3,
+        "file": "Major/F$Asharp!F$Bb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\Bb": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Си-бемоль",
+    "variants": [
+      "F$Asharp!F$Bb_1",
+      "F$Asharp!F$Bb_2",
+      "F$Asharp!F$Bb_3"
+    ],
+    "configs": {
+      "F$Asharp!F$Bb_1": {
+        "variant": 1,
+        "file": "Major/F$Asharp!F$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "F$Asharp!F$Bb_2": {
+        "variant": 2,
+        "file": "Major/F$Asharp!F$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "F$Asharp!F$Bb_3": {
+        "variant": 3,
+        "file": "Major/F$Asharp!F$Bb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\A": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Ля",
+    "variants": [
+      "F$A_1",
+      "F$A_2"
+    ],
+    "configs": {
+      "F$A_1": {
+        "variant": 1,
+        "file": "Major/F$A_1.py",
+        "chord_type": "Major"
+      },
+      "F$A_2": {
+        "variant": 2,
+        "file": "Major/F$A_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\B": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Си",
+    "variants": [
+      "F$B!F$H_1",
+      "F$B!F$H_2",
+      "F$B!F$H_3"
+    ],
+    "configs": {
+      "F$B!F$H_1": {
+        "variant": 1,
+        "file": "Major/F$B!F$H_1.py",
+        "chord_type": "Major"
+      },
+      "F$B!F$H_2": {
+        "variant": 2,
+        "file": "Major/F$B!F$H_2.py",
+        "chord_type": "Major"
+      },
+      "F$B!F$H_3": {
+        "variant": 3,
+        "file": "Major/F$B!F$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\H": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Си",
+    "variants": [
+      "F$B!F$H_1",
+      "F$B!F$H_2",
+      "F$B!F$H_3"
+    ],
+    "configs": {
+      "F$B!F$H_1": {
+        "variant": 1,
+        "file": "Major/F$B!F$H_1.py",
+        "chord_type": "Major"
+      },
+      "F$B!F$H_2": {
+        "variant": 2,
+        "file": "Major/F$B!F$H_2.py",
+        "chord_type": "Major"
+      },
+      "F$B!F$H_3": {
+        "variant": 3,
+        "file": "Major/F$B!F$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\C#": {
+    "type": "Major",
+    "description": "Фа-мажор с басом До-диез",
+    "variants": [
+      "F$Csharp!F$Db_1",
+      "F$Csharp!F$Db_2"
+    ],
+    "configs": {
+      "F$Csharp!F$Db_1": {
+        "variant": 1,
+        "file": "Major/F$Csharp!F$Db_1.py",
+        "chord_type": "Major"
+      },
+      "F$Csharp!F$Db_2": {
+        "variant": 2,
+        "file": "Major/F$Csharp!F$Db_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\Db": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Ре-бемоль",
+    "variants": [
+      "F$Csharp!F$Db_1",
+      "F$Csharp!F$Db_2"
+    ],
+    "configs": {
+      "F$Csharp!F$Db_1": {
+        "variant": 1,
+        "file": "Major/F$Csharp!F$Db_1.py",
+        "chord_type": "Major"
+      },
+      "F$Csharp!F$Db_2": {
+        "variant": 2,
+        "file": "Major/F$Csharp!F$Db_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\C": {
+    "type": "Major",
+    "description": "Фа-мажор с басом До",
+    "variants": [
+      "F$C_1",
+      "F$C_2",
+      "F$C_3"
+    ],
+    "configs": {
+      "F$C_1": {
+        "variant": 1,
+        "file": "Major/F$C_1.py",
+        "chord_type": "Major"
+      },
+      "F$C_2": {
+        "variant": 2,
+        "file": "Major/F$C_2.py",
+        "chord_type": "Major"
+      },
+      "F$C_3": {
+        "variant": 3,
+        "file": "Major/F$C_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\D#": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Ре-диез",
+    "variants": [
+      "F$Dsharp!F$Eb_1",
+      "F$Dsharp!F$Eb_2",
+      "F$Dsharp!F$Eb_3",
+      "F$Dsharp!F$Eb_4",
+      "F$Dsharp!F$Eb_5"
+    ],
+    "configs": {
+      "F$Dsharp!F$Eb_1": {
+        "variant": 1,
+        "file": "Major/F$Dsharp!F$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "F$Dsharp!F$Eb_2": {
+        "variant": 2,
+        "file": "Major/F$Dsharp!F$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "F$Dsharp!F$Eb_3": {
+        "variant": 3,
+        "file": "Major/F$Dsharp!F$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "F$Dsharp!F$Eb_4": {
+        "variant": 4,
+        "file": "Major/F$Dsharp!F$Eb_4.py",
+        "chord_type": "Major"
+      },
+      "F$Dsharp!F$Eb_5": {
+        "variant": 5,
+        "file": "Major/F$Dsharp!F$Eb_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\Eb": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Ми-бемоль",
+    "variants": [
+      "F$Dsharp!F$Eb_1",
+      "F$Dsharp!F$Eb_2",
+      "F$Dsharp!F$Eb_3",
+      "F$Dsharp!F$Eb_4",
+      "F$Dsharp!F$Eb_5"
+    ],
+    "configs": {
+      "F$Dsharp!F$Eb_1": {
+        "variant": 1,
+        "file": "Major/F$Dsharp!F$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "F$Dsharp!F$Eb_2": {
+        "variant": 2,
+        "file": "Major/F$Dsharp!F$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "F$Dsharp!F$Eb_3": {
+        "variant": 3,
+        "file": "Major/F$Dsharp!F$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "F$Dsharp!F$Eb_4": {
+        "variant": 4,
+        "file": "Major/F$Dsharp!F$Eb_4.py",
+        "chord_type": "Major"
+      },
+      "F$Dsharp!F$Eb_5": {
+        "variant": 5,
+        "file": "Major/F$Dsharp!F$Eb_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\D": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Ре",
+    "variants": [
+      "F$D_1",
+      "F$D_2",
+      "F$D_3",
+      "F$D_4",
+      "F$D_5",
+      "F$D_6"
+    ],
+    "configs": {
+      "F$D_1": {
+        "variant": 1,
+        "file": "Major/F$D_1.py",
+        "chord_type": "Major"
+      },
+      "F$D_2": {
+        "variant": 2,
+        "file": "Major/F$D_2.py",
+        "chord_type": "Major"
+      },
+      "F$D_3": {
+        "variant": 3,
+        "file": "Major/F$D_3.py",
+        "chord_type": "Major"
+      },
+      "F$D_4": {
+        "variant": 4,
+        "file": "Major/F$D_4.py",
+        "chord_type": "Major"
+      },
+      "F$D_5": {
+        "variant": 5,
+        "file": "Major/F$D_5.py",
+        "chord_type": "Major"
+      },
+      "F$D_6": {
+        "variant": 6,
+        "file": "Major/F$D_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\E": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Ми",
+    "variants": [
+      "F$E_1",
+      "F$E_2",
+      "F$E_3",
+      "F$E_4"
+    ],
+    "configs": {
+      "F$E_1": {
+        "variant": 1,
+        "file": "Major/F$E_1.py",
+        "chord_type": "Major"
+      },
+      "F$E_2": {
+        "variant": 2,
+        "file": "Major/F$E_2.py",
+        "chord_type": "Major"
+      },
+      "F$E_3": {
+        "variant": 3,
+        "file": "Major/F$E_3.py",
+        "chord_type": "Major"
+      },
+      "F$E_4": {
+        "variant": 4,
+        "file": "Major/F$E_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\F#": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Фа-диез",
+    "variants": [
+      "F$Fsharp!F$Gb_1",
+      "F$Fsharp!F$Gb_2",
+      "F$Fsharp!F$Gb_3"
+    ],
+    "configs": {
+      "F$Fsharp!F$Gb_1": {
+        "variant": 1,
+        "file": "Major/F$Fsharp!F$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "F$Fsharp!F$Gb_2": {
+        "variant": 2,
+        "file": "Major/F$Fsharp!F$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "F$Fsharp!F$Gb_3": {
+        "variant": 3,
+        "file": "Major/F$Fsharp!F$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\Gb": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Соль-бемоль",
+    "variants": [
+      "F$Fsharp!F$Gb_1",
+      "F$Fsharp!F$Gb_2",
+      "F$Fsharp!F$Gb_3"
+    ],
+    "configs": {
+      "F$Fsharp!F$Gb_1": {
+        "variant": 1,
+        "file": "Major/F$Fsharp!F$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "F$Fsharp!F$Gb_2": {
+        "variant": 2,
+        "file": "Major/F$Fsharp!F$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "F$Fsharp!F$Gb_3": {
+        "variant": 3,
+        "file": "Major/F$Fsharp!F$Gb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\G#": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Соль-диез",
+    "variants": [
+      "F$Gsharp!F$Ab_1",
+      "F$Gsharp!F$Ab_2",
+      "F$Gsharp!F$Ab_3"
+    ],
+    "configs": {
+      "F$Gsharp!F$Ab_1": {
+        "variant": 1,
+        "file": "Major/F$Gsharp!F$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "F$Gsharp!F$Ab_2": {
+        "variant": 2,
+        "file": "Major/F$Gsharp!F$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "F$Gsharp!F$Ab_3": {
+        "variant": 3,
+        "file": "Major/F$Gsharp!F$Ab_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\Ab": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Ля-бемоль",
+    "variants": [
+      "F$Gsharp!F$Ab_1",
+      "F$Gsharp!F$Ab_2",
+      "F$Gsharp!F$Ab_3"
+    ],
+    "configs": {
+      "F$Gsharp!F$Ab_1": {
+        "variant": 1,
+        "file": "Major/F$Gsharp!F$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "F$Gsharp!F$Ab_2": {
+        "variant": 2,
+        "file": "Major/F$Gsharp!F$Ab_2.py",
+        "chord_type": "Major"
+      },
+      "F$Gsharp!F$Ab_3": {
+        "variant": 3,
+        "file": "Major/F$Gsharp!F$Ab_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F\\G": {
+    "type": "Major",
+    "description": "Фа-мажор с басом Соль",
+    "variants": [
+      "F$G_1",
+      "F$G_2",
+      "F$G_3",
+      "F$G_4"
+    ],
+    "configs": {
+      "F$G_1": {
+        "variant": 1,
+        "file": "Major/F$G_1.py",
+        "chord_type": "Major"
+      },
+      "F$G_2": {
+        "variant": 2,
+        "file": "Major/F$G_2.py",
+        "chord_type": "Major"
+      },
+      "F$G_3": {
+        "variant": 3,
+        "file": "Major/F$G_3.py",
+        "chord_type": "Major"
+      },
+      "F$G_4": {
+        "variant": 4,
+        "file": "Major/F$G_4.py",
         "chord_type": "Major"
       }
     }
@@ -30092,6 +37968,850 @@ ALL_CHORDS = {
       }
     }
   },
+  "F#\\A": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Ля",
+    "variants": [
+      "Fsharp$A!Gb$A_1",
+      "Fsharp$A!Gb$A_2"
+    ],
+    "configs": {
+      "Fsharp$A!Gb$A_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$A!Gb$A_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$A!Gb$A_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$A!Gb$A_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\A": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Ля",
+    "variants": [
+      "Fsharp$A!Gb$A_1",
+      "Fsharp$A!Gb$A_2"
+    ],
+    "configs": {
+      "Fsharp$A!Gb$A_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$A!Gb$A_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$A!Gb$A_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$A!Gb$A_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\A#": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Ля-диез",
+    "variants": [
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1",
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2"
+    ],
+    "configs": {
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\A#": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Ля-диез",
+    "variants": [
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1",
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2"
+    ],
+    "configs": {
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\Bb": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Си-бемоль",
+    "variants": [
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1",
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2"
+    ],
+    "configs": {
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\Bb": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Си-бемоль",
+    "variants": [
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1",
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2"
+    ],
+    "configs": {
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Asharp!Gb$Asharp!Fsharp$Bb!Gb$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\B": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Си",
+    "variants": [
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_1",
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_2",
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_3"
+    ],
+    "configs": {
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\B": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Си",
+    "variants": [
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_1",
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_2",
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_3"
+    ],
+    "configs": {
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\H": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Си",
+    "variants": [
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_1",
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_2",
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_3"
+    ],
+    "configs": {
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\H": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Си",
+    "variants": [
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_1",
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_2",
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_3"
+    ],
+    "configs": {
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$B!Gb$B!Fsharp$H!Gb$H_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$B!Gb$B!Fsharp$H!Gb$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\C": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом До",
+    "variants": [
+      "Fsharp$C!Gb$C_1",
+      "Fsharp$C!Gb$C_2",
+      "Fsharp$C!Gb$C_3"
+    ],
+    "configs": {
+      "Fsharp$C!Gb$C_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$C!Gb$C_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$C!Gb$C_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$C!Gb$C_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$C!Gb$C_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$C!Gb$C_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\C": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом До",
+    "variants": [
+      "Fsharp$C!Gb$C_1",
+      "Fsharp$C!Gb$C_2",
+      "Fsharp$C!Gb$C_3"
+    ],
+    "configs": {
+      "Fsharp$C!Gb$C_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$C!Gb$C_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$C!Gb$C_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$C!Gb$C_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$C!Gb$C_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$C!Gb$C_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\C#": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом До-диез",
+    "variants": [
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1",
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2",
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3"
+    ],
+    "configs": {
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\C#": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом До-диез",
+    "variants": [
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1",
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2",
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3"
+    ],
+    "configs": {
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\Db": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Ре-бемоль",
+    "variants": [
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1",
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2",
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3"
+    ],
+    "configs": {
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\Db": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Ре-бемоль",
+    "variants": [
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1",
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2",
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3"
+    ],
+    "configs": {
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$Csharp!Gb$Csharp!Fsharp$Db!Gb$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\D": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Ре",
+    "variants": [
+      "Fsharp$D!Gb$D_1",
+      "Fsharp$D!Gb$D_2"
+    ],
+    "configs": {
+      "Fsharp$D!Gb$D_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$D!Gb$D_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$D!Gb$D_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$D!Gb$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\D": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Ре",
+    "variants": [
+      "Fsharp$D!Gb$D_1",
+      "Fsharp$D!Gb$D_2"
+    ],
+    "configs": {
+      "Fsharp$D!Gb$D_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$D!Gb$D_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$D!Gb$D_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$D!Gb$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\D#": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Ре-диез",
+    "variants": [
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6"
+    ],
+    "configs": {
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4": {
+        "variant": 4,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5": {
+        "variant": 5,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6": {
+        "variant": 6,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\D#": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Ре-диез",
+    "variants": [
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6"
+    ],
+    "configs": {
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4": {
+        "variant": 4,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5": {
+        "variant": 5,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6": {
+        "variant": 6,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\Eb": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Ми-бемоль",
+    "variants": [
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6"
+    ],
+    "configs": {
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4": {
+        "variant": 4,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5": {
+        "variant": 5,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6": {
+        "variant": 6,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\Eb": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Ми-бемоль",
+    "variants": [
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5",
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6"
+    ],
+    "configs": {
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_3.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4": {
+        "variant": 4,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_4.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5": {
+        "variant": 5,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_5.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6": {
+        "variant": 6,
+        "file": "Major/Fsharp$Dsharp!Gb$Dsharp!Fsharp$Eb!Gb$Eb_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\E": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Ми",
+    "variants": [
+      "Fsharp$E!Gb$E_1",
+      "Fsharp$E!Gb$E_2",
+      "Fsharp$E!Gb$E_3",
+      "Fsharp$E!Gb$E_4",
+      "Fsharp$E!Gb$E_5"
+    ],
+    "configs": {
+      "Fsharp$E!Gb$E_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$E!Gb$E_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$E!Gb$E_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$E!Gb$E_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$E!Gb$E_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$E!Gb$E_3.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$E!Gb$E_4": {
+        "variant": 4,
+        "file": "Major/Fsharp$E!Gb$E_4.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$E!Gb$E_5": {
+        "variant": 5,
+        "file": "Major/Fsharp$E!Gb$E_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\E": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Ми",
+    "variants": [
+      "Fsharp$E!Gb$E_1",
+      "Fsharp$E!Gb$E_2",
+      "Fsharp$E!Gb$E_3",
+      "Fsharp$E!Gb$E_4",
+      "Fsharp$E!Gb$E_5"
+    ],
+    "configs": {
+      "Fsharp$E!Gb$E_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$E!Gb$E_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$E!Gb$E_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$E!Gb$E_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$E!Gb$E_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$E!Gb$E_3.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$E!Gb$E_4": {
+        "variant": 4,
+        "file": "Major/Fsharp$E!Gb$E_4.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$E!Gb$E_5": {
+        "variant": 5,
+        "file": "Major/Fsharp$E!Gb$E_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\F": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Фа",
+    "variants": [
+      "Fsharp$F!Gb$F_1",
+      "Fsharp$F!Gb$F_2",
+      "Fsharp$F!Gb$F_3"
+    ],
+    "configs": {
+      "Fsharp$F!Gb$F_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$F!Gb$F_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$F!Gb$F_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$F!Gb$F_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$F!Gb$F_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$F!Gb$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\F": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Фа",
+    "variants": [
+      "Fsharp$F!Gb$F_1",
+      "Fsharp$F!Gb$F_2",
+      "Fsharp$F!Gb$F_3"
+    ],
+    "configs": {
+      "Fsharp$F!Gb$F_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$F!Gb$F_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$F!Gb$F_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$F!Gb$F_2.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$F!Gb$F_3": {
+        "variant": 3,
+        "file": "Major/Fsharp$F!Gb$F_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\G": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Соль",
+    "variants": [
+      "Fsharp$G!Gb$G_1",
+      "Fsharp$G!Gb$G_2"
+    ],
+    "configs": {
+      "Fsharp$G!Gb$G_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$G!Gb$G_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$G!Gb$G_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$G!Gb$G_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\G": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Соль",
+    "variants": [
+      "Fsharp$G!Gb$G_1",
+      "Fsharp$G!Gb$G_2"
+    ],
+    "configs": {
+      "Fsharp$G!Gb$G_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$G!Gb$G_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$G!Gb$G_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$G!Gb$G_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\G#": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Соль-диез",
+    "variants": [
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1",
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2"
+    ],
+    "configs": {
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\G#": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Соль-диез",
+    "variants": [
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1",
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2"
+    ],
+    "configs": {
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "F#\\Ab": {
+    "type": "Major",
+    "description": "Фа-диез-мажор с басом Ля-бемоль",
+    "variants": [
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1",
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2"
+    ],
+    "configs": {
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Gb\\Ab": {
+    "type": "Major",
+    "description": "Соль-бемоль-мажор с басом Ля-бемоль",
+    "variants": [
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1",
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2"
+    ],
+    "configs": {
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1": {
+        "variant": 1,
+        "file": "Major/Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_1.py",
+        "chord_type": "Major"
+      },
+      "Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2": {
+        "variant": 2,
+        "file": "Major/Fsharp$Gsharp!Gb$Gsharp!Fsharp$Ab!Gb$Ab_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
   "G": {
     "type": "Major",
     "description": "Соль мажор",
@@ -30164,6 +38884,516 @@ ALL_CHORDS = {
       "G!Gmaj_5": {
         "variant": 5,
         "file": "Major/G!Gmaj_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\A#": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Ля-диез",
+    "variants": [
+      "G$Asharp!G$Bb_1",
+      "G$Asharp!G$Bb_2",
+      "G$Asharp!G$Bb_3"
+    ],
+    "configs": {
+      "G$Asharp!G$Bb_1": {
+        "variant": 1,
+        "file": "Major/G$Asharp!G$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "G$Asharp!G$Bb_2": {
+        "variant": 2,
+        "file": "Major/G$Asharp!G$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "G$Asharp!G$Bb_3": {
+        "variant": 3,
+        "file": "Major/G$Asharp!G$Bb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\Bb": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Си-бемоль",
+    "variants": [
+      "G$Asharp!G$Bb_1",
+      "G$Asharp!G$Bb_2",
+      "G$Asharp!G$Bb_3"
+    ],
+    "configs": {
+      "G$Asharp!G$Bb_1": {
+        "variant": 1,
+        "file": "Major/G$Asharp!G$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "G$Asharp!G$Bb_2": {
+        "variant": 2,
+        "file": "Major/G$Asharp!G$Bb_2.py",
+        "chord_type": "Major"
+      },
+      "G$Asharp!G$Bb_3": {
+        "variant": 3,
+        "file": "Major/G$Asharp!G$Bb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\A": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Ля",
+    "variants": [
+      "G$A_1",
+      "G$A_2",
+      "G$A_3"
+    ],
+    "configs": {
+      "G$A_1": {
+        "variant": 1,
+        "file": "Major/G$A_1.py",
+        "chord_type": "Major"
+      },
+      "G$A_2": {
+        "variant": 2,
+        "file": "Major/G$A_2.py",
+        "chord_type": "Major"
+      },
+      "G$A_3": {
+        "variant": 3,
+        "file": "Major/G$A_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\B": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Си",
+    "variants": [
+      "G$B!G$H_1",
+      "G$B!G$H_2",
+      "G$B!G$H_3"
+    ],
+    "configs": {
+      "G$B!G$H_1": {
+        "variant": 1,
+        "file": "Major/G$B!G$H_1.py",
+        "chord_type": "Major"
+      },
+      "G$B!G$H_2": {
+        "variant": 2,
+        "file": "Major/G$B!G$H_2.py",
+        "chord_type": "Major"
+      },
+      "G$B!G$H_3": {
+        "variant": 3,
+        "file": "Major/G$B!G$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\H": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Си",
+    "variants": [
+      "G$B!G$H_1",
+      "G$B!G$H_2",
+      "G$B!G$H_3"
+    ],
+    "configs": {
+      "G$B!G$H_1": {
+        "variant": 1,
+        "file": "Major/G$B!G$H_1.py",
+        "chord_type": "Major"
+      },
+      "G$B!G$H_2": {
+        "variant": 2,
+        "file": "Major/G$B!G$H_2.py",
+        "chord_type": "Major"
+      },
+      "G$B!G$H_3": {
+        "variant": 3,
+        "file": "Major/G$B!G$H_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\C#": {
+    "type": "Major",
+    "description": "Соль-мажор с басом До-диез",
+    "variants": [
+      "G$Csharp!G$Db_1",
+      "G$Csharp!G$Db_2",
+      "G$Csharp!G$Db_3",
+      "G$Csharp!G$Db_4",
+      "G$Csharp!G$Db_5"
+    ],
+    "configs": {
+      "G$Csharp!G$Db_1": {
+        "variant": 1,
+        "file": "Major/G$Csharp!G$Db_1.py",
+        "chord_type": "Major"
+      },
+      "G$Csharp!G$Db_2": {
+        "variant": 2,
+        "file": "Major/G$Csharp!G$Db_2.py",
+        "chord_type": "Major"
+      },
+      "G$Csharp!G$Db_3": {
+        "variant": 3,
+        "file": "Major/G$Csharp!G$Db_3.py",
+        "chord_type": "Major"
+      },
+      "G$Csharp!G$Db_4": {
+        "variant": 4,
+        "file": "Major/G$Csharp!G$Db_4.py",
+        "chord_type": "Major"
+      },
+      "G$Csharp!G$Db_5": {
+        "variant": 5,
+        "file": "Major/G$Csharp!G$Db_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\Db": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Ре-бемоль",
+    "variants": [
+      "G$Csharp!G$Db_1",
+      "G$Csharp!G$Db_2",
+      "G$Csharp!G$Db_3",
+      "G$Csharp!G$Db_4",
+      "G$Csharp!G$Db_5"
+    ],
+    "configs": {
+      "G$Csharp!G$Db_1": {
+        "variant": 1,
+        "file": "Major/G$Csharp!G$Db_1.py",
+        "chord_type": "Major"
+      },
+      "G$Csharp!G$Db_2": {
+        "variant": 2,
+        "file": "Major/G$Csharp!G$Db_2.py",
+        "chord_type": "Major"
+      },
+      "G$Csharp!G$Db_3": {
+        "variant": 3,
+        "file": "Major/G$Csharp!G$Db_3.py",
+        "chord_type": "Major"
+      },
+      "G$Csharp!G$Db_4": {
+        "variant": 4,
+        "file": "Major/G$Csharp!G$Db_4.py",
+        "chord_type": "Major"
+      },
+      "G$Csharp!G$Db_5": {
+        "variant": 5,
+        "file": "Major/G$Csharp!G$Db_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\C": {
+    "type": "Major",
+    "description": "Соль-мажор с басом До",
+    "variants": [
+      "G$C_1",
+      "G$C_2",
+      "G$C_3",
+      "G$C_4",
+      "G$C_5",
+      "G$C_6"
+    ],
+    "configs": {
+      "G$C_1": {
+        "variant": 1,
+        "file": "Major/G$C_1.py",
+        "chord_type": "Major"
+      },
+      "G$C_2": {
+        "variant": 2,
+        "file": "Major/G$C_2.py",
+        "chord_type": "Major"
+      },
+      "G$C_3": {
+        "variant": 3,
+        "file": "Major/G$C_3.py",
+        "chord_type": "Major"
+      },
+      "G$C_4": {
+        "variant": 4,
+        "file": "Major/G$C_4.py",
+        "chord_type": "Major"
+      },
+      "G$C_5": {
+        "variant": 5,
+        "file": "Major/G$C_5.py",
+        "chord_type": "Major"
+      },
+      "G$C_6": {
+        "variant": 6,
+        "file": "Major/G$C_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\D#": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Ре-диез",
+    "variants": [
+      "G$Dsharp!G$Eb_1"
+    ],
+    "configs": {
+      "G$Dsharp!G$Eb_1": {
+        "variant": 1,
+        "file": "Major/G$Dsharp!G$Eb_1.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\Eb": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Ми-бемоль",
+    "variants": [
+      "G$Dsharp!G$Eb_1"
+    ],
+    "configs": {
+      "G$Dsharp!G$Eb_1": {
+        "variant": 1,
+        "file": "Major/G$Dsharp!G$Eb_1.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\D": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Ре",
+    "variants": [
+      "G$D_1",
+      "G$D_2",
+      "G$D_3",
+      "G$D_4",
+      "G$D_5"
+    ],
+    "configs": {
+      "G$D_1": {
+        "variant": 1,
+        "file": "Major/G$D_1.py",
+        "chord_type": "Major"
+      },
+      "G$D_2": {
+        "variant": 2,
+        "file": "Major/G$D_2.py",
+        "chord_type": "Major"
+      },
+      "G$D_3": {
+        "variant": 3,
+        "file": "Major/G$D_3.py",
+        "chord_type": "Major"
+      },
+      "G$D_4": {
+        "variant": 4,
+        "file": "Major/G$D_4.py",
+        "chord_type": "Major"
+      },
+      "G$D_5": {
+        "variant": 5,
+        "file": "Major/G$D_5.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\E": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Ми",
+    "variants": [
+      "G$E_1",
+      "G$E_2",
+      "G$E_3",
+      "G$E_4",
+      "G$E_5",
+      "G$E_6",
+      "G$E_7"
+    ],
+    "configs": {
+      "G$E_1": {
+        "variant": 1,
+        "file": "Major/G$E_1.py",
+        "chord_type": "Major"
+      },
+      "G$E_2": {
+        "variant": 2,
+        "file": "Major/G$E_2.py",
+        "chord_type": "Major"
+      },
+      "G$E_3": {
+        "variant": 3,
+        "file": "Major/G$E_3.py",
+        "chord_type": "Major"
+      },
+      "G$E_4": {
+        "variant": 4,
+        "file": "Major/G$E_4.py",
+        "chord_type": "Major"
+      },
+      "G$E_5": {
+        "variant": 5,
+        "file": "Major/G$E_5.py",
+        "chord_type": "Major"
+      },
+      "G$E_6": {
+        "variant": 6,
+        "file": "Major/G$E_6.py",
+        "chord_type": "Major"
+      },
+      "G$E_7": {
+        "variant": 7,
+        "file": "Major/G$E_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\F#": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Фа-диез",
+    "variants": [
+      "G$Fsharp!G$Gb_1",
+      "G$Fsharp!G$Gb_2",
+      "G$Fsharp!G$Gb_3",
+      "G$Fsharp!G$Gb_4",
+      "G$Fsharp!G$Gb_5",
+      "G$Fsharp!G$Gb_6",
+      "G$Fsharp!G$Gb_7"
+    ],
+    "configs": {
+      "G$Fsharp!G$Gb_1": {
+        "variant": 1,
+        "file": "Major/G$Fsharp!G$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_2": {
+        "variant": 2,
+        "file": "Major/G$Fsharp!G$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_3": {
+        "variant": 3,
+        "file": "Major/G$Fsharp!G$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_4": {
+        "variant": 4,
+        "file": "Major/G$Fsharp!G$Gb_4.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_5": {
+        "variant": 5,
+        "file": "Major/G$Fsharp!G$Gb_5.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_6": {
+        "variant": 6,
+        "file": "Major/G$Fsharp!G$Gb_6.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_7": {
+        "variant": 7,
+        "file": "Major/G$Fsharp!G$Gb_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\Gb": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Соль-бемоль",
+    "variants": [
+      "G$Fsharp!G$Gb_1",
+      "G$Fsharp!G$Gb_2",
+      "G$Fsharp!G$Gb_3",
+      "G$Fsharp!G$Gb_4",
+      "G$Fsharp!G$Gb_5",
+      "G$Fsharp!G$Gb_6",
+      "G$Fsharp!G$Gb_7"
+    ],
+    "configs": {
+      "G$Fsharp!G$Gb_1": {
+        "variant": 1,
+        "file": "Major/G$Fsharp!G$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_2": {
+        "variant": 2,
+        "file": "Major/G$Fsharp!G$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_3": {
+        "variant": 3,
+        "file": "Major/G$Fsharp!G$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_4": {
+        "variant": 4,
+        "file": "Major/G$Fsharp!G$Gb_4.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_5": {
+        "variant": 5,
+        "file": "Major/G$Fsharp!G$Gb_5.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_6": {
+        "variant": 6,
+        "file": "Major/G$Fsharp!G$Gb_6.py",
+        "chord_type": "Major"
+      },
+      "G$Fsharp!G$Gb_7": {
+        "variant": 7,
+        "file": "Major/G$Fsharp!G$Gb_7.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G\\F": {
+    "type": "Major",
+    "description": "Соль-мажор с басом Фа",
+    "variants": [
+      "G$F_1",
+      "G$F_2",
+      "G$F_3",
+      "G$F_4",
+      "G$F_5",
+      "G$F_6"
+    ],
+    "configs": {
+      "G$F_1": {
+        "variant": 1,
+        "file": "Major/G$F_1.py",
+        "chord_type": "Major"
+      },
+      "G$F_2": {
+        "variant": 2,
+        "file": "Major/G$F_2.py",
+        "chord_type": "Major"
+      },
+      "G$F_3": {
+        "variant": 3,
+        "file": "Major/G$F_3.py",
+        "chord_type": "Major"
+      },
+      "G$F_4": {
+        "variant": 4,
+        "file": "Major/G$F_4.py",
+        "chord_type": "Major"
+      },
+      "G$F_5": {
+        "variant": 5,
+        "file": "Major/G$F_5.py",
+        "chord_type": "Major"
+      },
+      "G$F_6": {
+        "variant": 6,
+        "file": "Major/G$F_6.py",
         "chord_type": "Major"
       }
     }
@@ -30320,6 +39550,850 @@ ALL_CHORDS = {
       }
     }
   },
+  "G#\\A": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Ля",
+    "variants": [
+      "Gsharp$A!Ab$A_1",
+      "Gsharp$A!Ab$A_2"
+    ],
+    "configs": {
+      "Gsharp$A!Ab$A_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$A!Ab$A_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$A!Ab$A_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$A!Ab$A_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\A": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Ля",
+    "variants": [
+      "Gsharp$A!Ab$A_1",
+      "Gsharp$A!Ab$A_2"
+    ],
+    "configs": {
+      "Gsharp$A!Ab$A_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$A!Ab$A_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$A!Ab$A_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$A!Ab$A_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\A#": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Ля-диез",
+    "variants": [
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1",
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2"
+    ],
+    "configs": {
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\A#": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Ля-диез",
+    "variants": [
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1",
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2"
+    ],
+    "configs": {
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\Bb": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Си-бемоль",
+    "variants": [
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1",
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2"
+    ],
+    "configs": {
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\Bb": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Си-бемоль",
+    "variants": [
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1",
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2"
+    ],
+    "configs": {
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Asharp!Ab$Asharp!Gsharp$Bb!Ab$Bb_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\B": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Си",
+    "variants": [
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_1",
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_2"
+    ],
+    "configs": {
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$B!Ab$B!Gsharp$H!Ab$H_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$B!Ab$B!Gsharp$H!Ab$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\B": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Си",
+    "variants": [
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_1",
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_2"
+    ],
+    "configs": {
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$B!Ab$B!Gsharp$H!Ab$H_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$B!Ab$B!Gsharp$H!Ab$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\H": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Си",
+    "variants": [
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_1",
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_2"
+    ],
+    "configs": {
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$B!Ab$B!Gsharp$H!Ab$H_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$B!Ab$B!Gsharp$H!Ab$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\H": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Си",
+    "variants": [
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_1",
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_2"
+    ],
+    "configs": {
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$B!Ab$B!Gsharp$H!Ab$H_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$B!Ab$B!Gsharp$H!Ab$H_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$B!Ab$B!Gsharp$H!Ab$H_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\C": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом До",
+    "variants": [
+      "Gsharp$C!Ab$C_1",
+      "Gsharp$C!Ab$C_2",
+      "Gsharp$C!Ab$C_3"
+    ],
+    "configs": {
+      "Gsharp$C!Ab$C_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$C!Ab$C_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$C!Ab$C_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$C!Ab$C_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$C!Ab$C_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$C!Ab$C_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\C": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом До",
+    "variants": [
+      "Gsharp$C!Ab$C_1",
+      "Gsharp$C!Ab$C_2",
+      "Gsharp$C!Ab$C_3"
+    ],
+    "configs": {
+      "Gsharp$C!Ab$C_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$C!Ab$C_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$C!Ab$C_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$C!Ab$C_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$C!Ab$C_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$C!Ab$C_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\C#": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом До-диез",
+    "variants": [
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1",
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2",
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3"
+    ],
+    "configs": {
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\C#": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом До-диез",
+    "variants": [
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1",
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2",
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3"
+    ],
+    "configs": {
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\Db": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Ре-бемоль",
+    "variants": [
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1",
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2",
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3"
+    ],
+    "configs": {
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\Db": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Ре-бемоль",
+    "variants": [
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1",
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2",
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3"
+    ],
+    "configs": {
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Csharp!Ab$Csharp!Gsharp$Db!Ab$Db_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\D": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Ре",
+    "variants": [
+      "Gsharp$D!Ab$D_1",
+      "Gsharp$D!Ab$D_2"
+    ],
+    "configs": {
+      "Gsharp$D!Ab$D_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$D!Ab$D_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$D!Ab$D_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$D!Ab$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\D": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Ре",
+    "variants": [
+      "Gsharp$D!Ab$D_1",
+      "Gsharp$D!Ab$D_2"
+    ],
+    "configs": {
+      "Gsharp$D!Ab$D_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$D!Ab$D_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$D!Ab$D_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$D!Ab$D_2.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\D#": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Ре-диез",
+    "variants": [
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1",
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2",
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3"
+    ],
+    "configs": {
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\D#": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Ре-диез",
+    "variants": [
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1",
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2",
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3"
+    ],
+    "configs": {
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\Eb": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Ми-бемоль",
+    "variants": [
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1",
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2",
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3"
+    ],
+    "configs": {
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\Eb": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Ми-бемоль",
+    "variants": [
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1",
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2",
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3"
+    ],
+    "configs": {
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Dsharp!Ab$Dsharp!Gsharp$Eb!Ab$Eb_3.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\E": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Ми",
+    "variants": [
+      "Gsharp$E!Ab$E_1",
+      "Gsharp$E!Ab$E_2",
+      "Gsharp$E!Ab$E_3",
+      "Gsharp$E!Ab$E_4"
+    ],
+    "configs": {
+      "Gsharp$E!Ab$E_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$E!Ab$E_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$E!Ab$E_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$E!Ab$E_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$E!Ab$E_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$E!Ab$E_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$E!Ab$E_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$E!Ab$E_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\E": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Ми",
+    "variants": [
+      "Gsharp$E!Ab$E_1",
+      "Gsharp$E!Ab$E_2",
+      "Gsharp$E!Ab$E_3",
+      "Gsharp$E!Ab$E_4"
+    ],
+    "configs": {
+      "Gsharp$E!Ab$E_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$E!Ab$E_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$E!Ab$E_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$E!Ab$E_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$E!Ab$E_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$E!Ab$E_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$E!Ab$E_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$E!Ab$E_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\F": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Фа",
+    "variants": [
+      "Gsharp$F!Ab$F_1",
+      "Gsharp$F!Ab$F_2",
+      "Gsharp$F!Ab$F_3",
+      "Gsharp$F!Ab$F_4",
+      "Gsharp$F!Ab$F_5",
+      "Gsharp$F!Ab$F_6"
+    ],
+    "configs": {
+      "Gsharp$F!Ab$F_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$F!Ab$F_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$F!Ab$F_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$F!Ab$F_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$F!Ab$F_4.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_5": {
+        "variant": 5,
+        "file": "Major/Gsharp$F!Ab$F_5.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_6": {
+        "variant": 6,
+        "file": "Major/Gsharp$F!Ab$F_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\F": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Фа",
+    "variants": [
+      "Gsharp$F!Ab$F_1",
+      "Gsharp$F!Ab$F_2",
+      "Gsharp$F!Ab$F_3",
+      "Gsharp$F!Ab$F_4",
+      "Gsharp$F!Ab$F_5",
+      "Gsharp$F!Ab$F_6"
+    ],
+    "configs": {
+      "Gsharp$F!Ab$F_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$F!Ab$F_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$F!Ab$F_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$F!Ab$F_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$F!Ab$F_4.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_5": {
+        "variant": 5,
+        "file": "Major/Gsharp$F!Ab$F_5.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$F!Ab$F_6": {
+        "variant": 6,
+        "file": "Major/Gsharp$F!Ab$F_6.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\F#": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Фа-диез",
+    "variants": [
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4"
+    ],
+    "configs": {
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\F#": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Фа-диез",
+    "variants": [
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4"
+    ],
+    "configs": {
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\Gb": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Соль-бемоль",
+    "variants": [
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4"
+    ],
+    "configs": {
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\Gb": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Соль-бемоль",
+    "variants": [
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3",
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4"
+    ],
+    "configs": {
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$Fsharp!Ab$Fsharp!Gsharp$Gb!Ab$Gb_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "G#\\G": {
+    "type": "Major",
+    "description": "Соль-диез-мажор с басом Соль",
+    "variants": [
+      "Gsharp$G!Ab$G_1",
+      "Gsharp$G!Ab$G_2",
+      "Gsharp$G!Ab$G_3",
+      "Gsharp$G!Ab$G_4"
+    ],
+    "configs": {
+      "Gsharp$G!Ab$G_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$G!Ab$G_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$G!Ab$G_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$G!Ab$G_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$G!Ab$G_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$G!Ab$G_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$G!Ab$G_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$G!Ab$G_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
+  "Ab\\G": {
+    "type": "Major",
+    "description": "Ля-бемоль-мажор с басом Соль",
+    "variants": [
+      "Gsharp$G!Ab$G_1",
+      "Gsharp$G!Ab$G_2",
+      "Gsharp$G!Ab$G_3",
+      "Gsharp$G!Ab$G_4"
+    ],
+    "configs": {
+      "Gsharp$G!Ab$G_1": {
+        "variant": 1,
+        "file": "Major/Gsharp$G!Ab$G_1.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$G!Ab$G_2": {
+        "variant": 2,
+        "file": "Major/Gsharp$G!Ab$G_2.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$G!Ab$G_3": {
+        "variant": 3,
+        "file": "Major/Gsharp$G!Ab$G_3.py",
+        "chord_type": "Major"
+      },
+      "Gsharp$G!Ab$G_4": {
+        "variant": 4,
+        "file": "Major/Gsharp$G!Ab$G_4.py",
+        "chord_type": "Major"
+      }
+    }
+  },
   "Am": {
     "type": "Minor",
     "description": "Ля минор",
@@ -30468,6 +40542,466 @@ ALL_CHORDS = {
       }
     }
   },
+  "Cm\\A#": {
+    "type": "Minor",
+    "description": "До-минор с басом Ля-диез",
+    "variants": [
+      "Cm$Asharp!Cm$Bb_1",
+      "Cm$Asharp!Cm$Bb_2",
+      "Cm$Asharp!Cm$Bb_3"
+    ],
+    "configs": {
+      "Cm$Asharp!Cm$Bb_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Asharp!Cm$Bb_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Asharp!Cm$Bb_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Asharp!Cm$Bb_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Asharp!Cm$Bb_3": {
+        "variant": 3,
+        "file": "Minor/Cm$Asharp!Cm$Bb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\Bb": {
+    "type": "Minor",
+    "description": "До-минор с басом Си-бемоль",
+    "variants": [
+      "Cm$Asharp!Cm$Bb_1",
+      "Cm$Asharp!Cm$Bb_2",
+      "Cm$Asharp!Cm$Bb_3"
+    ],
+    "configs": {
+      "Cm$Asharp!Cm$Bb_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Asharp!Cm$Bb_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Asharp!Cm$Bb_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Asharp!Cm$Bb_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Asharp!Cm$Bb_3": {
+        "variant": 3,
+        "file": "Minor/Cm$Asharp!Cm$Bb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\A": {
+    "type": "Minor",
+    "description": "До-минор с басом Ля",
+    "variants": [
+      "Cm$A_1",
+      "Cm$A_2",
+      "Cm$A_3"
+    ],
+    "configs": {
+      "Cm$A_1": {
+        "variant": 1,
+        "file": "Minor/Cm$A_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$A_2": {
+        "variant": 2,
+        "file": "Minor/Cm$A_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$A_3": {
+        "variant": 3,
+        "file": "Minor/Cm$A_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\B": {
+    "type": "Minor",
+    "description": "До-минор с басом Си",
+    "variants": [
+      "Cm$B!Cm$H_1",
+      "Cm$B!Cm$H_2"
+    ],
+    "configs": {
+      "Cm$B!Cm$H_1": {
+        "variant": 1,
+        "file": "Minor/Cm$B!Cm$H_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$B!Cm$H_2": {
+        "variant": 2,
+        "file": "Minor/Cm$B!Cm$H_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\H": {
+    "type": "Minor",
+    "description": "До-минор с басом Си",
+    "variants": [
+      "Cm$B!Cm$H_1",
+      "Cm$B!Cm$H_2"
+    ],
+    "configs": {
+      "Cm$B!Cm$H_1": {
+        "variant": 1,
+        "file": "Minor/Cm$B!Cm$H_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$B!Cm$H_2": {
+        "variant": 2,
+        "file": "Minor/Cm$B!Cm$H_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\C#": {
+    "type": "Minor",
+    "description": "До-минор с басом До-диез",
+    "variants": [
+      "Cm$Csharp!Cm$Db_1",
+      "Cm$Csharp!Cm$Db_2",
+      "Cm$Csharp!Cm$Db_3"
+    ],
+    "configs": {
+      "Cm$Csharp!Cm$Db_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Csharp!Cm$Db_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Csharp!Cm$Db_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Csharp!Cm$Db_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Csharp!Cm$Db_3": {
+        "variant": 3,
+        "file": "Minor/Cm$Csharp!Cm$Db_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\Db": {
+    "type": "Minor",
+    "description": "До-минор с басом Ре-бемоль",
+    "variants": [
+      "Cm$Csharp!Cm$Db_1",
+      "Cm$Csharp!Cm$Db_2",
+      "Cm$Csharp!Cm$Db_3"
+    ],
+    "configs": {
+      "Cm$Csharp!Cm$Db_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Csharp!Cm$Db_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Csharp!Cm$Db_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Csharp!Cm$Db_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Csharp!Cm$Db_3": {
+        "variant": 3,
+        "file": "Minor/Cm$Csharp!Cm$Db_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\D#": {
+    "type": "Minor",
+    "description": "До-минор с басом Ре-диез",
+    "variants": [
+      "Cm$Dsharp!Cm$Eb_1",
+      "Cm$Dsharp!Cm$Eb_2"
+    ],
+    "configs": {
+      "Cm$Dsharp!Cm$Eb_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Dsharp!Cm$Eb_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Dsharp!Cm$Eb_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Dsharp!Cm$Eb_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\Eb": {
+    "type": "Minor",
+    "description": "До-минор с басом Ми-бемоль",
+    "variants": [
+      "Cm$Dsharp!Cm$Eb_1",
+      "Cm$Dsharp!Cm$Eb_2"
+    ],
+    "configs": {
+      "Cm$Dsharp!Cm$Eb_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Dsharp!Cm$Eb_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Dsharp!Cm$Eb_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Dsharp!Cm$Eb_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\D": {
+    "type": "Minor",
+    "description": "До-минор с басом Ре",
+    "variants": [
+      "Cm$D_1",
+      "Cm$D_2",
+      "Cm$D_3"
+    ],
+    "configs": {
+      "Cm$D_1": {
+        "variant": 1,
+        "file": "Minor/Cm$D_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$D_2": {
+        "variant": 2,
+        "file": "Minor/Cm$D_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$D_3": {
+        "variant": 3,
+        "file": "Minor/Cm$D_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\E": {
+    "type": "Minor",
+    "description": "До-минор с басом Ми",
+    "variants": [
+      "Cm$E_1",
+      "Cm$E_2",
+      "Cm$E_3",
+      "Cm$E_4"
+    ],
+    "configs": {
+      "Cm$E_1": {
+        "variant": 1,
+        "file": "Minor/Cm$E_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$E_2": {
+        "variant": 2,
+        "file": "Minor/Cm$E_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$E_3": {
+        "variant": 3,
+        "file": "Minor/Cm$E_3.py",
+        "chord_type": "Minor"
+      },
+      "Cm$E_4": {
+        "variant": 4,
+        "file": "Minor/Cm$E_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\F#": {
+    "type": "Minor",
+    "description": "До-минор с басом Фа-диез",
+    "variants": [
+      "Cm$Fsharp!Cm$Gb_1",
+      "Cm$Fsharp!Cm$Gb_2",
+      "Cm$Fsharp!Cm$Gb_3"
+    ],
+    "configs": {
+      "Cm$Fsharp!Cm$Gb_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Fsharp!Cm$Gb_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Fsharp!Cm$Gb_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Fsharp!Cm$Gb_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Fsharp!Cm$Gb_3": {
+        "variant": 3,
+        "file": "Minor/Cm$Fsharp!Cm$Gb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\Gb": {
+    "type": "Minor",
+    "description": "До-минор с басом Соль-бемоль",
+    "variants": [
+      "Cm$Fsharp!Cm$Gb_1",
+      "Cm$Fsharp!Cm$Gb_2",
+      "Cm$Fsharp!Cm$Gb_3"
+    ],
+    "configs": {
+      "Cm$Fsharp!Cm$Gb_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Fsharp!Cm$Gb_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Fsharp!Cm$Gb_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Fsharp!Cm$Gb_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Fsharp!Cm$Gb_3": {
+        "variant": 3,
+        "file": "Minor/Cm$Fsharp!Cm$Gb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\F": {
+    "type": "Minor",
+    "description": "До-минор с басом Фа",
+    "variants": [
+      "Cm$F_1",
+      "Cm$F_2"
+    ],
+    "configs": {
+      "Cm$F_1": {
+        "variant": 1,
+        "file": "Minor/Cm$F_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$F_2": {
+        "variant": 2,
+        "file": "Minor/Cm$F_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\G#": {
+    "type": "Minor",
+    "description": "До-минор с басом Соль-диез",
+    "variants": [
+      "Cm$Gsharp!Cm$Ab_1",
+      "Cm$Gsharp!Cm$Ab_2",
+      "Cm$Gsharp!Cm$Ab_3",
+      "Cm$Gsharp!Cm$Ab_4",
+      "Cm$Gsharp!Cm$Ab_5",
+      "Cm$Gsharp!Cm$Ab_6"
+    ],
+    "configs": {
+      "Cm$Gsharp!Cm$Ab_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_3": {
+        "variant": 3,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_3.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_4": {
+        "variant": 4,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_4.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_5": {
+        "variant": 5,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_5.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_6": {
+        "variant": 6,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_6.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\Ab": {
+    "type": "Minor",
+    "description": "До-минор с басом Ля-бемоль",
+    "variants": [
+      "Cm$Gsharp!Cm$Ab_1",
+      "Cm$Gsharp!Cm$Ab_2",
+      "Cm$Gsharp!Cm$Ab_3",
+      "Cm$Gsharp!Cm$Ab_4",
+      "Cm$Gsharp!Cm$Ab_5",
+      "Cm$Gsharp!Cm$Ab_6"
+    ],
+    "configs": {
+      "Cm$Gsharp!Cm$Ab_1": {
+        "variant": 1,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_2": {
+        "variant": 2,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_3": {
+        "variant": 3,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_3.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_4": {
+        "variant": 4,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_4.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_5": {
+        "variant": 5,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_5.py",
+        "chord_type": "Minor"
+      },
+      "Cm$Gsharp!Cm$Ab_6": {
+        "variant": 6,
+        "file": "Minor/Cm$Gsharp!Cm$Ab_6.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Cm\\G": {
+    "type": "Minor",
+    "description": "До-минор с басом Соль",
+    "variants": [
+      "Cm$G_1",
+      "Cm$G_2",
+      "Cm$G_3",
+      "Cm$G_4"
+    ],
+    "configs": {
+      "Cm$G_1": {
+        "variant": 1,
+        "file": "Minor/Cm$G_1.py",
+        "chord_type": "Minor"
+      },
+      "Cm$G_2": {
+        "variant": 2,
+        "file": "Minor/Cm$G_2.py",
+        "chord_type": "Minor"
+      },
+      "Cm$G_3": {
+        "variant": 3,
+        "file": "Minor/Cm$G_3.py",
+        "chord_type": "Minor"
+      },
+      "Cm$G_4": {
+        "variant": 4,
+        "file": "Minor/Cm$G_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
   "Cm": {
     "type": "Minor",
     "description": "До минор",
@@ -30552,6 +41086,1328 @@ ALL_CHORDS = {
       }
     }
   },
+  "C#m\\A": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Ля",
+    "variants": [
+      "Csharpm$A!Dbm$A_1",
+      "Csharpm$A!Dbm$A_2",
+      "Csharpm$A!Dbm$A_3",
+      "Csharpm$A!Dbm$A_4",
+      "Csharpm$A!Dbm$A_5",
+      "Csharpm$A!Dbm$A_6"
+    ],
+    "configs": {
+      "Csharpm$A!Dbm$A_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$A!Dbm$A_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$A!Dbm$A_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$A!Dbm$A_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$A!Dbm$A_4.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_5": {
+        "variant": 5,
+        "file": "Minor/Csharpm$A!Dbm$A_5.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_6": {
+        "variant": 6,
+        "file": "Minor/Csharpm$A!Dbm$A_6.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\A": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Ля",
+    "variants": [
+      "Csharpm$A!Dbm$A_1",
+      "Csharpm$A!Dbm$A_2",
+      "Csharpm$A!Dbm$A_3",
+      "Csharpm$A!Dbm$A_4",
+      "Csharpm$A!Dbm$A_5",
+      "Csharpm$A!Dbm$A_6"
+    ],
+    "configs": {
+      "Csharpm$A!Dbm$A_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$A!Dbm$A_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$A!Dbm$A_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$A!Dbm$A_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$A!Dbm$A_4.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_5": {
+        "variant": 5,
+        "file": "Minor/Csharpm$A!Dbm$A_5.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$A!Dbm$A_6": {
+        "variant": 6,
+        "file": "Minor/Csharpm$A!Dbm$A_6.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\A#": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Ля-диез",
+    "variants": [
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1",
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2",
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3"
+    ],
+    "configs": {
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\A#": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Ля-диез",
+    "variants": [
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1",
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2",
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3"
+    ],
+    "configs": {
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\Bb": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Си-бемоль",
+    "variants": [
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1",
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2",
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3"
+    ],
+    "configs": {
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\Bb": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Си-бемоль",
+    "variants": [
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1",
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2",
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3"
+    ],
+    "configs": {
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Asharp!Dbm$Asharp!Csharpm$Bb!Dbm$Bb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\B": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Си",
+    "variants": [
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4"
+    ],
+    "configs": {
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\B": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Си",
+    "variants": [
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4"
+    ],
+    "configs": {
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\H": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Си",
+    "variants": [
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4"
+    ],
+    "configs": {
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\H": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Си",
+    "variants": [
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3",
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4"
+    ],
+    "configs": {
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$B!Dbm$B!Csharpm$H!Dbm$H_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\C": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом До",
+    "variants": [
+      "Csharpm$C!Dbm$C_1",
+      "Csharpm$C!Dbm$C_2"
+    ],
+    "configs": {
+      "Csharpm$C!Dbm$C_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$C!Dbm$C_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$C!Dbm$C_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$C!Dbm$C_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\C": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом До",
+    "variants": [
+      "Csharpm$C!Dbm$C_1",
+      "Csharpm$C!Dbm$C_2"
+    ],
+    "configs": {
+      "Csharpm$C!Dbm$C_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$C!Dbm$C_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$C!Dbm$C_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$C!Dbm$C_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\D": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Ре",
+    "variants": [
+      "Csharpm$D!Dbm$D_1",
+      "Csharpm$D!Dbm$D_2"
+    ],
+    "configs": {
+      "Csharpm$D!Dbm$D_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$D!Dbm$D_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$D!Dbm$D_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$D!Dbm$D_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\D": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Ре",
+    "variants": [
+      "Csharpm$D!Dbm$D_1",
+      "Csharpm$D!Dbm$D_2"
+    ],
+    "configs": {
+      "Csharpm$D!Dbm$D_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$D!Dbm$D_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$D!Dbm$D_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$D!Dbm$D_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\D#": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Ре-диез",
+    "variants": [
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4"
+    ],
+    "configs": {
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\D#": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Ре-диез",
+    "variants": [
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4"
+    ],
+    "configs": {
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\Eb": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Ми-бемоль",
+    "variants": [
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4"
+    ],
+    "configs": {
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\Eb": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Ми-бемоль",
+    "variants": [
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3",
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4"
+    ],
+    "configs": {
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_3.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4": {
+        "variant": 4,
+        "file": "Minor/Csharpm$Dsharp!Dbm$Dsharp!Csharpm$Eb!Dbm$Eb_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\E": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Ми",
+    "variants": [
+      "Csharpm$E!Dbm$E_1"
+    ],
+    "configs": {
+      "Csharpm$E!Dbm$E_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$E!Dbm$E_1.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\E": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Ми",
+    "variants": [
+      "Csharpm$E!Dbm$E_1"
+    ],
+    "configs": {
+      "Csharpm$E!Dbm$E_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$E!Dbm$E_1.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\F": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Фа",
+    "variants": [
+      "Csharpm$F!Dbm$F_1"
+    ],
+    "configs": {
+      "Csharpm$F!Dbm$F_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$F!Dbm$F_1.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\F": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Фа",
+    "variants": [
+      "Csharpm$F!Dbm$F_1"
+    ],
+    "configs": {
+      "Csharpm$F!Dbm$F_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$F!Dbm$F_1.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\F#": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Фа-диез",
+    "variants": [
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1",
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2",
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3"
+    ],
+    "configs": {
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\F#": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Фа-диез",
+    "variants": [
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1",
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2",
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3"
+    ],
+    "configs": {
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\Gb": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Соль-бемоль",
+    "variants": [
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1",
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2",
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3"
+    ],
+    "configs": {
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\Gb": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Соль-бемоль",
+    "variants": [
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1",
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2",
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3"
+    ],
+    "configs": {
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Fsharp!Dbm$Fsharp!Csharpm$Gb!Dbm$Gb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\G": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Соль",
+    "variants": [
+      "Csharpm$G!Dbm$G_1",
+      "Csharpm$G!Dbm$G_2",
+      "Csharpm$G!Dbm$G_3"
+    ],
+    "configs": {
+      "Csharpm$G!Dbm$G_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$G!Dbm$G_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$G!Dbm$G_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$G!Dbm$G_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$G!Dbm$G_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$G!Dbm$G_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\G": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Соль",
+    "variants": [
+      "Csharpm$G!Dbm$G_1",
+      "Csharpm$G!Dbm$G_2",
+      "Csharpm$G!Dbm$G_3"
+    ],
+    "configs": {
+      "Csharpm$G!Dbm$G_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$G!Dbm$G_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$G!Dbm$G_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$G!Dbm$G_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$G!Dbm$G_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$G!Dbm$G_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\G#": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Соль-диез",
+    "variants": [
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1",
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2",
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3"
+    ],
+    "configs": {
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\G#": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Соль-диез",
+    "variants": [
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1",
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2",
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3"
+    ],
+    "configs": {
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "C#m\\Ab": {
+    "type": "Minor",
+    "description": "До-диез-минор с басом Ля-бемоль",
+    "variants": [
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1",
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2",
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3"
+    ],
+    "configs": {
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dbm\\Ab": {
+    "type": "Minor",
+    "description": "Ре-бемоль-минор с басом Ля-бемоль",
+    "variants": [
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1",
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2",
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3"
+    ],
+    "configs": {
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1": {
+        "variant": 1,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_1.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2": {
+        "variant": 2,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_2.py",
+        "chord_type": "Minor"
+      },
+      "Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3": {
+        "variant": 3,
+        "file": "Minor/Csharpm$Gsharp!Dbm$Gsharp!Csharpm$Ab!Dbm$Ab_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\A#": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Ля-диез",
+    "variants": [
+      "Dm$Asharp!Dm$Bb_1",
+      "Dm$Asharp!Dm$Bb_2",
+      "Dm$Asharp!Dm$Bb_3",
+      "Dm$Asharp!Dm$Bb_4",
+      "Dm$Asharp!Dm$Bb_5"
+    ],
+    "configs": {
+      "Dm$Asharp!Dm$Bb_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Asharp!Dm$Bb_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Asharp!Dm$Bb_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Asharp!Dm$Bb_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Asharp!Dm$Bb_3": {
+        "variant": 3,
+        "file": "Minor/Dm$Asharp!Dm$Bb_3.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Asharp!Dm$Bb_4": {
+        "variant": 4,
+        "file": "Minor/Dm$Asharp!Dm$Bb_4.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Asharp!Dm$Bb_5": {
+        "variant": 5,
+        "file": "Minor/Dm$Asharp!Dm$Bb_5.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\Bb": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Си-бемоль",
+    "variants": [
+      "Dm$Asharp!Dm$Bb_1",
+      "Dm$Asharp!Dm$Bb_2",
+      "Dm$Asharp!Dm$Bb_3",
+      "Dm$Asharp!Dm$Bb_4",
+      "Dm$Asharp!Dm$Bb_5"
+    ],
+    "configs": {
+      "Dm$Asharp!Dm$Bb_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Asharp!Dm$Bb_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Asharp!Dm$Bb_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Asharp!Dm$Bb_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Asharp!Dm$Bb_3": {
+        "variant": 3,
+        "file": "Minor/Dm$Asharp!Dm$Bb_3.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Asharp!Dm$Bb_4": {
+        "variant": 4,
+        "file": "Minor/Dm$Asharp!Dm$Bb_4.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Asharp!Dm$Bb_5": {
+        "variant": 5,
+        "file": "Minor/Dm$Asharp!Dm$Bb_5.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\A": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Ля",
+    "variants": [
+      "Dm$A_1",
+      "Dm$A_2",
+      "Dm$A_3"
+    ],
+    "configs": {
+      "Dm$A_1": {
+        "variant": 1,
+        "file": "Minor/Dm$A_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$A_2": {
+        "variant": 2,
+        "file": "Minor/Dm$A_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$A_3": {
+        "variant": 3,
+        "file": "Minor/Dm$A_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\B": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Си",
+    "variants": [
+      "Dm$B!Dm$H_1",
+      "Dm$B!Dm$H_2",
+      "Dm$B!Dm$H_3",
+      "Dm$B!Dm$H_4",
+      "Dm$B!Dm$H_5"
+    ],
+    "configs": {
+      "Dm$B!Dm$H_1": {
+        "variant": 1,
+        "file": "Minor/Dm$B!Dm$H_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$B!Dm$H_2": {
+        "variant": 2,
+        "file": "Minor/Dm$B!Dm$H_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$B!Dm$H_3": {
+        "variant": 3,
+        "file": "Minor/Dm$B!Dm$H_3.py",
+        "chord_type": "Minor"
+      },
+      "Dm$B!Dm$H_4": {
+        "variant": 4,
+        "file": "Minor/Dm$B!Dm$H_4.py",
+        "chord_type": "Minor"
+      },
+      "Dm$B!Dm$H_5": {
+        "variant": 5,
+        "file": "Minor/Dm$B!Dm$H_5.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\H": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Си",
+    "variants": [
+      "Dm$B!Dm$H_1",
+      "Dm$B!Dm$H_2",
+      "Dm$B!Dm$H_3",
+      "Dm$B!Dm$H_4",
+      "Dm$B!Dm$H_5"
+    ],
+    "configs": {
+      "Dm$B!Dm$H_1": {
+        "variant": 1,
+        "file": "Minor/Dm$B!Dm$H_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$B!Dm$H_2": {
+        "variant": 2,
+        "file": "Minor/Dm$B!Dm$H_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$B!Dm$H_3": {
+        "variant": 3,
+        "file": "Minor/Dm$B!Dm$H_3.py",
+        "chord_type": "Minor"
+      },
+      "Dm$B!Dm$H_4": {
+        "variant": 4,
+        "file": "Minor/Dm$B!Dm$H_4.py",
+        "chord_type": "Minor"
+      },
+      "Dm$B!Dm$H_5": {
+        "variant": 5,
+        "file": "Minor/Dm$B!Dm$H_5.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\C#": {
+    "type": "Minor",
+    "description": "Ре-минор с басом До-диез",
+    "variants": [
+      "Dm$Csharp!Dm$Db_1",
+      "Dm$Csharp!Dm$Db_2"
+    ],
+    "configs": {
+      "Dm$Csharp!Dm$Db_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Csharp!Dm$Db_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Csharp!Dm$Db_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Csharp!Dm$Db_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\Db": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Ре-бемоль",
+    "variants": [
+      "Dm$Csharp!Dm$Db_1",
+      "Dm$Csharp!Dm$Db_2"
+    ],
+    "configs": {
+      "Dm$Csharp!Dm$Db_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Csharp!Dm$Db_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Csharp!Dm$Db_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Csharp!Dm$Db_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\C": {
+    "type": "Minor",
+    "description": "Ре-минор с басом До",
+    "variants": [
+      "Dm$C_1",
+      "Dm$C_2",
+      "Dm$C_3",
+      "Dm$C_4"
+    ],
+    "configs": {
+      "Dm$C_1": {
+        "variant": 1,
+        "file": "Minor/Dm$C_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$C_2": {
+        "variant": 2,
+        "file": "Minor/Dm$C_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$C_3": {
+        "variant": 3,
+        "file": "Minor/Dm$C_3.py",
+        "chord_type": "Minor"
+      },
+      "Dm$C_4": {
+        "variant": 4,
+        "file": "Minor/Dm$C_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\D#": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Ре-диез",
+    "variants": [
+      "Dm$Dsharp!Dm$Eb_1",
+      "Dm$Dsharp!Dm$Eb_2"
+    ],
+    "configs": {
+      "Dm$Dsharp!Dm$Eb_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Dsharp!Dm$Eb_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Dsharp!Dm$Eb_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Dsharp!Dm$Eb_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\Eb": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Ми-бемоль",
+    "variants": [
+      "Dm$Dsharp!Dm$Eb_1",
+      "Dm$Dsharp!Dm$Eb_2"
+    ],
+    "configs": {
+      "Dm$Dsharp!Dm$Eb_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Dsharp!Dm$Eb_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Dsharp!Dm$Eb_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Dsharp!Dm$Eb_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\E": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Ми",
+    "variants": [
+      "Dm$E_1",
+      "Dm$E_2",
+      "Dm$E_3"
+    ],
+    "configs": {
+      "Dm$E_1": {
+        "variant": 1,
+        "file": "Minor/Dm$E_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$E_2": {
+        "variant": 2,
+        "file": "Minor/Dm$E_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$E_3": {
+        "variant": 3,
+        "file": "Minor/Dm$E_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\F#": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Фа-диез",
+    "variants": [
+      "Dm$Fsharp!Dm$Gb_1",
+      "Dm$Fsharp!Dm$Gb_2",
+      "Dm$Fsharp!Dm$Gb_3"
+    ],
+    "configs": {
+      "Dm$Fsharp!Dm$Gb_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Fsharp!Dm$Gb_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Fsharp!Dm$Gb_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Fsharp!Dm$Gb_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Fsharp!Dm$Gb_3": {
+        "variant": 3,
+        "file": "Minor/Dm$Fsharp!Dm$Gb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\Gb": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Соль-бемоль",
+    "variants": [
+      "Dm$Fsharp!Dm$Gb_1",
+      "Dm$Fsharp!Dm$Gb_2",
+      "Dm$Fsharp!Dm$Gb_3"
+    ],
+    "configs": {
+      "Dm$Fsharp!Dm$Gb_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Fsharp!Dm$Gb_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Fsharp!Dm$Gb_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Fsharp!Dm$Gb_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Fsharp!Dm$Gb_3": {
+        "variant": 3,
+        "file": "Minor/Dm$Fsharp!Dm$Gb_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\F": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Фа",
+    "variants": [
+      "Dm$F_1"
+    ],
+    "configs": {
+      "Dm$F_1": {
+        "variant": 1,
+        "file": "Minor/Dm$F_1.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\G#": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Соль-диез",
+    "variants": [
+      "Dm$Gsharp!Dm$Ab_1",
+      "Dm$Gsharp!Dm$Ab_2",
+      "Dm$Gsharp!Dm$Ab_3",
+      "Dm$Gsharp!Dm$Ab_4"
+    ],
+    "configs": {
+      "Dm$Gsharp!Dm$Ab_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Gsharp!Dm$Ab_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Gsharp!Dm$Ab_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Gsharp!Dm$Ab_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Gsharp!Dm$Ab_3": {
+        "variant": 3,
+        "file": "Minor/Dm$Gsharp!Dm$Ab_3.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Gsharp!Dm$Ab_4": {
+        "variant": 4,
+        "file": "Minor/Dm$Gsharp!Dm$Ab_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\Ab": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Ля-бемоль",
+    "variants": [
+      "Dm$Gsharp!Dm$Ab_1",
+      "Dm$Gsharp!Dm$Ab_2",
+      "Dm$Gsharp!Dm$Ab_3",
+      "Dm$Gsharp!Dm$Ab_4"
+    ],
+    "configs": {
+      "Dm$Gsharp!Dm$Ab_1": {
+        "variant": 1,
+        "file": "Minor/Dm$Gsharp!Dm$Ab_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Gsharp!Dm$Ab_2": {
+        "variant": 2,
+        "file": "Minor/Dm$Gsharp!Dm$Ab_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Gsharp!Dm$Ab_3": {
+        "variant": 3,
+        "file": "Minor/Dm$Gsharp!Dm$Ab_3.py",
+        "chord_type": "Minor"
+      },
+      "Dm$Gsharp!Dm$Ab_4": {
+        "variant": 4,
+        "file": "Minor/Dm$Gsharp!Dm$Ab_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Dm\\G": {
+    "type": "Minor",
+    "description": "Ре-минор с басом Соль",
+    "variants": [
+      "Dm$G_1",
+      "Dm$G_2",
+      "Dm$G_3",
+      "Dm$G_4"
+    ],
+    "configs": {
+      "Dm$G_1": {
+        "variant": 1,
+        "file": "Minor/Dm$G_1.py",
+        "chord_type": "Minor"
+      },
+      "Dm$G_2": {
+        "variant": 2,
+        "file": "Minor/Dm$G_2.py",
+        "chord_type": "Minor"
+      },
+      "Dm$G_3": {
+        "variant": 3,
+        "file": "Minor/Dm$G_3.py",
+        "chord_type": "Minor"
+      },
+      "Dm$G_4": {
+        "variant": 4,
+        "file": "Minor/Dm$G_4.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
   "Dm": {
     "type": "Minor",
     "description": "Ре минор",
@@ -30632,6 +42488,46 @@ ALL_CHORDS = {
       "Dsharpm!Ebm_3": {
         "variant": 3,
         "file": "Minor/Dsharpm!Ebm_3.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "D#m\\E": {
+    "type": "Minor",
+    "description": "Ре-диез-минор с басом Ми",
+    "variants": [
+      "Dsharpm$E!Ebm$E_1",
+      "Dsharpm$E!Ebm$E_2"
+    ],
+    "configs": {
+      "Dsharpm$E!Ebm$E_1": {
+        "variant": 1,
+        "file": "Minor/Dsharpm$E!Ebm$E_1.py",
+        "chord_type": "Minor"
+      },
+      "Dsharpm$E!Ebm$E_2": {
+        "variant": 2,
+        "file": "Minor/Dsharpm$E!Ebm$E_2.py",
+        "chord_type": "Minor"
+      }
+    }
+  },
+  "Ebm\\E": {
+    "type": "Minor",
+    "description": "Ми-бемоль-минор с басом Ми",
+    "variants": [
+      "Dsharpm$E!Ebm$E_1",
+      "Dsharpm$E!Ebm$E_2"
+    ],
+    "configs": {
+      "Dsharpm$E!Ebm$E_1": {
+        "variant": 1,
+        "file": "Minor/Dsharpm$E!Ebm$E_1.py",
+        "chord_type": "Minor"
+      },
+      "Dsharpm$E!Ebm$E_2": {
+        "variant": 2,
+        "file": "Minor/Dsharpm$E!Ebm$E_2.py",
         "chord_type": "Minor"
       }
     }
