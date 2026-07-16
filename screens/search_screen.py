@@ -1,4 +1,4 @@
-# screens/search_screen.py - с поиском терминов (без изменения дизайна)
+# screens/search_screen.py - с поддержкой новых дублирующих экранов
 """
 Экран поиска (аккорды, песни и термины)
 """
@@ -157,7 +157,7 @@ class ResultCard(MDCard):
         self.spacing = dp(10)
         self.radius = [theme.CORNER_RADIUS_SMALL] * 4
         self.elevation = 0
-        self.ripple_behavior = False  # Отключаем для производительности
+        self.ripple_behavior = False
         self.theme_bg_color = "Custom"
         self.md_bg_color = [0, 0, 0, 0.08]
         self.line_color = [1, 1, 1, 0.08]
@@ -167,7 +167,6 @@ class ResultCard(MDCard):
         self._build_ui()
 
     def _build_ui(self):
-        # Иконка в зависимости от типа
         self.icon_image = Image(
             size_hint=(None, None),
             size=(dp(28), dp(28)),
@@ -229,7 +228,6 @@ class ResultCard(MDCard):
         self.bind(on_release=self._on_click)
 
     def _load_icon(self):
-        """Загружает иконку в зависимости от типа результата"""
         if self.result_type == 'chord':
             icon_name = 'chord_png'
         elif self.result_type == 'term':
@@ -247,7 +245,6 @@ class ResultCard(MDCard):
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконки {icon_name}: {e}")
 
-        # Заглушки
         if self.result_type == 'chord':
             self.icon_image.text = "🎸"
         elif self.result_type == 'term':
@@ -279,7 +276,6 @@ class SearchScreen(BaseScreen):
         logger.info('✅ Экран поиска создан')
 
     def load_background(self):
-        """Загружает фоновое изображение"""
         try:
             if HAS_ASSETS:
                 asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
@@ -306,27 +302,21 @@ class SearchScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def set_chords_screen(self, chords_screen):
-        """Устанавливает ссылку на экран аккордов"""
         self.chords_screen = chords_screen
         logger.info("🎸 Установлен chords_screen")
 
     def set_dictionary_screen(self, dictionary_screen):
-        """Устанавливает ссылку на экран словаря"""
         self.dictionary_screen = dictionary_screen
         logger.info("📚 Установлен dictionary_screen")
 
     def init_ui(self):
-        """Инициализирует UI с правильными отступами"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Верхний отступ (под статус-бар и TopNav)
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # Небольшой отступ сверху для эстетики
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
-        # Заголовок
         self.title_label = MDLabel(
             text="Что будем искать?",
             font_size=sp(16),
@@ -339,10 +329,8 @@ class SearchScreen(BaseScreen):
         )
         main_layout.add_widget(self.title_label)
 
-        # Небольшой отступ между заголовком и строкой поиска
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(16)))
 
-        # Поисковая строка
         self.search_bar = SearchBar(
             on_search=self.perform_search,
             on_clear=self.clear_search,
@@ -350,10 +338,8 @@ class SearchScreen(BaseScreen):
         )
         main_layout.add_widget(self.search_bar)
 
-        # Небольшой отступ перед результатами
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
-        # Контейнер для результатов с правильными отступами снизу
         bottom_padding = layout_config.get_bottom_padding()
 
         cards_container = MDBoxLayout(
@@ -363,7 +349,6 @@ class SearchScreen(BaseScreen):
         )
         cards_container.clip = True
 
-        # ScrollView для результатов (скрываем скроллбар)
         scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
@@ -409,7 +394,6 @@ class SearchScreen(BaseScreen):
             self._search_thread = None
 
     def on_text_changed(self, text):
-        """Только отслеживаем изменение текста, поиск только по Enter или кнопке"""
         pass
 
     def clear_search(self):
@@ -425,7 +409,6 @@ class SearchScreen(BaseScreen):
         logger.info("✅ Поиск очищен")
 
     def perform_search(self, query):
-        """Выполняет поиск только по Enter или кнопке"""
         logger.info(f"🔍 perform_search: query='{query}'")
         query = query.strip()
         self.current_query = query
@@ -469,7 +452,6 @@ class SearchScreen(BaseScreen):
             Clock.schedule_once(lambda dt: self._search_error(str(e)), 0)
 
     def _search_chords(self, query):
-        """Поиск аккордов - точное совпадение и по альтернативным названиям"""
         if not self.chords_screen or not hasattr(self.chords_screen, 'all_chords'):
             return []
 
@@ -528,7 +510,6 @@ class SearchScreen(BaseScreen):
         return unique[:15]
 
     def _search_songs(self, query):
-        """Поиск песен через API"""
         if len(query) < 2:
             return []
         try:
@@ -544,7 +525,6 @@ class SearchScreen(BaseScreen):
             return []
 
     def _search_terms(self, query):
-        """Поиск терминов из словаря"""
         if not self.dictionary_screen:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'screen_manager'):
@@ -693,6 +673,8 @@ class SearchScreen(BaseScreen):
         )
         self.results_list.add_widget(error_label)
 
+    # ============ ОБРАБОТЧИКИ РЕЗУЛЬТАТОВ (С ПОДДЕРЖКОЙ ДУБЛИРУЮЩИХ ЭКРАНОВ) ============
+
     def on_result_selected(self, result_type, chord_name, song_id, term_name):
         """Обработчик выбора результата"""
         if result_type == "chord" and chord_name:
@@ -703,39 +685,60 @@ class SearchScreen(BaseScreen):
             self.select_term(term_name)
 
     def select_chord(self, chord_name):
-        """Выбор аккорда"""
-        logger.info(f"🎸 Выбран аккорд: {chord_name}")
-
-        if not self.chords_screen:
-            notify.error("Ошибка навигации")
-            return
+        """Выбор аккорда ИЗ ПОИСКА - переход на chord_detail"""
+        logger.info(f"🎸 Выбран аккорд из поиска: {chord_name}")
 
         # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
         screen_state.set_previous_screen('search')
+        screen_state.set_pending_chord(chord_name)
 
-        if hasattr(self.chords_screen, 'select_chord_by_name'):
-            self.chords_screen.select_chord_by_name(chord_name)
-        elif hasattr(self.chords_screen, 'load_chord_by_name'):
-            self.chords_screen.load_chord_by_name(chord_name)
-
-        if self.manager and self.manager.has_screen('chords'):
+        if self.manager and self.manager.has_screen('chord_detail'):
+            chord_detail = self.manager.get_screen('chord_detail')
+            # Передаём аккорд через set_pending_chord, а экран сам загрузит
+            self.manager.current = 'chord_detail'
+            logger.info(f"✅ Переход на ChordDetailScreen с аккордом: {chord_name}")
+        elif self.manager and self.manager.has_screen('chords'):
+            # Fallback на основной экран аккордов
             self.manager.current = 'chords'
+            logger.info(f"✅ Переход на ChordsScreen с аккордом: {chord_name}")
+        else:
+            notify.error("Экран аккордов не найден")
 
     def select_song(self, song_id):
-        logger.info(f"🎵 Выбрана песня: {song_id}")
+        """Выбор песни ИЗ ПОИСКА - переход на search_screen_detail"""
+        logger.info(f"🎵 Выбрана песня из поиска: {song_id}")
+
+        # Находим исполнителя и название
+        artist = ""
+        title = ""
+        for child in self.results_list.children:
+            if hasattr(child, 'song_id') and child.song_id == song_id:
+                artist = child.title if hasattr(child, 'title') else ""
+                title = child.subtitle if hasattr(child, 'subtitle') else ""
+                break
 
         # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
         screen_state.set_previous_screen('search')
 
-        if self.manager and self.manager.has_screen('song_detail'):
-            song_detail = self.manager.get_screen('song_detail')
-            song_detail.set_previous_screen('search')
-            song_detail.set_song(song_id)
-            self.manager.current = 'song_detail'
+        if self.manager and self.manager.has_screen('search_screen_detail'):
+            search_screen_detail = self.manager.get_screen('search_screen_detail')
+            search_screen_detail.set_song(song_id, artist, title)
+            self.manager.current = 'search_screen_detail'
+            logger.info(f"✅ Переход на SearchScreenDetail: {title}")
+        else:
+            # Fallback
+            if self.manager and self.manager.has_screen('song_detail'):
+                song_detail = self.manager.get_screen('song_detail')
+                song_detail.set_previous_screen('search')
+                song_detail.set_song(song_id)
+                self.manager.current = 'song_detail'
+                logger.info(f"✅ Переход на SongDetail (fallback): {title}")
+            else:
+                notify.error("Экран песни не найден")
 
     def select_term(self, term_name):
-        """Выбор термина"""
-        logger.info(f"📚 Выбран термин: {term_name}")
+        """Выбор термина ИЗ ПОИСКА - переход на search_term_detail"""
+        logger.info(f"📚 Выбран термин из поиска: {term_name}")
 
         if not self.dictionary_screen:
             notify.error("Ошибка навигации")
@@ -749,10 +752,20 @@ class SearchScreen(BaseScreen):
         # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
         screen_state.set_previous_screen('search')
 
-        if self.manager and self.manager.has_screen('term_detail'):
-            term_detail = self.manager.get_screen('term_detail')
-            term_detail.set_term(term_name, term_data, 'search')
-            self.manager.current = 'term_detail'
+        if self.manager and self.manager.has_screen('search_term_detail'):
+            search_term_detail = self.manager.get_screen('search_term_detail')
+            search_term_detail.set_term(term_name, term_data)
+            self.manager.current = 'search_term_detail'
+            logger.info(f"✅ Переход на SearchTermDetail: {term_name}")
+        else:
+            # Fallback
+            if self.manager and self.manager.has_screen('term_detail'):
+                term_detail = self.manager.get_screen('term_detail')
+                term_detail.set_term(term_name, term_data, 'search')
+                self.manager.current = 'term_detail'
+                logger.info(f"✅ Переход на TermDetail (fallback): {term_name}")
+            else:
+                notify.error("Экран термина не найден")
 
     def refresh_search(self):
         logger.info("🔄 refresh_search вызван")

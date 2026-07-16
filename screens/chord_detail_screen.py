@@ -1,0 +1,812 @@
+# screens/chord_detail_screen.py
+"""
+Экран просмотра аккорда ИЗ ПОИСКА (search_screen)
+Возврат только в SearchScreen
+Полная копия ChordsScreen но с возвратом в search
+"""
+from kivy.uix.behaviors import ButtonBehavior
+from kivymd.app import MDApp
+from kivymd.uix.label import MDLabel
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDIconButton, MDRaisedButton
+from kivymd.uix.card import MDCard
+from kivy.metrics import dp, sp
+from kivy.clock import Clock
+from kivy.graphics import Color, Rectangle
+from kivy.uix.image import Image
+from kivy.uix.widget import Widget
+from kivy.uix.scrollview import ScrollView
+from kivy.core.image import Image as CoreImage
+from kivy.core.window import Window
+from kivy.animation import Animation
+from kivy.uix.carousel import Carousel
+from io import BytesIO
+import pkgutil
+import importlib
+import re
+import traceback
+
+from config.theme import theme
+from config.logger_config import screen_logger
+from config.layout_config import layout_config
+from screens.base_screen import BaseScreen
+from screens.chord_renderer import ChordRenderer
+from utils.notifications import notify
+from utils.screen_state import screen_state
+
+logger = screen_logger('ChordDetail')
+
+try:
+    from data import load_asset_as_bytes
+
+    HAS_ASSETS = True
+except ImportError:
+    HAS_ASSETS = False
+
+
+    def load_asset_as_bytes(name):
+        return None
+
+# Константы (копия из chords_screen)
+TONALITIES = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
+
+CHORD_TYPES = [
+    "Major", "Minor", "7", "m7", "Dim", "Dim7", "Aug", "sus2",
+    "sus4", "maj7", "7sus4", "maj9", "maj11", "maj13", "maj9#11", "maj13#11",
+    "add9", "6add9", "maj7b5", "maj7#5", "m6", "m9", "m11", "m13",
+    "madd9", "m6add9", "mmaj7", "mmaj9", "m7b5", "m7#5", "6", "9",
+    "11", "13", "7b5", "7#5", "7b9", "7#9", "7(b5,b9)", "7(b5,#9)",
+    "7(#5,b9)", "7(#5,#9)", "9b5", "9#5", "13#11", "13b9", "11b9",
+    "sus2sus4", "-5", "5"
+]
+
+
+# ============ КОНТЕЙНЕР С КАРУСЕЛЬЮ (КОПИЯ ИЗ CHORDS) ============
+class SwipeContainer(MDBoxLayout):
+    """Контейнер с Carousel для аккордов"""
+
+    def __init__(self, on_swipe_horizontal=None, on_swipe_vertical=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_swipe_horizontal = on_swipe_horizontal
+        self.on_swipe_vertical = on_swipe_vertical
+        self._touch_start_x = 0
+        self._touch_start_y = 0
+        self._touch_moved = False
+        self._is_dragging = False
+        self._drag_threshold = 20
+        self._is_vertical_swipe = False
+
+        self.orientation = 'vertical'
+        self.size_hint = (1, None)
+        self.height = dp(420)
+        self.md_bg_color = [0, 0, 0, 0]
+        self.spacing = 0
+
+        self.chord_name_label = MDLabel(
+            text="A | Amaj",
+            font_size=sp(22),
+            halign="center",
+            bold=True,
+            size_hint_y=None,
+            height=dp(32 + 16),
+            padding=[0, dp(8), 0, 0],
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95]
+        )
+        self.add_widget(self.chord_name_label)
+
+        self.carousel = Carousel(
+            direction='right',
+            loop=True,
+            size_hint=(1, 1),
+            anim_move_duration=0.3
+        )
+        self.carousel.bind(current_slide=self._on_carousel_slide)
+        self.add_widget(self.carousel)
+
+        self.slides = []
+        self.renderers = []
+        self.current_index = 0
+
+    def _build_griff_wrapper(self):
+        wrapper = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[dp(8), dp(12), dp(8), dp(4)],
+            md_bg_color=[0, 0, 0, 0]
+        )
+        return wrapper
+
+    def add_slide(self, chord_module):
+        slide = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        wrapper = self._build_griff_wrapper()
+
+        renderer = ChordRenderer()
+
+        try:
+            bg_data = load_asset_as_bytes("griff_png")
+            if bg_data:
+                img = CoreImage(BytesIO(bg_data), ext="png")
+                if img and img.texture:
+                    renderer.set_background(img.texture)
+        except Exception as e:
+            logger.error(f"Ошибка загрузки фона грифа: {e}")
+
+        if chord_module:
+            renderer.load_chord(chord_module)
+            renderer.set_mode("finger")
+
+        wrapper.add_widget(renderer)
+        slide.add_widget(wrapper)
+        self.carousel.add_widget(slide)
+        self.slides.append(slide)
+        self.renderers.append(renderer)
+        return slide, renderer
+
+    def clear_slides(self):
+        self.carousel.clear_widgets()
+        self.slides = []
+        self.renderers = []
+        self.current_index = 0
+
+    def set_current_slide(self, index):
+        if 0 <= index < len(self.slides):
+            self.carousel.load_slide(self.slides[index])
+            self.current_index = index
+
+    def _on_carousel_slide(self, instance, slide):
+        if not self.slides:
+            return
+        try:
+            index = self.slides.index(slide)
+            if index != self.current_index:
+                self.current_index = index
+        except ValueError:
+            pass
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            self._touch_start_x = touch.x
+            self._touch_start_y = touch.y
+            self._touch_moved = False
+            self._is_dragging = False
+            self._is_vertical_swipe = False
+            touch.grab(self)
+            return True
+        return super().on_touch_down(touch)
+
+    def on_touch_move(self, touch):
+        if touch.grab_current is self:
+            dx = touch.x - self._touch_start_x
+            dy = touch.y - self._touch_start_y
+
+            if abs(dx) > self._drag_threshold or abs(dy) > self._drag_threshold:
+                self._touch_moved = True
+                self._is_dragging = True
+
+                if abs(dx) > abs(dy):
+                    self._is_vertical_swipe = False
+                    self.carousel.on_touch_move(touch)
+                else:
+                    self._is_vertical_swipe = True
+
+            return True
+        return super().on_touch_move(touch)
+
+    def on_touch_up(self, touch):
+        if touch.grab_current is self:
+            if self._touch_moved:
+                dx = touch.x - self._touch_start_x
+                dy = touch.y - self._touch_start_y
+
+                abs_dx = abs(dx)
+                abs_dy = abs(dy)
+
+                if abs_dx > 50 and abs_dx > abs_dy:
+                    if self.on_swipe_horizontal:
+                        if dx < 0:
+                            self.on_swipe_horizontal(1)
+                            self.carousel.load_next()
+                        else:
+                            self.on_swipe_horizontal(-1)
+                            self.carousel.load_previous()
+
+                elif abs_dy > 50 and abs_dy > abs_dx:
+                    if self.on_swipe_vertical:
+                        if dy < 0:
+                            self.on_swipe_vertical(1)
+                        else:
+                            self.on_swipe_vertical(-1)
+                        self._animate_vertical_swipe()
+
+            touch.ungrab(self)
+            self._touch_moved = False
+            self._is_dragging = False
+            self._is_vertical_swipe = False
+            return True
+        return super().on_touch_up(touch)
+
+    def _animate_vertical_swipe(self):
+        anim_out = Animation(opacity=0, duration=0.15, t='out_quad')
+        anim_out.bind(on_complete=lambda *args: self._on_vertical_anim_complete())
+        anim_out.start(self.carousel)
+
+    def _on_vertical_anim_complete(self):
+        anim_in = Animation(opacity=1, duration=0.15, t='in_quad')
+        anim_in.start(self.carousel)
+
+    def update_renderer_mode(self, mode):
+        for renderer in self.renderers:
+            renderer.set_mode(mode)
+
+
+class ChordDetailScreen(BaseScreen):
+    """
+    Экран просмотра аккорда ИЗ ПОИСКА
+    Возврат ТОЛЬКО в SearchScreen
+    """
+    TONALITIES = TONALITIES
+    CHORD_TYPES = CHORD_TYPES
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = 'chord_detail'
+        self.all_chords = []
+        self.current_chord_module = None
+
+        self.current_tonality = "A"
+        self.current_tonality_index = 0
+        self.current_type = "Major"
+        self.current_type_index = 0
+        self.current_chord_name = "A"
+        self.current_chord_data = None
+        self.current_chord_index = 0
+        self.available_chords = []
+
+        self.current_position = 1
+        self.current_variants = []
+        self.current_variant_index = 0
+        self.current_mode = "finger"
+
+        self.bg_image = None
+        self._griff_height = dp(280)
+        self._update_griff_timer = None
+        self.swipe_container = None
+        self._data_loaded = False
+        self._chord_to_load = None
+
+        self.init_ui()
+        self.load_background()
+
+        Clock.schedule_once(lambda dt: self.scan_chords(), 0.1)
+        logger.info('ChordDetailScreen создан')
+
+    def load_background(self):
+        try:
+            if HAS_ASSETS:
+                asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
+                bg_data = None
+                for name in asset_names:
+                    bg_data = load_asset_as_bytes(name)
+                    if bg_data:
+                        logger.info(f"Фон загружен из ассета: {name}")
+                        break
+
+                if bg_data:
+                    img = CoreImage(BytesIO(bg_data), ext="jpg")
+                    with self.canvas.before:
+                        Color(1, 1, 1, 1)
+                        self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
+                    self.bind(pos=self._update_bg, size=self._update_bg)
+                    return
+        except Exception as e:
+            logger.error(f'Ошибка загрузки фона: {e}')
+
+    def _update_bg(self, *args):
+        if self.bg_image:
+            self.bg_image.pos = self.pos
+            self.bg_image.size = self.size
+
+    def _update_griff_size(self, *args):
+        if hasattr(self, 'swipe_container') and self.swipe_container:
+            window_width = Window.width
+            padding_total = dp(24)
+            available_width = window_width - padding_total
+            griff_height = available_width * 0.45
+
+            min_height = dp(200)
+            max_height = window_width * 0.6
+
+            if griff_height < min_height:
+                griff_height = min_height
+            if griff_height > max_height:
+                griff_height = max_height
+
+            griff_height = int(griff_height)
+            self._griff_height = griff_height
+            self.swipe_container.height = griff_height + dp(80)
+
+            logger.info(f"📐 Гриф обновлён: {griff_height}dp")
+
+    def _add_chord_slide(self, chord_module):
+        if self.swipe_container:
+            self.swipe_container.add_slide(chord_module)
+            if self.swipe_container.slides:
+                self.swipe_container.set_current_slide(len(self.swipe_container.slides) - 1)
+
+    def _update_display(self):
+        if not self.current_variants:
+            return
+
+        variant = self.current_variants[self.current_variant_index]
+        self.current_chord_module = variant['module']
+
+        chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
+        name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
+
+        if len(name_parts) > 1:
+            main_name = name_parts[0]
+            other_names = []
+            for name in name_parts[1:]:
+                if name != main_name and name not in other_names:
+                    other_names.append(name)
+
+            if other_names:
+                display_name = f"{main_name} ({', '.join(other_names)})"
+            else:
+                display_name = main_name
+        else:
+            display_name = name_parts[0] if name_parts else "?"
+
+        if self.swipe_container:
+            self.swipe_container.chord_name_label.text = display_name
+
+        self._add_chord_slide(self.current_chord_module)
+
+    def init_ui(self):
+        padding = layout_config.get_content_padding()
+        horizontal_padding = [padding[0], 0, padding[2], 0]
+
+        content = MDBoxLayout(
+            orientation='vertical',
+            spacing=0,
+            size_hint=(1, 1),
+            padding=[0, 0, 0, 0]
+        )
+
+        # Отступ сверху под TopNav
+        top_padding = layout_config.get_top_padding()
+        if top_padding < dp(48):
+            top_padding = dp(48)
+        content.add_widget(Widget(size_hint_y=None, height=top_padding))
+
+        self.swipe_container = SwipeContainer(
+            on_swipe_horizontal=self._on_swipe_horizontal,
+            on_swipe_vertical=self._on_swipe_vertical
+        )
+        self.swipe_container.size_hint = (1, None)
+        self.swipe_container.height = self._griff_height + dp(80)
+        content.add_widget(self.swipe_container)
+
+        Window.bind(on_resize=self._on_window_resize)
+
+        content.add_widget(Widget(size_hint_y=None, height=dp(4)))
+
+        # Информационная метка
+        self._info_label = MDLabel(
+            text="Свайп влево/вправо - смена тональности\nСвайп вверх/вниз - смена типа аккорда",
+            font_size=sp(11),
+            halign="center",
+            size_hint_y=None,
+            height=dp(36),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.4]
+        )
+        content.add_widget(self._info_label)
+
+        content.add_widget(Widget(size_hint_y=1))
+
+        self.build_ui(
+            content_widget=content,
+            use_scroll=False
+        )
+
+        Clock.schedule_once(self._update_griff_size, 0.1)
+        Clock.schedule_once(self._update_griff_size, 0.3)
+        Clock.schedule_once(self._update_griff_size, 0.5)
+
+    # ============ ОБРАБОТЧИКИ СВАЙПА ============
+
+    def _on_swipe_horizontal(self, step):
+        self._change_tonality(step)
+
+    def _on_swipe_vertical(self, step):
+        self._change_chord_type(step)
+
+    def _change_tonality(self, step):
+        if not self.available_chords:
+            return
+
+        old_tonality = self.current_tonality
+        old_chord_name = self.current_chord_name
+        chord_type = self.current_type
+        chord_suffix = old_chord_name[len(old_tonality):]
+
+        try:
+            current_index = self.TONALITIES.index(old_tonality)
+        except ValueError:
+            current_index = 0
+
+        total = len(self.TONALITIES)
+        new_index = (current_index + step) % total
+        new_tonality = self.TONALITIES[new_index]
+
+        if new_tonality == old_tonality:
+            return
+
+        self.current_tonality = new_tonality
+        self.current_tonality_index = new_index
+        self.update_available_chords()
+
+        target_chord = None
+        for chord in self.available_chords:
+            if chord.startswith(new_tonality) and chord.endswith(chord_suffix):
+                target_chord = chord
+                break
+
+        if target_chord is None and self.available_chords:
+            for chord in self.available_chords:
+                chord_data = self._find_chord_data(chord)
+                if chord_data and chord_data.get('type') == chord_type:
+                    target_chord = chord
+                    break
+
+        if target_chord is None and self.available_chords:
+            target_chord = self.available_chords[0]
+
+        if target_chord:
+            self.current_chord_name = target_chord
+            self.current_chord_index = self.available_chords.index(target_chord)
+            self._load_variants_for_chord(self.current_chord_name)
+            self._update_display()
+
+        logger.info(f"🎵 Тональность изменена: {old_tonality} → {new_tonality}")
+
+    def _change_chord_type(self, step):
+        if not self.available_chords:
+            return
+
+        old_type = self.current_type
+        old_tonality = self.current_tonality
+        old_chord_name = self.current_chord_name
+        chord_suffix = old_chord_name[len(old_tonality):]
+
+        try:
+            current_index = self.CHORD_TYPES.index(old_type)
+        except ValueError:
+            current_index = 0
+
+        total = len(self.CHORD_TYPES)
+        new_index = (current_index + step) % total
+        new_type = self.CHORD_TYPES[new_index]
+
+        if new_type == old_type:
+            return
+
+        self.current_type = new_type
+        self.current_type_index = new_index
+        self.update_available_chords()
+
+        target_chord = None
+        for chord in self.available_chords:
+            if chord.startswith(old_tonality):
+                chord_data = self._find_chord_data(chord)
+                if chord_data and chord_data.get('type') == new_type:
+                    target_chord = chord
+                    break
+
+        if target_chord is None:
+            for chord in self.available_chords:
+                if chord.startswith(old_tonality) and chord.endswith(chord_suffix):
+                    target_chord = chord
+                    break
+
+        if target_chord is None and self.available_chords:
+            for chord in self.available_chords:
+                if chord.startswith(old_tonality):
+                    target_chord = chord
+                    break
+
+        if target_chord is None and self.available_chords:
+            target_chord = self.available_chords[0]
+
+        if target_chord:
+            self.current_chord_name = target_chord
+            self.current_chord_index = self.available_chords.index(target_chord)
+            self._load_variants_for_chord(self.current_chord_name)
+            self._update_display()
+
+        logger.info(f"🎵 Тип аккорда изменён: {old_type} → {new_type}")
+
+    def _find_chord_data(self, chord_name):
+        for chord in self.all_chords:
+            if chord['short_name'] == chord_name:
+                return chord
+        return None
+
+    # ============ МЕТОДЫ ЗАГРУЗКИ АККОРДОВ ============
+
+    def scan_chords(self):
+        print("\n" + "=" * 60)
+        print("SCAN_CHORDS (ChordDetail): Начинаю сканирование аккордов")
+        self.all_chords = []
+        try:
+            import chords
+            self._scan_module_recursive(chords, 'chords')
+        except ImportError as e:
+            print(f"❌ Пакет chords не найден: {e}")
+        except Exception as e:
+            print(f"❌ Непредвиденная ошибка: {e}")
+            traceback.print_exc()
+        print(f"РЕЗУЛЬТАТ: Загружено {len(self.all_chords)} аккордов")
+
+        self.update_available_chords()
+        self._data_loaded = True
+
+        # Если есть ожидающий аккорд - загружаем его
+        if self._chord_to_load:
+            chord_name = self._chord_to_load
+            self._chord_to_load = None
+            Clock.schedule_once(lambda dt: self.select_chord_by_name(chord_name), 0.1)
+
+    def _scan_module_recursive(self, module, module_path):
+        try:
+            if hasattr(module, '__path__'):
+                for module_info in pkgutil.iter_modules(module.__path__, f"{module_path}."):
+                    try:
+                        sub_module = importlib.import_module(module_info.name)
+                        if hasattr(sub_module, '__path__'):
+                            self._scan_module_recursive(sub_module, module_info.name)
+                        else:
+                            self._load_chord_module(sub_module, module_info.name)
+                    except Exception as e:
+                        print(f"    ❌ Ошибка импорта {module_info.name}: {e}")
+        except Exception as e:
+            print(f"  ❌ Ошибка сканирования {module_path}: {e}")
+
+    def _load_chord_module(self, module, module_name):
+        try:
+            metadata = getattr(module, 'METADATA', {})
+            chord_name = metadata.get('name', module_name.split('.')[-1])
+            chord_name = chord_name.replace('!', '|').replace('$', '/')
+            path_parts = module_name.split('.')
+            chord_type = metadata.get('type', '')
+            if not chord_type and len(path_parts) >= 2:
+                chord_type = path_parts[-2]
+            variant_match = re.search(r'_(\d+)$', path_parts[-1])
+            variant_num = int(variant_match.group(1)) if variant_match else metadata.get('variant', 1)
+            short_name = chord_name.split('|')[0].replace('$', '/')
+            chord_data = {
+                'id': f"{short_name}_{chord_type}_v{variant_num}",
+                'name': chord_name,
+                'short_name': short_name,
+                'variant': variant_num,
+                'type': chord_type,
+                'description': metadata.get('description', ''),
+                'module': module,
+                'path': module_name
+            }
+            self.all_chords.append(chord_data)
+        except Exception as e:
+            print(f"    ❌ Ошибка загрузки модуля {module_name}: {e}")
+
+    def update_available_chords(self):
+        filtered = []
+        for chord in self.all_chords:
+            tonality = self.extract_tonality(chord['name'])
+            if tonality != self.current_tonality:
+                continue
+            chord_types = chord['type'].split('|') if chord['type'] else []
+            if self.current_type not in chord_types and self.current_type != chord.get('type', ''):
+                continue
+            filtered.append(chord)
+
+        chords_by_name = {}
+        for chord in filtered:
+            name = chord['short_name']
+            if name not in chords_by_name:
+                chords_by_name[name] = []
+            chords_by_name[name].append(chord)
+
+        self.available_chords = sorted(chords_by_name.keys())
+
+        if self.available_chords:
+            if self.current_chord_name not in self.available_chords:
+                self.current_chord_index = 0
+                self.current_chord_name = self.available_chords[0]
+
+            chord_data = chords_by_name.get(self.current_chord_name)
+            if chord_data:
+                self.load_chord_variants(chord_data)
+        else:
+            self.available_chords = []
+            self.current_variants = []
+            self.current_chord_data = None
+
+    def extract_tonality(self, chord_name):
+        if not chord_name:
+            return ""
+        match = re.match(r'^([A-H][#b]?)', chord_name)
+        return match.group(1) if match else (chord_name[0] if chord_name else "")
+
+    def load_chord_variants(self, variants):
+        if not variants:
+            return
+        variants.sort(key=lambda x: x['variant'])
+        self.current_variants = variants
+        self.current_variant_index = 0
+        self.current_position = 1
+        self._update_display()
+
+    def _load_variants_for_chord(self, chord_name):
+        variants = []
+        for chord in self.all_chords:
+            if chord['short_name'] == chord_name:
+                tonality = self.extract_tonality(chord['name'])
+                if tonality == self.current_tonality:
+                    chord_types = chord['type'].split('|') if chord['type'] else []
+                    if self.current_type in chord_types or self.current_type == chord.get('type', ''):
+                        variants.append(chord)
+
+        if variants:
+            variants.sort(key=lambda x: x['variant'])
+            self.current_variants = variants
+            self.current_variant_index = 0
+            self.current_position = 1
+            self._update_display()
+        else:
+            self.current_variants = []
+            self.current_variant_index = 0
+            self.current_position = 1
+
+    def select_chord_by_name(self, chord_name):
+        """Загружает аккорд по имени"""
+        logger.info(f"🎸 select_chord_by_name (ChordDetail): ищем аккорд '{chord_name}'")
+
+        if not self._data_loaded:
+            logger.info("   ⏳ Данные ещё не загружены, сохраняем для загрузки позже")
+            self._chord_to_load = chord_name
+            return False
+
+        target_chord = None
+        for chord in self.all_chords:
+            if chord['short_name'] == chord_name:
+                target_chord = chord
+                break
+
+        if not target_chord:
+            for chord in self.all_chords:
+                name_variants = chord['name'].split('|')
+                for variant in name_variants:
+                    variant_clean = variant.strip().replace('$', '/')
+                    if variant_clean == chord_name:
+                        target_chord = chord
+                        logger.info(f"   Найден по альтернативному названию: {chord['short_name']}")
+                        break
+                if target_chord:
+                    break
+
+        if not target_chord:
+            alt_name = chord_name.replace('#', 'b')
+            if alt_name != chord_name:
+                logger.info(f"   Пробуем альтернативное написание: {alt_name}")
+                return self.select_chord_by_name(alt_name)
+
+        if target_chord:
+            full_name = target_chord['name']
+            tonality = self._extract_tonality_from_name(full_name)
+            chord_type = target_chord.get('type', 'Major')
+
+            logger.info(f"   Найден: {target_chord['short_name']}, тональность: {tonality}, тип: {chord_type}")
+
+            if tonality in self.TONALITIES:
+                self.current_tonality = tonality
+                self.current_tonality_index = self.TONALITIES.index(tonality)
+
+            if chord_type in self.CHORD_TYPES:
+                self.current_type = chord_type
+                self.current_type_index = self.CHORD_TYPES.index(chord_type)
+
+            self.update_available_chords()
+
+            chord_key = target_chord['short_name']
+            if chord_key in self.available_chords:
+                self.current_chord_name = chord_key
+                self.current_chord_index = self.available_chords.index(chord_key)
+                self._load_variants_for_chord(self.current_chord_name)
+                self._update_display()
+                logger.info(f"✅ Аккорд {chord_name} успешно загружен")
+                return True
+            else:
+                logger.warning(f"⚠️ Аккорд {chord_key} не найден в available_chords")
+                return self._find_and_load_chord_variant(target_chord)
+        else:
+            logger.warning(f"⚠️ Аккорд {chord_name} не найден в базе")
+            notify.warning(f"Аккорд {chord_name} не найден")
+            return False
+
+    def _extract_tonality_from_name(self, chord_name):
+        if not chord_name:
+            return "A"
+        match = re.match(r'^([A-H][#b]?)', chord_name)
+        if match:
+            return match.group(1)
+        return chord_name[0] if chord_name else "A"
+
+    def _find_and_load_chord_variant(self, target_chord):
+        logger.info(f"🔍 _find_and_load_chord_variant для {target_chord['short_name']}")
+
+        variants = []
+        for chord in self.all_chords:
+            if chord['short_name'] == target_chord['short_name']:
+                variants.append(chord)
+
+        if variants:
+            variants.sort(key=lambda x: x['variant'])
+            self.current_variants = variants
+            self.current_variant_index = 0
+            self.current_position = 1
+            self.current_chord_name = target_chord['short_name']
+            self._update_display()
+            logger.info(f"✅ Загружен вариант аккорда {target_chord['short_name']}")
+            return True
+        else:
+            logger.error(f"❌ Не найдено вариантов для {target_chord['short_name']}")
+            return False
+
+    def _on_window_resize(self, window, width, height):
+        if hasattr(self, '_update_griff_timer') and self._update_griff_timer:
+            Clock.unschedule(self._update_griff_timer)
+        self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.1)
+
+    def go_back(self, instance=None):
+        """Возврат ТОЛЬКО в SearchScreen"""
+        logger.info("🔙 Возврат из ChordDetail в SearchScreen")
+
+        # Очищаем ожидающий аккорд
+        screen_state.clear_pending_chord()
+
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('search'):
+                self.manager.current = 'search'
+                logger.info("✅ Возврат на SearchScreen")
+            else:
+                self.manager.current = 'home'
+                logger.info("⚠️ SearchScreen не найден, возврат на home")
+
+    def on_enter(self):
+        logger.info("🚪 Вход в ChordDetailScreen")
+
+        Clock.schedule_once(self._update_griff_size, 0.1)
+        Clock.schedule_once(self._update_griff_size, 0.3)
+
+        # Настраиваем TopNav
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.set_custom_title("Аккорд")
+            app.top_nav.back_btn.on_release = self.go_back
+
+    def on_leave(self):
+        logger.info("🚪 Выход из ChordDetailScreen")
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.clear_custom_title_widget()
+            app.top_nav.reset_to_default()
+
+    def on_size(self, *args):
+        Clock.schedule_once(self._update_griff_size, 0.05)

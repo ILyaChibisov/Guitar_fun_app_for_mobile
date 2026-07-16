@@ -32,6 +32,9 @@ class ScreenStateManager:
         self._screen_cache = {}
         self._last_update = {}
 
+        # ============ ДАННЫЕ ЭКРАНА ПЕСЕН ИСПОЛНИТЕЛЯ ============
+        self._artist_songs_data = {}
+
     def save_state(self, screen_name, state):
         self._states[screen_name] = state
         logger.debug(f"Сохранено состояние для {screen_name}: {state.keys() if state else 'None'}")
@@ -101,7 +104,7 @@ class ScreenStateManager:
             return (time.time() - self._last_update[screen_name]) < max_age
         return False
 
-    # ============ НОВЫЕ МЕТОДЫ ДЛЯ СОХРАНЕНИЯ СОСТОЯНИЯ ЭКРАНОВ ============
+    # ============ СОХРАНЕНИЕ СОСТОЯНИЯ ЭКРАНОВ ============
 
     def save_screen_state(self, screen_name, state_dict):
         """
@@ -147,6 +150,65 @@ class ScreenStateManager:
             if cache_key in self._last_update:
                 del self._last_update[cache_key]
             logger.debug(f"🗑️ Очищено состояние для {screen_name}")
+
+    # ============ ДАННЫЕ ЭКРАНА ПЕСЕН ИСПОЛНИТЕЛЯ ============
+
+    def set_artist_songs_data(self, artist_name, scroll_position=1.0):
+        """
+        Сохраняет данные экрана песен исполнителя
+
+        Args:
+            artist_name: Имя исполнителя
+            scroll_position: Позиция скролла (0-1)
+        """
+        self._artist_songs_data = {
+            'artist_name': artist_name,
+            'scroll_position': scroll_position,
+            '_timestamp': time.time()
+        }
+        logger.info(f"📦 Сохранены данные ArtistSongs: {artist_name}, scroll={scroll_position:.2f}")
+
+    def get_artist_songs_data(self):
+        """
+        Возвращает данные экрана песен исполнителя
+
+        Returns:
+            dict: {'artist_name': str, 'scroll_position': float} или пустой dict
+        """
+        if self._artist_songs_data:
+            # Проверяем, не устарели ли данные (максимум 5 минут)
+            timestamp = self._artist_songs_data.get('_timestamp', 0)
+            if time.time() - timestamp < 300:  # 5 минут
+                data = self._artist_songs_data.copy()
+                if '_timestamp' in data:
+                    del data['_timestamp']
+                logger.info(f"📦 Получены данные ArtistSongs: {data.get('artist_name')}, scroll={data.get('scroll_position', 1.0):.2f}")
+                return data
+            else:
+                logger.info("⏳ Данные ArtistSongs устарели")
+        else:
+            logger.info("❌ Данные ArtistSongs не найдены")
+        return {}
+
+    def clear_artist_songs_data(self):
+        """
+        Очищает данные экрана песен исполнителя
+        """
+        if self._artist_songs_data:
+            self._artist_songs_data = {}
+            logger.info("🗑️ Данные ArtistSongs очищены")
+
+    def has_artist_songs_data(self):
+        """
+        Проверяет, есть ли сохранённые данные экрана песен исполнителя
+
+        Returns:
+            bool: True если данные есть и они валидны
+        """
+        if not self._artist_songs_data:
+            return False
+        timestamp = self._artist_songs_data.get('_timestamp', 0)
+        return time.time() - timestamp < 300  # 5 минут
 
 
 # Глобальный экземпляр

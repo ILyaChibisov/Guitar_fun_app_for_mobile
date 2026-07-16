@@ -1,4 +1,4 @@
-# screens/metronome_screen.py - ИСПРАВЛЕННАЯ ВЕРСИЯ
+# screens/metronome_screen.py - КОМПАКТНАЯ ВЕРСИЯ
 """
 Экран гитарного метронома с анимированным маятником
 4 вертикальные шкалы + меню в стиле аккордов
@@ -289,11 +289,11 @@ class VerticalSlider(MDBoxLayout):
 
         self.value_label = MDLabel(
             text=str(int(initial)),
-            font_size=sp(18),
+            font_size=sp(16),
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(28),
+            height=dp(24),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True
@@ -305,7 +305,7 @@ class VerticalSlider(MDBoxLayout):
             value=initial,
             step=step,
             size_hint=(None, 1),
-            width=dp(16),
+            width=dp(14),
             orientation='vertical',
             pos_hint={'center_x': 0.5},
             hint=False
@@ -322,11 +322,11 @@ class VerticalSlider(MDBoxLayout):
 
         self.label = MDLabel(
             text=label_text,
-            font_size=sp(9),
+            font_size=sp(8),
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(16),
+            height=dp(14),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.6],
             bold=True
@@ -387,7 +387,7 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.icon_btn = MDIconButton(
             icon=icon_name,
             size_hint=(None, None),
-            size=(dp(30), dp(30)),
+            size=(dp(28), dp(28)),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             theme_icon_color="Custom",
             icon_color=self.icon_color,
@@ -423,7 +423,7 @@ class MetronomeMenu(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(50)
+        self.height = dp(44)
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
@@ -611,73 +611,77 @@ class MetronomeScreen(BaseScreen):
             logger.error(f"❌ Ошибка загрузки звуков: {e}")
 
     def init_ui(self):
-        # Главный layout с отступами
-        main_layout = BoxLayout(orientation='vertical', spacing=0)
+        main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Верхний отступ (под TopNav)
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        # Нижний отступ (над BottomNav)
         nav_bar_height = get_navigation_bar_height()
         bottom_nav_height = dp(60)
-        total_bottom = bottom_nav_height + nav_bar_height + dp(8)
+        total_bottom = bottom_nav_height + nav_bar_height + dp(16)
 
-        # Основной контент
-        content = BoxLayout(
+        content_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(10), dp(4), dp(10), total_bottom],
-            spacing=dp(6)
+            padding=[dp(8), dp(4), dp(8), total_bottom]
         )
 
-        # ===== МАЯТНИК (35% высоты) =====
-        pendulum_container = MDCard(
+        content = MDBoxLayout(
             orientation='vertical',
-            size_hint=(1, 0.35),
-            padding=[dp(6), dp(2), dp(6), dp(2)],
-            radius=[dp(14), dp(14), dp(14), dp(14)],
-            md_bg_color=[0, 0, 0, 0.05],
-            elevation=0,
-            line_color=[1, 1, 1, 0.1],
-            line_width=0.5
-        )
-
-        self.pendulum = MetronomePendulum(bpm=self.DEFAULT_BPM, size_hint=(1, 1))
-        pendulum_container.add_widget(self.pendulum)
-
-        # BPM поверх маятника
-        self.bpm_label = MDLabel(
-            text=str(self.DEFAULT_BPM),
-            font_size=sp(28),
-            halign="center",
-            valign="top",
+            spacing=dp(4),
             size_hint=(1, None),
-            height=dp(40),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
-            bold=True,
-            pos_hint={'top': 1}
+            adaptive_height=True
         )
-        pendulum_container.add_widget(self.bpm_label)
 
+        # ===== МАЯТНИК (уменьшенный) =====
+        pendulum_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(160),
+            padding=[dp(4), dp(2), dp(4), dp(2)]
+        )
+
+        self.pendulum = MetronomePendulum(bpm=self.DEFAULT_BPM)
+        pendulum_container.add_widget(self.pendulum)
         content.add_widget(pendulum_container)
 
-        # ===== КАРТОЧКА СО СЛАЙДЕРАМИ (55% высоты) =====
+        # ===== BPM ПОД МАЯТНИКОМ =====
+        bpm_row = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(36),
+            spacing=dp(8),
+            padding=[dp(8), dp(0), dp(8), dp(0)]
+        )
+
+        self.bpm_label = MDLabel(
+            text=str(self.DEFAULT_BPM),
+            font_size=sp(24),
+            halign="center",
+            size_hint_x=1,
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.9],
+            bold=True
+        )
+        bpm_row.add_widget(self.bpm_label)
+        content.add_widget(bpm_row)
+
+        # ===== КАРТОЧКА СО СЛАЙДЕРАМИ =====
         sliders_card = MDCard(
             orientation='vertical',
-            size_hint=(1, 0.55),
+            size_hint=(1, None),
+            height=dp(210),
             padding=[dp(4), dp(4), dp(4), dp(4)],
             radius=[dp(14), dp(14), dp(14), dp(14)],
-            md_bg_color=[0, 0, 0, 0.08],
+            md_bg_color=[0, 0, 0, 0.06],
             elevation=0,
-            line_color=[1, 1, 1, 0.1],
+            line_color=[1, 1, 1, 0.08],
             line_width=0.5,
             spacing=dp(2)
         )
 
         # Слайдеры
-        sliders_row = BoxLayout(
+        sliders_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 0.75),
             spacing=dp(4)
@@ -726,15 +730,15 @@ class MetronomeScreen(BaseScreen):
 
         sliders_card.add_widget(sliders_row)
 
-        # Разделитель - простой виджет
+        # Разделитель
         divider = MDBoxLayout(
             size_hint=(1, None),
             height=dp(1),
-            md_bg_color=[1, 1, 1, 0.15]
+            md_bg_color=[1, 1, 1, 0.08]
         )
         sliders_card.add_widget(divider)
 
-        # Меню (25% от карточки)
+        # Меню
         self.metronome_menu = MetronomeMenu(
             on_play_press=self.toggle_metronome,
             on_reset_press=self._reset_to_defaults,
@@ -753,8 +757,8 @@ class MetronomeScreen(BaseScreen):
             text="",
             font_size=sp(10),
             halign="center",
-            size_hint=(1, None),
-            height=dp(18),
+            size_hint_y=None,
+            height=dp(20),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.5],
             opacity=0
@@ -762,10 +766,10 @@ class MetronomeScreen(BaseScreen):
         content.add_widget(self._hint_label)
 
         # ===== ИНДИКАТОРЫ =====
-        indicator_container = BoxLayout(
+        indicator_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(34),
+            height=dp(30),
             padding=[dp(4), dp(2), dp(4), dp(2)]
         )
 
@@ -776,13 +780,13 @@ class MetronomeScreen(BaseScreen):
             radius=[dp(10), dp(10), dp(10), dp(10)],
             md_bg_color=[0, 0, 0, 0.06],
             elevation=0,
-            line_color=[1, 1, 1, 0.1],
+            line_color=[1, 1, 1, 0.08],
             line_width=0.5,
             spacing=dp(2),
             opacity=0
         )
 
-        indicator_layout = BoxLayout(
+        indicator_layout = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, 1),
             spacing=dp(2),
@@ -793,12 +797,12 @@ class MetronomeScreen(BaseScreen):
         for i in range(12):
             indicator = MDCard(
                 size_hint=(None, None),
-                size=(dp(22), dp(22)),
-                radius=[dp(11)] * 4,
+                size=(dp(18), dp(18)),
+                radius=[dp(9)] * 4,
                 md_bg_color=[0.3, 0.3, 0.3, 0.3],
                 elevation=0,
                 opacity=0,
-                line_color=[1, 1, 1, 0.1],
+                line_color=[1, 1, 1, 0.08],
                 line_width=0.3
             )
             self.beat_indicators.append(indicator)
@@ -808,7 +812,9 @@ class MetronomeScreen(BaseScreen):
         indicator_container.add_widget(self.indicator_card)
         content.add_widget(indicator_container)
 
-        main_layout.add_widget(content)
+        content_container.add_widget(content)
+        content_container.add_widget(Widget(size_hint_y=1))
+        main_layout.add_widget(content_container)
         self.add_widget(main_layout)
 
         self._update_indicators(self.beats_per_measure)
@@ -875,17 +881,17 @@ class MetronomeScreen(BaseScreen):
         calculated_size = (available_width - total_spacing) / count
 
         if count <= 6:
-            max_size = dp(22)
-            min_size = dp(14)
-        elif count <= 8:
-            max_size = dp(20)
-            min_size = dp(12)
-        elif count <= 10:
             max_size = dp(18)
-            min_size = dp(10)
-        else:
+            min_size = dp(12)
+        elif count <= 8:
             max_size = dp(16)
+            min_size = dp(10)
+        elif count <= 10:
+            max_size = dp(14)
             min_size = dp(8)
+        else:
+            max_size = dp(12)
+            min_size = dp(6)
 
         final_size = max(min(calculated_size, max_size), min_size)
 

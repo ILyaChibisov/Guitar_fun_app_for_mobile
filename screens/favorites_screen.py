@@ -389,21 +389,18 @@ class FavoritesScreen(BaseScreen):
             return f"{total} песен"
 
     def _update_top_nav(self, total):
-        """Обновляет TopNav — только если экран активен и нужно обновить"""
+        """Обновляет TopNav — всегда обновляет, даже если уже обновлён"""
         if not self.manager or self.manager.current != self.name:
             return
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            if self._top_nav_updated:
-                return
-
+            # ✅ ВСЕГДА обновляем, даже если уже обновлён
             title_container = self._create_top_nav_title(total)
             app.top_nav.set_custom_title_widget(title_container)
-            # Убираем _show_back_button()
-            # app.top_nav._show_back_button()
             app.top_nav.back_btn.on_release = self.go_back
             self._top_nav_updated = True
+            logger.info(f"✅ TopNav обновлён: Избранное ({total} песен)")
 
     def _reset_top_nav(self):
         """БЫСТРЫЙ сброс TopNav — без лишних операций"""
@@ -588,22 +585,27 @@ class FavoritesScreen(BaseScreen):
             notify.error("Ошибка: не удалось загрузить песню")
             return
 
+        # Находим исполнителя
+        artist = ""
+        for song in self.favorites:
+            if song.get('song_id') == song_id or song.get('id') == song_id:
+                artist = song.get('artist', '')
+                break
+
         if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('song_detail'):
-                # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ favorites
-                screen_state.set_previous_screen('favorites')
-
-                song_detail_screen = self.manager.get_screen('song_detail')
-                song_detail_screen.set_previous_screen('favorites')
-                song_detail_screen.set_song(song_id)
-
-                for song in self.favorites:
-                    if song.get('song_id') == song_id or song.get('id') == song_id:
-                        song_detail_screen.song_artist = song.get('artist', '')
-                        song_detail_screen.song_title = song.get('title', '')
-                        break
-
-                self.manager.current = 'song_detail'
+            if self.manager.has_screen('favorite_detail'):
+                favorite_detail_screen = self.manager.get_screen('favorite_detail')
+                favorite_detail_screen.set_song(song_id, artist, song_title)
+                self.manager.current = 'favorite_detail'
+                logger.info(f"✅ Переход на FavoriteDetailScreen: {song_title}")
+            else:
+                # Fallback на старый экран
+                if self.manager.has_screen('song_detail'):
+                    screen_state.set_previous_screen('favorites')
+                    song_detail_screen = self.manager.get_screen('song_detail')
+                    song_detail_screen.set_previous_screen('favorites')
+                    song_detail_screen.set_song(song_id)
+                    self.manager.current = 'song_detail'
 
     def go_back(self, instance=None):
         """БЫСТРЫЙ возврат на главный экран"""
@@ -616,8 +618,11 @@ class FavoritesScreen(BaseScreen):
         logger.info("on_pre_enter: подготовка к показу")
 
     def on_enter(self):
-        """При входе на экран — основная загрузка"""
+        """При входе на экран — основная загрузка и ОБНОВЛЕНИЕ TopNav"""
         logger.info("Вход в экран избранного")
+
+        # ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ TopNav при входе
+        self._top_nav_updated = False
 
         if not api.is_authenticated():
             self._show_auth_message()
@@ -663,6 +668,15 @@ class FavoritesScreen(BaseScreen):
         """Обработчик успешного входа"""
         logger.info("✅ Успешная авторизация — обновляем избранное")
         self.load_favorites(force_refresh=True)
+
+    def force_update_top_nav(self):
+        """Принудительно обновляет TopNav извне"""
+        self._top_nav_updated = False
+        if self.favorites:
+            self._update_top_nav(len(self.favorites))
+        else:
+            self._update_top_nav(0)
+        logger.info("🔄 TopNav принудительно обновлён")
 
     def on_leave(self):
         """БЫСТРЫЙ выход — без лишних операций"""

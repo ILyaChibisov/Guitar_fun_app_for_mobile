@@ -40,6 +40,13 @@ class Theme:
     # Анимация
     ANIMATION_DURATION = 0.25
 
+    # ============ РАЗМЕРЫ ШРИФТОВ (ДОБАВИТЬ) ============
+    FONT_SIZE_H1 = 24
+    FONT_SIZE_H2 = 20
+    FONT_SIZE_H3 = 18
+    FONT_SIZE_BODY = 14
+    FONT_SIZE_SMALL = 12
+
     # Список поддерживаемых языков (с кодами)
     LANGUAGES = {
         "ru": "Русский",

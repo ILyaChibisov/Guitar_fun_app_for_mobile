@@ -1,6 +1,11 @@
 # screens/manager.py
+"""
+ScreenManager - централизованная регистрация всех экранов приложения
+"""
 from kivy.uix.screenmanager import ScreenManager, NoTransition
 from config.logger_config import get_logger
+
+# === ОСНОВНЫЕ ЭКРАНЫ ===
 from .home_screen import HomeScreen
 from .songs_screen import SongsScreen
 from .chords_screen import ChordsScreen
@@ -9,9 +14,33 @@ from .tuner_screen import TunerScreen
 from .metronome_screen import MetronomeScreen
 from .favorites_screen import FavoritesScreen
 from .profile_screen import ProfileScreen
-from .song_detail_screen import SongDetailScreen
 from .admin_screen import AdminScreen
 from .search_screen import SearchScreen
+
+# === ЭКРАНЫ ДЕТАЛЬНОГО ПРОСМОТРА ===
+from .song_detail_screen import SongDetailScreen
+from .term_detail_screen import TermDetailScreen
+from .search_detail_screen import SearchDetailScreen
+from .favorite_detail_screen import FavoriteDetailScreen
+from .search_screen_detail import SearchScreenDetail
+from .search_term_detail_screen import SearchTermDetailScreen
+from .chord_detail_screen import ChordDetailScreen
+
+# === ЭКРАНЫ СПИСКОВ ===
+from .artist_songs_screen import ArtistSongsScreen
+
+# === ЭКРАНЫ АВТОРИЗАЦИИ И ЗАДАЧ ===
+from .auth_screen import AuthScreen
+from .tasks_screen import TasksScreen
+from .task_detail_screen import TaskDetailScreen
+
+# === НОВЫЕ ЭКРАНЫ ===
+from .settings_screen import SettingsScreen
+from .help_screen import HelpScreen
+from .promo_screen import PromoScreen
+from .feedback_screen import FeedbackScreen
+
+# === ПАРСЕРЫ ===
 from .parsers_screens.amdm_parser_screen import AMDMParserScreen
 from .parsers_screens.mytabs_parser_screen import MyTabsParserScreen
 from .parsers_screens.accord_pro_parser_screen import AccordProParserScreen
@@ -22,22 +51,17 @@ from .parsers_screens.fivelad_parser_screen import FiveLadParserScreen
 from .parsers_screens.akkordbard_parser_screen import AkkordBardParserScreen
 from .parsers_screens.domhve_parser_screen import DomhveParserScreen
 from .parsers_screens.rushsound_parser_screen import RushSoundParserScreen
-from .term_detail_screen import TermDetailScreen
-from .tasks_screen import TasksScreen
-from .task_detail_screen import TaskDetailScreen
-from .auth_screen import AuthScreen
-# ============ НОВЫЕ ЭКРАНЫ ============
-from .settings_screen import SettingsScreen
-from .help_screen import HelpScreen
-from .promo_screen import PromoScreen
-from .feedback_screen import FeedbackScreen
 
 logger = get_logger('ScreenManager')
 
 
 def setup_screen_manager():
+    """Создаёт и настраивает ScreenManager со всеми экранами"""
     sm = ScreenManager(transition=NoTransition())
 
+    # ============================================================
+    # 1. ОСНОВНЫЕ ЭКРАНЫ (нижняя навигация)
+    # ============================================================
     sm.add_widget(HomeScreen(name='home'))
     sm.add_widget(SongsScreen(name='songs'))
     sm.add_widget(ChordsScreen(name='chords'))
@@ -46,21 +70,43 @@ def setup_screen_manager():
     sm.add_widget(MetronomeScreen(name='metronome'))
     sm.add_widget(FavoritesScreen(name='favorites'))
     sm.add_widget(ProfileScreen(name='profile'))
-    sm.add_widget(SongDetailScreen(name='song_detail'))
     sm.add_widget(AdminScreen(name='admin'))
     sm.add_widget(SearchScreen(name='search'))
-    sm.add_widget(TermDetailScreen(name='term_detail'))
 
-    # ============ НОВЫЕ ЭКРАНЫ ============
+    # ============================================================
+    # 2. ЭКРАНЫ ДЕТАЛЬНОГО ПРОСМОТРА
+    # ============================================================
+    sm.add_widget(SongDetailScreen(name='song_detail'))
+    sm.add_widget(TermDetailScreen(name='term_detail'))
+    sm.add_widget(SearchDetailScreen(name='search_detail'))
+    sm.add_widget(FavoriteDetailScreen(name='favorite_detail'))
+    sm.add_widget(SearchScreenDetail(name='search_screen_detail'))
+    sm.add_widget(SearchTermDetailScreen(name='search_term_detail'))
+    sm.add_widget(ChordDetailScreen(name='chord_detail'))
+
+    # ============================================================
+    # 3. ЭКРАНЫ СПИСКОВ
+    # ============================================================
+    sm.add_widget(ArtistSongsScreen(name='artist_songs'))
+
+    # ============================================================
+    # 4. ЭКРАНЫ АВТОРИЗАЦИИ И ЗАДАЧ
+    # ============================================================
+    sm.add_widget(AuthScreen(name='auth_screen'))
+    sm.add_widget(TasksScreen(name='tasks'))
+    sm.add_widget(TaskDetailScreen(name='task_detail'))
+
+    # ============================================================
+    # 5. НОВЫЕ ЭКРАНЫ (настройки, помощь, промокод, обратная связь)
+    # ============================================================
     sm.add_widget(SettingsScreen(name='settings'))
     sm.add_widget(HelpScreen(name='help'))
     sm.add_widget(PromoScreen(name='promo'))
     sm.add_widget(FeedbackScreen(name='feedback'))
-    sm.add_widget(TasksScreen(name='tasks'))
-    sm.add_widget(TaskDetailScreen(name='task_detail'))
-    sm.add_widget(AuthScreen(name='auth_screen'))
 
-    # Парсеры
+    # ============================================================
+    # 6. ЭКРАНЫ ПАРСЕРОВ
+    # ============================================================
     sm.add_widget(AMDMParserScreen(name='amdm_parser'))
     sm.add_widget(MyTabsParserScreen(name='mytabs_parser'))
     sm.add_widget(AccordProParserScreen(name='accord_pro_parser'))
@@ -72,5 +118,9 @@ def setup_screen_manager():
     sm.add_widget(DomhveParserScreen(name='domhve_parser'))
     sm.add_widget(RushSoundParserScreen(name='rushsound_parser'))
 
-    logger.info('ScreenManager настроен с NoTransition, добавлено 25 экранов')
+    logger.info('=' * 60)
+    logger.info('✅ ScreenManager настроен с NoTransition')
+    logger.info(f'📱 Всего экранов: {len(sm.screens)}')
+    logger.info('=' * 60)
+
     return sm

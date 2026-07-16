@@ -1,6 +1,7 @@
-# screens/song_detail_screen.py
+# screens/favorite_detail_screen.py
 """
-Экран просмотра песни с текстом и подборами
+Экран просмотра песни ИЗ ИЗБРАННОГО
+Полная копия SongDetailScreen с возвратом в FavoritesScreen
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -8,10 +9,8 @@ from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.dialog import MDDialog
 from kivy.metrics import dp, sp
-from kivy.animation import Animation
-from kivy.uix.progressbar import ProgressBar
+from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
@@ -19,19 +18,17 @@ from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
 from io import BytesIO
 import re
-from kivy.clock import Clock
 from kivy.utils import platform
 
 from config.theme import theme
 from config.logger_config import screen_logger
-from config.layout_config import layout_config  # ← ИСПОЛЬЗУЕМ layout_config
+from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height, get_status_bar_height
 from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
 from api.client import api
 from utils.notifications import notify
 from utils.screen_state import screen_state
-# Импорт для подсветки аккордов
 from utils.chord_highlighter import (
     ChordTextLabel,
     highlight_chords_in_text,
@@ -41,16 +38,13 @@ from utils.chord_highlighter import (
 )
 from utils.transposer import transpose_text, transpose_chord_list, set_transpose_system
 
-logger = screen_logger('SongDetail')
+logger = screen_logger('FavoriteDetail')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -59,11 +53,7 @@ def clean_text(text):
     """Очищает текст от HTML тегов и специальных символов"""
     if not text:
         return ""
-
-    # Простая очистка от HTML тегов
     temp_text = re.sub(r'<[^>]+>', '', text)
-
-    # Замена HTML сущностей
     html_entities = {
         '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"',
         '&apos;': "'", '&nbsp;': ' ', '&#39;': "'", '&#34;': '"',
@@ -71,13 +61,11 @@ def clean_text(text):
         '&#187;': '»', '&#169;': '©', '&#174;': '®', '&#8364;': '€',
         '&#8470;': '№', '&#8211;': '–', '&#8212;': '—', '&#8216;': "'",
         '&#8217;': "'", '&#8220;': '"', '&#8221;': '"', '&#8230;': '…',
-        '&#35;': '#',  # решётка
-        '%23': '#',  # решётка URL encoded
+        '&#35;': '#', '%23': '#',
     }
     for entity, char in html_entities.items():
         temp_text = temp_text.replace(entity, char)
 
-    # Удаляем первые 4 строки и строки с источником
     lines = temp_text.split('\n')
     cleaned_lines = []
     for i, line in enumerate(lines):
@@ -93,93 +81,7 @@ def clean_text(text):
     result = '\n'.join(cleaned_lines)
     if not result.strip():
         result = '\n'.join(lines[4:])
-
     return result
-
-
-class LoadingSpinner(MDBoxLayout):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.spacing = dp(16)
-        self.progress = ProgressBar(
-            size_hint=(0.8, None),
-            height=dp(4),
-            pos_hint={'center_x': 0.5},
-            value=50,
-            max=100
-        )
-        self.anim = None
-        self.label = MDLabel(
-            text="Загрузка...",
-            halign="center",
-            font_size=sp(16),
-            theme_text_color="Secondary",
-            size_hint_y=None,
-            height=dp(30)
-        )
-        self.add_widget(self.progress)
-        self.add_widget(self.label)
-
-    def start_animation(self):
-        self.anim = Animation(value=100, duration=1) + Animation(value=0, duration=1)
-        self.anim.repeat = True
-        self.anim.start(self.progress)
-
-    def stop_animation(self):
-        if self.anim:
-            self.anim.cancel(self.progress)
-        self.progress.value = 0
-
-
-class IconImageButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка с иконкой из PNG ассета с возможностью смещения через padding"""
-
-    def __init__(self, icon_name, on_press_callback=None, size=dp(18), offset_y=0, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (None, None)
-        self.size = (size, size)
-        self.md_bg_color = [0, 0, 0, 0]
-
-        self.offset_y = offset_y
-
-        self.icon_container = MDBoxLayout(
-            size_hint=(1, 1),
-            padding=[0, offset_y, 0, 0]
-        )
-
-        self.icon = Image(
-            size_hint=(0.8, 0.8),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            allow_stretch=True,
-            keep_ratio=True
-        )
-
-        self.icon_container.add_widget(self.icon)
-        self.add_widget(self.icon_container)
-
-        self.icon_name = icon_name
-        self.on_press_callback = on_press_callback
-        self.bind(on_release=self._on_press)
-        self._load_icon()
-
-    def _load_icon(self):
-        if HAS_ASSETS:
-            try:
-                icon_data = load_asset_as_bytes(self.icon_name)
-                if icon_data:
-                    img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.icon.texture = img.texture
-                    return
-            except Exception as e:
-                logger.error(f"Ошибка загрузки иконки {self.icon_name}: {e}")
-        self.icon.opacity = 0
-
-    def _on_press(self, instance):
-        if self.on_press_callback:
-            self.on_press_callback(self.icon_name)
 
 
 class IconActionButton(MDIconButton):
@@ -204,24 +106,51 @@ class IconActionButton(MDIconButton):
             self.on_press_callback()
 
 
-class SongDetailScreen(BaseScreen):
+class LoadingSpinner(MDBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = 'song_detail'
+        self.orientation = 'vertical'
+        self.size_hint = (1, 1)
+        self.spacing = dp(16)
+        self.progress = None
+        self.anim = None
+        self.label = MDLabel(
+            text="Загрузка...",
+            halign="center",
+            font_size=sp(16),
+            theme_text_color="Secondary",
+            size_hint_y=None,
+            height=dp(30)
+        )
+        self.add_widget(self.label)
+
+    def start_animation(self):
+        pass
+
+    def stop_animation(self):
+        pass
+
+
+class FavoriteDetailScreen(BaseScreen):
+    """Экран просмотра песни ИЗ ИЗБРАННОГО - полная копия SongDetailScreen"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = 'favorite_detail'
         self.song_id = None
         self.song_title = None
         self.song_artist = None
         self.is_liked = False
-        self.is_favorite = False
+        self.is_favorite = True
         self.is_loading = False
         self.loading_spinner = None
         self.bg_image = None
-        self.previous_screen = 'artist_songs'
+        self.previous_screen = 'favorites'
         self.current_tonality = 0
         self.tabs = []
         self.current_tab_index = 0
 
-        # Настройки размера шрифта в зависимости от платформы
+        # Настройки размера шрифта
         if platform == 'android':
             self.STANDARD_FONT_SIZE = 42
             self.MIN_FONT_SIZE = 30
@@ -281,14 +210,9 @@ class SongDetailScreen(BaseScreen):
 
         self.init_ui()
         self.load_background()
-
-        logger.info('Экран просмотра песни создан')
-
-    def set_previous_screen(self, screen_name):
-        self.previous_screen = screen_name
+        logger.info('Экран просмотра избранной песни создан')
 
     def load_background(self):
-        """Загружает фоновое изображение для всего экрана"""
         try:
             if HAS_ASSETS:
                 asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
@@ -332,7 +256,6 @@ class SongDetailScreen(BaseScreen):
         logger.info(f"🔄 Тема изменена на: {self._current_theme}")
 
     def _set_green_theme(self):
-        """Зелёная тема - фон из ассета, текст белый"""
         self.is_light_theme = False
         self.content_label.text_color = [1, 1, 1, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
@@ -342,7 +265,6 @@ class SongDetailScreen(BaseScreen):
             self.theme_btn.icon_color = [0.46, 0.70, 0.71, 1]
 
     def _set_light_theme(self):
-        """Светлая тема - фон белый, текст чёрный"""
         self.is_light_theme = True
         self.content_label.text_color = [0, 0, 0, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
@@ -352,7 +274,6 @@ class SongDetailScreen(BaseScreen):
             self.theme_btn.icon_color = [1, 1, 1, 1]
 
     def _set_dark_theme(self):
-        """Тёмная тема - фон чёрный, текст белый"""
         self.is_light_theme = False
         self.content_label.text_color = [1, 1, 1, 0.95]
         if hasattr(self, '_text_container') and self._text_container:
@@ -363,15 +284,6 @@ class SongDetailScreen(BaseScreen):
 
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
-
-        # ============ ДИАГНОСТИКА ============
-        nav_bar_height = get_navigation_bar_height()
-        logger.info("=" * 70)
-        logger.info("🔍 ДИАГНОСТИКА ОТСТУПОВ SongDetailScreen")
-        logger.info(f"📱 Платформа: {platform}")
-        logger.info(f"📊 nav_bar_height: {nav_bar_height}dp")
-        logger.info(f"📊 layout_config.get_bottom_padding(): {layout_config.get_bottom_padding()}dp")
-        logger.info("=" * 70)
 
         # ============ ОТСТУП ПОД TOPNAV ============
         top_padding_for_nav = layout_config.get_top_padding()
@@ -386,23 +298,12 @@ class SongDetailScreen(BaseScreen):
         main_container.add_widget(self._top_spacer_song)
 
         # ============ РАСЧЁТ ДОСТУПНОЙ ВЫСОТЫ ДЛЯ КОНТЕНТА ============
-        # Получаем высоту BottomNav из layout_config
         bottom_nav_total = layout_config.get_bottom_nav_total_height()
-
-        # Отступ снизу = полная высота BottomNav (чтобы контент прилегал к верхней границе)
         bottom_padding_for_card = bottom_nav_total
 
-        logger.info(f"🔧 bottom_nav_total: {bottom_nav_total}dp")
-        logger.info(f"🔧 bottom_padding_for_card: {bottom_padding_for_card}dp")
-
         # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧКИ ============
-        card_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=[0, 0, 0, 0]
-        )
+        card_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
-        # ============ КАРТОЧКА ============
         self.song_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
@@ -499,11 +400,8 @@ class SongDetailScreen(BaseScreen):
         )
         self.song_card.add_widget(self.bottom_divider)
 
-        # ============ ДОБАВЛЯЕМ ВСЁ В КОНТЕЙНЕРЫ ============
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
-
-        # ============ НЕТ ДОПОЛНИТЕЛЬНЫХ СПЕЙСЕРОВ! ============
 
         self.add_widget(main_container)
 
@@ -519,24 +417,29 @@ class SongDetailScreen(BaseScreen):
         Clock.schedule_once(lambda dt: self._update_card_size(), 0.1)
         Clock.schedule_once(lambda dt: self._update_card_size(), 0.3)
 
-        logger.info(f"SongDetailScreen: init_ui completed")
-        logger.info(f"  top_padding={top_padding_for_nav}dp")
-        logger.info(f"  bottom_padding_for_card={bottom_padding_for_card}dp")
-        logger.info("=" * 70)
-
     def _update_card_size(self, *args):
-        """Принудительно обновляет размеры карточки"""
         if hasattr(self, 'song_card') and self.song_card:
-            # Принудительно пересчитываем layout
             self.song_card.size_hint = (1, 1)
             self.song_card.height = self.height - self._top_spacer_song.height
             self.song_card.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-            logger.info(f"🔧 _update_card_size: song_card.height={self.song_card.height}dp")
 
-    # ==================== МЕТОДЫ СОЗДАНИЯ ПАНЕЛЕЙ ====================
+    def _update_content_height(self, *args):
+        if not self.content_label.texture:
+            Clock.schedule_once(lambda dt: self._update_content_height(), 0.05)
+            return
+
+        text_height = self.content_label.texture_size[1]
+        self.content_label.height = max(dp(50), text_height + dp(8))
+
+        if self.content_label.parent:
+            self.content_label.parent.height = text_height + dp(16)
+            if hasattr(self.content_label.parent, 'minimum_height'):
+                self.content_label.parent.minimum_height = text_height + dp(16)
+
+        self.content_scroll.scroll_y = 1.0
 
     def _create_main_panel(self):
-        """Создаёт основную панель с 7 кнопками"""
+        """Создаёт основную панель с кнопками"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -583,7 +486,7 @@ class SongDetailScreen(BaseScreen):
 
         # 6. Звёздочка (избранное) - золотистый
         self.favorite_btn = IconActionButton(
-            icon_name="star-outline",
+            icon_name="star",
             on_press_callback=self.toggle_favorite,
             icon_color=[0.9, 0.7, 0.2, 0.9]
         )
@@ -608,7 +511,7 @@ class SongDetailScreen(BaseScreen):
         logger.info("✅ Создана основная панель")
 
     def _create_chords_panel(self):
-        """Создаёт панель управления аккордами (с глазом, БЕЗ иконок пагинации)"""
+        """Создаёт панель управления аккордами"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -618,7 +521,6 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(1)
         )
 
-        # Кнопка вариантов аккорда
         self.variant_btn = MDIconButton(
             icon="format-list-bulleted-square",
             size_hint=(1, None),
@@ -630,7 +532,6 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # Кнопка режима (пальцы/ноты)
         self.mode_btn = MDIconButton(
             icon="music-note",
             size_hint=(1, None),
@@ -642,7 +543,6 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # ============ ГЛАЗ ============
         self.eye_btn = MDIconButton(
             icon="eye",
             size_hint=(1, None),
@@ -654,7 +554,6 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # Кнопка увеличения грифа
         self.griff_zoom_btn = MDIconButton(
             icon="magnify",
             size_hint=(1, None),
@@ -666,7 +565,6 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # Кнопка закрытия
         self.chords_close_btn = MDIconButton(
             icon="check",
             size_hint=(1, None),
@@ -678,7 +576,6 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # Порядок: вариант | режим | ГЛАЗ | лупа | галочка
         panel.add_widget(self.variant_btn)
         panel.add_widget(self.mode_btn)
         panel.add_widget(self.eye_btn)
@@ -687,10 +584,9 @@ class SongDetailScreen(BaseScreen):
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'chords'
-        logger.info("✅ Создана панель аккордов (с глазом)")
 
     def _create_font_panel(self):
-        """Создаёт панель шрифта с дополнительной кнопкой смены темы"""
+        """Создаёт панель шрифта"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -740,11 +636,7 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(0)
         )
 
-        left_spacer = MDLabel(
-            text="",
-            size_hint_x=None,
-            width=dp(2)
-        )
+        left_spacer = MDLabel(text="", size_hint_x=None, width=dp(2))
 
         self.font_value_label = MDLabel(
             text=self._get_font_multiplier(self.current_font_size),
@@ -757,11 +649,7 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        right_spacer = MDLabel(
-            text="",
-            size_hint_x=None,
-            width=dp(2)
-        )
+        right_spacer = MDLabel(text="", size_hint_x=None, width=dp(2))
 
         top_row.add_widget(left_spacer)
         top_row.add_widget(self.font_value_label)
@@ -825,8 +713,6 @@ class SongDetailScreen(BaseScreen):
                     for delay in delays:
                         Clock.schedule_once(lambda dt, d=delay: setattr(self.content_scroll, 'scroll_y', 1.0), delay)
 
-                logger.info(f"🔍 Размер шрифта изменён на: {self.current_font_size}")
-
         self.font_slider.bind(value=on_slider_change)
 
         slider_container.add_widget(self.font_slider)
@@ -861,7 +747,6 @@ class SongDetailScreen(BaseScreen):
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'font'
-        logger.info("✅ Создана панель шрифта")
 
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.1)
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.3)
@@ -998,7 +883,6 @@ class SongDetailScreen(BaseScreen):
             if step != self.current_tonality:
                 self.current_tonality = step
                 self.apply_tonality(self.current_tonality)
-                logger.info(f"🎵 Тональность изменена на: {self.current_tonality:.1f}")
 
         self.tonality_slider.bind(value=on_slider_change)
 
@@ -1030,7 +914,6 @@ class SongDetailScreen(BaseScreen):
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'tonality'
-        logger.info("✅ Создана панель тональности")
 
     def _create_scroll_panel(self):
         """Создаёт панель прокрутки текста"""
@@ -1073,11 +956,7 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(0)
         )
 
-        left_spacer = MDLabel(
-            text="",
-            size_hint_x=None,
-            width=dp(4)
-        )
+        left_spacer = MDLabel(text="", size_hint_x=None, width=dp(4))
 
         self.scroll_speed_value_label = MDLabel(
             text=f"{self.scroll_speed:.1f}x",
@@ -1090,11 +969,7 @@ class SongDetailScreen(BaseScreen):
             bold=True
         )
 
-        right_spacer = MDLabel(
-            text="",
-            size_hint_x=None,
-            width=dp(4)
-        )
+        right_spacer = MDLabel(text="", size_hint_x=None, width=dp(4))
 
         top_row.add_widget(left_spacer)
         top_row.add_widget(self.scroll_speed_value_label)
@@ -1141,8 +1016,6 @@ class SongDetailScreen(BaseScreen):
 
             self.scroll_speed = slider_to_speed(int_value)
             self.scroll_speed_value_label.text = f"{self.scroll_speed:.1f}x"
-
-            logger.info(f"🎚️ Скорость прокрутки изменена: {self.scroll_speed:.1f}x")
 
             if self.is_scrolling:
                 self.stop_scroll()
@@ -1191,13 +1064,10 @@ class SongDetailScreen(BaseScreen):
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'scroll'
-        logger.info("✅ Создана панель прокрутки")
 
-    # ==================== МЕТОДЫ ВЫЗОВА ПАНЕЛЕЙ ====================
+    # ============ МЕТОДЫ УПРАВЛЕНИЯ ПАНЕЛЯМИ ============
 
     def show_font_panel(self):
-        """Показывает панель шрифта"""
-        logger.info("🔍 Открытие панели шрифта")
         if self.is_chords_mode:
             self.close_chords_section()
         if self.is_tonality_mode:
@@ -1208,20 +1078,13 @@ class SongDetailScreen(BaseScreen):
         self.is_font_mode = True
 
     def close_font_panel(self):
-        """Закрывает панель шрифта и возвращает основную панель"""
-        logger.info("🔍 Закрытие панели шрифта")
         self._create_main_panel()
         self.is_font_mode = False
 
     def on_chords_press(self):
-        """Обработчик нажатия на кнопку аккордов"""
-        logger.info("🎸 Нажата кнопка аккордов")
         self.show_chords_section()
 
     def show_chords_section(self):
-        """Показывает секцию аккордов"""
-        logger.info("🎸 Открытие секции аккордов")
-
         if self.is_tonality_mode:
             self.close_tonality_panel()
         if self.is_font_mode:
@@ -1239,18 +1102,14 @@ class SongDetailScreen(BaseScreen):
 
         self._create_chords_panel()
         self.is_chords_mode = True
-
-        # Показываем гриф (карусель) и секцию с названием
         self._show_chords_layer()
 
     def _show_chords_layer(self):
-        """Показывает слой с грифом аккордов - как бесконечная карусель"""
         if hasattr(self, '_griff_added') and self._griff_added:
             return
 
         from kivy.uix.carousel import Carousel
 
-        # ============ СЕКЦИЯ С НАЗВАНИЕМ АККОРДА ============
         self.chord_name_section = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -1260,7 +1119,6 @@ class SongDetailScreen(BaseScreen):
             spacing=dp(4)
         )
 
-        # Декоративная иконка влево (неактивная)
         self.chord_pag_prev = MDIconButton(
             icon="chevron-left",
             size_hint=(None, 1),
@@ -1271,7 +1129,6 @@ class SongDetailScreen(BaseScreen):
             ripple_scale=0
         )
 
-        # Лейбл с названием аккорда по центру
         self.chord_name_label = MDLabel(
             text="",
             halign="center",
@@ -1283,7 +1140,6 @@ class SongDetailScreen(BaseScreen):
             font_size=sp(18)
         )
 
-        # Декоративная иконка вправо (неактивная)
         self.chord_pag_next = MDIconButton(
             icon="chevron-right",
             size_hint=(None, 1),
@@ -1298,7 +1154,6 @@ class SongDetailScreen(BaseScreen):
         self.chord_name_section.add_widget(self.chord_name_label)
         self.chord_name_section.add_widget(self.chord_pag_next)
 
-        # ============ КОНТЕЙНЕР ДЛЯ ГРИФА ============
         griff_height = dp(120)
         self.griff_container = MDBoxLayout(
             orientation='vertical',
@@ -1308,7 +1163,6 @@ class SongDetailScreen(BaseScreen):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # ============ КАРУСЕЛЬ ============
         self.chords_carousel = Carousel(
             direction='right',
             loop=True,
@@ -1317,7 +1171,6 @@ class SongDetailScreen(BaseScreen):
         )
         self.chords_carousel.bind(current_slide=self._on_carousel_slide)
 
-        # Создаём слайд для КАЖДОГО аккорда
         self.chord_renderers = []
         self.chord_slides = []
 
@@ -1349,7 +1202,6 @@ class SongDetailScreen(BaseScreen):
 
         self.griff_container.add_widget(self.chords_carousel)
 
-        # ============ РАЗДЕЛИТЕЛЬ ПОД ГРИФОМ ============
         self.griff_divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -1358,7 +1210,6 @@ class SongDetailScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
-        # ============ ВСТАВЛЯЕМ СЕКЦИЮ НАЗВАНИЯ И ГРИФ ============
         content_scroll = self.content_scroll
         bottom_divider = self.bottom_divider
 
@@ -1370,13 +1221,11 @@ class SongDetailScreen(BaseScreen):
         self.song_card.add_widget(self.chord_name_section)
         self.song_card.add_widget(self.griff_container)
         self.song_card.add_widget(self.griff_divider)
-
         self.song_card.add_widget(content_scroll)
         self.song_card.add_widget(bottom_divider)
 
         self._griff_added = True
 
-        # Загружаем первый аккорд
         self._current_chord_index = 0
         if self._song_chords:
             self._load_chord_variants(self._song_chords[0])
@@ -1384,43 +1233,22 @@ class SongDetailScreen(BaseScreen):
             if self.chords_carousel and self.chord_slides:
                 self.chords_carousel.load_slide(self.chord_slides[0])
 
-        logger.info("✅ Гриф и секция названия добавлены")
-
     def _on_carousel_slide(self, instance, slide):
-        """Обработчик смены слайда в карусели"""
         if not self.chord_slides:
             return
-
         try:
             index = self.chord_slides.index(slide)
             if index != self._current_chord_index:
                 self._current_chord_index = index
                 self._update_chords_display()
-                logger.info(f"🔄 Карусель переключена на аккорд {index}")
         except ValueError:
             pass
 
-    def _sync_carousel_index(self):
-        """Синхронизирует индекс с каруселью"""
-        if not self.chords_carousel or not self.chord_slides:
-            return
-
-        current_slide = self.chords_carousel.current_slide
-        if current_slide in self.chord_slides:
-            index = self.chord_slides.index(current_slide)
-            if index != self._current_chord_index:
-                self._current_chord_index = index
-                self._update_chords_display()
-
     def _hide_chords_layer(self):
-        """Скрывает слой с грифом аккордов и секцию названия"""
-        logger.info("🔚 Скрытие грифа и секции названия")
-
         if hasattr(self, '_griff_added') and self._griff_added:
             content_scroll = self.content_scroll
             bottom_divider = self.bottom_divider
 
-            # Удаляем секцию названия
             if hasattr(self, 'chord_name_section') and self.chord_name_section:
                 if self.chord_name_section in self.song_card.children:
                     self.song_card.remove_widget(self.chord_name_section)
@@ -1429,13 +1257,11 @@ class SongDetailScreen(BaseScreen):
                     self.chord_pag_prev = None
                     self.chord_pag_next = None
 
-            # Удаляем гриф
             if hasattr(self, 'griff_container') and self.griff_container:
                 if self.griff_container in self.song_card.children:
                     self.song_card.remove_widget(self.griff_container)
                     self.griff_container = None
 
-            # Удаляем разделитель
             if hasattr(self, 'griff_divider') and self.griff_divider:
                 if self.griff_divider in self.song_card.children:
                     self.song_card.remove_widget(self.griff_divider)
@@ -1450,15 +1276,9 @@ class SongDetailScreen(BaseScreen):
             self.chord_renderers = []
             self.chord_slides = []
             self._griff_added = False
-            logger.info("✅ Гриф и секция названия удалены")
 
     def close_chords_section(self, *args):
-        """Закрывает секцию аккордов"""
-        logger.info("🔚 Закрытие секции аккордов")
-
-        # Если глаз активен — оставляем гриф и название
         if hasattr(self, 'eye_active') and self.eye_active:
-            logger.info("👁️ Глаз активен — гриф и название остаются")
             self._create_main_panel()
             self.is_chords_mode = False
             return
@@ -1468,19 +1288,13 @@ class SongDetailScreen(BaseScreen):
         self._hide_chords_layer()
 
     def _toggle_eye(self, *args):
-        """Переключает состояние глаза (серый/красный)"""
         self.eye_active = not self.eye_active
-
         if self.eye_active:
-            self.eye_btn.icon_color = [0.8, 0.2, 0.2, 1]  # Красный
-            logger.info("👁️ Глаз активирован (аккорды останутся видны)")
+            self.eye_btn.icon_color = [0.8, 0.2, 0.2, 1]
         else:
-            self.eye_btn.icon_color = [0.6, 0.6, 0.6, 0.8]  # Серый
-            logger.info("👁️ Глаз деактивирован (аккорды скроются)")
+            self.eye_btn.icon_color = [0.6, 0.6, 0.6, 0.8]
 
     def show_tonality_panel(self):
-        """Показывает панель тональности"""
-        logger.info("🎵 Открытие панели тональности")
         if self.is_chords_mode:
             self.close_chords_section()
         if self.is_font_mode:
@@ -1491,23 +1305,10 @@ class SongDetailScreen(BaseScreen):
         self.is_tonality_mode = True
 
     def close_tonality_panel(self):
-        """Закрывает панель тональности"""
-        logger.info("🎵 Закрытие панели тональности")
         self._create_main_panel()
         self.is_tonality_mode = False
 
-    def cancel_tonality(self):
-        """Отменяет изменение тональности"""
-        if self.is_tonality_mode:
-            if self.current_tonality != 0:
-                self.current_tonality = 0
-                self.apply_tonality(0)
-                logger.info("Тональность сброшена до оригинальной")
-            self.close_tonality_panel()
-
     def show_scroll_panel(self):
-        """Показывает панель прокрутки"""
-        logger.info("▶️ Открытие панели прокрутки")
         if self.is_chords_mode:
             self.close_chords_section()
         if self.is_tonality_mode:
@@ -1518,83 +1319,39 @@ class SongDetailScreen(BaseScreen):
         self.is_scroll_mode = True
 
     def close_scroll_panel(self):
-        """Закрывает панель прокрутки"""
-        logger.info("⏹️ Закрытие панели прокрутки")
         if self.is_scrolling:
             self.stop_scroll()
         self._create_main_panel()
         self.is_scroll_mode = False
 
-    def _wait_for_ready_and_scroll(self, *args):
-        """Ждёт, пока текст полностью отрисуется, и прокручивает вверх"""
-        if not hasattr(self, 'content_scroll'):
-            return
-
-        if hasattr(self, 'content_label') and self.content_label.text:
-            if self.content_label.texture and self.content_label.texture_size[1] > 0:
-                self.content_scroll.scroll_y = 1.0
-                logger.info("✅ Текст отрисован, прокрутка вверх")
-                return
-            else:
-                logger.info("⏳ Текст загружен, но ещё не отрисован, ждём...")
-                Clock.schedule_once(self._wait_for_ready_and_scroll, 0.15)
-                return
-        else:
-            logger.info("⏳ Текст ещё не загружен, ждём...")
-            Clock.schedule_once(self._wait_for_ready_and_scroll, 0.15)
-
-    def _fix_scroll_position(self):
-        """Принудительно устанавливает корректную позицию скролла"""
-        if not hasattr(self, 'content_scroll'):
-            return
-        self.content_scroll.scroll_y = 1.0
-        logger.info("🔧 Scroll position fixed to top")
-
-    def _get_font_multiplier(self, font_size):
-        """Возвращает строку с множителем размера шрифта"""
-        ratio = font_size / self.STANDARD_FONT_SIZE
-        rounded = round(ratio * 10) / 10
-        if rounded == int(rounded):
-            return f"{int(rounded)}x"
-        return f"{rounded:.1f}x"
-
     def _fix_slider_thumb(self, slider):
-        """Принудительно обновляет слайдер, чтобы появился thumb (шарик) и не менял цвет"""
         if slider:
             bi_color = [0.46, 0.70, 0.71, 1]
             slider.thumb_color_active = bi_color
             slider.thumb_color_inactive = bi_color
             slider.thumb_color_disabled = bi_color
-
             current = slider.value
             slider.value = current + 0.01
             Clock.schedule_once(lambda dt: setattr(slider, 'value', current), 0.01)
 
-            logger.info("🔧 Слайдер обновлён, thumb зафиксирован")
-
     def _toggle_display_mode(self, *args):
-        """Переключает режим отображения (пальцы/ноты) для ТЕКУЩЕГО рендерера"""
         if self.display_mode == "finger":
             self.display_mode = "notes"
             self.mode_btn.icon = "gesture-tap"
             self.mode_btn.icon_color = [1.0, 0.55, 0.0, 1]
-            logger.info("Режим отображения: НОТЫ")
         else:
             self.display_mode = "finger"
             self.mode_btn.icon = "music-note"
             self.mode_btn.icon_color = [0.9, 0.2, 0.2, 1]
-            logger.info("Режим отображения: ПАЛЬЦЫ")
 
         if self._current_chord_index < len(self.chord_renderers):
             self.chord_renderers[self._current_chord_index].set_mode(self.display_mode)
 
     def _toggle_griff_zoom(self, *args):
-        """Переключает масштаб грифа по кругу: 1.0 -> 1.3 -> 1.6 -> 1.0"""
         if not hasattr(self, 'griff_container') or not self.griff_container:
             return
 
         zoom_levels = [1.0, 1.3, 1.6]
-
         current = self.griff_scale
         if current in zoom_levels:
             current_index = zoom_levels.index(current)
@@ -1604,7 +1361,6 @@ class SongDetailScreen(BaseScreen):
             new_scale = 1.0
 
         self.griff_scale = new_scale
-
         base_height = dp(120)
         new_height = int(base_height * new_scale)
         self.griff_container.height = new_height
@@ -1619,22 +1375,16 @@ class SongDetailScreen(BaseScreen):
             self.griff_zoom_btn.icon = "magnify-plus"
             self.griff_zoom_btn.icon_color = [0.9, 0.7, 0.2, 1]
 
-        logger.info(f"🔍 Гриф изменён: {self.griff_scale:.1f}x")
-
     def _update_chords_display(self):
-        """Обновляет отображение текущего аккорда"""
         if not self._song_chords:
             return
 
         chord_name = self._song_chords[self._current_chord_index]
-
         if hasattr(self, 'chord_name_label') and self.chord_name_label:
             self.chord_name_label.text = chord_name
-
         self._load_chord_variants(chord_name)
 
     def _load_chord_variants(self, chord_name):
-        """Загружает все варианты аппликатур для аккорда"""
         self.chord_variants = []
         self.chord_variant_index = 0
 
@@ -1647,15 +1397,12 @@ class SongDetailScreen(BaseScreen):
 
             variants.sort(key=lambda x: x['variant'])
             self.chord_variants = variants
-            logger.info(f"Загружено вариантов для {chord_name}: {len(self.chord_variants)}")
-
             self._update_variant_icon()
 
             if self.chord_variants:
                 self.load_current_variant()
 
     def _update_variant_icon(self):
-        """Обновляет видимость кнопки вариантов"""
         total = len(self.chord_variants)
         if hasattr(self, 'variant_btn'):
             if total <= 1:
@@ -1664,7 +1411,6 @@ class SongDetailScreen(BaseScreen):
                 self.variant_btn.opacity = 1
 
     def load_current_variant(self):
-        """Загружает текущий вариант аккорда в ТЕКУЩИЙ рендерер"""
         if not self.chord_variants:
             return
 
@@ -1685,51 +1431,37 @@ class SongDetailScreen(BaseScreen):
                 renderer = self.chord_renderers[self._current_chord_index]
                 renderer.load_chord(chord_module)
                 renderer.set_mode(self.display_mode)
-                logger.info(f"Загружен вариант {self.chord_variant_index + 1}/{len(self.chord_variants)}")
 
         self._update_variant_icon()
 
     def _next_chord_variant(self, *args):
-        """Переключает на следующий вариант аккорда"""
         if not self.chord_variants:
             return
-
         total = len(self.chord_variants)
         self.chord_variant_index = (self.chord_variant_index + 1) % total
         self.load_current_variant()
 
     def _extract_and_cache_chords(self):
-        """Извлекает и кэширует аккорды из песни"""
         chords = set()
-
         for tab in self.tabs:
             content = tab.get('content', '')
             if content:
                 cleaned = clean_text(content)
                 extracted = extract_chords_from_text(cleaned)
                 chords.update(extracted)
-
         self._song_chords = sorted(list(chords))
-        logger.info(f"🎸 Найдено аккордов в песне: {len(self._song_chords)} - {self._song_chords}")
-
-    # ==================== ТРАНСПОНИРОВАНИЕ ====================
 
     def precompute_transpositions(self, cleaned_text):
-        from utils.transposer import transpose_text
-
         self.original_cleaned_text = cleaned_text
         self.transposed_text_cache[0] = highlight_chords_in_text(cleaned_text)
         self.transposed_chords_cache[0] = self._song_chords.copy()
 
         steps = [-3, -2.5, -2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3]
-
         for step in steps:
             transposed = transpose_text(cleaned_text, step)
             self.transposed_text_cache[step] = transposed
             transposed_chords = transpose_chord_list(self._song_chords, step)
             self.transposed_chords_cache[step] = transposed_chords
-
-        logger.info(f"✅ Предварительно вычислены транспозиции для {len(steps) + 1} шагов")
 
     def apply_tonality(self, step):
         transposed_text = self.transposed_text_cache.get(step)
@@ -1742,9 +1474,6 @@ class SongDetailScreen(BaseScreen):
                     if self._current_chord_index >= len(self._song_chords):
                         self._current_chord_index = 0
                     self._update_chords_display()
-            logger.info(f"✅ Применена тональность: {step:.1f}")
-        else:
-            logger.warning(f"⚠️ Текст для {step} не найден")
 
     def _update_tonality_label_color(self, value):
         if hasattr(self, 'tonality_value_label'):
@@ -1754,8 +1483,6 @@ class SongDetailScreen(BaseScreen):
                 self.tonality_value_label.text_color = [0.3, 0.7, 0.3, 1]
             else:
                 self.tonality_value_label.text_color = [0.46, 0.70, 0.71, 1]
-
-    # ==================== ПОДБОРЫ ====================
 
     def show_tabs_picker(self):
         if not self.tabs or len(self.tabs) <= 1:
@@ -1796,17 +1523,22 @@ class SongDetailScreen(BaseScreen):
         self.current_tab_index = index
         self._load_current_tab()
 
-    # ==================== ОСНОВНЫЕ МЕТОДЫ ====================
-
     def reset_font_size(self):
         self.current_font_size = self.STANDARD_FONT_SIZE
         if hasattr(self, 'content_label'):
             self.content_label.font_size = self.current_font_size
             self._update_content_height()
-        logger.info(f"🔍 Размер шрифта сброшен до стандартного: {self.current_font_size}")
+
+    def set_song(self, song_id, artist="", title=""):
+        """Устанавливает песню для просмотра"""
+        self.song_id = song_id
+        self.song_artist = artist
+        self.song_title = title
+        self.is_favorite = True
+        self.reset_screen_state()
+        self.load_song_data()
 
     def reset_screen_state(self):
-        """Сбрасывает состояние экрана при загрузке новой песни"""
         self.current_tonality = 0
         self.transposed_chords_cache = {}
         self.transposed_text_cache = {}
@@ -1815,21 +1547,16 @@ class SongDetailScreen(BaseScreen):
         if self.is_chords_mode:
             self.close_chords_section()
         if self.is_tonality_mode:
-            self.cancel_tonality()
+            self.close_tonality_panel()
         if self.is_font_mode:
             self.close_font_panel()
         if self.is_scroll_mode:
             self.close_scroll_panel()
 
-        # СБРАСЫВАЕМ СОСТОЯНИЕ ГЛАЗА
         self.eye_active = False
-
         if hasattr(self, '_current_theme') and self._current_theme != 'green':
             self._set_green_theme()
             self._current_theme = 'green'
-        elif not hasattr(self, '_current_theme'):
-            self._current_theme = 'green'
-            self._set_green_theme()
 
         self._current_chord_index = 0
         self.reset_font_size()
@@ -1839,83 +1566,13 @@ class SongDetailScreen(BaseScreen):
         self.scroll_speed = 1.0
         self.is_scrolling = False
 
-        logger.info("🔄 Состояние экрана сброшено (глаз деактивирован)")
-
-    def _extract_and_log_chords(self, text):
-        chords = extract_chords_from_text(text)
-        if chords:
-            unique_chords = sorted(set(chords))
-            chords_str = ', '.join(unique_chords)
-            artist_part = f"{self.song_artist} - " if self.song_artist else ""
-            name_part = self.song_title if self.song_title else "Песня"
-            logger.info(f"🎸 Найдены аккорды в {artist_part}{name_part}: {chords_str}")
-        return chords
-
-    def _load_current_tab(self):
-        if self.tabs and self.current_tab_index < len(self.tabs):
-            tab = self.tabs[self.current_tab_index]
-            raw_content = tab.get('content', 'Текст не загружен')
-            cleaned = clean_text(raw_content)
-            self._extract_and_log_chords(cleaned)
-            if cleaned:
-                highlighted_text = highlight_chords_in_text(cleaned)
-                self.content_label.text = highlighted_text
-                self.content_label.markup = True
-            else:
-                self.content_label.text = "Текст не загружен"
-                self.content_label.markup = False
-            self._update_content_height()
-            Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
-
-    def _update_content_height(self, *args):
-        if not self.content_label.texture:
-            Clock.schedule_once(lambda dt: self._update_content_height(), 0.05)
-            return
-
-        text_height = self.content_label.texture_size[1]
-        self.content_label.height = max(dp(50), text_height + dp(8))
-
-        if self.content_label.parent:
-            self.content_label.parent.height = text_height + dp(16)
-            if hasattr(self.content_label.parent, 'minimum_height'):
-                self.content_label.parent.minimum_height = text_height + dp(16)
-
-        self.content_scroll.scroll_y = 1.0
-
-    def _force_scroll_view_update(self, *args):
-        """Принудительно обновляет ScrollView, чтобы он пересчитал размеры"""
-        if hasattr(self, 'content_scroll'):
-            w, h = self.content_scroll.size
-            self.content_scroll.size = (w, h + 1)
-            Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'size', (w, h)), 0.01)
-            self.content_scroll.scroll_y = 1.0
-            logger.info("🔧 ScrollView обновлён")
-
-    def set_song(self, song_id):
-        self.reset_screen_state()
-        self.song_id = song_id
-        self.load_song_data()
-
     def load_song_data(self):
-        """Загружает песню с кэшированием"""
-        self.show_loading()
-
-        # Используем кэш (force_refresh=False)
-        api.get_tab(
-            song_id=self.song_id,
-            on_success=self.on_song_loaded,
-            on_failure=self.on_load_failed,
-            force_refresh=False  # ← используем кэш
-        )
-
-    def refresh_song(self):
-        """Принудительно обновляет песню с сервера (для pull-to-refresh)"""
         self.show_loading()
         api.get_tab(
             song_id=self.song_id,
             on_success=self.on_song_loaded,
             on_failure=self.on_load_failed,
-            force_refresh=True  # ← игнорируем кэш
+            force_refresh=False
         )
 
     def show_loading(self):
@@ -1934,15 +1591,15 @@ class SongDetailScreen(BaseScreen):
             self.loading_spinner = None
 
     def on_song_loaded(self, data):
-        """Обработчик загрузки песни - с проверкой избранного из кэша"""
-        artist = data.get('artist') or 'Неизвестный'
-        title = data.get('title') or 'Без названия'
+        artist = data.get('artist') or self.song_artist or 'Неизвестный'
+        title = data.get('title') or self.song_title or 'Без названия'
         self.song_artist = artist
         self.song_title = title
         self.tabs = data.get('tabs', [])
         if not self.tabs and data.get('content'):
             self.tabs = [{'content': data.get('content', '')}]
         self.current_tab_index = 0
+
         if self.tabs:
             raw_content = self.tabs[0].get('content', 'Текст не загружен')
             cleaned = clean_text(raw_content)
@@ -1954,37 +1611,23 @@ class SongDetailScreen(BaseScreen):
             self._update_content_height()
 
         self.is_liked = data.get('is_liked', False)
-
-        # ============ ПРОВЕРЯЕМ ИЗБРАННОЕ ИЗ КЭША ============
-        # 1. Сначала проверяем через API кэш
-        self.is_favorite = api.is_song_favorited(self.song_id)
-
-        # 2. Если в кэше нет, используем данные с сервера
-        if not self.is_favorite:
-            self.is_favorite = data.get('is_favorite', False)
-
-        # 3. Если песня открыта из избранного (previous_screen == 'favorites')
-        # и is_favorite == False, значит песня уже удалена из избранного
-        # но мы все еще на экране - показываем правильное состояние
-        if self.previous_screen == 'favorites' and not self.is_favorite:
-            logger.info(f"⚠️ Песня {self.song_id} удалена из избранного, обновляем иконку")
+        self.is_favorite = True
 
         self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
-        self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
-
-        logger.info(
-            f"⭐ Песня {self.song_id} в избранном: {self.is_favorite} (из кэша: {api.is_song_favorited(self.song_id)})")
+        self.favorite_btn.icon = "star"
 
         self.update_top_nav_title()
-
         self.hide_loading()
-        logger.info(f"Песня загружена, подборов: {len(self.tabs)}")
 
         for delay in [0.3, 0.5, 0.8, 1.0, 1.5, 2.0, 3.0]:
             Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
 
-        for delay in [0.4, 0.6, 0.9, 1.2, 1.8, 2.5, 3.5]:
-            Clock.schedule_once(lambda dt, d=delay: setattr(self.content_scroll, 'scroll_y', 1.0), delay)
+    def _wait_for_ready_and_scroll(self, dt):
+        if hasattr(self, 'content_label') and self.content_label.text:
+            if self.content_label.texture and self.content_label.texture_size[1] > 0:
+                self.content_scroll.scroll_y = 1.0
+                return
+        Clock.schedule_once(self._wait_for_ready_and_scroll, 0.15)
 
     def on_load_failed(self, req, error):
         self.hide_loading()
@@ -2009,178 +1652,49 @@ class SongDetailScreen(BaseScreen):
         api.toggle_like(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
 
     def toggle_favorite(self, *args):
-        """Переключает избранное с принудительным обновлением состояния"""
         if not api.is_authenticated():
             app = MDApp.get_running_app()
             if app and hasattr(app, 'open_profile'):
                 app.open_profile()
             return
 
-        if self.is_favorite:
-            # Удаляем из избранного
-            def on_success(result):
-                self.is_favorite = False
-                self.favorite_btn.icon = "star-outline"
-                # ✅ Принудительно обновляем состояние избранного в API
-                api._clear_favorites_cache()
-                notify.success("Удалено из избранного")
-                self._refresh_favorites_screen()
+        from kivymd.uix.dialog import MDDialog
+        from kivymd.uix.button import MDRaisedButton
 
-            def on_failure(req, error):
-                notify.error("Ошибка")
+        def confirm_delete(instance):
+            dialog.dismiss()
+            self._remove_from_favorites()
 
-            api.remove_from_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
-        else:
-            # Добавляем в избранное
-            def on_success(result):
-                self.is_favorite = True
-                self.favorite_btn.icon = "star"
-                # ✅ Принудительно обновляем состояние избранного в API
-                api._clear_favorites_cache()
-                # ✅ Закэшируем текст песни
-                self._cache_song_for_offline()
-                notify.success("Добавлено в избранное")
-                self._refresh_favorites_screen()
+        def cancel_delete(instance):
+            dialog.dismiss()
 
-            def on_failure(req, error):
-                notify.error("Ошибка")
+        dialog = MDDialog(
+            title="Удалить из избранного?",
+            text=f"Песня '{self.song_title}' будет удалена из избранного",
+            buttons=[
+                MDRaisedButton(text="Отмена", on_release=cancel_delete),
+                MDRaisedButton(text="Удалить", on_release=confirm_delete, md_bg_color=[0.8, 0.3, 0.3, 1]),
+            ]
+        )
+        dialog.open()
 
-            api.add_to_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+    def _remove_from_favorites(self):
+        def on_success(result):
+            self.is_favorite = False
+            self.favorite_btn.icon = "star-outline"
+            api._clear_favorites_cache()
+            notify.success("Удалено из избранного")
+            Clock.schedule_once(lambda dt: self.go_back(), 0.3)
 
-    def _cache_song_for_offline(self):
-        """Закэширует текущую песню для офлайн-доступа"""
-        try:
-            import threading
-            # Сохраняем текущие данные песни в кэш
-            if self.song_id and self.tabs:
-                data = {
-                    'artist': self.song_artist,
-                    'title': self.song_title,
-                    'tabs': self.tabs,
-                    'is_favorite': True,
-                    'is_liked': self.is_liked
-                }
-                api._save_song_cache(self.song_id, data)
-                logger.info(f"📦 Песня {self.song_id} закэширована для офлайн-доступа")
-        except Exception as e:
-            logger.error(f"Ошибка кэширования песни: {e}")
+        def on_failure(req, error):
+            notify.error("Ошибка удаления из избранного")
 
-    def _refresh_favorites_screen(self):
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('favorites'):
-                fav_screen = self.manager.get_screen('favorites')
-                if hasattr(fav_screen, 'load_favorites'):
-                    Clock.schedule_once(lambda dt: fav_screen.load_favorites(), 0.5)
-
-    def go_back(self, instance=None):
-        """Возврат с обновлением состояния"""
-        logger.info("🔙 Нажата кнопка возврата")
-        logger.info(f"   📌 previous_screen = {self.previous_screen}")
-
-        if self.is_tonality_mode:
-            self.cancel_tonality()
-        if self.is_font_mode:
-            self.close_font_panel()
-        if self.is_scroll_mode:
-            self.close_scroll_panel()
-        if self.is_chords_mode:
-            self.close_chords_section()
-
-        if self.manager:
-            # Если возвращаемся на artist_songs — обновляем состояние
-            if self.previous_screen == 'artist_songs':
-                if self.manager.has_screen('artist_songs'):
-                    # Восстанавливаем состояние
-                    artist_data = screen_state.get_artist_songs_data()
-                    artist_name = artist_data.get('artist_name', '')
-                    scroll_pos = artist_data.get('scroll_position', 1.0)
-
-                    artist_screen = self.manager.get_screen('artist_songs')
-                    if artist_name:
-                        artist_screen.artist_name = artist_name
-                        artist_screen.artist_title.text = artist_name
-                        artist_screen._saved_scroll_position = scroll_pos
-                        # Перезагружаем песни, чтобы обновить состояние
-                        Clock.schedule_once(lambda dt: artist_screen._load_songs(), 0.1)
-
-            # Если возвращаемся на favorites — обновляем список
-            if self.previous_screen == 'favorites':
-                if self.manager.has_screen('favorites'):
-                    fav_screen = self.manager.get_screen('favorites')
-                    if hasattr(fav_screen, 'refresh_favorites'):
-                        Clock.schedule_once(lambda dt: fav_screen.refresh_favorites(), 0.3)
-
-            screen_state.clear_pending_chord()
-
-            # Возвращаемся на предыдущий экран
-            if self.previous_screen and self.manager.has_screen(self.previous_screen):
-                self.manager.current = self.previous_screen
-                logger.info(f"✅ Возврат на {self.previous_screen}")
-            else:
-                self.manager.current = 'home'
-                logger.info("✅ Возврат на home (по умолчанию)")
-
-    def on_size(self, *args):
-        """Вызывается при изменении размера экрана (поворот и т.д.)"""
-        if hasattr(self, '_top_spacer_song'):
-            top_padding = layout_config.get_top_padding()
-            if platform == 'android':
-                top_padding = top_padding + dp(12)
-            self._top_spacer_song.height = top_padding
-
-        if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
-            Clock.schedule_once(self._wait_for_ready_and_scroll, 0.3)
-
-        # screens/song_detail_screen.py - исправленный метод on_enter
-
-    def on_enter(self):
-        """При входе на экран"""
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            # Убираем _show_back_button()
-            # app.top_nav._show_back_button()
-
-            if self.song_title:
-                self.update_top_nav_title()
-            else:
-                app.top_nav.set_custom_title("Подбор")
-
-        if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
-            for delay in [0.2, 0.4, 0.6, 0.9, 1.2, 1.8, 2.5]:
-                Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
-                scroll_delay = delay + 0.1
-                Clock.schedule_once(lambda dt, d=scroll_delay: setattr(self.content_scroll, 'scroll_y', 1.0),
-                                    scroll_delay)
-
-        if hasattr(self, '_top_spacer_song'):
-            top_padding = layout_config.get_top_padding()
-            if platform == 'android':
-                top_padding = top_padding + dp(16)
-            self._top_spacer_song.height = top_padding
-
-    def on_leave(self):
-        """При выходе с экрана"""
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.reset_to_default()
-        if self.is_tonality_mode:
-            self.cancel_tonality()
-        if self.is_font_mode:
-            self.close_font_panel()
-        if self.is_scroll_mode:
-            self.close_scroll_panel()
-        if self.is_chords_mode:
-            self.close_chords_section()
+        api.remove_from_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
 
     def update_top_nav_title(self):
-        """Обновляет заголовок в топ нав с названием песни и артистом"""
         app = MDApp.get_running_app()
         if not app or not hasattr(app, 'top_nav'):
             return
-
-        from kivymd.uix.boxlayout import MDBoxLayout
-        from kivymd.uix.label import MDLabel
-        from kivy.metrics import sp, dp
 
         title_container = MDBoxLayout(
             orientation='vertical',
@@ -2219,10 +1733,9 @@ class SongDetailScreen(BaseScreen):
 
         app.top_nav.set_custom_title_widget(title_container)
 
-    # ==================== ПРОКРУТКА ТЕКСТА ====================
+    # ============ ПРОКРУТКА ТЕКСТА ============
 
     def toggle_scroll(self):
-        logger.info(f"🎬 Переключение прокрутки: {'СТАРТ' if not self.is_scrolling else 'СТОП'}")
         if not self.is_scrolling and self.content_scroll.scroll_y <= 0.01:
             self.reset_scroll_position()
         if not self.is_scrolling:
@@ -2246,7 +1759,6 @@ class SongDetailScreen(BaseScreen):
                 self.content_scroll.scroll_y = 0
                 self.stop_scroll()
                 self.play_pause_btn.icon = "play"
-                logger.info("🏁 Достигнут конец текста, прокрутка остановлена")
                 return False
             else:
                 self.content_scroll.scroll_y = new_y
@@ -2261,8 +1773,89 @@ class SongDetailScreen(BaseScreen):
         self.is_scrolling = False
 
     def reset_scroll_position(self):
-        logger.info("⏹️ Сброс позиции прокрутки в начало")
         if self.is_scrolling:
             self.stop_scroll()
             self.play_pause_btn.icon = "play"
         self.content_scroll.scroll_y = 1.0
+
+    def _get_font_multiplier(self, font_size):
+        ratio = font_size / self.STANDARD_FONT_SIZE
+        rounded = round(ratio * 10) / 10
+        if rounded == int(rounded):
+            return f"{int(rounded)}x"
+        return f"{rounded:.1f}x"
+
+    def go_back(self, instance=None):
+        """Возврат ТОЛЬКО в FavoritesScreen с обновлением"""
+        logger.info(f"🔙 Возврат из избранного просмотра в FavoritesScreen")
+
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.clear_custom_title_widget()
+            if hasattr(app.top_nav, '_update_right_buttons'):
+                app.top_nav._update_right_buttons('favorites')
+
+        if self.manager and self.manager.has_screen('favorites'):
+            favorites_screen = self.manager.get_screen('favorites')
+            Clock.schedule_once(lambda dt: favorites_screen.refresh_favorites(), 0.2)
+            self.manager.current = 'favorites'
+            logger.info("✅ Возврат на FavoritesScreen")
+        else:
+            self.manager.current = 'home'
+            logger.info("⚠️ FavoritesScreen не найден, возврат на home")
+
+    # screens/favorite_detail_screen.py - исправленный on_enter
+
+    def on_enter(self):
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            # Настраиваем левую кнопку - стрелка назад
+            if hasattr(app.top_nav, 'left_container'):
+                app.top_nav.left_container.clear_widgets()
+                app.top_nav.left_container.add_widget(app.top_nav.back_btn)
+                app.top_nav.back_btn.on_release = self.go_back
+
+            # ✅ СОЗДАЁМ НОВЫЕ КНОПКИ КАЖДЫЙ РАЗ
+            if hasattr(app.top_nav, 'right_container'):
+                app.top_nav.right_container.clear_widgets()
+
+                # Создаём кнопку лайка
+                self.like_btn = MDIconButton(
+                    icon="heart-outline" if not self.is_liked else "heart",
+                    size_hint=(None, None),
+                    size=(dp(40), dp(40)),
+                    theme_icon_color="Custom",
+                    icon_color=[0.8, 0.3, 0.3, 0.9] if not self.is_liked else [0.8, 0.3, 0.3, 1],
+                    md_bg_color=[0, 0, 0, 0],
+                    on_release=self.toggle_like
+                )
+
+                # Создаём кнопку избранного
+                self.fav_btn = MDIconButton(
+                    icon="star" if self.is_favorite else "star-outline",
+                    size_hint=(None, None),
+                    size=(dp(40), dp(40)),
+                    theme_icon_color="Custom",
+                    icon_color=[0.9, 0.7, 0.2, 0.9] if self.is_favorite else [0.6, 0.6, 0.6, 0.8],
+                    md_bg_color=[0, 0, 0, 0],
+                    on_release=self.toggle_favorite
+                )
+
+                app.top_nav.right_container.add_widget(self.like_btn)
+                app.top_nav.right_container.add_widget(self.fav_btn)
+
+        if self.song_title:
+            self.update_top_nav_title()
+
+        if hasattr(self, '_top_spacer_song'):
+            top_padding = layout_config.get_top_padding()
+            if platform == 'android':
+                top_padding = top_padding + dp(16)
+            self._top_spacer_song.height = top_padding
+
+    def on_leave(self):
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.clear_custom_title_widget()
+            if hasattr(app.top_nav, '_update_right_buttons'):
+                app.top_nav._update_right_buttons('favorites')
