@@ -1,12 +1,13 @@
 # screens/tuner_screen.py
 """
-Экран гитарного тюнера — полукруг от 0 до 180 градусов
-Цветные сегменты: зелёный (центр), жёлтый, оранжевый, красный
+Экран гитарного тюнера — тонкая прерывистая дуга
+С яркими цифрами -10, 0, +10 и т.д.
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Ellipse
 from kivy.core.image import Image as CoreImage
 from kivy.uix.widget import Widget
+from kivy.uix.label import Label
 from kivy.clock import Clock
 from kivy.animation import Animation
 from kivy.properties import NumericProperty, StringProperty, ListProperty
@@ -291,14 +292,12 @@ def cents_deviation(freq, target_freq):
 
 
 # ===================================================================
-# ============ ПОЛУКРУГ С ЦВЕТНЫМИ СЕГМЕНТАМИ ============
+# ============ ТЮНЕР С ЯРКИМИ ЦИФРАМИ ============
 # ===================================================================
 
 class TunerDial(Widget):
     """
-    Полукруг от 0 до 180 градусов
-    Цветные сегменты: зелёный (центр), жёлтый, оранжевый, красный
-    Стрелка чёрная, тонкая
+    Тонкая прерывистая дуга с яркими цифрами
     """
 
     deviation = NumericProperty(0)
@@ -306,117 +305,215 @@ class TunerDial(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.deviation = 0
+        self._labels = []
+        self._labels_created = False
         self.bind(pos=self._update, size=self._update)
         self.bind(deviation=self._update_needle)
+        Clock.schedule_once(self._create_labels_delayed, 0.1)
+        Clock.schedule_once(self._create_labels_delayed, 0.3)
+        Clock.schedule_once(self._create_labels_delayed, 0.5)
+
+    def _create_labels_delayed(self, dt):
+        if self.width > 10 and self.height > 10:
+            self._create_labels()
+            self._labels_created = True
+        else:
+            Clock.schedule_once(self._create_labels_delayed, 0.1)
+
+    def _create_labels(self):
+        for label in self._labels:
+            if label.parent:
+                label.parent.remove_widget(label)
+        self._labels = []
+
+        if self.width <= 0 or self.height <= 0:
+            return
+
+        cx = self.center_x
+        cy = self.center_y + dp(20)
+        r = min(self.width, self.height) * 0.48
+
+        for angle in range(-80, 81, 10):
+            if angle == 0:
+                continue
+            angle_rad = math.radians(angle)
+            text_r = r * 0.62
+
+            x = cx + text_r * math.sin(angle_rad)
+            y = cy + text_r * math.cos(angle_rad)
+
+            value = round(angle * 50 / 85)
+            if value > 0:
+                text = f"+{value}"
+            else:
+                text = str(value)
+
+            label = MDLabel(
+                text=text,
+                font_size=sp(12),
+                halign="center",
+                valign="middle",
+                size_hint=(None, None),
+                size=(dp(28), dp(18)),
+                pos=(x - dp(14), y - dp(9)),
+                theme_text_color="Custom",
+                text_color=[1, 1, 1, 1],
+                bold=True
+            )
+            self._labels.append(label)
+            self.add_widget(label)
+
+        # Цифра 0
+        label = MDLabel(
+            text="0",
+            font_size=sp(14),
+            halign="center",
+            valign="middle",
+            size_hint=(None, None),
+            size=(dp(30), dp(20)),
+            pos=(cx - dp(15), cy + r * 0.62 - dp(10)),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            bold=True
+        )
+        self._labels.append(label)
+        self.add_widget(label)
+
+    def _update_labels_position(self):
+        if not self._labels_created and self.width > 10 and self.height > 10:
+            self._create_labels()
+            self._labels_created = True
+            return
+
+        if not self._labels:
+            return
+
+        cx = self.center_x
+        cy = self.center_y + dp(20)
+        r = min(self.width, self.height) * 0.48
+
+        if r <= 0:
+            return
+
+        label_index = 0
+        for angle in range(-80, 81, 10):
+            if angle == 0:
+                continue
+            angle_rad = math.radians(angle)
+            text_r = r * 0.62
+
+            x = cx + text_r * math.sin(angle_rad)
+            y = cy + text_r * math.cos(angle_rad)
+
+            if label_index < len(self._labels):
+                label = self._labels[label_index]
+                label.pos = (x - dp(14), y - dp(9))
+                label_index += 1
+
+        if label_index < len(self._labels):
+            label = self._labels[label_index]
+            label.pos = (cx - dp(15), cy + r * 0.62 - dp(10))
 
     def _update(self, *args):
         self.canvas.clear()
 
         cx = self.center_x
-        cy = self.center_y + dp(15)
+        cy = self.center_y + dp(20)
         r = min(self.width, self.height) * 0.48
 
+        if r <= 0:
+            return
+
+        self._update_labels_position()
+
         with self.canvas:
-            # ============ 1. ДУГА С ЦВЕТНЫМИ СЕГМЕНТАМИ ============
-            # Каждый сегмент — 10 градусов в дуге от 0 до 180
-
-            # Полукруглая дуга — основа
-            Color(0.15, 0.15, 0.2, 1)
-            Line(circle=(cx, cy, r * 0.92, 0, 180), width=dp(14))
-
-            # Зелёный сегмент (центр, -3..+3 градуса от 90)
-            Color(0.1, 0.85, 0.2, 0.95)
-            Line(circle=(cx, cy, r * 0.92, 87, 93), width=dp(14))
-
-            # Жёлтый сегмент (ближе к центру)
-            Color(0.95, 0.9, 0.1, 0.85)
-            Line(circle=(cx, cy, r * 0.92, 80, 87), width=dp(14))
-            Line(circle=(cx, cy, r * 0.92, 93, 100), width=dp(14))
-
-            # Оранжевый сегмент
-            Color(0.95, 0.6, 0.1, 0.75)
-            Line(circle=(cx, cy, r * 0.92, 70, 80), width=dp(14))
-            Line(circle=(cx, cy, r * 0.92, 100, 110), width=dp(14))
-
-            # Красный сегмент (края)
-            Color(0.85, 0.15, 0.15, 0.75)
-            Line(circle=(cx, cy, r * 0.92, 55, 70), width=dp(14))
-            Line(circle=(cx, cy, r * 0.92, 110, 125), width=dp(14))
-
-            # Тёмно-красный (самые края)
-            Color(0.6, 0.05, 0.05, 0.6)
-            Line(circle=(cx, cy, r * 0.92, 40, 55), width=dp(14))
-            Line(circle=(cx, cy, r * 0.92, 125, 140), width=dp(14))
-
-            # ============ 2. ДЕЛЕНИЯ (ШАГ 5 ГРАДУСОВ) ============
-            for angle in range(40, 141, 5):
+            # ============ 1. ПРЕРЫВИСТАЯ ДУГА ============
+            for angle in range(-85, 86, 2):
                 angle_rad = math.radians(angle)
+                segment_len = r * 0.06
+                start_r = r * 0.90
+                end_r = r * 0.90 - segment_len
 
-                # Длинные риски каждые 10 градусов
-                if angle % 10 == 0:
-                    tick_len = r * 0.08
-                    Color(0.9, 0.9, 0.9, 0.9)
-                    width = 2
+                x1 = cx + start_r * math.sin(angle_rad)
+                y1 = cy + start_r * math.cos(angle_rad)
+                x2 = cx + end_r * math.sin(angle_rad)
+                y2 = cy + end_r * math.cos(angle_rad)
 
-                    # Цифры с шагом 10
-                    if angle != 90:
-                        value = round((angle - 90) * 1.25)  # Пересчёт в центы
-                        text_r = r * 0.68
-                        x = cx + text_r * math.sin(angle_rad)
-                        y = cy + text_r * math.cos(angle_rad)
-                        Color(0.6, 0.6, 0.6, 0.4)
-                        Ellipse(pos=(x - dp(4), y - dp(4)), size=(dp(8), dp(8)))
+                if -5 <= angle <= 5:
+                    Color(0.1, 0.85, 0.2, 0.95)
+                elif -15 <= angle <= -5 or 5 <= angle <= 15:
+                    Color(0.95, 0.9, 0.1, 0.85)
+                elif -30 <= angle <= -15 or 15 <= angle <= 30:
+                    Color(0.95, 0.6, 0.1, 0.75)
+                elif -50 <= angle <= -30 or 30 <= angle <= 50:
+                    Color(0.85, 0.15, 0.15, 0.75)
                 else:
-                    tick_len = r * 0.05
-                    Color(0.5, 0.5, 0.5, 0.4)
-                    width = 1.5
+                    Color(0.6, 0.05, 0.05, 0.6)
 
-                x1 = cx + (r * 0.84 - tick_len) * math.sin(angle_rad)
-                y1 = cy + (r * 0.84 - tick_len) * math.cos(angle_rad)
-                x2 = cx + r * 0.84 * math.sin(angle_rad)
-                y2 = cy + r * 0.84 * math.cos(angle_rad)
-                Line(points=[x1, y1, x2, y2], width=width)
+                Line(points=[x1, y1, x2, y2], width=2.5)
 
-            # ============ 3. СТРЕЛКА ============
+            # ============ 2. РИСКИ ============
+            for angle in range(-80, 81, 10):
+                angle_rad = math.radians(angle)
+                tick_len = r * 0.10
+                Color(0.9, 0.9, 0.9, 0.8)
+
+                x1 = cx + r * 0.88 * math.sin(angle_rad)
+                y1 = cy + r * 0.88 * math.cos(angle_rad)
+                x2 = cx + (r * 0.88 - tick_len) * math.sin(angle_rad)
+                y2 = cy + (r * 0.88 - tick_len) * math.cos(angle_rad)
+                Line(points=[x1, y1, x2, y2], width=2)
+
+            # ============ 3. МАЛЕНЬКИЕ РИСКИ ============
+            for angle in range(-85, 86, 5):
+                if angle % 10 == 0:
+                    continue
+                angle_rad = math.radians(angle)
+                tick_len = r * 0.05
+                Color(0.5, 0.5, 0.5, 0.4)
+
+                x1 = cx + r * 0.88 * math.sin(angle_rad)
+                y1 = cy + r * 0.88 * math.cos(angle_rad)
+                x2 = cx + (r * 0.88 - tick_len) * math.sin(angle_rad)
+                y2 = cy + (r * 0.88 - tick_len) * math.cos(angle_rad)
+                Line(points=[x1, y1, x2, y2], width=1.5)
+
+            # ============ 4. СТРЕЛКА ============
             self._draw_needle()
 
-            # ============ 4. ЦЕНТРАЛЬНАЯ ТОЧКА ============
+            # ============ 5. ЦЕНТРАЛЬНАЯ ТОЧКА ============
             Color(0.3, 0.3, 0.3, 0.8)
-            Ellipse(pos=(cx - dp(5), cy - dp(5)), size=(dp(10), dp(10)))
+            Ellipse(pos=(cx - dp(6), cy - dp(6)), size=(dp(12), dp(12)))
             Color(0.5, 0.5, 0.5, 0.3)
-            Line(circle=(cx, cy, dp(5)), width=1)
+            Line(circle=(cx, cy, dp(6)), width=1)
 
     def _draw_needle(self):
         cx = self.center_x
-        cy = self.center_y + dp(15)
+        cy = self.center_y + dp(20)
         r = min(self.width, self.height) * 0.48
 
-        # Отклонение в градусах (от 40 до 140)
-        # -50..+50 центов -> 40..140 градусов
-        angle_deg = 90 + self.deviation * 0.9
-        angle_deg = max(40, min(140, angle_deg))
+        if r <= 0:
+            return
+
+        angle_deg = self.deviation * 85 / 50
+        angle_deg = max(-85, min(85, angle_deg))
         angle_rad = math.radians(angle_deg)
 
-        needle_len = r * 0.68
+        needle_len = r * 0.72
 
         x_end = cx + needle_len * math.sin(angle_rad)
         y_end = cy + needle_len * math.cos(angle_rad)
 
-        # ============ ЧЁРНАЯ ТОНКАЯ СТРЕЛКА ============
-        # Тень стрелки
         Color(0, 0, 0, 0.2)
         Line(points=[cx + 1, cy - 1, x_end + 1, y_end - 1], width=dp(2), cap='round')
 
-        # Основная стрелка
         Color(0.05, 0.05, 0.05, 0.95)
         Line(points=[cx, cy, x_end, y_end], width=dp(2.5), cap='round')
 
-        # Маленькая точка на конце
         Color(0.05, 0.05, 0.05, 0.9)
         head_radius = r * 0.022
         Ellipse(pos=(x_end - head_radius, y_end - head_radius), size=(head_radius * 2, head_radius * 2))
 
-        # Слабое свечение
         Color(0.2, 0.2, 0.2, 0.08)
         Line(points=[cx, cy, x_end, y_end], width=dp(6), cap='round')
 
@@ -873,13 +970,11 @@ class TunerScreen(BaseScreen):
         if note:
             cents = cents_deviation(freq, note_freq)
 
-            # Отображаем ноту и частоту
             if hasattr(self, 'note_label'):
                 self.note_label.text = note
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.1f} Hz"
 
-            # Статус
             if abs(cents) < 3:
                 self._show_success("В СТРОЕ!")
             elif abs(cents) < 10:
@@ -973,7 +1068,6 @@ class TunerScreen(BaseScreen):
             adaptive_height=True
         )
 
-        # ============ СТРОЙ (маленький) ============
         tuning_info = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -993,7 +1087,6 @@ class TunerScreen(BaseScreen):
         tuning_info.add_widget(self.tuning_name_label)
         content.add_widget(tuning_info)
 
-        # ============ ПОЛУКРУГЛАЯ ШКАЛА ============
         dial_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -1004,7 +1097,6 @@ class TunerScreen(BaseScreen):
         dial_container.add_widget(self.tuner_dial)
         content.add_widget(dial_container)
 
-        # ============ НОТА И ЧАСТОТА ============
         info_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -1013,7 +1105,7 @@ class TunerScreen(BaseScreen):
             padding=[dp(16), dp(4), dp(16), dp(4)]
         )
 
-        self.note_label = MDLabel(
+        self.note_label = NoteLabel(
             text="--",
             font_size=sp(32),
             halign="center",
@@ -1039,7 +1131,6 @@ class TunerScreen(BaseScreen):
         info_container.add_widget(self.freq_label)
         content.add_widget(info_container)
 
-        # ============ МЕНЮ ============
         menu_card = MDCard(
             orientation='horizontal',
             size_hint=(1, None),
@@ -1087,7 +1178,6 @@ class TunerScreen(BaseScreen):
         menu_card.add_widget(self.reset_btn)
         content.add_widget(menu_card)
 
-        # ============ СТАТУС ============
         self._hint_label = MDLabel(
             text="",
             font_size=sp(10),
@@ -1152,7 +1242,9 @@ class TunerScreen(BaseScreen):
         logger.info("Вход в экран тюнера")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            app.top_nav.set_custom_title("")
+            # Используем force_update_title для мгновенного обновления
+            app.top_nav.force_update_title("Тюнер", show_back=True)
+            # Назначаем callback для кнопки назад
             app.top_nav.set_custom_back_callback(self.go_back)
 
     def go_back(self, instance=None):

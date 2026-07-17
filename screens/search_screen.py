@@ -1,6 +1,7 @@
-# screens/search_screen.py - с поддержкой новых дублирующих экранов
+# screens/search_screen.py - с дизайном поиска как в SongsScreen
 """
 Экран поиска (аккорды, песни и термины)
+С дизайном поисковой строки как в SongsScreen
 """
 import threading
 import traceback
@@ -48,29 +49,34 @@ except ImportError:
 
 
 class SearchBar(MDCard):
-    """Поисковая строка"""
+    """Поисковая строка - ТАКОЙ ЖЕ ДИЗАЙН КАК В SongsScreen"""
 
     def __init__(self, on_search=None, on_clear=None, on_text_change=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
         self.on_clear = on_clear
         self.on_text_change = on_text_change
+        self.current_query = ""
+        self._search_timer = None
 
         self.orientation = 'horizontal'
-        self.size_hint = (0.9, None)
-        self.height = dp(48)
-        self.radius = [dp(24), dp(24), dp(24), dp(24)]
-        self.md_bg_color = [0.96, 0.96, 0.96, 1]
+        self.size_hint = (1, None)  # ← ТЕПЕРЬ НА ВСЮ ШИРИНУ
+        self.height = dp(44)
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]  # ← ТАКИЕ ЖЕ СКРУГЛЕНИЯ
+        self.md_bg_color = [1, 1, 1, 1]  # ← БЕЛЫЙ ФОН
         self.elevation = 0
-        self.padding = [dp(16), dp(6), dp(12), dp(6)]
-        self.spacing = dp(8)
+        self.padding = [dp(12), dp(4), dp(8), dp(4)]
+        self.spacing = dp(4)
         self.pos_hint = {'center_x': 0.5}
+
+        self.line_color = [0.1, 0.1, 0.1, 0.3]
+        self.line_width = 1.6
 
         self.search_field = MDTextField(
             hint_text="Поиск аккордов или песен...",
             size_hint_x=1,
             font_size=sp(15),
-            height=dp(36),
+            height=dp(42),
             on_text_validate=self._on_search,
             mode="fill"
         )
@@ -79,20 +85,24 @@ class SearchBar(MDCard):
         self.search_field.line_color_focus = [0, 0, 0, 0]
         self.search_field.fill_color_normal = [1, 1, 1, 0]
         self.search_field.fill_color_focus = [1, 1, 1, 0]
-        self.search_field.hint_text_color = [0.7, 0.7, 0.7, 1]
-        self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
+        self.search_field.hint_text_color = [0.6, 0.6, 0.6, 1]
+        self.search_field.theme_text_color = "Custom"
+        self.search_field.text_color = [0.1, 0.1, 0.1, 1]
 
         self.search_field.bind(text=self._on_text_change)
+        self.search_field.bind(focus=self._on_focus)
 
         self.clear_btn = MDIconButton(
             icon="close-circle",
             size_hint=(None, None),
-            size=(dp(24), dp(24)),
+            size=(dp(28), dp(28)),
             theme_icon_color="Custom",
-            icon_color=[0.6, 0.6, 0.6, 1],
+            icon_color=[0.5, 0.5, 0.5, 1],
             md_bg_color=[0, 0, 0, 0],
             on_release=self._on_clear,
-            opacity=0
+            opacity=0,
+            disabled=True,
+            pos_hint={'center_y': 0.5}
         )
 
         self.search_icon = MDIconButton(
@@ -106,16 +116,43 @@ class SearchBar(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
+        self.add_widget(self.search_icon)
         self.add_widget(self.search_field)
         self.add_widget(self.clear_btn)
-        self.add_widget(self.search_icon)
 
     def _on_text_change(self, instance, text):
-        self.clear_btn.opacity = 1 if text else 0
+        self.current_query = text
+        if text.strip():
+            self.clear_btn.opacity = 1
+            self.clear_btn.disabled = False
+        else:
+            self.clear_btn.opacity = 0
+            self.clear_btn.disabled = True
+
+        if self._search_timer:
+            Clock.unschedule(self._search_timer)
+            self._search_timer = None
+
+        if not text.strip():
+            if self.on_clear:
+                self.on_clear()
+        else:
+            self._search_timer = Clock.schedule_once(lambda dt: self._do_search(), 0.5)
+
         if self.on_text_change:
             self.on_text_change(text)
 
+    def _do_search(self):
+        if self.on_search and self.current_query:
+            text = self.current_query.strip()
+            if text:
+                self.on_search(text)
+
     def _on_search(self, instance):
+        if self._search_timer:
+            Clock.unschedule(self._search_timer)
+            self._search_timer = None
+
         if self.on_search:
             text = self.search_field.text.strip()
             if text:
@@ -123,14 +160,26 @@ class SearchBar(MDCard):
 
     def _on_clear(self, instance):
         self.search_field.text = ""
-        self.search_field.focus = True
         self.clear_btn.opacity = 0
+        self.clear_btn.disabled = True
+        self.current_query = ""
         if self.on_clear:
             self.on_clear()
+        self.search_field.focus = True
+
+    def _on_focus(self, instance, value):
+        if value:
+            self.line_color = [0.1, 0.1, 0.1, 0.3]
+            self.line_width = 1.8
+        else:
+            self.line_color = [0.1, 0.1, 0.1, 0.3]
+            self.line_width = 1.5
 
     def clear(self):
         self.search_field.text = ""
         self.clear_btn.opacity = 0
+        self.clear_btn.disabled = True
+        self.current_query = ""
 
     def focus(self):
         self.search_field.focus = True
@@ -258,7 +307,9 @@ class ResultCard(MDCard):
 
 
 class SearchScreen(BaseScreen):
-    """Экран поиска - аккорды, песни и термины"""
+    """Экран поиска - аккорды, песни и термины
+    С дизайном поиска как в SongsScreen
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -269,6 +320,12 @@ class SearchScreen(BaseScreen):
         self._search_thread = None
         self._is_searching = False
         self.current_query = ""
+
+        # ============ ДЛЯ СОХРАНЕНИЯ СОСТОЯНИЯ ============
+        self._saved_scroll_position = 1.0
+        self._is_restoring = False
+        self._last_results = []
+        self._state_restored = False
 
         self.init_ui()
         self.load_background()
@@ -315,28 +372,36 @@ class SearchScreen(BaseScreen):
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(20)))
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(16)))
 
         self.title_label = MDLabel(
             text="Что будем искать?",
             font_size=sp(16),
             halign="center",
             size_hint_y=None,
-            height=dp(40),
+            height=dp(36),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.7],
             bold=True
         )
         main_layout.add_widget(self.title_label)
 
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(16)))
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
+        # ============ ПОИСКОВАЯ СТРОКА (КАК В SongsScreen) ============
+        search_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(48),
+            padding=[dp(16), 0, dp(16), 0]  # ← ОТСТУПЫ КАК В SongsScreen
+        )
         self.search_bar = SearchBar(
             on_search=self.perform_search,
             on_clear=self.clear_search,
             on_text_change=self.on_text_changed
         )
-        main_layout.add_widget(self.search_bar)
+        search_container.add_widget(self.search_bar)
+        main_layout.add_widget(search_container)
 
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
@@ -349,14 +414,14 @@ class SearchScreen(BaseScreen):
         )
         cards_container.clip = True
 
-        scroll = ScrollView(
+        self.scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
             bar_width=0,
             bar_color=[0, 0, 0, 0],
             bar_inactive_color=[0, 0, 0, 0]
         )
-        scroll.clip = True
+        self.scroll.clip = True
 
         self.results_list = MDBoxLayout(
             orientation='vertical',
@@ -366,18 +431,226 @@ class SearchScreen(BaseScreen):
         )
         self.results_list.bind(minimum_height=self.results_list.setter('height'))
 
-        scroll.add_widget(self.results_list)
-        cards_container.add_widget(scroll)
+        self.scroll.add_widget(self.results_list)
+        cards_container.add_widget(self.scroll)
         main_layout.add_widget(cards_container)
 
         self.add_widget(main_layout)
 
         logger.info(f"✅ UI поиска построен, bottom_padding={bottom_padding}dp")
 
+    # ============ СОХРАНЕНИЕ СОСТОЯНИЯ ============
+
+    def save_current_state(self):
+        """Сохраняет текущее состояние экрана поиска"""
+        logger.info("=" * 50)
+        logger.info("💾 СОХРАНЕНИЕ СОСТОЯНИЯ SearchScreen")
+
+        scroll_position = 1.0
+        if hasattr(self, 'scroll') and self.scroll:
+            scroll_position = self.scroll.scroll_y
+            logger.info(f"📜 Текущая позиция скролла: {scroll_position:.2f}")
+
+        # Сохраняем результаты поиска
+        results_data = []
+        for child in self.results_list.children:
+            if isinstance(child, ResultCard):
+                results_data.append({
+                    'title': child.title,
+                    'result_type': child.result_type,
+                    'subtitle': child.subtitle,
+                    'song_id': child.song_id,
+                    'chord_name': child.chord_name,
+                    'term_name': child.term_name,
+                })
+
+        state = {
+            'current_query': self.current_query,
+            'results': results_data,
+            'scroll_position': scroll_position,
+            'has_results': len(results_data) > 0,
+        }
+
+        logger.info(
+            f"📦 Сохраняем: query='{self.current_query}', results={len(results_data)}, scroll={scroll_position:.2f}")
+
+        screen_state.save_screen_state('search', state)
+        logger.info("=" * 50)
+
+    def restore_state(self):
+        """Восстанавливает состояние экрана поиска"""
+        if self._state_restored:
+            logger.info("⏭️ Состояние уже восстановлено, пропускаем")
+            return True
+
+        logger.info("=" * 50)
+        logger.info("📂 ВОССТАНОВЛЕНИЕ СОСТОЯНИЯ SearchScreen")
+
+        state = screen_state.get_screen_state('search', max_age=300)
+
+        if not state:
+            logger.info("❌ Нет сохранённого состояния")
+            logger.info("=" * 50)
+            return False
+
+        try:
+            self._is_restoring = True
+
+            current_query = state.get('current_query', '')
+            results_data = state.get('results', [])
+            scroll_position = state.get('scroll_position', 1.0)
+
+            # Восстанавливаем запрос
+            if current_query and self.search_bar:
+                self.search_bar.search_field.text = current_query
+                self.current_query = current_query
+                logger.info(f"🔍 Восстановлен запрос: '{current_query}'")
+
+            # Восстанавливаем результаты
+            if results_data:
+                self._last_results = results_data
+                self._show_restored_results(results_data)
+                logger.info(f"📄 Восстановлено {len(results_data)} результатов")
+
+                # Восстанавливаем позицию скролла
+                def restore_scroll(dt):
+                    if hasattr(self, 'scroll') and self.scroll:
+                        self.scroll.scroll_y = scroll_position
+                        logger.info(f"📜 Восстановлена позиция скролла: {scroll_position:.2f}")
+
+                Clock.schedule_once(restore_scroll, 0.1)
+            else:
+                self.results_list.clear_widgets()
+                self.title_label.opacity = 1
+
+            self._state_restored = True
+            self._is_restoring = False
+            logger.info("✅ Восстановление завершено")
+            logger.info("=" * 50)
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка восстановления: {e}")
+            self._is_restoring = False
+            logger.info("=" * 50)
+            return False
+
+    def _show_restored_results(self, results_data):
+        """Показывает восстановленные результаты"""
+        self.results_list.clear_widgets()
+        self.title_label.opacity = 0
+
+        # Разделяем по типам
+        chords = []
+        songs = []
+        terms = []
+
+        for item in results_data:
+            if item.get('result_type') == 'chord':
+                chords.append(item)
+            elif item.get('result_type') == 'song':
+                songs.append(item)
+            elif item.get('result_type') == 'term':
+                terms.append(item)
+
+        # Показываем аккорды
+        if chords:
+            chords_header = MDLabel(
+                text="Найденные аккорды",
+                font_size=sp(14),
+                bold=True,
+                halign="center",
+                size_hint_y=None,
+                height=dp(30),
+                theme_text_color="Custom",
+                text_color=[1, 1, 1, 0.8]
+            )
+            self.results_list.add_widget(chords_header)
+
+            for item in chords:
+                card = ResultCard(
+                    title=item.get('title', ''),
+                    result_type="chord",
+                    subtitle=item.get('subtitle', ''),
+                    chord_name=item.get('chord_name'),
+                    on_click=self.on_result_selected
+                )
+                self.results_list.add_widget(card)
+
+        # Показываем песни
+        if songs:
+            songs_header = MDLabel(
+                text="Найденные песни",
+                font_size=sp(14),
+                bold=True,
+                halign="center",
+                size_hint_y=None,
+                height=dp(30),
+                theme_text_color="Custom",
+                text_color=[1, 1, 1, 0.8]
+            )
+            self.results_list.add_widget(songs_header)
+
+            for item in songs:
+                card = ResultCard(
+                    title=item.get('title', ''),
+                    result_type="song",
+                    subtitle=item.get('subtitle', ''),
+                    song_id=item.get('song_id'),
+                    on_click=self.on_result_selected
+                )
+                self.results_list.add_widget(card)
+
+        # Показываем термины
+        if terms:
+            terms_header = MDLabel(
+                text="Найденные термины",
+                font_size=sp(14),
+                bold=True,
+                halign="center",
+                size_hint_y=None,
+                height=dp(30),
+                theme_text_color="Custom",
+                text_color=[1, 1, 1, 0.8]
+            )
+            self.results_list.add_widget(terms_header)
+
+            for item in terms:
+                card = ResultCard(
+                    title=item.get('title', ''),
+                    result_type="term",
+                    subtitle=item.get('subtitle', ''),
+                    term_name=item.get('term_name'),
+                    on_click=self.on_result_selected
+                )
+                self.results_list.add_widget(card)
+
+    # ============ МЕТОДЫ ПОИСКА ============
+
+    def on_pre_enter(self):
+        """Вызывается ПЕРЕД тем, как экран становится видимым"""
+        logger.info("🚪 on_pre_enter: подготовка к показу")
+
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.set_custom_title("Поиск")
+            if hasattr(app.top_nav, 'right_container'):
+                if hasattr(app.top_nav, 'home_btn'):
+                    app.top_nav.right_container.clear_widgets()
+                    app.top_nav.right_container.add_widget(app.top_nav.home_btn)
+
     def on_enter(self):
         logger.info("🚪 on_enter вызван")
-        self.clear_search()
-        self.search_bar.focus()
+
+        if not self._state_restored:
+            restored = self.restore_state()
+            if not restored:
+                self.clear_search()
+                self.search_bar.focus()
+        else:
+            logger.info("⏭️ Состояние уже восстановлено, пропускаем")
+            if hasattr(self, '_saved_scroll_position') and self.scroll:
+                Clock.schedule_once(lambda dt: setattr(self.scroll, 'scroll_y', self._saved_scroll_position), 0.1)
 
         if not self.dictionary_screen:
             app = MDApp.get_running_app()
@@ -386,6 +659,11 @@ class SearchScreen(BaseScreen):
                     if screen.name == 'dictionary':
                         self.dictionary_screen = screen
                         break
+
+    def on_pre_leave(self):
+        logger.info("🚪 on_pre_leave: сохранение состояния перед выходом")
+        self.save_current_state()
+        return super().on_pre_leave()
 
     def on_leave(self):
         logger.info("🚪 on_leave вызван")
@@ -405,6 +683,8 @@ class SearchScreen(BaseScreen):
         self.title_label.opacity = 1
         self.results_list.clear_widgets()
         self.current_query = ""
+        self._last_results = []
+        self._state_restored = False
         self.search_bar.clear()
         logger.info("✅ Поиск очищен")
 
@@ -412,6 +692,7 @@ class SearchScreen(BaseScreen):
         logger.info(f"🔍 perform_search: query='{query}'")
         query = query.strip()
         self.current_query = query
+        self._state_restored = False
 
         if not query:
             self.clear_search()
@@ -566,10 +847,12 @@ class SearchScreen(BaseScreen):
         return match.group(1) if match else (chord_name[0] if chord_name else "")
 
     def _show_results(self, query, chord_results, song_results, term_results):
-        logger.info(f"📊 _show_results: chords={len(chord_results)}, songs={len(song_results)}, terms={len(term_results)}")
+        logger.info(
+            f"📊 _show_results: chords={len(chord_results)}, songs={len(song_results)}, terms={len(term_results)}")
 
         self.results_list.clear_widgets()
         self._is_searching = False
+        self._last_results = []
 
         if not chord_results and not song_results and not term_results:
             no_results = MDLabel(
@@ -582,7 +865,10 @@ class SearchScreen(BaseScreen):
                 height=dp(60)
             )
             self.results_list.add_widget(no_results)
+            self.save_current_state()
             return
+
+        all_results = []
 
         if chord_results:
             chords_header = MDLabel(
@@ -607,6 +893,12 @@ class SearchScreen(BaseScreen):
                     on_click=self.on_result_selected
                 )
                 self.results_list.add_widget(card)
+                all_results.append({
+                    'title': chord['short_name'],
+                    'result_type': 'chord',
+                    'subtitle': f"Тональность: {tonality}",
+                    'chord_name': chord['short_name'],
+                })
 
         if song_results:
             songs_header = MDLabel(
@@ -630,6 +922,12 @@ class SearchScreen(BaseScreen):
                     on_click=self.on_result_selected
                 )
                 self.results_list.add_widget(card)
+                all_results.append({
+                    'title': song.get('artist', 'Неизвестный'),
+                    'result_type': 'song',
+                    'subtitle': song.get('title', 'Без названия'),
+                    'song_id': song.get('song_id'),
+                })
 
         if term_results:
             terms_header = MDLabel(
@@ -658,6 +956,16 @@ class SearchScreen(BaseScreen):
                     on_click=self.on_result_selected
                 )
                 self.results_list.add_widget(card)
+                all_results.append({
+                    'title': term_name.capitalize(),
+                    'result_type': 'term',
+                    'subtitle': description,
+                    'term_name': term_name,
+                })
+
+        self._last_results = all_results
+        self._state_restored = True
+        self.save_current_state()
 
     def _search_error(self, error_msg):
         self.results_list.clear_widgets()
@@ -673,10 +981,9 @@ class SearchScreen(BaseScreen):
         )
         self.results_list.add_widget(error_label)
 
-    # ============ ОБРАБОТЧИКИ РЕЗУЛЬТАТОВ (С ПОДДЕРЖКОЙ ДУБЛИРУЮЩИХ ЭКРАНОВ) ============
+    # ============ ОБРАБОТЧИКИ РЕЗУЛЬТАТОВ ============
 
     def on_result_selected(self, result_type, chord_name, song_id, term_name):
-        """Обработчик выбора результата"""
         if result_type == "chord" and chord_name:
             self.select_chord(chord_name)
         elif result_type == "song" and song_id:
@@ -685,30 +992,27 @@ class SearchScreen(BaseScreen):
             self.select_term(term_name)
 
     def select_chord(self, chord_name):
-        """Выбор аккорда ИЗ ПОИСКА - переход на chord_detail"""
         logger.info(f"🎸 Выбран аккорд из поиска: {chord_name}")
 
-        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
+        self.save_current_state()
         screen_state.set_previous_screen('search')
         screen_state.set_pending_chord(chord_name)
 
         if self.manager and self.manager.has_screen('chord_detail'):
             chord_detail = self.manager.get_screen('chord_detail')
-            # Передаём аккорд через set_pending_chord, а экран сам загрузит
             self.manager.current = 'chord_detail'
             logger.info(f"✅ Переход на ChordDetailScreen с аккордом: {chord_name}")
         elif self.manager and self.manager.has_screen('chords'):
-            # Fallback на основной экран аккордов
             self.manager.current = 'chords'
             logger.info(f"✅ Переход на ChordsScreen с аккордом: {chord_name}")
         else:
             notify.error("Экран аккордов не найден")
 
     def select_song(self, song_id):
-        """Выбор песни ИЗ ПОИСКА - переход на search_screen_detail"""
         logger.info(f"🎵 Выбрана песня из поиска: {song_id}")
 
-        # Находим исполнителя и название
+        self.save_current_state()
+
         artist = ""
         title = ""
         for child in self.results_list.children:
@@ -717,7 +1021,6 @@ class SearchScreen(BaseScreen):
                 title = child.subtitle if hasattr(child, 'subtitle') else ""
                 break
 
-        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
         screen_state.set_previous_screen('search')
 
         if self.manager and self.manager.has_screen('search_screen_detail'):
@@ -726,7 +1029,6 @@ class SearchScreen(BaseScreen):
             self.manager.current = 'search_screen_detail'
             logger.info(f"✅ Переход на SearchScreenDetail: {title}")
         else:
-            # Fallback
             if self.manager and self.manager.has_screen('song_detail'):
                 song_detail = self.manager.get_screen('song_detail')
                 song_detail.set_previous_screen('search')
@@ -737,8 +1039,9 @@ class SearchScreen(BaseScreen):
                 notify.error("Экран песни не найден")
 
     def select_term(self, term_name):
-        """Выбор термина ИЗ ПОИСКА - переход на search_term_detail"""
         logger.info(f"📚 Выбран термин из поиска: {term_name}")
+
+        self.save_current_state()
 
         if not self.dictionary_screen:
             notify.error("Ошибка навигации")
@@ -749,7 +1052,6 @@ class SearchScreen(BaseScreen):
             notify.error("Термин не найден")
             return
 
-        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ search
         screen_state.set_previous_screen('search')
 
         if self.manager and self.manager.has_screen('search_term_detail'):
@@ -758,7 +1060,6 @@ class SearchScreen(BaseScreen):
             self.manager.current = 'search_term_detail'
             logger.info(f"✅ Переход на SearchTermDetail: {term_name}")
         else:
-            # Fallback
             if self.manager and self.manager.has_screen('term_detail'):
                 term_detail = self.manager.get_screen('term_detail')
                 term_detail.set_term(term_name, term_data, 'search')
@@ -769,7 +1070,13 @@ class SearchScreen(BaseScreen):
 
     def refresh_search(self):
         logger.info("🔄 refresh_search вызван")
-        if self.current_query:
+        if self.current_query and not self.results_list.children:
             self.perform_search(self.current_query)
-        else:
+        elif not self.current_query:
             self.clear_search()
+
+    def go_back(self, instance=None):
+        logger.info("🔙 Возврат на home")
+        self.save_current_state()
+        if hasattr(self, 'manager') and self.manager:
+            self.manager.current = 'home'

@@ -107,16 +107,50 @@ if platform == 'android':
         View = autoclass('android.view.View')
         window = mActivity.getWindow()
         decorView = window.getDecorView()
-        decorView.setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+
+        # ============ НАСТРОЙКА СИСТЕМНЫХ ПАНЕЛЕЙ ============
+        # 1. Устанавливаем тёмный статус-бар (сверху)
+        window.setStatusBarColor(0xFF000000)  # Чёрный
+
+        # 2. Устанавливаем тёмную навигационную панель (снизу)
+        window.setNavigationBarColor(0xFF000000)  # Чёрный
+
+        # 3. Настраиваем флаги для светлых значков
+        # SYSTEM_UI_FLAG_LAYOUT_STABLE = 0x00000100
+        # SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN = 0x00000400
+        # SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR = 0x00000010 (API 26+)
+        # SYSTEM_UI_FLAG_LIGHT_STATUS_BAR = 0x00002000 (API 23+)
+
+        flags = (
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         )
-        window.setStatusBarColor(0xFF000000)
-        window.setNavigationBarColor(0xFF000000)
+
+        # Проверяем, поддерживается ли флаг для светлой навигации
+        try:
+            # Для Android 8.0+ (API 26+)
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            print("✅ Включён режим светлой навигационной панели")
+        except AttributeError:
+            print("⚠️ SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR не поддерживается")
+
+        # Проверяем, поддерживается ли флаг для светлого статус-бара
+        try:
+            # Для Android 6.0+ (API 23+)
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            print("✅ Включён режим светлого статус-бара")
+        except AttributeError:
+            print("⚠️ SYSTEM_UI_FLAG_LIGHT_STATUS_BAR не поддерживается")
+
+        decorView.setSystemUiVisibility(flags)
+
+        # Убираем любые конфликтующие флаги
         current_flags = decorView.getSystemUiVisibility()
         if current_flags & View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:
-            new_flags = current_flags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-            decorView.setSystemUiVisibility(new_flags)
+            print("✅ Навигационная панель: светлые значки")
+        else:
+            print("ℹ️ Навигационная панель: тёмные значки")
+
         print("✅ Системные панели настроены")
     except Exception as e:
         print(f"Ошибка настройки: {e}")
