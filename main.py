@@ -103,57 +103,76 @@ if platform == 'android':
         ])
         print("✅ Разрешения запрошены")
 
-        Window.clearcolor = (0, 0, 0, 0)
+        # ============ 1. НАСТРОЙКА ОКНА ============
+        Window.clearcolor = (0, 0, 0, 0)  # Прозрачный фон
+
         View = autoclass('android.view.View')
+        WindowManager = autoclass('android.view.WindowManager$LayoutParams')
         window = mActivity.getWindow()
         decorView = window.getDecorView()
 
-        # ============ НАСТРОЙКА СИСТЕМНЫХ ПАНЕЛЕЙ ============
-        # 1. Устанавливаем тёмный статус-бар (сверху)
-        window.setStatusBarColor(0xFF000000)  # Чёрный
+        # ============ 2. ДЕЛАЕМ ПАНЕЛИ ПРОЗРАЧНЫМИ ============
+        # Прозрачный статус-бар (сверху)
+        window.setStatusBarColor(0x00000000)  # Полностью прозрачный
 
-        # 2. Устанавливаем тёмную навигационную панель (снизу)
-        window.setNavigationBarColor(0xFF000000)  # Чёрный
+        # Прозрачная навигационная панель (снизу)
+        window.setNavigationBarColor(0x00000000)  # Полностью прозрачный
 
-        # 3. Настраиваем флаги для светлых значков
-        # SYSTEM_UI_FLAG_LAYOUT_STABLE = 0x00000100
-        # SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN = 0x00000400
-        # SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR = 0x00000010 (API 26+)
-        # SYSTEM_UI_FLAG_LIGHT_STATUS_BAR = 0x00002000 (API 23+)
-
+        # ============ 3. НАСТРАИВАЕМ ФЛАГИ ДЛЯ ПРОЗРАЧНОСТИ ============
+        # Флаги для прозрачных системных панелей
         flags = (
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
         )
 
-        # Проверяем, поддерживается ли флаг для светлой навигации
+        # Пытаемся добавить флаг для прозрачной навигации (API 21+)
         try:
-            # Для Android 8.0+ (API 26+)
-            flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-            print("✅ Включён режим светлой навигационной панели")
+            if hasattr(View, 'SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION'):
+                flags |= View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                print("✅ Включён флаг LAYOUT_HIDE_NAVIGATION")
         except AttributeError:
-            print("⚠️ SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR не поддерживается")
+            print("⚠️ SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION не поддерживается")
 
-        # Проверяем, поддерживается ли флаг для светлого статус-бара
+        # Пытаемся добавить флаг для прозрачного статус-бара (API 19+)
         try:
-            # Для Android 6.0+ (API 23+)
-            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-            print("✅ Включён режим светлого статус-бара")
+            if hasattr(View, 'SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN'):
+                flags |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                print("✅ Включён флаг LAYOUT_FULLSCREEN")
         except AttributeError:
-            print("⚠️ SYSTEM_UI_FLAG_LIGHT_STATUS_BAR не поддерживается")
+            print("⚠️ SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN не поддерживается")
 
+        # Применяем флаги
         decorView.setSystemUiVisibility(flags)
 
-        # Убираем любые конфликтующие флаги
-        current_flags = decorView.getSystemUiVisibility()
-        if current_flags & View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:
-            print("✅ Навигационная панель: светлые значки")
-        else:
-            print("ℹ️ Навигационная панель: тёмные значки")
+        # ============ 4. ДОПОЛНИТЕЛЬНО: РАЗРЕШАЕМ РИСОВАТЬ ПОД ПАНЕЛЯМИ ============
+        try:
+            # FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS = 0x80000000
+            # Позволяет приложению рисовать под системными панелями
+            params = window.getAttributes()
+            if hasattr(WindowManager, 'FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS'):
+                params.flags |= WindowManager.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
+                window.setAttributes(params)
+                print("✅ Включён FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS")
+        except Exception as e:
+            print(f"⚠️ Не удалось установить FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS: {e}")
 
-        print("✅ Системные панели настроены")
+        # ============ 5. ДИАГНОСТИКА ============
+        current_flags = decorView.getSystemUiVisibility()
+        print(f"🔍 Текущие флаги: {current_flags}")
+
+        nav_color = window.getNavigationBarColor()
+        status_color = window.getStatusBarColor()
+        print(f"🔍 Цвет навигации: #{nav_color:08X} (должен быть 00000000)")
+        print(f"🔍 Цвет статус-бара: #{status_color:08X} (должен быть 00000000)")
+
+        print("✅ Системные панели сделаны прозрачными")
+
     except Exception as e:
-        print(f"Ошибка настройки: {e}")
+        print(f"❌ Ошибка настройки: {e}")
+        import traceback
+
+        traceback.print_exc()
         Window.clearcolor = (0, 0, 0, 0)
 else:
     Window.borderless = False
