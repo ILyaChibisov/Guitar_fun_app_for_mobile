@@ -1,7 +1,7 @@
 # screens/search_term_detail_screen.py
 """
 Экран определения термина ИЗ ПОИСКА (search_screen)
-Возврат только в SearchScreen
+Возврат только в SearchScreen с полным функционалом (шрифт, тема)
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle
@@ -23,17 +23,15 @@ from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
+from utils.notifications import notify
 
 logger = screen_logger('SearchTermDetail')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
@@ -61,10 +59,7 @@ class IconActionButton(MDIconButton):
 
 
 class SearchTermDetailScreen(BaseScreen):
-    """
-    Экран определения термина ИЗ ПОИСКА
-    Возврат ТОЛЬКО в SearchScreen
-    """
+    """Экран определения термина ИЗ ПОИСКА - с полным функционалом"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -96,21 +91,6 @@ class SearchTermDetailScreen(BaseScreen):
         self.init_ui()
         self.load_background()
         logger.info('Экран определения термина из поиска создан')
-
-    def _size_to_slider(self, size):
-        try:
-            return self._font_sizes.index(size)
-        except ValueError:
-            closest = min(self._font_sizes, key=lambda x: abs(x - size))
-            return self._font_sizes.index(closest)
-
-    def _slider_to_size(self, slider_value):
-        idx = int(round(slider_value))
-        if idx < 0:
-            idx = 0
-        elif idx > len(self._font_sizes) - 1:
-            idx = len(self._font_sizes) - 1
-        return self._font_sizes[idx]
 
     def load_background(self):
         try:
@@ -451,13 +431,27 @@ class SearchTermDetailScreen(BaseScreen):
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.1)
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.3)
 
+    def _size_to_slider(self, size):
+        try:
+            return self._font_sizes.index(size)
+        except ValueError:
+            closest = min(self._font_sizes, key=lambda x: abs(x - size))
+            return self._font_sizes.index(closest)
+
+    def _slider_to_size(self, slider_value):
+        idx = int(round(slider_value))
+        if idx < 0:
+            idx = 0
+        elif idx > len(self._font_sizes) - 1:
+            idx = len(self._font_sizes) - 1
+        return self._font_sizes[idx]
+
     def _fix_slider_thumb(self, slider):
         if slider:
             bi_color = [0.46, 0.70, 0.71, 1]
             slider.thumb_color_active = bi_color
             slider.thumb_color_inactive = bi_color
             slider.thumb_color_disabled = bi_color
-
             current = slider.value
             slider.value = current + 0.01
             Clock.schedule_once(lambda dt: setattr(slider, 'value', current), 0.01)
@@ -564,7 +558,6 @@ class SearchTermDetailScreen(BaseScreen):
         """Возврат ТОЛЬКО в SearchScreen"""
         logger.info("🔙 Возврат из термина в SearchScreen")
 
-        # Убираем кастомный заголовок
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.clear_custom_title_widget()
@@ -599,4 +592,6 @@ class SearchTermDetailScreen(BaseScreen):
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            app.top_nav.reset_to_default()
+            app.top_nav.clear_custom_title_widget()
+            if hasattr(app.top_nav, '_update_right_buttons'):
+                app.top_nav._update_right_buttons('search')

@@ -207,9 +207,14 @@ class SearchScreenDetail(BaseScreen):
         self.panel_container = None
         self.current_panel_type = 'main'
 
-        # Кнопки для TopNav
-        self.like_btn = None
-        self.fav_btn = None
+        # Кнопки для панели
+        self.chords_btn = None
+        self.tonality_btn = None
+        self.scroll_btn = None
+        self.tabs_btn = None
+        self.font_btn = None
+        self.favorite_btn = None
+        self.like_btn_panel = None
 
         self.init_ui()
         self.load_background()
@@ -1603,8 +1608,6 @@ class SearchScreenDetail(BaseScreen):
         if hasattr(self, 'favorite_btn') and self.favorite_btn:
             self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
-        self._update_top_nav_buttons()
-
         self.update_top_nav_title()
         self.hide_loading()
 
@@ -1634,7 +1637,6 @@ class SearchScreenDetail(BaseScreen):
             self.is_liked = result.get('liked', not self.is_liked)
             if hasattr(self, 'like_btn_panel') and self.like_btn_panel:
                 self.like_btn_panel.icon = "heart" if self.is_liked else "heart-outline"
-            self._update_top_nav_buttons()
             notify.success("Лайк поставлен!" if self.is_liked else "Лайк убран")
 
         def on_failure(req, error):
@@ -1654,7 +1656,6 @@ class SearchScreenDetail(BaseScreen):
                 self.is_favorite = False
                 if hasattr(self, 'favorite_btn') and self.favorite_btn:
                     self.favorite_btn.icon = "star-outline"
-                self._update_top_nav_buttons()
                 api._clear_favorites_cache()
                 notify.success("Удалено из избранного")
 
@@ -1667,7 +1668,6 @@ class SearchScreenDetail(BaseScreen):
                 self.is_favorite = True
                 if hasattr(self, 'favorite_btn') and self.favorite_btn:
                     self.favorite_btn.icon = "star"
-                self._update_top_nav_buttons()
                 api._clear_favorites_cache()
                 notify.success("Добавлено в избранное")
 
@@ -1675,35 +1675,6 @@ class SearchScreenDetail(BaseScreen):
                 notify.error("Ошибка")
 
             api.add_to_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
-
-    def _update_top_nav_buttons(self):
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            if hasattr(app.top_nav, 'right_container'):
-                app.top_nav.right_container.clear_widgets()
-
-                self.like_btn = MDIconButton(
-                    icon="heart" if self.is_liked else "heart-outline",
-                    size_hint=(None, None),
-                    size=(dp(40), dp(40)),
-                    theme_icon_color="Custom",
-                    icon_color=[0.8, 0.3, 0.3, 1] if self.is_liked else [0.8, 0.3, 0.3, 0.9],
-                    md_bg_color=[0, 0, 0, 0],
-                    on_release=self.toggle_like
-                )
-
-                self.fav_btn = MDIconButton(
-                    icon="star" if self.is_favorite else "star-outline",
-                    size_hint=(None, None),
-                    size=(dp(40), dp(40)),
-                    theme_icon_color="Custom",
-                    icon_color=[0.9, 0.7, 0.2, 0.9] if self.is_favorite else [0.6, 0.6, 0.6, 0.8],
-                    md_bg_color=[0, 0, 0, 0],
-                    on_release=self.toggle_favorite
-                )
-
-                app.top_nav.right_container.add_widget(self.like_btn)
-                app.top_nav.right_container.add_widget(self.fav_btn)
 
     def update_top_nav_title(self):
         app = MDApp.get_running_app()
@@ -1809,9 +1780,6 @@ class SearchScreenDetail(BaseScreen):
             if hasattr(app.top_nav, '_update_right_buttons'):
                 app.top_nav._update_right_buttons('search')
 
-            self.like_btn = None
-            self.fav_btn = None
-
         if self.manager and self.manager.has_screen('search'):
             search_screen = self.manager.get_screen('search')
             Clock.schedule_once(lambda dt: search_screen.refresh_search(), 0.2)
@@ -1824,13 +1792,18 @@ class SearchScreenDetail(BaseScreen):
     def on_enter(self):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
+            # Настраиваем левую кнопку - стрелка назад
             if hasattr(app.top_nav, 'left_container'):
                 app.top_nav.left_container.clear_widgets()
                 app.top_nav.left_container.add_widget(app.top_nav.back_btn)
                 app.top_nav.back_btn.on_release = self.go_back
 
+            # ✅ ВОССТАНАВЛИВАЕМ ПРАВЫЕ КНОПКИ - иконка домой (как в SongDetailScreen)
             if hasattr(app.top_nav, 'right_container'):
-                self._update_top_nav_buttons()
+                if hasattr(app.top_nav, 'home_btn'):
+                    app.top_nav.right_container.clear_widgets()
+                    app.top_nav.right_container.add_widget(app.top_nav.home_btn)
+                    logger.info("✅ Восстановлена иконка домой")
 
         if self.song_title:
             self.update_top_nav_title()
@@ -1847,6 +1820,3 @@ class SearchScreenDetail(BaseScreen):
             app.top_nav.clear_custom_title_widget()
             if hasattr(app.top_nav, '_update_right_buttons'):
                 app.top_nav._update_right_buttons('search')
-
-        self.like_btn = None
-        self.fav_btn = None

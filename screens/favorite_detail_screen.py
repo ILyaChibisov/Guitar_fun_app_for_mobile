@@ -42,9 +42,12 @@ logger = screen_logger('FavoriteDetail')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -207,6 +210,15 @@ class FavoriteDetailScreen(BaseScreen):
         # Панель-контейнер
         self.panel_container = None
         self.current_panel_type = 'main'
+
+        # Кнопки для панели
+        self.chords_btn = None
+        self.tonality_btn = None
+        self.scroll_btn = None
+        self.tabs_btn = None
+        self.font_btn = None
+        self.favorite_btn = None
+        self.like_btn_panel = None
 
         self.init_ui()
         self.load_background()
@@ -492,7 +504,7 @@ class FavoriteDetailScreen(BaseScreen):
         )
 
         # 7. Лайк (сердце) - красный
-        self.like_btn = IconActionButton(
+        self.like_btn_panel = IconActionButton(
             icon_name="heart-outline",
             on_press_callback=self.toggle_like,
             icon_color=[0.8, 0.3, 0.3, 0.9]
@@ -504,7 +516,7 @@ class FavoriteDetailScreen(BaseScreen):
         panel.add_widget(self.tabs_btn)
         panel.add_widget(self.font_btn)
         panel.add_widget(self.favorite_btn)
-        panel.add_widget(self.like_btn)
+        panel.add_widget(self.like_btn_panel)
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'main'
@@ -1613,8 +1625,11 @@ class FavoriteDetailScreen(BaseScreen):
         self.is_liked = data.get('is_liked', False)
         self.is_favorite = True
 
-        self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
-        self.favorite_btn.icon = "star"
+        # Обновляем иконки в панели
+        if hasattr(self, 'like_btn_panel') and self.like_btn_panel:
+            self.like_btn_panel.icon = "heart" if self.is_liked else "heart-outline"
+        if hasattr(self, 'favorite_btn') and self.favorite_btn:
+            self.favorite_btn.icon = "star"
 
         self.update_top_nav_title()
         self.hide_loading()
@@ -1643,7 +1658,8 @@ class FavoriteDetailScreen(BaseScreen):
 
         def on_success(result):
             self.is_liked = result.get('liked', not self.is_liked)
-            self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
+            if hasattr(self, 'like_btn_panel') and self.like_btn_panel:
+                self.like_btn_panel.icon = "heart" if self.is_liked else "heart-outline"
             notify.success("Лайк поставлен!" if self.is_liked else "Лайк убран")
 
         def on_failure(req, error):
@@ -1681,7 +1697,8 @@ class FavoriteDetailScreen(BaseScreen):
     def _remove_from_favorites(self):
         def on_success(result):
             self.is_favorite = False
-            self.favorite_btn.icon = "star-outline"
+            if hasattr(self, 'favorite_btn') and self.favorite_btn:
+                self.favorite_btn.icon = "star-outline"
             api._clear_favorites_cache()
             notify.success("Удалено из избранного")
             Clock.schedule_once(lambda dt: self.go_back(), 0.3)
@@ -1792,8 +1809,11 @@ class FavoriteDetailScreen(BaseScreen):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.clear_custom_title_widget()
+            # ✅ Устанавливаем "Избранное" ДО перехода
+            app.top_nav.force_update_title("Избранное", show_back=False)
             if hasattr(app.top_nav, '_update_right_buttons'):
                 app.top_nav._update_right_buttons('favorites')
+            app.top_nav.back_btn.on_release = lambda: None
 
         if self.manager and self.manager.has_screen('favorites'):
             favorites_screen = self.manager.get_screen('favorites')
@@ -1804,9 +1824,8 @@ class FavoriteDetailScreen(BaseScreen):
             self.manager.current = 'home'
             logger.info("⚠️ FavoritesScreen не найден, возврат на home")
 
-    # screens/favorite_detail_screen.py - исправленный on_enter
-
     def on_enter(self):
+        """При входе на экран - в правой части только домой"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             # Настраиваем левую кнопку - стрелка назад
@@ -1815,34 +1834,12 @@ class FavoriteDetailScreen(BaseScreen):
                 app.top_nav.left_container.add_widget(app.top_nav.back_btn)
                 app.top_nav.back_btn.on_release = self.go_back
 
-            # ✅ СОЗДАЁМ НОВЫЕ КНОПКИ КАЖДЫЙ РАЗ
+            # ✅ ВОССТАНАВЛИВАЕМ ПРАВЫЕ КНОПКИ - иконка домой (как в SongDetailScreen)
             if hasattr(app.top_nav, 'right_container'):
-                app.top_nav.right_container.clear_widgets()
-
-                # Создаём кнопку лайка
-                self.like_btn = MDIconButton(
-                    icon="heart-outline" if not self.is_liked else "heart",
-                    size_hint=(None, None),
-                    size=(dp(40), dp(40)),
-                    theme_icon_color="Custom",
-                    icon_color=[0.8, 0.3, 0.3, 0.9] if not self.is_liked else [0.8, 0.3, 0.3, 1],
-                    md_bg_color=[0, 0, 0, 0],
-                    on_release=self.toggle_like
-                )
-
-                # Создаём кнопку избранного
-                self.fav_btn = MDIconButton(
-                    icon="star" if self.is_favorite else "star-outline",
-                    size_hint=(None, None),
-                    size=(dp(40), dp(40)),
-                    theme_icon_color="Custom",
-                    icon_color=[0.9, 0.7, 0.2, 0.9] if self.is_favorite else [0.6, 0.6, 0.6, 0.8],
-                    md_bg_color=[0, 0, 0, 0],
-                    on_release=self.toggle_favorite
-                )
-
-                app.top_nav.right_container.add_widget(self.like_btn)
-                app.top_nav.right_container.add_widget(self.fav_btn)
+                if hasattr(app.top_nav, 'home_btn'):
+                    app.top_nav.right_container.clear_widgets()
+                    app.top_nav.right_container.add_widget(app.top_nav.home_btn)
+                    logger.info("✅ Восстановлена иконка домой (как в SongDetailScreen)")
 
         if self.song_title:
             self.update_top_nav_title()

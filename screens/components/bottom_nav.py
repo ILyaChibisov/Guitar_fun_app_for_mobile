@@ -158,7 +158,24 @@ class NavItem(ButtonBehavior, BoxLayout):
         anim.start(self)
 
         if hasattr(self.parent, 'switch_to'):
+            # ✅ ПЕРЕД переходом обновляем TopNav
+            self._update_top_nav_before_switch(self.screen_name)
             self.parent.switch_to(self.screen_name)
+
+    def _update_top_nav_before_switch(self, screen_name):
+        """Обновляет TopNav ПЕРЕД переходом на экран"""
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            titles = {
+                'songs': 'Песни',
+                'chords': 'Аккорды',
+                'tuner': 'Тюнер',
+                'metronome': 'Метроном',
+                'favorites': 'Избранное',
+            }
+            if screen_name in titles:
+                app.top_nav.set_custom_title(titles[screen_name])
+                logger.info(f"✅ TopNav обновлён ДО перехода: {titles[screen_name]}")
 
 
 class BottomNav(BoxLayout):

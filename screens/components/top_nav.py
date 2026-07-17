@@ -242,8 +242,20 @@ class TopNav(MDCard):
         self._adjust_title_width()
 
     def set_custom_title(self, title: str):
+        """Устанавливает кастомный заголовок"""
         self.screen_title.text = title
         self._adjust_title_width()
+
+        # ✅ Если заголовок "Избранное" - убираем кастомный виджет
+        if title == "Избранное":
+            if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
+                if self.custom_title_widget in self.container.children:
+                    self.container.remove_widget(self.custom_title_widget)
+                self.custom_title_widget = None
+
+            if self.screen_title not in self.container.children:
+                self.container.add_widget(self.screen_title)
+                self._adjust_title_width()
 
     def _adjust_title_width(self):
         text = self.screen_title.text
@@ -368,6 +380,7 @@ class TopNav(MDCard):
         if old and old != screen_name:
             self._previous_screen = old
 
+        # ============ СБРАСЫВАЕМ КАСТОМНЫЙ CALLBACK ============
         if screen_name not in self.ALWAYS_BACK_SCREENS:
             if screen_name == 'chords':
                 prev = screen_state.get_previous_screen()
@@ -378,9 +391,13 @@ class TopNav(MDCard):
                 self._custom_back_callback = None
                 logger.info(f"   → Сброшен custom callback ({screen_name})")
 
+        # ✅ Обновляем левую кнопку ДО того, как экран станет видимым
         self._update_left_button(screen_name)
+
+        # ✅ Обновляем правые кнопки
         self._update_right_buttons(screen_name)
 
+        # ============ ОБНОВЛЯЕМ BOTTOM NAV ============
         app = MDApp.get_running_app()
         if app and hasattr(app, 'bottom_nav') and app.bottom_nav:
             nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
@@ -391,10 +408,18 @@ class TopNav(MDCard):
                 app.bottom_nav.clear_active()
                 logger.info(f"🔽 BottomNav: экран '{screen_name}' не в меню, все иконки сброшены")
 
+        # ✅ Если экран НЕ с кастомным заголовком - обновляем стандартный
         if screen_name not in self.CUSTOM_TITLE_SCREENS:
             if self.custom_title_widget:
                 self.clear_custom_title_widget()
             self.update_title(screen_name)
+        else:
+            if screen_name == 'term_detail':
+                if self.custom_title_widget:
+                    self.clear_custom_title_widget()
+                self.set_custom_title("Термин")
+            elif screen_name == 'song_detail':
+                pass  # song_detail сам управляет заголовком
 
         if old in self.CUSTOM_TITLE_SCREENS and screen_name not in self.CUSTOM_TITLE_SCREENS:
             self.clear_custom_title_widget()
@@ -616,10 +641,28 @@ class TopNav(MDCard):
     def on_size(self, *args):
         Clock.schedule_once(lambda dt: self._adjust_title_width(), 0.1)
 
-    def force_update_title(self, title, show_back=True):
-        """Принудительно обновляет заголовок"""
-        self.set_custom_title(title)
+    def force_update_title(self, title, show_back=False):
+        """Мгновенно обновляет заголовок без анимации и задержек"""
+        # Убираем кастомный виджет если есть
+        if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
+            if self.custom_title_widget in self.container.children:
+                self.container.remove_widget(self.custom_title_widget)
+            self.custom_title_widget = None
+
+        # Устанавливаем заголовок
+        self.screen_title.text = title
+        self._adjust_title_width()
+
+        # Добавляем стандартный заголовок если его нет
+        if self.screen_title not in self.container.children:
+            self.container.add_widget(self.screen_title)
+
+        # Обновляем левую кнопку если нужно
         if show_back:
             self.left_container.clear_widgets()
             self.left_container.add_widget(self.back_btn)
-        logger.info(f"🔄 Заголовок принудительно обновлён: {title}")
+
+        # Принудительно обновляем layout
+        self.container.do_layout()
+
+        logger.info(f"⚡ Мгновенное обновление заголовка: {title}")

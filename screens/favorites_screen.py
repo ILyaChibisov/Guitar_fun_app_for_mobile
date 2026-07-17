@@ -1,8 +1,9 @@
 # screens/favorites_screen.py
 """
 Экран избранного - список любимых песен пользователя
-с двухстрочным заголовком в TopNav и круговым спиннером загрузки по центру
-ОПТИМИЗИРОВАННАЯ ВЕРСИЯ С БЫСТРЫМИ ПЕРЕХОДАМИ И КЭШИРОВАНИЕМ
+СТАТИЧНЫЙ ЗАГОЛОВОК В TopNav: "Избранное"
+Количество песен показывается на самом экране
+Карточки как были - исполнитель + название в две строки
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -10,8 +11,6 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp, sp
-from kivy.animation import Animation
-from kivy.uix.progressbar import ProgressBar
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
@@ -23,7 +22,6 @@ from io import BytesIO
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
-from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from screens.components.loading_spinner import LoadingSpinner
 from api.client import api
@@ -34,21 +32,17 @@ logger = screen_logger('Favorites')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
 
-# ============ ГЛОБАЛЬНАЯ ТЕКСТУРА ДЛЯ ВСЕХ КАРТОЧЕК ============
+# ============ ГЛОБАЛЬНАЯ ТЕКСТУРА ============
 _shared_song_texture = None
 
 
 def init_shared_song_icon():
-    """ОДНОКРАТНО загружает иконку для всех карточек"""
     global _shared_song_texture
     if _shared_song_texture is not None:
         return _shared_song_texture
@@ -63,13 +57,12 @@ def init_shared_song_icon():
                 return _shared_song_texture
         except Exception as e:
             logger.error(f"Ошибка загрузки иконки: {e}")
-
     return None
 
 
-# ============ КАРТОЧКА ИЗБРАННОЙ ПЕСНИ ============
+# ============ КАРТОЧКА ИЗБРАННОЙ ПЕСНИ (ОРИГИНАЛЬНЫЙ ДИЗАЙН) ============
 class FavoriteSongCard(MDCard):
-    """Карточка избранной песни - ОПТИМИЗИРОВАННАЯ"""
+    """Карточка избранной песни - исполнитель + название в две строки"""
 
     _shared_texture = None
 
@@ -111,6 +104,7 @@ class FavoriteSongCard(MDCard):
         self._build_ui()
 
     def _build_ui(self):
+        # Иконка песни
         self.icon_image = Image(
             size_hint=(None, 1),
             width=dp(28),
@@ -127,6 +121,7 @@ class FavoriteSongCard(MDCard):
             else:
                 self.icon_image.text = "🎵"
 
+        # Текстовый блок - исполнитель и название в две строки
         text_layout = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
@@ -134,6 +129,7 @@ class FavoriteSongCard(MDCard):
             pos_hint={'center_y': 0.5}
         )
 
+        # Исполнитель - жирный, крупный
         self.artist_label = MDLabel(
             text=self.artist,
             font_size=sp(15),
@@ -147,6 +143,7 @@ class FavoriteSongCard(MDCard):
             shorten_from="right"
         )
 
+        # Название песни - мелкий, серый
         self.title_label = MDLabel(
             text=self.song_title,
             font_size=sp(11),
@@ -162,6 +159,7 @@ class FavoriteSongCard(MDCard):
         text_layout.add_widget(self.artist_label)
         text_layout.add_widget(self.title_label)
 
+        # Стрелка
         arrow = MDLabel(
             text="›",
             font_size=sp(24),
@@ -243,7 +241,7 @@ class AuthMessageCard(MDCard):
 
 # ============ ОСНОВНОЙ ЭКРАН ============
 class FavoritesScreen(BaseScreen):
-    """Экран избранного - ОПТИМИЗИРОВАННЫЙ С БЫСТРЫМИ ПЕРЕХОДАМИ"""
+    """Экран избранного - СТАТИЧНЫЙ ЗАГОЛОВОК В TopNav"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -258,6 +256,7 @@ class FavoritesScreen(BaseScreen):
         self._last_load_time = 0
         self._top_nav_updated = False
         self._pending_refresh = False
+        self.count_label = None
 
         self.init_ui()
         self.load_background()
@@ -292,7 +291,6 @@ class FavoritesScreen(BaseScreen):
             self.bg_image.size = self.size
 
     def init_ui(self):
-        """Инициализирует UI с правильными отступами"""
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
         self._main_layout = main_layout
 
@@ -304,6 +302,21 @@ class FavoritesScreen(BaseScreen):
         self._top_spacer = Widget(size_hint_y=None, height=top_padding)
         main_layout.add_widget(self._top_spacer)
 
+        # ============ КОЛИЧЕСТВО ПЕСЕН НА ЭКРАНЕ ============
+        self.count_label = MDLabel(
+            text="",
+            font_size=sp(13),
+            halign="center",
+            size_hint_y=None,
+            height=dp(28),
+            theme_text_color="Custom",
+            text_color=[0.46, 0.70, 0.71, 1],
+            opacity=0,
+            bold=True
+        )
+        main_layout.add_widget(self.count_label)
+
+        # ============ КАРТОЧКИ ============
         bottom_padding = layout_config.get_bottom_padding()
 
         cards_container = MDBoxLayout(
@@ -337,85 +350,35 @@ class FavoritesScreen(BaseScreen):
         self.add_widget(main_layout)
         logger.info(f"UI избранного построен, bottom_padding={bottom_padding}dp")
 
-    def _create_top_nav_title(self, total):
-        from kivymd.uix.boxlayout import MDBoxLayout
-        from kivymd.uix.label import MDLabel
-        from kivy.metrics import sp, dp
-
-        title_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            spacing=dp(2),
-            padding=[dp(8), dp(4), dp(8), dp(4)]
-        )
-
-        title_label = MDLabel(
-            text="Избранное",
-            font_size=sp(20),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True,
-            shorten=True,
-            shorten_from="right"
-        )
-
-        count_text = self._get_count_text(total)
-        count_label = MDLabel(
-            text=count_text,
-            font_size=sp(12),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[0.9, 0.9, 0.9, 0.8],
-            shorten=True,
-            shorten_from="right"
-        )
-
-        title_container.add_widget(title_label)
-        title_container.add_widget(count_label)
-
-        return title_container
-
-    def _get_count_text(self, total):
-        if total == 0:
-            return "Нет песен"
-        elif total == 1:
-            return "1 песня"
-        elif 2 <= total <= 4:
-            return f"{total} песни"
-        else:
-            return f"{total} песен"
-
-    def _update_top_nav(self, total):
-        """Обновляет TopNav — всегда обновляет, даже если уже обновлён"""
-        if not self.manager or self.manager.current != self.name:
-            return
-
+    def _update_top_nav(self):
+        """Обновляет TopNav - форсированно и мгновенно"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # ✅ ВСЕГДА обновляем, даже если уже обновлён
-            title_container = self._create_top_nav_title(total)
-            app.top_nav.set_custom_title_widget(title_container)
-            app.top_nav.back_btn.on_release = self.go_back
+            # ✅ Используем форсированное обновление
+            app.top_nav.force_update_title("Избранное", show_back=False)
             self._top_nav_updated = True
-            logger.info(f"✅ TopNav обновлён: Избранное ({total} песен)")
+            logger.info("✅ TopNav форсированно обновлён: Избранное")
 
-    def _reset_top_nav(self):
-        """БЫСТРЫЙ сброс TopNav — без лишних операций"""
-        try:
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'top_nav'):
-                self._top_nav_updated = False
-        except Exception as e:
-            logger.debug(f"Ошибка сброса TopNav: {e}")
+    def _update_count_label(self, total):
+        """Обновляет лейбл с количеством песен на экране"""
+        if self.count_label:
+            if total == 0:
+                self.count_label.text = "Нет песен"
+            elif total == 1:
+                self.count_label.text = "1 песня"
+            elif 2 <= total <= 4:
+                self.count_label.text = f"{total} песни"
+            else:
+                self.count_label.text = f"{total} песен"
+            self.count_label.opacity = 1
+            logger.info(f"✅ Количество песен обновлено: {total}")
 
     def _show_auth_message(self):
         self.cards_container.clear_widgets()
         auth_card = AuthMessageCard()
         self.cards_container.add_widget(auth_card)
-        self._update_top_nav(0)
+        self._update_top_nav()
+        self.count_label.opacity = 0
 
     def _show_loading(self):
         if self.loading_spinner:
@@ -431,6 +394,8 @@ class FavoritesScreen(BaseScreen):
             index = self._main_layout.children.index(self._top_spacer) + 1
             self._main_layout.add_widget(self.loading_spinner, index)
 
+        self.count_label.opacity = 0
+
     def _hide_loading(self):
         if self.loading_spinner:
             self.loading_spinner.stop_animation()
@@ -440,7 +405,8 @@ class FavoritesScreen(BaseScreen):
 
     def _show_empty(self):
         self.cards_container.clear_widgets()
-        self._update_top_nav(0)
+        self._update_top_nav()
+        self._update_count_label(0)
 
         empty_card = MDCard(
             orientation='vertical',
@@ -491,7 +457,7 @@ class FavoritesScreen(BaseScreen):
             return
 
         self._show_loading()
-        self._update_top_nav(0)
+        self._update_top_nav()
 
         api.get_favorites(
             on_success=self.on_favorites_loaded,
@@ -535,7 +501,6 @@ class FavoritesScreen(BaseScreen):
 
         self.favorites = formatted_favorites
 
-        # Сохраняем в кэш состояния
         screen_state.cache_screen_data('favorites', formatted_favorites)
         self._last_load_time = 0
 
@@ -549,7 +514,8 @@ class FavoritesScreen(BaseScreen):
             self._show_empty()
             return
 
-        self._update_top_nav(len(favorites))
+        self._update_top_nav()
+        self._update_count_label(len(favorites))
 
         for song_data in favorites:
             card = FavoriteSongCard(song=song_data, on_click=self.on_song_selected)
@@ -561,7 +527,6 @@ class FavoritesScreen(BaseScreen):
         logger.info(f"Отображено {len(favorites)} избранных песен")
 
     def on_load_failed(self, req, error):
-        """Обработчик ошибки загрузки"""
         self._hide_loading()
         self._pending_refresh = False
         self.cards_container.clear_widgets()
@@ -580,12 +545,10 @@ class FavoritesScreen(BaseScreen):
                 notify.error("Ошибка загрузки избранного")
 
     def on_song_selected(self, song_id, song_title):
-        """БЫСТРЫЙ переход к песне — с обновлением состояния"""
         if not song_id:
             notify.error("Ошибка: не удалось загрузить песню")
             return
 
-        # Находим исполнителя
         artist = ""
         for song in self.favorites:
             if song.get('song_id') == song_id or song.get('id') == song_id:
@@ -599,7 +562,6 @@ class FavoritesScreen(BaseScreen):
                 self.manager.current = 'favorite_detail'
                 logger.info(f"✅ Переход на FavoriteDetailScreen: {song_title}")
             else:
-                # Fallback на старый экран
                 if self.manager.has_screen('song_detail'):
                     screen_state.set_previous_screen('favorites')
                     song_detail_screen = self.manager.get_screen('song_detail')
@@ -608,9 +570,7 @@ class FavoritesScreen(BaseScreen):
                     self.manager.current = 'song_detail'
 
     def go_back(self, instance=None):
-        """БЫСТРЫЙ возврат на главный экран"""
         logger.info("🔙 go_back: возврат на home")
-        self._reset_top_nav()
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
 
@@ -618,11 +578,11 @@ class FavoritesScreen(BaseScreen):
         logger.info("on_pre_enter: подготовка к показу")
 
     def on_enter(self):
-        """При входе на экран — основная загрузка и ОБНОВЛЕНИЕ TopNav"""
+        """При входе на экран - загружаем данные"""
         logger.info("Вход в экран избранного")
 
-        # ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ TopNav при входе
-        self._top_nav_updated = False
+        # ✅ TopNav уже обновлён в on_pre_enter, но на всякий случай обновляем ещё раз
+        self._update_top_nav()
 
         if not api.is_authenticated():
             self._show_auth_message()
@@ -635,7 +595,6 @@ class FavoritesScreen(BaseScreen):
             logger.info(f"📦 Показываем избранное из кэша состояния: {len(cached_favorites)} песен")
             self.favorites = cached_favorites
             self._show_favorites(cached_favorites)
-            # Обновляем в фоне
             Clock.schedule_once(lambda dt: self._check_and_refresh(), 0.5)
             return
 
@@ -647,11 +606,9 @@ class FavoritesScreen(BaseScreen):
         self.load_favorites(force_refresh=False)
 
     def _check_and_refresh(self):
-        """Проверяет, нужно ли обновить избранное в фоне"""
         if not api.is_authenticated():
             return
 
-        # Если было обновление, не проверяем
         if self._pending_refresh:
             return
 
@@ -665,22 +622,20 @@ class FavoritesScreen(BaseScreen):
             )
 
     def on_login_success(self):
-        """Обработчик успешного входа"""
         logger.info("✅ Успешная авторизация — обновляем избранное")
+        self._top_nav_updated = False
         self.load_favorites(force_refresh=True)
 
-    def force_update_top_nav(self):
-        """Принудительно обновляет TopNav извне"""
-        self._top_nav_updated = False
-        if self.favorites:
-            self._update_top_nav(len(self.favorites))
-        else:
-            self._update_top_nav(0)
-        logger.info("🔄 TopNav принудительно обновлён")
-
     def on_leave(self):
-        """БЫСТРЫЙ выход — без лишних операций"""
         logger.info("Выход из экрана избранного")
         self._hide_loading()
-        # НЕ вызываем _reset_top_nav() здесь — это делается при переходе
         self._top_nav_updated = False
+
+    @staticmethod
+    def pre_update_top_nav():
+        """Статический метод для обновления TopNav ДО перехода на экран"""
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'top_nav'):
+            app.top_nav.set_custom_title("Избранное")
+            app.top_nav.back_btn.on_release = lambda: None
+            logger.info("✅ TopNav обновлён: Избранное (до перехода)")
