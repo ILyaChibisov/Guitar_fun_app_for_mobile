@@ -1,10 +1,10 @@
-# screens/metronome_screen.py - КОМПАКТНАЯ ВЕРСИЯ
+# screens/metronome_screen.py - С УМЕНЬШЕННЫМ МАЯТНИКОМ И БОЛЬШИМИ СЛАЙДЕРАМИ
 """
-Экран гитарного метронома с анимированным маятником
+Экран гитарного метронома с реалистичным маятником
 4 вертикальные шкалы + меню в стиле аккордов
 """
 from kivy.metrics import dp, sp
-from kivy.graphics import Color, Rectangle, Line, Ellipse, Rotate, PushMatrix, PopMatrix
+from kivy.graphics import Color, Rectangle, Line, Ellipse, Rotate, PushMatrix, PopMatrix, Mesh
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
@@ -13,7 +13,7 @@ from kivy.clock import Clock
 from kivy.animation import Animation
 from kivy.properties import NumericProperty, BooleanProperty, ListProperty
 from kivy.core.audio import SoundLoader
-from kivy.utils import platform
+from kivy.utils import get_color_from_hex, platform
 from io import BytesIO
 import math
 import array
@@ -110,22 +110,111 @@ def generate_mechanical_click(is_accent=False, sample_rate=44100, volume=0.8):
     return generate_click_sound(freq, duration, sample_rate, volume, 'sine')
 
 
-# ============ МАЯТНИК ============
-class MetronomePendulum(Widget):
+# ============ РЕАЛИСТИЧНЫЙ МАЯТНИК (УМЕНЬШЕННЫЙ) ============
+class RealisticMetronome(Widget):
     angle = NumericProperty(0)
-    max_angle = NumericProperty(0.5)
+    bpm_value = NumericProperty(120)
     is_running = BooleanProperty(False)
-    bpm = NumericProperty(120)
     pendulum_color = ListProperty([0.46, 0.70, 0.71, 1])
-    glow_color = ListProperty([0.46, 0.70, 0.71, 0.3])
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._update_clock = None
-        self._current_amplitude = 0.4
-        self._angle_velocity = 0
+        super(RealisticMetronome, self).__init__(**kwargs)
+        self._animation = None
         self.size_hint = (1, 1)
-        Clock.schedule_interval(self._update_pendulum, 1 / 60.0)
+        self.bind(pos=self.render, size=self.render, angle=self.render, bpm_value=self.render)
+
+    def render(self, *args):
+        self.canvas.clear()
+
+        # Основная геометрия - масштабируем в 2 раза меньше
+        cx = self.center_x
+        base_y = self.y + 10
+        w_base = min(self.width, self.height) * 0.55  # Было 0.75
+        h_body = self.height - 30
+
+        # Точки деревянного корпуса
+        top_x, top_y = cx, base_y + h_body
+        left_x, left_y = cx - w_base / 2, base_y
+        right_x, right_y = cx + w_base / 2, base_y
+        pivot_y = base_y + h_body * 0.22
+
+        with self.canvas:
+            # 1. ЗАДНЯЯ СТЕНКА КОРПУСА
+            Color(*get_color_from_hex('#3a1d11'))
+            Mesh(vertices=[left_x, left_y, 0, 0, right_x, right_y, 0, 0, top_x, top_y, 0, 0],
+                 indices=[0, 1, 2], mode='triangles')
+
+            # Эффект тени
+            Color(0, 0, 0, 0.4)
+            Line(points=[left_x, left_y, top_x, top_y, right_x, right_y], width=3)
+
+            # 2. МЕТАЛЛИЧЕСКАЯ ШКАЛА ТЕМПА
+            Color(*get_color_from_hex('#cd9a62'))
+            scale_w = w_base * 0.22
+            scale_ly, scale_hy = pivot_y - 10, top_y - 30
+            Mesh(vertices=[cx - scale_w / 2, scale_ly, 0, 0, cx + scale_w / 2, scale_ly, 0, 0,
+                           cx + scale_w / 3, scale_hy, 0, 0, cx - scale_w / 3, scale_hy, 0, 0],
+                 indices=[0, 1, 2, 2, 3, 0], mode='triangles')
+
+            # Разметка на шкале
+            Color(0.2, 0.1, 0, 0.6)
+            for i in range(10):
+                y_pos = scale_ly + (i / 9) * (scale_hy - scale_ly - 15)
+                curr_w = (scale_w / 2) - (i / 9) * (scale_w / 6)
+                Line(points=[cx - curr_w, y_pos, cx + curr_w, y_pos], width=1.2)
+
+            # 3. ПОДВИЖНЫЙ МАЯТНИК
+            rad = math.radians(self.angle + 90)
+            rod_len = h_body * 0.65
+            end_x = cx + rod_len * math.cos(rad)
+            end_y = pivot_y + rod_len * math.sin(rad)
+
+            # Стержень маятника
+            Color(*get_color_from_hex('#7f8c8d'))
+            Line(points=[cx, pivot_y, end_x, end_y], width=2.5)
+            Color(*get_color_from_hex('#ffffff'))
+            Line(points=[cx, pivot_y, end_x, end_y], width=0.8)
+
+            # Грузик
+            bpm_pct = (self.bpm_value - 40) / (210 - 40)
+            bpm_pct = max(0, min(1, bpm_pct))
+            weight_dist = rod_len * (0.9 - (bpm_pct * 0.55))
+            wx = cx + weight_dist * math.cos(rad)
+            wy = pivot_y + weight_dist * math.sin(rad)
+
+            # Цвет грузика
+            color = self.pendulum_color
+            Color(color[0], color[1], color[2], 1)
+            Line(circle=(wx, wy, 8), width=12, joint='round')  # Уменьшен грузик
+
+            # Световой блик
+            Color(*get_color_from_hex('#fef08a'))
+            Line(circle=(wx - 1.5, wy + 1.5, 4), width=4, joint='round')
+
+            # Тень на грузике
+            Color(*get_color_from_hex('#78350f'))
+            Line(circle=(wx, wy, 9), width=1.5)
+
+            # 4. ПЕРЕДНЯЯ ПАНЕЛЬ
+            Color(*get_color_from_hex('#5c2e16'))
+            # Левое крыло
+            Mesh(vertices=[left_x, left_y, 0, 0, cx - scale_w / 2 - 4, scale_ly, 0, 0,
+                           cx - scale_w / 3 - 4, scale_hy, 0, 0, top_x, top_y, 0, 0],
+                 indices=[0, 1, 2, 2, 3, 0], mode='triangles')
+            # Правое крыло
+            Mesh(vertices=[right_x, right_y, 0, 0, cx + scale_w / 2 + 4, scale_ly, 0, 0,
+                           cx + scale_w / 3 + 4, scale_hy, 0, 0, top_x, top_y, 0, 0],
+                 indices=[0, 1, 2, 2, 3, 0], mode='triangles')
+            # Нижний порожек
+            Mesh(vertices=[left_x, left_y, 0, 0, right_x, right_y, 0, 0,
+                           cx + scale_w / 2 + 4, scale_ly, 0, 0, cx - scale_w / 2 - 4, scale_ly, 0, 0],
+                 indices=[0, 1, 2, 2, 3, 0], mode='triangles')
+
+            # 5. КРЕПЛЕНИЕ ОСИ
+            Color(*get_color_from_hex('#1a1a1a'))
+            Line(circle=(cx, pivot_y, 7), width=8, joint='round')
+            Color(*get_color_from_hex('#8a8a8a'))
+            Line(circle=(cx, pivot_y, 3), width=4, joint='round')
 
     def start(self):
         self.is_running = True
@@ -133,141 +222,36 @@ class MetronomePendulum(Widget):
 
     def stop(self):
         self.is_running = False
-        if self._update_clock:
-            try:
-                Clock.unschedule(self._update_clock)
-                self._update_clock = None
-            except:
-                pass
+        if self._animation:
+            self._animation.cancel_all(self)
+            self._animation = None
+        anim_center = Animation(angle=0, duration=0.2, transition='out_quad')
+        anim_center.start(self)
 
     def _animate_swing(self):
         if not self.is_running:
             return
 
-        if self._update_clock:
-            try:
-                Clock.unschedule(self._update_clock)
-                self._update_clock = None
-            except:
-                pass
+        duration = 60.0 / self.bpm_value
+        target_angle = 28 if self.angle <= 0 else -28
 
-        period = 60.0 / self.bpm
+        self._animation = Animation(angle=target_angle, duration=duration, transition='in_out_quad')
+        self._animation.bind(on_complete=self._on_swing_complete)
+        self._animation.start(self)
 
-        if self.bpm < 60:
-            amplitude = self.max_angle
-        elif self.bpm < 120:
-            amplitude = self.max_angle * (1 - (self.bpm - 60) / 60 * 0.3)
-        elif self.bpm < 180:
-            amplitude = self.max_angle * (0.7 - (self.bpm - 120) / 60 * 0.2)
-        else:
-            amplitude = self.max_angle * 0.5
+    def _on_swing_complete(self, animation, widget):
+        if self.is_running:
+            if self.parent and hasattr(self.parent, 'play_tick_sound'):
+                self.parent.play_tick_sound()
+            self._animate_swing()
 
-        self._current_amplitude = amplitude
-
-        def update_angle(dt):
-            if not self.is_running:
-                return False
-            time = Clock.get_time()
-            self.angle = self._current_amplitude * math.sin(2 * math.pi * time / period)
-            return True
-
-        self._update_clock = Clock.schedule_interval(update_angle, 1 / 60.0)
-
-    def _update_pendulum(self, dt):
-        if not self.is_running and self._angle_velocity != 0:
-            self._angle_velocity *= 0.98
-            self.angle += self._angle_velocity * dt
-            if abs(self._angle_velocity) < 0.001:
-                self._angle_velocity = 0
-                self.angle = 0
-
-    def on_bpm(self, instance, value):
+    def on_bpm_value(self, instance, value):
         if self.is_running:
             self.stop()
             Clock.schedule_once(lambda dt: self.start(), 0.1)
 
-    def on_size(self, *args):
-        self.draw_pendulum()
 
-    def draw_pendulum(self):
-        self.canvas.clear()
-        with self.canvas:
-            w = self.width
-            h = self.height
-            if w < 10 or h < 10:
-                return
-
-            center_x = w / 2
-            center_y = h * 0.82
-            pendulum_length = min(w, h) * 0.65
-            bob_radius = min(w, h) * 0.09
-
-            # Тень
-            Color(0, 0, 0, 0.15)
-            Ellipse(
-                pos=(center_x - bob_radius * 1.2, center_y - pendulum_length - bob_radius * 0.4),
-                size=(bob_radius * 2.4, bob_radius * 0.4)
-            )
-
-            # Свечение
-            Color(*self.glow_color)
-            Ellipse(
-                pos=(center_x - bob_radius * 1.8, center_y - pendulum_length - bob_radius * 1.8),
-                size=(bob_radius * 3.6, bob_radius * 3.6)
-            )
-
-            # Корпус
-            PushMatrix()
-            Rotate(origin=(center_x, center_y), angle=math.degrees(self.angle))
-
-            # Стержень
-            Color(0.2, 0.2, 0.3, 0.7)
-            Line(
-                points=[center_x, center_y, center_x, center_y - pendulum_length],
-                width=2,
-                cap='round'
-            )
-
-            Color(*self.pendulum_color)
-            Line(
-                points=[center_x, center_y, center_x, center_y - pendulum_length],
-                width=1.2,
-                cap='round'
-            )
-
-            # Грузик
-            Color(0.3, 0.3, 0.4, 0.9)
-            Ellipse(
-                pos=(center_x - bob_radius, center_y - pendulum_length - bob_radius),
-                size=(bob_radius * 2, bob_radius * 2)
-            )
-
-            Color(*self.pendulum_color)
-            Ellipse(
-                pos=(center_x - bob_radius * 0.7, center_y - pendulum_length - bob_radius * 0.7),
-                size=(bob_radius * 1.4, bob_radius * 1.4)
-            )
-
-            Color(1, 1, 1, 0.25)
-            Ellipse(
-                pos=(center_x - bob_radius * 0.35, center_y - pendulum_length + bob_radius * 0.2),
-                size=(bob_radius * 0.7, bob_radius * 0.4)
-            )
-
-            # Точка подвеса
-            Color(0.3, 0.3, 0.4, 0.7)
-            Ellipse(pos=(center_x - 5, center_y - 5), size=(10, 10))
-
-            Color(*self.pendulum_color)
-            Ellipse(pos=(center_x - 3, center_y - 3), size=(6, 6))
-
-            PopMatrix()
-
-    def on_angle(self, instance, value):
-        self.draw_pendulum()
-
-
-# ============ ВЕРТИКАЛЬНЫЙ СЛАЙДЕР ============
+# ============ ВЕРТИКАЛЬНЫЙ СЛАЙДЕР (УВЕЛИЧЕННЫЙ) ============
 class VerticalSlider(MDBoxLayout):
     value = NumericProperty(60)
     min_value = NumericProperty(30)
@@ -284,16 +268,16 @@ class VerticalSlider(MDBoxLayout):
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-        self.spacing = dp(1)
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.spacing = dp(2)
+        self.padding = [dp(4), dp(4), dp(4), dp(4)]
 
         self.value_label = MDLabel(
             text=str(int(initial)),
-            font_size=sp(16),
+            font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(24),
+            height=dp(30),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True
@@ -305,7 +289,7 @@ class VerticalSlider(MDBoxLayout):
             value=initial,
             step=step,
             size_hint=(None, 1),
-            width=dp(14),
+            width=dp(18),
             orientation='vertical',
             pos_hint={'center_x': 0.5},
             hint=False
@@ -322,11 +306,11 @@ class VerticalSlider(MDBoxLayout):
 
         self.label = MDLabel(
             text=label_text,
-            font_size=sp(8),
+            font_size=sp(11),
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(14),
+            height=dp(18),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.6],
             bold=True
@@ -387,7 +371,7 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.icon_btn = MDIconButton(
             icon=icon_name,
             size_hint=(None, None),
-            size=(dp(28), dp(28)),
+            size=(dp(30), dp(30)),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             theme_icon_color="Custom",
             icon_color=self.icon_color,
@@ -423,7 +407,7 @@ class MetronomeMenu(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)
+        self.height = dp(50)
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
@@ -610,6 +594,35 @@ class MetronomeScreen(BaseScreen):
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки звуков: {e}")
 
+    def play_tick_sound(self):
+        """Воспроизводит звук тика - вызывается из маятника"""
+        if not self.is_running:
+            return
+
+        is_main_beat = (self.subdivision_count == 0)
+        is_accent = (is_main_beat and self.tick_count == 0)
+
+        try:
+            if is_accent and self.is_accent_enabled and self.accent_sound:
+                self.accent_sound.play()
+            elif is_main_beat and self.click_sound:
+                self.click_sound.play()
+            elif not is_main_beat and self.subdivision_sound:
+                self.subdivision_sound.play()
+        except Exception as e:
+            logger.error(f"Ошибка воспроизведения: {e}")
+
+        if is_main_beat:
+            beat_index = self.tick_count % self.beats_per_measure
+            self._highlight_beat(beat_index)
+
+            if beat_index < len(self.beat_indicators):
+                indicator = self.beat_indicators[beat_index]
+                anim = Animation(opacity=1.0, duration=0.05) + Animation(opacity=0.7, duration=0.1)
+                anim.start(indicator)
+
+            self.tick_count = (self.tick_count + 1) % self.beats_per_measure
+
     def init_ui(self):
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
@@ -633,44 +646,28 @@ class MetronomeScreen(BaseScreen):
             adaptive_height=True
         )
 
-        # ===== МАЯТНИК (уменьшенный) =====
+        # ===== МАЯТНИК (УМЕНЬШЕННЫЙ) =====
         pendulum_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(160),
+            height=dp(130),  # Было 220
             padding=[dp(4), dp(2), dp(4), dp(2)]
         )
 
-        self.pendulum = MetronomePendulum(bpm=self.DEFAULT_BPM)
+        self.pendulum = RealisticMetronome(
+            bpm_value=self.DEFAULT_BPM,
+            size_hint=(1, 1)
+        )
         pendulum_container.add_widget(self.pendulum)
         content.add_widget(pendulum_container)
 
-        # ===== BPM ПОД МАЯТНИКОМ =====
-        bpm_row = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(36),
-            spacing=dp(8),
-            padding=[dp(8), dp(0), dp(8), dp(0)]
-        )
+        # ===== BPM ЛЕЙБЛ УБРАН =====
 
-        self.bpm_label = MDLabel(
-            text=str(self.DEFAULT_BPM),
-            font_size=sp(24),
-            halign="center",
-            size_hint_x=1,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
-            bold=True
-        )
-        bpm_row.add_widget(self.bpm_label)
-        content.add_widget(bpm_row)
-
-        # ===== КАРТОЧКА СО СЛАЙДЕРАМИ =====
+        # ===== КАРТОЧКА СО СЛАЙДЕРАМИ (УВЕЛИЧЕННАЯ) =====
         sliders_card = MDCard(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(210),
+            height=dp(280),  # Было 210
             padding=[dp(4), dp(4), dp(4), dp(4)],
             radius=[dp(14), dp(14), dp(14), dp(14)],
             md_bg_color=[0, 0, 0, 0.06],
@@ -840,7 +837,7 @@ class MetronomeScreen(BaseScreen):
         self.volume_slider.set_value(self.DEFAULT_VOLUME)
 
         if hasattr(self, 'pendulum'):
-            self.pendulum.bpm = self.DEFAULT_BPM
+            self.pendulum.bpm_value = self.DEFAULT_BPM
 
         self._update_display()
         self._update_indicators(self.beats_per_measure)
@@ -932,13 +929,11 @@ class MetronomeScreen(BaseScreen):
         subdivision_names = {'none': 'Нет', 'eighth': '1/8', 'triplet': '1/8T', 'sixteenth': '1/16'}
         sub_text = subdivision_names.get(self.subdivision, 'Нет')
         self._show_temporary_hint(f"{self.bpm} BPM | {self.beats_per_measure}/4 | {sub_text}", 1.5)
-        if hasattr(self, 'bpm_label'):
-            self.bpm_label.text = str(self.bpm)
 
     def _on_bpm_change(self, instance, value):
         self.bpm = int(value)
         if hasattr(self, 'pendulum'):
-            self.pendulum.bpm = self.bpm
+            self.pendulum.bpm_value = self.bpm
         self._update_display()
         if self.is_running:
             self.stop_metronome()
@@ -1011,22 +1006,16 @@ class MetronomeScreen(BaseScreen):
 
         if hasattr(self, 'pendulum'):
             self.pendulum.start()
-            self.pendulum.pendulum_color = [0.46, 0.70, 0.71, 1] if self.is_accent_enabled else [0.6, 0.6, 0.6, 1]
+            if self.is_accent_enabled:
+                self.pendulum.pendulum_color = [0.46, 0.70, 0.71, 1]
+            else:
+                self.pendulum.pendulum_color = [0.6, 0.6, 0.6, 1]
 
         self._show_indicators()
         self.metronome_menu.update_state(self.is_running, self.is_accent_enabled)
-
-        interval = 60.0 / self.bpm
-        self._tick()
-        self.tick_event = Clock.schedule_interval(self._tick, interval)
-
         self._show_temporary_hint(f"Запущен: {self.bpm} BPM", 1.2)
 
     def stop_metronome(self):
-        if self.tick_event:
-            self.tick_event.cancel()
-            self.tick_event = None
-
         self.is_running = False
         self._hide_indicators()
         self.metronome_menu.update_state(self.is_running, self.is_accent_enabled)
@@ -1037,34 +1026,6 @@ class MetronomeScreen(BaseScreen):
         self.tick_count = 0
         self.subdivision_count = 0
         self._show_temporary_hint("Остановлен", 1.2)
-
-    def _tick(self, dt=None):
-        if not self.is_running:
-            return
-
-        is_main_beat = (self.subdivision_count == 0)
-        is_accent = (is_main_beat and self.tick_count == 0)
-
-        try:
-            if is_accent and self.is_accent_enabled and self.accent_sound:
-                self.accent_sound.play()
-            elif is_main_beat and self.click_sound:
-                self.click_sound.play()
-            elif not is_main_beat and self.subdivision_sound:
-                self.subdivision_sound.play()
-        except Exception as e:
-            logger.error(f"Ошибка воспроизведения: {e}")
-
-        if is_main_beat:
-            beat_index = self.tick_count % self.beats_per_measure
-            self._highlight_beat(beat_index)
-
-            if beat_index < len(self.beat_indicators):
-                indicator = self.beat_indicators[beat_index]
-                anim = Animation(opacity=1.0, duration=0.05) + Animation(opacity=0.7, duration=0.1)
-                anim.start(indicator)
-
-            self.tick_count = (self.tick_count + 1) % self.beats_per_measure
 
     def on_enter(self):
         self._update_indicators(self.beats_per_measure)
