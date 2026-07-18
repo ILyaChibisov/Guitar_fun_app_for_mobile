@@ -69,24 +69,40 @@ class LayoutConfig:
             # На Windows эмулируем системную навигацию
             return cls.get_bottom_nav_height() + nav_bar_height
 
+    # config/layout_config.py
+
     @classmethod
     def get_top_padding(cls, include_top_nav=True):
         """Возвращает отступ сверху для контента в dp"""
-        status_h = get_status_bar_height()
-        total = status_h
-        if include_top_nav:
-            total += cls.get_top_nav_height()
-        total += dp(cls.EXTRA_TOP_PADDING)
-        return total
+        # На Android с прозрачными панелями контент должен быть под статус-баром
+        if platform == 'android':
+            status_h = get_status_bar_height()
+            total = status_h  # Всегда добавляем статус-бар
+            if include_top_nav:
+                total += cls.get_top_nav_height()
+            # Добавляем небольшой отступ для воздуха
+            total += dp(4)
+            return total
+        else:
+            # На Windows эмулируем
+            status_h = get_status_bar_height()
+            total = status_h
+            if include_top_nav:
+                total += cls.get_top_nav_height()
+            total += dp(4)
+            return total
 
     @classmethod
     def get_bottom_padding(cls):
-        """
-        Возвращает отступ снизу для контента в dp.
-        Отступ должен быть равен ПОЛНОЙ высоте BottomNav,
-        чтобы контент прилегал к верхней границе панели.
-        """
-        return cls.get_bottom_nav_total_height() + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
+        """Возвращает отступ снизу для контента в dp"""
+        # На Android с прозрачными панелями контент должен быть над навигацией
+        if platform == 'android':
+            nav_h = get_navigation_bar_height()
+            bottom_nav_h = cls.get_bottom_nav_total_height()
+            # Отступ = навигационная панель + BottomNav + небольшой зазор
+            return nav_h + bottom_nav_h + dp(4)
+        else:
+            return cls.get_bottom_nav_total_height() + dp(4)
 
     @classmethod
     def get_content_padding(cls):
