@@ -1,23 +1,27 @@
 # screens/tuner_screen.py
 """
-Экран гитарного тюнера — с красивой стрелкой и чёткими цифрами
+Экран гитарного тюнера — горизонтальная шкала + эталонные ноты
 """
 from kivy.metrics import dp, sp
-from kivy.graphics import Color, Rectangle, Line, Ellipse, PushMatrix, PopMatrix, Rotate, Mesh
+from kivy.graphics import Color, Rectangle, Line
 from kivy.core.image import Image as CoreImage
 from kivy.uix.widget import Widget
-from kivy.uix.label import Label
+from kivy.uix.behaviors import ButtonBehavior
 from kivy.clock import Clock
+from kivy.uix.label import Label
 from kivy.animation import Animation
-from kivy.properties import NumericProperty, StringProperty, ListProperty
-from kivy.utils import platform
+from kivy.properties import NumericProperty, StringProperty, BooleanProperty
+from kivy.utils import platform, get_color_from_hex
 from io import BytesIO
 import math
 import threading
 import struct
 import time
 import sys
-
+import os
+import array
+import tempfile
+from kivy.core.audio import SoundLoader
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -199,6 +203,121 @@ NOTES = {
 }
 
 
+# ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
+def get_temp_path():
+    """Возвращает безопасный путь для временных файлов на Android"""
+    if platform == 'android':
+        try:
+            from android.storage import app_storage_path
+            return app_storage_path()
+        except:
+            pass
+    return tempfile.gettempdir()
+
+
+def clamp_value(value, min_val=-1.0, max_val=1.0):
+    return max(min_val, min(max_val, value))
+
+
+def generate_reference_note(frequency, duration=2.0, volume=0.6):
+    """
+    Генерирует чистый эталонный звук ноты
+    С гармониками и плавным затуханием
+    """
+    sample_rate = 44100
+    num_samples = int(sample_rate * duration)
+
+    # Гармоники (обертоны) для реалистичности
+    harmonics = [
+        (1, 1.0),  # Основная
+        (2, 0.60),  # 2-я
+        (3, 0.35),  # 3-я
+        (4, 0.20),  # 4-я
+        (5, 0.10),  # 5-я
+    ]
+
+    audio_data = array.array('h')
+
+    for i in range(num_samples):
+        t = i / sample_rate
+
+        value = 0.0
+        for harmonic, amp in harmonics:
+            freq = frequency * harmonic
+            phase = harmonic * 0.2
+            value += amp * math.sin(2 * math.pi * freq * t + phase)
+
+        # Плавное затухание
+        decay_rate = 2.0
+        envelope = math.exp(-t * decay_rate)
+
+        # Атака
+        attack_time = 0.01
+        if t < attack_time:
+            attack = t / attack_time
+        else:
+            attack = 1.0
+
+        value = value * envelope * attack * volume
+        value = clamp_value(value, -1.0, 1.0)
+
+        audio_data.append(int(32767 * value))
+
+    return audio_data
+
+
+def play_reference_note(frequency):
+    """
+    Воспроизводит эталонную ноту через временный WAV
+    """
+    try:
+        from kivy.core.audio import SoundLoader
+
+        audio_data = generate_reference_note(frequency)
+
+        temp_dir = get_temp_path()
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav', dir=temp_dir) as tmp_file:
+            tmp_path = tmp_file.name
+            with open(tmp_path, 'wb') as f:
+                f.write(b'RIFF')
+                f.write(struct.pack('<I', 36 + len(audio_data) * 2))
+                f.write(b'WAVE')
+                f.write(b'fmt ')
+                f.write(struct.pack('<I', 16))
+                f.write(struct.pack('<H', 1))
+                f.write(struct.pack('<H', 1))
+                f.write(struct.pack('<I', 44100))
+                f.write(struct.pack('<I', 44100 * 2))
+                f.write(struct.pack('<H', 2))
+                f.write(struct.pack('<H', 16))
+                f.write(b'data')
+                f.write(struct.pack('<I', len(audio_data) * 2))
+                audio_data.tofile(f)
+
+        sound = SoundLoader.load(tmp_path)
+
+        if sound:
+            sound.play()
+            # Удаляем файл после воспроизведения
+            Clock.schedule_once(lambda dt: clean_temp_file(tmp_path), sound.length + 0.1)
+            return True
+
+        return False
+
+    except Exception as e:
+        logger.error(f"Ошибка воспроизведения эталонной ноты: {e}")
+        return False
+
+
+def clean_temp_file(path):
+    """Удаляет временный файл"""
+    try:
+        if os.path.exists(path):
+            os.unlink(path)
+    except:
+        pass
+
+
 # ============ ОПРЕДЕЛЕНИЕ ЧАСТОТЫ ============
 def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
     if not audio_data or len(audio_data) < 200:
@@ -291,211 +410,158 @@ def cents_deviation(freq, target_freq):
 
 
 # ===================================================================
-# ============ ТЮНЕР — ВСЁ В ОДНОМ ВИДЖЕТЕ ============
+# ============ КНОПКА ЭТАЛОННОЙ НОТЫ ============
 # ===================================================================
 
-class TunerDial(Widget):
-    """
-    Тюнер — дуга как радуга (горизонтально), цифры под дугой
-    """
+class NoteButton(MDCard):
+    """Кнопка-кружок для эталонной ноты"""
+
+    note_name = StringProperty('')
+    frequency = NumericProperty(0)
+    is_active = BooleanProperty(False)
+
+    def __init__(self, note_name, frequency, on_press=None, **kwargs):
+        super().__init__(**kwargs)
+        self.note_name = note_name
+        self.frequency = frequency
+        self.on_press_callback = on_press
+
+        self.orientation = 'vertical'
+        self.size_hint = (None, None)
+        self.size = (dp(40), dp(40))
+        self.radius = [dp(20)] * 4
+        self.md_bg_color = [0.2, 0.2, 0.3, 0.6]
+        self.elevation = 2
+        self.line_color = [0.46, 0.70, 0.71, 0.3]
+        self.line_width = 1
+        self.ripple_behavior = True
+
+        self.label = MDLabel(
+            text=note_name,
+            font_size=sp(13),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.9],
+            bold=True,
+            size_hint=(1, 1)
+        )
+        self.add_widget(self.label)
+
+        self.bind(on_release=self._on_press)
+        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
+
+    def _on_enter(self, *args):
+        self.elevation = 4
+        self.md_bg_color = [0.3, 0.3, 0.4, 0.8]
+
+    def _on_leave(self, *args):
+        self.elevation = 2
+        if not self.is_active:
+            self.md_bg_color = [0.2, 0.2, 0.3, 0.6]
+
+    def _on_press(self, instance):
+        if self.on_press_callback:
+            self.on_press_callback(self.note_name, self.frequency)
+
+        # Анимация нажатия
+        anim = Animation(size=(dp(44), dp(44)), duration=0.05)
+        anim += Animation(size=(dp(40), dp(40)), duration=0.05)
+        anim.start(self)
+
+    def set_active(self, active):
+        self.is_active = active
+        if active:
+            self.md_bg_color = [0.46, 0.70, 0.71, 0.8]
+            self.line_color = [0.46, 0.70, 0.71, 1]
+            self.label.text_color = [1, 1, 1, 1]
+            self.elevation = 6
+        else:
+            self.md_bg_color = [0.2, 0.2, 0.3, 0.6]
+            self.line_color = [0.46, 0.70, 0.71, 0.3]
+            self.label.text_color = [1, 1, 1, 0.9]
+            self.elevation = 2
+
+
+# ===================================================================
+# ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР ============
+# ===================================================================
+
+class ModernHorizontalTuner(Widget):
+    """Горизонтальная шкала тюнера"""
 
     deviation = NumericProperty(0)
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.deviation = 0
-        self._labels = []
+        super(ModernHorizontalTuner, self).__init__(**kwargs)
+        self.labels = []
         self.bind(pos=self.update_gauge, size=self.update_gauge)
         self.bind(deviation=self.update_gauge)
-        Clock.schedule_once(self.update_gauge, 0.1)
-        Clock.schedule_once(self.update_gauge, 0.3)
 
     def update_gauge(self, *args):
         self.canvas.clear()
-
-        for label in self._labels:
+        for label in self.labels:
             if label.parent:
                 self.remove_widget(label)
-        self._labels.clear()
+        self.labels.clear()
 
         if self.width <= 0 or self.height <= 0:
             return
 
-        center_x = self.center_x
-        center_y = self.center_y + dp(10)
-        radius = min(self.width, self.height) / 2 - 20
-
-        # ============ ДУГА КАК РАДУГА (ГОРИЗОНТАЛЬНО) ============
-        # Дуга от -50 (левая сторона, 180°) до +50 (правая сторона, 0°)
-        # 0 (центр) — 90° (верх)
-        start_angle = -50  # Левая сторона (-50)
-        end_angle = 50  # Правая сторона (+50)
-        total_span = abs(end_angle - start_angle)  # 180 градусов (полуокружность)
+        scale_w = self.width * 0.85
+        scale_x = self.center_x - scale_w / 2
+        scale_y = self.center_y
 
         with self.canvas:
-            # ============ 1. ФОН ДУГИ ============
-            Color(0.06, 0.06, 0.10, 1)
-            Line(circle=(center_x, center_y, radius + 2, start_angle, end_angle), width=16)
+            # 1. ОСНОВНАЯ ЛИНИЯ
+            Color(0.15, 0.18, 0.22, 1)
+            Line(points=[scale_x, scale_y, scale_x + scale_w, scale_y], width=2)
 
-            # ============ 2. ЦВЕТНЫЕ СЕГМЕНТЫ ============
-            num_segments = 10
-            gap_deg = 1.5
-            segment_span = (total_span - gap_deg * (num_segments - 1)) / num_segments
+            # 2. ЗАСЕЧКИ
+            Color(0.5, 0.55, 0.6, 1)
+            positions = [0, 0.25, 0.5, 0.75, 1.0]
+            for pos_pct in positions:
+                curr_x = scale_x + (pos_pct * scale_w)
+                tick_h = dp(24) if pos_pct == 0.5 else dp(12)
+                Line(points=[curr_x, scale_y - tick_h / 2, curr_x, scale_y + tick_h / 2], width=1.5)
 
-            for i in range(num_segments):
-                s_angle = start_angle - i * (segment_span + gap_deg)
-                e_angle = s_angle - segment_span
+        # 3. ПОДПИСИ
+        cents_vals = {0: "-50", 0.25: "-25", 0.5: "0", 0.75: "+25", 1.0: "+50"}
+        for pos_pct, text in cents_vals.items():
+            curr_x = scale_x + (pos_pct * scale_w)
+            is_zero = (pos_pct == 0.5)
 
-                t = i / (num_segments - 1)
-                if t < 0.5:
-                    r = 0.9
-                    g = 0.9 * (t * 2)
-                else:
-                    r = 0.9 * (1 - (t - 0.5) * 2)
-                    g = 0.9
-                Color(r, g, 0.1, 0.9)
-                Line(circle=(center_x, center_y, radius, e_angle, s_angle), width=12)
+            color = [0.18, 0.8, 0.44, 1] if is_zero else [0.5, 0.55, 0.6, 1]
+            font_size = sp(14) if is_zero else sp(12)
 
-            # ============ 3. ОСНОВНЫЕ РИСКИ ============
-            for val in range(-50, 51, 10):
-                pct = (val + 50) / 100.0
-                angle_deg = start_angle + pct * total_span
-                angle_rad = math.radians(angle_deg)
-
-                inner_r = radius - 18
-                outer_r = radius + 2
-                x1 = center_x + inner_r * math.cos(angle_rad)
-                y1 = center_y + inner_r * math.sin(angle_rad)
-                x2 = center_x + outer_r * math.cos(angle_rad)
-                y2 = center_y + outer_r * math.sin(angle_rad)
-
-                Color(0.9, 0.9, 0.9, 0.8)
-                Line(points=[x1, y1, x2, y2], width=2)
-
-            # ============ 4. МАЛЕНЬКИЕ РИСКИ ============
-            for val in range(-45, 46, 5):
-                if val % 10 == 0:
-                    continue
-                pct = (val + 50) / 100.0
-                angle_deg = start_angle + pct * total_span
-                angle_rad = math.radians(angle_deg)
-
-                inner_r = radius - 10
-                outer_r = radius + 2
-                x1 = center_x + inner_r * math.cos(angle_rad)
-                y1 = center_y + inner_r * math.sin(angle_rad)
-                x2 = center_x + outer_r * math.cos(angle_rad)
-                y2 = center_y + outer_r * math.sin(angle_rad)
-
-                Color(0.6, 0.6, 0.6, 0.4)
-                Line(points=[x1, y1, x2, y2], width=1)
-
-            # ============ 5. СТРЕЛКА ============
-            val_pct = (self.deviation - (-50)) / 100
-            arrow_deg = start_angle + val_pct * total_span
-            arrow_rad = math.radians(arrow_deg)
-
-            tip_x = center_x + (radius - 6) * math.cos(arrow_rad)
-            tip_y = center_y + (radius - 6) * math.sin(arrow_rad)
-
-            base_width = 12
-            perp_rad = arrow_rad + math.radians(90)
-            base_x1 = center_x + base_width * math.cos(perp_rad)
-            base_y1 = center_y + base_width * math.sin(perp_rad)
-            base_x2 = center_x - base_width * math.cos(perp_rad)
-            base_y2 = center_y - base_width * math.sin(perp_rad)
-
-            abs_dev = abs(self.deviation)
-            if abs_dev < 3:
-                arrow_color = (0.2, 0.9, 0.2, 1)
-            elif abs_dev < 10:
-                arrow_color = (0.9, 0.85, 0.1, 1)
-            elif abs_dev < 25:
-                arrow_color = (0.95, 0.5, 0.1, 1)
-            else:
-                arrow_color = (0.9, 0.2, 0.1, 1)
-
-            Color(0, 0, 0, 0.3)
-            Mesh(vertices=[
-                base_x1 + 2, base_y1 - 2, 0, 0,
-                base_x2 + 2, base_y2 - 2, 0, 0,
-                tip_x + 2, tip_y - 2, 0, 0
-            ], indices=[0, 1, 2], mode='triangles')
-
-            Color(*arrow_color)
-            Mesh(vertices=[
-                base_x1, base_y1, 0, 0,
-                base_x2, base_y2, 0, 0,
-                tip_x, tip_y, 0, 0
-            ], indices=[0, 1, 2], mode='triangles')
-
-            # ============ 6. ЦЕНТРАЛЬНЫЙ КРУГ ============
-            Color(0.08, 0.08, 0.12, 1)
-            Line(circle=(center_x, center_y, 14), width=28, joint='round')
-            Color(0.46, 0.70, 0.71, 0.3)
-            Line(circle=(center_x, center_y, 16), width=2)
-            Color(0.46, 0.70, 0.71, 0.6)
-            Ellipse(pos=(center_x - 3, center_y - 3), size=(6, 6))
-
-        # ============ 7. ЦИФРЫ (ПОД ДУГОЙ) ============
-        for val in range(-50, 51, 10):
-            pct = (val + 50) / 100.0
-            angle_deg = start_angle + pct * total_span
-            angle_rad = math.radians(angle_deg)
-
-            # Цифры располагаются чуть ниже дуги
-            text_radius = radius + 28
-            tx = center_x + text_radius * math.cos(angle_rad)
-            ty = center_y + text_radius * math.sin(angle_rad)
-
-            if val == 0:
-                color = [0.46, 0.70, 0.71, 1]
-                font_size = sp(16)
-                bold = True
-            else:
-                t = (val + 50) / 100.0
-                if t < 0.5:
-                    r = 0.9
-                    g = 0.9 * (t * 2)
-                else:
-                    r = 0.9 * (1 - (t - 0.5) * 2)
-                    g = 0.9
-                color = (r, g, 0.1, 0.9)
-                font_size = sp(13)
-                bold = False
-
-            lbl = MDLabel(
-                text=str(val),
+            lbl = Label(
+                text=text,
                 font_size=font_size,
-                bold=bold,
-                halign="center",
-                valign="middle",
+                bold=is_zero,
+                color=color,
                 size_hint=(None, None),
-                size=(dp(35), dp(20)),
-                pos=(tx - dp(17.5), ty - dp(10)),
-                theme_text_color="Custom",
-                text_color=color
+                size=(dp(40), dp(20)),
+                center=(curr_x, scale_y - dp(22))
             )
             self.add_widget(lbl)
-            self._labels.append(lbl)
+            self.labels.append(lbl)
 
+        # 4. ИНДИКАТОР
+        val_pct = (self.deviation - (-50)) / 100.0
+        indicator_x = scale_x + (val_pct * scale_w)
 
-class NoteLabel(MDLabel):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._anim = None
+        with self.canvas:
+            if abs(self.deviation) <= 3:
+                Color(0.18, 0.8, 0.44, 1)
+                ind_w = dp(4)
+            elif abs(self.deviation) <= 12:
+                Color(0.2, 0.6, 1, 1)
+                ind_w = dp(2.5)
+            else:
+                Color(0.9, 0.3, 0.3, 1)
+                ind_w = dp(2.5)
 
-    def set_note(self, note, is_in_tuning=True):
-        self.text = note
-        if is_in_tuning:
-            self.text_color = [0.46, 0.70, 0.71, 1]
-        else:
-            self.text_color = [0.9, 0.7, 0.2, 1]
-        if self._anim:
-            self._anim.cancel(self)
-        self.opacity = 0
-        self._anim = Animation(opacity=1, duration=0.2)
-        self._anim.start(self)
+            Line(points=[indicator_x, scale_y - dp(18), indicator_x, scale_y + dp(18)], width=ind_w)
 
 
 # ===================================================================
@@ -522,6 +588,7 @@ class TunerScreen(BaseScreen):
         self._error_message = ""
         self._attempts = []
         self._working_params = None
+        self._note_buttons = []
 
         self.current_tuning = 'standard_6'
         self.tuning_notes = TUNINGS[self.current_tuning]['notes']
@@ -677,7 +744,6 @@ class TunerScreen(BaseScreen):
             self._show_error("Аудио не доступно на Android")
             self._audio_backend = 'none'
         else:
-            # Windows
             self._init_audio_windows()
 
     def _init_audio_windows(self):
@@ -925,19 +991,44 @@ class TunerScreen(BaseScreen):
     def _process_frequency(self, freq):
         if not self.is_listening:
             return
+
+        # Обновляем частоту
+        self.current_frequency = freq
+
         note, note_freq, diff = freq_to_note(freq, self.tuning_note_names, self.tuning_freqs)
+
         if note:
             cents = cents_deviation(freq, note_freq)
+            self.current_deviation = cents
 
+            # Обновляем индикатор
+            if hasattr(self, 'tuner_gauge'):
+                self.tuner_gauge.deviation = cents
+
+            # Обновляем информацию
             if hasattr(self, 'note_label'):
                 self.note_label.text = note
+                if abs(cents) < 3:
+                    self.note_label.text_color = [0.18, 0.8, 0.44, 1]
+                elif abs(cents) < 12:
+                    self.note_label.text_color = [1, 1, 1, 1]
+                else:
+                    self.note_label.text_color = [1, 1, 1, 1]
+
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.1f} Hz"
 
-            # Обновляем индикатор
-            if hasattr(self, 'tuner_dial'):
-                self.tuner_dial.deviation = cents
+            if hasattr(self, 'cents_label'):
+                sign = "+" if cents >= 0 else ""
+                self.cents_label.text = f"{sign}{cents:.1f} cents"
+                if abs(cents) < 3:
+                    self.cents_label.text_color = [0.18, 0.8, 0.44, 1]
+                elif abs(cents) < 12:
+                    self.cents_label.text_color = [0.2, 0.6, 1, 1]
+                else:
+                    self.cents_label.text_color = [0.9, 0.3, 0.3, 1]
 
+            # Статус
             if abs(cents) < 3:
                 self._show_success("В СТРОЕ!")
             elif abs(cents) < 10:
@@ -949,8 +1040,57 @@ class TunerScreen(BaseScreen):
         else:
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.1f} Hz"
-            if hasattr(self, 'tuner_dial'):
-                self.tuner_dial.deviation = 0
+            if hasattr(self, 'tuner_gauge'):
+                self.tuner_gauge.deviation = 0
+
+    # ============ ЭТАЛОННЫЕ НОТЫ ============
+    def on_reference_note_pressed(self, note_name, frequency):
+        """Обработчик нажатия на эталонную ноту"""
+        logger.info(f"🎵 Эталонная нота: {note_name} ({frequency:.2f} Hz)")
+
+        # Сбрасываем активность всех кнопок
+        for btn in self._note_buttons:
+            btn.set_active(False)
+
+        # Активируем нажатую кнопку
+        for btn in self._note_buttons:
+            if btn.note_name == note_name:
+                btn.set_active(True)
+                break
+
+        # Воспроизводим звук
+        play_reference_note(frequency)
+
+        # Показываем в интерфейсе
+        if hasattr(self, 'note_label'):
+            self.note_label.text = note_name
+
+        # Через 2 секунды сбрасываем подсветку
+        Clock.schedule_once(lambda dt: self._reset_note_buttons(), 2.0)
+
+    def _reset_note_buttons(self):
+        """Сбрасывает подсветку кнопок нот"""
+        for btn in self._note_buttons:
+            btn.set_active(False)
+
+    def _update_note_buttons(self):
+        """Обновляет кнопки нот при смене строя"""
+        if not self._note_buttons:
+            return
+
+        note_names = self.tuning_note_names
+        freqs = self.tuning_freqs
+
+        for i, btn in enumerate(self._note_buttons):
+            if i < len(note_names):
+                btn.note_name = note_names[i]
+                btn.frequency = freqs[i]
+                btn.label.text = note_names[i]
+                btn.opacity = 1
+                btn.disabled = False
+            else:
+                btn.opacity = 0
+                btn.disabled = True
 
     # ============ ДИАЛОГ ВЫБОРА СТРОЯ ============
     def _show_tuning_dialog(self):
@@ -989,20 +1129,36 @@ class TunerScreen(BaseScreen):
             self.tuning_dialog.dismiss()
         if tuning_id == self.current_tuning:
             return
+
         self.current_tuning = tuning_id
         t = TUNINGS[tuning_id]
         self.tuning_notes = t['notes']
         self.tuning_freqs = t['freqs']
         self.tuning_note_names = t['note_names']
         self.strings_count = t['strings']
+
+        # Обновляем UI
         if hasattr(self, 'tuning_name_label'):
             self.tuning_name_label.text = t['name']
-        if hasattr(self, 'tuner_dial'):
-            self.tuner_dial.deviation = 0
+
+        if hasattr(self, 'tuner_gauge'):
+            self.tuner_gauge.deviation = 0
+
         if hasattr(self, 'freq_label'):
             self.freq_label.text = "--"
+
         if hasattr(self, 'note_label'):
             self.note_label.text = "--"
+
+        if hasattr(self, 'cents_label'):
+            self.cents_label.text = "--"
+
+        # Обновляем кнопки нот
+        self._update_note_buttons()
+
+        # Сбрасываем подсветку
+        self._reset_note_buttons()
+
         notify.success(f"Строй: {t['name']}")
         logger.info(f"🎸 Выбран строй: {t['name']}")
 
@@ -1023,7 +1179,7 @@ class TunerScreen(BaseScreen):
 
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(2),
+            spacing=dp(4),
             size_hint=(1, None),
             adaptive_height=True
         )
@@ -1032,66 +1188,130 @@ class TunerScreen(BaseScreen):
         tuning_info = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(18),
+            height=dp(20),
             padding=[dp(8), dp(0), dp(8), dp(0)]
         )
         self.tuning_name_label = MDLabel(
             text=TUNINGS[self.current_tuning]['name'],
-            font_size=sp(9),
+            font_size=sp(10),
             halign="center",
             size_hint_x=1,
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.2],
+            text_color=[1, 1, 1, 0.3],
             bold=False
         )
         tuning_info.add_widget(self.tuning_name_label)
         content.add_widget(tuning_info)
 
-        # ============ ТЮНЕР ============
-        dial_container = MDBoxLayout(
+        # ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР ============
+        gauge_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(340),
-            padding=[dp(4), dp(2), dp(4), dp(2)]
+            height=dp(100),
+            padding=[dp(8), dp(4), dp(8), dp(4)]
         )
-        self.tuner_dial = TunerDial()
-        dial_container.add_widget(self.tuner_dial)
-        content.add_widget(dial_container)
+        self.tuner_gauge = ModernHorizontalTuner()
+        gauge_container.add_widget(self.tuner_gauge)
+        content.add_widget(gauge_container)
 
         # ============ НОТА И ЧАСТОТА ============
         info_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(70),
+            height=dp(80),
             spacing=dp(2),
             padding=[dp(16), dp(4), dp(16), dp(4)]
         )
 
-        self.note_label = NoteLabel(
+        self.note_label = MDLabel(
             text="--",
-            font_size=sp(32),
+            font_size=sp(52),
             halign="center",
             size_hint_y=None,
-            height=dp(40),
+            height=dp(56),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True
         )
 
-        self.freq_label = MDLabel(
-            text="--",
-            font_size=sp(14),
-            halign="center",
-            size_hint_y=None,
-            height=dp(22),
-            theme_text_color="Custom",
-            text_color=[0.46, 0.70, 0.71, 0.7],
-            bold=True
+        hz_cents_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(24),
+            spacing=dp(16),
+            padding=[dp(16), dp(0), dp(16), dp(0)]
         )
 
+        self.freq_label = MDLabel(
+            text="--",
+            font_size=sp(12),
+            halign="center",
+            size_hint_x=0.5,
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 0.7],
+            bold=False
+        )
+
+        self.cents_label = MDLabel(
+            text="--",
+            font_size=sp(12),
+            halign="center",
+            size_hint_x=0.5,
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 0.7],
+            bold=False
+        )
+
+        hz_cents_container.add_widget(self.freq_label)
+        hz_cents_container.add_widget(self.cents_label)
+
         info_container.add_widget(self.note_label)
-        info_container.add_widget(self.freq_label)
+        info_container.add_widget(hz_cents_container)
         content.add_widget(info_container)
+
+        # ============ ЭТАЛОННЫЕ НОТЫ ============
+        notes_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(75),
+            spacing=dp(4),
+            padding=[dp(16), dp(4), dp(16), dp(4)]
+        )
+
+        notes_label = MDLabel(
+            text="Эталонные ноты",
+            font_size=sp(11),
+            halign="center",
+            size_hint_y=None,
+            height=dp(18),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.35],
+            bold=False
+        )
+        notes_container.add_widget(notes_label)
+
+        notes_row = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(44),
+            spacing=dp(8),
+            padding=[dp(8), dp(0), dp(8), dp(0)]
+        )
+
+        note_names = self.tuning_note_names
+        freqs = self.tuning_freqs
+
+        for i, (name, freq) in enumerate(zip(note_names, freqs)):
+            btn = NoteButton(
+                note_name=name,
+                frequency=freq,
+                on_press=self.on_reference_note_pressed
+            )
+            self._note_buttons.append(btn)
+            notes_row.add_widget(btn)
+
+        notes_container.add_widget(notes_row)
+        content.add_widget(notes_container)
 
         # ============ МЕНЮ ============
         menu_card = MDCard(
@@ -1176,29 +1396,35 @@ class TunerScreen(BaseScreen):
             self.play_btn.icon = "play"
             self.play_btn.icon_color = [0.46, 0.70, 0.71, 1]
             self._stop_audio_thread()
-            if hasattr(self, 'tuner_dial'):
-                self.tuner_dial.deviation = 0
+            if hasattr(self, 'tuner_gauge'):
+                self.tuner_gauge.deviation = 0
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = "--"
             if hasattr(self, 'note_label'):
                 self.note_label.text = "--"
+            if hasattr(self, 'cents_label'):
+                self.cents_label.text = "--"
             if hasattr(self, '_hint_label'):
                 self._hint_label.text = ""
                 self._hint_label.opacity = 0
+            self._reset_note_buttons()
             self._show_debug("Тюнер остановлен")
 
     def reset_tuner(self, instance):
         if self.is_listening:
             self.toggle_tuner(None)
-        if hasattr(self, 'tuner_dial'):
-            self.tuner_dial.deviation = 0
+        if hasattr(self, 'tuner_gauge'):
+            self.tuner_gauge.deviation = 0
         if hasattr(self, 'freq_label'):
             self.freq_label.text = "--"
         if hasattr(self, 'note_label'):
             self.note_label.text = "--"
+        if hasattr(self, 'cents_label'):
+            self.cents_label.text = "--"
         if hasattr(self, '_hint_label'):
             self._hint_label.text = ""
             self._hint_label.opacity = 0
+        self._reset_note_buttons()
         self._clear_error()
         logger.info("🔄 Тюнер сброшен")
 
