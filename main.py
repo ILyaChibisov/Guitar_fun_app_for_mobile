@@ -1,4 +1,4 @@
-смотри мой бульдозер раньше нормально собирал приложение: import os
+import os
 import sys
 import ssl
 import warnings
