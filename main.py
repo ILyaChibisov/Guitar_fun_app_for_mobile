@@ -1,4 +1,4 @@
-import os
+смотри мой бульдозер раньше нормально собирал приложение: import os
 import sys
 import ssl
 import warnings
@@ -85,193 +85,8 @@ except AttributeError:
 os.environ['SSL_CERT_FILE'] = ''
 os.environ['REQUESTS_CA_BUNDLE'] = ''
 
-
-# ============ ВИЗУАЛИЗАЦИЯ СИСТЕМНЫХ ПАНЕЛЕЙ НА WINDOWS ============
-class SystemBarEmulator:
-    """Эмуляция системных панелей на Windows (как на Android)"""
-
-    _instance = None
-    status_bar = None
-    nav_bar = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    @classmethod
-    def add_to_root(cls, root):
-        """Добавляет эмуляцию панелей в корневой виджет"""
-        # Проверяем, что это Windows
-        if platform not in ['win', 'win32', 'win64']:
-            return None, None
-
-        if not root:
-            return None, None
-
-        # Проверяем, не добавлены ли уже панели
-        if cls.status_bar and cls.status_bar.parent:
-            return cls.status_bar, cls.nav_bar
-
-        from kivy.uix.widget import Widget
-        from kivy.graphics import Color, Rectangle
-        from kivy.core.window import Window
-        from kivy.clock import Clock
-
-        # ============ ВЕРХНЯЯ ПАНЕЛЬ (СТАТУС-БАР) ============
-        cls.status_bar = Widget(
-            size_hint=(1, None),
-            height=28,
-            pos_hint={'top': 1}
-        )
-
-        with cls.status_bar.canvas.before:
-            Color(0, 0, 0, 1)
-            cls.status_bar.rect = Rectangle(
-                pos=cls.status_bar.pos,
-                size=cls.status_bar.size
-            )
-
-        def update_status_rect(instance, *args):
-            if hasattr(instance, 'rect'):
-                instance.rect.pos = instance.pos
-                instance.rect.size = instance.size
-
-        cls.status_bar.bind(pos=update_status_rect, size=update_status_rect)
-
-        # ============ НИЖНЯЯ ПАНЕЛЬ (НАВИГАЦИЯ) ============
-        cls.nav_bar = Widget(
-            size_hint=(1, None),
-            height=48,
-            pos_hint={'y': 0}
-        )
-
-        with cls.nav_bar.canvas.before:
-            Color(0, 0, 0, 1)
-            cls.nav_bar.rect = Rectangle(
-                pos=cls.nav_bar.pos,
-                size=cls.nav_bar.size
-            )
-
-        def update_nav_rect(instance, *args):
-            if hasattr(instance, 'rect'):
-                instance.rect.pos = instance.pos
-                instance.rect.size = instance.size
-
-        cls.nav_bar.bind(pos=update_nav_rect, size=update_nav_rect)
-
-        # ============ ДОБАВЛЯЕМ ПАНЕЛИ В ROOT ============
-        root.add_widget(cls.status_bar)
-        root.add_widget(cls.nav_bar)
-
-        def on_window_resize(window, width, height):
-            Clock.schedule_once(lambda dt: cls.update_panels(), 0.05)
-
-        Window.bind(on_resize=on_window_resize)
-
-        print("✅ Windows: визуализация системных панелей добавлена")
-        return cls.status_bar, cls.nav_bar
-
-    @classmethod
-    def update_panels(cls):
-        """Обновляет размеры панелей при изменении окна"""
-        if cls.status_bar:
-            cls.status_bar.pos_hint = {'top': 1}
-            cls.status_bar.size_hint = (1, None)
-            cls.status_bar.height = 28
-
-        if cls.nav_bar:
-            cls.nav_bar.pos_hint = {'y': 0}
-            cls.nav_bar.size_hint = (1, None)
-            cls.nav_bar.height = 48
-
-    @classmethod
-    def remove(cls, root):
-        """Удаляет панели из корня"""
-        if cls.status_bar and cls.status_bar.parent:
-            root.remove_widget(cls.status_bar)
-            cls.status_bar = None
-
-        if cls.nav_bar and cls.nav_bar.parent:
-            root.remove_widget(cls.nav_bar)
-            cls.nav_bar = None
-
-        print("🗑️ Windows: панели удалены")
-
-
-# ============ УНИВЕРСАЛЬНАЯ НАСТРОЙКА СИСТЕМНЫХ ПАНЕЛЕЙ ============
-def setup_system_bars():
-    """
-    Универсальная настройка системных панелей для Android и Windows
-    На Android: чёрные панели со светлыми значками
-    На Windows: визуальная эмуляция системных панелей
-    """
-
-    # ============ WINDOWS ============
-    if platform in ['win', 'win32', 'win64']:
-        try:
-            from kivy.core.window import Window
-
-            Window.clearcolor = (0.05, 0.05, 0.05, 1)
-            Window.size = (400, 750)
-            Window.top = 50
-            Window.left = 50
-            Window.borderless = False
-
-            # Пытаемся установить тёмный заголовок окна
-            try:
-                import ctypes
-                hwnd = ctypes.windll.user32.GetActiveWindow()
-                dark_mode_set = False
-
-                # Windows 10 1903+ (API 20)
-                try:
-                    DARK_MODE = 20
-                    ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                        hwnd,
-                        DARK_MODE,
-                        ctypes.byref(ctypes.c_int(1)),
-                        ctypes.sizeof(ctypes.c_int)
-                    )
-                    dark_mode_set = True
-                    print("✅ Windows: тёмный заголовок окна включён (API 20)")
-                except:
-                    pass
-
-                # Windows 10 1809 (API 19)
-                if not dark_mode_set:
-                    try:
-                        DARK_MODE = 19
-                        ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                            hwnd,
-                            DARK_MODE,
-                            ctypes.byref(ctypes.c_int(1)),
-                            ctypes.sizeof(ctypes.c_int)
-                        )
-                        dark_mode_set = True
-                        print("✅ Windows: тёмный заголовок окна включён (API 19)")
-                    except:
-                        pass
-
-                if not dark_mode_set:
-                    print("ℹ️ Windows: тёмный заголовок не поддерживается")
-
-            except Exception as e:
-                print(f"⚠️ Ошибка настройки заголовка Windows: {e}")
-
-            print("✅ Windows: настройка выполнена")
-            return
-
-        except Exception as e:
-            print(f"❌ Ошибка настройки Windows: {e}")
-            Window.clearcolor = (0.05, 0.05, 0.05, 1)
-            Window.size = (400, 750)
-            return
-
-    # ============ ANDROID ============
-    if platform != 'android':
-        return
-
+# ============ НАСТРОЙКА ОКНА ============
+if platform == 'android':
     try:
         from android import mActivity
         from jnius import autoclass
@@ -288,124 +103,84 @@ def setup_system_bars():
         ])
         print("✅ Разрешения запрошены")
 
+        # ============ 1. НАСТРОЙКА ОКНА ============
+        Window.clearcolor = (0, 0, 0, 0)  # Прозрачный фон
+
         View = autoclass('android.view.View')
         WindowManager = autoclass('android.view.WindowManager$LayoutParams')
-        Build = autoclass('android.os.Build')
-
         window = mActivity.getWindow()
         decorView = window.getDecorView()
 
-        # Чёрные панели
-        window.setStatusBarColor(0xFF000000)
-        window.setNavigationBarColor(0xFF000000)
+        # ============ 2. ДЕЛАЕМ ПАНЕЛИ ПРОЗРАЧНЫМИ ============
+        # Прозрачный статус-бар (сверху)
+        window.setStatusBarColor(0x00000000)  # Полностью прозрачный
 
-        # Флаги
+        # Прозрачная навигационная панель (снизу)
+        window.setNavigationBarColor(0x00000000)  # Полностью прозрачный
+
+        # ============ 3. НАСТРАИВАЕМ ФЛАГИ ДЛЯ ПРОЗРАЧНОСТИ ============
+        # Флаги для прозрачных системных панелей
         flags = (
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
         )
 
-        if Build.VERSION.SDK_INT >= 23:
-            try:
-                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                print("✅ API 23+: светлые значки статус-бара включены")
-            except AttributeError:
-                pass
+        # Пытаемся добавить флаг для прозрачной навигации (API 21+)
+        try:
+            if hasattr(View, 'SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION'):
+                flags |= View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                print("✅ Включён флаг LAYOUT_HIDE_NAVIGATION")
+        except AttributeError:
+            print("⚠️ SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION не поддерживается")
 
-        if Build.VERSION.SDK_INT >= 26:
-            try:
-                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                print("✅ API 26+: светлые значки навигации включены")
-            except AttributeError:
-                pass
+        # Пытаемся добавить флаг для прозрачного статус-бара (API 19+)
+        try:
+            if hasattr(View, 'SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN'):
+                flags |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                print("✅ Включён флаг LAYOUT_FULLSCREEN")
+        except AttributeError:
+            print("⚠️ SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN не поддерживается")
 
+        # Применяем флаги
         decorView.setSystemUiVisibility(flags)
 
-        # FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
+        # ============ 4. ДОПОЛНИТЕЛЬНО: РАЗРЕШАЕМ РИСОВАТЬ ПОД ПАНЕЛЯМИ ============
         try:
+            # FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS = 0x80000000
+            # Позволяет приложению рисовать под системными панелями
             params = window.getAttributes()
             if hasattr(WindowManager, 'FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS'):
                 params.flags |= WindowManager.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
                 window.setAttributes(params)
-                print("✅ FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS включён")
+                print("✅ Включён FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS")
         except Exception as e:
             print(f"⚠️ Не удалось установить FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS: {e}")
 
-        # Фиксы для производителей
-        manufacturer = Build.MANUFACTURER.lower()
-        display = Build.DISPLAY.lower()
+        # ============ 5. ДИАГНОСТИКА ============
+        current_flags = decorView.getSystemUiVisibility()
+        print(f"🔍 Текущие флаги: {current_flags}")
 
-        # Xiaomi
-        if "xiaomi" in manufacturer or "miui" in display:
-            try:
-                MIUI_NAVIGATION_BAR_DARK = 0x00000010
-                decorView.setSystemUiVisibility(
-                    decorView.getSystemUiVisibility() | MIUI_NAVIGATION_BAR_DARK
-                )
-                print("✅ Xiaomi/MIUI: тёмная навигация включена")
-            except:
-                pass
+        nav_color = window.getNavigationBarColor()
+        status_color = window.getStatusBarColor()
+        print(f"🔍 Цвет навигации: #{nav_color:08X} (должен быть 00000000)")
+        print(f"🔍 Цвет статус-бара: #{status_color:08X} (должен быть 00000000)")
 
-        # Samsung
-        if "samsung" in manufacturer:
-            try:
-                if Build.VERSION.SDK_INT >= 26:
-                    decorView.setSystemUiVisibility(
-                        decorView.getSystemUiVisibility() |
-                        View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    )
-                if Build.VERSION.SDK_INT >= 23:
-                    decorView.setSystemUiVisibility(
-                        decorView.getSystemUiVisibility() |
-                        View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    )
-                print("✅ Samsung/OneUI: светлые значки включены")
-            except:
-                pass
-
-        # Huawei
-        if "huawei" in manufacturer or "emui" in display:
-            try:
-                window.setStatusBarColor(0xFF000000)
-                window.setNavigationBarColor(0xFF000000)
-                print("✅ Huawei/EMUI: чёрные панели установлены")
-            except:
-                pass
-
-        # OPPO
-        if "oppo" in manufacturer or "coloros" in display:
-            try:
-                window.setStatusBarColor(0xFF000000)
-                window.setNavigationBarColor(0xFF000000)
-                print("✅ OPPO/ColorOS: чёрные панели установлены")
-            except:
-                pass
-
-        # Диагностика
-        print("=" * 50)
-        print("📱 ДИАГНОСТИКА СИСТЕМНЫХ ПАНЕЛЕЙ")
-        print(f"📱 Производитель: {Build.MANUFACTURER}")
-        print(f"📱 Модель: {Build.MODEL}")
-        print(f"📱 Android API: {Build.VERSION.SDK_INT}")
-        print(f"📱 Версия: {Build.VERSION.RELEASE}")
-        print(f"🔍 Цвет статус-бара: #{window.getStatusBarColor():08X}")
-        print(f"🔍 Цвет навигации: #{window.getNavigationBarColor():08X}")
-        print("✅ Системные панели настроены (ЧЁРНЫЕ + СВЕТЛЫЕ ЗНАЧКИ)")
-        print("=" * 50)
-
-        Window.clearcolor = (0, 0, 0, 0)
+        print("✅ Системные панели сделаны прозрачными")
 
     except Exception as e:
-        print(f"❌ Ошибка настройки системных панелей: {e}")
+        print(f"❌ Ошибка настройки: {e}")
         import traceback
+
         traceback.print_exc()
         Window.clearcolor = (0, 0, 0, 0)
+else:
+    Window.borderless = False
+    Window.size = (400, 750)
+    Window.top = 50
+    Window.left = 50
+    Window.clearcolor = (0, 0, 0, 0)
 
-
-# ============ ВЫЗЫВАЕМ НАСТРОЙКУ ============
-setup_system_bars()
-
-# ============ ИМПОРТЫ ПОСЛЕ НАСТРОЙКИ ============
 from config.logger_config import setup_logging, app_logger
 
 setup_logging(level='debug')
@@ -460,11 +235,6 @@ class RootWidget(MDFloatLayout):
         self.size_hint = (1, 1)
         self.padding = [0, 0, 0, 0]
         self.load_background()
-
-        # ============ ДОБАВЛЯЕМ ЭМУЛЯЦИЮ ПАНЕЛЕЙ ТОЛЬКО НА WINDOWS ============
-        if platform in ['win', 'win32', 'win64']:
-            SystemBarEmulator.add_to_root(self)
-
         logger.info("RootWidget создан")
 
     def load_background(self):
@@ -745,15 +515,10 @@ class GuitarFunsApp(MDApp):
     def on_window_resize(self, window, width, height):
         from config.layout_config import layout_config
         from kivy.clock import Clock
-
         logger.info(f"🔄 Поворот экрана: {width}x{height}")
         layout_config.force_update()
         Clock.schedule_once(lambda dt: self._reload_nav_bars(), 0.1)
         Clock.schedule_once(lambda dt: self._reload_content_screens(), 0.2)
-
-        # Обновляем эмуляцию панелей на Windows
-        if platform in ['win', 'win32', 'win64']:
-            SystemBarEmulator.update_panels()
 
     def _reload_nav_bars(self):
         if hasattr(self, 'bottom_nav') and self.bottom_nav:
@@ -830,4 +595,4 @@ class GuitarFunsApp(MDApp):
 
 
 if __name__ == '__main__':
-    GuitarFunsApp().run()
+    GuitarFunsApp().run() 
