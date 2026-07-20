@@ -82,11 +82,14 @@ class TopNav(MDCard):
         self.size_hint = (1, None)
         self.pos_hint = {'top': 1}
 
+        # ============ ПРАВИЛЬНЫЙ РАСЧЁТ ВЫСОТЫ И ОТСТУПОВ ============
         status_h = get_status_bar_height()
 
         if platform == 'android':
-            self.height = dp(88)
-            top_padding = status_h + dp(24)
+            # ✅ TopNav прижат к верху, его высота = статус-бар + высота панели
+            self.height = dp(88) + status_h
+            # Внутренний отступ сверху = статус-бар + небольшой отступ для воздуха
+            top_padding = status_h + dp(16)
         else:
             self.height = dp(80)
             top_padding = status_h + dp(8)
