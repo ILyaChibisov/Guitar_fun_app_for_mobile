@@ -89,7 +89,7 @@ class TopNav(MDCard):
             # ✅ TopNav прижат к верху, его высота = статус-бар + высота панели
             self.height = dp(88) + status_h
             # Внутренний отступ сверху = статус-бар + небольшой отступ для воздуха
-            top_padding = status_h + dp(16)
+            top_padding = status_h + dp(24)
         else:
             self.height = dp(80)
             top_padding = status_h + dp(8)

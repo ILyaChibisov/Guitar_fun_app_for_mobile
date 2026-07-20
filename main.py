@@ -112,13 +112,14 @@ if platform == 'android':
         decorView = window.getDecorView()
 
         # ============ 1. ЧЁРНЫЕ ПАНЕЛИ ============
-        window.setStatusBarColor(0xFF000000)  # Чёрный статус-бар
-        window.setNavigationBarColor(0xFF000000)  # Чёрная навигация
+        window.setStatusBarColor(0xFF000000)
+        window.setNavigationBarColor(0xFF000000)
 
         # ============ 2. ФЛАГИ ДЛЯ СВЕТЛЫХ ЗНАЧКОВ ============
         flags = (
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            # ❌ НЕ ДОБАВЛЯЙ LAYOUT_HIDE_NAVIGATION
         )
 
         # Светлые значки на статус-баре (Android 6.0+)
@@ -139,7 +140,7 @@ if platform == 'android':
 
         decorView.setSystemUiVisibility(flags)
 
-        # ============ 3. РАЗРЕШАЕМ РИСОВАТЬ ПОД ПАНЕЛЯМИ ============
+        # ============ 3. FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS ============
         try:
             params = window.getAttributes()
             if hasattr(WindowManager, 'FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS'):
