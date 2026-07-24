@@ -15,7 +15,7 @@ source.include_patterns = chords/**, **/*.py
 # Исключаем ненужные файлы
 source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, create_icons.py, prepare_icons.py
 
-version = 1.0.2
+version = 1.0.3
 version.code = 2
 orientation = portrait
 
@@ -24,7 +24,8 @@ icon.filename = android_res/drawable/icon.png
 
 # --- ЗАВИСИМОСТИ ---
 # УБРАЛИ audiostream - используем JNI напрямую через jnius (уже есть в kivy)
-requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui
+requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,certifi,urllib3
+
 
 # --- ПРАВА ---
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,RECORD_AUDIO

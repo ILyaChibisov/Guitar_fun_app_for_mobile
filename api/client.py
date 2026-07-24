@@ -197,9 +197,13 @@ class APIClient:
     # ============ ЗАПРОСЫ ============
 
     def _request_sync(self, url, method='GET', data=None, include_auth=True):
-        """Синхронный запрос"""
+        """
+        Синхронный запрос с обработкой SSL ошибок
+        Универсальная версия для Android и Windows
+        """
         headers = self._get_headers(include_auth)
         try:
+            # Выполняем запрос
             if method == 'GET':
                 response = self.session.get(url, headers=headers, timeout=config.CONNECTION_TIMEOUT)
             elif method == 'POST':
@@ -211,6 +215,7 @@ class APIClient:
             else:
                 response = self.session.request(method, url, json=data, headers=headers,
                                                 timeout=config.CONNECTION_TIMEOUT)
+
             response.raise_for_status()
 
             if not response.content or response.content.strip() == b'':
@@ -218,8 +223,46 @@ class APIClient:
                 return {"artists": [], "total": 0}
 
             return response.json() if response.content else {"artists": [], "total": 0}
+
+        except requests.exceptions.SSLError as e:
+            Logger.error(f"❌ SSL Error: {e}")
+            Logger.warning("⚠️ Пробуем запрос без проверки SSL...")
+
+            try:
+                # Повторяем запрос с отключенной проверкой SSL
+                if method == 'GET':
+                    response = self.session.get(url, headers=headers, timeout=config.CONNECTION_TIMEOUT, verify=False)
+                elif method == 'POST':
+                    response = self.session.post(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT,
+                                                 verify=False)
+                elif method == 'PUT':
+                    response = self.session.put(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT,
+                                                verify=False)
+                elif method == 'DELETE':
+                    response = self.session.delete(url, headers=headers, timeout=config.CONNECTION_TIMEOUT,
+                                                   verify=False)
+                else:
+                    response = self.session.request(method, url, json=data, headers=headers,
+                                                    timeout=config.CONNECTION_TIMEOUT, verify=False)
+
+                response.raise_for_status()
+                Logger.warning("⚠️ Запрос выполнен без проверки SSL")
+                return response.json() if response.content else {"artists": [], "total": 0}
+
+            except Exception as e2:
+                Logger.error(f'❌ Ошибка запроса (без SSL): {e2}')
+                return {"artists": [], "total": 0}
+
+        except requests.exceptions.Timeout as e:
+            Logger.error(f"⏱️ Таймаут: {e}")
+            return {"artists": [], "total": 0}
+
+        except requests.exceptions.ConnectionError as e:
+            Logger.error(f"🔌 Ошибка соединения: {e}")
+            return {"artists": [], "total": 0}
+
         except Exception as e:
-            Logger.error(f'API: Ошибка запроса - {e}')
+            Logger.error(f'❌ Ошибка запроса: {e}')
             return {"artists": [], "total": 0}
 
     def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):

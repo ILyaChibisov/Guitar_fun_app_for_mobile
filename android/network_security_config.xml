@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Разрешаем HTTPS, запрещаем HTTP -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
+            <!-- Используем системные сертификаты Android -->
             <certificates src="system" />
         </trust-anchors>
     </base-config>
 
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">guitarfans.ru</domain>
-        <trust-anchors>
-            <certificates src="system" />
-        </trust-anchors>
+    <!-- Для отладки: разрешаем HTTP на localhost -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
     </domain-config>
 </network-security-config>
