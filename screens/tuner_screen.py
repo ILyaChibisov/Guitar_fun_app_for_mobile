@@ -619,24 +619,27 @@ class ModernHorizontalTuner(Widget):
 
 
 # ===================================================================
-# ============ КНОПКА ЭТАЛОННОЙ НОТЫ (АСИНХРОННАЯ) ============
+# ============ КНОПКА ЭТАЛОННОЙ НОТЫ (С АССЕТАМИ) ============
 # ===================================================================
 
 class NoteButton(MDCard):
-    """Кнопка-кружок для эталонной ноты с асинхронным воспроизведением"""
+    """Кнопка-кружок для эталонной ноты с ассетами"""
 
-    note_name = StringProperty('')
+    note_name = StringProperty('')  # Полное имя с октавой (E2, A2, D3, ...)
+    display_name = StringProperty('')  # Отображаемое имя (E, A, D, ...)
     frequency = NumericProperty(0)
     is_active = BooleanProperty(False)
-    is_playing = BooleanProperty(False)  # Флаг воспроизведения
+    is_playing = BooleanProperty(False)
 
-    def __init__(self, note_name, frequency, on_press=None, **kwargs):
+    def __init__(self, note_name, display_name, frequency, tuning_id='standard', on_press=None, **kwargs):
         super().__init__(**kwargs)
-        self.note_name = note_name
+        self.note_name = note_name  # Полное имя для поиска в ассетах
+        self.display_name = display_name  # Короткое имя для отображения
         self.frequency = frequency
+        self.tuning_id = tuning_id
         self.on_press_callback = on_press
-        self._sound = None  # Кэшируем звук для быстрого воспроизведения
-        self._sound_path = None
+        self._sound = None
+        self._sound_data = None
 
         self.orientation = 'vertical'
         self.size_hint = (None, None)
@@ -649,7 +652,7 @@ class NoteButton(MDCard):
         self.ripple_behavior = True
 
         self.label = MDLabel(
-            text=note_name,
+            text=display_name,  # Показываем короткое имя
             font_size=sp(13),
             halign="center",
             valign="middle",
@@ -663,93 +666,62 @@ class NoteButton(MDCard):
         self.bind(on_release=self._on_press)
         self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
 
-        # Предварительно генерируем звук в фоне
-        Clock.schedule_once(self._preload_sound, 0.5)
+        # Загружаем звук из ассетов
+        Clock.schedule_once(self._load_sound_from_assets, 0.1)
 
-    def _preload_sound(self, dt):
-        """Предварительно генерирует и загружает звук в фоне"""
-        import threading
-        threading.Thread(target=self._generate_and_cache_sound, daemon=True).start()
-
-    def _generate_and_cache_sound(self):
-        """Генерирует и кэширует звук в отдельном потоке"""
+    def _load_sound_from_assets(self, dt):
+        """Загружает звук из ассетов в фоне"""
         try:
-            audio_data = generate_reference_note(self.frequency, duration=2.0, volume=0.5)
-            temp_dir = get_temp_path()
+            import importlib
 
-            import tempfile
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav', dir=temp_dir) as tmp_file:
-                tmp_path = tmp_file.name
-                with open(tmp_path, 'wb') as f:
-                    f.write(b'RIFF')
-                    f.write(struct.pack('<I', 36 + len(audio_data) * 2))
-                    f.write(b'WAVE')
-                    f.write(b'fmt ')
-                    f.write(struct.pack('<I', 16))
-                    f.write(struct.pack('<H', 1))
-                    f.write(struct.pack('<H', 1))
-                    f.write(struct.pack('<I', 44100))
-                    f.write(struct.pack('<I', 44100 * 2))
-                    f.write(struct.pack('<H', 2))
-                    f.write(struct.pack('<H', 16))
-                    f.write(b'data')
-                    f.write(struct.pack('<I', len(audio_data) * 2))
-                    audio_data.tofile(f)
+            # Маппинг tuning_id на имена модулей
+            tuning_map = {
+                'standard_6': 'standard',
+                'drop_d': 'drop_d',
+                'open_g': 'open_g',
+                'open_d': 'open_d',
+                'dadgad': 'dadgad',
+                'half_step_down': 'half_step_down',
+                'bass_4': 'bass_4',
+                'bass_5': 'bass_5',
+                'ukulele': 'ukulele',
+            }
 
-            self._sound_path = tmp_path
+            module_name = tuning_map.get(self.tuning_id, self.tuning_id)
+            full_module_name = f"data.sounds.{module_name}"
 
-            # Загружаем звук в главном потоке
-            Clock.schedule_once(lambda dt: self._load_sound_main_thread(), 0)
-
-        except Exception as e:
-            logger.error(f"Ошибка генерации звука для {self.note_name}: {e}")
-
-    def _load_sound_main_thread(self):
-        """Загружает звук в главном потоке (из Kivy)"""
-        try:
-            if self._sound_path:
-                self._sound = SoundLoader.load(self._sound_path)
-                if self._sound:
-                    logger.info(f"✅ Звук для {self.note_name} загружен")
-        except Exception as e:
-            logger.error(f"Ошибка загрузки звука: {e}")
-
-    def _on_enter(self, *args):
-        self.elevation = 4
-        self.md_bg_color = [0.3, 0.3, 0.4, 0.8]
-
-    def _on_leave(self, *args):
-        self.elevation = 2
-        if not self.is_active:
-            self.md_bg_color = [0.2, 0.2, 0.3, 0.6]
-
-    def _on_press(self, instance):
-        if self.is_playing:
-            return  # Предотвращаем повторное нажатие
-
-        if self.on_press_callback:
-            self.on_press_callback(self.note_name, self.frequency)
-
-        # Анимация нажатия
-        anim = Animation(size=(dp(44), dp(44)), duration=0.05)
-        anim += Animation(size=(dp(40), dp(40)), duration=0.05)
-        anim.start(self)
-
-        # Воспроизводим звук асинхронно
-        self._play_sound_async()
-
-    def _play_sound_async(self):
-        """Асинхронное воспроизведение звука"""
-        def play_in_thread():
             try:
-                self.is_playing = True
+                module = importlib.import_module(full_module_name)
+                class_name = module_name.title().replace('_', '') + 'Sounds'
+                sound_class = getattr(module, class_name)
 
-                # Если звук уже загружен - используем его
+                # Загружаем звук
+                self._sound = sound_class.get_sound(self.note_name)
+                self._sound_data = sound_class.get_sound_data(self.note_name)
+
                 if self._sound:
-                    Clock.schedule_once(lambda dt: self._play_cached_sound(), 0)
+                    logger.info(f"✅ Звук для {self.note_name} загружен из ассетов")
                     return
+                else:
+                    logger.warning(f"⚠️ Звук {self.note_name} не найден в ассетах")
 
-                # Иначе генерируем на лету
+            except ImportError as e:
+                logger.warning(f"⚠️ Модуль {full_module_name} не найден: {e}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка загрузки звука: {e}")
+
+            # Если не загрузилось - генерируем фолбэк
+            self._generate_fallback_sound()
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка в _load_sound_from_assets: {e}")
+            self._generate_fallback_sound()
+
+    def _generate_fallback_sound(self):
+        """Генерирует звук на лету (если нет ассетов)"""
+
+        def generate():
+            try:
                 audio_data = generate_reference_note(self.frequency, duration=2.0, volume=0.5)
                 temp_dir = get_temp_path()
 
@@ -772,46 +744,67 @@ class NoteButton(MDCard):
                         f.write(struct.pack('<I', len(audio_data) * 2))
                         audio_data.tofile(f)
 
-                # Загружаем и воспроизводим в главном потоке
-                Clock.schedule_once(lambda dt: self._play_from_file(tmp_path), 0)
+                Clock.schedule_once(lambda dt: self._load_fallback_sound(tmp_path), 0)
 
             except Exception as e:
-                logger.error(f"Ошибка воспроизведения: {e}")
-                self.is_playing = False
+                logger.error(f"Ошибка генерации фолбэк звука: {e}")
 
-        import threading
-        threading.Thread(target=play_in_thread, daemon=True).start()
+        threading.Thread(target=generate, daemon=True).start()
 
-    def _play_cached_sound(self):
-        """Воспроизводит кэшированный звук"""
+    def _load_fallback_sound(self, path):
+        """Загружает сгенерированный звук"""
+        try:
+            # Пробуем загрузить через SoundLoader напрямую
+            self._sound = SoundLoader.load(path)
+            if self._sound:
+                logger.info(f"✅ Фолбэк звук для {self.note_name} загружен")
+            Clock.schedule_once(lambda dt: clean_temp_file(path), 1.0)
+        except Exception as e:
+            logger.error(f"Ошибка загрузки фолбэк звука: {e}")
+
+    def _on_enter(self, *args):
+        self.elevation = 4
+        self.md_bg_color = [0.3, 0.3, 0.4, 0.8]
+
+    def _on_leave(self, *args):
+        self.elevation = 2
+        if not self.is_active:
+            self.md_bg_color = [0.2, 0.2, 0.3, 0.6]
+
+    def _on_press(self, instance):
+        if self.is_playing:
+            return
+
+        if self.on_press_callback:
+            self.on_press_callback(self.note_name, self.frequency)
+
+        # Анимация нажатия
+        anim = Animation(size=(dp(44), dp(44)), duration=0.05)
+        anim += Animation(size=(dp(40), dp(40)), duration=0.05)
+        anim.start(self)
+
+        # Воспроизводим звук
+        self._play_sound()
+
+    def _play_sound(self):
+        """Мгновенное воспроизведение звука из кэша"""
         try:
             if self._sound:
-                # Останавливаем если играет
                 if self._sound.state == 'play':
                     self._sound.stop()
 
-                # Воспроизводим заново
+                self.is_playing = True
                 self._sound.play()
 
-                # Сбрасываем флаг через время
-                Clock.schedule_once(lambda dt: self._reset_playing_state(), self._sound.length + 0.1)
-        except Exception as e:
-            logger.error(f"Ошибка воспроизведения кэша: {e}")
-            self.is_playing = False
-
-    def _play_from_file(self, file_path):
-        """Воспроизводит звук из файла"""
-        try:
-            sound = SoundLoader.load(file_path)
-            if sound:
-                sound.play()
-                Clock.schedule_once(lambda dt: self._reset_playing_state(), sound.length + 0.1)
-                # Удаляем файл после воспроизведения
-                Clock.schedule_once(lambda dt: clean_temp_file(file_path), sound.length + 0.2)
+                duration = self._sound.length if self._sound.length else 2.0
+                Clock.schedule_once(lambda dt: self._reset_playing_state(), duration + 0.1)
             else:
-                self.is_playing = False
+                # Если звук не загружен, пробуем загрузить снова
+                Clock.schedule_once(self._load_sound_from_assets, 0.1)
+                self._generate_fallback_sound()
+
         except Exception as e:
-            logger.error(f"Ошибка воспроизведения из файла: {e}")
+            logger.error(f"Ошибка воспроизведения: {e}")
             self.is_playing = False
 
     def _reset_playing_state(self):
@@ -830,7 +823,6 @@ class NoteButton(MDCard):
             self.line_color = [0.46, 0.70, 0.71, 0.3]
             self.label.text_color = [1, 1, 1, 0.9]
             self.elevation = 2
-
 
 # ===================================================================
 # ============ ОСНОВНОЙ ЭКРАН ============
@@ -1322,19 +1314,17 @@ class TunerScreen(BaseScreen):
 
         # Активируем нажатую кнопку
         for btn in self._note_buttons:
-            if btn.note_name == note_name:
+            if btn.note_name == note_name:  # note_name теперь 'E2', 'A2', etc.
                 btn.set_active(True)
                 break
 
-        # Показываем в интерфейсе (не блокируем тюнер)
+        # Показываем в интерфейсе (извлекаем только букву без октавы)
         if hasattr(self, 'note_label'):
-            self.note_label.text = note_name
-            # Визуально подсвечиваем ноту
+            # Убираем цифры из имени для отображения
+            display_name = ''.join(c for c in note_name if not c.isdigit())
+            self.note_label.text = display_name
             self.note_label.text_color = [0.46, 0.70, 0.71, 1]
             Clock.schedule_once(lambda dt: self._reset_note_display(), 2.0)
-
-        # Воспроизведение звука происходит асинхронно в самой кнопке
-        # Тюнер продолжает работать параллельно
 
         # Через 2.5 секунды сбрасываем подсветку кнопок
         Clock.schedule_once(lambda dt: self._reset_note_buttons(), 2.5)
@@ -1369,14 +1359,16 @@ class TunerScreen(BaseScreen):
         if not self._note_buttons:
             return
 
-        note_names = self.tuning_note_names
+        note_names = self.tuning_note_names  # Для отображения
+        full_notes = self.tuning_notes  # Для поиска в ассетах
         freqs = self.tuning_freqs
 
         for i, btn in enumerate(self._note_buttons):
             if i < len(note_names):
-                btn.note_name = note_names[i]
+                btn.note_name = full_notes[i]  # Полное имя с октавой
+                btn.display_name = note_names[i]  # Короткое имя для отображения
                 btn.frequency = freqs[i]
-                btn.label.text = note_names[i]
+                btn.label.text = note_names[i]  # Показываем короткое имя
                 btn.opacity = 1
                 btn.disabled = False
             else:
@@ -1560,31 +1552,44 @@ class TunerScreen(BaseScreen):
             padding=[dp(16), dp(4), dp(16), dp(8)]
         )
 
-        note_names = self.tuning_note_names
+        note_names = self.tuning_note_names  # ['E', 'A', 'D', 'G', 'B', 'E'] - для отображения
+        full_note_names = self.tuning_notes  # ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'] - для поиска в ассетах
         freqs = self.tuning_freqs
 
+        # Маппинг tuning_id на имена модулей
+        tuning_map = {
+            'standard_6': 'standard',
+            'drop_d': 'drop_d',
+            'open_g': 'open_g',
+            'open_d': 'open_d',
+            'dadgad': 'dadgad',
+            'half_step_down': 'half_step_down',
+            'bass_4': 'bass_4',
+            'bass_5': 'bass_5',
+            'ukulele': 'ukulele',
+        }
+        module_name = tuning_map.get(self.current_tuning, self.current_tuning)
+
         # Создаем кнопки нот
-        for i, (name, freq) in enumerate(zip(note_names, freqs)):
+        for i, (display_name, full_name, freq) in enumerate(zip(note_names, full_note_names, freqs)):
             btn = NoteButton(
-                note_name=name,
+                note_name=full_name,  # ПОЛНОЕ имя для поиска в ассетах (E2, A2, D3, ...)
+                display_name=display_name,  # Короткое имя для отображения на кнопке (E, A, D, ...)
                 frequency=freq,
+                tuning_id=self.current_tuning,
                 on_press=self.on_reference_note_pressed
             )
             self._note_buttons.append(btn)
             notes_row.add_widget(btn)
 
-        # Добавляем пустые виджеты для центрирования в зависимости от количества
-        num_buttons = len(note_names)
-
         # Добавляем пустые виджеты для центрирования
+        num_buttons = len(note_names)
         if num_buttons < 6:
-            # По одному пустому виджету с каждой стороны для центрирования
             empty_left = Widget(size_hint_x=1)
             empty_right = Widget(size_hint_x=1)
             notes_row.add_widget(empty_left, index=0)
             notes_row.add_widget(empty_right)
 
-            # Если кнопок меньше 4, добавляем дополнительные пустые виджеты
             if num_buttons <= 3:
                 notes_row.add_widget(Widget(size_hint_x=1), index=0)
                 notes_row.add_widget(Widget(size_hint_x=1))
