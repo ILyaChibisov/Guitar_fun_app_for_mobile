@@ -410,6 +410,274 @@ def cents_deviation(freq, target_freq):
 
 
 # ===================================================================
+# ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР СО СТРЕЛКОЙ ============
+# ===================================================================
+
+# ===================================================================
+# ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР СО СТРЕЛКОЙ ============
+# ===================================================================
+
+class ModernHorizontalTuner(Widget):
+    """
+    Горизонтальная шкала тюнера с градиентной полосой
+    и стрелкой-указателем из ассетов
+    """
+    deviation = NumericProperty(0)
+
+    def __init__(self, **kwargs):
+        super(ModernHorizontalTuner, self).__init__(**kwargs)
+        self.scale_rects = []  # полоски градиента
+        self.labels = []  # подписи
+        self.arrow_texture = None  # текстура стрелки
+        self.arrow_rect = None  # прямоугольник для стрелки
+
+        self.bind(pos=self.update_gauge, size=self.update_gauge)
+        self.bind(deviation=self.update_gauge)
+
+        # Загружаем стрелку из ассетов
+        Clock.schedule_once(self._load_arrow_texture, 0)
+        Clock.schedule_once(self._init_components, 0.1)
+
+    def _load_arrow_texture(self, dt):
+        """Загружает текстуру стрелки из ассетов"""
+        try:
+            from data import load_asset_as_bytes
+
+            # Пробуем загрузить ассет
+            arrow_data = load_asset_as_bytes("guitar_tune_png")
+
+            if arrow_data:
+                from kivy.core.image import Image as CoreImage
+                from io import BytesIO
+
+                img = CoreImage(BytesIO(arrow_data), ext="png")
+                self.arrow_texture = img.texture
+                logger.info("✅ Стрелка загружена из ассета guitar_tune_png")
+            else:
+                # Если ассет не найден, создаем стрелку программно
+                logger.warning("⚠️ Ассет guitar_tune_png не найден, создаем стрелку программно")
+                self._create_fallback_arrow()
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки стрелки: {e}")
+            self._create_fallback_arrow()
+
+        self.update_gauge()
+
+    def _create_fallback_arrow(self):
+        """Создает стрелку-заглушку программно (для отладки)"""
+        from kivy.graphics.texture import Texture
+
+        # Создаем простую текстуру со стрелкой
+        size = 64
+        texture = Texture.create(size=(size, size))
+
+        # Рисуем простую стрелку в текстуре
+        pixels = bytearray(size * size * 4)
+
+        for y in range(size):
+            for x in range(size):
+                # Нормализованные координаты
+                nx = x / size
+                ny = y / size
+
+                # Стрелка указывает вниз (как треугольник)
+                cx = 0.5
+                cy = 0.3
+
+                # Проверяем попадание в треугольник
+                half_width = 0.3 * (1 - ny * 0.8)
+                if ny >= 0.2 and abs(nx - cx) < half_width:
+                    alpha = 255
+                else:
+                    alpha = 0
+
+                idx = (y * size + x) * 4
+                pixels[idx:idx + 4] = bytes([255, 255, 255, alpha])
+
+        texture.blit_buffer(pixels, colorfmt='rgba', bufferfmt='ubyte')
+        self.arrow_texture = texture
+        logger.info("✅ Создана стрелка-заглушка")
+
+    def _init_components(self, dt):
+        """Инициализирует компоненты шкалы"""
+        # Создаем стрелку как Rectangle с текстурой
+        with self.canvas:
+            self.arrow_rect = Rectangle(
+                texture=self.arrow_texture,
+                pos=(0, 0),
+                size=(dp(24), dp(36))
+            )
+
+        self.update_gauge()
+
+    @staticmethod
+    def _gradient_color(pct):
+        """
+        pct: 0.0–1.0 по шкале от -50 до +50 центов.
+        Возвращает RGB цвет: красный -> жёлтый -> зелёный -> жёлтый -> красный
+        """
+        if pct < 0.25:
+            t = pct / 0.25
+            r, g, b = 1.0, t, 0.0
+        elif pct < 0.5:
+            t = (pct - 0.25) / 0.25
+            r, g, b = 1.0 - t, 1.0, 0.0
+        elif pct < 0.75:
+            t = (pct - 0.5) / 0.25
+            r, g, b = t, 1.0, 0.0
+        else:
+            t = (pct - 0.75) / 0.25
+            r, g, b = 1.0, 1.0 - t, 0.0
+        return r, g, b
+
+    def update_gauge(self, *args):
+        """Обновляет все элементы шкалы"""
+        # Сохраняем ссылку на стрелку
+        arrow_rect = self.arrow_rect
+
+        # Очищаем canvas (кроме стрелки)
+        self.canvas.clear()
+
+        # Удаляем старые подписи
+        for label in self.labels:
+            if label.parent:
+                self.remove_widget(label)
+        self.labels.clear()
+
+        if self.width <= 0 or self.height <= 0:
+            return
+
+        scale_w = self.width * 0.85
+        scale_x = self.center_x - scale_w / 2
+        scale_y = self.center_y + dp(20)  # Поднимаем шкалу выше для места под ней
+
+        # ===== 1. ГРАДИЕНТНАЯ ПОЛОСА =====
+        strip_w = max(1.5, scale_w / 120)
+        n_strips = int(scale_w // strip_w)
+        if n_strips < 2:
+            n_strips = 2
+
+        for i in range(n_strips):
+            pct = i / (n_strips - 1) if n_strips > 1 else 0.5
+            r, g, b = self._gradient_color(pct)
+            x = scale_x + i * strip_w
+
+            with self.canvas:
+                Color(r, g, b, 0.85)
+                Rectangle(pos=(x, scale_y - dp(12)), size=(strip_w + 0.5, dp(24)))
+
+        # Обводка полосы
+        with self.canvas:
+            Color(0.3, 0.35, 0.4, 0.5)
+            Line(
+                rectangle=(
+                    scale_x - 1,
+                    scale_y - dp(13),
+                    scale_w + 2,
+                    dp(26)
+                ),
+                width=0.8
+            )
+
+        # ===== 2. ЗАСЕЧКИ (только каждые 10 центов) =====
+        # Засечки: -50, -40, -30, -20, -10, 0, +10, +20, +30, +40, +50
+        num_ticks = 11  # от -50 до +50 с шагом 10
+        tick_positions = []
+        for i in range(num_ticks):
+            pos_pct = i / (num_ticks - 1)
+            value = -50 + i * 10
+            tick_positions.append((pos_pct, value))
+
+        for pos_pct, value in tick_positions:
+            curr_x = scale_x + pos_pct * scale_w
+
+            # Определяем высоту засечки
+            if value == 0:
+                h = dp(28)  # Центральная - самая высокая
+                line_width = 2.5
+                color = [0.6, 0.65, 0.7, 1]
+            else:
+                h = dp(18)  # Остальные - средние
+                line_width = 1.8
+                color = [0.5, 0.55, 0.6, 0.9]
+
+            with self.canvas:
+                Color(*color)
+                Line(
+                    points=[
+                        curr_x, scale_y - h / 2,
+                        curr_x, scale_y + h / 2
+                    ],
+                    width=line_width
+                )
+
+        # ===== 3. ПОДПИСИ (каждые 10) =====
+        # Подписи: -50, -40, -30, -20, -10, 0, +10, +20, +30, +40, +50
+        for i in range(num_ticks):
+            pos_pct = i / (num_ticks - 1)
+            value = -50 + i * 10
+            curr_x = scale_x + pos_pct * scale_w
+            is_zero = (value == 0)
+
+            # Форматируем текст с знаком +
+            if value > 0:
+                text = f"+{value}"
+            else:
+                text = str(value)
+
+            color = [0.18, 0.8, 0.44, 1] if is_zero else [0.5, 0.55, 0.6, 0.7]
+            font_size = sp(13) if is_zero else sp(11)
+
+            lbl = Label(
+                text=text,
+                font_size=font_size,
+                bold=is_zero,
+                color=color,
+                size_hint=(None, None),
+                size=(dp(40), dp(18)),
+                center=(curr_x, scale_y - dp(32)),
+                halign='center',
+                valign='middle'
+            )
+            self.add_widget(lbl)
+            self.labels.append(lbl)
+
+        # ===== 4. СТРЕЛКА-ИНДИКАТОР =====
+        dev = max(-50, min(50, self.deviation))
+        val_pct = (dev - (-50)) / 100.0
+        indicator_x = scale_x + val_pct * scale_w
+
+        # Размер стрелки
+        arrow_width = dp(28)
+        arrow_height = dp(40)
+
+        # Стрелка опущена ниже шкалы
+        arrow_x = indicator_x - arrow_width / 2
+        arrow_y = scale_y - dp(12) - arrow_height + dp(8)
+
+        # Обновляем позицию стрелки
+        if self.arrow_rect:
+            self.arrow_rect.pos = (arrow_x, arrow_y)
+            self.arrow_rect.size = (arrow_width, arrow_height)
+
+            if not self.arrow_texture:
+                self._create_fallback_arrow()
+                self.arrow_rect.texture = self.arrow_texture
+
+        if self.arrow_rect:
+            self.canvas.add(self.arrow_rect)
+
+    def set_value(self, value):
+        """Устанавливает отклонение и обновляет шкалу"""
+        self.deviation = clamp_value(value, -50, 50)
+
+    def animate_to(self, value, duration=0.15):
+        """Плавная анимация индикатора"""
+        self.deviation = clamp_value(value, -50, 50)
+
+
+# ===================================================================
 # ============ КНОПКА ЭТАЛОННОЙ НОТЫ ============
 # ===================================================================
 
@@ -481,87 +749,6 @@ class NoteButton(MDCard):
             self.line_color = [0.46, 0.70, 0.71, 0.3]
             self.label.text_color = [1, 1, 1, 0.9]
             self.elevation = 2
-
-
-# ===================================================================
-# ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР ============
-# ===================================================================
-
-class ModernHorizontalTuner(Widget):
-    """Горизонтальная шкала тюнера"""
-
-    deviation = NumericProperty(0)
-
-    def __init__(self, **kwargs):
-        super(ModernHorizontalTuner, self).__init__(**kwargs)
-        self.labels = []
-        self.bind(pos=self.update_gauge, size=self.update_gauge)
-        self.bind(deviation=self.update_gauge)
-
-    def update_gauge(self, *args):
-        self.canvas.clear()
-        for label in self.labels:
-            if label.parent:
-                self.remove_widget(label)
-        self.labels.clear()
-
-        if self.width <= 0 or self.height <= 0:
-            return
-
-        scale_w = self.width * 0.85
-        scale_x = self.center_x - scale_w / 2
-        scale_y = self.center_y
-
-        with self.canvas:
-            # 1. ОСНОВНАЯ ЛИНИЯ
-            Color(0.15, 0.18, 0.22, 1)
-            Line(points=[scale_x, scale_y, scale_x + scale_w, scale_y], width=2)
-
-            # 2. ЗАСЕЧКИ
-            Color(0.5, 0.55, 0.6, 1)
-            positions = [0, 0.25, 0.5, 0.75, 1.0]
-            for pos_pct in positions:
-                curr_x = scale_x + (pos_pct * scale_w)
-                tick_h = dp(24) if pos_pct == 0.5 else dp(12)
-                Line(points=[curr_x, scale_y - tick_h / 2, curr_x, scale_y + tick_h / 2], width=1.5)
-
-        # 3. ПОДПИСИ
-        cents_vals = {0: "-50", 0.25: "-25", 0.5: "0", 0.75: "+25", 1.0: "+50"}
-        for pos_pct, text in cents_vals.items():
-            curr_x = scale_x + (pos_pct * scale_w)
-            is_zero = (pos_pct == 0.5)
-
-            color = [0.18, 0.8, 0.44, 1] if is_zero else [0.5, 0.55, 0.6, 1]
-            font_size = sp(14) if is_zero else sp(12)
-
-            lbl = Label(
-                text=text,
-                font_size=font_size,
-                bold=is_zero,
-                color=color,
-                size_hint=(None, None),
-                size=(dp(40), dp(20)),
-                center=(curr_x, scale_y - dp(22))
-            )
-            self.add_widget(lbl)
-            self.labels.append(lbl)
-
-        # 4. ИНДИКАТОР
-        val_pct = (self.deviation - (-50)) / 100.0
-        indicator_x = scale_x + (val_pct * scale_w)
-
-        with self.canvas:
-            if abs(self.deviation) <= 3:
-                Color(0.18, 0.8, 0.44, 1)
-                ind_w = dp(4)
-            elif abs(self.deviation) <= 12:
-                Color(0.2, 0.6, 1, 1)
-                ind_w = dp(2.5)
-            else:
-                Color(0.9, 0.3, 0.3, 1)
-                ind_w = dp(2.5)
-
-            Line(points=[indicator_x, scale_y - dp(18), indicator_x, scale_y + dp(18)], width=ind_w)
 
 
 # ===================================================================
@@ -1003,7 +1190,7 @@ class TunerScreen(BaseScreen):
 
             # Обновляем индикатор
             if hasattr(self, 'tuner_gauge'):
-                self.tuner_gauge.deviation = cents
+                self.tuner_gauge.set_value(cents)
 
             # Обновляем информацию
             if hasattr(self, 'note_label'):
@@ -1041,7 +1228,7 @@ class TunerScreen(BaseScreen):
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.1f} Hz"
             if hasattr(self, 'tuner_gauge'):
-                self.tuner_gauge.deviation = 0
+                self.tuner_gauge.set_value(0)
 
     # ============ ЭТАЛОННЫЕ НОТЫ ============
     def on_reference_note_pressed(self, note_name, frequency):
@@ -1142,7 +1329,7 @@ class TunerScreen(BaseScreen):
             self.tuning_name_label.text = t['name']
 
         if hasattr(self, 'tuner_gauge'):
-            self.tuner_gauge.deviation = 0
+            self.tuner_gauge.set_value(0)
 
         if hasattr(self, 'freq_label'):
             self.freq_label.text = "--"
@@ -1179,21 +1366,78 @@ class TunerScreen(BaseScreen):
 
         content = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(4),
+            spacing=dp(2),
             size_hint=(1, None),
             adaptive_height=True
         )
 
-        # ============ СТРОЙ ============
+        # ============ НОТА (по центру вверху) ============
+        self.note_label = MDLabel(
+            text="--",
+            font_size=sp(60),
+            halign="center",
+            size_hint_y=None,
+            height=dp(70),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95],
+            bold=True
+        )
+        content.add_widget(self.note_label)
+
+        # ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР ============
+        gauge_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(120),
+            padding=[dp(8), dp(0), dp(8), dp(0)]
+        )
+        self.tuner_gauge = ModernHorizontalTuner()
+        gauge_container.add_widget(self.tuner_gauge)
+        content.add_widget(gauge_container)
+
+        # ============ ЧАСТОТА И ЦЕНТЫ (по бокам под шкалой) ============
+        info_container = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(30),
+            spacing=dp(16),
+            padding=[dp(24), dp(0), dp(24), dp(0)]
+        )
+
+        self.freq_label = MDLabel(
+            text="--",
+            font_size=sp(13),
+            halign="left",
+            size_hint_x=0.5,
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 0.7],
+            bold=False
+        )
+
+        self.cents_label = MDLabel(
+            text="--",
+            font_size=sp(13),
+            halign="right",
+            size_hint_x=0.5,
+            theme_text_color="Custom",
+            text_color=[0.5, 0.5, 0.5, 0.7],
+            bold=False
+        )
+
+        info_container.add_widget(self.freq_label)
+        info_container.add_widget(self.cents_label)
+        content.add_widget(info_container)
+
+        # ============ НАЗВАНИЕ СТРОЯ ============
         tuning_info = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(20),
-            padding=[dp(8), dp(0), dp(8), dp(0)]
+            padding=[dp(8), dp(4), dp(8), dp(0)]
         )
         self.tuning_name_label = MDLabel(
             text=TUNINGS[self.current_tuning]['name'],
-            font_size=sp(10),
+            font_size=sp(11),
             halign="center",
             size_hint_x=1,
             theme_text_color="Custom",
@@ -1203,104 +1447,19 @@ class TunerScreen(BaseScreen):
         tuning_info.add_widget(self.tuning_name_label)
         content.add_widget(tuning_info)
 
-        # ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР ============
-        gauge_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(100),
-            padding=[dp(8), dp(4), dp(8), dp(4)]
-        )
-        self.tuner_gauge = ModernHorizontalTuner()
-        gauge_container.add_widget(self.tuner_gauge)
-        content.add_widget(gauge_container)
-
-        # ============ НОТА И ЧАСТОТА ============
-        info_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(80),
-            spacing=dp(2),
-            padding=[dp(16), dp(4), dp(16), dp(4)]
-        )
-
-        self.note_label = MDLabel(
-            text="--",
-            font_size=sp(52),
-            halign="center",
-            size_hint_y=None,
-            height=dp(56),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95],
-            bold=True
-        )
-
-        hz_cents_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(24),
-            spacing=dp(16),
-            padding=[dp(16), dp(0), dp(16), dp(0)]
-        )
-
-        self.freq_label = MDLabel(
-            text="--",
-            font_size=sp(12),
-            halign="center",
-            size_hint_x=0.5,
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 0.7],
-            bold=False
-        )
-
-        self.cents_label = MDLabel(
-            text="--",
-            font_size=sp(12),
-            halign="center",
-            size_hint_x=0.5,
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 0.7],
-            bold=False
-        )
-
-        hz_cents_container.add_widget(self.freq_label)
-        hz_cents_container.add_widget(self.cents_label)
-
-        info_container.add_widget(self.note_label)
-        info_container.add_widget(hz_cents_container)
-        content.add_widget(info_container)
-
-        # ============ ЭТАЛОННЫЕ НОТЫ ============
-        notes_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(75),
-            spacing=dp(4),
-            padding=[dp(16), dp(4), dp(16), dp(4)]
-        )
-
-        notes_label = MDLabel(
-            text="Эталонные ноты",
-            font_size=sp(11),
-            halign="center",
-            size_hint_y=None,
-            height=dp(18),
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.35],
-            bold=False
-        )
-        notes_container.add_widget(notes_label)
-
+        # ============ ЭТАЛОННЫЕ НОТЫ (по центру, без подписи) ============
         notes_row = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(44),
             spacing=dp(8),
-            padding=[dp(8), dp(0), dp(8), dp(0)]
+            padding=[dp(16), dp(4), dp(16), dp(8)]
         )
 
         note_names = self.tuning_note_names
         freqs = self.tuning_freqs
 
+        # Создаем кнопки нот
         for i, (name, freq) in enumerate(zip(note_names, freqs)):
             btn = NoteButton(
                 note_name=name,
@@ -1310,8 +1469,12 @@ class TunerScreen(BaseScreen):
             self._note_buttons.append(btn)
             notes_row.add_widget(btn)
 
-        notes_container.add_widget(notes_row)
-        content.add_widget(notes_container)
+        # Добавляем пустые виджеты для центрирования, если нот меньше 6
+        if len(note_names) < 6:
+            for _ in range(6 - len(note_names)):
+                notes_row.add_widget(Widget(size_hint_x=1))
+
+        content.add_widget(notes_row)
 
         # ============ МЕНЮ ============
         menu_card = MDCard(
@@ -1397,7 +1560,7 @@ class TunerScreen(BaseScreen):
             self.play_btn.icon_color = [0.46, 0.70, 0.71, 1]
             self._stop_audio_thread()
             if hasattr(self, 'tuner_gauge'):
-                self.tuner_gauge.deviation = 0
+                self.tuner_gauge.set_value(0)
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = "--"
             if hasattr(self, 'note_label'):
@@ -1414,7 +1577,7 @@ class TunerScreen(BaseScreen):
         if self.is_listening:
             self.toggle_tuner(None)
         if hasattr(self, 'tuner_gauge'):
-            self.tuner_gauge.deviation = 0
+            self.tuner_gauge.set_value(0)
         if hasattr(self, 'freq_label'):
             self.freq_label.text = "--"
         if hasattr(self, 'note_label'):
