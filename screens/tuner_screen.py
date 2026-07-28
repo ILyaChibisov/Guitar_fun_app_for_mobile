@@ -266,49 +266,6 @@ def generate_reference_note(frequency, duration=2.0, volume=0.6):
     return audio_data
 
 
-def play_reference_note(frequency):
-    """
-    Воспроизводит эталонную ноту через временный WAV
-    """
-    try:
-        from kivy.core.audio import SoundLoader
-
-        audio_data = generate_reference_note(frequency)
-
-        temp_dir = get_temp_path()
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav', dir=temp_dir) as tmp_file:
-            tmp_path = tmp_file.name
-            with open(tmp_path, 'wb') as f:
-                f.write(b'RIFF')
-                f.write(struct.pack('<I', 36 + len(audio_data) * 2))
-                f.write(b'WAVE')
-                f.write(b'fmt ')
-                f.write(struct.pack('<I', 16))
-                f.write(struct.pack('<H', 1))
-                f.write(struct.pack('<H', 1))
-                f.write(struct.pack('<I', 44100))
-                f.write(struct.pack('<I', 44100 * 2))
-                f.write(struct.pack('<H', 2))
-                f.write(struct.pack('<H', 16))
-                f.write(b'data')
-                f.write(struct.pack('<I', len(audio_data) * 2))
-                audio_data.tofile(f)
-
-        sound = SoundLoader.load(tmp_path)
-
-        if sound:
-            sound.play()
-            # Удаляем файл после воспроизведения
-            Clock.schedule_once(lambda dt: clean_temp_file(tmp_path), sound.length + 0.1)
-            return True
-
-        return False
-
-    except Exception as e:
-        logger.error(f"Ошибка воспроизведения эталонной ноты: {e}")
-        return False
-
-
 def clean_temp_file(path):
     """Удаляет временный файл"""
     try:
@@ -662,21 +619,24 @@ class ModernHorizontalTuner(Widget):
 
 
 # ===================================================================
-# ============ КНОПКА ЭТАЛОННОЙ НОТЫ ============
+# ============ КНОПКА ЭТАЛОННОЙ НОТЫ (АСИНХРОННАЯ) ============
 # ===================================================================
 
 class NoteButton(MDCard):
-    """Кнопка-кружок для эталонной ноты"""
+    """Кнопка-кружок для эталонной ноты с асинхронным воспроизведением"""
 
     note_name = StringProperty('')
     frequency = NumericProperty(0)
     is_active = BooleanProperty(False)
+    is_playing = BooleanProperty(False)  # Флаг воспроизведения
 
     def __init__(self, note_name, frequency, on_press=None, **kwargs):
         super().__init__(**kwargs)
         self.note_name = note_name
         self.frequency = frequency
         self.on_press_callback = on_press
+        self._sound = None  # Кэшируем звук для быстрого воспроизведения
+        self._sound_path = None
 
         self.orientation = 'vertical'
         self.size_hint = (None, None)
@@ -703,6 +663,57 @@ class NoteButton(MDCard):
         self.bind(on_release=self._on_press)
         self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
 
+        # Предварительно генерируем звук в фоне
+        Clock.schedule_once(self._preload_sound, 0.5)
+
+    def _preload_sound(self, dt):
+        """Предварительно генерирует и загружает звук в фоне"""
+        import threading
+        threading.Thread(target=self._generate_and_cache_sound, daemon=True).start()
+
+    def _generate_and_cache_sound(self):
+        """Генерирует и кэширует звук в отдельном потоке"""
+        try:
+            audio_data = generate_reference_note(self.frequency, duration=2.0, volume=0.5)
+            temp_dir = get_temp_path()
+
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav', dir=temp_dir) as tmp_file:
+                tmp_path = tmp_file.name
+                with open(tmp_path, 'wb') as f:
+                    f.write(b'RIFF')
+                    f.write(struct.pack('<I', 36 + len(audio_data) * 2))
+                    f.write(b'WAVE')
+                    f.write(b'fmt ')
+                    f.write(struct.pack('<I', 16))
+                    f.write(struct.pack('<H', 1))
+                    f.write(struct.pack('<H', 1))
+                    f.write(struct.pack('<I', 44100))
+                    f.write(struct.pack('<I', 44100 * 2))
+                    f.write(struct.pack('<H', 2))
+                    f.write(struct.pack('<H', 16))
+                    f.write(b'data')
+                    f.write(struct.pack('<I', len(audio_data) * 2))
+                    audio_data.tofile(f)
+
+            self._sound_path = tmp_path
+
+            # Загружаем звук в главном потоке
+            Clock.schedule_once(lambda dt: self._load_sound_main_thread(), 0)
+
+        except Exception as e:
+            logger.error(f"Ошибка генерации звука для {self.note_name}: {e}")
+
+    def _load_sound_main_thread(self):
+        """Загружает звук в главном потоке (из Kivy)"""
+        try:
+            if self._sound_path:
+                self._sound = SoundLoader.load(self._sound_path)
+                if self._sound:
+                    logger.info(f"✅ Звук для {self.note_name} загружен")
+        except Exception as e:
+            logger.error(f"Ошибка загрузки звука: {e}")
+
     def _on_enter(self, *args):
         self.elevation = 4
         self.md_bg_color = [0.3, 0.3, 0.4, 0.8]
@@ -713,6 +724,9 @@ class NoteButton(MDCard):
             self.md_bg_color = [0.2, 0.2, 0.3, 0.6]
 
     def _on_press(self, instance):
+        if self.is_playing:
+            return  # Предотвращаем повторное нажатие
+
         if self.on_press_callback:
             self.on_press_callback(self.note_name, self.frequency)
 
@@ -720,6 +734,89 @@ class NoteButton(MDCard):
         anim = Animation(size=(dp(44), dp(44)), duration=0.05)
         anim += Animation(size=(dp(40), dp(40)), duration=0.05)
         anim.start(self)
+
+        # Воспроизводим звук асинхронно
+        self._play_sound_async()
+
+    def _play_sound_async(self):
+        """Асинхронное воспроизведение звука"""
+        def play_in_thread():
+            try:
+                self.is_playing = True
+
+                # Если звук уже загружен - используем его
+                if self._sound:
+                    Clock.schedule_once(lambda dt: self._play_cached_sound(), 0)
+                    return
+
+                # Иначе генерируем на лету
+                audio_data = generate_reference_note(self.frequency, duration=2.0, volume=0.5)
+                temp_dir = get_temp_path()
+
+                import tempfile
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.wav', dir=temp_dir) as tmp_file:
+                    tmp_path = tmp_file.name
+                    with open(tmp_path, 'wb') as f:
+                        f.write(b'RIFF')
+                        f.write(struct.pack('<I', 36 + len(audio_data) * 2))
+                        f.write(b'WAVE')
+                        f.write(b'fmt ')
+                        f.write(struct.pack('<I', 16))
+                        f.write(struct.pack('<H', 1))
+                        f.write(struct.pack('<H', 1))
+                        f.write(struct.pack('<I', 44100))
+                        f.write(struct.pack('<I', 44100 * 2))
+                        f.write(struct.pack('<H', 2))
+                        f.write(struct.pack('<H', 16))
+                        f.write(b'data')
+                        f.write(struct.pack('<I', len(audio_data) * 2))
+                        audio_data.tofile(f)
+
+                # Загружаем и воспроизводим в главном потоке
+                Clock.schedule_once(lambda dt: self._play_from_file(tmp_path), 0)
+
+            except Exception as e:
+                logger.error(f"Ошибка воспроизведения: {e}")
+                self.is_playing = False
+
+        import threading
+        threading.Thread(target=play_in_thread, daemon=True).start()
+
+    def _play_cached_sound(self):
+        """Воспроизводит кэшированный звук"""
+        try:
+            if self._sound:
+                # Останавливаем если играет
+                if self._sound.state == 'play':
+                    self._sound.stop()
+
+                # Воспроизводим заново
+                self._sound.play()
+
+                # Сбрасываем флаг через время
+                Clock.schedule_once(lambda dt: self._reset_playing_state(), self._sound.length + 0.1)
+        except Exception as e:
+            logger.error(f"Ошибка воспроизведения кэша: {e}")
+            self.is_playing = False
+
+    def _play_from_file(self, file_path):
+        """Воспроизводит звук из файла"""
+        try:
+            sound = SoundLoader.load(file_path)
+            if sound:
+                sound.play()
+                Clock.schedule_once(lambda dt: self._reset_playing_state(), sound.length + 0.1)
+                # Удаляем файл после воспроизведения
+                Clock.schedule_once(lambda dt: clean_temp_file(file_path), sound.length + 0.2)
+            else:
+                self.is_playing = False
+        except Exception as e:
+            logger.error(f"Ошибка воспроизведения из файла: {e}")
+            self.is_playing = False
+
+    def _reset_playing_state(self):
+        """Сбрасывает состояние воспроизведения"""
+        self.is_playing = False
 
     def set_active(self, active):
         self.is_active = active
@@ -1216,7 +1313,7 @@ class TunerScreen(BaseScreen):
 
     # ============ ЭТАЛОННЫЕ НОТЫ ============
     def on_reference_note_pressed(self, note_name, frequency):
-        """Обработчик нажатия на эталонную ноту"""
+        """Обработчик нажатия на эталонную ноту (асинхронный)"""
         logger.info(f"🎵 Эталонная нота: {note_name} ({frequency:.2f} Hz)")
 
         # Сбрасываем активность всех кнопок
@@ -1229,15 +1326,38 @@ class TunerScreen(BaseScreen):
                 btn.set_active(True)
                 break
 
-        # Воспроизводим звук
-        play_reference_note(frequency)
-
-        # Показываем в интерфейсе
+        # Показываем в интерфейсе (не блокируем тюнер)
         if hasattr(self, 'note_label'):
             self.note_label.text = note_name
+            # Визуально подсвечиваем ноту
+            self.note_label.text_color = [0.46, 0.70, 0.71, 1]
+            Clock.schedule_once(lambda dt: self._reset_note_display(), 2.0)
 
-        # Через 2 секунды сбрасываем подсветку
-        Clock.schedule_once(lambda dt: self._reset_note_buttons(), 2.0)
+        # Воспроизведение звука происходит асинхронно в самой кнопке
+        # Тюнер продолжает работать параллельно
+
+        # Через 2.5 секунды сбрасываем подсветку кнопок
+        Clock.schedule_once(lambda dt: self._reset_note_buttons(), 2.5)
+
+    def _reset_note_display(self):
+        """Сбрасывает отображение ноты"""
+        if hasattr(self, 'note_label'):
+            # Если тюнер активен, показываем обнаруженную ноту
+            if self.is_listening and self.current_frequency > 0:
+                note, note_freq, diff = freq_to_note(
+                    self.current_frequency,
+                    self.tuning_note_names,
+                    self.tuning_freqs
+                )
+                if note:
+                    self.note_label.text = note
+                    self.note_label.text_color = [1, 1, 1, 0.95]
+                else:
+                    self.note_label.text = "--"
+                    self.note_label.text_color = [1, 1, 1, 0.95]
+            else:
+                self.note_label.text = "--"
+                self.note_label.text_color = [1, 1, 1, 0.95]
 
     def _reset_note_buttons(self):
         """Сбрасывает подсветку кнопок нот"""
@@ -1333,7 +1453,6 @@ class TunerScreen(BaseScreen):
         notify.success(f"Строй: {t['name']}")
         logger.info(f"🎸 Выбран строй: {t['name']}")
 
-    # ============ UI ============
     # ============ UI ============
     def init_ui(self):
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
@@ -1455,12 +1574,10 @@ class TunerScreen(BaseScreen):
             notes_row.add_widget(btn)
 
         # Добавляем пустые виджеты для центрирования в зависимости от количества
-        # Кнопки занимают фиксированное место, остальное заполняем пустыми виджетами
         num_buttons = len(note_names)
-        total_slots = 6  # Максимум 6 кнопок
 
         # Добавляем пустые виджеты для центрирования
-        if num_buttons < total_slots:
+        if num_buttons < 6:
             # По одному пустому виджету с каждой стороны для центрирования
             empty_left = Widget(size_hint_x=1)
             empty_right = Widget(size_hint_x=1)
@@ -1469,7 +1586,6 @@ class TunerScreen(BaseScreen):
 
             # Если кнопок меньше 4, добавляем дополнительные пустые виджеты
             if num_buttons <= 3:
-                # Добавляем еще по одному с каждой стороны
                 notes_row.add_widget(Widget(size_hint_x=1), index=0)
                 notes_row.add_widget(Widget(size_hint_x=1))
 
