@@ -1,4 +1,4 @@
-# utils/sound_asset_converter.py (полностью исправленный)
+# utils/sound_asset_converter.py (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
 
 """
 Конвертер звуковых ассетов в Python-модули с base64
@@ -37,6 +37,7 @@ print(f"📁 Корень проекта: {PROJECT_ROOT}")
 # Пробуем импортировать soundfile для чтения OGG
 try:
     import soundfile as sf
+
     HAS_SOUNDFILE = True
 except ImportError:
     HAS_SOUNDFILE = False
@@ -304,7 +305,7 @@ class SoundAssetConverter:
         lines.append('}')
         lines.append('')
 
-        # Генерируем класс с исправленным get_sound
+        # Генерируем класс - ИСПОЛЬЗУЕМ ПРЯМУЮ ПОДСТАНОВКУ class_name
         lines.extend([
             '',
             f'class {class_name}:',
@@ -330,13 +331,11 @@ class SoundAssetConverter:
             '        """Возвращает Kivy Sound объект для воспроизведения"""',
             '        if not KIVY_AVAILABLE:',
             '            return None',
-            '        data = {class_name}.get_sound_data(note_name)',
+            f'        data = {class_name}.get_sound_data(note_name)',
             '        if data:',
-            '            # Пробуем загрузить напрямую из BytesIO',
             '            sound = SoundLoader.load(BytesIO(data))',
             '            if sound:',
             '                return sound',
-            '            # Если не получилось, пробуем через временный файл',
             '            try:',
             '                fd, path = tempfile.mkstemp(suffix=".ogg")',
             '                os.close(fd)',
@@ -411,7 +410,11 @@ class SoundAssetConverter:
                 display_name = tuning_name.replace('_', ' ').title()
                 content = self.generate_module(tuning_name, notes, display_name)
 
+                # УДАЛЯЕМ СТАРЫЙ ФАЙЛ если есть
                 output_file = self.output_dir / f"{tuning_name}.py"
+                if output_file.exists():
+                    output_file.unlink()
+
                 with open(output_file, 'w', encoding='utf-8') as f:
                     f.write(content)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Звуковые ассеты для строя: Bass 5
-Создан: 2026-07-28 17:29:12
+Создан: 2026-07-28 17:32:43
 Количество нот: 5
 
 Использование:
@@ -141,13 +141,11 @@ class Bass5Sounds:
         """Возвращает Kivy Sound объект для воспроизведения"""
         if not KIVY_AVAILABLE:
             return None
-        data = {class_name}.get_sound_data(note_name)
+        data = Bass5Sounds.get_sound_data(note_name)
         if data:
-            # Пробуем загрузить напрямую из BytesIO
             sound = SoundLoader.load(BytesIO(data))
             if sound:
                 return sound
-            # Если не получилось, пробуем через временный файл
             try:
                 fd, path = tempfile.mkstemp(suffix=".ogg")
                 os.close(fd)
