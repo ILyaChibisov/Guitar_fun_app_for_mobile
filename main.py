@@ -1,3 +1,4 @@
+# main.py
 import os
 import sys
 import ssl
@@ -13,6 +14,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.clock import Clock
 from io import BytesIO
+from kivy.uix.floatlayout import FloatLayout
 
 import kivy
 
@@ -103,7 +105,8 @@ if platform == 'android':
         ])
         print("✅ Разрешения запрошены")
 
-        Window.clearcolor = (0, 0, 0, 0)
+        # ✅ ЧЁРНЫЙ ФОН ВМЕСТО БЕЛОГО
+        Window.clearcolor = (0, 0, 0, 1)
 
         View = autoclass('android.view.View')
         WindowManager = autoclass('android.view.WindowManager$LayoutParams')
@@ -117,8 +120,8 @@ if platform == 'android':
 
         # ============ 2. ФЛАГИ ДЛЯ СВЕТЛЫХ ЗНАЧКОВ ============
         flags = (
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
             # ❌ НЕ ДОБАВЛЯЙ LAYOUT_HIDE_NAVIGATION
         )
 
@@ -183,13 +186,14 @@ if platform == 'android':
 
     except Exception as e:
         print(f"❌ Ошибка: {e}")
-        Window.clearcolor = (0, 0, 0, 0)
+        Window.clearcolor = (0, 0, 0, 1)
 else:
+    # ✅ ЧЁРНЫЙ ФОН ДЛЯ WINDOWS
+    Window.clearcolor = (0, 0, 0, 1)
     Window.borderless = False
     Window.size = (400, 750)
     Window.top = 50
     Window.left = 50
-    Window.clearcolor = (0, 0, 0, 0)
 
 from config.logger_config import setup_logging, app_logger
 
@@ -244,8 +248,21 @@ class RootWidget(MDFloatLayout):
         self.bg_image = None
         self.size_hint = (1, 1)
         self.padding = [0, 0, 0, 0]
+
+        # ✅ СНАЧАЛА устанавливаем цвет-заглушку (тёмный фон)
+        with self.canvas.before:
+            Color(0.05, 0.05, 0.05, 1)  # Почти чёрный
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self._update_rect, size=self._update_rect)
+
+        # ✅ ПОТОМ загружаем ассет
         self.load_background()
         logger.info("RootWidget создан")
+
+    def _update_rect(self, *args):
+        if hasattr(self, 'bg_rect'):
+            self.bg_rect.pos = self.pos
+            self.bg_rect.size = self.size
 
     def load_background(self):
         try:
@@ -263,13 +280,16 @@ class RootWidget(MDFloatLayout):
                         Color(1, 1, 1, 1)
                         self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
                     self.bind(pos=self._update_bg, size=self._update_bg)
+                    # ✅ Убираем цвет-заглушку после загрузки ассета
+                    if hasattr(self, 'bg_rect'):
+                        self.canvas.before.remove(self.bg_rect)
+                    logger.info("✅ Фон загружен из ассета")
                     return
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
-        with self.canvas.before:
-            Color(0.46, 0.70, 0.71, 1)
-            self.bg_image = Rectangle(pos=self.pos, size=self.size)
-        self.bind(pos=self._update_bg, size=self._update_bg)
+
+        # Если ассет не загрузился — оставляем тёмный фон
+        logger.info("✅ Используем тёмный фон (ассет не найден)")
 
     def _update_bg(self, *args):
         if self.bg_image:
@@ -290,6 +310,8 @@ class GuitarFunsApp(MDApp):
         self.is_auth_blocking = False
         self._bottom_nav_visible = False
         self._favorites_preloaded = False
+        self.splash_screen = None
+        self._components_created = False
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
@@ -426,6 +448,8 @@ class GuitarFunsApp(MDApp):
         except Exception as e:
             logger.warning(f"⚠️ Ошибка сохранения предзагруженного избранного: {e}")
 
+    # ============ BUILD ============
+
     def build(self):
         logger.debug('Создание интерфейса...')
 
@@ -445,11 +469,28 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
-        root = RootWidget()
-        self.screen_manager = setup_screen_manager()
-        self.screen_manager.current = 'home'
-        self.screen_manager.md_bg_color = [0, 0, 0, 0]
+        # ============ СОЗДАЁМ ROOT ============
+        self.root = RootWidget()  # ← теперь используем RootWidget с фоном
 
+        # ============ ПОКАЗЫВАЕМ СПЛЕШ-СКРИН ============
+        try:
+            from screens.splash_screen import SplashScreen
+            self.splash_screen = SplashScreen(
+                on_complete=self._on_splash_complete
+            )
+            self.root.add_widget(self.splash_screen)
+            logger.info("✅ SplashScreen создан и добавлен")
+        except ImportError as e:
+            logger.error(f"❌ Ошибка импорта SplashScreen: {e}")
+            # Fallback: сразу создаём приложение
+            self._components_created = True
+            self._create_app_components()
+            self._show_app_components()
+
+        # ============ ПРЕДЗАГРУЗКА В ФОНЕ ============
+        Clock.schedule_once(self._preload_app, 0.1)
+
+        # Предзагрузка иконок
         try:
             from utils.icon_cache import preload_icons
             preload_icons()
@@ -459,58 +500,102 @@ class GuitarFunsApp(MDApp):
 
         logger.info("📡 Режим работы: все данные загружаются с сервера по запросу")
 
-        # ============ TOP NAV ============
+        return self.root
+
+    def _preload_app(self, dt):
+        """Предзагружает компоненты в фоне"""
+        logger.info("🔄 Фоновая предзагрузка приложения...")
+
+        if not self._components_created:
+            self._create_app_components()
+            self._components_created = True
+
+        # Предзагружаем избранное
+        Clock.schedule_once(lambda dt: self._preload_favorites(), 0.5)
+
+    def _create_app_components(self):
+        """Создаёт все компоненты приложения (без добавления в root)"""
+        logger.info("📦 Создание компонентов приложения...")
+
+        # ScreenManager
+        self.screen_manager = setup_screen_manager()
+        self.screen_manager.current = 'home'
+        self.screen_manager.md_bg_color = [0, 0, 0, 0]
+
+        # TopNav
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
         self.top_nav.pos_hint = {'top': 1}
-
         self.top_nav.update_title('home')
         self.top_nav._update_left_button('home')
         self.top_nav._update_right_buttons('home')
-        logger.info("✅ TopNav установлен на 'Главная'")
+        self.top_nav.settings_btn.on_release = self._on_settings_press
 
-        # ============ BOTTOM NAV ============
+        # BottomNav
         self.bottom_nav = BottomNav(self.screen_manager)
         self.bottom_nav.pos_hint = {'y': 0}
 
-        current_screen = self.screen_manager.current
-        nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
-        if current_screen in nav_screens:
-            for item, (_, _, screen) in zip(self.bottom_nav.items, self.bottom_nav.nav_items):
-                item.active = (screen == current_screen)
-        else:
-            self.bottom_nav.clear_active()
-        logger.info(f"✅ BottomNav инициализирован: экран '{current_screen}'")
-
-        # ============ SIDEBAR ============
+        # Sidebar
         self.sidebar = Sidebar(self.screen_manager)
-        # ✅ ПРИНУДИТЕЛЬНО ЗАКРЫВАЕМ САЙДБАР (убеждаемся, что скрыт)
         self.sidebar.close()
-        logger.info("✅ Sidebar создан и принудительно скрыт")
 
-        # ============ BLOCKING LAYER ============
+        # BlockingLayer
         self.blocking_layer = BlockingLayer()
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
 
-        # ============ ДОБАВЛЯЕМ ВСЁ НА ROOT ============
-        root.add_widget(self.screen_manager)
-        root.add_widget(self.bottom_nav)
-        root.add_widget(self.top_nav)
-        root.add_widget(self.sidebar)
-        root.add_widget(self.blocking_layer)
+        logger.info("✅ Все компоненты созданы")
 
-        # ============ УСТАНАВЛИВАЕМ ОБРАБОТЧИК ДЛЯ КНОПКИ НАСТРОЕК ============
-        # ✅ ТОЛЬКО ОДИН РАЗ - через on_release
-        self.top_nav.settings_btn.on_release = self._on_settings_press
-        # ❌ НЕ используем bind
+    def _show_app_components(self):
+        """Добавляет компоненты в root и показывает приложение"""
+        logger.info("🎬 Показываем компоненты приложения")
 
+        # Добавляем компоненты в root
+        self.root.add_widget(self.screen_manager)
+        self.root.add_widget(self.bottom_nav)
+        self.root.add_widget(self.top_nav)
+        self.root.add_widget(self.sidebar)
+        self.root.add_widget(self.blocking_layer)
+
+        # Инициализация сети
         network_manager.start_monitoring()
         Window.bind(on_resize=self.on_window_resize)
 
-        logger.info('Интерфейс успешно создан')
-        return root
+        # Обновляем Sidebar
+        Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
+
+        # Проверяем авторизацию
+        if self.screen_manager and self.screen_manager.has_screen('home'):
+            home_screen = self.screen_manager.get_screen('home')
+            Clock.schedule_once(lambda dt: home_screen._check_auth(0), 0.5)
+
+        logger.info("✅ Компоненты приложения показаны")
+
+    def _on_splash_complete(self):
+        """Сплеш-скрин завершил работу — показываем приложение"""
+        logger.info("🎬 Сплеш-скрин завершён, показываем приложение")
+
+        # Удаляем сплеш-скрин
+        if self.splash_screen and self.splash_screen.parent:
+            self.root.remove_widget(self.splash_screen)
+            self.splash_screen = None
+
+        # Показываем компоненты приложения
+        if not self._components_created:
+            self._create_app_components()
+            self._components_created = True
+
+        self._show_app_components()
+
+        # Анимация появления
+        self.root.opacity = 0
+        anim = Animation(opacity=1, duration=0.3, t='out_quad')
+        anim.start(self.root)
+
+        logger.info("✅ Приложение полностью загружено")
+
+    # ============ ОБРАБОТЧИКИ ============
 
     def _on_settings_press(self, *args):
         """Обработчик нажатия на иконку настроек (шестерёнка) - открывает Sidebar"""
@@ -550,6 +635,8 @@ class GuitarFunsApp(MDApp):
 
     def change_language(self, lang_code):
         logger.info(f"Смена языка на: {lang_code}")
+
+    # ============ ЖИЗНЕННЫЙ ЦИКЛ ============
 
     def on_start(self):
         logger.info('Приложение GuitarFuns запущено')
@@ -605,4 +692,4 @@ class GuitarFunsApp(MDApp):
 
 
 if __name__ == '__main__':
-    GuitarFunsApp().run() 
+    GuitarFunsApp().run()
