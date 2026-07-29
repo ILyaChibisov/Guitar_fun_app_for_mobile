@@ -305,7 +305,7 @@ class SoundAssetConverter:
         lines.append('}')
         lines.append('')
 
-        # Генерируем класс - ИСПОЛЬЗУЕМ ПРЯМУЮ ПОДСТАНОВКУ class_name
+        # Генерируем класс с ИСПРАВЛЕННЫМ get_sound
         lines.extend([
             '',
             f'class {class_name}:',
@@ -333,21 +333,20 @@ class SoundAssetConverter:
             '            return None',
             f'        data = {class_name}.get_sound_data(note_name)',
             '        if data:',
-            '            sound = SoundLoader.load(BytesIO(data))',
-            '            if sound:',
-            '                return sound',
+            '            # Сохраняем во временный файл',
             '            try:',
             '                fd, path = tempfile.mkstemp(suffix=".ogg")',
             '                os.close(fd)',
             '                with open(path, "wb") as f:',
             '                    f.write(data)',
             '                sound = SoundLoader.load(path)',
+            '                # Удаляем файл после загрузки',
             '                try:',
             '                    os.unlink(path)',
             '                except:',
             '                    pass',
             '                return sound',
-            '            except:',
+            '            except Exception as e:',
             '                return None',
             '        return None',
             '    ',
@@ -410,7 +409,6 @@ class SoundAssetConverter:
                 display_name = tuning_name.replace('_', ' ').title()
                 content = self.generate_module(tuning_name, notes, display_name)
 
-                # УДАЛЯЕМ СТАРЫЙ ФАЙЛ если есть
                 output_file = self.output_dir / f"{tuning_name}.py"
                 if output_file.exists():
                     output_file.unlink()

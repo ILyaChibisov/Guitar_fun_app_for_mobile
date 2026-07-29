@@ -10,7 +10,7 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
 
 # Включаем все файлы аккордов рекурсивно
-source.include_patterns = chords/**, **/*.py
+source.include_patterns = chords/**, data/**, **/*.py
 
 # Исключаем ненужные файлы
 source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, create_icons.py, prepare_icons.py

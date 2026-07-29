@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Звуковые ассеты для строя: Ukulele
-Создан: 2026-07-28 17:32:43
+Создан: 2026-07-29 08:59:48
 Количество нот: 4
 
 Использование:
@@ -127,21 +127,20 @@ class UkuleleSounds:
             return None
         data = UkuleleSounds.get_sound_data(note_name)
         if data:
-            sound = SoundLoader.load(BytesIO(data))
-            if sound:
-                return sound
+            # Сохраняем во временный файл
             try:
                 fd, path = tempfile.mkstemp(suffix=".ogg")
                 os.close(fd)
                 with open(path, "wb") as f:
                     f.write(data)
                 sound = SoundLoader.load(path)
+                # Удаляем файл после загрузки
                 try:
                     os.unlink(path)
                 except:
                     pass
                 return sound
-            except:
+            except Exception as e:
                 return None
         return None
     
