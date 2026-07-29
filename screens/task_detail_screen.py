@@ -906,11 +906,12 @@ class TaskDetailScreen(BaseScreen):
         """Возврат в список задач"""
         logger.info("🔙 Возврат в список задач")
 
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.clear_custom_title_widget()
-            app.top_nav.update_title('tasks')
-            app.top_nav._update_left_button('tasks')
+        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ============
+        # app = MDApp.get_running_app()
+        # if app and hasattr(app, 'top_nav'):
+        #     app.top_nav.clear_custom_title_widget()
+        #     app.top_nav.update_title('tasks')
+        #     app.top_nav._update_left_button('tasks')
 
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'tasks'

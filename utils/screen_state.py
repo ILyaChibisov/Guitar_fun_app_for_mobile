@@ -52,6 +52,12 @@ class ScreenStateManager:
         logger.debug("Очищены все состояния")
 
     def set_previous_screen(self, screen_name):
+        """Сохраняет предыдущий экран"""
+        # Не сохраняем как предыдущий, если это тот же экран
+        if screen_name == self._previous_screen:
+            logger.debug(f"⏭️ Пропускаем сохранение того же экрана: {screen_name}")
+            return
+
         old = self._previous_screen
         self._previous_screen = screen_name
         logger.info(f"✅ screen_state: предыдущий экран изменён: {old} → {screen_name}")
@@ -176,13 +182,13 @@ class ScreenStateManager:
             dict: {'artist_name': str, 'scroll_position': float} или пустой dict
         """
         if self._artist_songs_data:
-            # Проверяем, не устарели ли данные (максимум 5 минут)
             timestamp = self._artist_songs_data.get('_timestamp', 0)
             if time.time() - timestamp < 300:  # 5 минут
                 data = self._artist_songs_data.copy()
                 if '_timestamp' in data:
                     del data['_timestamp']
-                logger.info(f"📦 Получены данные ArtistSongs: {data.get('artist_name')}, scroll={data.get('scroll_position', 1.0):.2f}")
+                logger.info(
+                    f"📦 Получены данные ArtistSongs: {data.get('artist_name')}, scroll={data.get('scroll_position', 1.0):.2f}")
                 return data
             else:
                 logger.info("⏳ Данные ArtistSongs устарели")

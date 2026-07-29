@@ -558,9 +558,10 @@ class SearchTermDetailScreen(BaseScreen):
         """Возврат ТОЛЬКО в SearchScreen"""
         logger.info("🔙 Возврат из термина в SearchScreen")
 
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.clear_custom_title_widget()
+        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ============
+        # app = MDApp.get_running_app()
+        # if app and hasattr(app, 'top_nav'):
+        #     app.top_nav.clear_custom_title_widget()
 
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('search'):
@@ -590,8 +591,10 @@ class SearchTermDetailScreen(BaseScreen):
     def on_leave(self):
         logger.info("Выход из экрана определения термина из поиска")
 
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.clear_custom_title_widget()
-            if hasattr(app.top_nav, '_update_right_buttons'):
-                app.top_nav._update_right_buttons('search')
+        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ============
+        # app = MDApp.get_running_app()
+        # if app and hasattr(app, 'top_nav'):
+        #     app.top_nav.clear_custom_title_widget()
+        #     if hasattr(app.top_nav, '_update_right_buttons'):
+        #         app.top_nav._update_right_buttons('search')
+        pass

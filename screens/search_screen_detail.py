@@ -1815,8 +1815,10 @@ class SearchScreenDetail(BaseScreen):
             self._top_spacer_song.height = top_padding
 
     def on_leave(self):
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.clear_custom_title_widget()
-            if hasattr(app.top_nav, '_update_right_buttons'):
-                app.top_nav._update_right_buttons('search')
+        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ============
+        # app = MDApp.get_running_app()
+        # if app and hasattr(app, 'top_nav'):
+        #     app.top_nav.clear_custom_title_widget()
+        #     if hasattr(app.top_nav, '_update_right_buttons'):
+        #         app.top_nav._update_right_buttons('search')
+        pass

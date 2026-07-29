@@ -1,11 +1,11 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - заголовок по центру
-с правильной навигацией назад через screen_state
+Верхняя панель навигации - с конфигом из top_nav_config.py
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
 from kivy.core.window import Window
+from kivy.clock import Clock
 
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
@@ -13,59 +13,18 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.app import MDApp
-from kivy.clock import Clock
 
 from config.theme import theme
 from config.logger_config import get_logger
 from config.system_bars import get_status_bar_height, get_screen_density
+from config.top_nav_config import top_nav_config
 from utils.screen_state import screen_state
 
 logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации"""
-
-    # Список экранов, где всегда показывается стрелка назад
-    ALWAYS_BACK_SCREENS = [
-        'song_detail',
-        'term_detail',
-        'admin',
-        'task_detail',
-        'artist_songs',
-        'search_detail',
-        'favorite_detail',
-        'search_screen_detail',
-        'search_term_detail',
-        'chord_detail',
-        'amdm_parser',
-        'mytabs_parser',
-        'accord_pro_parser',
-        'akkordus_parser',
-        'muzland_parser',
-        'chordie_parser',
-        'fivelad_parser',
-        'akkordbard_parser',
-        'domhve_parser',
-        'rushsound_parser',
-        'settings',
-        'help',
-        'promo',
-        'feedback',
-    ]
-
-    # Список экранов с кастомным заголовком
-    CUSTOM_TITLE_SCREENS = [
-        'song_detail',
-        'search_screen_detail',
-        'search_term_detail',
-        'chord_detail',
-        'terms_by_letter',
-        'term_detail',
-        'artists_by_letter',
-        'artist_songs',
-        'favorites',
-    ]
+    """Верхняя панель навигации с конфигом"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -78,6 +37,12 @@ class TopNav(MDCard):
         self._old_title_widget = None
         self.custom_title_widget = None
 
+        # ============ ЗАЩИТА ОТ ДВОЙНЫХ НАЖАТИЙ ============
+        self._back_press_blocked = False
+        self._back_press_timer = None
+        self._going_back = False
+        self._navigating = False
+
         self.orientation = 'vertical'
         self.size_hint = (1, None)
         self.pos_hint = {'top': 1}
@@ -86,26 +51,20 @@ class TopNav(MDCard):
         status_h = get_status_bar_height()
 
         if platform == 'android':
-            # ✅ TopNav прижат к верху, его высота = статус-бар + высота панели
             self.height = dp(88) + status_h
-            # Внутренний отступ сверху = статус-бар + небольшой отступ для воздуха
             top_padding = status_h + dp(24)
         else:
             self.height = dp(80)
             top_padding = status_h + dp(8)
 
         self.padding = [0, top_padding, 0, 0]
-
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
         self.spacing = 0
 
-        screen_density = get_screen_density()
         logger.info("=" * 70)
         logger.info(f"📱 TOP NAV - {platform.upper()}")
-        logger.info(f"📱 Статус-бар: {status_h:.1f}dp = {status_h * screen_density:.0f}px")
-        logger.info(f"📱 Отступ сверху: {top_padding:.1f}dp")
         logger.info(f"📱 Высота панели: {self.height}dp")
         logger.info("=" * 70)
 
@@ -135,6 +94,7 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'center_y': 0.5}
         )
+        self.settings_btn.bind(on_release=self._on_settings_press)
 
         # Кнопка назад (стрелка) - возврат на предыдущий экран
         self.back_btn = MDIconButton(
@@ -220,28 +180,13 @@ class TopNav(MDCard):
             self._on_screen_changed(self.sm, self.sm.current)
 
     def _get_screen_title(self, screen_name: str) -> str:
-        titles = {
-            'home': 'Главная',
-            'songs': 'Песни',
-            'chords': 'Аккорды',
-            'tuner': 'Тюнер',
-            'metronome': 'Метроном',
-            'favorites': 'Избранное',
-            'profile': 'Профиль',
-            'dictionary': 'Словарь',
-            'admin': 'Админ панель',
-            'search': 'Быстрый поиск',
-            'song_detail': '',
-            'term_detail': 'Термин',
-            'settings': 'Настройки',
-            'help': 'Помощь',
-            'promo': 'Промокод',
-            'feedback': 'Обратная связь',
-        }
-        return titles.get(screen_name, screen_name.capitalize())
+        """Возвращает заголовок из конфига"""
+        return top_nav_config.get_title(screen_name)
 
     def update_title(self, screen_name: str):
-        self.screen_title.text = self._get_screen_title(screen_name)
+        """Обновляет заголовок из конфига"""
+        title = self._get_screen_title(screen_name)
+        self.screen_title.text = title
         self._adjust_title_width()
 
     def set_custom_title(self, title: str):
@@ -249,7 +194,6 @@ class TopNav(MDCard):
         self.screen_title.text = title
         self._adjust_title_width()
 
-        # ✅ Если заголовок "Избранное" - убираем кастомный виджет
         if title == "Избранное":
             if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
                 if self.custom_title_widget in self.container.children:
@@ -261,16 +205,15 @@ class TopNav(MDCard):
                 self._adjust_title_width()
 
     def _adjust_title_width(self):
+        """Подстраивает ширину заголовка"""
         text = self.screen_title.text
         if not text:
             return
 
         window_width = Window.width
-
         left_width = dp(48)
         right_width = dp(48)
         padding = dp(32)
-
         max_width = window_width - left_width - right_width - padding
 
         if max_width < dp(100):
@@ -288,6 +231,7 @@ class TopNav(MDCard):
         self.screen_title.width = text_width
 
     def set_custom_title_widget(self, widget):
+        """Устанавливает кастомный виджет заголовка"""
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
@@ -320,6 +264,7 @@ class TopNav(MDCard):
         logger.info(f"✅ Установлен кастомный виджет заголовка")
 
     def clear_custom_title_widget(self):
+        """Удаляет кастомный виджет заголовка"""
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
@@ -332,73 +277,149 @@ class TopNav(MDCard):
             logger.info("✅ Стандартный заголовок восстановлен")
 
     def set_custom_back_callback(self, callback):
+        """Устанавливает кастомный callback для кнопки назад"""
         self._custom_back_callback = callback
 
     def clear_custom_back_callback(self):
+        """Удаляет кастомный callback"""
         self._custom_back_callback = None
 
-    def _update_left_button(self, screen_name):
+    def _update_left_button(self, screen_name: str):
+        """Обновляет левую кнопку согласно конфигу"""
+        import traceback
+
+        # ============ ТРАССИРОВКА ============
+        logger.info(f"🔍 _update_left_button вызван для {screen_name}")
+        logger.info(f"   Текущий экран: {self.current_screen_name}")
+        logger.info(f"   Стек вызовов:")
+        stack = traceback.format_stack()[-8:-1]
+        for line in stack:
+            line = line.strip()
+            if len(line) > 150:
+                line = line[:150] + "..."
+            logger.info(f"     {line}")
+        # =====================================
+
         self.left_container.clear_widgets()
 
-        logger.info(f"🔧 _update_left_button для экрана: {screen_name}")
+        left_type = top_nav_config.get_left_button(screen_name)
 
-        if screen_name in self.ALWAYS_BACK_SCREENS:
+        logger.info(f"🔧 _update_left_button для экрана: {screen_name} → {left_type}")
+
+        if left_type == top_nav_config.LEFT_BUTTON_BACK:
             self.left_container.add_widget(self.back_btn)
-            logger.info("   → Установлена стрелка назад (всегда)")
-            return
+        elif left_type == top_nav_config.LEFT_BUTTON_HAMBURGER:
+            self.left_container.add_widget(self.settings_btn)
+        else:
+            pass
 
-        if screen_name == 'chords':
-            previous_screen = screen_state.get_previous_screen()
-            if previous_screen == 'search':
-                self.left_container.add_widget(self.back_btn)
-                logger.info("   → Установлена стрелка назад (пришли из search)")
-                return
-            else:
-                self.left_container.add_widget(self.settings_btn)
-                logger.info("   → Установлена иконка настроек")
-                return
+    def _update_right_buttons(self, screen_name: str):
+        """Обновляет правую кнопку согласно конфигу"""
+        import traceback
 
-        self.left_container.add_widget(self.settings_btn)
-        logger.info("   → Установлена иконка настроек")
+        # ============ ТРАССИРОВКА ============
+        logger.info(f"🔍 _update_right_buttons вызван для {screen_name}")
+        logger.info(f"   Текущий экран: {self.current_screen_name}")
+        logger.info(f"   Стек вызовов:")
+        stack = traceback.format_stack()[-8:-1]
+        for line in stack:
+            line = line.strip()
+            if len(line) > 150:
+                line = line[:150] + "..."
+            logger.info(f"     {line}")
+        # =====================================
 
-    def _update_right_buttons(self, screen_name):
         self.right_container.clear_widgets()
 
-        if screen_name == 'home':
+        right_type = top_nav_config.get_right_button(screen_name)
+
+        logger.info(f"🔧 _update_right_buttons для экрана: {screen_name} → {right_type}")
+
+        if right_type == top_nav_config.RIGHT_BUTTON_SEARCH:
             self.right_container.add_widget(self.search_btn)
-            logger.info("   → Установлена лупа (поиск)")
-        else:
+        elif right_type == top_nav_config.RIGHT_BUTTON_HOME:
             self.right_container.add_widget(self.home_btn)
-            logger.info("   → Установлена иконка домой")
+        else:
+            pass
+
+    def _set_artist_songs_mode(self):
+        """Принудительно устанавливает режим для artist_songs"""
+        logger.info("🔧 _set_artist_songs_mode: устанавливаем стрелку назад и заголовок")
+
+        self.left_container.clear_widgets()
+        self.left_container.add_widget(self.back_btn)
+        self.back_btn.on_release = self._on_back_press
+
+        self.right_container.clear_widgets()
+        self.right_container.add_widget(self.home_btn)
+
+        self.set_custom_title("Песни исполнителя")
+
+        logger.info("✅ artist_songs режим установлен")
+
+    def _unblock_back_button(self):
+        """Разблокирует кнопку назад"""
+        self._back_press_blocked = False
+        self._back_press_timer = None
+        logger.debug("🔓 Кнопка назад разблокирована")
 
     def _on_screen_changed(self, instance, screen_name):
+        """Обработчик смены экрана"""
         old = self.current_screen_name
+
+        # ============ ДИАГНОСТИКА ============
+        import traceback
+        logger.info(f"🔍 _on_screen_changed: {old} → {screen_name}")
+        logger.info(f"   Стек вызовов:")
+        stack = traceback.format_stack()[-6:-1]
+        for line in stack:
+            line = line.strip()
+            if len(line) > 150:
+                line = line[:150] + "..."
+            logger.info(f"     {line}")
+        # =====================================
+
+        if old == screen_name:
+            logger.debug(f"⏭️ Экран не изменился: {screen_name}, пропускаем")
+            return
+
         self.current_screen_name = screen_name
         logger.info(f"🔄 _on_screen_changed: {old} → {screen_name}")
 
+        # ============ СОХРАНЯЕМ ПРЕДЫДУЩИЙ ЭКРАН ============
         if old and old != screen_name:
-            screen_state.set_previous_screen(old)
-            logger.info(f"   ✅ Сохранён предыдущий экран: {old}")
+            if screen_name == 'artist_songs' and old == 'song_detail':
+                logger.info(f"   ⏭️ Возврат в artist_songs, не меняем previous_screen")
+            else:
+                screen_state.set_previous_screen(old)
+                logger.info(f"   ✅ Сохранён предыдущий экран: {old}")
 
         if old and old != screen_name:
             self._previous_screen = old
 
-        # ============ СБРАСЫВАЕМ КАСТОМНЫЙ CALLBACK ============
-        if screen_name not in self.ALWAYS_BACK_SCREENS:
-            if screen_name == 'chords':
-                prev = screen_state.get_previous_screen()
-                if prev != 'search':
-                    self._custom_back_callback = None
-                    logger.info("   → Сброшен custom callback (chords, не из search)")
+        # ============ ОБНОВЛЯЕМ КНОПКИ ============
+        if screen_name == 'artist_songs':
+            self._set_artist_songs_mode()
+        else:
+            self._update_left_button(screen_name)
+            self._update_right_buttons(screen_name)
+
+        # ============ ОБНОВЛЯЕМ ЗАГОЛОВОК ============
+        if screen_name == 'artist_songs':
+            # Заголовок уже установлен в _set_artist_songs_mode
+            pass
+        else:
+            title_type = top_nav_config.get_custom_title_widget_type(screen_name)
+            if title_type == 'vertical' and screen_name not in ['song_detail']:
+                pass
+            elif top_nav_config.is_title_custom(screen_name):
+                if self.custom_title_widget:
+                    self.clear_custom_title_widget()
+                self.update_title(screen_name)
             else:
-                self._custom_back_callback = None
-                logger.info(f"   → Сброшен custom callback ({screen_name})")
-
-        # ✅ Обновляем левую кнопку ДО того, как экран станет видимым
-        self._update_left_button(screen_name)
-
-        # ✅ Обновляем правые кнопки
-        self._update_right_buttons(screen_name)
+                if self.custom_title_widget:
+                    self.clear_custom_title_widget()
+                self.update_title(screen_name)
 
         # ============ ОБНОВЛЯЕМ BOTTOM NAV ============
         app = MDApp.get_running_app()
@@ -411,24 +432,18 @@ class TopNav(MDCard):
                 app.bottom_nav.clear_active()
                 logger.info(f"🔽 BottomNav: экран '{screen_name}' не в меню, все иконки сброшены")
 
-        # ✅ Если экран НЕ с кастомным заголовком - обновляем стандартный
-        if screen_name not in self.CUSTOM_TITLE_SCREENS:
-            if self.custom_title_widget:
-                self.clear_custom_title_widget()
-            self.update_title(screen_name)
-        else:
-            if screen_name == 'term_detail':
-                if self.custom_title_widget:
-                    self.clear_custom_title_widget()
-                self.set_custom_title("Термин")
-            elif screen_name == 'song_detail':
-                pass  # song_detail сам управляет заголовком
-
-        if old in self.CUSTOM_TITLE_SCREENS and screen_name not in self.CUSTOM_TITLE_SCREENS:
-            self.clear_custom_title_widget()
-            self.update_title(screen_name)
-
     def _on_back_press(self, *args):
+        """Обработчик нажатия кнопки назад - с защитой от двойных нажатий"""
+
+        if self._back_press_blocked:
+            logger.info("⏭️ Кнопка назад заблокирована (предотвращение двойного нажатия)")
+            return
+
+        self._back_press_blocked = True
+        if self._back_press_timer:
+            Clock.unschedule(self._back_press_timer)
+        self._back_press_timer = Clock.schedule_once(lambda dt: self._unblock_back_button(), 0.8)
+
         logger.info(f"🔙 _on_back_press для экрана: {self.current_screen_name}")
 
         if self._custom_back_callback:
@@ -443,172 +458,95 @@ class TopNav(MDCard):
         prev_from_state = screen_state.get_previous_screen()
         logger.info(f"   📌 screen_state.previous_screen = {prev_from_state}")
 
-        # ============ ЛОГИКА ДЛЯ chord_detail ============
+        # ============ artist_songs → всегда на songs ============
+        if current == 'artist_songs':
+            if self._navigating:
+                logger.info("⏭️ Уже выполняется навигация, пропускаем")
+                return
+            self._navigating = True
+
+            if self.sm.has_screen('artist_songs'):
+                artist_screen = self.sm.get_screen('artist_songs')
+                if hasattr(artist_screen, 'go_back'):
+                    artist_screen.go_back()
+                    logger.info("   → artist_songs возврат на songs через go_back")
+                    Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
+                    return
+
+            if self.sm.has_screen('songs'):
+                songs_screen = self.sm.get_screen('songs')
+                Clock.schedule_once(lambda dt: songs_screen.restore_state(), 0.1)
+                self.sm.current = 'songs'
+                logger.info("   → artist_songs возврат на songs (fallback)")
+                Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
+                return
+            else:
+                self.sm.current = 'home'
+                logger.info("   → artist_songs возврат на home (songs не найден)")
+                Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
+                return
+
+        # ============ song_detail → на предыдущий экран ============
+        if current == 'song_detail':
+            if self.sm.has_screen('song_detail'):
+                song_detail = self.sm.get_screen('song_detail')
+                if hasattr(song_detail, 'go_back'):
+                    song_detail.go_back()
+                    logger.info("   → song_detail возврат через go_back")
+                    return
+
+            if prev_from_state and self.sm.has_screen(prev_from_state):
+                logger.info(f"   → song_detail возврат на {prev_from_state}")
+                self.sm.current = prev_from_state
+                return
+
+            if self.sm.has_screen('home'):
+                logger.info("   → song_detail возврат на home (по умолчанию)")
+                self.sm.current = 'home'
+                return
+
+        # ============ chord_detail → на search или chords ============
         if current == 'chord_detail':
             if self.sm.has_screen('search'):
                 screen_state.clear_pending_chord()
                 self.sm.current = 'search'
                 logger.info("   → chord_detail возврат на search")
                 return
-            else:
-                self.sm.current = 'home'
-                logger.info("   → chord_detail возврат на home (search не найден)")
-                return
-
-        # ============ ЛОГИКА ДЛЯ search_term_detail ============
-        if current == 'search_term_detail':
-            if self.sm.has_screen('search'):
-                self.sm.current = 'search'
-                logger.info("   → search_term_detail возврат на search")
-                return
-            else:
-                self.sm.current = 'dictionary'
-                logger.info("   → search_term_detail возврат на dictionary (search не найден)")
-                return
-
-        # ============ ЛОГИКА ДЛЯ favorite_detail ============
-        if current == 'favorite_detail':
-            if self.sm.has_screen('favorites'):
-                favorites_screen = self.sm.get_screen('favorites')
-                Clock.schedule_once(lambda dt: favorites_screen.refresh_favorites(), 0.2)
-                self.sm.current = 'favorites'
-                logger.info("   → favorite_detail возврат на favorites")
+            elif self.sm.has_screen('chords'):
+                self.sm.current = 'chords'
+                logger.info("   → chord_detail возврат на chords")
                 return
             else:
                 self.sm.current = 'home'
-                logger.info("   → favorite_detail возврат на home (favorites не найден)")
+                logger.info("   → chord_detail возврат на home")
                 return
 
-        # ============ ЛОГИКА ДЛЯ search_screen_detail ============
-        if current == 'search_screen_detail':
-            if self.sm.has_screen('search'):
-                search_screen = self.sm.get_screen('search')
-                Clock.schedule_once(lambda dt: search_screen.refresh_search(), 0.2)
-                self.sm.current = 'search'
-                logger.info("   → search_screen_detail возврат на search")
-                return
-            else:
-                self.sm.current = 'home'
-                logger.info("   → search_screen_detail возврат на home (search не найден)")
-                return
-
-        # ============ ЛОГИКА ДЛЯ search_detail (поиск из SongsScreen) ============
-        if current == 'search_detail':
-            if self.sm.has_screen('songs'):
-                songs_screen = self.sm.get_screen('songs')
-                Clock.schedule_once(lambda dt: songs_screen.restore_state(), 0.2)
-                self.sm.current = 'songs'
-                logger.info("   → search_detail возврат на songs")
-                return
-            else:
-                self.sm.current = 'home'
-                logger.info("   → search_detail возврат на home (songs не найден)")
-                return
-
-        # ============ ЛОГИКА ДЛЯ artist_songs ============
-        if current == 'artist_songs':
-            if self.sm.has_screen('songs'):
-                songs_screen = self.sm.get_screen('songs')
-                Clock.schedule_once(lambda dt: songs_screen.restore_state(), 0.2)
-                self.sm.current = 'songs'
-                logger.info("   → artist_songs возврат на songs")
-                return
-            else:
-                self.sm.current = 'home'
-                logger.info("   → artist_songs возврат на home (songs не найден)")
-                return
-
-        # ============ ЛОГИКА ДЛЯ song_detail ============
-        if current == 'song_detail':
-            if prev_from_state == 'favorites' and self.sm.has_screen('favorites'):
-                favorites_screen = self.sm.get_screen('favorites')
-                Clock.schedule_once(lambda dt: favorites_screen.refresh_favorites(), 0.2)
-                self.sm.current = 'favorites'
-                logger.info("   → SongDetail возврат на favorites")
-                return
-
-            if prev_from_state == 'artist_songs' and self.sm.has_screen('artist_songs'):
-                self.sm.current = 'artist_songs'
-                logger.info("   → SongDetail возврат на artist_songs")
-                return
-
+        # ============ ОБЫЧНАЯ ЛОГИКА ============
+        if top_nav_config.show_back_button(current):
             if prev_from_state and self.sm.has_screen(prev_from_state):
-                if prev_from_state in ['songs', 'favorites', 'search', 'chords', 'artist_songs']:
-                    logger.info(f"   → SongDetail возврат на {prev_from_state}")
-                    self.sm.current = prev_from_state
-                    return
-
-            if self.sm.has_screen('home'):
-                logger.info("   → SongDetail возврат на home (по умолчанию)")
-                self.sm.current = 'home'
+                logger.info(f"   → Возврат на {prev_from_state}")
+                self.sm.current = prev_from_state
                 return
 
-        # ============ ЛОГИКА ДЛЯ term_detail ============
-        if current == 'term_detail':
-            if prev_from_state and self.sm.has_screen(prev_from_state):
-                if prev_from_state in ['dictionary', 'search']:
-                    logger.info(f"   → TermDetail возврат на {prev_from_state}")
-                    self.sm.current = prev_from_state
-                    return
-
-            if self.sm.has_screen('dictionary'):
-                logger.info("   → TermDetail возврат на dictionary (по умолчанию)")
-                self.sm.current = 'dictionary'
-                return
-            elif self.sm.has_screen('home'):
-                logger.info("   → TermDetail возврат на home")
-                self.sm.current = 'home'
-                return
-
-        # ============ ЛОГИКА ДЛЯ chords ============
-        if current == 'chords':
-            if prev_from_state == 'search' and self.sm.has_screen('search'):
-                logger.info("   → Chords возврат на search")
-                self.sm.current = 'search'
-                return
-
-            if self.sm.has_screen('home'):
-                logger.info("   → Chords возврат на home")
-                self.sm.current = 'home'
-                return
-
-        # ============ ЛОГИКА ДЛЯ admin и парсеров ============
-        if current == 'admin':
-            if self.sm.has_screen('profile'):
-                logger.info("   → Admin возврат на profile")
-                self.sm.current = 'profile'
-                return
-
-        if current in self.ALWAYS_BACK_SCREENS and current not in ['song_detail', 'term_detail', 'admin', 'favorite_detail', 'search_screen_detail', 'search_detail', 'artist_songs', 'chord_detail', 'search_term_detail']:
-            if self.sm.has_screen('admin'):
-                logger.info(f"   → {current} возврат на admin")
-                self.sm.current = 'admin'
-                return
-
-        # ============ ЛОГИКА ДЛЯ НОВЫХ ЭКРАНОВ ============
-        if current in ['settings', 'help', 'promo', 'feedback']:
-            if self.sm.has_screen('home'):
-                logger.info(f"   → {current} возврат на home")
-                self.sm.current = 'home'
-                return
-
-        # ============ ПО УМОЛЧАНИЮ ============
         if self.sm.has_screen('home'):
             logger.info("   → Переход на home (по умолчанию)")
             self.sm.current = 'home'
 
     def _on_settings_press(self, *args):
+        """Обработчик нажатия на иконку настроек"""
         logger.info("⚙️ Нажата иконка настроек → открываем Sidebar")
         app = MDApp.get_running_app()
         if hasattr(app, 'sidebar') and app.sidebar:
             app.sidebar.toggle()
 
     def _on_home_press(self, *args):
+        """Обработчик нажатия кнопки домой"""
         logger.info("🏠 Нажата иконка домой")
         if self.sm and self.sm.has_screen('home'):
             self.sm.current = 'home'
 
     def _on_search_press(self, *args):
+        """Обработчик нажатия кнопки поиска"""
         logger.info("🔍 Нажата иконка поиска")
         app = MDApp.get_running_app()
         if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
@@ -635,37 +573,31 @@ class TopNav(MDCard):
         self.app = app
 
     def reset_to_default(self):
+        """Сбрасывает TopNav к состоянию по умолчанию (home)"""
         self.clear_custom_title_widget()
-        if self.sm:
-            self.update_title(self.sm.current)
-            self._update_right_buttons(self.sm.current)
-            self._update_left_button(self.sm.current)
+        self._update_left_button('home')
+        self._update_right_buttons('home')
+        self.update_title('home')
 
     def on_size(self, *args):
         Clock.schedule_once(lambda dt: self._adjust_title_width(), 0.1)
 
     def force_update_title(self, title, show_back=False):
-        """Мгновенно обновляет заголовок без анимации и задержек"""
-        # Убираем кастомный виджет если есть
+        """Мгновенно обновляет заголовок"""
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
             self.custom_title_widget = None
 
-        # Устанавливаем заголовок
         self.screen_title.text = title
         self._adjust_title_width()
 
-        # Добавляем стандартный заголовок если его нет
         if self.screen_title not in self.container.children:
             self.container.add_widget(self.screen_title)
 
-        # Обновляем левую кнопку если нужно
         if show_back:
             self.left_container.clear_widgets()
             self.left_container.add_widget(self.back_btn)
 
-        # Принудительно обновляем layout
         self.container.do_layout()
-
         logger.info(f"⚡ Мгновенное обновление заголовка: {title}")

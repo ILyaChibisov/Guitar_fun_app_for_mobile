@@ -24,14 +24,13 @@ from kivy.utils import platform
 
 from config.theme import theme
 from config.logger_config import screen_logger
-from config.layout_config import layout_config  # ← ИСПОЛЬЗУЕМ layout_config
+from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height, get_status_bar_height
 from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
 from api.client import api
 from utils.notifications import notify
 from utils.screen_state import screen_state
-# Импорт для подсветки аккордов
 from utils.chord_highlighter import (
     ChordTextLabel,
     highlight_chords_in_text,
@@ -71,8 +70,8 @@ def clean_text(text):
         '&#187;': '»', '&#169;': '©', '&#174;': '®', '&#8364;': '€',
         '&#8470;': '№', '&#8211;': '–', '&#8212;': '—', '&#8216;': "'",
         '&#8217;': "'", '&#8220;': '"', '&#8221;': '"', '&#8230;': '…',
-        '&#35;': '#',  # решётка
-        '%23': '#',  # решётка URL encoded
+        '&#35;': '#',
+        '%23': '#',
     }
     for entity, char in html_entities.items():
         temp_text = temp_text.replace(entity, char)
@@ -279,6 +278,10 @@ class SongDetailScreen(BaseScreen):
         self.panel_container = None
         self.current_panel_type = 'main'
 
+        # ============ НОВЫЕ ЭЛЕМЕНТЫ ДЛЯ ЗАГОЛОВКА НА ЭКРАНЕ ============
+        self.song_header_label = None  # Артист — Название песни
+        self.song_header_container = None  # Контейнер для заголовка
+
         self.init_ui()
         self.load_background()
 
@@ -361,17 +364,22 @@ class SongDetailScreen(BaseScreen):
             self.theme_btn.icon = "weather-night"
             self.theme_btn.icon_color = [0.3, 0.3, 0.3, 1]
 
+    def _update_song_header(self, artist=None, title=None):
+        """Обновляет заголовок на экране: Артист — Название песни"""
+        artist_name = artist if artist is not None else self.song_artist
+        song_title = title if title is not None else self.song_title
+
+        if artist_name and song_title:
+            self.song_header_label.text = f"{artist_name} — {song_title}"
+        elif song_title:
+            self.song_header_label.text = song_title
+        else:
+            self.song_header_label.text = "Подбор"
+
+        logger.info(f"✅ Заголовок на экране обновлён: {self.song_header_label.text}")
+
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
-
-        # ============ ДИАГНОСТИКА ============
-        nav_bar_height = get_navigation_bar_height()
-        logger.info("=" * 70)
-        logger.info("🔍 ДИАГНОСТИКА ОТСТУПОВ SongDetailScreen")
-        logger.info(f"📱 Платформа: {platform}")
-        logger.info(f"📊 nav_bar_height: {nav_bar_height}dp")
-        logger.info(f"📊 layout_config.get_bottom_padding(): {layout_config.get_bottom_padding()}dp")
-        logger.info("=" * 70)
 
         # ============ ОТСТУП ПОД TOPNAV ============
         top_padding_for_nav = layout_config.get_top_padding()
@@ -386,14 +394,8 @@ class SongDetailScreen(BaseScreen):
         main_container.add_widget(self._top_spacer_song)
 
         # ============ РАСЧЁТ ДОСТУПНОЙ ВЫСОТЫ ДЛЯ КОНТЕНТА ============
-        # Получаем высоту BottomNav из layout_config
         bottom_nav_total = layout_config.get_bottom_nav_total_height()
-
-        # Отступ снизу = полная высота BottomNav (чтобы контент прилегал к верхней границе)
         bottom_padding_for_card = bottom_nav_total
-
-        logger.info(f"🔧 bottom_nav_total: {bottom_nav_total}dp")
-        logger.info(f"🔧 bottom_padding_for_card: {bottom_padding_for_card}dp")
 
         # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧКИ ============
         card_container = MDBoxLayout(
@@ -422,6 +424,40 @@ class SongDetailScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
         self.song_card.add_widget(self.top_divider)
+
+        # ============ ЗАГОЛОВОК НА ЭКРАНЕ (Артист — Название) ============
+        self.song_header_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            padding=[dp(16), dp(8), dp(16), dp(8)],
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        self.song_header_label = MDLabel(
+            text="",
+            font_size=sp(18),
+            halign="center",
+            bold=True,
+            size_hint_y=None,
+            height=dp(36),
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.95],
+            shorten=True,
+            shorten_from="right"
+        )
+
+        self.song_header_container.add_widget(self.song_header_label)
+        self.song_card.add_widget(self.song_header_container)
+
+        # ============ РАЗДЕЛИТЕЛЬ ПОД ЗАГОЛОВКОМ ============
+        header_divider = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(1),
+            md_bg_color=[1, 1, 1, 0.1],
+            padding=[dp(16), 0, dp(16), 0]
+        )
+        self.song_card.add_widget(header_divider)
 
         # ============ ПАНЕЛЬ-КОНТЕЙНЕР ============
         self.panel_container = MDCard(
@@ -503,8 +539,6 @@ class SongDetailScreen(BaseScreen):
         card_container.add_widget(self.song_card)
         main_container.add_widget(card_container)
 
-        # ============ НЕТ ДОПОЛНИТЕЛЬНЫХ СПЕЙСЕРОВ! ============
-
         self.add_widget(main_container)
 
         if hasattr(self, '_top_spacer') and self._top_spacer:
@@ -520,18 +554,13 @@ class SongDetailScreen(BaseScreen):
         Clock.schedule_once(lambda dt: self._update_card_size(), 0.3)
 
         logger.info(f"SongDetailScreen: init_ui completed")
-        logger.info(f"  top_padding={top_padding_for_nav}dp")
-        logger.info(f"  bottom_padding_for_card={bottom_padding_for_card}dp")
-        logger.info("=" * 70)
 
     def _update_card_size(self, *args):
         """Принудительно обновляет размеры карточки"""
         if hasattr(self, 'song_card') and self.song_card:
-            # Принудительно пересчитываем layout
             self.song_card.size_hint = (1, 1)
             self.song_card.height = self.height - self._top_spacer_song.height
             self.song_card.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-            logger.info(f"🔧 _update_card_size: song_card.height={self.song_card.height}dp")
 
     # ==================== МЕТОДЫ СОЗДАНИЯ ПАНЕЛЕЙ ====================
 
@@ -1905,7 +1934,7 @@ class SongDetailScreen(BaseScreen):
             song_id=self.song_id,
             on_success=self.on_song_loaded,
             on_failure=self.on_load_failed,
-            force_refresh=False  # ← используем кэш
+            force_refresh=False
         )
 
     def refresh_song(self):
@@ -1915,7 +1944,7 @@ class SongDetailScreen(BaseScreen):
             song_id=self.song_id,
             on_success=self.on_song_loaded,
             on_failure=self.on_load_failed,
-            force_refresh=True  # ← игнорируем кэш
+            force_refresh=True
         )
 
     def show_loading(self):
@@ -1943,6 +1972,7 @@ class SongDetailScreen(BaseScreen):
         if not self.tabs and data.get('content'):
             self.tabs = [{'content': data.get('content', '')}]
         self.current_tab_index = 0
+
         if self.tabs:
             raw_content = self.tabs[0].get('content', 'Текст не загружен')
             cleaned = clean_text(raw_content)
@@ -1955,27 +1985,22 @@ class SongDetailScreen(BaseScreen):
 
         self.is_liked = data.get('is_liked', False)
 
-        # ============ ПРОВЕРЯЕМ ИЗБРАННОЕ ИЗ КЭША ============
-        # 1. Сначала проверяем через API кэш
+        # Проверяем избранное из кэша
         self.is_favorite = api.is_song_favorited(self.song_id)
-
-        # 2. Если в кэше нет, используем данные с сервера
         if not self.is_favorite:
             self.is_favorite = data.get('is_favorite', False)
 
-        # 3. Если песня открыта из избранного (previous_screen == 'favorites')
-        # и is_favorite == False, значит песня уже удалена из избранного
-        # но мы все еще на экране - показываем правильное состояние
         if self.previous_screen == 'favorites' and not self.is_favorite:
             logger.info(f"⚠️ Песня {self.song_id} удалена из избранного, обновляем иконку")
 
         self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
         self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
-        logger.info(
-            f"⭐ Песня {self.song_id} в избранном: {self.is_favorite} (из кэша: {api.is_song_favorited(self.song_id)})")
+        logger.info(f"⭐ Песня {self.song_id} в избранном: {self.is_favorite}")
 
-        self.update_top_nav_title()
+        # ============ ОБНОВЛЯЕМ ЗАГОЛОВОК НА ЭКРАНЕ ============
+        # TopNav обновляется через _on_screen_changed, НЕ вызываем _update_top_nav()
+        self._update_song_header(artist, title)
 
         self.hide_loading()
         logger.info(f"Песня загружена, подборов: {len(self.tabs)}")
@@ -2017,11 +2042,9 @@ class SongDetailScreen(BaseScreen):
             return
 
         if self.is_favorite:
-            # Удаляем из избранного
             def on_success(result):
                 self.is_favorite = False
                 self.favorite_btn.icon = "star-outline"
-                # ✅ Принудительно обновляем состояние избранного в API
                 api._clear_favorites_cache()
                 notify.success("Удалено из избранного")
                 self._refresh_favorites_screen()
@@ -2031,13 +2054,10 @@ class SongDetailScreen(BaseScreen):
 
             api.remove_from_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
         else:
-            # Добавляем в избранное
             def on_success(result):
                 self.is_favorite = True
                 self.favorite_btn.icon = "star"
-                # ✅ Принудительно обновляем состояние избранного в API
                 api._clear_favorites_cache()
-                # ✅ Закэшируем текст песни
                 self._cache_song_for_offline()
                 notify.success("Добавлено в избранное")
                 self._refresh_favorites_screen()
@@ -2051,7 +2071,6 @@ class SongDetailScreen(BaseScreen):
         """Закэширует текущую песню для офлайн-доступа"""
         try:
             import threading
-            # Сохраняем текущие данные песни в кэш
             if self.song_id and self.tabs:
                 data = {
                     'artist': self.song_artist,
@@ -2077,6 +2096,12 @@ class SongDetailScreen(BaseScreen):
         logger.info("🔙 Нажата кнопка возврата")
         logger.info(f"   📌 previous_screen = {self.previous_screen}")
 
+        # БЛОКИРУЕМ ПОВТОРНЫЙ ВЫЗОВ
+        if hasattr(self, '_going_back') and self._going_back:
+            logger.info("⏭️ Уже выполняется возврат, пропускаем")
+            return
+        self._going_back = True
+
         if self.is_tonality_mode:
             self.cancel_tonality()
         if self.is_font_mode:
@@ -2087,10 +2112,10 @@ class SongDetailScreen(BaseScreen):
             self.close_chords_section()
 
         if self.manager:
-            # Если возвращаемся на artist_songs — обновляем состояние
+            # ============ ВОЗВРАТ В ARTIST_SONGS ============
             if self.previous_screen == 'artist_songs':
                 if self.manager.has_screen('artist_songs'):
-                    # Восстанавливаем состояние
+                    # Восстанавливаем данные
                     artist_data = screen_state.get_artist_songs_data()
                     artist_name = artist_data.get('artist_name', '')
                     scroll_pos = artist_data.get('scroll_position', 1.0)
@@ -2098,27 +2123,43 @@ class SongDetailScreen(BaseScreen):
                     artist_screen = self.manager.get_screen('artist_songs')
                     if artist_name:
                         artist_screen.artist_name = artist_name
-                        artist_screen.artist_title.text = artist_name
                         artist_screen._saved_scroll_position = scroll_pos
-                        # Перезагружаем песни, чтобы обновить состояние
-                        Clock.schedule_once(lambda dt: artist_screen._load_songs(), 0.1)
 
-            # Если возвращаемся на favorites — обновляем список
+                        # НЕ ПЕРЕЗАГРУЖАЕМ ПЕСНИ ЗАНОВО!
+                        # Просто обновляем заголовки и показываем то, что уже есть
+                        artist_screen._update_artist_header(artist_name, len(artist_screen._artist_songs))
+
+                        # Переходим
+                        self.manager.current = 'artist_songs'
+                        logger.info(f"✅ Возврат на artist_songs: {artist_name}")
+
+                        # Разблокируем через 0.5 секунды
+                        Clock.schedule_once(lambda dt: setattr(self, '_going_back', False), 0.5)
+                        return
+
+            # ============ ВОЗВРАТ В FAVORITES ============
             if self.previous_screen == 'favorites':
                 if self.manager.has_screen('favorites'):
                     fav_screen = self.manager.get_screen('favorites')
                     if hasattr(fav_screen, 'refresh_favorites'):
                         Clock.schedule_once(lambda dt: fav_screen.refresh_favorites(), 0.3)
+                    self.manager.current = 'favorites'
+                    logger.info("✅ Возврат на favorites")
+                    Clock.schedule_once(lambda dt: setattr(self, '_going_back', False), 0.5)
+                    return
 
+            # ============ ОБЫЧНЫЙ ВОЗВРАТ ============
             screen_state.clear_pending_chord()
 
-            # Возвращаемся на предыдущий экран
             if self.previous_screen and self.manager.has_screen(self.previous_screen):
                 self.manager.current = self.previous_screen
                 logger.info(f"✅ Возврат на {self.previous_screen}")
             else:
                 self.manager.current = 'home'
                 logger.info("✅ Возврат на home (по умолчанию)")
+
+        # Разблокируем через 0.5 секунды
+        Clock.schedule_once(lambda dt: setattr(self, '_going_back', False), 0.5)
 
     def on_size(self, *args):
         """Вызывается при изменении размера экрана (поворот и т.д.)"""
@@ -2131,26 +2172,26 @@ class SongDetailScreen(BaseScreen):
         if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
             Clock.schedule_once(self._wait_for_ready_and_scroll, 0.3)
 
-        # screens/song_detail_screen.py - исправленный метод on_enter
-
     def on_enter(self):
         """При входе на экран"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Убираем _show_back_button()
-            # app.top_nav._show_back_button()
+            # Настраиваем левую кнопку - стрелка назад
+            if hasattr(app.top_nav, 'left_container'):
+                app.top_nav.left_container.clear_widgets()
+                app.top_nav.left_container.add_widget(app.top_nav.back_btn)
+                app.top_nav.back_btn.on_release = self.go_back
 
-            if self.song_title:
-                self.update_top_nav_title()
-            else:
-                app.top_nav.set_custom_title("Подбор")
+            # Восстанавливаем правые кнопки - иконка домой
+            if hasattr(app.top_nav, 'right_container'):
+                if hasattr(app.top_nav, 'home_btn'):
+                    app.top_nav.right_container.clear_widgets()
+                    app.top_nav.right_container.add_widget(app.top_nav.home_btn)
 
-        if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
-            for delay in [0.2, 0.4, 0.6, 0.9, 1.2, 1.8, 2.5]:
-                Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
-                scroll_delay = delay + 0.1
-                Clock.schedule_once(lambda dt, d=scroll_delay: setattr(self.content_scroll, 'scroll_y', 1.0),
-                                    scroll_delay)
+        # ============ ОБНОВЛЯЕМ ЗАГОЛОВОК НА ЭКРАНЕ ============
+        # TopNav уже обновлён через _on_screen_changed
+        if self.song_artist or self.song_title:
+            self._update_song_header()
 
         if hasattr(self, '_top_spacer_song'):
             top_padding = layout_config.get_top_padding()
@@ -2173,51 +2214,8 @@ class SongDetailScreen(BaseScreen):
             self.close_chords_section()
 
     def update_top_nav_title(self):
-        """Обновляет заголовок в топ нав с названием песни и артистом"""
-        app = MDApp.get_running_app()
-        if not app or not hasattr(app, 'top_nav'):
-            return
-
-        from kivymd.uix.boxlayout import MDBoxLayout
-        from kivymd.uix.label import MDLabel
-        from kivy.metrics import sp, dp
-
-        title_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            spacing=dp(2),
-            padding=[dp(8), dp(4), dp(8), dp(4)]
-        )
-
-        song_name = self.song_title if self.song_title else "Подбор"
-        song_title_label = MDLabel(
-            text=song_name,
-            font_size=sp(18),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True,
-            shorten=True,
-            shorten_from="right"
-        )
-
-        artist_name = self.song_artist if self.song_artist else ""
-        artist_label = MDLabel(
-            text=artist_name,
-            font_size=sp(12),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[0.9, 0.9, 0.9, 0.8],
-            shorten=True,
-            shorten_from="right"
-        )
-
-        title_container.add_widget(song_title_label)
-        title_container.add_widget(artist_label)
-
-        app.top_nav.set_custom_title_widget(title_container)
+        """УСТАРЕЛО — больше не используется, оставлено для совместимости"""
+        pass
 
     # ==================== ПРОКРУТКА ТЕКСТА ====================
 

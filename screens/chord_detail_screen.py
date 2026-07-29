@@ -1733,11 +1733,5 @@ class ChordDetailScreen(BaseScreen):
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
 
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.clear_custom_title_widget()
-            if hasattr(app.top_nav, '_update_right_buttons'):
-                app.top_nav._update_right_buttons('search')
-
     def on_size(self, *args):
         Clock.schedule_once(self._update_griff_size, 0.05)

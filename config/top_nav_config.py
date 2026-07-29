@@ -134,13 +134,13 @@ class TopNavConfig:
 
         # ============ ЭКРАНЫ ДЕТАЛЬНОГО ПРОСМОТРА ============
         'song_detail': {
-            'title': '',  # Динамический (название песни)
-            'title_type': TITLE_TYPE_CUSTOM,
+            'title': 'Подбор',
+            'title_type': TITLE_TYPE_STATIC,
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
             'custom_back_callback': 'go_back',
-            'custom_title_widget': 'vertical',  # Исполнитель + Название
+            'custom_title_widget': None,
         },
 
         'favorite_detail': {
@@ -205,13 +205,13 @@ class TopNavConfig:
 
         # ============ ЭКРАНЫ СПИСКОВ ============
         'artist_songs': {
-            'title': '',  # Динамический (исполнитель)
-            'title_type': TITLE_TYPE_CUSTOM,
+            'title': 'Песни исполнителя',
+            'title_type': TITLE_TYPE_STATIC,
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
             'custom_back_callback': 'go_back',
-            'custom_title_widget': 'vertical',
+            'custom_title_widget': None,
         },
 
         # ============ ЭКРАНЫ ЗАДАЧ ============

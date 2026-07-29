@@ -1343,8 +1343,6 @@ class SongsScreen(BaseScreen):
             self.songs_menu.set_current_letter(letter)
         self._load_artists(letter)
 
-    # screens/songs_screen.py - исправленный on_artist_selected
-
     def on_artist_selected(self, artist, songs_count):
         """Обработчик выбора исполнителя - переход на экран песен исполнителя"""
         logger.info(f"Выбран исполнитель: {artist}")
@@ -1357,7 +1355,7 @@ class SongsScreen(BaseScreen):
         # Сохраняем состояние SongsScreen
         self.save_current_state()
 
-        # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ songs
+        # Сохраняем, что пришли из songs
         screen_state.set_previous_screen('songs')
 
         # Сохраняем данные для ArtistSongsScreen
@@ -1367,7 +1365,21 @@ class SongsScreen(BaseScreen):
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('artist_songs'):
                 artist_songs_screen = self.manager.get_screen('artist_songs')
-                artist_songs_screen.set_artist(artist)
+                # Устанавливаем исполнителя (без лишних обновлений TopNav)
+                artist_songs_screen.artist_name = artist
+                artist_songs_screen._total_songs = 0
+                artist_songs_screen._page = 0
+                artist_songs_screen._artist_songs = []
+                artist_songs_screen._has_more = True
+                artist_songs_screen._is_loading_more = False
+                artist_songs_screen._is_loading = False
+
+                # Обновляем заголовок на экране
+                artist_songs_screen._update_artist_header(artist, 0)
+
+                # Загружаем песни
+                artist_songs_screen._load_artist_songs(artist)
+
                 self.manager.current = 'artist_songs'
 
     def do_search(self, query):
@@ -1449,10 +1461,6 @@ class SongsScreen(BaseScreen):
 
     def on_item_selected(self, item_type, *args):
         pass
-
-    # screens/songs_screen.py - изменить on_song_selected
-
-    # screens/songs_screen.py - исправленный on_song_selected
 
     def on_song_selected(self, song_id, title):
         """Обработчик выбора песни из поиска - переход на search_detail"""
@@ -1584,6 +1592,12 @@ class SongsScreen(BaseScreen):
         logger.info("=" * 50)
         logger.info("📂 ВОССТАНОВЛЕНИЕ СОСТОЯНИЯ SongsScreen")
 
+        # ============ ПРОВЕРКА: МЫ НА songs? ============
+        if self.manager and self.manager.current != 'songs':
+            logger.info(f"⏭️ Пропускаем восстановление: текущий экран {self.manager.current}, не songs")
+            logger.info("=" * 50)
+            return False
+
         state = screen_state.get_screen_state('songs', max_age=300)
 
         if not state:
@@ -1637,6 +1651,9 @@ class SongsScreen(BaseScreen):
                 self._show_hint("Поиск исполнителей по алфавиту")
                 self._hide_result_label()
 
+            # ============ НЕ ОБНОВЛЯЕМ TOPNAV ЗДЕСЬ ============
+            # TopNav сам обновится через _on_screen_changed при переходе на songs
+
             self._is_restoring = False
             logger.info("✅ Восстановление завершено")
             logger.info("=" * 50)
@@ -1665,12 +1682,8 @@ class SongsScreen(BaseScreen):
     def on_enter(self):
         logger.info("🚪 Вход в экран песен")
 
-        try:
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'top_nav'):
-                app.top_nav.set_custom_title("Песни")
-        except Exception as e:
-            logger.error(f"Ошибка обновления TopNav: {e}")
+        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ЗДЕСЬ ============
+        # TopNav обновится через _on_screen_changed
 
         restored = self.restore_state()
         logger.info(f"📊 Результат восстановления: {restored}")
@@ -1694,6 +1707,9 @@ class SongsScreen(BaseScreen):
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
+
+        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ЗДЕСЬ ============
+        # TopNav обновится через _on_screen_changed
 
         logger.info("=" * 50)
 
