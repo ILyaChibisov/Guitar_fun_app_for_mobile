@@ -1715,7 +1715,6 @@ class TunerScreen(BaseScreen):
         logger.info("Вход в экран тюнера")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            app.top_nav.force_update_title("Тюнер", show_back=True)
             app.top_nav.set_custom_back_callback(self.go_back)
 
     def go_back(self, instance=None):
@@ -1729,13 +1728,14 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
 
+
     def on_leave(self):
         logger.info("Выход из экрана тюнера")
         if self.is_listening:
             self.toggle_tuner(None)
         self._stop_audio_thread()
         self._hide_hint()
+
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            app.top_nav.clear_custom_title_widget()
-            app.top_nav.update_title('home')
+            app.top_nav.clear_custom_back_callback()

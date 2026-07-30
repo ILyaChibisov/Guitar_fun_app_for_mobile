@@ -284,63 +284,52 @@ class TopNav(MDCard):
         """Удаляет кастомный callback"""
         self._custom_back_callback = None
 
+
     def _update_left_button(self, screen_name: str):
-        """Обновляет левую кнопку согласно конфигу"""
-        import traceback
-
-        # ============ ТРАССИРОВКА ============
-        logger.info(f"🔍 _update_left_button вызван для {screen_name}")
-        logger.info(f"   Текущий экран: {self.current_screen_name}")
-        logger.info(f"   Стек вызовов:")
-        stack = traceback.format_stack()[-8:-1]
-        for line in stack:
-            line = line.strip()
-            if len(line) > 150:
-                line = line[:150] + "..."
-            logger.info(f"     {line}")
-        # =====================================
-
         self.left_container.clear_widgets()
 
-        left_type = top_nav_config.get_left_button(screen_name)
+        # СПИСОК ЭКРАНОВ, ГДЕ ВСЕГДА БУРГЕР
+        nav_screens_with_hamburger = [
+            'songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary',
+            'profile', 'settings', 'help', 'promo', 'feedback',
+            'admin'
+        ]
 
-        logger.info(f"🔧 _update_left_button для экрана: {screen_name} → {left_type}")
-
-        if left_type == top_nav_config.LEFT_BUTTON_BACK:
-            self.left_container.add_widget(self.back_btn)
-        elif left_type == top_nav_config.LEFT_BUTTON_HAMBURGER:
+        if screen_name in nav_screens_with_hamburger:
             self.left_container.add_widget(self.settings_btn)
+            logger.info(f"🔧 Для {screen_name} установлена кнопка HAMBURGER")
         else:
-            pass
+            left_type = top_nav_config.get_left_button(screen_name)
+            logger.info(f"🔧 _update_left_button для экрана: {screen_name} → {left_type}")
+
+            if left_type == top_nav_config.LEFT_BUTTON_BACK:
+                self.left_container.add_widget(self.back_btn)
+            elif left_type == top_nav_config.LEFT_BUTTON_HAMBURGER:
+                self.left_container.add_widget(self.settings_btn)
+            else:
+                pass
 
     def _update_right_buttons(self, screen_name: str):
         """Обновляет правую кнопку согласно конфигу"""
-        import traceback
-
-        # ============ ТРАССИРОВКА ============
-        logger.info(f"🔍 _update_right_buttons вызван для {screen_name}")
-        logger.info(f"   Текущий экран: {self.current_screen_name}")
-        logger.info(f"   Стек вызовов:")
-        stack = traceback.format_stack()[-8:-1]
-        for line in stack:
-            line = line.strip()
-            if len(line) > 150:
-                line = line[:150] + "..."
-            logger.info(f"     {line}")
-        # =====================================
-
         self.right_container.clear_widgets()
 
-        right_type = top_nav_config.get_right_button(screen_name)
+        # СПИСОК ЭКРАНОВ, ГДЕ ВСЕГДА ДОМИК
+        nav_screens_with_home = ['songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary']
 
-        logger.info(f"🔧 _update_right_buttons для экрана: {screen_name} → {right_type}")
-
-        if right_type == top_nav_config.RIGHT_BUTTON_SEARCH:
-            self.right_container.add_widget(self.search_btn)
-        elif right_type == top_nav_config.RIGHT_BUTTON_HOME:
+        if screen_name in nav_screens_with_home:
+            # Для этих экранов всегда показываем домик
             self.right_container.add_widget(self.home_btn)
+            logger.info(f"🔧 Для {screen_name} установлена кнопка HOME")
         else:
-            pass
+            right_type = top_nav_config.get_right_button(screen_name)
+            logger.info(f"🔧 _update_right_buttons для экрана: {screen_name} → {right_type}")
+
+            if right_type == top_nav_config.RIGHT_BUTTON_SEARCH:
+                self.right_container.add_widget(self.search_btn)
+            elif right_type == top_nav_config.RIGHT_BUTTON_HOME:
+                self.right_container.add_widget(self.home_btn)
+            else:
+                pass
 
     def _set_artist_songs_mode(self):
         """Принудительно устанавливает режим для artist_songs"""
@@ -383,6 +372,7 @@ class TopNav(MDCard):
             logger.debug(f"⏭️ Экран не изменился: {screen_name}, пропускаем")
             return
 
+        # ✅ Сначала обновляем текущий экран
         self.current_screen_name = screen_name
         logger.info(f"🔄 _on_screen_changed: {old} → {screen_name}")
 

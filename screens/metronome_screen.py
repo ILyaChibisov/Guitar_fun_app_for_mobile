@@ -1278,6 +1278,7 @@ class MetronomeScreen(BaseScreen):
 
             self.tick_count = (self.tick_count + 1) % self.beats_per_measure
 
+
     def on_enter(self):
         logger.info("Вход в экран метронома")
         self._update_indicators(self.beats_per_measure)

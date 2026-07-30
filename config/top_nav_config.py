@@ -65,7 +65,7 @@ class TopNavConfig:
         'tuner': {
             'title': 'Тюнер',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
             'custom_back_callback': 'go_back',
@@ -85,7 +85,7 @@ class TopNavConfig:
         'favorites': {
             'title': 'Избранное',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
             'custom_back_callback': 'go_back',
@@ -95,10 +95,10 @@ class TopNavConfig:
         'profile': {
             'title': 'Профиль',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'show_back_button': False,
+            'custom_back_callback': None,
             'custom_title_widget': None,
         },
 
@@ -113,19 +113,19 @@ class TopNavConfig:
         },
 
         'admin': {
-            'title': 'Админ панель',
+            'title': 'Админка',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'show_back_button': False,
+            'custom_back_callback': None,
             'custom_title_widget': None,
         },
 
         'search': {
             'title': 'Поиск',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
             'custom_back_callback': 'go_back',
@@ -134,13 +134,13 @@ class TopNavConfig:
 
         # ============ ЭКРАНЫ ДЕТАЛЬНОГО ПРОСМОТРА ============
         'song_detail': {
-            'title': 'Подбор',
-            'title_type': TITLE_TYPE_STATIC,
+            'title': '',
+            'title_type': TITLE_TYPE_CUSTOM,
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
             'custom_back_callback': 'go_back',
-            'custom_title_widget': None,
+            'custom_title_widget': 'vertical',
         },
 
         'favorite_detail': {
@@ -205,13 +205,13 @@ class TopNavConfig:
 
         # ============ ЭКРАНЫ СПИСКОВ ============
         'artist_songs': {
-            'title': 'Песни исполнителя',
-            'title_type': TITLE_TYPE_STATIC,
+            'title': '',
+            'title_type': TITLE_TYPE_CUSTOM,
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
             'custom_back_callback': 'go_back',
-            'custom_title_widget': None,
+            'custom_title_widget': 'vertical',
         },
 
         # ============ ЭКРАНЫ ЗАДАЧ ============
@@ -239,40 +239,40 @@ class TopNavConfig:
         'settings': {
             'title': 'Настройки',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,  # ← БЫЛО BACK, СТАЛО HAMBURGER
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'show_back_button': False,  # ← БЫЛО True, СТАЛО False
+            'custom_back_callback': None,
             'custom_title_widget': None,
         },
 
         'help': {
             'title': 'Помощь',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,  # ← БЫЛО BACK, СТАЛО HAMBURGER
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'show_back_button': False,  # ← БЫЛО True, СТАЛО False
+            'custom_back_callback': None,
             'custom_title_widget': None,
         },
 
         'promo': {
             'title': 'Промокод',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,  # ← БЫЛО BACK, СТАЛО HAMBURGER
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'show_back_button': False,  # ← БЫЛО True, СТАЛО False
+            'custom_back_callback': None,
             'custom_title_widget': None,
         },
 
         'feedback': {
             'title': 'Обратная связь',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
+            'left_button': LEFT_BUTTON_HAMBURGER,  # ← БЫЛО BACK, СТАЛО HAMBURGER
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'show_back_button': False,  # ← БЫЛО True, СТАЛО False
+            'custom_back_callback': None,
             'custom_title_widget': None,
         },
 

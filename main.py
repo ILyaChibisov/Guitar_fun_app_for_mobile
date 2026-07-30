@@ -530,7 +530,7 @@ class GuitarFunsApp(MDApp):
         self.top_nav.update_title('home')
         self.top_nav._update_left_button('home')
         self.top_nav._update_right_buttons('home')
-        self.top_nav.settings_btn.on_release = self._on_settings_press
+        #self.top_nav.settings_btn.on_release = self._on_settings_press
 
         # BottomNav
         self.bottom_nav = BottomNav(self.screen_manager)
@@ -600,12 +600,6 @@ class GuitarFunsApp(MDApp):
     def _on_settings_press(self, *args):
         """Обработчик нажатия на иконку настроек (шестерёнка) - открывает Sidebar"""
         logger.info("⚙️ Нажата иконка настроек → открываем Sidebar")
-        if hasattr(self, 'sidebar') and self.sidebar:
-            logger.info(f"   Sidebar exists, is_open={self.sidebar.is_open}")
-            self.sidebar.toggle()
-            logger.info(f"   После toggle, is_open={self.sidebar.is_open}")
-        else:
-            logger.error("❌ Sidebar не найден!")
 
     def on_window_resize(self, window, width, height):
         from config.layout_config import layout_config
