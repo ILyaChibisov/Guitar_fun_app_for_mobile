@@ -1788,23 +1788,21 @@ class SearchDetailScreen(BaseScreen):
         return f"{rounded:.1f}x"
 
     def go_back(self, instance=None):
-        """Возврат ТОЛЬКО в SongsScreen с сохранением результатов поиска"""
-        logger.info(f"🔙 Возврат из поискового просмотра в SongsScreen")
+        logger.info(f"🔙 Возврат из общего поиска в SearchScreen")
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.clear_custom_title_widget()
             if hasattr(app.top_nav, '_update_right_buttons'):
-                app.top_nav._update_right_buttons('songs')
+                app.top_nav._update_right_buttons('search')
 
-        if self.manager and self.manager.has_screen('songs'):
-            songs_screen = self.manager.get_screen('songs')
-            Clock.schedule_once(lambda dt: songs_screen.restore_state(), 0.1)
-            self.manager.current = 'songs'
-            logger.info("✅ Возврат на SongsScreen")
+        if self.manager and self.manager.has_screen('search'):
+            # ✅ Просто переключаем, без таймеров
+            self.manager.current = 'search'
+            logger.info("✅ Возврат на SearchScreen")
         else:
             self.manager.current = 'home'
-            logger.info("⚠️ SongsScreen не найден, возврат на home")
+            logger.info("⚠️ SearchScreen не найден, возврат на home")
 
     def on_enter(self):
         app = MDApp.get_running_app()
@@ -1833,10 +1831,4 @@ class SearchDetailScreen(BaseScreen):
             self._top_spacer_song.height = top_padding
 
     def on_leave(self):
-        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ============
-        # app = MDApp.get_running_app()
-        # if app and hasattr(app, 'top_nav'):
-        #     app.top_nav.clear_custom_title_widget()
-        #     if hasattr(app.top_nav, '_update_right_buttons'):
-        #         app.top_nav._update_right_buttons('songs')
         pass

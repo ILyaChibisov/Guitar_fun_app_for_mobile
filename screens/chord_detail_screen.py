@@ -1686,9 +1686,9 @@ class ChordDetailScreen(BaseScreen):
         self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.1)
 
     def go_back(self, instance=None):
-        """Возврат ТОЛЬКО в SearchScreen"""
         logger.info("🔙 Возврат из ChordDetail в SearchScreen")
 
+        # Очищаем pending chord
         screen_state.clear_pending_chord()
 
         app = MDApp.get_running_app()
@@ -1699,6 +1699,8 @@ class ChordDetailScreen(BaseScreen):
 
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('search'):
+                # ❌ НЕ вызывать здесь self.manager.current = 'search'
+                # Это должно происходить через TopNav
                 self.manager.current = 'search'
                 logger.info("✅ Возврат на SearchScreen")
             else:
@@ -1708,13 +1710,17 @@ class ChordDetailScreen(BaseScreen):
     def on_enter(self):
         logger.info("🚪 Вход в ChordDetailScreen")
 
-        Clock.schedule_once(self._update_griff_size, 0.1)
-        Clock.schedule_once(self._update_griff_size, 0.3)
+        # ❌ Убираем Clock.schedule_once
+        # Clock.schedule_once(self._update_griff_size, 0.1)
+        # Clock.schedule_once(self._update_griff_size, 0.3)
+        self._update_griff_size()
 
         pending_chord = screen_state.get_pending_chord()
         if pending_chord:
             logger.info(f"🎸 Есть ожидающий аккорд: {pending_chord}")
-            Clock.schedule_once(lambda dt: self.select_chord_by_name(pending_chord), 0.1)
+            # ❌ Убираем Clock.schedule_once
+            # Clock.schedule_once(lambda dt: self.select_chord_by_name(pending_chord), 0.1)
+            self.select_chord_by_name(pending_chord)
             screen_state.clear_pending_chord()
 
         app = MDApp.get_running_app()

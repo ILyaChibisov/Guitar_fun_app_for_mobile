@@ -519,6 +519,8 @@ class SearchTermDetailScreen(BaseScreen):
             lines.pop()
         return '\n'.join(lines)
 
+    # screens/search_term_detail_screen.py
+
     def set_term(self, term_name, term_data):
         """Устанавливает термин для отображения"""
         self._reset_to_defaults()
@@ -536,9 +538,7 @@ class SearchTermDetailScreen(BaseScreen):
         self.content_label.text = description
 
         self._update_top_nav()
-
-        Clock.schedule_once(self._scroll_to_top, 0.1)
-        Clock.schedule_once(self._scroll_to_top, 0.3)
+        self.content_scroll.scroll_y = 1.0
 
     def _scroll_to_top(self, dt):
         if hasattr(self, 'content_scroll'):
@@ -590,11 +590,4 @@ class SearchTermDetailScreen(BaseScreen):
 
     def on_leave(self):
         logger.info("Выход из экрана определения термина из поиска")
-
-        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ============
-        # app = MDApp.get_running_app()
-        # if app and hasattr(app, 'top_nav'):
-        #     app.top_nav.clear_custom_title_widget()
-        #     if hasattr(app.top_nav, '_update_right_buttons'):
-        #         app.top_nav._update_right_buttons('search')
         pass

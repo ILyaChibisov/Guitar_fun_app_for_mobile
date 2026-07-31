@@ -1771,7 +1771,6 @@ class SearchScreenDetail(BaseScreen):
         return f"{rounded:.1f}x"
 
     def go_back(self, instance=None):
-        """Возврат ТОЛЬКО в SearchScreen с сохранением результатов поиска"""
         logger.info(f"🔙 Возврат из общего поиска в SearchScreen")
 
         app = MDApp.get_running_app()
@@ -1782,7 +1781,7 @@ class SearchScreenDetail(BaseScreen):
 
         if self.manager and self.manager.has_screen('search'):
             search_screen = self.manager.get_screen('search')
-            Clock.schedule_once(lambda dt: search_screen.refresh_search(), 0.2)
+            # ✅ Просто переключаем, без таймеров
             self.manager.current = 'search'
             logger.info("✅ Возврат на SearchScreen")
         else:

@@ -461,7 +461,25 @@ class TopNav(MDCard):
         if current in parser_screens:
             logger.info(f"   → Парсер '{current}' возвращает на admin")
             if self.sm.has_screen('admin'):
-                self._block_navigation = True  # Блокируем последующие переходы
+                # ✅ Отменяем ВСЕ запланированные события
+                Clock.unschedule(self._on_screen_changed)
+                Clock.unschedule(self._on_back_press)
+                Clock.unschedule(self._on_home_press)
+                Clock.unschedule(self._on_search_press)
+                # Отменяем любые другие события
+                Clock.unschedule(self._on_settings_press)
+
+                # Также отменяем все события, которые могут быть в экранах
+                # (например, в search_screen_detail)
+                if hasattr(self, 'sm') and self.sm:
+                    for screen in self.sm.screens:
+                        if hasattr(screen, 'go_back'):
+                            # Принудительно отменяем все запланированные в экране
+                            if hasattr(screen, '_hint_timer') and screen._hint_timer:
+                                Clock.unschedule(screen._hint_timer)
+                                screen._hint_timer = None
+
+                self._block_navigation = True
                 self.sm.current = 'admin'
                 Clock.schedule_once(lambda dt: setattr(self, '_block_navigation', False), 0.5)
             else:

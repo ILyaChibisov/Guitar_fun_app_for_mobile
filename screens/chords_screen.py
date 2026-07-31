@@ -1709,20 +1709,11 @@ class ChordsScreen(BaseScreen):
 
     def go_back(self, instance=None):
         logger.info("🔙 Нажата кнопка возврата")
-
-        previous_screen = screen_state.get_previous_screen()
-        logger.info(f"   Сохранённый предыдущий экран: {previous_screen}")
-
-        if previous_screen and self.manager and self.manager.has_screen(previous_screen):
-            screen_state.clear_pending_chord()
-            self.manager.current = previous_screen
-            logger.info(f"✅ Возврат на экран: {previous_screen}")
+        if self.manager and self.manager.has_screen('home'):
+            self.manager.current = 'home'
+            logger.info("✅ Возврат на home")
         else:
-            logger.warning(f"Нет сохранённого предыдущего экрана или он не существует: {previous_screen}")
-            if self.manager and self.manager.has_screen('song_detail'):
-                self.manager.current = 'song_detail'
-            elif self.manager and self.manager.has_screen('home'):
-                self.manager.current = 'home'
+            logger.error("❌ Экран home не найден")
 
     def on_size(self, *args):
         Clock.schedule_once(self._update_griff_size, 0.05)

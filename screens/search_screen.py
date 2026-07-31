@@ -1,4 +1,4 @@
-# screens/search_screen.py - с дизайном поиска как в SongsScreen
+# screens/search_screen.py
 """
 Экран поиска (аккорды, песни и термины)
 С дизайном поисковой строки как в SongsScreen
@@ -327,6 +327,9 @@ class SearchScreen(BaseScreen):
         self._last_results = []
         self._state_restored = False
 
+        # Флаг для предотвращения повторных переходов
+        self._block_transition = False
+
         self.init_ui()
         self.load_background()
 
@@ -443,6 +446,11 @@ class SearchScreen(BaseScreen):
 
     def save_current_state(self):
         """Сохраняет текущее состояние экрана поиска"""
+        # Если блокировка активна — не сохраняем
+        if self._block_transition:
+            logger.info("⏭️ Блокировка перехода активна, не сохраняем состояние")
+            return
+
         logger.info("=" * 50)
         logger.info("💾 СОХРАНЕНИЕ СОСТОЯНИЯ SearchScreen")
 
@@ -479,6 +487,11 @@ class SearchScreen(BaseScreen):
 
     def restore_state(self):
         """Восстанавливает состояние экрана поиска"""
+        # Если блокировка активна — не восстанавливаем
+        if self._block_transition:
+            logger.info("⏭️ Блокировка перехода активна, не восстанавливаем состояние")
+            return False
+
         if self._state_restored:
             logger.info("⏭️ Состояние уже восстановлено, пропускаем")
             return True
@@ -642,6 +655,9 @@ class SearchScreen(BaseScreen):
     def on_enter(self):
         logger.info("🚪 on_enter вызван")
 
+        # Сбрасываем блокировку при входе
+        self._block_transition = False
+
         if not self._state_restored:
             restored = self.restore_state()
             if not restored:
@@ -662,7 +678,9 @@ class SearchScreen(BaseScreen):
 
     def on_pre_leave(self):
         logger.info("🚪 on_pre_leave: сохранение состояния перед выходом")
-        self.save_current_state()
+        # Если блокировка активна — не сохраняем
+        if not self._block_transition:
+            self.save_current_state()
         return super().on_pre_leave()
 
     def on_leave(self):
