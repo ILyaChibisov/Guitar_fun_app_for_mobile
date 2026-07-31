@@ -132,7 +132,7 @@ class SearchBar(MDCard):
         self.line_width = 1.6
 
         self.search_field = MDTextField(
-            hint_text="Поиск песен...",
+            hint_text="Поиск",  # ← ИЗМЕНЕНО
             size_hint_x=1,
             font_size=sp(15),
             height=dp(42),
@@ -188,16 +188,6 @@ class SearchBar(MDCard):
         else:
             self.clear_btn.opacity = 0
             self.clear_btn.disabled = True
-
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
-        if not text.strip():
-            if self.on_clear:
-                self.on_clear()
-        else:
-            self._search_timer = Clock.schedule_once(lambda dt: self._do_search(), 0.5)
 
     def _do_search(self):
         if self.on_search and self.current_query:
@@ -848,6 +838,11 @@ class SongsScreen(BaseScreen):
         self._main_layout = None
         self._menu_container = None
 
+        # ============ ДЛЯ СОХРАНЕНИЯ ПОИСКА ============
+        self._search_query = ""
+        self._search_results = []
+        self._is_search_mode = False
+
         load_shared_icons_sync()
 
         self.init_ui()
@@ -1053,12 +1048,8 @@ class SongsScreen(BaseScreen):
         self.current_artist = None
         self.current_letter = letter
 
-        # Для цифр показываем специальную подсказку
-        if self.current_language == 'digits':
-            display_letter = '#' if letter == '#' else letter
-            self._show_loading(f"Загрузка исполнителей на '{display_letter}'...")
-        else:
-            self._show_loading(f"Загрузка исполнителей на букву '{letter}'...")
+        # ✅ Всегда показываем просто "Загрузка"
+        self._show_loading("Загрузка")
 
         self._hide_result_label()
 
@@ -1396,7 +1387,7 @@ class SongsScreen(BaseScreen):
         self.current_artist = None
         if self.songs_menu:
             self.songs_menu.set_current_letter(None)
-        self._show_loading("Идёт загрузка данных...")
+        self._show_loading("Загрузка")  # ← ИЗМЕНЕНО
         self.recycle_view.clear()
         self.recycle_view.viewclass = 'SearchSongCard'
 
@@ -1434,6 +1425,7 @@ class SongsScreen(BaseScreen):
         else:
             self.recycle_view.set_songs(self.search_results, self.on_song_selected)
             self._show_result_label(f"Найдено песен: {len(self.search_results)}")
+            self._show_hint("Результаты поиска")  # ← ДОБАВЛЕНО
 
     def _on_search_failed(self, req, error):
         """Обработчик ошибки поиска"""
@@ -1471,6 +1463,7 @@ class SongsScreen(BaseScreen):
             return
 
         # Сохраняем состояние поиска
+        self.save_search_state()
         self.save_current_state()
 
         # ✅ СОХРАНЯЕМ, ЧТО ПРИШЛИ ИЗ songs (поиск)
@@ -1587,6 +1580,28 @@ class SongsScreen(BaseScreen):
         screen_state.save_screen_state('songs', state)
         logger.info("=" * 50)
 
+    def save_search_state(self):
+        """Сохраняет состояние поиска перед уходом с экрана"""
+        self._search_query = self.search_bar.current_query if self.search_bar else ""
+        self._search_results = self.search_results
+        self._is_search_mode = self.is_search_mode
+        logger.info(f"💾 Сохранено состояние поиска: query='{self._search_query}', results={len(self._search_results)}")
+
+    def restore_search_state(self):
+        """Восстанавливает состояние поиска при возврате на экран"""
+        if self._is_search_mode and self._search_query:
+            logger.info(f"🔄 Восстанавливаем поиск: query='{self._search_query}'")
+            self.search_bar.search_field.text = self._search_query
+            self.is_search_mode = True
+            self.current_letter = None
+            self.current_artist = None
+            if self.songs_menu:
+                self.songs_menu.set_current_letter(None)
+            self.recycle_view.viewclass = 'SearchSongCard'
+            self.recycle_view.set_songs(self._search_results, self.on_song_selected)
+            self._show_result_label(f"Найдено песен: {len(self._search_results)}")
+            self._show_hint("Результаты поиска")
+
     def restore_state(self):
         """Восстанавливает состояние экрана песен"""
         logger.info("=" * 50)
@@ -1672,6 +1687,9 @@ class SongsScreen(BaseScreen):
     def on_pre_leave(self):
         logger.info("🚪 on_pre_leave: сохранение состояния перед выходом")
 
+        # Сохраняем состояние поиска
+        self.save_search_state()
+
         if self.recycle_view:
             self._temp_scroll_position = self.recycle_view.scroll_y
             logger.info(f"📜 on_pre_leave: позиция скролла: {self._temp_scroll_position:.2f}")
@@ -1685,10 +1703,13 @@ class SongsScreen(BaseScreen):
         # ============ НЕ ОБНОВЛЯЕМ TOPNAV ЗДЕСЬ ============
         # TopNav обновится через _on_screen_changed
 
+        # Восстанавливаем состояние поиска
+        self.restore_search_state()
+
         restored = self.restore_state()
         logger.info(f"📊 Результат восстановления: {restored}")
 
-        if not restored:
+        if not restored and not self._is_search_mode:
             self._show_hint("Поиск исполнителей по алфавиту")
             self._hide_result_label()
             self.recycle_view.clear()

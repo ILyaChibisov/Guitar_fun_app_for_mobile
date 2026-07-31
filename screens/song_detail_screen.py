@@ -1977,8 +1977,14 @@ class SongDetailScreen(BaseScreen):
                         # ✅ Обновляем заголовок в TopNav и количество на экране
                         artist_screen._update_top_nav_title(artist_name)
                         artist_screen._update_count_label(artist_screen._total_songs)
-                        # ❌ НЕ перезагружаем песни — оставляем как есть
-                        # Clock.schedule_once(lambda dt: artist_screen._load_artist_songs(artist_name), 0.1)
+
+            # ✅ Возврат на songs (с восстановлением поиска)
+            if self.previous_screen == 'songs':
+                if self.manager.has_screen('songs'):
+                    songs_screen = self.manager.get_screen('songs')
+                    # Восстанавливаем состояние поиска
+                    Clock.schedule_once(lambda dt: songs_screen.restore_search_state(), 0.1)
+                    logger.info("✅ Восстановлен поиск на SongsScreen")
 
             # ✅ Возврат на другие экраны
             screen_state.clear_pending_chord()

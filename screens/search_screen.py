@@ -129,19 +129,6 @@ class SearchBar(MDCard):
             self.clear_btn.opacity = 0
             self.clear_btn.disabled = True
 
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
-        if not text.strip():
-            if self.on_clear:
-                self.on_clear()
-        else:
-            self._search_timer = Clock.schedule_once(lambda dt: self._do_search(), 0.5)
-
-        if self.on_text_change:
-            self.on_text_change(text)
-
     def _do_search(self):
         if self.on_search and self.current_query:
             text = self.current_query.strip()
