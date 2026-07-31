@@ -1,7 +1,7 @@
 # screens/artist_songs_screen.py
 """
-Экран списка песен исполнителя - с двухстрочным заголовком в TopNav
-с круговым спиннером загрузки по центру
+Экран списка песен исполнителя - с именем в TopNav
+и количеством песен на экране (как в избранном)
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -200,7 +200,7 @@ class SongRecycleView(RecycleView):
 
 
 class ArtistSongsScreen(BaseScreen):
-    """Экран списка песен исполнителя с двухстрочным заголовком в TopNav"""
+    """Экран списка песен исполнителя - с именем в TopNav, количеством на экране"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -224,13 +224,15 @@ class ArtistSongsScreen(BaseScreen):
 
         # UI элементы
         self.recycle_view = None
-        self._result_label = None
         self._hint_timer = None
         self._main_layout = None
         self._top_spacer = None
         self.loading_spinner = None
         self.empty_label = None
         self.bg_image = None
+
+        # Количество песен на экране (как в избранном)
+        self.count_label = None
 
         # Флаг, что экран уже был инициализирован
         self._initialized = False
@@ -281,6 +283,20 @@ class ArtistSongsScreen(BaseScreen):
         self._top_spacer = Widget(size_hint_y=None, height=top_padding)
         main_layout.add_widget(self._top_spacer)
 
+        # ============ КОЛИЧЕСТВО ПЕСЕН НА ЭКРАНЕ (как в избранном) ============
+        self.count_label = MDLabel(
+            text="",
+            font_size=sp(13),
+            halign="center",
+            size_hint_y=None,
+            height=dp(28),
+            theme_text_color="Custom",
+            text_color=[0.46, 0.70, 0.71, 1],
+            opacity=0,
+            bold=True
+        )
+        main_layout.add_widget(self.count_label)
+
         # ============ СПИСОК ПЕСЕН ============
         bottom_padding = layout_config.get_bottom_padding()
 
@@ -299,75 +315,32 @@ class ArtistSongsScreen(BaseScreen):
         self._initialized = True
         logger.info(f"UI построен, bottom_padding={bottom_padding}dp")
 
-    def _create_top_nav_title(self, artist, total):
-        from kivymd.uix.boxlayout import MDBoxLayout
-        from kivymd.uix.label import MDLabel
-        from kivy.metrics import sp, dp
+    def _update_count_label(self, total):
+        """Обновляет лейбл с количеством песен на экране"""
+        if self.count_label:
+            if total == 0:
+                self.count_label.text = "Нет песен"
+            elif total == 1:
+                self.count_label.text = "1 песня"
+            elif 2 <= total <= 4:
+                self.count_label.text = f"{total} песни"
+            else:
+                self.count_label.text = f"{total} песен"
+            self.count_label.opacity = 1
+            logger.info(f"✅ Количество песен обновлено: {total}")
 
-        title_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            spacing=dp(2),
-            padding=[dp(8), dp(4), dp(8), dp(4)]
-        )
-
-        display_name = artist if len(artist) <= 25 else artist[:22] + "..."
-        artist_label = MDLabel(
-            text=display_name,
-            font_size=sp(18),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True,
-            shorten=True,
-            shorten_from="right"
-        )
-
-        count_text = self._get_count_text(total)
-        count_label = MDLabel(
-            text=count_text,
-            font_size=sp(12),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[0.9, 0.9, 0.9, 0.8],
-            shorten=True,
-            shorten_from="right"
-        )
-
-        title_container.add_widget(artist_label)
-        title_container.add_widget(count_label)
-
-        return title_container
-
-    def _get_count_text(self, total):
-        if total == 0:
-            return "Нет песен"
-        elif total == 1:
-            return "1 песня"
-        elif 2 <= total <= 4:
-            return f"{total} песни"
-        else:
-            return f"{total} песен"
-
-    def _update_top_nav_title(self, artist=None, total=None):
-        """Обновляет заголовок в TopNav"""
+    def _update_top_nav_title(self, artist=None):
+        """Обновляет заголовок в TopNav (только имя исполнителя)"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             artist_name = artist if artist is not None else self.artist_name
-            total_count = total if total is not None else self._total_songs
 
             if artist_name:
-                title_container = self._create_top_nav_title(artist_name, total_count)
-                app.top_nav.set_custom_title_widget(title_container)
-                logger.info(f"✅ TopNav обновлён: {artist_name} ({total_count} песен)")
+                display_name = artist_name if len(artist_name) <= 25 else artist_name[:22] + "..."
+                app.top_nav.set_custom_title(display_name)
+                logger.info(f"✅ TopNav обновлён: {display_name}")
             else:
                 logger.warning("⚠️ Не удалось обновить TopNav: artist_name отсутствует")
-
-    def _restore_top_nav(self, *args):
-        if self.artist_name:
-            self._update_top_nav_title(self.artist_name, self._total_songs)
 
     def set_artist(self, artist):
         """Устанавливает исполнителя и загружает песни"""
@@ -381,7 +354,8 @@ class ArtistSongsScreen(BaseScreen):
         self._is_loading_more = False
         self._is_loading = False
 
-        self._update_top_nav_title(artist, 0)
+        self._update_top_nav_title(artist)
+        self._update_count_label(0)
 
         if self.manager and self.manager.current == self.name:
             self._load_artist_songs(artist)
@@ -447,7 +421,8 @@ class ArtistSongsScreen(BaseScreen):
 
         logger.info(f"📄 Первая страница: {len(self._artist_songs)} из {total} песен")
 
-        self._update_top_nav_title(self.artist_name, self._total_songs)
+        self._update_top_nav_title(self.artist_name)
+        self._update_count_label(self._total_songs)
         self._display_songs()
 
         if len(self._artist_songs) >= total:
@@ -465,7 +440,8 @@ class ArtistSongsScreen(BaseScreen):
         if self._total_songs > 0 and len(self._artist_songs) >= self._total_songs:
             self._has_more = False
             self._hide_loading()
-            self._update_top_nav_title(self.artist_name, self._total_songs)
+            self._update_top_nav_title(self.artist_name)
+            self._update_count_label(self._total_songs)
             return
 
         self._is_loading_more = True
@@ -501,7 +477,8 @@ class ArtistSongsScreen(BaseScreen):
         if not songs:
             self._has_more = False
             self._hide_loading()
-            self._update_top_nav_title(self.artist_name, self._total_songs)
+            self._update_top_nav_title(self.artist_name)
+            self._update_count_label(self._total_songs)
             return
 
         for song in songs:
@@ -515,13 +492,15 @@ class ArtistSongsScreen(BaseScreen):
         new_count = len(self._artist_songs)
         logger.info(f"✅ Загружено {new_count} из {total} песен")
 
-        self._update_top_nav_title(self.artist_name, self._total_songs)
+        self._update_top_nav_title(self.artist_name)
+        self._update_count_label(self._total_songs)
         self._display_songs()
 
         if new_count >= total:
             self._has_more = False
             self._hide_loading()
-            self._update_top_nav_title(self.artist_name, self._total_songs)
+            self._update_top_nav_title(self.artist_name)
+            self._update_count_label(self._total_songs)
             return
 
         Clock.schedule_once(lambda dt: self._load_next_pages(), 0.1)
@@ -603,7 +582,8 @@ class ArtistSongsScreen(BaseScreen):
 
         if self.recycle_view:
             self.recycle_view.clear()
-        self._update_top_nav_title(self.artist_name, 0)
+        self._update_top_nav_title(self.artist_name)
+        self._update_count_label(0)
         self._show_empty("Ошибка загрузки\nПроверьте интернет")
 
     # ============ ВЫБОР ПЕСНИ ============
@@ -666,9 +646,10 @@ class ArtistSongsScreen(BaseScreen):
         """При входе на экран"""
         logger.info(f"🚪 Вход в ArtistSongsScreen: {self.artist_name}")
 
-        # Обновляем заголовок в TopNav
+        # Обновляем заголовок в TopNav и количество на экране
         if self.artist_name:
-            self._update_top_nav_title(self.artist_name, self._total_songs)
+            self._update_top_nav_title(self.artist_name)
+            self._update_count_label(self._total_songs)
 
         # Если есть отложенный исполнитель - загружаем
         if hasattr(self, '_pending_artist') and self._pending_artist:

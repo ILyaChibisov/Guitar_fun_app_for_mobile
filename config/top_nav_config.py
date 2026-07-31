@@ -283,7 +283,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -293,7 +293,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -303,7 +303,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -313,7 +313,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -323,7 +323,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -333,7 +333,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -343,7 +343,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -353,7 +353,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -363,7 +363,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
 
@@ -373,7 +373,7 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': 'go_back',
+            'custom_back_callback': 'None',
             'custom_title_widget': None,
         },
     }

@@ -37,9 +37,9 @@ class TopNav(MDCard):
         self._old_title_widget = None
         self.custom_title_widget = None
 
-        # ============ ЗАЩИТА ОТ ДВОЙНЫХ НАЖАТИЙ ============
-        self._back_press_blocked = False
-        self._back_press_timer = None
+        # Флаги для управления навигацией
+        self._just_returned_from_song_detail = False
+        self._block_navigation = False  # ← ДОБАВЛЕНО
         self._going_back = False
         self._navigating = False
 
@@ -284,7 +284,6 @@ class TopNav(MDCard):
         """Удаляет кастомный callback"""
         self._custom_back_callback = None
 
-
     def _update_left_button(self, screen_name: str):
         self.left_container.clear_widgets()
 
@@ -346,14 +345,13 @@ class TopNav(MDCard):
 
         logger.info("✅ artist_songs режим установлен")
 
-    def _unblock_back_button(self):
-        """Разблокирует кнопку назад"""
-        self._back_press_blocked = False
-        self._back_press_timer = None
-        logger.debug("🔓 Кнопка назад разблокирована")
-
     def _on_screen_changed(self, instance, screen_name):
         """Обработчик смены экрана"""
+        # ============ БЛОКИРОВКА НАВИГАЦИИ ============
+        if self._block_navigation:
+            logger.info("⏭️ Навигация заблокирована, пропускаем смену экрана")
+            return
+
         old = self.current_screen_name
 
         # ============ ДИАГНОСТИКА ============
@@ -423,16 +421,11 @@ class TopNav(MDCard):
                 logger.info(f"🔽 BottomNav: экран '{screen_name}' не в меню, все иконки сброшены")
 
     def _on_back_press(self, *args):
-        """Обработчик нажатия кнопки назад - с защитой от двойных нажатий"""
-
-        if self._back_press_blocked:
-            logger.info("⏭️ Кнопка назад заблокирована (предотвращение двойного нажатия)")
+        """Обработчик нажатия кнопки назад"""
+        # ============ БЛОКИРОВКА НАВИГАЦИИ ============
+        if self._block_navigation:
+            logger.info("⏭️ Навигация заблокирована, пропускаем")
             return
-
-        self._back_press_blocked = True
-        if self._back_press_timer:
-            Clock.unschedule(self._back_press_timer)
-        self._back_press_timer = Clock.schedule_once(lambda dt: self._unblock_back_button(), 0.8)
 
         logger.info(f"🔙 _on_back_press для экрана: {self.current_screen_name}")
 
@@ -448,8 +441,41 @@ class TopNav(MDCard):
         prev_from_state = screen_state.get_previous_screen()
         logger.info(f"   📌 screen_state.previous_screen = {prev_from_state}")
 
+        # СПИСОК ЭКРАНОВ, ГДЕ КНОПКА НАЗАД НЕ РАБОТАЕТ (нижняя навигация)
+        nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary']
+
+        # СПИСОК ПАРСЕРОВ — они должны возвращать на admin
+        parser_screens = [
+            'amdm_parser', 'mytabs_parser', 'accord_pro_parser',
+            'akkordus_parser', 'muzland_parser', 'chordie_parser',
+            'fivelad_parser', 'akkordbard_parser', 'domhve_parser',
+            'rushsound_parser'
+        ]
+
+        # ============ Если экран из нижней навигации — игнорируем ============
+        if current in nav_screens:
+            logger.info(f"   ⏭️ Экран '{current}' не поддерживает кнопку назад, игнорируем")
+            return
+
+        # ============ Если экран парсера — возвращаем на admin ============
+        if current in parser_screens:
+            logger.info(f"   → Парсер '{current}' возвращает на admin")
+            if self.sm.has_screen('admin'):
+                self._block_navigation = True  # Блокируем последующие переходы
+                self.sm.current = 'admin'
+                Clock.schedule_once(lambda dt: setattr(self, '_block_navigation', False), 0.5)
+            else:
+                self.sm.current = 'home'
+            return
+
         # ============ artist_songs → всегда на songs ============
         if current == 'artist_songs':
+            # Проверяем, не только ли мы вернулись из song_detail
+            if hasattr(self, '_just_returned_from_song_detail') and self._just_returned_from_song_detail:
+                logger.info("   ⏭️ Только что вернулись из song_detail, пропускаем повторный возврат")
+                self._just_returned_from_song_detail = False
+                return
+
             if self._navigating:
                 logger.info("⏭️ Уже выполняется навигация, пропускаем")
                 return
@@ -478,21 +504,27 @@ class TopNav(MDCard):
 
         # ============ song_detail → на предыдущий экран ============
         if current == 'song_detail':
+            # Устанавливаем флаг, что мы только что вернулись из song_detail
+            self._just_returned_from_song_detail = True
+
             if self.sm.has_screen('song_detail'):
                 song_detail = self.sm.get_screen('song_detail')
                 if hasattr(song_detail, 'go_back'):
                     song_detail.go_back()
                     logger.info("   → song_detail возврат через go_back")
+                    Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
                     return
 
             if prev_from_state and self.sm.has_screen(prev_from_state):
                 logger.info(f"   → song_detail возврат на {prev_from_state}")
                 self.sm.current = prev_from_state
+                Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
                 return
 
             if self.sm.has_screen('home'):
                 logger.info("   → song_detail возврат на home (по умолчанию)")
                 self.sm.current = 'home'
+                Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
                 return
 
         # ============ chord_detail → на search или chords ============

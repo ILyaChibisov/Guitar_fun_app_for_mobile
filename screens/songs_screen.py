@@ -1374,8 +1374,8 @@ class SongsScreen(BaseScreen):
                 artist_songs_screen._is_loading_more = False
                 artist_songs_screen._is_loading = False
 
-                # ✅ ИСПРАВЛЕНО: используем новый метод
-                artist_songs_screen._update_top_nav_title(artist, 0)  # ← ЗДЕСЬ БЫЛА ОШИБКА
+                # ✅ ИСПРАВЛЕНО: передаём только artist
+                artist_songs_screen._update_top_nav_title(artist)
 
                 # Загружаем песни
                 artist_songs_screen._load_artist_songs(artist)

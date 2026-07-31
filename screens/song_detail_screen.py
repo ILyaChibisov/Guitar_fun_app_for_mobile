@@ -1974,7 +1974,8 @@ class SongDetailScreen(BaseScreen):
                     if artist_name:
                         artist_screen.artist_name = artist_name
                         artist_screen._saved_scroll_position = scroll_pos
-                        artist_screen._update_top_nav_title(artist_name, artist_screen._total_songs)
+                        # ✅ ИСПРАВЛЕНО: передаём только artist
+                        artist_screen._update_top_nav_title(artist_name)
                         Clock.schedule_once(lambda dt: artist_screen._load_artist_songs(artist_name), 0.1)
 
             # ✅ Возврат на другие экраны
