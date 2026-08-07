@@ -1,7 +1,6 @@
 # api/client.py
 """
-HTTP клиент для работы с сервером - с кэшированием избранного и текстов песен
-ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
+HTTP клиент для работы с сервером - БЕЗ КЭША ПЕСЕН
 """
 import json
 import os
@@ -134,12 +133,9 @@ class APIClient:
         self.config = config
         self.waiting_for_callback = False
 
-        # Кэш в памяти для быстрого доступа
+        # ============ КЭШ ИЗБРАННОГО ТОЛЬКО В ПАМЯТИ ============
         self._favorites_cache = None
         self._favorites_cache_timestamp = 0
-
-        # Иконка
-        self._icon_texture = None
 
         # Создаем сессию
         self.session = get_requests_session()
@@ -180,7 +176,7 @@ class APIClient:
             self.access_token = None
             self.refresh_token = None
             self.user_data = None
-            self.clear_cache()
+            self._clear_favorites_cache()
             Logger.info('API: Токены очищены')
         except Exception as e:
             Logger.error(f'API: Ошибка очистки токенов - {e}')
@@ -287,169 +283,45 @@ class APIClient:
     def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
         return self._request_async(url, method, data, on_success, on_failure, include_auth)
 
-    # ============ КЭШ ИЗБРАННОГО ============
-
-    def _get_favorites_cache_path(self):
-        """Возвращает путь к файлу кэша избранного"""
-        cache_dir = config.CACHE_DIR
-        user_id = self.user_data.get('id', 'guest') if self.user_data else 'guest'
-        return os.path.join(cache_dir, f'favorites_{user_id}.json')
+    # ============ КЭШ ИЗБРАННОГО (ТОЛЬКО В ПАМЯТИ, НЕ В ФАЙЛАХ) ============
 
     def _load_favorites_cache(self):
-        """Загружает кэш избранного из памяти или файла"""
-        # Сначала проверяем память
+        """Загружает кэш избранного из памяти (не из файлов!)"""
         if self._favorites_cache is not None:
             if time.time() - self._favorites_cache_timestamp < config.FAVORITES_CACHE_TTL:
                 Logger.debug(f"📦 Избранное из памяти: {len(self._favorites_cache)} песен")
                 return self._favorites_cache
             else:
                 Logger.debug("⏳ Кэш в памяти устарел")
-
-        # Пробуем загрузить из файла
-        try:
-            cache_path = self._get_favorites_cache_path()
-            if os.path.exists(cache_path):
-                with open(cache_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    if time.time() - data.get('timestamp', 0) < config.FAVORITES_CACHE_TTL:
-                        favorites = data.get('favorites', [])
-                        self._favorites_cache = favorites
-                        self._favorites_cache_timestamp = data.get('timestamp', 0)
-                        Logger.info(f"📦 Избранное из файла: {len(favorites)} песен")
-                        return favorites
-        except Exception as e:
-            Logger.error(f"❌ Ошибка загрузки кэша: {e}")
-
         return None
 
     def _save_favorites_cache(self, favorites):
-        """Сохраняет кэш избранного в память и файл"""
-        try:
-            self._favorites_cache = favorites
-            self._favorites_cache_timestamp = time.time()
-
-            cache_path = self._get_favorites_cache_path()
-            data = {
-                'favorites': favorites,
-                'timestamp': time.time()
-            }
-
-            cache_dir = os.path.dirname(cache_path)
-            if not os.path.exists(cache_dir):
-                os.makedirs(cache_dir, mode=0o755)
-
-            with open(cache_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            Logger.info(f"💾 Кэш избранного сохранён: {len(favorites)} песен")
-        except Exception as e:
-            Logger.error(f"❌ Ошибка сохранения кэша избранного: {e}")
+        """Сохраняет кэш избранного в память (не в файлы!)"""
+        self._favorites_cache = favorites
+        self._favorites_cache_timestamp = time.time()
+        Logger.info(f"💾 Кэш избранного сохранён в памяти: {len(favorites)} песен")
 
     def _clear_favorites_cache(self):
-        """Очищает кэш избранного (память + файл)"""
+        """Очищает кэш избранного в памяти"""
         self._favorites_cache = None
         self._favorites_cache_timestamp = 0
-        try:
-            cache_path = self._get_favorites_cache_path()
-            if os.path.exists(cache_path):
-                os.remove(cache_path)
-                Logger.info("🗑️ Кэш избранного очищен")
-        except Exception as e:
-            Logger.error(f"❌ Ошибка очистки кэша избранного: {e}")
+        Logger.info("🗑️ Кэш избранного очищен (память)")
 
-    # ============ КЭШ ТЕКСТОВ ПЕСЕН ============
-
-    def _get_song_cache_path(self, song_id):
-        """Возвращает путь к файлу кэша текста песни"""
-        cache_dir = config.CACHE_DIR
-        return os.path.join(cache_dir, f'song_{song_id}.json')
-
-    def _load_song_cache(self, song_id):
-        """Загружает текст песни из кэша"""
-        try:
-            cache_path = self._get_song_cache_path(song_id)
-            if os.path.exists(cache_path):
-                with open(cache_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    if time.time() - data.get('timestamp', 0) < config.SONG_CACHE_TTL:
-                        Logger.info(f"📦 Текст песни {song_id} загружен из кэша")
-                        return data.get('data')
-                    else:
-                        Logger.info(f"⏳ Кэш песни {song_id} устарел")
-                        os.remove(cache_path)
-        except Exception as e:
-            Logger.error(f"❌ Ошибка загрузки кэша песни {song_id}: {e}")
-        return None
-
-    def _save_song_cache(self, song_id, data):
-        """Сохраняет текст песни в кэш"""
-        try:
-            cache_dir = config.CACHE_DIR
-            if not os.path.exists(cache_dir):
-                os.makedirs(cache_dir, mode=0o755)
-
-            song_files = [f for f in os.listdir(cache_dir) if f.startswith('song_') and f.endswith('.json')]
-
-            if len(song_files) >= config.MAX_CACHED_SONGS:
-                song_files.sort(key=lambda f: os.path.getmtime(os.path.join(cache_dir, f)))
-                to_delete = song_files[:len(song_files) // 2]
-                for f in to_delete:
-                    try:
-                        os.remove(os.path.join(cache_dir, f))
-                        Logger.info(f"🗑️ Удален старый кэш: {f}")
-                    except:
-                        pass
-
-            cache_path = self._get_song_cache_path(song_id)
-            cache_data = {
-                'data': data,
-                'timestamp': time.time(),
-                'song_id': song_id
-            }
-            with open(cache_path, 'w', encoding='utf-8') as f:
-                json.dump(cache_data, f, ensure_ascii=False, indent=2)
-            Logger.info(f"💾 Текст песни {song_id} сохранён в кэш")
-        except Exception as e:
-            Logger.error(f"❌ Ошибка сохранения кэша песни {song_id}: {e}")
-
-    def _clear_song_cache(self, song_id=None):
-        """Очищает кэш песен (одной или всех)"""
-        try:
-            cache_dir = config.CACHE_DIR
-            if not os.path.exists(cache_dir):
-                return
-
-            if song_id:
-                cache_path = self._get_song_cache_path(song_id)
-                if os.path.exists(cache_path):
-                    os.remove(cache_path)
-                    Logger.info(f"🗑️ Кэш песни {song_id} очищен")
-            else:
-                count = 0
-                for f in os.listdir(cache_dir):
-                    if f.startswith('song_') and f.endswith('.json'):
-                        os.remove(os.path.join(cache_dir, f))
-                        count += 1
-                Logger.info(f"🗑️ Кэш всех песен очищен: {count} файлов")
-        except Exception as e:
-            Logger.error(f"❌ Ошибка очистки кэша песен: {e}")
-
-    def clear_cache(self):
-        """Очищает весь кэш"""
-        self._clear_favorites_cache()
-        self._clear_song_cache()
-        Logger.info("🗑️ Весь кэш очищен")
+    # ============ УДАЛЁН КЭШ ПЕСЕН ============
+    # get_tab() теперь всегда загружает с сервера
 
     # ============ API МЕТОДЫ ============
 
     def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
         """
-        Получить избранное с кэшированием
+        Получить избранное
 
         Args:
             on_success: колбэк при успехе
             on_failure: колбэк при ошибке
             force_refresh: принудительно обновить с сервера
         """
+        # Проверяем кэш в памяти только если не force_refresh
         if not force_refresh:
             cached = self._load_favorites_cache()
             if cached is not None:
@@ -494,6 +366,7 @@ class APIClient:
                         item['id'] = item['song_id']
                     formatted_favorites.append(item)
 
+            # Сохраняем только в память
             self._save_favorites_cache(formatted_favorites)
             Logger.info(f'✅ Получено избранных: {len(formatted_favorites)}')
 
@@ -501,9 +374,10 @@ class APIClient:
                 on_success(formatted_favorites)
 
         def _on_failure(req, error):
+            # При ошибке используем кэш в памяти если есть
             cached = self._load_favorites_cache()
             if cached is not None:
-                Logger.warning(f"⚠️ Ошибка сервера, показываем устаревший кэш ({len(cached)} песен)")
+                Logger.warning(f"⚠️ Ошибка сервера, показываем кэш в памяти ({len(cached)} песен)")
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(cached), 0)
                 return
@@ -520,21 +394,10 @@ class APIClient:
         )
 
     def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Добавить в избранное с обновлением кэша"""
+        """Добавить в избранное - очищаем кэш в памяти"""
 
         def _on_success(result):
             self._clear_favorites_cache()
-
-            if not self._load_song_cache(song_id):
-                def cache_song():
-                    self.get_tab(
-                        song_id=song_id,
-                        on_success=lambda x: Logger.info(f"📦 Песня {song_id} закэширована при добавлении"),
-                        on_failure=lambda x, y: Logger.warning(f"⚠️ Не удалось закэшировать песню {song_id}")
-                    )
-
-                threading.Thread(target=cache_song, daemon=True).start()
-
             Logger.info(f"⭐ Песня {song_id} добавлена в избранное, кэш очищен")
             if on_success:
                 on_success(result)
@@ -548,7 +411,7 @@ class APIClient:
         )
 
     def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Удалить из избранного с обновлением кэша"""
+        """Удалить из избранного - очищаем кэш в памяти"""
 
         def _on_success(result):
             self._clear_favorites_cache()
@@ -566,7 +429,7 @@ class APIClient:
 
     def is_song_favorited(self, song_id: int) -> bool:
         """
-        Проверяет, находится ли песня в избранном (из кэша)
+        Проверяет, находится ли песня в избранном (из кэша в памяти)
         """
         cached = self._load_favorites_cache()
         if cached is None:
@@ -581,38 +444,15 @@ class APIClient:
 
     def get_tab(self, song_id: int, on_success=None, on_failure=None, force_refresh=False):
         """
-        Получить текст песни с кэшированием
+        Получить текст песни - ВСЕГДА С СЕРВЕРА (без кэша)
         """
-        if not force_refresh:
-            cached = self._load_song_cache(song_id)
-            if cached is not None:
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-                return
-
         Logger.info(f"🔄 Загрузка песни {song_id} с сервера...")
-
-        def _on_success(result):
-            self._save_song_cache(song_id, result)
-            if on_success:
-                on_success(result)
-
-        def _on_failure(req, error):
-            cached = self._load_song_cache(song_id)
-            if cached is not None:
-                Logger.warning(f"⚠️ Ошибка сервера, показываем устаревший кэш песни {song_id}")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-                return
-
-            if on_failure:
-                on_failure(req, error)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}",
             method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
+            on_success=on_success,
+            on_failure=on_failure,
             include_auth=False
         )
 
@@ -654,7 +494,6 @@ class APIClient:
         )
 
     # ============ УДАЛЁН МЕТОД toggle_like ============
-    # def toggle_like(...) - УДАЛЁН
 
     def search_songs(self, query: str, limit: int = 30, offset: int = 0, on_success=None, on_failure=None):
         encoded_query = urllib.parse.quote(query, safe='')
@@ -675,153 +514,32 @@ class APIClient:
 
     # ============ МЕТОДЫ ДЛЯ РАБОТЫ С ЗАДАЧАМИ ============
 
-    def _get_tasks_cache_path(self):
-        """Возвращает путь к файлу кэша задач"""
-        cache_dir = config.CACHE_DIR
-        return os.path.join(cache_dir, 'tasks_cache.json')
-
-    def _load_tasks_cache(self):
-        """Загружает кэш задач из памяти или файла"""
-        # Проверяем память
-        if hasattr(self, '_tasks_cache') and self._tasks_cache is not None:
-            if time.time() - self._tasks_cache_timestamp < 60:  # 1 минута
-                return self._tasks_cache
-
-        # Пробуем загрузить из файла
-        try:
-            cache_path = self._get_tasks_cache_path()
-            if os.path.exists(cache_path):
-                with open(cache_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    if time.time() - data.get('timestamp', 0) < 60:
-                        self._tasks_cache = data.get('tasks', [])
-                        self._tasks_cache_timestamp = data.get('timestamp', 0)
-                        return self._tasks_cache
-        except Exception as e:
-            Logger.error(f"Ошибка загрузки кэша задач: {e}")
-
-        return None
-
-    def _save_tasks_cache(self, tasks):
-        """Сохраняет кэш задач в память и файл"""
-        try:
-            self._tasks_cache = tasks
-            self._tasks_cache_timestamp = time.time()
-
-            cache_path = self._get_tasks_cache_path()
-            data = {
-                'tasks': tasks,
-                'timestamp': time.time()
-            }
-
-            cache_dir = os.path.dirname(cache_path)
-            if not os.path.exists(cache_dir):
-                os.makedirs(cache_dir, mode=0o755)
-
-            with open(cache_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            Logger.error(f"Ошибка сохранения кэша задач: {e}")
-
-    def _clear_tasks_cache(self):
-        """Очищает кэш задач"""
-        self._tasks_cache = None
-        self._tasks_cache_timestamp = 0
-        try:
-            cache_path = self._get_tasks_cache_path()
-            if os.path.exists(cache_path):
-                os.remove(cache_path)
-        except Exception as e:
-            Logger.error(f"Ошибка очистки кэша задач: {e}")
-
     def get_tasks(self, on_success=None, on_failure=None, force_refresh=False, status=None):
-        """
-        Получить список задач с кэшированием
-
-        Args:
-            on_success: колбэк при успехе
-            on_failure: колбэк при ошибке
-            force_refresh: принудительно обновить с сервера
-            status: фильтр по статусу
-        """
-        # Проверяем кэш
-        if not force_refresh:
-            cached = self._load_tasks_cache()
-            if cached is not None:
-                # Фильтруем по статусу если нужно
-                if status:
-                    filtered = [t for t in cached if t.get('status') == status]
-                else:
-                    filtered = cached
-
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(filtered), 0)
-                return
-
+        """Получить список задач - ВСЕГДА С СЕРВЕРА"""
         Logger.info("🔄 Загрузка задач с сервера...")
 
         url = f"{self.config.API_BASE_URL}/tasks/"
         if status:
             url += f"?status={status}"
 
-        def _on_success(result):
-            tasks = result.get('tasks', []) if isinstance(result, dict) else result
-            self._save_tasks_cache(tasks)
-            if on_success:
-                on_success(tasks)
-
-        def _on_failure(req, error):
-            # При ошибке пробуем показать кэш
-            cached = self._load_tasks_cache()
-            if cached is not None:
-                Logger.warning(f"⚠️ Ошибка сервера, показываем кэш задач ({len(cached)} шт)")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
-                return
-            if on_failure:
-                on_failure(req, error)
-
         return self._request(
             url=url,
             method='GET',
-            on_success=_on_success,
-            on_failure=_on_failure,
+            on_success=on_success,
+            on_failure=on_failure,
             include_auth=True
         )
 
     def get_task(self, task_id, on_success=None, on_failure=None, force_refresh=False):
-        """Получить задачу по ID"""
-        if not force_refresh:
-            # Проверяем в кэше
-            cached = self._load_tasks_cache()
-            if cached is not None:
-                for task in cached:
-                    if task.get('id') == task_id:
-                        if on_success:
-                            Clock.schedule_once(lambda dt: on_success(task), 0)
-                        return
-
+        """Получить задачу по ID - ВСЕГДА С СЕРВЕРА"""
         Logger.info(f"🔄 Загрузка задачи {task_id} с сервера...")
 
         url = f"{self.config.API_BASE_URL}/tasks/{task_id}"
 
-        def _on_success(result):
-            # Обновляем кэш
-            cached = self._load_tasks_cache()
-            if cached is not None:
-                # Обновляем задачу в кэше
-                for i, task in enumerate(cached):
-                    if task.get('id') == task_id:
-                        cached[i] = result
-                        break
-                self._save_tasks_cache(cached)
-            if on_success:
-                on_success(result)
-
         return self._request(
             url=url,
             method='GET',
-            on_success=_on_success,
+            on_success=on_success,
             on_failure=on_failure,
             include_auth=True
         )
@@ -832,17 +550,11 @@ class APIClient:
 
         url = f"{self.config.API_BASE_URL}/tasks/"
 
-        def _on_success(result):
-            # Очищаем кэш при создании
-            self._clear_tasks_cache()
-            if on_success:
-                on_success(result)
-
         return self._request(
             url=url,
             method='POST',
             data=task_data,
-            on_success=_on_success,
+            on_success=on_success,
             on_failure=on_failure,
             include_auth=True
         )
@@ -853,17 +565,11 @@ class APIClient:
 
         url = f"{self.config.API_BASE_URL}/tasks/{task_id}"
 
-        def _on_success(result):
-            # Очищаем кэш при обновлении
-            self._clear_tasks_cache()
-            if on_success:
-                on_success(result)
-
         return self._request(
             url=url,
             method='PUT',
             data=task_data,
-            on_success=_on_success,
+            on_success=on_success,
             on_failure=on_failure,
             include_auth=True
         )
@@ -874,16 +580,10 @@ class APIClient:
 
         url = f"{self.config.API_BASE_URL}/tasks/{task_id}?hard={str(hard).lower()}"
 
-        def _on_success(result):
-            # Очищаем кэш при удалении
-            self._clear_tasks_cache()
-            if on_success:
-                on_success(result)
-
         return self._request(
             url=url,
             method='DELETE',
-            on_success=_on_success,
+            on_success=on_success,
             on_failure=on_failure,
             include_auth=True
         )
@@ -895,17 +595,11 @@ class APIClient:
         url = f"{self.config.API_BASE_URL}/tasks/{task_id}/comment"
         data = {'comment': comment}
 
-        def _on_success(result):
-            # Очищаем кэш при добавлении комментария
-            self._clear_tasks_cache()
-            if on_success:
-                on_success(result)
-
         return self._request(
             url=url,
             method='POST',
             data=data,
-            on_success=_on_success,
+            on_success=on_success,
             on_failure=on_failure,
             include_auth=True
         )
@@ -920,40 +614,23 @@ class APIClient:
             data['completed_at'] = completed_at
             Logger.info(f"   с completed_at={completed_at}")
 
-        def _on_success(result):
-            self._clear_tasks_cache()
-            if on_success:
-                on_success(result)
-
         return self._request(
             url=url,
             method='PATCH',
             data=data,
-            on_success=_on_success,
+            on_success=on_success,
             on_failure=on_failure,
             include_auth=True
         )
 
     def get_task_statuses(self, on_success=None, on_failure=None):
-        """Получить список статусов задач"""
-        # Используем кэш статусов
-        if hasattr(self, '_statuses_cache') and self._statuses_cache is not None:
-            if on_success:
-                Clock.schedule_once(lambda dt: on_success(self._statuses_cache), 0)
-            return
-
+        """Получить список статусов задач - ВСЕГДА С СЕРВЕРА"""
         url = f"{self.config.API_BASE_URL}/tasks/statuses/list"
-
-        def _on_success(result):
-            statuses = result.get('statuses', []) if isinstance(result, dict) else result
-            self._statuses_cache = statuses
-            if on_success:
-                on_success(statuses)
 
         return self._request(
             url=url,
             method='GET',
-            on_success=_on_success,
+            on_success=on_success,
             on_failure=on_failure,
             include_auth=True
         )
@@ -1056,7 +733,6 @@ class APIClient:
     def logout(self, on_success=None, on_failure=None):
         def _on_success(result):
             self._clear_tokens()
-            self.clear_cache()
             if on_success:
                 on_success(result)
 
@@ -1104,7 +780,7 @@ class APIClient:
 
     def force_refresh_favorites(self):
         """Принудительно обновляет кэш избранного с сервера"""
-        Logger.info("🔄 Принудительное обновление кэша избранного")
+        Logger.info("🔄 Принудительное обновление избранного")
         self._clear_favorites_cache()
 
         def refresh():
