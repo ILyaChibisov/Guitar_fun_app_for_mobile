@@ -201,7 +201,6 @@ class SongDetailScreen(BaseScreen):
         self.song_id = None
         self.song_title = None
         self.song_artist = None
-        self.is_liked = False
         self.is_favorite = False
         self.is_loading = False
         self.loading_spinner = None
@@ -509,7 +508,7 @@ class SongDetailScreen(BaseScreen):
     # ==================== МЕТОДЫ СОЗДАНИЯ ПАНЕЛЕЙ ====================
 
     def _create_main_panel(self):
-        """Создаёт основную панель с 7 кнопками"""
+        """Создаёт основную панель с 6 кнопками (БЕЗ ЛАЙКА)"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -555,23 +554,16 @@ class SongDetailScreen(BaseScreen):
             icon_color=[0.9, 0.7, 0.2, 0.9]
         )
 
-        self.like_btn = IconActionButton(
-            icon_name="heart-outline",
-            on_press_callback=self.toggle_like,
-            icon_color=[0.8, 0.3, 0.3, 0.9]
-        )
-
         panel.add_widget(self.chords_btn)
         panel.add_widget(self.tonality_btn)
         panel.add_widget(self.scroll_btn)
         panel.add_widget(self.tabs_btn)
         panel.add_widget(self.font_btn)
         panel.add_widget(self.favorite_btn)
-        panel.add_widget(self.like_btn)
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'main'
-        logger.info("✅ Создана основная панель")
+        logger.info("✅ Создана основная панель (без лайка)")
 
     def _create_chords_panel(self):
         """Создаёт панель управления аккордами (с глазом, БЕЗ иконок пагинации)"""
@@ -1845,8 +1837,6 @@ class SongDetailScreen(BaseScreen):
             self.content_label.markup = True
             self._update_content_height()
 
-        self.is_liked = data.get('is_liked', False)
-
         self.is_favorite = api.is_song_favorited(self.song_id)
 
         if not self.is_favorite:
@@ -1855,7 +1845,6 @@ class SongDetailScreen(BaseScreen):
         if self.previous_screen == 'favorites' and not self.is_favorite:
             logger.info(f"⚠️ Песня {self.song_id} удалена из избранного, обновляем иконку")
 
-        self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
         self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
         logger.info(f"⭐ Песня {self.song_id} в избранном: {self.is_favorite} (из кэша: {api.is_song_favorited(self.song_id)})")
@@ -1876,22 +1865,7 @@ class SongDetailScreen(BaseScreen):
         self.content_label.text = "Ошибка загрузки\nПроверьте интернет"
         notify.error("Ошибка загрузки песни")
 
-    def toggle_like(self, *args):
-        if not api.is_authenticated():
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'open_profile'):
-                app.open_profile()
-            return
-
-        def on_success(result):
-            self.is_liked = result.get('liked', not self.is_liked)
-            self.like_btn.icon = "heart" if self.is_liked else "heart-outline"
-            notify.success("Лайк поставлен!" if self.is_liked else "Лайк убран")
-
-        def on_failure(req, error):
-            notify.error("Ошибка")
-
-        api.toggle_like(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+    # ============ УДАЛЁН МЕТОД toggle_like ============
 
     def toggle_favorite(self, *args):
         if not api.is_authenticated():
@@ -1935,7 +1909,6 @@ class SongDetailScreen(BaseScreen):
                     'title': self.song_title,
                     'tabs': self.tabs,
                     'is_favorite': True,
-                    'is_liked': self.is_liked
                 }
                 api._save_song_cache(self.song_id, data)
                 logger.info(f"📦 Песня {self.song_id} закэширована для офлайн-доступа")

@@ -653,11 +653,8 @@ class APIClient:
             method='GET', on_success=on_success, on_failure=on_failure, include_auth=False
         )
 
-    def toggle_like(self, song_id: int, on_success=None, on_failure=None):
-        return self._request(
-            url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/like",
-            method='POST', on_success=on_success, on_failure=on_failure, include_auth=True
-        )
+    # ============ УДАЛЁН МЕТОД toggle_like ============
+    # def toggle_like(...) - УДАЛЁН
 
     def search_songs(self, query: str, limit: int = 30, offset: int = 0, on_success=None, on_failure=None):
         encoded_query = urllib.parse.quote(query, safe='')
@@ -675,8 +672,6 @@ class APIClient:
         except Exception as e:
             Logger.error(f"❌ Ошибка синхронного поиска: {e}")
             return {"results": [], "total": 0}
-
-        # api/client.py - добавляем методы для работы с задачами
 
     # ============ МЕТОДЫ ДЛЯ РАБОТЫ С ЗАДАЧАМИ ============
 
@@ -914,8 +909,6 @@ class APIClient:
             on_failure=on_failure,
             include_auth=True
         )
-
-    # api/client.py
 
     def change_task_status(self, task_id, status, completed_at=None, on_success=None, on_failure=None):
         """Изменить статус задачи"""

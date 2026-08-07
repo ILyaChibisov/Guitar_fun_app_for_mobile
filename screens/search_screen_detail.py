@@ -1,7 +1,7 @@
 # screens/search_screen_detail.py
 """
 Экран просмотра песни ИЗ ОБЩЕГО ПОИСКА (search_screen)
-Полная копия SongDetailScreen с возвратом в SearchScreen
+Полная копия SongDetailScreen с возвратом в SearchScreen (БЕЗ ЛАЙКОВ)
 """
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
@@ -131,7 +131,7 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class SearchScreenDetail(BaseScreen):
-    """Экран просмотра песни ИЗ ОБЩЕГО ПОИСКА - полная копия SongDetailScreen"""
+    """Экран просмотра песни ИЗ ОБЩЕГО ПОИСКА - полная копия SongDetailScreen (БЕЗ ЛАЙКОВ)"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -139,7 +139,6 @@ class SearchScreenDetail(BaseScreen):
         self.song_id = None
         self.song_title = None
         self.song_artist = None
-        self.is_liked = False
         self.is_favorite = False
         self.is_loading = False
         self.loading_spinner = None
@@ -214,11 +213,10 @@ class SearchScreenDetail(BaseScreen):
         self.tabs_btn = None
         self.font_btn = None
         self.favorite_btn = None
-        self.like_btn_panel = None
 
         self.init_ui()
         self.load_background()
-        logger.info('Экран просмотра песни из общего поиска создан')
+        logger.info('Экран просмотра песни из общего поиска создан (БЕЗ ЛАЙКОВ)')
 
     def load_background(self):
         try:
@@ -443,6 +441,7 @@ class SearchScreenDetail(BaseScreen):
         self.content_scroll.scroll_y = 1.0
 
     def _create_main_panel(self):
+        """Создаёт основную панель с 6 кнопками (БЕЗ ЛАЙКА)"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -488,24 +487,19 @@ class SearchScreenDetail(BaseScreen):
             icon_color=[0.9, 0.7, 0.2, 0.9]
         )
 
-        self.like_btn_panel = IconActionButton(
-            icon_name="heart-outline",
-            on_press_callback=self.toggle_like,
-            icon_color=[0.8, 0.3, 0.3, 0.9]
-        )
-
         panel.add_widget(self.chords_btn)
         panel.add_widget(self.tonality_btn)
         panel.add_widget(self.scroll_btn)
         panel.add_widget(self.tabs_btn)
         panel.add_widget(self.font_btn)
         panel.add_widget(self.favorite_btn)
-        panel.add_widget(self.like_btn_panel)
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'main'
+        logger.info("✅ Создана основная панель (БЕЗ ЛАЙКА)")
 
     def _create_chords_panel(self):
+        """Создаёт панель управления аккордами"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -580,6 +574,7 @@ class SearchScreenDetail(BaseScreen):
         self.current_panel_type = 'chords'
 
     def _create_font_panel(self):
+        """Создаёт панель шрифта"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -745,6 +740,7 @@ class SearchScreenDetail(BaseScreen):
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.3)
 
     def _create_tonality_panel(self):
+        """Создаёт панель выбора тональности"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -908,6 +904,7 @@ class SearchScreenDetail(BaseScreen):
         self.current_panel_type = 'tonality'
 
     def _create_scroll_panel(self):
+        """Создаёт панель прокрутки текста"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -1600,11 +1597,8 @@ class SearchScreenDetail(BaseScreen):
             self.content_label.markup = True
             self._update_content_height()
 
-        self.is_liked = data.get('is_liked', False)
         self.is_favorite = data.get('is_favorite', False)
 
-        if hasattr(self, 'like_btn_panel') and self.like_btn_panel:
-            self.like_btn_panel.icon = "heart" if self.is_liked else "heart-outline"
         if hasattr(self, 'favorite_btn') and self.favorite_btn:
             self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
@@ -1626,23 +1620,7 @@ class SearchScreenDetail(BaseScreen):
         self.content_label.text = "Ошибка загрузки\nПроверьте интернет"
         notify.error("Ошибка загрузки песни")
 
-    def toggle_like(self, *args):
-        if not api.is_authenticated():
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'open_profile'):
-                app.open_profile()
-            return
-
-        def on_success(result):
-            self.is_liked = result.get('liked', not self.is_liked)
-            if hasattr(self, 'like_btn_panel') and self.like_btn_panel:
-                self.like_btn_panel.icon = "heart" if self.is_liked else "heart-outline"
-            notify.success("Лайк поставлен!" if self.is_liked else "Лайк убран")
-
-        def on_failure(req, error):
-            notify.error("Ошибка")
-
-        api.toggle_like(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+    # ============ УДАЛЁН МЕТОД toggle_like ============
 
     def toggle_favorite(self, *args):
         if not api.is_authenticated():
@@ -1781,7 +1759,6 @@ class SearchScreenDetail(BaseScreen):
 
         if self.manager and self.manager.has_screen('search'):
             search_screen = self.manager.get_screen('search')
-            # ✅ Просто переключаем, без таймеров
             self.manager.current = 'search'
             logger.info("✅ Возврат на SearchScreen")
         else:
@@ -1791,13 +1768,11 @@ class SearchScreenDetail(BaseScreen):
     def on_enter(self):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Настраиваем левую кнопку - стрелка назад
             if hasattr(app.top_nav, 'left_container'):
                 app.top_nav.left_container.clear_widgets()
                 app.top_nav.left_container.add_widget(app.top_nav.back_btn)
                 app.top_nav.back_btn.on_release = self.go_back
 
-            # ✅ ВОССТАНАВЛИВАЕМ ПРАВЫЕ КНОПКИ - иконка домой (как в SongDetailScreen)
             if hasattr(app.top_nav, 'right_container'):
                 if hasattr(app.top_nav, 'home_btn'):
                     app.top_nav.right_container.clear_widgets()
@@ -1814,10 +1789,4 @@ class SearchScreenDetail(BaseScreen):
             self._top_spacer_song.height = top_padding
 
     def on_leave(self):
-        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ============
-        # app = MDApp.get_running_app()
-        # if app and hasattr(app, 'top_nav'):
-        #     app.top_nav.clear_custom_title_widget()
-        #     if hasattr(app.top_nav, '_update_right_buttons'):
-        #         app.top_nav._update_right_buttons('search')
         pass

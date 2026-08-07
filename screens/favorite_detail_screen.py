@@ -2,7 +2,7 @@
 """
 Экран просмотра песни ИЗ ИЗБРАННОГО
 Полная копия SongDetailScreen с возвратом в FavoritesScreen
-ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
+ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (БЕЗ ЛАЙКОВ)
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -131,7 +131,7 @@ class LoadingSpinner(MDBoxLayout):
 
 
 class FavoriteDetailScreen(BaseScreen):
-    """Экран просмотра песни ИЗ ИЗБРАННОГО - оптимизированный"""
+    """Экран просмотра песни ИЗ ИЗБРАННОГО - оптимизированный (БЕЗ ЛАЙКОВ)"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -139,7 +139,6 @@ class FavoriteDetailScreen(BaseScreen):
         self.song_id = None
         self.song_title = None
         self.song_artist = None
-        self.is_liked = False
         self.is_favorite = True
         self.is_loading = False
         self.loading_spinner = None
@@ -214,11 +213,10 @@ class FavoriteDetailScreen(BaseScreen):
         self.tabs_btn = None
         self.font_btn = None
         self.favorite_btn = None
-        self.like_btn_panel = None
 
         self.init_ui()
         self.load_background()
-        logger.info('Экран просмотра избранной песни создан')
+        logger.info('Экран просмотра избранной песни создан (БЕЗ ЛАЙКОВ)')
 
     def load_background(self):
         try:
@@ -443,6 +441,7 @@ class FavoriteDetailScreen(BaseScreen):
         self.content_scroll.scroll_y = 1.0
 
     def _create_main_panel(self):
+        """Создаёт основную панель с 6 кнопками (БЕЗ ЛАЙКА)"""
         self.panel_container.clear_widgets()
 
         panel = MDBoxLayout(
@@ -488,23 +487,16 @@ class FavoriteDetailScreen(BaseScreen):
             icon_color=[0.9, 0.7, 0.2, 0.9]
         )
 
-        self.like_btn_panel = IconActionButton(
-            icon_name="heart-outline",
-            on_press_callback=self.toggle_like,
-            icon_color=[0.8, 0.3, 0.3, 0.9]
-        )
-
         panel.add_widget(self.chords_btn)
         panel.add_widget(self.tonality_btn)
         panel.add_widget(self.scroll_btn)
         panel.add_widget(self.tabs_btn)
         panel.add_widget(self.font_btn)
         panel.add_widget(self.favorite_btn)
-        panel.add_widget(self.like_btn_panel)
 
         self.panel_container.add_widget(panel)
         self.current_panel_type = 'main'
-        logger.info("✅ Создана основная панель")
+        logger.info("✅ Создана основная панель (БЕЗ ЛАЙКА)")
 
     # ============ МЕТОДЫ ДЛЯ АККОРДОВ ============
 
@@ -1676,12 +1668,8 @@ class FavoriteDetailScreen(BaseScreen):
             self.content_label.markup = True
             self._update_content_height()
 
-        self.is_liked = data.get('is_liked', False)
         self.is_favorite = True
 
-        # Обновляем иконки в панели
-        if hasattr(self, 'like_btn_panel') and self.like_btn_panel:
-            self.like_btn_panel.icon = "heart" if self.is_liked else "heart-outline"
         if hasattr(self, 'favorite_btn') and self.favorite_btn:
             self.favorite_btn.icon = "star"
 
@@ -1703,25 +1691,7 @@ class FavoriteDetailScreen(BaseScreen):
         self.content_label.text = "Ошибка загрузки\nПроверьте интернет"
         notify.error("Ошибка загрузки песни")
 
-    # ============ ЛАЙК И ИЗБРАННОЕ ============
-
-    def toggle_like(self, *args):
-        if not api.is_authenticated():
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'open_profile'):
-                app.open_profile()
-            return
-
-        def on_success(result):
-            self.is_liked = result.get('liked', not self.is_liked)
-            if hasattr(self, 'like_btn_panel') and self.like_btn_panel:
-                self.like_btn_panel.icon = "heart" if self.is_liked else "heart-outline"
-            notify.success("Лайк поставлен!" if self.is_liked else "Лайк убран")
-
-        def on_failure(req, error):
-            notify.error("Ошибка")
-
-        api.toggle_like(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+    # ============ ИЗБРАННОЕ ============
 
     def toggle_favorite(self, *args):
         if not api.is_authenticated():
@@ -1816,12 +1786,9 @@ class FavoriteDetailScreen(BaseScreen):
         logger.info(f"🔙 Возврат из избранного просмотра в FavoritesScreen")
 
         # ✅ 1. СНАЧАЛА - МГНОВЕННО обновляем TopNav на "Избранное"
-        #    (чтобы при переходе пользователь уже видел правильный заголовок)
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Очищаем кастомный виджет
             app.top_nav.clear_custom_title_widget()
-            # Форсированно устанавливаем "Избранное"
             app.top_nav.force_update_title("Избранное", show_back=False)
             if hasattr(app.top_nav, '_update_right_buttons'):
                 app.top_nav._update_right_buttons('favorites')
@@ -1841,20 +1808,17 @@ class FavoriteDetailScreen(BaseScreen):
         """При входе на экран - показываем название песни, а не "Избранное" """
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
-            # Настраиваем левую кнопку - стрелка назад
             if hasattr(app.top_nav, 'left_container'):
                 app.top_nav.left_container.clear_widgets()
                 app.top_nav.left_container.add_widget(app.top_nav.back_btn)
                 app.top_nav.back_btn.on_release = self.go_back
 
-            # ✅ ВОССТАНАВЛИВАЕМ ПРАВЫЕ КНОПКИ - иконка домой
             if hasattr(app.top_nav, 'right_container'):
                 if hasattr(app.top_nav, 'home_btn'):
                     app.top_nav.right_container.clear_widgets()
                     app.top_nav.right_container.add_widget(app.top_nav.home_btn)
                     logger.info("✅ Восстановлена иконка домой")
 
-        # ✅ ПОКАЗЫВАЕМ НАЗВАНИЕ ПЕСНИ (НЕ "Избранное")
         if self.song_title:
             self.update_top_nav_title()
 
@@ -1867,4 +1831,3 @@ class FavoriteDetailScreen(BaseScreen):
     def on_leave(self):
         """При выходе - НЕ трогаем TopNav, чтобы не было мерцаний"""
         logger.info("🚪 Выход из FavoriteDetailScreen")
-        # Ничего не делаем - TopNav обновится в go_back() или при переходе
