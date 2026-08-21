@@ -1,11 +1,13 @@
 # screens/components/top_nav.py
 """
 Верхняя панель навигации - с конфигом из top_nav_config.py
+С ОТЛАДОЧНОЙ ПОЛОСКОЙ ДЛЯ АНАЛИЗА ОТСТУПОВ НА ANDROID
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
 from kivy.core.window import Window
 from kivy.clock import Clock
+from kivy.graphics import Color, Rectangle
 
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
@@ -39,7 +41,7 @@ class TopNav(MDCard):
 
         # Флаги для управления навигацией
         self._just_returned_from_song_detail = False
-        self._block_navigation = False  # ← ДОБАВЛЕНО
+        self._block_navigation = False
         self._going_back = False
         self._navigating = False
 
@@ -50,23 +52,34 @@ class TopNav(MDCard):
         # ============ ПРАВИЛЬНЫЙ РАСЧЁТ ВЫСОТЫ И ОТСТУПОВ ============
         status_h = get_status_bar_height()
 
-        if platform == 'android':
-            self.height = dp(88) + status_h
-            top_padding = status_h + dp(24)
-        else:
-            self.height = dp(80)
-            top_padding = status_h + dp(8)
+        # ДИАГНОСТИКА: выводим реальные значения
+        logger.info("=" * 70)
+        logger.info(f"📱 TOP NAV - {platform.upper()}")
+        logger.info(f"📱 get_status_bar_height() = {status_h}dp")
+        logger.info(f"📱 Window.height = {Window.height}px")
+        logger.info(f"📱 Window.dpi = {Window.dpi}")
+        logger.info(f"📱 get_screen_density() = {get_screen_density()}")
+        logger.info("=" * 70)
 
-        self.padding = [0, top_padding, 0, 0]
+        if platform == 'android':
+            # На Android: высота = статус-бар + высота панели
+            # Используем МЕНЬШУЮ высоту для панели, чтобы прилегала плотнее
+            panel_height = dp(52)  # Уменьшено с 64 до 52
+            self.height = status_h + panel_height
+            top_padding = status_h  # БЕЗ ДОПОЛНИТЕЛЬНОГО ОТСТУПА!
+            logger.info(f"📱 Android: status_h={status_h}dp, panel_height={panel_height}dp, total={self.height}dp")
+        else:
+            self.height = dp(64)
+            top_padding = status_h + dp(4)
+
+        self.padding = [0, 0, 0, 0]  # УБИРАЕМ ВЕСЬ PADDING
         self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]
+        self.md_bg_color = [0, 0, 0, 0.8]  # НЕМНОГО ТЁМНЫЙ ФОН ДЛЯ ВИДИМОСТИ
         self.elevation = 0
         self.spacing = 0
 
-        logger.info("=" * 70)
-        logger.info(f"📱 TOP NAV - {platform.upper()}")
-        logger.info(f"📱 Высота панели: {self.height}dp")
-        logger.info("=" * 70)
+        # ============ ОТЛАДОЧНАЯ ПОЛОСКА ПОВЕРХ (БУДЕТ ДОБАВЛЕНА ПОЗЖЕ) ============
+        self._debug_bar = None
 
         # ============ ИСПОЛЬЗУЕМ FLOATLAYOUT ДЛЯ ТОЧНОГО ЦЕНТРИРОВАНИЯ ============
         self.container = MDFloatLayout(
@@ -171,6 +184,9 @@ class TopNav(MDCard):
 
         self.add_widget(self.container)
 
+        # ============ ДОБАВЛЯЕМ ОТЛАДОЧНУЮ ПОЛОСКУ ============
+        Clock.schedule_once(self._add_debug_bar, 0.1)
+
         if hasattr(self.sm, 'add_observer'):
             self.sm.add_observer(self._on_screen_changed)
         elif hasattr(self.sm, 'bind'):
@@ -178,6 +194,42 @@ class TopNav(MDCard):
 
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
+
+    def _add_debug_bar(self, dt):
+        """Добавляет яркую отладочную полоску поверх TopNav"""
+        from kivy.uix.widget import Widget
+        from kivy.graphics import Color, Rectangle
+
+        # Удаляем старую полоску, если есть
+        if self._debug_bar and self._debug_bar.parent:
+            self.remove_widget(self._debug_bar)
+        self._debug_bar = None
+
+        # Создаём полоску-виджет (НЕ через canvas, а как отдельный виджет)
+        self._debug_bar = Widget(
+            size_hint=(1, None),
+            height=dp(3),
+            pos_hint={'top': 1},
+            opacity=1
+        )
+
+        # Рисуем яркую полоску на canvas
+        with self._debug_bar.canvas:
+            Color(1, 0, 0, 1)  # ЯРКО-КРАСНАЯ
+            self._debug_rect = Rectangle(pos=self._debug_bar.pos, size=self._debug_bar.size)
+
+        self._debug_bar.bind(pos=self._update_debug_rect, size=self._update_debug_rect)
+        self.add_widget(self._debug_bar)
+
+        logger.info("=" * 70)
+        logger.info("🔴 ОТЛАДОЧНАЯ ПОЛОСКА ДОБАВЛЕНА (красная, высота 3dp)")
+        logger.info(f"🔴 Позиция полоски: top = {self._debug_bar.pos[1] + self._debug_bar.height}")
+        logger.info("=" * 70)
+
+    def _update_debug_rect(self, *args):
+        if hasattr(self, '_debug_rect'):
+            self._debug_rect.pos = self._debug_bar.pos
+            self._debug_rect.size = self._debug_bar.size
 
     def _get_screen_title(self, screen_name: str) -> str:
         """Возвращает заголовок из конфига"""
@@ -347,34 +399,23 @@ class TopNav(MDCard):
 
     def _on_screen_changed(self, instance, screen_name):
         """Обработчик смены экрана"""
-        # ============ БЛОКИРОВКА НАВИГАЦИИ ============
         if self._block_navigation:
             logger.info("⏭️ Навигация заблокирована, пропускаем смену экрана")
             return
 
         old = self.current_screen_name
 
-        # ============ ДИАГНОСТИКА ============
+        # ДИАГНОСТИКА
         import traceback
         logger.info(f"🔍 _on_screen_changed: {old} → {screen_name}")
-        logger.info(f"   Стек вызовов:")
-        stack = traceback.format_stack()[-6:-1]
-        for line in stack:
-            line = line.strip()
-            if len(line) > 150:
-                line = line[:150] + "..."
-            logger.info(f"     {line}")
-        # =====================================
 
         if old == screen_name:
             logger.debug(f"⏭️ Экран не изменился: {screen_name}, пропускаем")
             return
 
-        # ✅ Сначала обновляем текущий экран
         self.current_screen_name = screen_name
         logger.info(f"🔄 _on_screen_changed: {old} → {screen_name}")
 
-        # ============ СОХРАНЯЕМ ПРЕДЫДУЩИЙ ЭКРАН ============
         if old and old != screen_name:
             if screen_name == 'artist_songs' and old == 'song_detail':
                 logger.info(f"   ⏭️ Возврат в artist_songs, не меняем previous_screen")
@@ -385,16 +426,13 @@ class TopNav(MDCard):
         if old and old != screen_name:
             self._previous_screen = old
 
-        # ============ ОБНОВЛЯЕМ КНОПКИ ============
         if screen_name == 'artist_songs':
             self._set_artist_songs_mode()
         else:
             self._update_left_button(screen_name)
             self._update_right_buttons(screen_name)
 
-        # ============ ОБНОВЛЯЕМ ЗАГОЛОВОК ============
         if screen_name == 'artist_songs':
-            # Заголовок уже установлен в _set_artist_songs_mode
             pass
         else:
             title_type = top_nav_config.get_custom_title_widget_type(screen_name)
@@ -409,7 +447,6 @@ class TopNav(MDCard):
                     self.clear_custom_title_widget()
                 self.update_title(screen_name)
 
-        # ============ ОБНОВЛЯЕМ BOTTOM NAV ============
         app = MDApp.get_running_app()
         if app and hasattr(app, 'bottom_nav') and app.bottom_nav:
             nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
@@ -420,9 +457,26 @@ class TopNav(MDCard):
                 app.bottom_nav.clear_active()
                 logger.info(f"🔽 BottomNav: экран '{screen_name}' не в меню, все иконки сброшены")
 
+        # ============ ОТЛАДКА: ВЫВОДИМ РЕАЛЬНОЕ ПОЛОЖЕНИЕ ============
+        Clock.schedule_once(self._log_position, 0.2)
+
+    def _log_position(self, dt):
+        """Выводит реальное положение TopNav для отладки"""
+        if self.parent:
+            parent_h = self.parent.height
+            logger.info("=" * 70)
+            logger.info(f"📐 ОТЛАДКА ПОЗИЦИИ TopNav:")
+            logger.info(f"   parent.height = {parent_h}px")
+            logger.info(f"   self.y = {self.y}px")
+            logger.info(f"   self.top = {self.top}px")
+            logger.info(f"   self.height = {self.height}px")
+            logger.info(f"   self.pos_hint = {self.pos_hint}")
+            logger.info(f"   self.padding = {self.padding}")
+            logger.info(f"   Отступ сверху = {parent_h - self.top}px")
+            logger.info("=" * 70)
+
     def _on_back_press(self, *args):
         """Обработчик нажатия кнопки назад"""
-        # ============ БЛОКИРОВКА НАВИГАЦИИ ============
         if self._block_navigation:
             logger.info("⏭️ Навигация заблокирована, пропускаем")
             return
@@ -441,10 +495,8 @@ class TopNav(MDCard):
         prev_from_state = screen_state.get_previous_screen()
         logger.info(f"   📌 screen_state.previous_screen = {prev_from_state}")
 
-        # СПИСОК ЭКРАНОВ, ГДЕ КНОПКА НАЗАД НЕ РАБОТАЕТ (нижняя навигация)
         nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary']
 
-        # СПИСОК ПАРСЕРОВ — они должны возвращать на admin
         parser_screens = [
             'amdm_parser', 'mytabs_parser', 'accord_pro_parser',
             'akkordus_parser', 'muzland_parser', 'chordie_parser',
@@ -452,29 +504,22 @@ class TopNav(MDCard):
             'rushsound_parser'
         ]
 
-        # ============ Если экран из нижней навигации — игнорируем ============
         if current in nav_screens:
             logger.info(f"   ⏭️ Экран '{current}' не поддерживает кнопку назад, игнорируем")
             return
 
-        # ============ Если экран парсера — возвращаем на admin ============
         if current in parser_screens:
             logger.info(f"   → Парсер '{current}' возвращает на admin")
             if self.sm.has_screen('admin'):
-                # ✅ Отменяем ВСЕ запланированные события
                 Clock.unschedule(self._on_screen_changed)
                 Clock.unschedule(self._on_back_press)
                 Clock.unschedule(self._on_home_press)
                 Clock.unschedule(self._on_search_press)
-                # Отменяем любые другие события
                 Clock.unschedule(self._on_settings_press)
 
-                # Также отменяем все события, которые могут быть в экранах
-                # (например, в search_screen_detail)
                 if hasattr(self, 'sm') and self.sm:
                     for screen in self.sm.screens:
                         if hasattr(screen, 'go_back'):
-                            # Принудительно отменяем все запланированные в экране
                             if hasattr(screen, '_hint_timer') and screen._hint_timer:
                                 Clock.unschedule(screen._hint_timer)
                                 screen._hint_timer = None
@@ -486,9 +531,7 @@ class TopNav(MDCard):
                 self.sm.current = 'home'
             return
 
-        # ============ artist_songs → всегда на songs ============
         if current == 'artist_songs':
-            # Проверяем, не только ли мы вернулись из song_detail
             if hasattr(self, '_just_returned_from_song_detail') and self._just_returned_from_song_detail:
                 logger.info("   ⏭️ Только что вернулись из song_detail, пропускаем повторный возврат")
                 self._just_returned_from_song_detail = False
@@ -520,9 +563,7 @@ class TopNav(MDCard):
                 Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
                 return
 
-        # ============ song_detail → на предыдущий экран ============
         if current == 'song_detail':
-            # Устанавливаем флаг, что мы только что вернулись из song_detail
             self._just_returned_from_song_detail = True
 
             if self.sm.has_screen('song_detail'):
@@ -545,7 +586,6 @@ class TopNav(MDCard):
                 Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
                 return
 
-        # ============ chord_detail → на search или chords ============
         if current == 'chord_detail':
             if self.sm.has_screen('search'):
                 screen_state.clear_pending_chord()
@@ -561,7 +601,6 @@ class TopNav(MDCard):
                 logger.info("   → chord_detail возврат на home")
                 return
 
-        # ============ ОБЫЧНАЯ ЛОГИКА ============
         if top_nav_config.show_back_button(current):
             if prev_from_state and self.sm.has_screen(prev_from_state):
                 logger.info(f"   → Возврат на {prev_from_state}")

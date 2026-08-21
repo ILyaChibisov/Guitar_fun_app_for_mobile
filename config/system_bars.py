@@ -21,8 +21,6 @@ GESTURE_NAV_BAR_HEIGHT_DP = 16
 def get_screen_density():
     """
     Возвращает плотность экрана (scale factor)
-    На Android: реальная плотность (обычно 1.5, 2.0, 2.75, 3.0, 3.5)
-    На Windows: dpi/160
     """
     try:
         if platform == 'android':
@@ -30,12 +28,12 @@ def get_screen_density():
             from jnius import autoclass
             Resources = autoclass('android.content.res.Resources')
             density = Resources.getSystem().getDisplayMetrics().density
-            logger.info(f"[SystemBars] 📱 Плотность экрана (Android): {density:.3f}")
 
-            # Дополнительная диагностика
+            # ДОПОЛНИТЕЛЬНАЯ ДИАГНОСТИКА
             metrics = Resources.getSystem().getDisplayMetrics()
             logger.info(
                 f"[SystemBars] 📱 DisplayMetrics: widthPixels={metrics.widthPixels}, heightPixels={metrics.heightPixels}, densityDpi={metrics.densityDpi}")
+            logger.info(f"[SystemBars] 📱 Плотность экрана (Android): {density:.3f}")
             return density
         else:
             density = Window.dpi / 160 if Window.dpi else 1.0
@@ -49,6 +47,7 @@ def get_screen_density():
 def get_status_bar_height():
     """
     Возвращает высоту статус-бара в dp
+    С ДОПОЛНИТЕЛЬНОЙ ДИАГНОСТИКОЙ
     """
     global _status_bar_height_dp
 
@@ -64,6 +63,7 @@ def get_status_bar_height():
             from jnius import autoclass
             Resources = autoclass('android.content.res.Resources')
 
+            # Пробуем через ресурсы
             resource_id = Resources.getSystem().getIdentifier(
                 'status_bar_height', 'dimen', 'android'
             )
@@ -74,7 +74,7 @@ def get_status_bar_height():
                 density = get_screen_density()
                 _status_bar_height_dp = px / density
                 logger.info(
-                    f"[SystemBars] ✅ Статус-бар: {px}px, плотность={density:.3f}, = {_status_bar_height_dp:.1f}dp")
+                    f"[SystemBars] ✅ Статус-бар (ресурсы): {px}px, плотность={density:.3f}, = {_status_bar_height_dp:.1f}dp")
                 return _status_bar_height_dp
             else:
                 logger.warning("[SystemBars] ⚠️ Resource ID статус-бара не найден!")
@@ -83,9 +83,9 @@ def get_status_bar_height():
             import traceback
             traceback.print_exc()
 
-        # Альтернативный способ через Window
+        # Альтернативный способ через Window Insets
         try:
-            logger.info("[SystemBars] 🔍 Пробуем альтернативный способ определения статус-бара...")
+            logger.info("[SystemBars] 🔍 Пробуем альтернативный способ (WindowInsets)...")
             from android import mActivity
             from jnius import autoclass
             View = autoclass('android.view.View')
@@ -100,10 +100,39 @@ def get_status_bar_height():
                         density = get_screen_density()
                         _status_bar_height_dp = status_height / density
                         logger.info(
-                            f"[SystemBars] ✅ Статус-бар (через insets): {status_height}px = {_status_bar_height_dp:.1f}dp")
+                            f"[SystemBars] ✅ Статус-бар (Insets): {status_height}px = {_status_bar_height_dp:.1f}dp")
                         return _status_bar_height_dp
         except Exception as e:
             logger.error(f"Ошибка альтернативного определения статус-бара: {e}")
+
+        # Ещё один способ: через контекст
+        try:
+            logger.info("[SystemBars] 🔍 Пробуем через контекст...")
+            from android import mActivity
+            context = mActivity.getApplicationContext()
+            resources = context.getResources()
+
+            # Пробуем разные ID
+            ids = [
+                resources.getIdentifier('status_bar_height', 'dimen', 'android'),
+                resources.getIdentifier('status_bar_height', 'dimen', 'com.android.internal.R$dimen'),
+            ]
+
+            for res_id in ids:
+                if res_id > 0:
+                    px = resources.getDimensionPixelSize(res_id)
+                    if px > 0:
+                        density = get_screen_density()
+                        _status_bar_height_dp = px / density
+                        logger.info(f"[SystemBars] ✅ Статус-бар (контекст): {px}px = {_status_bar_height_dp:.1f}dp")
+                        return _status_bar_height_dp
+        except Exception as e:
+            logger.error(f"Ошибка определения через контекст: {e}")
+
+        # Если ничего не сработало — используем разумное значение по умолчанию
+        # На большинстве Android устройств статус-бар ~24-28dp
+        _status_bar_height_dp = 24
+        logger.warning(f"[SystemBars] ⚠️ Используем значение по умолчанию: {_status_bar_height_dp}dp")
 
     # Windows симуляция
     _status_bar_height_dp = WINDOWS_STATUS_BAR_HEIGHT_DP
@@ -152,7 +181,6 @@ def get_navigation_bar_height():
             View = autoclass('android.view.View')
             decorView = mActivity.getWindow().getDecorView()
 
-            # Получаем insets
             if hasattr(decorView, 'getRootWindowInsets'):
                 insets = decorView.getRootWindowInsets()
                 if insets:
@@ -161,24 +189,24 @@ def get_navigation_bar_height():
                     if nav_height > 0:
                         density = get_screen_density()
                         _nav_bar_height_dp = nav_height / density
-                        logger.info(
-                            f"[SystemBars] ✅ Нав-бар (через insets): {nav_height}px = {_nav_bar_height_dp:.1f}dp")
+                        logger.info(f"[SystemBars] ✅ Нав-бар (Insets): {nav_height}px = {_nav_bar_height_dp:.1f}dp")
                         return _nav_bar_height_dp
 
-            # Проверяем режим жестов по флагам
             systemUiVisibility = decorView.getSystemUiVisibility()
             logger.info(f"[SystemBars] 🔍 SystemUiVisibility: {systemUiVisibility}")
 
-            # SYSTEM_UI_FLAG_HIDE_NAVIGATION = 0x00000002
             if systemUiVisibility & 0x00000002:
                 _nav_bar_height_dp = GESTURE_NAV_BAR_HEIGHT_DP
                 logger.info(f"[SystemBars] 🖐️ Режим жестов: {_nav_bar_height_dp}dp")
                 return _nav_bar_height_dp
             else:
                 logger.info("[SystemBars] 🔍 Похоже на режим с кнопками")
-
         except Exception as e:
             logger.error(f"Ошибка проверки режима нав-бара: {e}")
+
+        # Значение по умолчанию
+        _nav_bar_height_dp = 48
+        logger.warning(f"[SystemBars] ⚠️ Используем значение по умолчанию: {_nav_bar_height_dp}dp")
 
     # Windows симуляция
     _nav_bar_height_dp = WINDOWS_NAV_BAR_HEIGHT_DP
@@ -199,12 +227,10 @@ def get_all_system_info():
         'navigation_bar_height_dp': get_navigation_bar_height(),
     }
 
-    # Добавляем px значения
     density = info['screen_density']
     info['status_bar_height_px'] = info['status_bar_height_dp'] * density
     info['navigation_bar_height_px'] = info['navigation_bar_height_dp'] * density
 
-    # Форматируем вывод
     logger.info("=" * 70)
     logger.info("📱 ПОЛНАЯ ДИАГНОСТИКА СИСТЕМНЫХ ПАНЕЛЕЙ")
     logger.info("=" * 70)

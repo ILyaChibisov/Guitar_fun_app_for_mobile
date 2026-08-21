@@ -11,6 +11,8 @@ import urllib.parse
 import webbrowser
 import warnings
 import time
+
+import requests
 from kivy.logger import Logger
 from kivy.storage.jsonstore import JsonStore
 from kivy.clock import Clock
