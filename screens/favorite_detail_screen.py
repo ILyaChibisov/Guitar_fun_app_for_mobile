@@ -303,7 +303,6 @@ class FavoriteDetailScreen(BaseScreen):
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
-        # ============ ЕДИНЫЙ ОТСТУП ДЛЯ ВСЕХ ПЛАТФОРМ ============
         top_offset = layout_config.get_top_padding(include_top_nav=True)
 
         bottom_nav_total = layout_config.get_bottom_nav_total_height()

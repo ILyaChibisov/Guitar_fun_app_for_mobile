@@ -19,7 +19,7 @@ class LayoutConfig:
     TOP_NAV_HEIGHT_TABLET = 72
 
     # ========== ДОПОЛНИТЕЛЬНЫЙ ОТСТУП СВЕРХУ ==========
-    EXTRA_TOP_PADDING = 4  # Минимальный зазор
+    EXTRA_TOP_PADDING = 4
 
     # ========== ОТСТУПЫ ==========
     SIDE_PADDING = 16
@@ -60,27 +60,28 @@ class LayoutConfig:
         """
         Возвращает отступ сверху для контента в dp.
 
-        Android: TopNav прозрачный → отступ = panel_height (52dp)
-        Windows: TopNav НЕ прозрачный → отступ = status_bar + top_nav_height
+        Android: TopNav прозрачный → отступ = panel_height (52dp) + зазор
+        Windows: Нет статус-бара, TopNav НЕ прозрачный → отступ = top_nav_height + зазор
         """
         if platform == 'android':
             # Android: TopNav прозрачный
             panel_height = dp(52)
             total = panel_height
         else:
-            # Windows: TopNav НЕ прозрачный
-            status_h = get_status_bar_height()
+            # Windows: Нет статус-бара, TopNav НЕ прозрачный
             if include_top_nav:
-                total = status_h + cls.get_top_nav_height()
+                total = cls.get_top_nav_height()  # 64dp
             else:
-                total = status_h
+                total = 0
 
         total += dp(cls.EXTRA_TOP_PADDING)
         return total
 
     @classmethod
     def get_bottom_padding(cls):
-        return cls.get_bottom_nav_total_height() + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
+        """Возвращает нижний отступ с учётом BottomNav и системной панели"""
+        nav_bar_height = get_navigation_bar_height()
+        return cls.get_bottom_nav_height() + nav_bar_height + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
 
     @classmethod
     def get_content_padding(cls):
