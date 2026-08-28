@@ -42,6 +42,11 @@ class BaseScreen(MDScreen):
         self._use_scroll = False
         self._custom_padding = None
 
+        # ============ ФЛАГ: ЭКРАН САМ УПРАВЛЯЕТ ОТСТУПАМИ ============
+        # Если True - BaseScreen НЕ создаёт и НЕ обновляет отступы
+        # Используется в экранах детального просмотра (song_detail, favorite_detail, etc.)
+        self._manage_padding_manually = False
+
         # Привязываемся к изменению размера окна (поворот экрана)
         Window.bind(on_resize=self._on_window_resize)
 
@@ -54,10 +59,15 @@ class BaseScreen(MDScreen):
         if not hasattr(self, '_main_layout') or not self._main_layout:
             return
 
+        # ============ ЕСЛИ ЭКРАН САМ УПРАВЛЯЕТ ОТСТУПАМИ — НЕ ТРОГАЕМ ============
+        if self._manage_padding_manually:
+            logger.debug(f"{self.name}: ручное управление отступами, пропускаем _update_layout")
+            return
+
         logger.debug(f"{self.name}: обновление layout после поворота")
 
-        # Обновляем отступы
-        top_padding = layout_config.get_top_padding()
+        # Используем include_top_nav=True для всех экранов (TopNav прозрачный)
+        top_padding = layout_config.get_top_padding(include_top_nav=True)
         bottom_padding = self._get_bottom_padding()
 
         if self._top_spacer:

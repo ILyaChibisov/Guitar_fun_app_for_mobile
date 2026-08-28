@@ -19,11 +19,11 @@ class LayoutConfig:
     TOP_NAV_HEIGHT_TABLET = 72
 
     # ========== ДОПОЛНИТЕЛЬНЫЙ ОТСТУП СВЕРХУ ==========
-    EXTRA_TOP_PADDING = 12
+    EXTRA_TOP_PADDING = 4  # Минимальный зазор
 
     # ========== ОТСТУПЫ ==========
     SIDE_PADDING = 16
-    GAP_BETWEEN_CONTENT_AND_NAV = 0  # ПЛОТНОЕ ПРИЛЕГАНИЕ
+    GAP_BETWEEN_CONTENT_AND_NAV = 0
 
     CONTENT_TOP_PADDING = 8
     CONTENT_BOTTOM_PADDING = 8
@@ -32,7 +32,6 @@ class LayoutConfig:
 
     @classmethod
     def is_tablet(cls):
-        """Определяет, планшет ли это (ширина >= 600dp)"""
         if cls._is_tablet is None:
             min_width = min(Window.width, Window.height)
             cls._is_tablet = min_width >= dp(600)
@@ -40,57 +39,51 @@ class LayoutConfig:
 
     @classmethod
     def get_top_nav_height(cls):
-        """Возвращает высоту верхней панели в dp"""
         if cls.is_tablet():
             return dp(cls.TOP_NAV_HEIGHT_TABLET)
         return dp(cls.TOP_NAV_HEIGHT)
 
     @classmethod
     def get_bottom_nav_height(cls):
-        """
-        Возвращает высоту BottomNav в dp (только видимая часть с иконками).
-        На всех платформах = 52dp.
-        """
         return dp(52)
 
     @classmethod
     def get_bottom_nav_total_height(cls):
-        """
-        Возвращает ПОЛНУЮ высоту BottomNav с учётом системной навигации.
-        На Android: только высота панели (системная навигация не входит)
-        На Windows: высота панели + эмуляция системной навигации
-        """
         nav_bar_height = get_navigation_bar_height()
-
         if platform == 'android':
-            # На Android системная навигация не входит в BottomNav
             return cls.get_bottom_nav_height()
         else:
-            # На Windows эмулируем системную навигацию
             return cls.get_bottom_nav_height() + nav_bar_height
 
     @classmethod
     def get_top_padding(cls, include_top_nav=True):
-        """Возвращает отступ сверху для контента в dp"""
-        status_h = get_status_bar_height()
-        total = status_h
-        if include_top_nav:
-            total += cls.get_top_nav_height()
+        """
+        Возвращает отступ сверху для контента в dp.
+
+        Android: TopNav прозрачный → отступ = panel_height (52dp)
+        Windows: TopNav НЕ прозрачный → отступ = status_bar + top_nav_height
+        """
+        if platform == 'android':
+            # Android: TopNav прозрачный
+            panel_height = dp(52)
+            total = panel_height
+        else:
+            # Windows: TopNav НЕ прозрачный
+            status_h = get_status_bar_height()
+            if include_top_nav:
+                total = status_h + cls.get_top_nav_height()
+            else:
+                total = status_h
+
         total += dp(cls.EXTRA_TOP_PADDING)
         return total
 
     @classmethod
     def get_bottom_padding(cls):
-        """
-        Возвращает отступ снизу для контента в dp.
-        Отступ должен быть равен ПОЛНОЙ высоте BottomNav,
-        чтобы контент прилегал к верхней границе панели.
-        """
         return cls.get_bottom_nav_total_height() + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
 
     @classmethod
     def get_content_padding(cls):
-        """Возвращает padding для контейнера контента [left, top, right, bottom] в dp"""
         return [
             dp(cls.SIDE_PADDING),
             dp(cls.CONTENT_TOP_PADDING),
@@ -100,7 +93,6 @@ class LayoutConfig:
 
     @classmethod
     def force_update(cls):
-        """Принудительное обновление после поворота экрана"""
         cls._is_tablet = None
         logger.info(f"LayoutConfig: принудительное обновление после поворота")
 
@@ -113,7 +105,7 @@ class LayoutConfig:
         logger.info(f"📱 BOTTOM_NAV_HEIGHT: {cls.get_bottom_nav_height()}dp")
         logger.info(f"📱 BOTTOM_NAV_TOTAL: {cls.get_bottom_nav_total_height()}dp")
         logger.info(f"📱 EXTRA_TOP_PADDING: {cls.EXTRA_TOP_PADDING}dp")
-        logger.info(f"📱 GAP_BETWEEN_CONTENT_AND_NAV: {cls.GAP_BETWEEN_CONTENT_AND_NAV}dp")
+        logger.info(f"📱 get_top_padding(): {cls.get_top_padding()}dp")
         logger.info(f"📱 get_bottom_padding(): {cls.get_bottom_padding()}dp")
         logger.info("=" * 70)
 
