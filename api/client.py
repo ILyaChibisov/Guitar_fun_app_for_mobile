@@ -1,6 +1,7 @@
 # api/client.py
 """
 HTTP клиент для работы с сервером - БЕЗ КЭША ПЕСЕН
+С автоматическим обновлением access_token через refresh_token
 """
 import json
 import os
@@ -192,12 +193,47 @@ class APIClient:
             headers['Authorization'] = f'Bearer {self.access_token}'
         return headers
 
+    # ============ ОБНОВЛЕНИЕ ТОКЕНА ============
+
+    def _refresh_access_token(self) -> bool:
+        """
+        Пытается обновить access_token через refresh_token.
+        Возвращает True, если удалось, False — если нет.
+        """
+        if not self.refresh_token:
+            Logger.warning("API: Нет refresh_token, обновление невозможно")
+            return False
+
+        try:
+            Logger.info("🔄 Обновление access_token через refresh_token...")
+            response = self.session.post(
+                f"{self.config.API_BASE_URL}/auth/refresh",
+                params={'refresh_token': self.refresh_token},
+                timeout=config.CONNECTION_TIMEOUT
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                new_access = result.get('access_token')
+                if new_access:
+                    self.access_token = new_access
+                    self._save_tokens()
+                    Logger.info("✅ access_token успешно обновлён")
+                    return True
+
+            Logger.warning(f"⚠️ Не удалось обновить токен, статус: {response.status_code}")
+            return False
+
+        except Exception as e:
+            Logger.error(f"❌ Ошибка обновления токена: {e}")
+            return False
+
     # ============ ЗАПРОСЫ ============
 
-    def _request_sync(self, url, method='GET', data=None, include_auth=True):
+    def _request_sync(self, url, method='GET', data=None, include_auth=True, _retry=True):
         """
-        Синхронный запрос с обработкой SSL ошибок
-        Универсальная версия для Android и Windows
+        Синхронный запрос с обработкой SSL ошибок и автообновлением токена.
+        _retry — внутренний флаг, чтобы не зациклиться при повторной попытке.
         """
         headers = self._get_headers(include_auth)
         try:
@@ -213,6 +249,20 @@ class APIClient:
             else:
                 response = self.session.request(method, url, json=data, headers=headers,
                                                 timeout=config.CONNECTION_TIMEOUT)
+
+            # ============ АВТООБНОВЛЕНИЕ ТОКЕНА ПРИ 401 ============
+            if response.status_code == 401 and include_auth and _retry:
+                Logger.warning("⚠️ Получен 401, пробуем обновить токен...")
+
+                if self._refresh_access_token():
+                    # Токен обновился — повторяем запрос с новым токеном
+                    Logger.info("🔄 Повторяем исходный запрос с новым токеном...")
+                    return self._request_sync(url, method, data, include_auth, _retry=False)
+                else:
+                    # Не удалось обновить — чистим токены
+                    Logger.warning("❌ Не удалось обновить токен, очищаем данные авторизации")
+                    self._clear_tokens()
+                    return {"error": "unauthorized"}
 
             response.raise_for_status()
 
@@ -269,6 +319,16 @@ class APIClient:
         def worker():
             try:
                 result = self._request_sync(url, method, data, include_auth)
+
+                # Если токен не удалось обновить — сообщаем об ошибке авторизации
+                if isinstance(result, dict) and result.get('error') == 'unauthorized':
+                    error_msg = "unauthorized"
+                    if on_failure:
+                        Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
+                    else:
+                        Logger.error("API: Требуется повторная авторизация")
+                    return
+
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(result), 0)
             except Exception as e:
@@ -308,9 +368,6 @@ class APIClient:
         self._favorites_cache = None
         self._favorites_cache_timestamp = 0
         Logger.info("🗑️ Кэш избранного очищен (память)")
-
-    # ============ УДАЛЁН КЭШ ПЕСЕН ============
-    # get_tab() теперь всегда загружает с сервера
 
     # ============ API МЕТОДЫ ============
 
@@ -494,8 +551,6 @@ class APIClient:
             url=f"{self.config.API_BASE_URL}/songs/popular?limit={limit}",
             method='GET', on_success=on_success, on_failure=on_failure, include_auth=False
         )
-
-    # ============ УДАЛЁН МЕТОД toggle_like ============
 
     def search_songs(self, query: str, limit: int = 30, offset: int = 0, on_success=None, on_failure=None):
         encoded_query = urllib.parse.quote(query, safe='')
