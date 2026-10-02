@@ -50,7 +50,7 @@ android.keystore_alias = guitarfuns
 android.keystore_key_password = lexx311285
 
 [buildozer]
-log_level = 2
+log_level = 1
 warn_on_root = 1
 
 [gradle]
