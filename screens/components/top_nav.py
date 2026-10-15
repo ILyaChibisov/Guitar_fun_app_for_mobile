@@ -2,6 +2,7 @@
 """
 Верхняя панель навигации - с конфигом из top_nav_config.py
 ПРОЗРАЧНЫЙ ФОН + ЗЕЛЁНАЯ ПОЛОСКА СНИЗУ
+С ДИАГНОСТИКОЙ ВЫСОТЫ
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -78,9 +79,18 @@ class TopNav(MDCard):
 
         self.bind(pos=self._update_bottom_line, size=self._update_bottom_line)
 
+        # ============ ДИАГНОСТИКА ПРИ СОЗДАНИИ ============
         logger.info("=" * 70)
         logger.info(f"📱 TOP NAV - {platform.upper()} - ПРОЗРАЧНЫЙ ФОН + ПОЛОСКА")
-        logger.info(f"📱 status_h={status_h}dp, panel_height={panel_height}dp, total={self.height}dp")
+        logger.info(f"📱 platform = {platform}")
+        logger.info(f"📱 status_h = {status_h}dp")
+        logger.info(f"📱 panel_height = {panel_height}dp")
+        logger.info(f"📱 self.height (расчёт) = {self.height}px = {self.height / dp(1):.1f}dp")
+        logger.info(f"📱 top_padding = {top_padding}dp")
+        logger.info(f"📱 self.padding = {self.padding}")
+        logger.info(f"📱 Window.height = {Window.height}px")
+        logger.info(f"📱 Window.dpi = {Window.dpi}")
+        logger.info(f"📱 get_screen_density() = {get_screen_density()}")
         logger.info("=" * 70)
 
         # ============ КОНТЕЙНЕР ============
@@ -189,6 +199,35 @@ class TopNav(MDCard):
 
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
+
+        # ============ ДИАГНОСТИКА ПОСЛЕ СОЗДАНИЯ ============
+        Clock.schedule_once(self._log_top_nav_size, 0.1)
+        Clock.schedule_once(self._log_top_nav_size, 0.5)
+        Clock.schedule_once(self._log_top_nav_size, 1.0)
+
+    def _log_top_nav_size(self, dt):
+        """Логирует реальные размеры TopNav после отрисовки"""
+        logger.info("=" * 70)
+        logger.info(f"🔍 TOP NAV РЕАЛЬНЫЕ РАЗМЕРЫ (после отрисовки):")
+        logger.info(f"   self.height = {self.height}px = {self.height / dp(1):.1f}dp")
+        logger.info(f"   self.width = {self.width}px")
+        logger.info(f"   self.y = {self.y}px")
+        logger.info(f"   self.top = {self.top}px")
+        logger.info(f"   self.pos = {self.pos}")
+        logger.info(f"   self.padding = {self.padding}")
+        logger.info(f"   self.pos_hint = {self.pos_hint}")
+
+        if self.parent:
+            parent_height = self.parent.height
+            logger.info(f"   parent.height = {parent_height}px")
+            logger.info(f"   parent класс = {self.parent.__class__.__name__}")
+            # Отступ сверху (сколько от верха родителя до верха TopNav)
+            top_offset = parent_height - self.top
+            logger.info(f"   ⚠️ Отступ сверху от родителя = {top_offset}px = {top_offset / dp(1):.1f}dp")
+            # Высота, которую реально занимает TopNav
+            logger.info(f"   ✅ Реальная высота TopNav = {self.height}px = {self.height / dp(1):.1f}dp")
+
+        logger.info("=" * 70)
 
     def _update_bottom_line(self, *args):
         """Обновляет позицию нижней полоски"""
@@ -565,4 +604,4 @@ class TopNav(MDCard):
 
     def is_transparent(self):
         """Возвращает True, если TopNav прозрачный (контент должен идти под ним)"""
-        return True  # Теперь всегда прозрачный
+        return True

@@ -14,14 +14,13 @@ logger = get_logger('LayoutConfig')
 class LayoutConfig:
     """Централизованная конфигурация"""
 
-    # ========== БАЗОВЫЕ РАЗМЕРЫ ==========
-    TOP_NAV_HEIGHT = 64
-    TOP_NAV_HEIGHT_TABLET = 72
+    # ========== РЕАЛЬНЫЕ РАЗМЕРЫ ПАНЕЛЕЙ ==========
+    # ВАЖНО: эти значения должны СОВПАДАТЬ с top_nav.py!
+    TOP_NAV_PANEL_HEIGHT = 64      # Windows
+    ANDROID_PANEL_HEIGHT = 52      # Android
 
-    # ========== ДОПОЛНИТЕЛЬНЫЙ ОТСТУП СВЕРХУ ==========
     EXTRA_TOP_PADDING = 4
 
-    # ========== ОТСТУПЫ ==========
     SIDE_PADDING = 16
     GAP_BETWEEN_CONTENT_AND_NAV = 0
 
@@ -39,9 +38,15 @@ class LayoutConfig:
 
     @classmethod
     def get_top_nav_height(cls):
-        if cls.is_tablet():
-            return dp(cls.TOP_NAV_HEIGHT_TABLET)
-        return dp(cls.TOP_NAV_HEIGHT)
+        """
+        Возвращает РЕАЛЬНУЮ высоту TopNav.
+        Должна совпадать с top_nav.py.
+        """
+        if platform == 'android':
+            status_h = get_status_bar_height()
+            return status_h + dp(cls.ANDROID_PANEL_HEIGHT)
+        else:
+            return dp(cls.TOP_NAV_PANEL_HEIGHT)  # 64dp
 
     @classmethod
     def get_bottom_nav_height(cls):
@@ -58,23 +63,15 @@ class LayoutConfig:
     @classmethod
     def get_top_padding(cls, include_top_nav=True):
         """
-        Возвращает отступ сверху для контента в dp.
-
-        Android: TopNav прозрачный. Контент должен идти ПОСЛЕ него.
-                 Отступ = status_h + panel_height + EXTRA
-        Windows: TopNav непрозрачный (нет статус-бара).
-                 Отступ = top_nav_height + EXTRA
+        Возвращает отступ сверху для контента.
         """
         if platform == 'android':
-            # Android: TopNav занимает status_h + panel_height (52dp)
-            # Контент начинается после этого
             status_h = get_status_bar_height()
-            panel_height = dp(52)
+            panel_height = dp(cls.ANDROID_PANEL_HEIGHT)
             total = status_h + panel_height
         else:
-            # Windows: TopNav непрозрачный, нет статус-бара
             if include_top_nav:
-                total = cls.get_top_nav_height()  # 64dp
+                total = dp(cls.TOP_NAV_PANEL_HEIGHT)  # 64dp
             else:
                 total = 0
 
@@ -83,7 +80,6 @@ class LayoutConfig:
 
     @classmethod
     def get_bottom_padding(cls):
-        """Возвращает нижний отступ с учётом BottomNav и системной панели"""
         nav_bar_height = get_navigation_bar_height()
         return cls.get_bottom_nav_height() + nav_bar_height + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
 
@@ -99,17 +95,13 @@ class LayoutConfig:
     @classmethod
     def force_update(cls):
         cls._is_tablet = None
-        logger.info(f"LayoutConfig: принудительное обновление после поворота")
 
     @classmethod
     def update_for_platform(cls):
         logger.info("=" * 70)
         logger.info("📐 LAYOUT CONFIG")
         logger.info(f"📱 Платформа: {platform}")
-        logger.info(f"📱 TOP_NAV_HEIGHT: {cls.TOP_NAV_HEIGHT}dp")
-        logger.info(f"📱 BOTTOM_NAV_HEIGHT: {cls.get_bottom_nav_height()}dp")
-        logger.info(f"📱 BOTTOM_NAV_TOTAL: {cls.get_bottom_nav_total_height()}dp")
-        logger.info(f"📱 EXTRA_TOP_PADDING: {cls.EXTRA_TOP_PADDING}dp")
+        logger.info(f"📱 get_top_nav_height(): {cls.get_top_nav_height()}dp")
         logger.info(f"📱 get_top_padding(): {cls.get_top_padding()}dp")
         logger.info(f"📱 get_bottom_padding(): {cls.get_bottom_padding()}dp")
         logger.info("=" * 70)

@@ -21,7 +21,7 @@ from kivy.utils import platform
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
-from config.system_bars import get_navigation_bar_height
+from config.system_bars import get_navigation_bar_height, get_status_bar_height
 from screens.base_screen import BaseScreen
 
 logger = screen_logger('TermDetail')
@@ -66,6 +66,10 @@ class TermDetailScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'term_detail'
+
+        # ============ ЭКРАН САМ УПРАВЛЯЕТ ОТСТУПАМИ ============
+        self._manage_padding_manually = True
+
         self.bg_image = None
         self.term_name = None
         self.term_data = None
@@ -209,17 +213,31 @@ class TermDetailScreen(BaseScreen):
         """Инициализирует UI как в song_detail_screen"""
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
-        # ============ ОТСТУП ПОД TOPNAV ============
         top_padding_for_nav = layout_config.get_top_padding()
-        if platform == 'android':
-            min_top_padding = dp(48)
-            if top_padding_for_nav < min_top_padding:
-                top_padding_for_nav = min_top_padding
-            else:
-                top_padding_for_nav = top_padding_for_nav + dp(8)
+
+        logger.info("=" * 70)
+        logger.info(f"🔍 term_detail init_ui:")
+        logger.info(f"   platform = {platform}")
+        logger.info(f"   get_top_padding() = {top_padding_for_nav}dp")
+        logger.info(f"   get_top_nav_height() = {layout_config.get_top_nav_height()}dp")
+        logger.info(f"   get_status_bar_height() = {get_status_bar_height()}dp")
+        logger.info("=" * 70)
 
         self._top_spacer_term = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_term)
+
+        # # ============ ОТЛАДОЧНАЯ ПОЛОСКА ПОД SPACER'ОМ ============
+        # # Показывает, где РЕАЛЬНО начинается контент
+        # debug_line = Widget(size_hint_y=None, height=dp(3))
+        # with debug_line.canvas:
+        #     Color(1, 0, 0, 1)  # Ярко-красная
+        #     from kivy.graphics import Rectangle
+        #     debug_line_rect = Rectangle(pos=debug_line.pos, size=debug_line.size)
+        # debug_line.bind(
+        #     pos=lambda *a: setattr(debug_line_rect, 'pos', debug_line.pos),
+        #     size=lambda *a: setattr(debug_line_rect, 'size', debug_line.size)
+        # )
+        # main_container.add_widget(debug_line)
 
         # ============ КОНТЕЙНЕР ДЛЯ КАРТОЧКИ ============
         card_container = MDBoxLayout(
@@ -297,14 +315,14 @@ class TermDetailScreen(BaseScreen):
         # ============ НАЗВАНИЕ ТЕРМИНА (ЖИРНЫЙ ЗАГОЛОВОК ПО ЦЕНТРУ) ============
         self.term_title_label = MDLabel(
             text="",
-            font_size=self.current_font_size + dp(6),  # чуть крупнее основного текста
+            font_size=self.current_font_size + dp(6),
             size_hint_y=None,
             height=dp(50),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.95],
             bold=True,
             valign="middle",
-            halign="center",  # ← центрируем по горизонтали
+            halign="center",
             shorten=False
         )
         self._text_container.add_widget(self.term_title_label)
@@ -341,6 +359,7 @@ class TermDetailScreen(BaseScreen):
 
         self.add_widget(main_container)
 
+        # ============ ОБНУЛЯЕМ SPACER'ы (т.к. управляем вручную) ============
         if hasattr(self, '_top_spacer') and self._top_spacer:
             self._top_spacer.height = 0
         if hasattr(self, '_bottom_spacer') and self._bottom_spacer:
@@ -651,11 +670,7 @@ class TermDetailScreen(BaseScreen):
         if self.term_name:
             Clock.schedule_once(self._scroll_to_top, 0.2)
 
-        if hasattr(self, '_top_spacer_term'):
-            top_padding = layout_config.get_top_padding()
-            if platform == 'android':
-                top_padding = top_padding + dp(16)
-            self._top_spacer_term.height = top_padding
+        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_term — отступ задан в init_ui ============
 
     def on_leave(self):
         """При выходе с экрана"""
