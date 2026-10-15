@@ -136,6 +136,10 @@ class SearchScreenDetail(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'search_screen_detail'
+
+        # ============ ЭКРАН САМ УПРАВЛЯЕТ ОТСТУПАМИ ============
+        self._manage_padding_manually = True
+
         self.song_id = None
         self.song_title = None
         self.song_artist = None
@@ -299,13 +303,15 @@ class SearchScreenDetail(BaseScreen):
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
+        # ============ ЕДИНЫЙ ОТСТУП ============
         top_padding_for_nav = layout_config.get_top_padding()
-        if platform == 'android':
-            min_top_padding = dp(48)
-            if top_padding_for_nav < min_top_padding:
-                top_padding_for_nav = min_top_padding
-            else:
-                top_padding_for_nav = top_padding_for_nav + dp(8)
+
+        logger.info("=" * 70)
+        logger.info(f"🔍 search_screen_detail init_ui:")
+        logger.info(f"   platform = {platform}")
+        logger.info(f"   get_top_padding() = {top_padding_for_nav}dp")
+        logger.info(f"   get_top_nav_height() = {layout_config.get_top_nav_height()}dp")
+        logger.info("=" * 70)
 
         self._top_spacer_song = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_song)
@@ -415,15 +421,6 @@ class SearchScreenDetail(BaseScreen):
             self._bottom_spacer.height = 0
 
         self._create_main_panel()
-
-        Clock.schedule_once(lambda dt: self._update_card_size(), 0.1)
-        Clock.schedule_once(lambda dt: self._update_card_size(), 0.3)
-
-    def _update_card_size(self, *args):
-        if hasattr(self, 'song_card') and self.song_card:
-            self.song_card.size_hint = (1, 1)
-            self.song_card.height = self.height - self._top_spacer_song.height
-            self.song_card.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
     def _update_content_height(self, *args):
         if not self.content_label.texture:
@@ -1620,8 +1617,6 @@ class SearchScreenDetail(BaseScreen):
         self.content_label.text = "Ошибка загрузки\nПроверьте интернет"
         notify.error("Ошибка загрузки песни")
 
-    # ============ УДАЛЁН МЕТОД toggle_like ============
-
     def toggle_favorite(self, *args):
         if not api.is_authenticated():
             app = MDApp.get_running_app()
@@ -1777,16 +1772,11 @@ class SearchScreenDetail(BaseScreen):
                 if hasattr(app.top_nav, 'home_btn'):
                     app.top_nav.right_container.clear_widgets()
                     app.top_nav.right_container.add_widget(app.top_nav.home_btn)
-                    logger.info("✅ Восстановлена иконка домой")
 
         if self.song_title:
             self.update_top_nav_title()
 
-        if hasattr(self, '_top_spacer_song'):
-            top_padding = layout_config.get_top_padding()
-            if platform == 'android':
-                top_padding = top_padding + dp(16)
-            self._top_spacer_song.height = top_padding
+        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_song ============
 
     def on_leave(self):
         pass

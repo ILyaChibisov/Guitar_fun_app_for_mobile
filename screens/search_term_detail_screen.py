@@ -64,6 +64,10 @@ class SearchTermDetailScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'search_term_detail'
+
+        # ============ ЭКРАН САМ УПРАВЛЯЕТ ОТСТУПАМИ ============
+        self._manage_padding_manually = True
+
         self.bg_image = None
         self.term_name = None
         self.term_data = None
@@ -176,13 +180,15 @@ class SearchTermDetailScreen(BaseScreen):
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
+        # ============ ЕДИНЫЙ ОТСТУП ============
         top_padding_for_nav = layout_config.get_top_padding()
-        if platform == 'android':
-            min_top_padding = dp(48)
-            if top_padding_for_nav < min_top_padding:
-                top_padding_for_nav = min_top_padding
-            else:
-                top_padding_for_nav = top_padding_for_nav + dp(8)
+
+        logger.info("=" * 70)
+        logger.info(f"🔍 search_term_detail init_ui:")
+        logger.info(f"   platform = {platform}")
+        logger.info(f"   get_top_padding() = {top_padding_for_nav}dp")
+        logger.info(f"   get_top_nav_height() = {layout_config.get_top_nav_height()}dp")
+        logger.info("=" * 70)
 
         self._top_spacer_term = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_term)
@@ -519,8 +525,6 @@ class SearchTermDetailScreen(BaseScreen):
             lines.pop()
         return '\n'.join(lines)
 
-    # screens/search_term_detail_screen.py
-
     def set_term(self, term_name, term_data):
         """Устанавливает термин для отображения"""
         self._reset_to_defaults()
@@ -558,11 +562,6 @@ class SearchTermDetailScreen(BaseScreen):
         """Возврат ТОЛЬКО в SearchScreen"""
         logger.info("🔙 Возврат из термина в SearchScreen")
 
-        # ============ НЕ ОБНОВЛЯЕМ TOPNAV ============
-        # app = MDApp.get_running_app()
-        # if app and hasattr(app, 'top_nav'):
-        #     app.top_nav.clear_custom_title_widget()
-
         if hasattr(self, 'manager') and self.manager:
             if self.manager.has_screen('search'):
                 self.manager.current = 'search'
@@ -582,11 +581,8 @@ class SearchTermDetailScreen(BaseScreen):
         if self.term_name:
             Clock.schedule_once(self._scroll_to_top, 0.2)
 
-        if hasattr(self, '_top_spacer_term'):
-            top_padding = layout_config.get_top_padding()
-            if platform == 'android':
-                top_padding = top_padding + dp(16)
-            self._top_spacer_term.height = top_padding
+        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_term ============
+        # Отступ задан в init_ui и не меняется
 
     def on_leave(self):
         logger.info("Выход из экрана определения термина из поиска")
