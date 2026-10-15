@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    timeout-minutes: 360   # 6 часов — с запасом на первую сборку
 
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +89,7 @@ jobs:
       - name: Setup keystore
         run: |
           KEYSTORE_PATH="./.buildozer/android/platform/guitarfuns_keystore.jks"
-          
+
           # Проверяем, есть ли keystore в корне проекта
           if [ -f "guitarfuns_keystore.jks" ]; then
             echo "✅ Keystore найден в корне проекта, копируем..."
@@ -112,7 +113,7 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          yes | buildozer -v android debug
+          yes | buildozer android debug 2>&1 | tee buildozer_build.log
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -120,9 +121,10 @@ jobs:
           name: GuitarFuns-APK-${{ github.run_number }}
           path: bin/*.apk
 
-      - name: Upload debug logs on failure
-        if: failure()
+      - name: Upload full build log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: buildozer-logs
-          path: .buildozer/logs/
+          name: buildozer-log-${{ github.run_number }}
+          path: buildozer_build.log
+          if-no-files-found: warn
