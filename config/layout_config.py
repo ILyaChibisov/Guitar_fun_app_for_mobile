@@ -60,15 +60,19 @@ class LayoutConfig:
         """
         Возвращает отступ сверху для контента в dp.
 
-        Android: TopNav прозрачный → отступ = panel_height (52dp) + зазор
-        Windows: Нет статус-бара, TopNav НЕ прозрачный → отступ = top_nav_height + зазор
+        Android: TopNav прозрачный. Контент должен идти ПОСЛЕ него.
+                 Отступ = status_h + panel_height + EXTRA
+        Windows: TopNav непрозрачный (нет статус-бара).
+                 Отступ = top_nav_height + EXTRA
         """
         if platform == 'android':
-            # Android: TopNav прозрачный
+            # Android: TopNav занимает status_h + panel_height (52dp)
+            # Контент начинается после этого
+            status_h = get_status_bar_height()
             panel_height = dp(52)
-            total = panel_height
+            total = status_h + panel_height
         else:
-            # Windows: Нет статус-бара, TopNav НЕ прозрачный
+            # Windows: TopNav непрозрачный, нет статус-бара
             if include_top_nav:
                 total = cls.get_top_nav_height()  # 64dp
             else:
