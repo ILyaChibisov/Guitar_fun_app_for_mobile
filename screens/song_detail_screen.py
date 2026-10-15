@@ -198,6 +198,10 @@ class SongDetailScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'song_detail'
+
+        # ============ ЭКРАН САМ УПРАВЛЯЕТ ОТСТУПАМИ ============
+        self._manage_padding_manually = True
+
         self.song_id = None
         self.song_title = None
         self.song_artist = None
@@ -353,23 +357,16 @@ class SongDetailScreen(BaseScreen):
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, 0])
 
-        # ============ ДИАГНОСТИКА ============
-        nav_bar_height = get_navigation_bar_height()
-        logger.info("=" * 70)
-        logger.info("🔍 ДИАГНОСТИКА ОТСТУПОВ SongDetailScreen")
-        logger.info(f"📱 Платформа: {platform}")
-        logger.info(f"📊 nav_bar_height: {nav_bar_height}dp")
-        logger.info(f"📊 layout_config.get_bottom_padding(): {layout_config.get_bottom_padding()}dp")
-        logger.info("=" * 70)
-
-        # ============ ОТСТУП ПОД TOPNAV ============
+        # ============ ЕДИНЫЙ ОТСТУП (как в term_detail) ============
         top_padding_for_nav = layout_config.get_top_padding()
-        if platform == 'android':
-            min_top_padding = dp(48)
-            if top_padding_for_nav < min_top_padding:
-                top_padding_for_nav = min_top_padding
-            else:
-                top_padding_for_nav = top_padding_for_nav + dp(8)
+
+        logger.info("=" * 70)
+        logger.info(f"🔍 song_detail init_ui:")
+        logger.info(f"   platform = {platform}")
+        logger.info(f"   get_top_padding() = {top_padding_for_nav}dp")
+        logger.info(f"   get_top_nav_height() = {layout_config.get_top_nav_height()}dp")
+        logger.info(f"   get_status_bar_height() = {get_status_bar_height()}dp")
+        logger.info("=" * 70)
 
         self._top_spacer_song = Widget(size_hint_y=None, height=top_padding_for_nav)
         main_container.add_widget(self._top_spacer_song)
@@ -377,9 +374,6 @@ class SongDetailScreen(BaseScreen):
         # ============ РАСЧЁТ ДОСТУПНОЙ ВЫСОТЫ ДЛЯ КОНТЕНТА ============
         bottom_nav_total = layout_config.get_bottom_nav_total_height()
         bottom_padding_for_card = bottom_nav_total
-
-        logger.info(f"🔧 bottom_nav_total: {bottom_nav_total}dp")
-        logger.info(f"🔧 bottom_padding_for_card: {bottom_padding_for_card}dp")
 
         card_container = MDBoxLayout(
             orientation='vertical',
@@ -482,6 +476,7 @@ class SongDetailScreen(BaseScreen):
 
         self.add_widget(main_container)
 
+        # ============ ОБНУЛЯЕМ SPACER'ы BaseScreen ============
         if hasattr(self, '_top_spacer') and self._top_spacer:
             self._top_spacer.height = 0
         if hasattr(self, '_bottom_spacer') and self._bottom_spacer:
@@ -489,21 +484,10 @@ class SongDetailScreen(BaseScreen):
 
         self._create_main_panel()
 
-        Clock.schedule_once(lambda dt: self._update_card_size(), 0.1)
-        Clock.schedule_once(lambda dt: self._update_card_size(), 0.3)
-
         logger.info(f"SongDetailScreen: init_ui completed")
         logger.info(f"  top_padding={top_padding_for_nav}dp")
         logger.info(f"  bottom_padding_for_card={bottom_padding_for_card}dp")
         logger.info("=" * 70)
-
-    def _update_card_size(self, *args):
-        """Принудительно обновляет размеры карточки"""
-        if hasattr(self, 'song_card') and self.song_card:
-            self.song_card.size_hint = (1, 1)
-            self.song_card.height = self.height - self._top_spacer_song.height
-            self.song_card.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-            logger.info(f"🔧 _update_card_size: song_card.height={self.song_card.height}dp")
 
     # ==================== МЕТОДЫ СОЗДАНИЯ ПАНЕЛЕЙ ====================
 
@@ -1865,8 +1849,6 @@ class SongDetailScreen(BaseScreen):
         self.content_label.text = "Ошибка загрузки\nПроверьте интернет"
         notify.error("Ошибка загрузки песни")
 
-    # ============ УДАЛЁН МЕТОД toggle_like ============
-
     def toggle_favorite(self, *args):
         if not api.is_authenticated():
             app = MDApp.get_running_app()
@@ -1970,12 +1952,7 @@ class SongDetailScreen(BaseScreen):
                 logger.info("✅ Возврат на home (по умолчанию)")
 
     def on_size(self, *args):
-        if hasattr(self, '_top_spacer_song'):
-            top_padding = layout_config.get_top_padding()
-            if platform == 'android':
-                top_padding = top_padding + dp(12)
-            self._top_spacer_song.height = top_padding
-
+        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_song ============
         if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
             Clock.schedule_once(self._wait_for_ready_and_scroll, 0.3)
 
@@ -1994,11 +1971,7 @@ class SongDetailScreen(BaseScreen):
                 Clock.schedule_once(lambda dt, d=scroll_delay: setattr(self.content_scroll, 'scroll_y', 1.0),
                                     scroll_delay)
 
-        if hasattr(self, '_top_spacer_song'):
-            top_padding = layout_config.get_top_padding()
-            if platform == 'android':
-                top_padding = top_padding + dp(16)
-            self._top_spacer_song.height = top_padding
+        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_song ============
 
     def on_leave(self):
         """При выходе с экрана"""
