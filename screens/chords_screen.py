@@ -4,7 +4,10 @@
 ТОН | ТИП | АККОРД | ВАРИАНТЫ | ПАЛЬЦЫ/НОТЫ
 СТАТИЧНЫЙ ЭКРАН - БЕЗ ПРОКРУТКИ
 С КЭШИРОВАНИЕМ МЕНЮ
-СВАЙП ВЛЕВО/ВПРАВО МЕНЯЕТ ВАРИАНТ АККОРДА (с правильной анимацией)
+СВАЙП ВЛЕВО/ВПРАВО МЕНЯЕТ ВАРИАНТ АККОРДА
+ТРЕТЬЯ ИКОНКА - СЕЛЕКТОР АККОРДОВ (как первые две)
+В РАМКЕ - ОСНОВНОЕ ИМЯ АККОРДА (по центру)
+ПОД МЕНЮ - ОПИСАНИЕ + "Варианты записи:" + ВСЕ ИМЕНА
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -70,10 +73,16 @@ class SwipeContainer(MDBoxLayout):
     """
     Контейнер с Carousel для аккордов.
     Горизонтальный свайп — переключение ВАРИАНТОВ аккорда.
-    Направление анимации соответствует направлению свайпа:
-        свайп влево  -> load_next()     (слайд уезжает влево)
-        свайп вправо -> load_previous() (слайд уезжает вправо)
+    В рамке — только ОСНОВНОЕ имя аккорда (центрировано).
     """
+
+    # ---- Настройки блока названия ----
+    _NAME_FONT_BASE = sp(22)
+    _NAME_FONT_MIN = sp(12)
+    _NAME_PADDING = dp(20)
+    _CARD_MIN_WIDTH = dp(120)
+    _CARD_MAX_WIDTH = dp(280)
+    _CHAR_WIDTH_FACTOR = 0.62
 
     def __init__(self, on_swipe_horizontal=None, **kwargs):
         super().__init__(**kwargs)
@@ -91,56 +100,44 @@ class SwipeContainer(MDBoxLayout):
         self.spacing = 0
 
         # ============ БЛОК НАЗВАНИЯ АККОРДА ============
+        # padding снизу увеличен — даём больше воздуха между рамкой и грифом
         self.name_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(92),
-            padding=[dp(8), dp(4), dp(8), 0],
-            spacing=dp(2),
+            height=dp(96),
+            padding=[dp(8), dp(8), dp(8), dp(24)],   # <-- больше воздуха снизу
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # --- Квадратик с основным названием (прозрачный + белая обводка) ---
         self.chord_name_card = MDCard(
             orientation='vertical',
             size_hint=(None, None),
-            size=(dp(160), dp(52)),
+            size=(dp(140), dp(52)),
             pos_hint={'center_x': 0.5},
-            radius=[dp(14), dp(14), dp(14), dp(14)],
-            md_bg_color=[0, 0, 0, 0],           # полностью прозрачный фон
+            radius=[dp(16), dp(16), dp(16), dp(16)],
+            md_bg_color=[0, 0, 0, 0.08],
             elevation=0,
-            line_color=[1, 1, 1, 0.85],          # белая обводка
-            line_width=1.4
+            line_color=[1, 1, 1, 0.15],
+            line_width=0.8,
+            padding=[dp(4), dp(4), dp(4), dp(4)],
+            spacing=dp(0)
         )
 
         self.chord_name_label = MDLabel(
-            text="A | Amaj",
-            font_size=sp(24),
+            text="A",
+            font_size=sp(22),
             bold=True,
             halign="center",
             valign="middle",
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.98]
+            text_color=[1, 1, 1, 0.95],
         )
         self.chord_name_card.add_widget(self.chord_name_label)
+
         self.name_container.add_widget(self.chord_name_card)
-
-        # --- Альтернативные названия (мелкая строка под квадратиком) ---
-        self.chord_alt_label = MDLabel(
-            text="",
-            font_size=sp(12),
-            halign="center",
-            valign="middle",
-            size_hint_y=None,
-            height=0,
-            opacity=0,
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.5],          # как подсказка под меню
-        )
-        self.chord_alt_label.text_size = (Window.width - dp(32), None)
-        self.name_container.add_widget(self.chord_alt_label)
-
         self.add_widget(self.name_container)
+
+        self._current_main_name = ""
 
         # ============ КАРУСЕЛЬ ДЛЯ ГРИФОВ ============
         self.carousel = Carousel(
@@ -156,11 +153,6 @@ class SwipeContainer(MDBoxLayout):
         self.renderers = []
         self.current_index = 0
 
-        # Храним текущие данные для анимации смены названия
-        self._current_main_name = ""
-        self._current_alt_names = []
-
-        # Флаг: программное переключение карусели (чтобы не было рекурсии)
         self._programmatic_slide = False
 
     def _build_griff_wrapper(self):
@@ -210,7 +202,6 @@ class SwipeContainer(MDBoxLayout):
         self.current_index = 0
 
     def set_current_slide(self, index):
-        """Программное переключение на конкретный слайд (без анимации направления)"""
         if 0 <= index < len(self.slides):
             self._programmatic_slide = True
             self.carousel.load_slide(self.slides[index])
@@ -228,59 +219,43 @@ class SwipeContainer(MDBoxLayout):
         except ValueError:
             pass
 
-    # ============ ОБНОВЛЕНИЕ БЛОКА НАЗВАНИЯ ============
+    # ============ ОБНОВЛЕНИЕ НАЗВАНИЯ ============
 
-    def _calc_card_width(self, text):
-        """Авто-ширина квадратика под текст с min/max"""
-        base_width = dp(50)
-        char_width = dp(10)
-        padding = dp(30)
-        min_width = dp(120)
-        max_width = dp(280)
+    def _calc_card_width_and_font(self, name):
+        """Подбирает ширину карточки и размер шрифта под ОДНО имя."""
+        font_size = self._NAME_FONT_BASE
 
-        width = base_width + len(text) * char_width + padding
-        width = max(min_width, min(width, max_width))
-        return width
+        def natural_width(fs):
+            return len(name) * fs * self._CHAR_WIDTH_FACTOR + 2 * self._NAME_PADDING + dp(16)
 
-    def update_chord_name(self, display_name, alt_names=None):
-        """
-        display_name — основное имя (например, "A maj")
-        alt_names — список альтернативных (например, ['A', 'Amaj', 'A+'])
-                    или None/[] — тогда строка альтернатив скрывается
-        """
-        alt_names = alt_names or []
-        if (display_name == self._current_main_name
-                and alt_names == self._current_alt_names):
+        total = natural_width(font_size)
+        if total > self._CARD_MAX_WIDTH:
+            k = self._CARD_MAX_WIDTH / total
+            font_size = max(self._NAME_FONT_MIN, font_size * k)
+            total = natural_width(font_size)
+
+        card_width = max(self._CARD_MIN_WIDTH, min(total, self._CARD_MAX_WIDTH))
+        return card_width, font_size
+
+    def update_chord_name(self, display_name):
+        """display_name — ОДНО основное имя аккорда."""
+        display_name = (display_name or "?").strip()
+        if display_name == self._current_main_name:
             return
 
         self._current_main_name = display_name
-        self._current_alt_names = alt_names
 
-        # Анимация: затухание -> смена текста -> появление
         anim_out = Animation(opacity=0, duration=0.12, t='out_quad')
-        anim_out.bind(
-            on_complete=lambda *a: self._apply_name_change(display_name, alt_names)
-        )
+        anim_out.bind(on_complete=lambda *a: self._apply_name(display_name))
         anim_out.start(self.name_container)
 
-    def _apply_name_change(self, display_name, alt_names):
-        # Обновляем текст основного названия и ширину квадратика
-        self.chord_name_label.text = display_name
-        self.chord_name_card.width = self._calc_card_width(display_name)
+    def _apply_name(self, name):
+        card_width, font_size = self._calc_card_width_and_font(name)
 
-        # Обновляем строку альтернатив
-        if alt_names and len(alt_names) > 0:
-            self.chord_alt_label.text = " | ".join(alt_names)
-            self.chord_alt_label.opacity = 1
-            self.chord_alt_label.height = dp(18)
-            self.name_container.height = dp(92)
-        else:
-            self.chord_alt_label.text = ""
-            self.chord_alt_label.opacity = 0
-            self.chord_alt_label.height = 0
-            self.name_container.height = dp(72)
+        self.chord_name_label.text = name
+        self.chord_name_label.font_size = font_size
+        self.chord_name_card.width = card_width
 
-        # Появление
         anim_in = Animation(opacity=1, duration=0.15, t='in_quad')
         anim_in.start(self.name_container)
 
@@ -297,12 +272,6 @@ class SwipeContainer(MDBoxLayout):
         return super().on_touch_down(touch)
 
     def on_touch_move(self, touch):
-        """
-        ВАЖНО: мы НЕ передаём touch в карусель.
-        Карусель двигается только через load_next() / load_previous()
-        в on_touch_up, чтобы направление анимации точно совпадало
-        с направлением свайпа.
-        """
         if touch.grab_current is self:
             dx = touch.x - self._touch_start_x
             dy = touch.y - self._touch_start_y
@@ -323,17 +292,12 @@ class SwipeContainer(MDBoxLayout):
                 abs_dx = abs(dx)
                 abs_dy = abs(dy)
 
-                # Только горизонтальный свайп
                 if abs_dx > 50 and abs_dx > abs_dy:
                     if dx < 0:
-                        # Свайп ВЛЕВО — следующий вариант.
-                        # Карусель уезжает влево через load_next().
                         if self.on_swipe_horizontal:
                             self.on_swipe_horizontal(1)
                         self.carousel.load_next()
                     else:
-                        # Свайп ВПРАВО — предыдущий вариант.
-                        # Карусель уезжает вправо через load_previous().
                         if self.on_swipe_horizontal:
                             self.on_swipe_horizontal(-1)
                         self.carousel.load_previous()
@@ -704,6 +668,50 @@ class TypeSelectorMenu(BaseSelectorMenu):
         self._highlight_current()
 
 
+# ============ СЕЛЕКТОР АККОРДОВ ============
+class ChordSelectorMenu(BaseSelectorMenu):
+    """Селектор доступных аккордов для текущей тональности/типа."""
+
+    def __init__(self, current_chord, on_confirm, on_cancel, chords=None, **kwargs):
+        self.current_chord = current_chord
+        self.chords = list(chords) if chords else []
+        super().__init__(on_confirm, on_cancel, **kwargs)
+
+    def _populate_items(self):
+        self.buttons = []
+        for chord_name in self.chords:
+            btn = MDRaisedButton(
+                text=chord_name,
+                size_hint=(None, 1),
+                width=self._get_button_width(chord_name),
+                md_bg_color=[0, 0, 0, 0],
+                text_color=[1, 1, 1, 0.7],
+                font_size=sp(14),
+                elevation=0,
+                on_release=lambda x, t=chord_name: self._on_item_press(t)
+            )
+            self.buttons.append(btn)
+            self.container.add_widget(btn)
+
+        self.current_selection = self.current_chord
+
+    def set_chords(self, chords, current_chord=None):
+        self.chords = list(chords) if chords else []
+        if current_chord is not None:
+            self.current_chord = current_chord
+            self.current_selection = current_chord
+
+        self.container.clear_widgets()
+        self.buttons = []
+        self._populate_items()
+        self._highlight_current()
+
+    def set_current(self, chord_name):
+        self.current_chord = chord_name
+        self.current_selection = chord_name
+        self._highlight_current()
+
+
 class UnifiedMenu(MDCard):
     def __init__(self,
                  tonality_value, type_value, chord_value,
@@ -745,9 +753,10 @@ class UnifiedMenu(MDCard):
         has_chords = chord_count > 1
         self.chord_item = IconMenuItem(
             icon_name="music-circle",
-            on_press=on_chord_press if has_chords else None,
-            is_active=has_chords,
-            icon_color=[1.0, 0.7, 0.0, 1] if has_chords else [1, 1, 1, 0.3]
+            on_press=on_chord_press,
+            is_active=True,
+            icon_color=[1.0, 0.7, 0.0, 1] if has_chords else [1, 1, 1, 0.35],
+            fixed_color=False
         )
 
         self.variants_item = IconMenuItem(
@@ -786,14 +795,13 @@ class UnifiedMenu(MDCard):
 
     def update_chord(self, chord_count):
         has_chords = chord_count > 1
-        self.chord_item.is_active = has_chords
-        self.chord_item.on_press_callback = self.chord_item.on_press_callback if has_chords else None
+        self.chord_item.is_active = True
         if has_chords:
             self.chord_item.set_color([1.0, 0.7, 0.0, 1])
             self.chord_item.icon_btn.opacity = 1
         else:
-            self.chord_item.set_color([1, 1, 1, 0.3])
-            self.chord_item.icon_btn.opacity = 0.6
+            self.chord_item.set_color([1, 1, 1, 0.35])
+            self.chord_item.icon_btn.opacity = 0.7
         self.chord_item.update_state()
 
     def update_variants(self, count):
@@ -856,6 +864,7 @@ class ChordsScreen(BaseScreen):
 
         self.tonality_selector = None
         self.type_selector = None
+        self.chord_selector = None
         self._menu_cache_initialized = False
 
         self._griff_height = dp(280)
@@ -863,6 +872,11 @@ class ChordsScreen(BaseScreen):
 
         self.swipe_container = None
         self._data_loaded = False
+
+        # Храним основное и все имена для _show_description
+        self._current_main_name = ""
+        self._current_alt_names = []
+        self._current_all_names = []
 
         # Сначала создаём UI
         self.init_ui()
@@ -899,6 +913,16 @@ class ChordsScreen(BaseScreen):
         self.type_selector.opacity = 0
         self.type_selector.disabled = True
         self._menu_container.add_widget(self.type_selector)
+
+        self.chord_selector = ChordSelectorMenu(
+            current_chord=self.current_chord_name,
+            on_confirm=self._on_chord_confirmed,
+            on_cancel=self._close_chord_selector,
+            chords=self.available_chords
+        )
+        self.chord_selector.opacity = 0
+        self.chord_selector.disabled = True
+        self._menu_container.add_widget(self.chord_selector)
 
         self._menu_cache_initialized = True
         logger.info("✅ Кэшированные меню созданы")
@@ -954,49 +978,32 @@ class ChordsScreen(BaseScreen):
             griff_height = int(griff_height)
             self._griff_height = griff_height
 
+            # +dp(120) — новый блок названия стал выше из-за увеличенных отступов
             self.swipe_container.height = griff_height + dp(120)
 
             logger.info(f"📐 Гриф обновлён: {griff_height}dp")
 
     def _add_chord_slide(self, chord_module):
-        """
-        Добавляет слайд в карусель БЕЗ переключения на него.
-        Переключение делается отдельно через load_next() / load_previous().
-        """
         if self.swipe_container:
             self.swipe_container.add_slide(chord_module)
 
     def _rebuild_slides_for_current_chord(self):
-        """
-        Пересобирает все слайды карусели под текущий аккорд
-        (все его варианты). Используется при смене аккорда/тональности/типа,
-        а НЕ при переключении варианта свайпом.
-        """
         if not self.swipe_container:
             return
 
-        # Очищаем старые слайды
         self.swipe_container.clear_slides()
 
-        # Заново создаём слайд для каждого варианта
         for variant in self.current_variants:
             module = variant.get('module')
             if module:
                 self.swipe_container.add_slide(module)
 
-        # Применяем текущий режим
         self.swipe_container.update_renderer_mode(self.current_mode)
 
-        # Ставим карусель на текущий индекс варианта
         if self.current_variants:
             self.swipe_container.set_current_slide(self.current_variant_index)
 
     def _update_display(self):
-        """
-        Обновляет только текстовую часть (название + альтернативы + описание).
-        Слайды карусели пересобираются отдельно — через
-        _rebuild_slides_for_current_chord() при смене аккорда.
-        """
         if not self.current_variants:
             return
 
@@ -1006,22 +1013,27 @@ class ChordsScreen(BaseScreen):
         chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
         name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
 
+        # Убираем дубли, сохраняя порядок
         unique_names = []
         for n in name_parts:
             if n not in unique_names:
                 unique_names.append(n)
 
-        if unique_names:
-            main_name = unique_names[0]
-            alt_names = unique_names[1:]
-        else:
-            main_name = "?"
-            alt_names = []
+        if not unique_names:
+            unique_names = ["?"]
 
-        logger.info(f"🎸 Обновление отображения: '{main_name}' | альт: {alt_names}")
+        main_name = unique_names[0]
+        alt_names = unique_names[1:] if len(unique_names) > 1 else []
+
+        # Запоминаем все имена для _show_description
+        self._current_main_name = main_name
+        self._current_alt_names = alt_names
+        self._current_all_names = list(unique_names)
+
+        logger.info(f"🎸 Основное имя: '{main_name}', все: {unique_names}")
 
         if self.swipe_container:
-            self.swipe_container.update_chord_name(main_name, alt_names)
+            self.swipe_container.update_chord_name(main_name)
 
         self._show_description()
         self._data_loaded = True
@@ -1050,7 +1062,8 @@ class ChordsScreen(BaseScreen):
         search_container.add_widget(self.search_bar)
         content.add_widget(search_container)
 
-        content.add_widget(Widget(size_hint_y=None, height=dp(6)))
+        # >>> Больше воздуха между поиском и рамкой аккорда
+        content.add_widget(Widget(size_hint_y=None, height=dp(24)))
 
         self.swipe_container = SwipeContainer(
             on_swipe_horizontal=self._on_swipe_horizontal
@@ -1122,11 +1135,8 @@ class ChordsScreen(BaseScreen):
         Clock.schedule_once(lambda dt: self._update_display(), 0.2)
 
     # ============ ОБРАБОТЧИК ГОРИЗОНТАЛЬНОГО СВАЙПА ============
-    # Вызывается из SwipeContainer.on_touch_up ПОСЛЕ load_next/load_previous,
-    # поэтому здесь мы только синхронизируем индекс и обновляем текст.
 
     def _on_swipe_horizontal(self, step):
-        """step = +1 (влево) — следующий вариант, -1 (вправо) — предыдущий"""
         if not self.current_variants or len(self.current_variants) <= 1:
             self._show_temporary_hint("Нет других вариантов", 1.0)
             return
@@ -1135,134 +1145,11 @@ class ChordsScreen(BaseScreen):
         self.current_variant_index = (self.current_variant_index + step) % total
         self.current_position = self.current_variant_index + 1
 
-        # Обновляем только текстовую часть (слайды уже переключены каруселью)
         self._update_display()
         self._show_temporary_hint(
             f"Вариант {self.current_position}/{total}", 1.0
         )
         logger.info(f"🔄 Свайп: вариант {self.current_position}/{total}")
-
-    def _change_tonality(self, step):
-        """Оставлено на случай вызова из меню тональностей (не из свайпа)"""
-        if not self.available_chords:
-            self._show_temporary_hint("Нет доступных аккордов", 1.0)
-            return
-
-        old_tonality = self.current_tonality
-        old_chord_name = self.current_chord_name
-        chord_type = self.current_type
-
-        chord_suffix = old_chord_name[len(old_tonality):]
-
-        try:
-            current_index = self.TONALITIES.index(old_tonality)
-        except ValueError:
-            current_index = 0
-
-        total = len(self.TONALITIES)
-        new_index = (current_index + step) % total
-        new_tonality = self.TONALITIES[new_index]
-
-        if new_tonality == old_tonality:
-            self._show_temporary_hint("Конец списка тональностей", 1.0)
-            return
-
-        self.current_tonality = new_tonality
-        self.current_tonality_index = new_index
-
-        self.update_available_chords()
-
-        target_chord = None
-        for chord in self.available_chords:
-            if chord.startswith(new_tonality) and chord.endswith(chord_suffix):
-                target_chord = chord
-                break
-
-        if target_chord is None and self.available_chords:
-            for chord in self.available_chords:
-                chord_data = self._find_chord_data(chord)
-                if chord_data and chord_data.get('type') == chord_type:
-                    target_chord = chord
-                    break
-
-        if target_chord is None and self.available_chords:
-            target_chord = self.available_chords[0]
-
-        if target_chord:
-            self.current_chord_name = target_chord
-            self.current_chord_index = self.available_chords.index(target_chord)
-            self._load_variants_for_chord(self.current_chord_name)
-            self._show_temporary_hint(f"{new_tonality} {chord_type}", 1.2)
-
-        if self.unified_menu:
-            self.unified_menu.update_chord(len(self.available_chords))
-
-        logger.info(f"🎵 Тональность изменена: {old_tonality} → {new_tonality}")
-
-    def _change_chord_type(self, step):
-        """Оставлено на случай вызова из меню типов (не из свайпа)"""
-        if not self.available_chords:
-            self._show_temporary_hint("Нет доступных аккордов", 1.0)
-            return
-
-        old_type = self.current_type
-        old_tonality = self.current_tonality
-        old_chord_name = self.current_chord_name
-
-        chord_suffix = old_chord_name[len(old_tonality):]
-
-        try:
-            current_index = self.CHORD_TYPES.index(old_type)
-        except ValueError:
-            current_index = 0
-
-        total = len(self.CHORD_TYPES)
-        new_index = (current_index + step) % total
-        new_type = self.CHORD_TYPES[new_index]
-
-        if new_type == old_type:
-            self._show_temporary_hint("Конец списка типов аккордов", 1.0)
-            return
-
-        self.current_type = new_type
-        self.current_type_index = new_index
-
-        self.update_available_chords()
-
-        target_chord = None
-
-        for chord in self.available_chords:
-            if chord.startswith(old_tonality):
-                chord_data = self._find_chord_data(chord)
-                if chord_data and chord_data.get('type') == new_type:
-                    target_chord = chord
-                    break
-
-        if target_chord is None:
-            for chord in self.available_chords:
-                if chord.startswith(old_tonality) and chord.endswith(chord_suffix):
-                    target_chord = chord
-                    break
-
-        if target_chord is None and self.available_chords:
-            for chord in self.available_chords:
-                if chord.startswith(old_tonality):
-                    target_chord = chord
-                    break
-
-        if target_chord is None and self.available_chords:
-            target_chord = self.available_chords[0]
-
-        if target_chord:
-            self.current_chord_name = target_chord
-            self.current_chord_index = self.available_chords.index(target_chord)
-            self._load_variants_for_chord(self.current_chord_name)
-            self._show_temporary_hint(f"{old_tonality} {new_type}", 1.2)
-
-        if self.unified_menu:
-            self.unified_menu.update_chord(len(self.available_chords))
-
-        logger.info(f"🎵 Тип аккорда изменён: {old_type} → {new_type}")
 
     def _find_chord_data(self, chord_name):
         for chord in self.all_chords:
@@ -1270,65 +1157,124 @@ class ChordsScreen(BaseScreen):
                 return chord
         return None
 
-    # ============ МЕТОД ДЛЯ ТРЕТЬЕЙ ИКОНКИ ============
+    # ============ ОТКРЫТИЕ/ЗАКРЫТИЕ СЕЛЕКТОРА АККОРДОВ ============
 
     def _open_chord_selector(self):
-        if len(self.available_chords) <= 1:
-            self._show_temporary_hint("Нет других подвидов аккорда", 1.0)
+        if self.chord_selector and self.chord_selector.is_visible:
+            self._close_chord_selector()
             return
 
-        total = len(self.available_chords)
-        new_index = (self.current_chord_index + 1) % total
-        new_chord_name = self.available_chords[new_index]
-
-        if new_chord_name == self.current_chord_name:
+        if not self.available_chords:
+            self._show_temporary_hint("Нет доступных аккордов", 1.0)
             return
 
-        self.current_chord_name = new_chord_name
-        self.current_chord_index = new_index
+        logger.info("Открытие меню выбора аккорда (кешированное)")
+
+        if not self.chord_selector:
+            self.chord_selector = ChordSelectorMenu(
+                current_chord=self.current_chord_name,
+                on_confirm=self._on_chord_confirmed,
+                on_cancel=self._close_chord_selector,
+                chords=self.available_chords
+            )
+            self.chord_selector.opacity = 0
+            self.chord_selector.disabled = True
+            self._menu_container.add_widget(self.chord_selector)
+
+        self.chord_selector.set_chords(
+            self.available_chords,
+            current_chord=self.current_chord_name
+        )
+
+        if self.unified_menu and self.unified_menu.parent:
+            self._menu_container.remove_widget(self.unified_menu)
+
+        self.chord_selector.show()
+        self._menu_container.add_widget(self.chord_selector)
+        self._show_hint("Выберите аккорд")
+
+    def _on_chord_confirmed(self, selected_chord):
+        logger.info(f"Выбран аккорд: {selected_chord}")
+
+        if not selected_chord or selected_chord == self.current_chord_name:
+            self._close_chord_selector()
+            return
+
+        self.current_chord_name = selected_chord
+        if selected_chord in self.available_chords:
+            self.current_chord_index = self.available_chords.index(selected_chord)
+
         self._load_variants_for_chord(self.current_chord_name)
-
-        self._show_temporary_hint(f"{new_chord_name}", 1.0)
 
         if self.unified_menu:
             self.unified_menu.update_chord(len(self.available_chords))
 
-        logger.info(f"🔄 Подвид аккорда изменён: {new_chord_name}")
+        self._close_chord_selector()
 
-    # ============ ОСТАЛЬНЫЕ МЕТОДЫ ============
+    def _close_chord_selector(self):
+        logger.info("Закрытие меню выбора аккорда")
+
+        if self.chord_selector:
+            self.chord_selector.hide()
+            if self.chord_selector.parent:
+                self._menu_container.remove_widget(self.chord_selector)
+
+        if self.unified_menu and not self.unified_menu.parent:
+            self._menu_container.add_widget(self.unified_menu)
+
+        self._restore_description()
+
+    # ============ ОПИСАНИЕ ПОД МЕНЮ ============
 
     def _show_description(self):
+        """
+        Формат:
+        <описание>, Варианты записи: <все имена через запятую>
+
+        Пример:
+        ля мажор, Варианты записи: A, Amaj, A+
+        """
         if not self.current_variants:
+            self._info_label.text = ""
             return
 
         variant = self.current_variants[self.current_variant_index]
+
+        parts = []
+
+        # 1) Описание (первая непустая строка из description)
         description = variant.get('description', '')
-
         if description:
-            desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
-            unique_parts = []
+            desc_parts = [
+                p.strip()
+                for p in description.replace('!', '|').split('|')
+                if p.strip()
+            ]
+            unique_desc = []
             for part in desc_parts:
-                if part not in unique_parts:
-                    unique_parts.append(part)
+                if part not in unique_desc:
+                    unique_desc.append(part)
 
-            if unique_parts:
-                chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
-                name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
-                main_name = name_parts[0] if name_parts else ""
-
-                formatted_desc = unique_parts[0]
+            if unique_desc:
+                formatted_desc = unique_desc[0]
+                main_name = self._current_main_name
                 if main_name and main_name in formatted_desc:
-                    formatted_desc = formatted_desc.replace(main_name, '').strip(' |')
-                formatted_desc = re.sub(r'\s*\|\s*', ' | ', formatted_desc).strip(' |')
+                    formatted_desc = formatted_desc.replace(main_name, '').strip(' |,')
+                formatted_desc = re.sub(r'\s*\|\s*', ', ', formatted_desc).strip(' ,')
                 formatted_desc = re.sub(r'\s+', ' ', formatted_desc)
 
-                self._info_label.text = formatted_desc
-            else:
-                chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
-                self._info_label.text = chord_name
+                if formatted_desc:
+                    parts.append(formatted_desc)
+
+        # 2) "Варианты записи:" + ВСЕ имена (включая то, что в рамке)
+        if self._current_all_names:
+            variants_str = ", ".join(self._current_all_names)
+            parts.append(f"Варианты записи: {variants_str}")
+
+        if parts:
+            self._info_label.text = ", ".join(parts)
         else:
-            chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
-            self._info_label.text = chord_name
+            self._info_label.text = self._current_main_name or ""
 
     def _show_hint(self, text):
         if hasattr(self, '_hint_timer') and self._hint_timer:
@@ -1464,7 +1410,6 @@ class ChordsScreen(BaseScreen):
         self.current_variant_index = (self.current_variant_index + 1) % total
         self.current_position = self.current_variant_index + 1
 
-        # Переключаем карусель в правильную сторону
         if self.swipe_container:
             self.swipe_container.carousel.load_next()
 
@@ -1541,7 +1486,6 @@ class ChordsScreen(BaseScreen):
                 self.current_position = 1
                 self.unified_menu.update_variants(len(variants))
 
-                # Пересобираем слайды под новый аккорд
                 self._rebuild_slides_for_current_chord()
                 self._update_display()
 
@@ -1640,10 +1584,12 @@ class ChordsScreen(BaseScreen):
         self.available_chords = sorted(chords_by_name.keys())
 
         self.unified_menu.update_chord(len(self.available_chords))
-        if len(self.available_chords) > 1:
-            self.unified_menu.chord_item.on_press_callback = self._open_chord_selector
-        else:
-            self.unified_menu.chord_item.on_press_callback = None
+
+        if self.chord_selector is not None:
+            self.chord_selector.set_chords(
+                self.available_chords,
+                current_chord=self.current_chord_name
+            )
 
         if self.available_chords:
             if self.current_chord_name not in self.available_chords:
@@ -1673,7 +1619,6 @@ class ChordsScreen(BaseScreen):
         self.current_position = 1
         self.unified_menu.update_variants(len(variants))
 
-        # Пересобираем слайды под новый набор вариантов
         self._rebuild_slides_for_current_chord()
         self._update_display()
 
@@ -1694,7 +1639,6 @@ class ChordsScreen(BaseScreen):
             self.current_position = 1
             self.unified_menu.update_variants(len(variants))
 
-            # Пересобираем слайды под новый набор вариантов
             self._rebuild_slides_for_current_chord()
             self._update_display()
         else:
@@ -1817,6 +1761,7 @@ class ChordsScreen(BaseScreen):
 
         self._close_tonality_selector()
         self._close_type_selector()
+        self._close_chord_selector()
 
     def _show_back_button(self):
         try:
@@ -1832,6 +1777,7 @@ class ChordsScreen(BaseScreen):
         logger.info("🚪 Выход из экрана аккордов")
         self._close_tonality_selector()
         self._close_type_selector()
+        self._close_chord_selector()
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
