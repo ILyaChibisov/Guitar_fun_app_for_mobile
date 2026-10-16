@@ -1849,7 +1849,13 @@ class SongDetailScreen(BaseScreen):
         self.content_label.text = "Ошибка загрузки\nПроверьте интернет"
         notify.error("Ошибка загрузки песни")
 
+    # ==================== ИЗБРАННОЕ (НОВАЯ ЛОГИКА) ====================
+
     def toggle_favorite(self, *args):
+        """
+        Переключает избранное с оптимистичным обновлением.
+        api.add_to_favorites/remove_from_favorites сами обновляют кэш и уведомляют listeners.
+        """
         if not api.is_authenticated():
             app = MDApp.get_running_app()
             if app and hasattr(app, 'open_profile'):
@@ -1857,52 +1863,51 @@ class SongDetailScreen(BaseScreen):
             return
 
         if self.is_favorite:
+            # ============ УДАЛЕНИЕ ============
             def on_success(result):
                 self.is_favorite = False
-                self.favorite_btn.icon = "star-outline"
-                api._clear_favorites_cache()
+                if hasattr(self, 'favorite_btn') and self.favorite_btn:
+                    self.favorite_btn.icon = "star-outline"
                 notify.success("Удалено из избранного")
-                self._refresh_favorites_screen()
+                # ✅ НЕ вызываем _refresh — listener обновит FavoritesScreen
 
             def on_failure(req, error):
-                notify.error("Ошибка")
+                # ❌ api сделал откат — вернём иконку
+                self.is_favorite = True
+                if hasattr(self, 'favorite_btn') and self.favorite_btn:
+                    self.favorite_btn.icon = "star"
+                notify.error("Ошибка удаления из избранного")
 
-            api.remove_from_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+            api.remove_from_favorites(
+                song_id=self.song_id,
+                on_success=on_success,
+                on_failure=on_failure
+            )
         else:
+            # ============ ДОБАВЛЕНИЕ ============
             def on_success(result):
                 self.is_favorite = True
-                self.favorite_btn.icon = "star"
-                api._clear_favorites_cache()
-                self._cache_song_for_offline()
+                if hasattr(self, 'favorite_btn') and self.favorite_btn:
+                    self.favorite_btn.icon = "star"
                 notify.success("Добавлено в избранное")
-                self._refresh_favorites_screen()
 
             def on_failure(req, error):
-                notify.error("Ошибка")
+                # ❌ api сделал откат — вернём иконку
+                self.is_favorite = False
+                if hasattr(self, 'favorite_btn') and self.favorite_btn:
+                    self.favorite_btn.icon = "star-outline"
+                notify.error("Ошибка добавления в избранное")
 
-            api.add_to_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
-
-    def _cache_song_for_offline(self):
-        try:
-            import threading
-            if self.song_id and self.tabs:
-                data = {
-                    'artist': self.song_artist,
-                    'title': self.song_title,
-                    'tabs': self.tabs,
-                    'is_favorite': True,
-                }
-                api._save_song_cache(self.song_id, data)
-                logger.info(f"📦 Песня {self.song_id} закэширована для офлайн-доступа")
-        except Exception as e:
-            logger.error(f"Ошибка кэширования песни: {e}")
-
-    def _refresh_favorites_screen(self):
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('favorites'):
-                fav_screen = self.manager.get_screen('favorites')
-                if hasattr(fav_screen, 'load_favorites'):
-                    Clock.schedule_once(lambda dt: fav_screen.load_favorites(), 0.5)
+            # ✅ Передаём song_data для оптимистичного обновления кэша
+            api.add_to_favorites(
+                song_id=self.song_id,
+                song_data={
+                    'artist': self.song_artist or '',
+                    'title': self.song_title or '',
+                },
+                on_success=on_success,
+                on_failure=on_failure
+            )
 
     def go_back(self, instance=None):
         logger.info("🔙 Нажата кнопка возврата")
@@ -1929,7 +1934,6 @@ class SongDetailScreen(BaseScreen):
                     if artist_name:
                         artist_screen.artist_name = artist_name
                         artist_screen._saved_scroll_position = scroll_pos
-                        # ✅ Обновляем заголовок в TopNav и количество на экране
                         artist_screen._update_top_nav_title(artist_name)
                         artist_screen._update_count_label(artist_screen._total_songs)
 
@@ -1937,7 +1941,6 @@ class SongDetailScreen(BaseScreen):
             if self.previous_screen == 'songs':
                 if self.manager.has_screen('songs'):
                     songs_screen = self.manager.get_screen('songs')
-                    # Восстанавливаем состояние поиска
                     Clock.schedule_once(lambda dt: songs_screen.restore_search_state(), 0.1)
                     logger.info("✅ Восстановлен поиск на SongsScreen")
 
@@ -1952,7 +1955,6 @@ class SongDetailScreen(BaseScreen):
                 logger.info("✅ Возврат на home (по умолчанию)")
 
     def on_size(self, *args):
-        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_song ============
         if self.song_title and hasattr(self, 'content_label') and self.content_label.text:
             Clock.schedule_once(self._wait_for_ready_and_scroll, 0.3)
 
@@ -1971,15 +1973,10 @@ class SongDetailScreen(BaseScreen):
                 Clock.schedule_once(lambda dt, d=scroll_delay: setattr(self.content_scroll, 'scroll_y', 1.0),
                                     scroll_delay)
 
-        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_song ============
-
     def on_leave(self):
-        """При выходе с экрана"""
-        # Если мы выходим на artist_songs — НЕ сбрасываем TopNav
-        if self.manager and self.manager.current != 'artist_songs':
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'top_nav'):
-                app.top_nav.reset_to_default()
+        """При выходе с экрана - НЕ трогаем TopNav."""
+        # ✅ TopNav сам обновится через _on_screen_changed
+        # Не вызываем reset_to_default — он сбрасывает на 'Главная'
 
         if self.is_tonality_mode:
             self.cancel_tonality()

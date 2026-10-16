@@ -1,7 +1,8 @@
 # api/client.py
 """
-HTTP клиент для работы с сервером - БЕЗ КЭША ПЕСЕН
+HTTP клиент для работы с сервером - БЕЗ ФАЙЛОВОГО КЭША
 С автоматическим обновлением access_token через refresh_token
+С поддержкой stale-while-revalidate для избранного
 """
 import json
 import os
@@ -139,6 +140,9 @@ class APIClient:
         # ============ КЭШ ИЗБРАННОГО ТОЛЬКО В ПАМЯТИ ============
         self._favorites_cache = None
         self._favorites_cache_timestamp = 0
+        self._favorites_stale = True            # пока данных нет — считаем устаревшими
+        self._favorites_listeners = []          # подписчики на изменения
+        self._favorites_load_in_progress = False  # защита от дублирующих запросов
 
         # Создаем сессию
         self.session = get_requests_session()
@@ -180,6 +184,7 @@ class APIClient:
             self.refresh_token = None
             self.user_data = None
             self._clear_favorites_cache()
+            self._notify_favorites_changed()
             Logger.info('API: Токены очищены')
         except Exception as e:
             Logger.error(f'API: Ошибка очистки токенов - {e}')
@@ -246,6 +251,8 @@ class APIClient:
                 response = self.session.put(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
             elif method == 'DELETE':
                 response = self.session.delete(url, headers=headers, timeout=config.CONNECTION_TIMEOUT)
+            elif method == 'PATCH':
+                response = self.session.patch(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
             else:
                 response = self.session.request(method, url, json=data, headers=headers,
                                                 timeout=config.CONNECTION_TIMEOUT)
@@ -345,52 +352,177 @@ class APIClient:
     def _request(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
         return self._request_async(url, method, data, on_success, on_failure, include_auth)
 
-    # ============ КЭШ ИЗБРАННОГО (ТОЛЬКО В ПАМЯТИ, НЕ В ФАЙЛАХ) ============
+    # ============ КЭШ ИЗБРАННОГО (ТОЛЬКО В ПАМЯТИ) ============
 
-    def _load_favorites_cache(self):
-        """Загружает кэш избранного из памяти (не из файлов!)"""
-        if self._favorites_cache is not None:
-            if time.time() - self._favorites_cache_timestamp < config.FAVORITES_CACHE_TTL:
-                Logger.debug(f"📦 Избранное из памяти: {len(self._favorites_cache)} песен")
-                return self._favorites_cache
-            else:
-                Logger.debug("⏳ Кэш в памяти устарел")
+    def _load_favorites_cache(self, allow_stale=False):
+        """
+        Возвращает кэш избранного из памяти.
+        allow_stale=True — вернёт даже устаревший кэш (для мгновенного показа).
+        allow_stale=False — вернёт только свежий кэш.
+        """
+        if self._favorites_cache is None:
+            return None
+
+        # Если разрешено отдавать устаревший — отдаём что есть
+        if allow_stale:
+            return self._favorites_cache
+
+        # Иначе проверяем TTL
+        if time.time() - self._favorites_cache_timestamp < config.FAVORITES_CACHE_TTL:
+            return self._favorites_cache
+
         return None
 
-    def _save_favorites_cache(self, favorites):
-        """Сохраняет кэш избранного в память (не в файлы!)"""
+    def _save_favorites_cache(self, favorites, stale=False):
+        """Сохраняет кэш избранного в память"""
         self._favorites_cache = favorites
         self._favorites_cache_timestamp = time.time()
-        Logger.info(f"💾 Кэш избранного сохранён в памяти: {len(favorites)} песен")
+        self._favorites_stale = stale
+        Logger.info(
+            f"💾 Кэш избранного сохранён: {len(favorites)} песен, stale={stale}"
+        )
+
+    def _mark_favorites_stale(self):
+        """Помечает кэш как устаревший, НЕ очищая данные"""
+        if self._favorites_cache is not None:
+            self._favorites_stale = True
+            Logger.info("⚠️ Кэш избранного помечен как устаревший (данные сохранены)")
 
     def _clear_favorites_cache(self):
-        """Очищает кэш избранного в памяти"""
+        """Полностью очищает кэш избранного (при logout)"""
         self._favorites_cache = None
         self._favorites_cache_timestamp = 0
-        Logger.info("🗑️ Кэш избранного очищен (память)")
+        self._favorites_stale = True
+        Logger.info("🗑️ Кэш избранного очищен")
+
+    # ============ ЛОКАЛЬНЫЕ ИЗМЕНЕНИЯ КЭША ============
+
+    def _add_to_favorites_cache_local(self, song: dict):
+        """
+        Оптимистично добавляет песню в локальный кэш избранного.
+        song — словарь с полями id/song_id, artist, title.
+        """
+        if self._favorites_cache is None:
+            self._favorites_cache = []
+
+        song_id = song.get('id') or song.get('song_id')
+        if not song_id:
+            return
+
+        # Проверяем, нет ли уже
+        for s in self._favorites_cache:
+            if s.get('id') == song_id or s.get('song_id') == song_id:
+                return  # уже есть
+
+        # Нормализуем поля
+        entry = {
+            'id': song_id,
+            'song_id': song_id,
+            'artist': song.get('artist', ''),
+            'title': song.get('title', ''),
+            'tabs_count': song.get('tabs_count', 1),
+        }
+        self._favorites_cache.insert(0, entry)
+        self._favorites_cache_timestamp = time.time()
+        self._favorites_stale = False
+        Logger.info(f"➕ Локально добавлено в избранное: {entry['artist']} - {entry['title']}")
+
+    def _remove_from_favorites_cache_local(self, song_id):
+        """Оптимистично удаляет песню из локального кэша"""
+        if self._favorites_cache is None:
+            return
+
+        before = len(self._favorites_cache)
+        self._favorites_cache = [
+            s for s in self._favorites_cache
+            if s.get('id') != song_id and s.get('song_id') != song_id
+        ]
+        self._favorites_cache_timestamp = time.time()
+        self._favorites_stale = False
+        removed = before - len(self._favorites_cache)
+        if removed:
+            Logger.info(f"➖ Локально удалено из избранного: song_id={song_id}")
+
+    # ============ ПОДПИСКА НА ИЗМЕНЕНИЯ ============
+
+    def add_favorites_listener(self, callback):
+        """Добавляет слушателя изменений избранного"""
+        if callback not in self._favorites_listeners:
+            self._favorites_listeners.append(callback)
+            Logger.debug(f"👂 Добавлен слушатель избранного: {callback}")
+
+    def remove_favorites_listener(self, callback):
+        """Удаляет слушателя"""
+        if callback in self._favorites_listeners:
+            self._favorites_listeners.remove(callback)
+            Logger.debug(f"👂 Удалён слушатель избранного: {callback}")
+
+    def _notify_favorites_changed(self):
+        """Уведомляет всех слушателей об изменении избранного"""
+        favorites = self._favorites_cache or []
+        Logger.info(f"📢 Уведомляем {len(self._favorites_listeners)} слушателей об изменении избранного")
+        for cb in self._favorites_listeners:
+            try:
+                Clock.schedule_once(lambda dt, c=cb: c(favorites), 0)
+            except Exception as e:
+                Logger.error(f"Ошибка в слушателе избранного: {e}")
 
     # ============ API МЕТОДЫ ============
 
-    def get_favorites(self, on_success=None, on_failure=None, force_refresh=False):
+    def get_favorites(self, on_success=None, on_failure=None,
+                      force_refresh=False, silent_refresh=False):
         """
-        Получить избранное
+        Получить избранное с поддержкой stale-while-revalidate.
 
         Args:
-            on_success: колбэк при успехе
+            on_success: колбэк при успехе (может вызваться ДВАЖДЫ:
+                        сначала из кэша, потом после сети)
             on_failure: колбэк при ошибке
-            force_refresh: принудительно обновить с сервера
+            force_refresh: True — игнорировать кэш, сразу запрос
+            silent_refresh: True — не показывать спиннер, обновлять в фоне
         """
-        # Проверяем кэш в памяти только если не force_refresh
+        # ============ 1. Проверяем кэш ============
         if not force_refresh:
-            cached = self._load_favorites_cache()
-            if cached is not None:
+            cached_stale = self._load_favorites_cache(allow_stale=True)
+
+            if cached_stale is not None:
+                # Есть кэш — отдаём СРАЗУ (0 мс)
+                Logger.info(f"⚡ Избранное из кэша (stale={self._favorites_stale}): {len(cached_stale)} песен")
                 if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
+                    Clock.schedule_once(lambda dt: on_success(cached_stale), 0)
+
+                # Если кэш свежий — сеть не нужна
+                if not self._favorites_stale:
+                    return
+
+                # Если stale — запускаем фоновое обновление
+                Logger.info("🔄 Кэш устарел — фоновое обновление...")
+                self._fetch_favorites_from_server(
+                    on_success=on_success,
+                    on_failure=on_failure,
+                    silent=True
+                )
                 return
 
-        Logger.info("🔄 Загрузка избранного с сервера...")
+        # ============ 2. Кэша нет — обычная загрузка ============
+        Logger.info("🔄 Загрузка избранного с сервера (кэш пуст)...")
+        self._fetch_favorites_from_server(
+            on_success=on_success,
+            on_failure=on_failure,
+            silent=silent_refresh
+        )
+
+    def _fetch_favorites_from_server(self, on_success=None, on_failure=None, silent=False):
+        """Внутренний метод — реальный запрос к серверу"""
+        if self._favorites_load_in_progress:
+            Logger.info("⏳ Загрузка избранного уже идёт — пропускаем")
+            return
+
+        self._favorites_load_in_progress = True
 
         def _on_success(result):
+            self._favorites_load_in_progress = False
+
             if isinstance(result, dict):
                 favorites = result.get('favorites', result.get('songs', []))
             elif isinstance(result, list):
@@ -398,47 +530,31 @@ class APIClient:
             else:
                 favorites = []
 
-            formatted_favorites = []
-            for item in favorites:
-                if isinstance(item, str):
-                    parts = item.split(' - ', 1)
-                    if len(parts) == 2:
-                        formatted_favorites.append({
-                            'artist': parts[0],
-                            'title': parts[1],
-                            'tabs_count': 1,
-                            'id': 0,
-                            'song_id': 0
-                        })
-                    else:
-                        formatted_favorites.append({
-                            'artist': '',
-                            'title': item,
-                            'tabs_count': 1,
-                            'id': 0,
-                            'song_id': 0
-                        })
-                else:
-                    if 'id' in item and 'song_id' not in item:
-                        item['song_id'] = item['id']
-                    elif 'song_id' in item and 'id' not in item:
-                        item['id'] = item['song_id']
-                    formatted_favorites.append(item)
+            formatted = self._format_favorites(favorites)
 
-            # Сохраняем только в память
-            self._save_favorites_cache(formatted_favorites)
-            Logger.info(f'✅ Получено избранных: {len(formatted_favorites)}')
+            # ✅ Сохраняем в кэш как свежий
+            self._save_favorites_cache(formatted, stale=False)
+
+            # ✅ Уведомляем слушателей (для мгновенного обновления UI)
+            self._notify_favorites_changed()
+
+            Logger.info(f"✅ Избранное получено с сервера: {len(formatted)} песен")
 
             if on_success:
-                on_success(formatted_favorites)
+                on_success(formatted)
 
         def _on_failure(req, error):
-            # При ошибке используем кэш в памяти если есть
-            cached = self._load_favorites_cache()
-            if cached is not None:
-                Logger.warning(f"⚠️ Ошибка сервера, показываем кэш в памяти ({len(cached)} песен)")
-                if on_success:
-                    Clock.schedule_once(lambda dt: on_success(cached), 0)
+            self._favorites_load_in_progress = False
+            Logger.warning(f"⚠️ Ошибка загрузки избранного: {error}")
+
+            # Если есть кэш — оставляем его, не падаем
+            if self._favorites_cache is not None:
+                Logger.info("ℹ️ Используем старый кэш после ошибки")
+                if silent:
+                    # Тихо игнорируем — данные уже показаны
+                    return
+                if on_failure:
+                    on_failure(req, error)
                 return
 
             if on_failure:
@@ -452,37 +568,113 @@ class APIClient:
             include_auth=True
         )
 
-    def add_to_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Добавить в избранное - очищаем кэш в памяти"""
+    def _format_favorites(self, favorites):
+        """Форматирует список избранного в единый вид"""
+        formatted = []
+        for item in favorites:
+            if isinstance(item, str):
+                parts = item.split(' - ', 1)
+                if len(parts) == 2:
+                    formatted.append({
+                        'artist': parts[0], 'title': parts[1],
+                        'tabs_count': 1, 'id': 0, 'song_id': 0,
+                    })
+                else:
+                    formatted.append({
+                        'artist': '', 'title': item,
+                        'tabs_count': 1, 'id': 0, 'song_id': 0,
+                    })
+            else:
+                if 'id' in item and 'song_id' not in item:
+                    item['song_id'] = item['id']
+                elif 'song_id' in item and 'id' not in item:
+                    item['id'] = item['song_id']
+                formatted.append(item)
+        return formatted
 
+    def add_to_favorites(self, song_id: int, song_data: dict = None,
+                         on_success=None, on_failure=None):
+        """
+        Добавить в избранное с оптимистичным обновлением.
+
+        Args:
+            song_id: ID песни
+            song_data: опционально {'artist': ..., 'title': ...} для локального кэша
+            on_success, on_failure: колбэки
+        """
+        # ✅ 1. ОПТИМИСТИЧНО обновляем локальный кэш
+        if song_data:
+            song_data = dict(song_data)
+            song_data['id'] = song_id
+            song_data['song_id'] = song_id
+        else:
+            song_data = {'id': song_id, 'song_id': song_id, 'artist': '', 'title': ''}
+
+        self._add_to_favorites_cache_local(song_data)
+
+        # ✅ 2. Уведомляем UI мгновенно
+        self._notify_favorites_changed()
+
+        # ✅ 3. В фоне отправляем на сервер
         def _on_success(result):
-            self._clear_favorites_cache()
-            Logger.info(f"⭐ Песня {song_id} добавлена в избранное, кэш очищен")
+            Logger.info(f"⭐ Песня {song_id} добавлена на сервере")
             if on_success:
                 on_success(result)
+
+        def _on_failure(req, error):
+            Logger.error(f"❌ Ошибка добавления в избранное: {error}")
+            # ❌ ОТКАТ локального кэша
+            self._remove_from_favorites_cache_local(song_id)
+            self._notify_favorites_changed()
+            if on_failure:
+                on_failure(req, error)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
             method='POST',
             on_success=_on_success,
-            on_failure=on_failure,
+            on_failure=_on_failure,
             include_auth=True
         )
 
-    def remove_from_favorites(self, song_id: int, on_success=None, on_failure=None):
-        """Удалить из избранного - очищаем кэш в памяти"""
+    def remove_from_favorites(self, song_id: int,
+                              on_success=None, on_failure=None):
+        """Удалить из избранного с оптимистичным обновлением"""
 
+        # ✅ 1. Запоминаем удалённый элемент (для отката)
+        removed_song = None
+        if self._favorites_cache:
+            for s in self._favorites_cache:
+                if s.get('id') == song_id or s.get('song_id') == song_id:
+                    removed_song = dict(s)
+                    break
+
+        # ✅ 2. Оптимистично удаляем
+        self._remove_from_favorites_cache_local(song_id)
+
+        # ✅ 3. Уведомляем UI
+        self._notify_favorites_changed()
+
+        # ✅ 4. В фоне отправляем на сервер
         def _on_success(result):
-            self._clear_favorites_cache()
-            Logger.info(f"⭐ Песня {song_id} удалена из избранного, кэш очищен")
+            Logger.info(f"⭐ Песня {song_id} удалена на сервере")
             if on_success:
                 on_success(result)
+
+        def _on_failure(req, error):
+            Logger.error(f"❌ Ошибка удаления из избранного: {error}")
+            # ❌ ОТКАТ
+            if removed_song:
+                self._add_to_favorites_cache_local(removed_song)
+                self._notify_favorites_changed()
+            if on_failure:
+                on_failure(req, error)
 
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}/favorite",
             method='DELETE',
             on_success=_on_success,
-            on_failure=on_failure,
+            on_failure=_on_failure,
             include_auth=True
         )
 
@@ -490,7 +682,7 @@ class APIClient:
         """
         Проверяет, находится ли песня в избранном (из кэша в памяти)
         """
-        cached = self._load_favorites_cache()
+        cached = self._load_favorites_cache(allow_stale=True)
         if cached is None:
             return False
 
@@ -746,6 +938,8 @@ class APIClient:
             self.access_token = result.get('access_token')
             self.refresh_token = result.get('refresh_token')
             self._save_tokens()
+            # ✅ Сбрасываем кэш избранного при входе
+            self._clear_favorites_cache()
             if on_success:
                 on_success(result)
 
@@ -770,8 +964,9 @@ class APIClient:
         redirect_uri = f"http://127.0.0.1:{oauth_server.port}/callback"
         auth_url = f"{self.config.API_BASE_URL}/auth/google/login?redirect_uri={urllib.parse.quote(redirect_uri)}"
         webbrowser.open(auth_url)
-        self._check_callback_interval = Clock.schedule_interval(lambda dt: self._check_callback(on_success, on_failure),
-                                                                1)
+        self._check_callback_interval = Clock.schedule_interval(
+            lambda dt: self._check_callback(on_success, on_failure), 1
+        )
 
     def _check_callback(self, on_success, on_failure):
         if not self.waiting_for_callback:
@@ -783,6 +978,7 @@ class APIClient:
             self.access_token = tokens['access_token']
             self.refresh_token = tokens.get('refresh_token')
             self._save_tokens()
+            self._clear_favorites_cache()
             self.get_current_user(on_success=on_success, on_failure=on_failure)
             return False
         return True
@@ -835,20 +1031,19 @@ class APIClient:
             print(f"Ошибка получения букв: {e}")
             return None
 
-    def force_refresh_favorites(self):
-        """Принудительно обновляет кэш избранного с сервера"""
+    def force_refresh_favorites(self, on_success=None):
+        """Принудительно обновляет кэш избранного с сервера (для pull-to-refresh)"""
         Logger.info("🔄 Принудительное обновление избранного")
-        self._clear_favorites_cache()
 
-        def refresh():
-            self.get_favorites(
-                on_success=lambda x: Logger.info("✅ Кэш избранного обновлен"),
-                on_failure=lambda req, err: Logger.warning(f"⚠️ Ошибка обновления кэша: {err}"),
-                force_refresh=True
-            )
+        def _done(favorites):
+            if on_success:
+                on_success(favorites)
 
-        import threading
-        threading.Thread(target=refresh, daemon=True).start()
+        self.get_favorites(
+            on_success=_done,
+            on_failure=lambda req, err: Logger.warning(f"⚠️ Ошибка refresh: {err}"),
+            force_refresh=True
+        )
 
 
 api = APIClient()

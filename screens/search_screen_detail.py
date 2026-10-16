@@ -1617,7 +1617,13 @@ class SearchScreenDetail(BaseScreen):
         self.content_label.text = "Ошибка загрузки\nПроверьте интернет"
         notify.error("Ошибка загрузки песни")
 
+    # ==================== ИЗБРАННОЕ (НОВАЯ ЛОГИКА) ====================
+
     def toggle_favorite(self, *args):
+        """
+        Переключает избранное с оптимистичным обновлением.
+        api.add_to_favorites/remove_from_favorites сами обновляют кэш и уведомляют listeners.
+        """
         if not api.is_authenticated():
             app = MDApp.get_running_app()
             if app and hasattr(app, 'open_profile'):
@@ -1625,29 +1631,48 @@ class SearchScreenDetail(BaseScreen):
             return
 
         if self.is_favorite:
+            # ============ УДАЛЕНИЕ ============
             def on_success(result):
                 self.is_favorite = False
                 if hasattr(self, 'favorite_btn') and self.favorite_btn:
                     self.favorite_btn.icon = "star-outline"
-                api._clear_favorites_cache()
                 notify.success("Удалено из избранного")
 
             def on_failure(req, error):
-                notify.error("Ошибка")
+                self.is_favorite = True
+                if hasattr(self, 'favorite_btn') and self.favorite_btn:
+                    self.favorite_btn.icon = "star"
+                notify.error("Ошибка удаления из избранного")
 
-            api.remove_from_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+            api.remove_from_favorites(
+                song_id=self.song_id,
+                on_success=on_success,
+                on_failure=on_failure
+            )
         else:
+            # ============ ДОБАВЛЕНИЕ ============
             def on_success(result):
                 self.is_favorite = True
                 if hasattr(self, 'favorite_btn') and self.favorite_btn:
                     self.favorite_btn.icon = "star"
-                api._clear_favorites_cache()
                 notify.success("Добавлено в избранное")
 
             def on_failure(req, error):
-                notify.error("Ошибка")
+                self.is_favorite = False
+                if hasattr(self, 'favorite_btn') and self.favorite_btn:
+                    self.favorite_btn.icon = "star-outline"
+                notify.error("Ошибка добавления в избранное")
 
-            api.add_to_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+            # ✅ Передаём song_data для оптимистичного обновления кэша
+            api.add_to_favorites(
+                song_id=self.song_id,
+                song_data={
+                    'artist': self.song_artist or '',
+                    'title': self.song_title or '',
+                },
+                on_success=on_success,
+                on_failure=on_failure
+            )
 
     def update_top_nav_title(self):
         app = MDApp.get_running_app()
@@ -1775,8 +1800,6 @@ class SearchScreenDetail(BaseScreen):
 
         if self.song_title:
             self.update_top_nav_title()
-
-        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_song ============
 
     def on_leave(self):
         pass

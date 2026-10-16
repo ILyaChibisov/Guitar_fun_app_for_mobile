@@ -1665,10 +1665,15 @@ class FavoriteDetailScreen(BaseScreen):
             self.content_label.markup = True
             self._update_content_height()
 
-        self.is_favorite = True
+        # ✅ Проверяем реальное состояние избранного из кэша api
+        # (а не жёстко is_favorite=True)
+        self.is_favorite = api.is_song_favorited(self.song_id)
+        if not self.is_favorite:
+            # Fallback на ответ сервера
+            self.is_favorite = data.get('is_favorite', True)
 
         if hasattr(self, 'favorite_btn') and self.favorite_btn:
-            self.favorite_btn.icon = "star"
+            self.favorite_btn.icon = "star" if self.is_favorite else "star-outline"
 
         self.update_top_nav_title()
         self.hide_loading()
@@ -1718,18 +1723,36 @@ class FavoriteDetailScreen(BaseScreen):
         dialog.open()
 
     def _remove_from_favorites(self):
+        """
+        Удаляет песню из избранного.
+        api.remove_from_favorites сам:
+        - оптимистично удаляет из кэша
+        - уведомляет listener → FavoritesScreen обновится
+        - отправляет DELETE на сервер
+        - при ошибке делает откат
+        """
+
         def on_success(result):
             self.is_favorite = False
             if hasattr(self, 'favorite_btn') and self.favorite_btn:
                 self.favorite_btn.icon = "star-outline"
-            api._clear_favorites_cache()
             notify.success("Удалено из избранного")
+            # ✅ НЕ вызываем _clear_favorites_cache — api сам управляет
+            # ✅ НЕ вызываем _refresh — listener обновит FavoritesScreen
             Clock.schedule_once(lambda dt: self.go_back(), 0.3)
 
         def on_failure(req, error):
+            # ❌ api сделал откат — вернём иконку
+            self.is_favorite = True
+            if hasattr(self, 'favorite_btn') and self.favorite_btn:
+                self.favorite_btn.icon = "star"
             notify.error("Ошибка удаления из избранного")
 
-        api.remove_from_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
+        api.remove_from_favorites(
+            song_id=self.song_id,
+            on_success=on_success,
+            on_failure=on_failure
+        )
 
     # ============ ОБНОВЛЕНИЕ TopNav ============
 
@@ -1779,10 +1802,10 @@ class FavoriteDetailScreen(BaseScreen):
     # ============ ВОЗВРАТ ============
 
     def go_back(self, instance=None):
-        """Возврат ТОЛЬКО в FavoritesScreen - С ПРАВИЛЬНЫМ ОБНОВЛЕНИЕМ"""
+        """Возврат ТОЛЬКО в FavoritesScreen"""
         logger.info(f"🔙 Возврат из избранного просмотра в FavoritesScreen")
 
-        # ✅ 1. СНАЧАЛА - МГНОВЕННО обновляем TopNav на "Избранное"
+        # ✅ Мгновенно обновляем TopNav на "Избранное" ДО перехода
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.clear_custom_title_widget()
@@ -1791,7 +1814,7 @@ class FavoriteDetailScreen(BaseScreen):
                 app.top_nav._update_right_buttons('favorites')
             logger.info("✅ TopNav обновлён на 'Избранное' ДО перехода")
 
-        # ✅ 2. ПОТОМ - переходим на экран избранного
+        # ✅ Переходим на экран избранного
         if self.manager and self.manager.has_screen('favorites'):
             self.manager.current = 'favorites'
             logger.info("✅ Возврат на FavoritesScreen")
@@ -1802,7 +1825,7 @@ class FavoriteDetailScreen(BaseScreen):
     # ============ on_enter, on_leave ============
 
     def on_enter(self):
-        """При входе на экран - показываем название песни, а не "Избранное" """
+        """При входе на экран - показываем название песни"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             if hasattr(app.top_nav, 'left_container'):
@@ -1818,9 +1841,6 @@ class FavoriteDetailScreen(BaseScreen):
 
         if self.song_title:
             self.update_top_nav_title()
-
-        # ============ НЕ ОБНОВЛЯЕМ _top_spacer_song ============
-        # Отступы управляются через card_container.padding
 
     def on_leave(self):
         """При выходе - НЕ трогаем TopNav, чтобы не было мерцаний"""

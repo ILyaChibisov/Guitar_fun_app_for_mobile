@@ -412,7 +412,11 @@ class GuitarFunsApp(MDApp):
     # ============ ПРЕДЗАГРУЗКА ИЗБРАННОГО ============
 
     def _preload_favorites(self):
-        """Предзагружает избранное в фоне при запуске приложения"""
+        """
+        Предзагружает избранное при запуске приложения.
+        Результат кладётся в api._favorites_cache (в памяти).
+        api.get_favorites сам асинхронный — внешний поток не нужен.
+        """
         if self._favorites_preloaded:
             logger.debug("ℹ️ Избранное уже предзагружено")
             return
@@ -423,30 +427,18 @@ class GuitarFunsApp(MDApp):
 
         logger.info("🔄 Фоновая предзагрузка избранного...")
 
-        def preload():
-            try:
-                from api.client import api
-                api.get_favorites(
-                    on_success=self._on_favorites_preloaded,
-                    on_failure=lambda req, err: logger.warning(f"⚠️ Предзагрузка избранного не удалась: {err}"),
-                    force_refresh=False
-                )
-            except Exception as e:
-                logger.warning(f"⚠️ Ошибка предзагрузки избранного: {e}")
-
-        # Запускаем в фоновом потоке
-        import threading
-        threading.Thread(target=preload, daemon=True).start()
+        # ✅ api.get_favorites уже асинхронный (внутри свой поток)
+        # Дополнительный threading.Thread не нужен
+        api.get_favorites(
+            on_success=self._on_favorites_preloaded,
+            on_failure=lambda req, err: logger.warning(f"⚠️ Предзагрузка избранного не удалась: {err}"),
+            force_refresh=False
+        )
 
     def _on_favorites_preloaded(self, favorites):
         """Обработчик успешной предзагрузки избранного"""
-        try:
-            from utils.screen_state import screen_state
-            screen_state.cache_screen_data('favorites', favorites)
-            self._favorites_preloaded = True
-            logger.info(f"✅ Избранное предзагружено: {len(favorites)} песен")
-        except Exception as e:
-            logger.warning(f"⚠️ Ошибка сохранения предзагруженного избранного: {e}")
+        self._favorites_preloaded = True
+        logger.info(f"✅ Избранное предзагружено: {len(favorites)} песен")
 
     # ============ BUILD ============
 
