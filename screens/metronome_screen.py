@@ -401,7 +401,6 @@ class RealisticMetronome(Widget):
 
     def _on_swing_complete(self, animation, widget):
         if self.is_running:
-            # Маятник просто продолжает качаться, звук идёт от _tick()
             self._animate_swing()
 
     def on_bpm_value(self, instance, value):
@@ -428,9 +427,9 @@ class VerticalSlider(MDBoxLayout):
         self.orientation = 'vertical'
         self.size_hint = (None, None)
         self.width = dp(70)
-        self.height = dp(280)
-        self.spacing = dp(2)
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.height = dp(240)                       # ← синхронизировано с sliders_layout
+        self.spacing = dp(4)                        # ← «воздух» между элементами
+        self.padding = [dp(2), dp(6), dp(2), dp(6)] # ← симметричные отступы
 
         slider_container = BoxLayout(
             orientation='vertical',
@@ -438,18 +437,20 @@ class VerticalSlider(MDBoxLayout):
             padding=[dp(16), dp(2), dp(16), dp(2)]
         )
 
+        # Верхняя цифра (текущее значение)
         self.value_label = MDLabel(
             text=str(int(initial)),
             font_size=sp(20),
             halign="center",
             valign="middle",
             size_hint_y=None,
-            height=dp(30),
+            height=dp(28),
             theme_text_color="Custom",
             text_color=[0.46, 0.70, 0.71, 1],
             bold=True
         )
 
+        # Сам слайдер
         self.slider = MDSlider(
             min=min_value - 0.01,
             max=max_value + 0.01,
@@ -471,6 +472,7 @@ class VerticalSlider(MDBoxLayout):
 
         self.slider.bind(value=self._on_value_change)
 
+        # Нижняя цифра (дублирует верхнюю для симметрии)
         self.value_below = MDLabel(
             text=str(int(initial)),
             font_size=sp(14),
@@ -483,6 +485,7 @@ class VerticalSlider(MDBoxLayout):
             bold=True
         )
 
+        # Подпись (BPM, BEAT, SUB, VOL)
         self.label = MDLabel(
             text=label_text,
             font_size=sp(10),
@@ -495,12 +498,12 @@ class VerticalSlider(MDBoxLayout):
             bold=True
         )
 
-        slider_container.add_widget(self.value_label)
         slider_container.add_widget(self.slider)
 
-        self.add_widget(slider_container)
-        self.add_widget(self.value_below)
-        self.add_widget(self.label)
+        self.add_widget(self.value_label)      # верхняя цифра
+        self.add_widget(slider_container)      # слайдер
+        self.add_widget(self.value_below)      # нижняя цифра
+        self.add_widget(self.label)            # подпись
 
     def _on_value_change(self, instance, value):
         if value < self.min_value:
@@ -601,11 +604,11 @@ class MetronomeMenu(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(60)
+        self.height = dp(64)                            # ← было 60, чуть больше «воздуха»
         self.radius = [0, 0, 0, 0]
         self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.padding = [dp(8), dp(6), dp(8), dp(6)]     # ← симметричные отступы
         self.spacing = dp(0)
 
         self.on_play_press = on_play_press
@@ -807,18 +810,18 @@ class MetronomeScreen(BaseScreen):
         )
 
         # === ВЕРХНЯЯ ЧАСТЬ: КАРТОЧКА СО СЛАЙДЕРАМИ + МЕНЮ ===
-        # Уменьшаем высоту, чтобы освободить место для маятника
+        # Точная высота под содержимое: 240 (слайдеры) + 1 (разделитель) + 64 (меню) + 20 (паддинги) + 5 (запас)
         top_section = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(360),  # Уменьшено с 400 до 360
+            height=dp(330),
             spacing=dp(2)
         )
 
         unified_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(12), dp(10), dp(12), dp(10)],  # Немного уменьшены отступы
+            padding=[dp(12), dp(10), dp(12), dp(10)],   # ← симметричные паддинги
             radius=[dp(16), dp(16), dp(16), dp(16)],
             md_bg_color=[0, 0, 0, 0.1],
             elevation=0,
@@ -831,7 +834,7 @@ class MetronomeScreen(BaseScreen):
         sliders_layout = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=dp(250),  # Уменьшено с 260 до 250
+            height=dp(240),                             # ← синхронизировано с VerticalSlider.height
             spacing=dp(2)
         )
 
@@ -883,7 +886,7 @@ class MetronomeScreen(BaseScreen):
 
         unified_card.add_widget(sliders_layout)
 
-        # Разделитель
+        # Разделитель — с боковыми отступами, чтобы не упирался в края карточки
         divider = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -925,7 +928,7 @@ class MetronomeScreen(BaseScreen):
         indicator_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(44),  # Уменьшено с 52 до 44
+            height=dp(44),
             padding=[dp(4), dp(2), dp(4), dp(2)],
             md_bg_color=[0, 0, 0, 0]
         )
@@ -951,7 +954,7 @@ class MetronomeScreen(BaseScreen):
         )
 
         self.beat_indicators = []
-        initial_size = dp(30)  # Уменьшено с 36 до 30
+        initial_size = dp(30)
         for i in range(12):
             indicator = MDCard(
                 size_hint=(None, None),
@@ -971,15 +974,14 @@ class MetronomeScreen(BaseScreen):
         content_container.add_widget(indicator_container)
 
         # === МАЯТНИК (прижат к нижней части, крупный) ===
-        # Используем FloatLayout для точного позиционирования
         pendulum_container = FloatLayout(
             size_hint=(1, 1)
         )
 
         self.pendulum = RealisticMetronome(
             bpm_value=self.DEFAULT_BPM,
-            size_hint=(0.9, 0.85),  # 90% ширины, 85% высоты контейнера
-            pos_hint={'center_x': 0.5, 'y': 0.02}  # Центр по X, 2% отступа снизу
+            size_hint=(0.9, 0.85),
+            pos_hint={'center_x': 0.5, 'y': 0.02}
         )
         pendulum_container.add_widget(self.pendulum)
         content_container.add_widget(pendulum_container)
@@ -1218,7 +1220,7 @@ class MetronomeScreen(BaseScreen):
         self._show_indicators()
         self.metronome_menu.update_state(self.is_running, self.is_accent_enabled)
 
-        # ЗАПУСКАЕМ ТАЙМЕР КАК В РАБОЧЕМ МОДУЛЕ
+        # ЗАПУСКАЕМ ТАЙМЕР
         interval = 60.0 / self.bpm
         self._tick()  # первый тик сразу
         self.tick_event = Clock.schedule_interval(self._tick, interval)
@@ -1277,7 +1279,6 @@ class MetronomeScreen(BaseScreen):
                 anim.start(indicator)
 
             self.tick_count = (self.tick_count + 1) % self.beats_per_measure
-
 
     def on_enter(self):
         logger.info("Вход в экран метронома")

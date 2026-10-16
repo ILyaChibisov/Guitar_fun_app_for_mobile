@@ -80,7 +80,7 @@ jobs:
       - name: Install pip dependencies
         run: |
           pip install --upgrade pip
-          pip install buildozer cython==0.29.37
+          pip install buildozer cython==0.29.37 requests
 
       - name: Create keystore directory
         run: |
@@ -115,16 +115,90 @@ jobs:
         run: |
           yes | buildozer android debug 2>&1 | tee buildozer_build.log
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: GuitarFuns-APK-${{ github.run_number }}
-          path: bin/*.apk
+      - name: Upload APK to Yandex Disk
+        if: success()
+        env:
+          YANDEX_DISK_TOKEN: ${{ secrets.YANDEX_DISK_TOKEN }}
+          ARTIFACT_PATH: bin
+          REMOTE_DIR: /github-artifacts
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'EOF'
+          import os, glob, requests, sys
 
-      - name: Upload full build log
+          token = os.environ['YANDEX_DISK_TOKEN']
+          local_dir = os.environ['ARTIFACT_PATH']
+          remote_dir = os.environ['REMOTE_DIR']
+          run_number = os.environ['RUN_NUMBER']
+
+          headers = {'Authorization': f'OAuth {token}'}
+          api_upload = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
+          api_mkdir  = 'https://cloud-api.yandex.net/v1/disk/resources'
+
+          # Создаём подпапку под конкретный запуск, чтобы ничего не перезаписывалось
+          run_dir = f'{remote_dir}/run-{run_number}'
+          r = requests.put(api_mkdir, headers=headers, params={'path': run_dir})
+          if r.status_code not in (200, 201, 409):
+              print('Ошибка создания папки:', r.status_code, r.text)
+              sys.exit(1)
+
+          # Ищем все APK
+          apks = glob.glob(os.path.join(local_dir, '*.apk'))
+          if not apks:
+              print('❌ APK-файлы не найдены в', local_dir)
+              sys.exit(1)
+
+          for apk in apks:
+              name = os.path.basename(apk)
+              remote_path = f'{run_dir}/{name}'
+
+              # Получаем ссылку на загрузку
+              r = requests.get(api_upload, headers=headers,
+                               params={'path': remote_path, 'overwrite': 'true'})
+              if r.status_code != 200:
+                  print('Ошибка получения ссылки:', r.status_code, r.text)
+                  sys.exit(1)
+              upload_url = r.json()['href']
+
+              # Загружаем
+              with open(apk, 'rb') as f:
+                  up = requests.put(upload_url, data=f)
+              if up.status_code not in (200, 201, 202):
+                  print('Ошибка загрузки:', up.status_code, up.text)
+                  sys.exit(1)
+              print(f'✅ Загружено: {apk} → {remote_path}')
+          EOF
+
+      - name: Upload build log to Yandex Disk
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildozer-log-${{ github.run_number }}
-          path: buildozer_build.log
-          if-no-files-found: warn
+        env:
+          YANDEX_DISK_TOKEN: ${{ secrets.YANDEX_DISK_TOKEN }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'EOF'
+          import os, requests, sys
+
+          token = os.environ['YANDEX_DISK_TOKEN']
+          run_number = os.environ['RUN_NUMBER']
+          log_file = 'buildozer_build.log'
+          remote_path = f'/github-artifacts/run-{run_number}/{log_file}'
+
+          if not os.path.exists(log_file):
+              print('Лог не найден, пропускаем')
+              sys.exit(0)
+
+          headers = {'Authorization': f'OAuth {token}'}
+          r = requests.get('https://cloud-api.yandex.net/v1/disk/resources/upload',
+                           headers=headers,
+                           params={'path': remote_path, 'overwrite': 'true'})
+          if r.status_code != 200:
+              print('Ошибка получения ссылки:', r.status_code, r.text)
+              sys.exit(1)
+
+          with open(log_file, 'rb') as f:
+              up = requests.put(r.json()['href'], data=f)
+          if up.status_code not in (200, 201, 202):
+              print('Ошибка загрузки:', up.status_code, up.text)
+              sys.exit(1)
+          print(f'✅ Лог загружен: {remote_path}')
+          EOF
