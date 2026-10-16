@@ -82,6 +82,12 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.37 requests
 
+      - name: Quarantine long-path files
+        run: |
+          # Исключаем файлы, чей путь внутри .aab превышает лимит tarfile USTAR.
+          # Файлы перемещаются в chords_quarantine/ и не попадают в сборку.
+          python utils/quarantine_long_paths.py --limit 90
+
       - name: Create keystore directory
         run: |
           mkdir -p ./.buildozer/android/platform/
