@@ -8,6 +8,7 @@
 ТРЕТЬЯ ИКОНКА - СЕЛЕКТОР АККОРДОВ (как первые две)
 В РАМКЕ - ОСНОВНОЕ ИМЯ АККОРДА (по центру)
 ПОД МЕНЮ - ОПИСАНИЕ + "Варианты записи:" + ВСЕ ИМЕНА
+ПОИСК В СТИЛЕ ЯНДЕКС; ПОД РАМКОЙ - СТАТУС ПОИСКА (найдено / не найдено)
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -17,6 +18,7 @@ from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.card import MDCard
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.dialog import MDDialog
+from kivy.uix.textinput import TextInput
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
@@ -76,7 +78,6 @@ class SwipeContainer(MDBoxLayout):
     В рамке — только ОСНОВНОЕ имя аккорда (центрировано).
     """
 
-    # ---- Настройки блока названия ----
     _NAME_FONT_BASE = sp(22)
     _NAME_FONT_MIN = sp(12)
     _NAME_PADDING = dp(20)
@@ -100,12 +101,11 @@ class SwipeContainer(MDBoxLayout):
         self.spacing = 0
 
         # ============ БЛОК НАЗВАНИЯ АККОРДА ============
-        # padding снизу увеличен — даём больше воздуха между рамкой и грифом
         self.name_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
             height=dp(96),
-            padding=[dp(8), dp(8), dp(8), dp(24)],   # <-- больше воздуха снизу
+            padding=[dp(8), dp(8), dp(8), dp(24)],
             md_bg_color=[0, 0, 0, 0]
         )
 
@@ -130,7 +130,7 @@ class SwipeContainer(MDBoxLayout):
             halign="center",
             valign="middle",
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.95],
+            text_color=[0.83, 0.69, 0.22, 1],  # тёмно-оранжевый золотой
         )
         self.chord_name_card.add_widget(self.chord_name_label)
 
@@ -222,7 +222,6 @@ class SwipeContainer(MDBoxLayout):
     # ============ ОБНОВЛЕНИЕ НАЗВАНИЯ ============
 
     def _calc_card_width_and_font(self, name):
-        """Подбирает ширину карточки и размер шрифта под ОДНО имя."""
         font_size = self._NAME_FONT_BASE
 
         def natural_width(fs):
@@ -238,7 +237,6 @@ class SwipeContainer(MDBoxLayout):
         return card_width, font_size
 
     def update_chord_name(self, display_name):
-        """display_name — ОДНО основное имя аккорда."""
         display_name = (display_name or "?").strip()
         if display_name == self._current_main_name:
             return
@@ -313,117 +311,112 @@ class SwipeContainer(MDBoxLayout):
             renderer.set_mode(mode)
 
 
-# ============ ПОИСКОВАЯ СТРОКА ============
+# ============ ПОИСКОВАЯ СТРОКА (стиль Яндекс) ============
 class SearchBar(MDCard):
-    """Поисковая строка"""
+    """
+    Поисковая строка в стиле Яндекс:
+    - тонкая серая обводка
+    - поле ввода слева (без нижней полосы)
+    - круглая серая кнопка «×» (появляется при вводе)
+    - тёмно-зелёная кнопка «Найти» справа
+    """
+
+    _BORDER = [0.75, 0.75, 0.75, 1]
+    _BTN_BG = [0.10, 0.42, 0.25, 1]
+    _BTN_TEXT = [1, 1, 1, 1]
+    _CLEAR_BG = [0.75, 0.75, 0.75, 1]
 
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
         self.on_clear = on_clear
         self.current_query = ""
-        self._search_timer = None
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)
+        self.height = dp(52)
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.md_bg_color = [1, 1, 1, 1]
         self.elevation = 0
-        self.padding = [dp(12), dp(4), dp(8), dp(4)]
-        self.spacing = dp(4)
+        self.line_color = self._BORDER
+        self.line_width = 1.4
+        self.padding = [dp(12), dp(6), dp(6), dp(6)]
+        self.spacing = dp(6)
 
-        self.line_color = [0.1, 0.1, 0.1, 0.3]
-        self.line_width = 1.6
-
-        self.search_field = MDTextField(
-            hint_text="Поиск аккордов...",
+        self.search_field = TextInput(
+            hint_text="Найти аккорд",
+            multiline=False,
             size_hint_x=1,
-            font_size=sp(15),
-            height=dp(42),
-            on_text_validate=self._on_search,
-            mode="fill"
+            height=dp(40),
+            font_size=sp(16),
+            background_color=[1, 1, 1, 0],
+            background_normal="",
+            background_active="",
+            foreground_color=[0.1, 0.1, 0.1, 1],
+            hint_text_color=[0.55, 0.55, 0.55, 1],
+            cursor_color=[0.1, 0.1, 0.1, 1],
+            padding=[0, dp(10), 0, dp(6)],
+            on_text_validate=self._on_search_pressed
         )
-
-        self.search_field.line_color_normal = [0, 0, 0, 0]
-        self.search_field.line_color_focus = [0, 0, 0, 0]
-        self.search_field.fill_color_normal = [1, 1, 1, 0]
-        self.search_field.fill_color_focus = [1, 1, 1, 0]
-        self.search_field.hint_text_color = [0.6, 0.6, 0.6, 1]
-        self.search_field.theme_text_color = "Custom"
-        self.search_field.text_color = [0.1, 0.1, 0.1, 1]
-
         self.search_field.bind(text=self._on_text_change)
+        self.search_field.bind(focus=self._on_focus)
+
+        self.clear_wrapper = MDCard(
+            size_hint=(None, None),
+            size=(dp(34), dp(34)),
+            radius=[dp(17), dp(17), dp(17), dp(17)],
+            md_bg_color=self._CLEAR_BG,
+            elevation=0,
+            pos_hint={'center_y': 0.5},
+            opacity=0,
+            disabled=True
+        )
 
         self.clear_btn = MDIconButton(
-            icon="close-circle",
-            size_hint=(None, None),
-            size=(dp(28), dp(28)),
+            icon="close",
+            size_hint=(1, 1),
             theme_icon_color="Custom",
-            icon_color=[0.5, 0.5, 0.5, 1],
+            icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_clear,
-            opacity=0,
-            disabled=True,
+            on_release=self._on_clear_pressed
+        )
+        self.clear_wrapper.add_widget(self.clear_btn)
+
+        self.search_btn = MDRaisedButton(
+            text="Найти",
+            size_hint=(None, None),
+            size=(dp(88), dp(40)),
+            md_bg_color=self._BTN_BG,
+            text_color=self._BTN_TEXT,
+            font_size=sp(15),
+            elevation=0,
             pos_hint={'center_y': 0.5}
         )
+        self.search_btn.bind(on_release=self._on_search_pressed)
 
-        self.search_icon = MDIconButton(
-            icon="magnify",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
-            theme_icon_color="Custom",
-            icon_color=[0.46, 0.70, 0.71, 1],
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_search,
-            pos_hint={'center_y': 0.5}
-        )
-
-        self.add_widget(self.search_icon)
         self.add_widget(self.search_field)
-        self.add_widget(self.clear_btn)
-
-        self.search_field.bind(focus=self._on_focus)
+        self.add_widget(self.clear_wrapper)
+        self.add_widget(self.search_btn)
 
     def _on_text_change(self, instance, text):
         self.current_query = text
         if text.strip():
-            self.clear_btn.opacity = 1
-            self.clear_btn.disabled = False
+            self.clear_wrapper.opacity = 1
+            self.clear_wrapper.disabled = False
         else:
-            self.clear_btn.opacity = 0
-            self.clear_btn.disabled = True
+            self.clear_wrapper.opacity = 0
+            self.clear_wrapper.disabled = True
 
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
-        if not text.strip():
-            if self.on_clear:
-                self.on_clear()
-        else:
-            self._search_timer = Clock.schedule_once(lambda dt: self._do_search(), 0.5)
-
-    def _do_search(self):
-        if self.on_search and self.current_query:
-            text = self.current_query.strip()
-            if text:
-                self.on_search(text)
-
-    def _on_search(self, instance):
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
+    def _on_search_pressed(self, *args):
         if self.on_search:
             text = self.search_field.text.strip()
             if text:
                 self.on_search(text)
 
-    def _on_clear(self, instance):
+    def _on_clear_pressed(self, instance):
         self.search_field.text = ""
-        self.clear_btn.opacity = 0
-        self.clear_btn.disabled = True
+        self.clear_wrapper.opacity = 0
+        self.clear_wrapper.disabled = True
         self.current_query = ""
         if self.on_clear:
             self.on_clear()
@@ -431,16 +424,14 @@ class SearchBar(MDCard):
 
     def _on_focus(self, instance, value):
         if value:
-            self.line_color = [0.1, 0.1, 0.1, 0.3]
-            self.line_width = 1.8
+            self.line_width = 1.6
         else:
-            self.line_color = [0.1, 0.1, 0.1, 0.3]
-            self.line_width = 1.5
+            self.line_width = 1.4
 
     def clear(self):
         self.search_field.text = ""
-        self.clear_btn.opacity = 0
-        self.clear_btn.disabled = True
+        self.clear_wrapper.opacity = 0
+        self.clear_wrapper.disabled = True
         self.current_query = ""
 
     def focus(self):
@@ -855,6 +846,7 @@ class ChordsScreen(BaseScreen):
         self.current_mode = "finger"
 
         self.search_bar = None
+        self.search_status_label = None    # <-- лейбл статуса под рамкой поиска
         self.unified_menu = None
         self._menu_container = None
         self._info_label = None
@@ -873,19 +865,14 @@ class ChordsScreen(BaseScreen):
         self.swipe_container = None
         self._data_loaded = False
 
-        # Храним основное и все имена для _show_description
         self._current_main_name = ""
         self._current_alt_names = []
         self._current_all_names = []
 
-        # Сначала создаём UI
         self.init_ui()
         self.load_background()
 
-        # Потом создаём кэшированные меню
         Clock.schedule_once(self._create_cached_menus, 0.05)
-
-        # Сканируем аккорды после создания UI
         Clock.schedule_once(lambda dt: self.scan_chords(), 0.1)
 
         logger.info('Экран аккордов создан (с Carousel)')
@@ -978,7 +965,6 @@ class ChordsScreen(BaseScreen):
             griff_height = int(griff_height)
             self._griff_height = griff_height
 
-            # +dp(120) — новый блок названия стал выше из-за увеличенных отступов
             self.swipe_container.height = griff_height + dp(120)
 
             logger.info(f"📐 Гриф обновлён: {griff_height}dp")
@@ -1013,7 +999,6 @@ class ChordsScreen(BaseScreen):
         chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
         name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
 
-        # Убираем дубли, сохраняя порядок
         unique_names = []
         for n in name_parts:
             if n not in unique_names:
@@ -1025,7 +1010,6 @@ class ChordsScreen(BaseScreen):
         main_name = unique_names[0]
         alt_names = unique_names[1:] if len(unique_names) > 1 else []
 
-        # Запоминаем все имена для _show_description
         self._current_main_name = main_name
         self._current_alt_names = alt_names
         self._current_all_names = list(unique_names)
@@ -1049,10 +1033,11 @@ class ChordsScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
+        # ---- Рамка поиска ----
         search_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(48),
+            height=dp(52),
             padding=[0, 0, 0, 0]
         )
         self.search_bar = SearchBar(
@@ -1062,8 +1047,26 @@ class ChordsScreen(BaseScreen):
         search_container.add_widget(self.search_bar)
         content.add_widget(search_container)
 
-        # >>> Больше воздуха между поиском и рамкой аккорда
-        content.add_widget(Widget(size_hint_y=None, height=dp(24)))
+        # ---- Лейбл СТАТУСА поиска (ПОД рамкой) ----
+        # Место заложено заранее (dp(20)), чтобы layout не сдвигался.
+        # По умолчанию скрыт (opacity=0).
+        self.search_status_label = MDLabel(
+            text="",
+            font_size=sp(11),
+            halign="center",
+            valign="middle",
+            size_hint=(1, None),
+            height=dp(20),
+            opacity=0,
+            theme_text_color="Custom",
+            text_color=[0.6, 0.6, 0.6, 1],
+            padding=[dp(4), 0, dp(4), 0],
+        )
+        self.search_status_label.text_size = (None, None)
+        content.add_widget(self.search_status_label)
+
+        # ---- Отступ между поиском и рамкой аккорда ----
+        content.add_widget(Widget(size_hint_y=None, height=dp(16)))
 
         self.swipe_container = SwipeContainer(
             on_swipe_horizontal=self._on_swipe_horizontal
@@ -1133,6 +1136,29 @@ class ChordsScreen(BaseScreen):
         Clock.schedule_once(self._update_griff_size, 0.5)
 
         Clock.schedule_once(lambda dt: self._update_display(), 0.2)
+
+    # ============ СТАТУС ПОИСКА ============
+
+    def _set_search_status(self, status):
+        """
+        status: 'found' | 'not_found' | None
+        Показывает под рамкой поиска соответствующее сообщение.
+        Место заложено заранее — layout не сдвигается.
+        """
+        if not self.search_status_label:
+            return
+
+        if status == 'found':
+            self.search_status_label.text = "Мы нашли ваш аккорд"
+            self.search_status_label.text_color = [0.35, 0.75, 0.45, 1]
+            self.search_status_label.opacity = 1
+        elif status == 'not_found':
+            self.search_status_label.text = "По вашему запросу ничего не нашлось"
+            self.search_status_label.text_color = [0.85, 0.45, 0.45, 1]
+            self.search_status_label.opacity = 1
+        else:
+            self.search_status_label.text = ""
+            self.search_status_label.opacity = 0
 
     # ============ ОБРАБОТЧИК ГОРИЗОНТАЛЬНОГО СВАЙПА ============
 
@@ -1228,11 +1254,7 @@ class ChordsScreen(BaseScreen):
 
     def _show_description(self):
         """
-        Формат:
-        <описание>, Варианты записи: <все имена через запятую>
-
-        Пример:
-        ля мажор, Варианты записи: A, Amaj, A+
+        Формат: <описание>, Варианты записи: <все имена через запятую>
         """
         if not self.current_variants:
             self._info_label.text = ""
@@ -1242,7 +1264,6 @@ class ChordsScreen(BaseScreen):
 
         parts = []
 
-        # 1) Описание (первая непустая строка из description)
         description = variant.get('description', '')
         if description:
             desc_parts = [
@@ -1266,7 +1287,6 @@ class ChordsScreen(BaseScreen):
                 if formatted_desc:
                     parts.append(formatted_desc)
 
-        # 2) "Варианты записи:" + ВСЕ имена (включая то, что в рамке)
         if self._current_all_names:
             variants_str = ", ".join(self._current_all_names)
             parts.append(f"Варианты записи: {variants_str}")
@@ -1470,6 +1490,9 @@ class ChordsScreen(BaseScreen):
         self.search_results = unique_results
 
         if self.search_results:
+            # Найдено — показываем «Мы нашли ваш аккорд»
+            self._set_search_status('found')
+
             selected_chord = self.search_results[0]
             self.current_chord_name = selected_chord['short_name']
             self.unified_menu.update_chord(len(self.available_chords))
@@ -1491,16 +1514,13 @@ class ChordsScreen(BaseScreen):
 
             notify.info(f"Найдено аккордов: {len(self.search_results)}", duration=1.5)
         else:
-            self.search_bar.search_field.hint_text = f"'{query}' не найдено"
-            Clock.schedule_once(lambda dt: self._reset_hint(), 2)
-
-    def _reset_hint(self):
-        self.search_bar.search_field.hint_text = "Поиск аккордов..."
+            # Не найдено — «По вашему запросу ничего не нашлось»
+            self._set_search_status('not_found')
 
     def clear_search(self):
         self.is_search_mode = False
         self.search_results = []
-        self.search_bar.search_field.hint_text = "Поиск аккордов..."
+        self._set_search_status(None)
         self.update_available_chords()
 
     def scan_chords(self):
