@@ -38,7 +38,7 @@ android.archs = arm64-v8a
 
 # --- ОТЛАДКА ---
 fullscreen = 0
-log_level = 1
+log_level = 2
 # p4a.branch = develop  <-- убрано, используем стабильный master по умолчанию
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
@@ -50,5 +50,5 @@ android.keystore_alias = guitarfuns
 android.keystore_key_password = lexx311285
 
 [buildozer]
-log_level = 1
+log_level = 2
 warn_on_root = 1
