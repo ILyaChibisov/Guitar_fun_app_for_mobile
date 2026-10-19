@@ -323,7 +323,7 @@ class SwipeContainer(MDBoxLayout):
 
 # ============ ПОИСКОВАЯ СТРОКА (стиль Яндекс) ============
 class SearchBar(MDCard):
-    _BORDER = [0.75, 0.75, 0.75, 1]
+    _BORDER = [0.08, 0.35, 0.20, 1]
     _BTN_BG = [0.10, 0.42, 0.25, 1]
     _BTN_TEXT = [1, 1, 1, 1]
     _CLEAR_BG = [0.75, 0.75, 0.75, 1]
@@ -365,20 +365,20 @@ class SearchBar(MDCard):
 
         self.clear_wrapper = MDCard(
             size_hint=(None, None),
-            size=(dp(34), dp(34)),
-            radius=[dp(17), dp(17), dp(17), dp(17)],
-            md_bg_color=self._CLEAR_BG,
+            size=(dp(30), dp(30)),
+            radius=[dp(15), dp(15), dp(15), dp(15)],
+            md_bg_color=[0, 0, 0, 0],  # ← прозрачный фон
             elevation=0,
             pos_hint={'center_y': 0.5},
             opacity=0,
-            disabled=True
+            disabled=True,
         )
 
         self.clear_btn = MDIconButton(
-            icon="close",
+            icon="close-circle-outline",  # ← outline-иконка, тоньше
             size_hint=(1, 1),
             theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
+            icon_color=[0.4, 0.4, 0.4, 0.8],  # ← приглушённый серый
             md_bg_color=[0, 0, 0, 0],
             on_release=self._on_clear_pressed
         )
@@ -422,11 +422,12 @@ class SearchBar(MDCard):
         self.current_query = ""
         if self.on_clear:
             self.on_clear()
-        self.search_field.focus = True
+        # Не фокусируем — пусть клавиатура закроется
+        self.search_field.focus = False
 
     def _on_focus(self, instance, value):
         if value:
-            self.line_width = 1.6
+            self.line_width = 1.8
         else:
             self.line_width = 1.4
 
@@ -1689,14 +1690,23 @@ class ChordsScreen(BaseScreen):
         self.search_results = []
         self._set_search_status(None)
 
-        # Сбрасываем аккорд — пусть выберется первый из списка
         self.current_chord_name = ""
         self.current_chord_index = 0
         self.current_variants = []
         self.current_variant_index = 0
         self.current_position = 1
 
-        self.update_available_chords()
+        if self.current_type in self._core_types:
+            self.update_available_chords()
+        elif self.available_chords:
+            # Server: список уже загружен → берём первый без запроса
+            self.current_chord_name = self.available_chords[0]
+            self.current_chord_index = 0
+            if self.unified_menu:
+                self.unified_menu.update_chord(len(self.available_chords))
+            self._load_variants_for_chord(self.current_chord_name)
+        else:
+            self.update_available_chords()
 
     # ============ СКАНИРОВАНИЕ (CORE) ============
 
