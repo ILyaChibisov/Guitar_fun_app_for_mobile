@@ -7,7 +7,7 @@
 СВАЙП ВЛЕВО/ВПРАВО МЕНЯЕТ ВАРИАНТ АККОРДА
 ТРЕТЬЯ ИКОНКА - СЕЛЕКТОР АККОРДОВ (как первые две)
 В РАМКЕ - ОСНОВНОЕ ИМЯ АККОРДА (по центру)
-ПОД МЕНЮ - ОПИСАНИЕ + "Варианты записи:" + ВСЕ ИМЕНА
+ПОД КВАДРАТИКОМ - АЛЬТЕРНАТИВНЫЕ НАЗВАНИЯ (fade-цикл 2 сек)
 ПОИСК В СТИЛЕ ЯНДЕКС; ПОД РАМКОЙ - СТАТУС ПОИСКА
 
 ГИБРИДНАЯ ЗАГРУЗКА:
@@ -86,6 +86,7 @@ class SwipeContainer(MDBoxLayout):
     Контейнер с Carousel для аккордов.
     Горизонтальный свайп — переключение ВАРИАНТОВ аккорда.
     В рамке — только ОСНОВНОЕ имя аккорда (центрировано).
+    Под квадратиком — альтернативные названия (fade-цикл).
     """
 
     _NAME_FONT_BASE = sp(22)
@@ -94,6 +95,9 @@ class SwipeContainer(MDBoxLayout):
     _CARD_MIN_WIDTH = dp(120)
     _CARD_MAX_WIDTH = dp(280)
     _CHAR_WIDTH_FACTOR = 0.62
+
+    _ALT_CYCLE_INTERVAL = 2.0
+    _ALT_FADE_DURATION = 0.2
 
     def __init__(self, on_swipe_horizontal=None, **kwargs):
         super().__init__(**kwargs)
@@ -114,8 +118,8 @@ class SwipeContainer(MDBoxLayout):
         self.name_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(96),
-            padding=[dp(8), dp(8), dp(8), dp(24)],
+            height=dp(112),
+            padding=[dp(8), dp(8), dp(8), dp(20)],
             md_bg_color=[0, 0, 0, 0]
         )
 
@@ -145,9 +149,31 @@ class SwipeContainer(MDBoxLayout):
         self.chord_name_card.add_widget(self.chord_name_label)
 
         self.name_container.add_widget(self.chord_name_card)
+
+        # ---- Альтернативные названия под квадратиком ----
+        self.chord_alt_label = MDLabel(
+            text="",
+            font_size=sp(11),
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=dp(16),
+            opacity=0,
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.5],
+        )
+        self.chord_alt_label.text_size = (Window.width - dp(32), None)
+        self.name_container.add_widget(self.chord_alt_label)
+
         self.add_widget(self.name_container)
 
         self._current_main_name = ""
+
+        # ---- Состояние цикла альтернативных названий ----
+        self._alt_names = []
+        self._alt_index = 0
+        self._alt_timer = None
+        self._alt_fade_anim = None
 
         # ============ КАРУСЕЛЬ ДЛЯ ГРИФОВ ============
         self.carousel = Carousel(
@@ -246,26 +272,85 @@ class SwipeContainer(MDBoxLayout):
         card_width = max(self._CARD_MIN_WIDTH, min(total, self._CARD_MAX_WIDTH))
         return card_width, font_size
 
-    def update_chord_name(self, display_name):
+    def update_chord_name(self, display_name, alt_names=None):
         display_name = (display_name or "?").strip()
-        if display_name == self._current_main_name:
+        alt_names = [n for n in (alt_names or []) if n and n != display_name]
+
+        if (display_name == self._current_main_name
+                and alt_names == self._alt_names):
             return
 
         self._current_main_name = display_name
+        self._alt_names = alt_names
+        self._alt_index = 0
 
         anim_out = Animation(opacity=0, duration=0.12, t='out_quad')
-        anim_out.bind(on_complete=lambda *a: self._apply_name(display_name))
+        anim_out.bind(on_complete=lambda *a: self._apply_name(display_name, alt_names))
         anim_out.start(self.name_container)
 
-    def _apply_name(self, name):
+    def _apply_name(self, name, alt_names):
         card_width, font_size = self._calc_card_width_and_font(name)
 
         self.chord_name_label.text = name
         self.chord_name_label.font_size = font_size
         self.chord_name_card.width = card_width
 
+        # Настройка альтернатив
+        if alt_names:
+            self.chord_alt_label.text = alt_names[0]
+            self.chord_alt_label.opacity = 1
+            self._alt_index = 0
+        else:
+            self.chord_alt_label.text = ""
+            self.chord_alt_label.opacity = 0
+
         anim_in = Animation(opacity=1, duration=0.15, t='in_quad')
+        anim_in.bind(on_complete=lambda *a: self._start_alt_cycle())
         anim_in.start(self.name_container)
+
+    # ============ ЦИКЛ АЛЬТЕРНАТИВНЫХ НАЗВАНИЙ ============
+
+    def _start_alt_cycle(self):
+        self._stop_alt_cycle()
+
+        if not self._alt_names or len(self._alt_names) <= 1:
+            return
+
+        self._alt_timer = Clock.schedule_interval(
+            self._next_alt_name,
+            self._ALT_CYCLE_INTERVAL
+        )
+
+    def _stop_alt_cycle(self):
+        if self._alt_timer:
+            Clock.unschedule(self._alt_timer)
+            self._alt_timer = None
+        if self._alt_fade_anim:
+            self._alt_fade_anim.cancel(self.chord_alt_label)
+            self._alt_fade_anim = None
+
+    def _next_alt_name(self, dt):
+        if not self._alt_names or not self.chord_alt_label.parent:
+            self._stop_alt_cycle()
+            return
+
+        if len(self._alt_names) <= 1:
+            return
+
+        anim_out = Animation(opacity=0, duration=self._ALT_FADE_DURATION, t='out_quad')
+        anim_out.bind(on_complete=lambda *a: self._apply_next_alt())
+        self._alt_fade_anim = anim_out
+        anim_out.start(self.chord_alt_label)
+
+    def _apply_next_alt(self):
+        if not self._alt_names or not self.chord_alt_label.parent:
+            return
+
+        self._alt_index = (self._alt_index + 1) % len(self._alt_names)
+        self.chord_alt_label.text = self._alt_names[self._alt_index]
+
+        anim_in = Animation(opacity=1, duration=self._ALT_FADE_DURATION, t='in_quad')
+        anim_in.start(self.chord_alt_label)
 
     # ============ ОБРАБОТКА КАСАНИЙ ============
 
@@ -357,13 +442,12 @@ class SearchBar(MDCard):
             foreground_color=[0.1, 0.1, 0.1, 1],
             hint_text_color=[0.55, 0.55, 0.55, 1],
             cursor_color=[0.1, 0.1, 0.1, 1],
-            padding=[0, dp(10), 0, dp(4)],           # ← нижний паддинг 6 → 4
+            padding=[0, dp(10), 0, dp(4)],
             on_text_validate=self._on_search_pressed
         )
         self.search_field.bind(text=self._on_text_change)
         self.search_field.bind(focus=self._on_focus)
 
-        # ---- Крестик (прозрачный, тонкий) ----
         self.clear_wrapper = MDCard(
             size_hint=(None, None),
             size=(dp(30), dp(30)),
@@ -385,7 +469,6 @@ class SearchBar(MDCard):
         )
         self.clear_wrapper.add_widget(self.clear_btn)
 
-        # ---- Кнопка «Найти» (растянута по высоте) ----
         self.search_btn = MDRaisedButton(
             text="Найти",
             size_hint=(None, 1),
@@ -424,7 +507,6 @@ class SearchBar(MDCard):
         self.current_query = ""
         if self.on_clear:
             self.on_clear()
-        # Не фокусируем — пусть клавиатура закроется
         self.search_field.focus = False
 
     def _on_focus(self, instance, value):
@@ -971,7 +1053,8 @@ class ChordsScreen(BaseScreen):
             griff_height = int(griff_height)
             self._griff_height = griff_height
 
-            self.swipe_container.height = griff_height + dp(120)
+            # +dp(136) — блок названия вырос на 16dp из-за альт-строки
+            self.swipe_container.height = griff_height + dp(136)
 
             logger.info(f"📐 Гриф обновлён: {griff_height}dp")
 
@@ -1064,10 +1147,10 @@ class ChordsScreen(BaseScreen):
         self._current_alt_names = alt_names
         self._current_all_names = list(unique_names)
 
-        logger.info(f"🎸 Основное имя: '{main_name}', все: {unique_names}")
+        logger.info(f"🎸 Основное имя: '{main_name}', альтернативы: {alt_names}")
 
         if self.swipe_container:
-            self.swipe_container.update_chord_name(main_name)
+            self.swipe_container.update_chord_name(main_name, alt_names)
 
         self._show_description()
         self._data_loaded = True
@@ -1117,7 +1200,7 @@ class ChordsScreen(BaseScreen):
             on_swipe_horizontal=self._on_swipe_horizontal
         )
         self.swipe_container.size_hint = (1, None)
-        self.swipe_container.height = self._griff_height + dp(120)
+        self.swipe_container.height = self._griff_height + dp(136)
         content.add_widget(self.swipe_container)
 
         Window.bind(on_resize=self._on_window_resize)
@@ -1324,10 +1407,7 @@ class ChordsScreen(BaseScreen):
                 if formatted_desc:
                     parts.append(formatted_desc)
 
-        if self._current_all_names:
-            variants_str = ", ".join(self._current_all_names)
-            parts.append(f"Варианты записи: {variants_str}")
-
+        # "Варианты записи" теперь под квадратиком — здесь только описание
         if parts:
             self._info_label.text = ", ".join(parts)
         else:
@@ -1384,7 +1464,6 @@ class ChordsScreen(BaseScreen):
         self.current_tonality = selected_tonality
         self.current_tonality_index = TONALITIES.index(selected_tonality)
 
-        # Выходим из режима поиска
         self.is_search_mode = False
         self._set_search_status(None)
 
@@ -1443,7 +1522,6 @@ class ChordsScreen(BaseScreen):
         self.current_type = selected_type
         self.current_type_index = CHORD_TYPES.index(selected_type)
 
-        # Выходим из режима поиска — иначе update_available_chords ничего не сделает
         self.is_search_mode = False
         self._set_search_status(None)
 
@@ -1588,7 +1666,6 @@ class ChordsScreen(BaseScreen):
 
         def _on_results(items):
             if not items:
-                # Fallback: альтернативное написание # ↔ b
                 alt = query.replace('#', 'b') if '#' in query else query.replace('b', '#')
                 if alt != query:
                     logger.info(f"   Пробуем '{alt}'")
@@ -1612,10 +1689,7 @@ class ChordsScreen(BaseScreen):
             on_error=_on_err,
         )
 
-
-
     def _handle_server_search_results(self, items, query):
-        """items — список dict с main_name, synonyms, tonality, chord_type."""
         if not items:
             logger.warning(f"⚠️ '{query}' не найдено")
             self._set_search_status('not_found')
@@ -1640,7 +1714,6 @@ class ChordsScreen(BaseScreen):
             self.current_type = chord_type
             self.current_type_index = self.CHORD_TYPES.index(chord_type)
 
-        # Выходим из режима поиска
         self.is_search_mode = False
 
         self.current_chord_name = main_name
@@ -1649,12 +1722,9 @@ class ChordsScreen(BaseScreen):
         notify.info(f"Найдено: {main_name}", duration=1.5)
 
     def _load_available_and_variants(self, target_chord_name: str):
-        """Обновляет available_chords + загружает варианты target_chord_name."""
-
         def _on_list(chords):
             self.available_chords = list(chords or [])
 
-            # Если target не в списке — добавляем в конец (не в начало!)
             if target_chord_name not in self.available_chords:
                 self.available_chords.append(target_chord_name)
                 self.available_chords.sort()
@@ -1701,7 +1771,6 @@ class ChordsScreen(BaseScreen):
         if self.current_type in self._core_types:
             self.update_available_chords()
         elif self.available_chords:
-            # Server: список уже загружен → берём первый без запроса
             self.current_chord_name = self.available_chords[0]
             self.current_chord_index = 0
             if self.unified_menu:
@@ -1825,7 +1894,6 @@ class ChordsScreen(BaseScreen):
         # === SERVER ===
         logger.info(f"📥 Список аккордов {self.current_tonality}/{self.current_type} с сервера...")
 
-        # Уникальный идентификатор запроса — чтобы игнорировать старые ответы
         self._request_id += 1
         my_id = self._request_id
 
@@ -1854,7 +1922,6 @@ class ChordsScreen(BaseScreen):
                     self.unified_menu.update_variants(0)
                 return
 
-            # Если текущего нет в новом списке — сбрасываем на первый
             if self.current_chord_name not in self.available_chords:
                 self.current_chord_index = 0
                 self.current_chord_name = self.available_chords[0]
@@ -2082,6 +2149,13 @@ class ChordsScreen(BaseScreen):
         self._close_type_selector()
         self._close_chord_selector()
 
+        # Перезапускаем цикл альтернативных названий для текущего аккорда
+        if self.swipe_container and self._current_alt_names:
+            self.swipe_container.update_chord_name(
+                self._current_main_name,
+                self._current_alt_names
+            )
+
     def _show_back_button(self):
         try:
             app = MDApp.get_running_app()
@@ -2100,6 +2174,10 @@ class ChordsScreen(BaseScreen):
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
+
+        # Останавливаем цикл альтернативных названий
+        if self.swipe_container:
+            self.swipe_container._stop_alt_cycle()
 
     def go_back(self, instance=None):
         logger.info("🔙 Нажата кнопка возврата")
