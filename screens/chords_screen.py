@@ -140,7 +140,7 @@ class SwipeContainer(MDBoxLayout):
             halign="center",
             valign="middle",
             theme_text_color="Custom",
-            text_color=[0.83, 0.69, 0.22, 1],
+            text_color=[1.0, 0.95, 0.85, 0.95],
         )
         self.chord_name_card.add_widget(self.chord_name_label)
 
@@ -336,13 +336,13 @@ class SearchBar(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(48)                       # ← 52 → 48
+        self.height = dp(48)
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.md_bg_color = [1, 1, 1, 1]
         self.elevation = 0
         self.line_color = self._BORDER
         self.line_width = 1.4
-        self.padding = [dp(12), dp(4), dp(8), dp(4)]   # ← верх/низ 6 → 4, справа 6 → 4
+        self.padding = [dp(12), dp(4), dp(6), dp(4)]
         self.spacing = dp(6)
 
         self.search_field = TextInput(
@@ -388,11 +388,11 @@ class SearchBar(MDCard):
         # ---- Кнопка «Найти» (растянута по высоте) ----
         self.search_btn = MDRaisedButton(
             text="Найти",
-            size_hint=(None, 1),                # ← растягивается по высоте карточки
-            width=dp(88),
+            size_hint=(None, 1),
+            width=dp(70),
             md_bg_color=self._BTN_BG,
             text_color=self._BTN_TEXT,
-            font_size=sp(15),
+            font_size=sp(13),
             elevation=0,
             pos_hint={'center_y': 0.5}
         )
