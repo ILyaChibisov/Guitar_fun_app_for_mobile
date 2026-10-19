@@ -336,13 +336,13 @@ class SearchBar(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(52)
+        self.height = dp(48)                       # ← 52 → 48
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.md_bg_color = [1, 1, 1, 1]
         self.elevation = 0
         self.line_color = self._BORDER
         self.line_width = 1.4
-        self.padding = [dp(12), dp(6), dp(6), dp(6)]
+        self.padding = [dp(12), dp(4), dp(8), dp(4)]   # ← верх/низ 6 → 4, справа 6 → 4
         self.spacing = dp(6)
 
         self.search_field = TextInput(
@@ -357,17 +357,18 @@ class SearchBar(MDCard):
             foreground_color=[0.1, 0.1, 0.1, 1],
             hint_text_color=[0.55, 0.55, 0.55, 1],
             cursor_color=[0.1, 0.1, 0.1, 1],
-            padding=[0, dp(10), 0, dp(6)],
+            padding=[0, dp(10), 0, dp(4)],           # ← нижний паддинг 6 → 4
             on_text_validate=self._on_search_pressed
         )
         self.search_field.bind(text=self._on_text_change)
         self.search_field.bind(focus=self._on_focus)
 
+        # ---- Крестик (прозрачный, тонкий) ----
         self.clear_wrapper = MDCard(
             size_hint=(None, None),
             size=(dp(30), dp(30)),
             radius=[dp(15), dp(15), dp(15), dp(15)],
-            md_bg_color=[0, 0, 0, 0],  # ← прозрачный фон
+            md_bg_color=[0, 0, 0, 0],
             elevation=0,
             pos_hint={'center_y': 0.5},
             opacity=0,
@@ -375,19 +376,20 @@ class SearchBar(MDCard):
         )
 
         self.clear_btn = MDIconButton(
-            icon="close-circle-outline",  # ← outline-иконка, тоньше
+            icon="close-circle-outline",
             size_hint=(1, 1),
             theme_icon_color="Custom",
-            icon_color=[0.4, 0.4, 0.4, 0.8],  # ← приглушённый серый
+            icon_color=[0.4, 0.4, 0.4, 0.8],
             md_bg_color=[0, 0, 0, 0],
             on_release=self._on_clear_pressed
         )
         self.clear_wrapper.add_widget(self.clear_btn)
 
+        # ---- Кнопка «Найти» (растянута по высоте) ----
         self.search_btn = MDRaisedButton(
             text="Найти",
-            size_hint=(None, None),
-            size=(dp(88), dp(40)),
+            size_hint=(None, 1),                # ← растягивается по высоте карточки
+            width=dp(88),
             md_bg_color=self._BTN_BG,
             text_color=self._BTN_TEXT,
             font_size=sp(15),
