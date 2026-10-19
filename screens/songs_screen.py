@@ -15,6 +15,7 @@ from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.textinput import TextInput
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -107,125 +108,129 @@ def load_shared_icons_sync():
             logger.error(f"Ошибка загрузки иконок: {e}")
 
 
-# ============ СОВРЕМЕННАЯ ПОИСКОВАЯ СТРОКА ============
+# ============ ПОИСКОВАЯ СТРОКА (стиль Яндекс, как в chords_screen) ============
 
 class SearchBar(MDCard):
-    """Поисковая строка в стиле Google с красивой обводкой"""
+    """Поисковая строка в стиле chords_screen (TextInput, зелёная рамка, кнопка «Найти»)"""
 
-    def __init__(self, on_search=None, on_clear=None, **kwargs):
+    _BORDER = [0.08, 0.35, 0.20, 1]
+    _BTN_BG = [0.10, 0.42, 0.25, 1]
+    _BTN_TEXT = [1, 1, 1, 1]
+
+    def __init__(self, on_search=None, on_clear=None,
+                 hint_text="Найти", button_text="Найти", **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
         self.on_clear = on_clear
         self.current_query = ""
-        self._search_timer = None
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)
+        self.height = dp(48)
         self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.md_bg_color = [1, 1, 1, 1]
         self.elevation = 0
-        self.padding = [dp(12), dp(4), dp(8), dp(4)]
-        self.spacing = dp(4)
+        self.line_color = self._BORDER
+        self.line_width = 1.4
+        self.padding = [dp(12), dp(4), dp(6), dp(4)]
+        self.spacing = dp(6)
 
-        self.line_color = [0.1, 0.1, 0.1, 0.3]
-        self.line_width = 1.6
-
-        self.search_field = MDTextField(
-            hint_text="Поиск",  # ← ИЗМЕНЕНО
+        self.search_field = TextInput(
+            hint_text=hint_text,
+            multiline=False,
             size_hint_x=1,
-            font_size=sp(15),
-            height=dp(42),
-            on_text_validate=self._on_search,
-            mode="fill"
+            height=dp(40),
+            font_size=sp(16),
+            background_color=[1, 1, 1, 0],
+            background_normal="",
+            background_active="",
+            foreground_color=[0.1, 0.1, 0.1, 1],
+            hint_text_color=[0.55, 0.55, 0.55, 1],
+            cursor_color=[0.1, 0.1, 0.1, 1],
+            padding=[0, dp(10), 0, dp(4)],
+            on_text_validate=self._on_search_pressed
         )
-
-        self.search_field.line_color_normal = [0, 0, 0, 0]
-        self.search_field.line_color_focus = [0, 0, 0, 0]
-        self.search_field.fill_color_normal = [1, 1, 1, 0]
-        self.search_field.fill_color_focus = [1, 1, 1, 0]
-        self.search_field.hint_text_color = [0.6, 0.6, 0.6, 1]
-        self.search_field.theme_text_color = "Custom"
-        self.search_field.text_color = [0.1, 0.1, 0.1, 1]
-
         self.search_field.bind(text=self._on_text_change)
+        self.search_field.bind(focus=self._on_focus)
 
-        self.clear_btn = MDIconButton(
-            icon="close-circle",
+        # ---- Крестик (прозрачный, тонкий) ----
+        self.clear_wrapper = MDCard(
             size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            theme_icon_color="Custom",
-            icon_color=[0.5, 0.5, 0.5, 1],
+            size=(dp(30), dp(30)),
+            radius=[dp(15), dp(15), dp(15), dp(15)],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_clear,
+            elevation=0,
+            pos_hint={'center_y': 0.5},
             opacity=0,
             disabled=True,
-            pos_hint={'center_y': 0.5}
         )
 
-        self.search_icon = MDIconButton(
-            icon="magnify",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
+        self.clear_btn = MDIconButton(
+            icon="close-circle-outline",
+            size_hint=(1, 1),
             theme_icon_color="Custom",
-            icon_color=[0.46, 0.70, 0.71, 1],
+            icon_color=[0.4, 0.4, 0.4, 0.8],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_search,
+            on_release=self._on_clear_pressed
+        )
+        self.clear_wrapper.add_widget(self.clear_btn)
+
+        # ---- Кнопка «Найти» (растянута по высоте) ----
+        self.search_btn = MDRaisedButton(
+            text=button_text,
+            size_hint=(None, 1),
+            width=dp(70),
+            md_bg_color=self._BTN_BG,
+            text_color=self._BTN_TEXT,
+            font_size=sp(13),
+            elevation=0,
             pos_hint={'center_y': 0.5}
         )
+        self.search_btn.bind(on_release=self._on_search_pressed)
 
-        self.add_widget(self.search_icon)
         self.add_widget(self.search_field)
-        self.add_widget(self.clear_btn)
-
-        self.search_field.bind(focus=self._on_focus)
+        self.add_widget(self.clear_wrapper)
+        self.add_widget(self.search_btn)
 
     def _on_text_change(self, instance, text):
         self.current_query = text
         if text.strip():
-            self.clear_btn.opacity = 1
-            self.clear_btn.disabled = False
+            self.clear_wrapper.opacity = 1
+            self.clear_wrapper.disabled = False
         else:
-            self.clear_btn.opacity = 0
-            self.clear_btn.disabled = True
+            self.clear_wrapper.opacity = 0
+            self.clear_wrapper.disabled = True
 
-    def _do_search(self):
-        if self.on_search and self.current_query:
-            text = self.current_query.strip()
-            if text:
-                self.on_search(text)
-
-    def _on_search(self, instance):
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
+    def _on_search_pressed(self, *args):
         if self.on_search:
             text = self.search_field.text.strip()
             if text:
                 self.on_search(text)
 
-    def _on_clear(self, instance):
+    def _on_clear_pressed(self, instance):
         self.search_field.text = ""
-        self.clear_btn.opacity = 0
-        self.clear_btn.disabled = True
+        self.clear_wrapper.opacity = 0
+        self.clear_wrapper.disabled = True
         self.current_query = ""
         if self.on_clear:
             self.on_clear()
-        self.search_field.focus = True
+        self.search_field.focus = False
 
     def _on_focus(self, instance, value):
         if value:
-            self.line_color = [0.1, 0.1, 0.1, 0.3]
             self.line_width = 1.8
         else:
-            self.line_color = [0.1, 0.1, 0.1, 0.3]
-            self.line_width = 1.5
+            self.line_width = 1.4
+
+    def set_text(self, text):
+        """Программная установка текста (обновляет крестик)."""
+        self.search_field.text = text or ""
+        self._on_text_change(None, self.search_field.text)
 
     def clear(self):
         self.search_field.text = ""
-        self.clear_btn.opacity = 0
-        self.clear_btn.disabled = True
+        self.clear_wrapper.opacity = 0
+        self.clear_wrapper.disabled = True
         self.current_query = ""
 
     def focus(self):
@@ -891,10 +896,12 @@ class SongsScreen(BaseScreen):
         search_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(48),
+            height=dp(52),
             padding=[padding[0], 0, padding[2], 0]
         )
         self.search_bar = SearchBar(
+            hint_text="Поиск",
+            button_text="Найти",
             on_search=self.do_search,
             on_clear=self.clear_search
         )
@@ -1591,7 +1598,7 @@ class SongsScreen(BaseScreen):
         """Восстанавливает состояние поиска при возврате на экран"""
         if self._is_search_mode and self._search_query:
             logger.info(f"🔄 Восстанавливаем поиск: query='{self._search_query}'")
-            self.search_bar.search_field.text = self._search_query
+            self.search_bar.set_text(self._search_query)
             self.is_search_mode = True
             self.current_letter = None
             self.current_artist = None

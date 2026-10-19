@@ -1,7 +1,7 @@
 # screens/search_screen.py
 """
 Экран поиска (аккорды, песни и термины)
-С дизайном поисковой строки как в SongsScreen
+С дизайном поисковой строки как в ChordsScreen
 """
 import threading
 import traceback
@@ -14,6 +14,7 @@ from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.textinput import TextInput
 from kivy.core.window import Window
 from io import BytesIO
 from threading import Thread
@@ -21,7 +22,7 @@ from threading import Thread
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.button import MDIconButton
+from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.card import MDCard
 from kivymd.app import MDApp
 
@@ -48,124 +49,134 @@ except ImportError:
         return None
 
 
-class SearchBar(MDCard):
-    """Поисковая строка - ТАКОЙ ЖЕ ДИЗАЙН КАК В SongsScreen"""
+# ============ ПОИСКОВАЯ СТРОКА (стиль Яндекс, как в chords_screen) ============
 
-    def __init__(self, on_search=None, on_clear=None, on_text_change=None, **kwargs):
+class SearchBar(MDCard):
+    """Поисковая строка в стиле chords_screen (TextInput, зелёная рамка, кнопка «Найти»)"""
+
+    _BORDER = [0.08, 0.35, 0.20, 1]
+    _BTN_BG = [0.10, 0.42, 0.25, 1]
+    _BTN_TEXT = [1, 1, 1, 1]
+
+    def __init__(self, on_search=None, on_clear=None, on_text_change=None,
+                 hint_text="Найти", button_text="Найти", **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
         self.on_clear = on_clear
         self.on_text_change = on_text_change
         self.current_query = ""
-        self._search_timer = None
 
         self.orientation = 'horizontal'
-        self.size_hint = (1, None)  # ← ТЕПЕРЬ НА ВСЮ ШИРИНУ
-        self.height = dp(44)
-        self.radius = [dp(16), dp(16), dp(16), dp(16)]  # ← ТАКИЕ ЖЕ СКРУГЛЕНИЯ
-        self.md_bg_color = [1, 1, 1, 1]  # ← БЕЛЫЙ ФОН
+        self.size_hint = (1, None)
+        self.height = dp(48)
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
+        self.md_bg_color = [1, 1, 1, 1]
         self.elevation = 0
-        self.padding = [dp(12), dp(4), dp(8), dp(4)]
-        self.spacing = dp(4)
-        self.pos_hint = {'center_x': 0.5}
+        self.line_color = self._BORDER
+        self.line_width = 1.4
+        self.padding = [dp(12), dp(4), dp(6), dp(4)]
+        self.spacing = dp(6)
 
-        self.line_color = [0.1, 0.1, 0.1, 0.3]
-        self.line_width = 1.6
-
-        self.search_field = MDTextField(
-            hint_text="Поиск аккордов или песен...",
+        self.search_field = TextInput(
+            hint_text=hint_text,
+            multiline=False,
             size_hint_x=1,
-            font_size=sp(15),
-            height=dp(42),
-            on_text_validate=self._on_search,
-            mode="fill"
+            height=dp(40),
+            font_size=sp(16),
+            background_color=[1, 1, 1, 0],
+            background_normal="",
+            background_active="",
+            foreground_color=[0.1, 0.1, 0.1, 1],
+            hint_text_color=[0.55, 0.55, 0.55, 1],
+            cursor_color=[0.1, 0.1, 0.1, 1],
+            padding=[0, dp(10), 0, dp(4)],
+            on_text_validate=self._on_search_pressed
         )
-
-        self.search_field.line_color_normal = [0, 0, 0, 0]
-        self.search_field.line_color_focus = [0, 0, 0, 0]
-        self.search_field.fill_color_normal = [1, 1, 1, 0]
-        self.search_field.fill_color_focus = [1, 1, 1, 0]
-        self.search_field.hint_text_color = [0.6, 0.6, 0.6, 1]
-        self.search_field.theme_text_color = "Custom"
-        self.search_field.text_color = [0.1, 0.1, 0.1, 1]
-
         self.search_field.bind(text=self._on_text_change)
         self.search_field.bind(focus=self._on_focus)
 
-        self.clear_btn = MDIconButton(
-            icon="close-circle",
+        # ---- Крестик (прозрачный, тонкий) ----
+        self.clear_wrapper = MDCard(
             size_hint=(None, None),
-            size=(dp(28), dp(28)),
-            theme_icon_color="Custom",
-            icon_color=[0.5, 0.5, 0.5, 1],
+            size=(dp(30), dp(30)),
+            radius=[dp(15), dp(15), dp(15), dp(15)],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_clear,
+            elevation=0,
+            pos_hint={'center_y': 0.5},
             opacity=0,
             disabled=True,
-            pos_hint={'center_y': 0.5}
         )
 
-        self.search_icon = MDIconButton(
-            icon="magnify",
-            size_hint=(None, None),
-            size=(dp(32), dp(32)),
+        self.clear_btn = MDIconButton(
+            icon="close-circle-outline",
+            size_hint=(1, 1),
             theme_icon_color="Custom",
-            icon_color=[0.46, 0.70, 0.71, 1],
+            icon_color=[0.4, 0.4, 0.4, 0.8],
             md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_search,
+            on_release=self._on_clear_pressed
+        )
+        self.clear_wrapper.add_widget(self.clear_btn)
+
+        # ---- Кнопка «Найти» (растянута по высоте) ----
+        self.search_btn = MDRaisedButton(
+            text=button_text,
+            size_hint=(None, 1),
+            width=dp(70),
+            md_bg_color=self._BTN_BG,
+            text_color=self._BTN_TEXT,
+            font_size=sp(13),
+            elevation=0,
             pos_hint={'center_y': 0.5}
         )
+        self.search_btn.bind(on_release=self._on_search_pressed)
 
-        self.add_widget(self.search_icon)
         self.add_widget(self.search_field)
-        self.add_widget(self.clear_btn)
+        self.add_widget(self.clear_wrapper)
+        self.add_widget(self.search_btn)
 
     def _on_text_change(self, instance, text):
         self.current_query = text
         if text.strip():
-            self.clear_btn.opacity = 1
-            self.clear_btn.disabled = False
+            self.clear_wrapper.opacity = 1
+            self.clear_wrapper.disabled = False
         else:
-            self.clear_btn.opacity = 0
-            self.clear_btn.disabled = True
+            self.clear_wrapper.opacity = 0
+            self.clear_wrapper.disabled = True
 
-    def _do_search(self):
-        if self.on_search and self.current_query:
-            text = self.current_query.strip()
-            if text:
-                self.on_search(text)
+        # Внешний колбэк (используется search_screen)
+        if self.on_text_change:
+            self.on_text_change(text)
 
-    def _on_search(self, instance):
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
+    def _on_search_pressed(self, *args):
         if self.on_search:
             text = self.search_field.text.strip()
             if text:
                 self.on_search(text)
 
-    def _on_clear(self, instance):
+    def _on_clear_pressed(self, instance):
         self.search_field.text = ""
-        self.clear_btn.opacity = 0
-        self.clear_btn.disabled = True
+        self.clear_wrapper.opacity = 0
+        self.clear_wrapper.disabled = True
         self.current_query = ""
         if self.on_clear:
             self.on_clear()
-        self.search_field.focus = True
+        self.search_field.focus = False
 
     def _on_focus(self, instance, value):
         if value:
-            self.line_color = [0.1, 0.1, 0.1, 0.3]
             self.line_width = 1.8
         else:
-            self.line_color = [0.1, 0.1, 0.1, 0.3]
-            self.line_width = 1.5
+            self.line_width = 1.4
+
+    def set_text(self, text):
+        """Программная установка текста (обновляет крестик + колбэк)."""
+        self.search_field.text = text or ""
+        self._on_text_change(None, self.search_field.text)
 
     def clear(self):
         self.search_field.text = ""
-        self.clear_btn.opacity = 0
-        self.clear_btn.disabled = True
+        self.clear_wrapper.opacity = 0
+        self.clear_wrapper.disabled = True
         self.current_query = ""
 
     def focus(self):
@@ -295,7 +306,7 @@ class ResultCard(MDCard):
 
 class SearchScreen(BaseScreen):
     """Экран поиска - аккорды, песни и термины
-    С дизайном поиска как в SongsScreen
+    С дизайном поиска как в ChordsScreen
     """
 
     def __init__(self, **kwargs):
@@ -378,14 +389,16 @@ class SearchScreen(BaseScreen):
 
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
-        # ============ ПОИСКОВАЯ СТРОКА (КАК В SongsScreen) ============
+        # ============ ПОИСКОВАЯ СТРОКА (стиль chords_screen) ============
         search_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(48),
-            padding=[dp(16), 0, dp(16), 0]  # ← ОТСТУПЫ КАК В SongsScreen
+            height=dp(52),
+            padding=[dp(16), 0, dp(16), 0]
         )
         self.search_bar = SearchBar(
+            hint_text="Поиск аккордов или песен...",
+            button_text="Найти",
             on_search=self.perform_search,
             on_clear=self.clear_search,
             on_text_change=self.on_text_changed
@@ -502,7 +515,7 @@ class SearchScreen(BaseScreen):
 
             # Восстанавливаем запрос
             if current_query and self.search_bar:
-                self.search_bar.search_field.text = current_query
+                self.search_bar.set_text(current_query)
                 self.current_query = current_query
                 logger.info(f"🔍 Восстановлен запрос: '{current_query}'")
 
@@ -732,68 +745,124 @@ class SearchScreen(BaseScreen):
             chord_results = self._search_chords(query)
             song_results = self._search_songs(query)
             term_results = self._search_terms(query)
-            Clock.schedule_once(lambda dt: self._show_results(query, chord_results, song_results, term_results), 0)
+            Clock.schedule_once(
+                lambda dt: self._show_results(query, chord_results, song_results, term_results),
+                0
+            )
         except Exception as e:
-            logger.error(f"❌ Ошибка: {e}")
-            Clock.schedule_once(lambda dt: self._search_error(str(e)), 0)
+            error_msg = str(e)  # ← сохраняем строку ДО выхода из except
+            logger.error(f"❌ Ошибка поиска: {error_msg}")
+            traceback.print_exc()
+            Clock.schedule_once(lambda dt: self._search_error(error_msg), 0)
 
     def _search_chords(self, query):
-        if not self.chords_screen or not hasattr(self.chords_screen, 'all_chords'):
+        """Поиск аккордов: сначала в core (локально), потом на сервере."""
+        query_lower = query.lower().strip()
+        if not query_lower:
             return []
 
         results = []
-        query_lower = query.lower().strip()
-        query_words = query_lower.split()
+        seen = set()
 
+        # === 1) Локальный поиск в core ===
+        if self.chords_screen and hasattr(self.chords_screen, 'all_chords'):
+            local_results = self._search_chords_local(query_lower, self.chords_screen.all_chords)
+            for chord in local_results:
+                key = chord['short_name']
+                if key not in seen:
+                    seen.add(key)
+                    results.append(chord)
+            logger.info(f"🔍 Локально найдено: {len(results)} аккордов")
+
+        # === 2) Сервер (если локально мало или ничего) ===
+        try:
+            server_items = self._search_chords_on_server(query)
+            if server_items:
+                for item in server_items:
+                    main_name = item.get('main_name')
+                    if not main_name or main_name in seen:
+                        continue
+                    seen.add(main_name)
+                    results.append({
+                        'short_name': main_name,
+                        'name': ' | '.join(item.get('synonyms') or [main_name]),
+                        'type': item.get('chord_type', ''),
+                        'description': '',
+                        'module': None,
+                        'server_data': item,
+                    })
+                logger.info(f"🔍 + сервер: всего {len(results)} аккордов")
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка серверного поиска аккордов: {e}")
+
+        return results[:15]
+
+    def _search_chords_local(self, query_lower, all_chords):
+        """Точный поиск по short_name и синонимам (part.split('|')) в core."""
+        results = []
         alt_map = {
             'bb': 'a#', 'a#': 'bb', 'db': 'c#', 'c#': 'db',
             'eb': 'd#', 'd#': 'eb', 'gb': 'f#', 'f#': 'gb',
-            'ab': 'g#', 'g#': 'ab'
+            'ab': 'g#', 'g#': 'ab',
         }
-        alt_query = alt_map.get(query_lower, None)
+        alt_query = alt_map.get(query_lower)
+        query_words = query_lower.split()
 
-        for chord in self.chords_screen.all_chords:
-            short_name_lower = chord['short_name'].lower()
-            full_name_lower = chord['name'].lower()
+        for chord in all_chords:
+            short_lower = chord['short_name'].lower()
+            full_lower = chord['name'].lower()
 
-            if short_name_lower == query_lower:
-                if chord not in results:
-                    results.append(chord)
+            if short_lower == query_lower:
+                results.append(chord)
+                continue
+            if alt_query and short_lower == alt_query:
+                results.append(chord)
                 continue
 
-            if alt_query and short_name_lower == alt_query:
-                if chord not in results:
-                    results.append(chord)
-                continue
-
-            name_parts = full_name_lower.split('|')
-            for part in name_parts:
+            for part in full_lower.split('|'):
                 part_clean = part.strip().replace('$', '/')
                 if part_clean == query_lower:
-                    if chord not in results:
-                        results.append(chord)
+                    results.append(chord)
                     break
 
-                if len(query_words) > 1:
-                    all_words_found = True
-                    for word in query_words:
-                        if word not in part_clean:
-                            all_words_found = False
-                            break
-                    if all_words_found:
-                        if chord not in results:
-                            results.append(chord)
-                        break
+                if len(query_words) > 1 and all(w in part_clean for w in query_words):
+                    results.append(chord)
+                    break
 
         unique = []
         seen = set()
-        for chord in results:
-            if chord['short_name'] not in seen:
-                seen.add(chord['short_name'])
-                unique.append(chord)
+        for c in results:
+            if c['short_name'] not in seen:
+                seen.add(c['short_name'])
+                unique.append(c)
+        return unique
 
-        logger.info(f"🔍 Найдено аккордов: {len(unique)}")
-        return unique[:15]
+    def _search_chords_on_server(self, query):
+        """GET /api/chords/search?query=... — возвращает список items."""
+        try:
+            from api.chords_client import get_chords_client
+            client = get_chords_client()
+
+            # Синхронно через api._request_sync (search_by_synonym асинхронный)
+            import urllib.parse
+            from api.client import api
+            from config.app_config import config
+
+            q_enc = urllib.parse.quote(query, safe="")
+            url = f"{config.API_BASE_URL}/chords/search?query={q_enc}"
+
+            logger.info(f"🌐 Поиск аккордов на сервере: {url}")
+            result = api._request_sync(url, method="GET", include_auth=False)
+
+            if not result or not isinstance(result, dict):
+                return []
+            items = result.get('results') or []
+            logger.info(f"🌐 Сервер вернул: {len(items)} аккордов")
+            return items
+        except Exception as e:
+            logger.error(f"❌ Ошибка _search_chords_on_server: {e}")
+            return []
+
 
     def _search_songs(self, query):
         if len(query) < 2:
@@ -889,20 +958,33 @@ class SearchScreen(BaseScreen):
             self.results_list.add_widget(chords_header)
 
             for chord in chord_results:
-                tonality = self._extract_tonality(chord['name'])
+                main_name = chord.get('short_name') or ""
+                tonality = self._extract_tonality(chord.get('name', main_name))
+                # Показываем основное имя + список альтернатив (если есть)
+                synonyms = []
+                raw_name = chord.get('name', '')
+                for part in raw_name.split('|'):
+                    p = part.strip().replace('$', '/')
+                    if p and p != main_name and p not in synonyms:
+                        synonyms.append(p)
+
+                subtitle = f"Тональность: {tonality}"
+                if synonyms:
+                    subtitle += f" · {', '.join(synonyms[:3])}"
+
                 card = ResultCard(
-                    title=chord['short_name'],
+                    title=main_name,
                     result_type="chord",
-                    subtitle=f"Тональность: {tonality}",
-                    chord_name=chord['short_name'],
+                    subtitle=subtitle,
+                    chord_name=main_name,
                     on_click=self.on_result_selected
                 )
                 self.results_list.add_widget(card)
                 all_results.append({
-                    'title': chord['short_name'],
+                    'title': main_name,
                     'result_type': 'chord',
-                    'subtitle': f"Тональность: {tonality}",
-                    'chord_name': chord['short_name'],
+                    'subtitle': subtitle,
+                    'chord_name': main_name,
                 })
 
         if song_results:
