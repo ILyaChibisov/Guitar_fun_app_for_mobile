@@ -8,7 +8,12 @@
 ТРЕТЬЯ ИКОНКА - СЕЛЕКТОР АККОРДОВ (как первые две)
 В РАМКЕ - ОСНОВНОЕ ИМЯ АККОРДА (по центру)
 ПОД МЕНЮ - ОПИСАНИЕ + "Варианты записи:" + ВСЕ ИМЕНА
-ПОИСК В СТИЛЕ ЯНДЕКС; ПОД РАМКОЙ - СТАТУС ПОИСКА (найдено / не найдено)
+ПОИСК В СТИЛЕ ЯНДЕКС; ПОД РАМКОЙ - СТАТУС ПОИСКА
+
+ГИБРИДНАЯ ЗАГРУЗКА:
+- Major, Minor, 7, m7 — из локальных .py модулей
+- Остальные типы — с сервера через API (все варианты одним запросом)
+- RAM-кеш в ChordsClient (без диска)
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
@@ -34,6 +39,7 @@ import pkgutil
 import importlib
 import re
 import traceback
+import threading
 
 from config.theme import theme
 from config.logger_config import screen_logger
@@ -42,6 +48,7 @@ from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
 from utils.notifications import notify
 from utils.screen_state import screen_state
+from api.chords_client import get_chords_client
 
 logger = screen_logger('Chords')
 
@@ -68,6 +75,9 @@ CHORD_TYPES = [
     "7(#5,b9)", "7(#5,#9)", "9b5", "9#5", "13#11", "13b9", "11b9",
     "sus2sus4", "-5", "5"
 ]
+
+# Типы, которые грузятся из локальных .py модулей
+CORE_TYPES = {"Major", "Minor", "7", "m7"}
 
 
 # ============ КОНТЕЙНЕР С КАРУСЕЛЬЮ ============
@@ -130,7 +140,7 @@ class SwipeContainer(MDBoxLayout):
             halign="center",
             valign="middle",
             theme_text_color="Custom",
-            text_color=[0.83, 0.69, 0.22, 1],  # тёмно-оранжевый золотой
+            text_color=[0.83, 0.69, 0.22, 1],
         )
         self.chord_name_card.add_widget(self.chord_name_label)
 
@@ -313,14 +323,6 @@ class SwipeContainer(MDBoxLayout):
 
 # ============ ПОИСКОВАЯ СТРОКА (стиль Яндекс) ============
 class SearchBar(MDCard):
-    """
-    Поисковая строка в стиле Яндекс:
-    - тонкая серая обводка
-    - поле ввода слева (без нижней полосы)
-    - круглая серая кнопка «×» (появляется при вводе)
-    - тёмно-зелёная кнопка «Найти» справа
-    """
-
     _BORDER = [0.75, 0.75, 0.75, 1]
     _BTN_BG = [0.10, 0.42, 0.25, 1]
     _BTN_TEXT = [1, 1, 1, 1]
@@ -439,8 +441,6 @@ class SearchBar(MDCard):
 
 
 class IconMenuItem(ButtonBehavior, MDBoxLayout):
-    """Пункт меню с иконкой"""
-
     def __init__(self, icon_name, on_press=None, is_active=False, icon_color=None, fixed_color=False, **kwargs):
         super().__init__(**kwargs)
         self.icon_name = icon_name
@@ -511,8 +511,6 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
 
 
 class BaseSelectorMenu(MDCard):
-    """Базовый класс для всех меню-селекторов с кэшированием"""
-
     def __init__(self, on_confirm, on_cancel, **kwargs):
         super().__init__(**kwargs)
         self.on_confirm = on_confirm
@@ -659,10 +657,7 @@ class TypeSelectorMenu(BaseSelectorMenu):
         self._highlight_current()
 
 
-# ============ СЕЛЕКТОР АККОРДОВ ============
 class ChordSelectorMenu(BaseSelectorMenu):
-    """Селектор доступных аккордов для текущей тональности/типа."""
-
     def __init__(self, current_chord, on_confirm, on_cancel, chords=None, **kwargs):
         self.current_chord = current_chord
         self.chords = list(chords) if chords else []
@@ -843,10 +838,15 @@ class ChordsScreen(BaseScreen):
         self.current_variants = []
         self.current_variant_index = 0
 
+        # ===== Гибридная загрузка =====
+        self._core_types = CORE_TYPES
+        self._chords_client = get_chords_client()
+        self._server_loading = False
+
         self.current_mode = "finger"
 
         self.search_bar = None
-        self.search_status_label = None    # <-- лейбл статуса под рамкой поиска
+        self.search_status_label = None
         self.unified_menu = None
         self._menu_container = None
         self._info_label = None
@@ -869,13 +869,16 @@ class ChordsScreen(BaseScreen):
         self._current_alt_names = []
         self._current_all_names = []
 
+        # Защита от гонки запросов
+        self._request_id = 0
+
         self.init_ui()
         self.load_background()
 
         Clock.schedule_once(self._create_cached_menus, 0.05)
         Clock.schedule_once(lambda dt: self.scan_chords(), 0.1)
 
-        logger.info('Экран аккордов создан (с Carousel)')
+        logger.info('Экран аккордов создан (гибридный режим)')
 
     def _create_cached_menus(self, dt=None):
         if self._menu_cache_initialized:
@@ -989,15 +992,59 @@ class ChordsScreen(BaseScreen):
         if self.current_variants:
             self.swipe_container.set_current_slide(self.current_variant_index)
 
+    def _dict_to_module(self, data: dict):
+        class _FakeModule:
+            pass
+
+        m = _FakeModule()
+        m.__name__ = f"server_chord_{data.get('main_name', '?')}_{data.get('variant', 1)}"
+        m.BACKGROUND_NAME = data.get("background_name", "griff")
+        m.FRETS = data.get("frets", {})
+        m.NOTES = data.get("notes", {})
+        m.OPEN_NOTES = data.get("open_notes", {})
+        m.BARRES = data.get("barres", {})
+        m.SELECTED_FINGER = data.get("selected_finger", [])
+        m.SELECTED_NOTE = data.get("selected_note", [])
+        m.METADATA = {
+            "name": data.get("main_name", ""),
+            "variant": data.get("variant", 1),
+            "type": data.get("chord_type", ""),
+            "description": data.get("description", ""),
+        }
+        return m
+
+    def _rebuild_server_slides(self):
+        if not self.swipe_container:
+            return
+
+        self.swipe_container.clear_slides()
+
+        for variant in self.current_variants:
+            server_data = variant.get("server_data")
+            if not server_data:
+                continue
+            module = self._dict_to_module(server_data)
+            self.swipe_container.add_slide(module)
+
+        self.swipe_container.update_renderer_mode(self.current_mode)
+        if self.current_variants:
+            self.swipe_container.set_current_slide(self.current_variant_index)
+
     def _update_display(self):
         if not self.current_variants:
             return
 
         variant = self.current_variants[self.current_variant_index]
-        self.current_chord_module = variant['module']
 
-        chord_name = variant['name'].replace('!', ' | ').replace('$', '/')
-        name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
+        if variant.get("module") is not None:
+            self.current_chord_module = variant["module"]
+            chord_name = variant["name"].replace('!', ' | ').replace('$', '/')
+            name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
+        else:
+            self.current_chord_module = None
+            server_data = variant.get("server_data") or {}
+            synonyms = server_data.get("synonyms") or [server_data.get("main_name", "?")]
+            name_parts = [s.replace('!', ' | ').replace('$', '/') for s in synonyms]
 
         unique_names = []
         for n in name_parts:
@@ -1033,7 +1080,6 @@ class ChordsScreen(BaseScreen):
             padding=[0, 0, 0, 0]
         )
 
-        # ---- Рамка поиска ----
         search_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -1047,9 +1093,6 @@ class ChordsScreen(BaseScreen):
         search_container.add_widget(self.search_bar)
         content.add_widget(search_container)
 
-        # ---- Лейбл СТАТУСА поиска (ПОД рамкой) ----
-        # Место заложено заранее (dp(20)), чтобы layout не сдвигался.
-        # По умолчанию скрыт (opacity=0).
         self.search_status_label = MDLabel(
             text="",
             font_size=sp(11),
@@ -1065,7 +1108,6 @@ class ChordsScreen(BaseScreen):
         self.search_status_label.text_size = (None, None)
         content.add_widget(self.search_status_label)
 
-        # ---- Отступ между поиском и рамкой аккорда ----
         content.add_widget(Widget(size_hint_y=None, height=dp(16)))
 
         self.swipe_container = SwipeContainer(
@@ -1140,11 +1182,6 @@ class ChordsScreen(BaseScreen):
     # ============ СТАТУС ПОИСКА ============
 
     def _set_search_status(self, status):
-        """
-        status: 'found' | 'not_found' | None
-        Показывает под рамкой поиска соответствующее сообщение.
-        Место заложено заранее — layout не сдвигается.
-        """
         if not self.search_status_label:
             return
 
@@ -1160,7 +1197,7 @@ class ChordsScreen(BaseScreen):
             self.search_status_label.text = ""
             self.search_status_label.opacity = 0
 
-    # ============ ОБРАБОТЧИК ГОРИЗОНТАЛЬНОГО СВАЙПА ============
+    # ============ СВАЙП ============
 
     def _on_swipe_horizontal(self, step):
         if not self.current_variants or len(self.current_variants) <= 1:
@@ -1183,7 +1220,7 @@ class ChordsScreen(BaseScreen):
                 return chord
         return None
 
-    # ============ ОТКРЫТИЕ/ЗАКРЫТИЕ СЕЛЕКТОРА АККОРДОВ ============
+    # ============ СЕЛЕКТОР АККОРДОВ ============
 
     def _open_chord_selector(self):
         if self.chord_selector and self.chord_selector.is_visible:
@@ -1194,7 +1231,7 @@ class ChordsScreen(BaseScreen):
             self._show_temporary_hint("Нет доступных аккордов", 1.0)
             return
 
-        logger.info("Открытие меню выбора аккорда (кешированное)")
+        logger.info("Открытие меню выбора аккорда")
 
         if not self.chord_selector:
             self.chord_selector = ChordSelectorMenu(
@@ -1253,9 +1290,6 @@ class ChordsScreen(BaseScreen):
     # ============ ОПИСАНИЕ ПОД МЕНЮ ============
 
     def _show_description(self):
-        """
-        Формат: <описание>, Варианты записи: <все имена через запятую>
-        """
         if not self.current_variants:
             self._info_label.text = ""
             return
@@ -1314,12 +1348,14 @@ class ChordsScreen(BaseScreen):
             self._hint_timer = None
         self._show_description()
 
+    # ============ СЕЛЕКТОР ТОНАЛЬНОСТИ ============
+
     def _open_tonality_selector(self):
         if self.tonality_selector and self.tonality_selector.is_visible:
             self._close_tonality_selector()
             return
 
-        logger.info("Открытие меню выбора тональности (кешированное)")
+        logger.info("Открытие меню выбора тональности")
 
         if not self.tonality_selector:
             self.tonality_selector = TonalitySelectorMenu(
@@ -1344,6 +1380,17 @@ class ChordsScreen(BaseScreen):
         logger.info(f"Выбрана тональность: {selected_tonality}")
         self.current_tonality = selected_tonality
         self.current_tonality_index = TONALITIES.index(selected_tonality)
+
+        # Выходим из режима поиска
+        self.is_search_mode = False
+        self._set_search_status(None)
+
+        self.current_chord_name = ""
+        self.current_chord_index = 0
+        self.current_variants = []
+        self.current_variant_index = 0
+        self.current_position = 1
+
         self.update_available_chords()
         self._close_tonality_selector()
 
@@ -1360,12 +1407,14 @@ class ChordsScreen(BaseScreen):
 
         self._restore_description()
 
+    # ============ СЕЛЕКТОР ТИПА ============
+
     def _open_type_selector(self):
         if self.type_selector and self.type_selector.is_visible:
             self._close_type_selector()
             return
 
-        logger.info("Открытие меню выбора типа аккорда (кешированное)")
+        logger.info("Открытие меню выбора типа аккорда")
 
         if not self.type_selector:
             self.type_selector = TypeSelectorMenu(
@@ -1390,6 +1439,17 @@ class ChordsScreen(BaseScreen):
         logger.info(f"Выбран тип: {selected_type}")
         self.current_type = selected_type
         self.current_type_index = CHORD_TYPES.index(selected_type)
+
+        # Выходим из режима поиска — иначе update_available_chords ничего не сделает
+        self.is_search_mode = False
+        self._set_search_status(None)
+
+        self.current_chord_name = ""
+        self.current_chord_index = 0
+        self.current_variants = []
+        self.current_variant_index = 0
+        self.current_position = 1
+
         self.update_available_chords()
         self._close_type_selector()
 
@@ -1405,6 +1465,8 @@ class ChordsScreen(BaseScreen):
             self._menu_container.add_widget(self.unified_menu)
 
         self._restore_description()
+
+    # ============ РЕЖИМ И ВАРИАНТЫ ============
 
     def _toggle_mode(self):
         if self.current_mode == "finger":
@@ -1436,6 +1498,8 @@ class ChordsScreen(BaseScreen):
         self._update_display()
         self._show_temporary_hint(f"Изменена позиция аккорда: {self.current_position}", 1.2)
         logger.info(f"Вариант {self.current_position}/{total}")
+
+    # ============ ПОИСК ============
 
     def do_search(self, query):
         query_original = query.strip()
@@ -1490,7 +1554,6 @@ class ChordsScreen(BaseScreen):
         self.search_results = unique_results
 
         if self.search_results:
-            # Найдено — показываем «Мы нашли ваш аккорд»
             self._set_search_status('found')
 
             selected_chord = self.search_results[0]
@@ -1514,18 +1577,132 @@ class ChordsScreen(BaseScreen):
 
             notify.info(f"Найдено аккордов: {len(self.search_results)}", duration=1.5)
         else:
-            # Не найдено — «По вашему запросу ничего не нашлось»
+            self._search_server(query_original)
+
+    def _search_server(self, query: str):
+        """Поиск на сервере через GET /api/chords/search (по main_name + synonyms)."""
+        logger.info(f"🔎 Поиск '{query}' на сервере...")
+
+        def _on_results(items):
+            if not items:
+                # Fallback: альтернативное написание # ↔ b
+                alt = query.replace('#', 'b') if '#' in query else query.replace('b', '#')
+                if alt != query:
+                    logger.info(f"   Пробуем '{alt}'")
+                    self._chords_client.search_by_synonym(
+                        alt,
+                        on_success=lambda items2: self._handle_server_search_results(items2, alt),
+                        on_error=lambda msg: self._set_search_status('not_found'),
+                    )
+                else:
+                    self._set_search_status('not_found')
+            else:
+                self._handle_server_search_results(items, query)
+
+        def _on_err(msg):
+            logger.error(f"Ошибка поиска: {msg}")
             self._set_search_status('not_found')
+
+        self._chords_client.search_by_synonym(
+            query,
+            on_success=_on_results,
+            on_error=_on_err,
+        )
+
+
+
+    def _handle_server_search_results(self, items, query):
+        """items — список dict с main_name, synonyms, tonality, chord_type."""
+        if not items:
+            logger.warning(f"⚠️ '{query}' не найдено")
+            self._set_search_status('not_found')
+            return
+
+        best = items[0]
+        main_name = best.get("main_name") or query
+        tonality = best.get("tonality") or ""
+        chord_type = best.get("chord_type") or ""
+
+        logger.info(
+            f"✅ Найдено: main={main_name}/{chord_type} ({tonality}), "
+            f"synonyms={best.get('synonyms')}"
+        )
+
+        self._set_search_status('found')
+
+        if tonality in self.TONALITIES:
+            self.current_tonality = tonality
+            self.current_tonality_index = self.TONALITIES.index(tonality)
+        if chord_type in self.CHORD_TYPES:
+            self.current_type = chord_type
+            self.current_type_index = self.CHORD_TYPES.index(chord_type)
+
+        # Выходим из режима поиска
+        self.is_search_mode = False
+
+        self.current_chord_name = main_name
+        self._load_available_and_variants(main_name)
+
+        notify.info(f"Найдено: {main_name}", duration=1.5)
+
+    def _load_available_and_variants(self, target_chord_name: str):
+        """Обновляет available_chords + загружает варианты target_chord_name."""
+
+        def _on_list(chords):
+            self.available_chords = list(chords or [])
+
+            # Если target не в списке — добавляем в конец (не в начало!)
+            if target_chord_name not in self.available_chords:
+                self.available_chords.append(target_chord_name)
+                self.available_chords.sort()
+
+            if self.unified_menu:
+                self.unified_menu.update_chord(len(self.available_chords))
+            if self.chord_selector is not None:
+                self.chord_selector.set_chords(
+                    self.available_chords,
+                    current_chord=target_chord_name
+                )
+
+            self.current_chord_name = target_chord_name
+            self.current_chord_index = self.available_chords.index(target_chord_name)
+
+            self._load_variants_for_chord(target_chord_name)
+
+        def _on_err(msg):
+            logger.error(f"_load_available_and_variants: {msg}")
+            self.available_chords = [target_chord_name]
+            self.current_chord_name = target_chord_name
+            self.current_chord_index = 0
+            if self.unified_menu:
+                self.unified_menu.update_chord(1)
+            self._load_variants_for_chord(target_chord_name)
+
+        self._chords_client.get_available_chords(
+            self.current_tonality, self.current_type,
+            on_success=_on_list,
+            on_error=_on_err,
+        )
 
     def clear_search(self):
         self.is_search_mode = False
         self.search_results = []
         self._set_search_status(None)
+
+        # Сбрасываем аккорд — пусть выберется первый из списка
+        self.current_chord_name = ""
+        self.current_chord_index = 0
+        self.current_variants = []
+        self.current_variant_index = 0
+        self.current_position = 1
+
         self.update_available_chords()
+
+    # ============ СКАНИРОВАНИЕ (CORE) ============
 
     def scan_chords(self):
         print("\n" + "=" * 60)
-        print("SCAN_CHORDS: Начинаю сканирование аккордов")
+        print("SCAN_CHORDS: Сканирую локальные аккорды (core-типы)")
         self.all_chords = []
         try:
             import chords
@@ -1535,7 +1712,7 @@ class ChordsScreen(BaseScreen):
         except Exception as e:
             print(f"❌ Непредвиденная ошибка: {e}")
             traceback.print_exc()
-        print(f"РЕЗУЛЬТАТ: Загружено {len(self.all_chords)} аккордов")
+        print(f"РЕЗУЛЬТАТ: Загружено {len(self.all_chords)} локальных аккордов")
 
         self.update_available_chords()
         self._data_loaded = True
@@ -1564,6 +1741,10 @@ class ChordsScreen(BaseScreen):
             chord_type = metadata.get('type', '')
             if not chord_type and len(path_parts) >= 2:
                 chord_type = path_parts[-2]
+
+            if chord_type not in self._core_types:
+                return
+
             variant_match = re.search(r'_(\d+)$', path_parts[-1])
             variant_num = int(variant_match.group(1)) if variant_match else metadata.get('variant', 1)
             short_name = chord_name.split('|')[0].replace('$', '/')
@@ -1581,48 +1762,107 @@ class ChordsScreen(BaseScreen):
         except Exception as e:
             print(f"    ❌ Ошибка загрузки модуля {module_name}: {e}")
 
+    # ============ СПИСОК ДОСТУПНЫХ АККОРДОВ ============
+
     def update_available_chords(self):
         if self.is_search_mode:
             return
-        filtered = []
-        for chord in self.all_chords:
-            tonality = self.extract_tonality(chord['name'])
-            if tonality != self.current_tonality:
-                continue
-            chord_types = chord['type'].split('|') if chord['type'] else []
-            if self.current_type not in chord_types and self.current_type != chord.get('type', ''):
-                continue
-            filtered.append(chord)
 
-        chords_by_name = {}
-        for chord in filtered:
-            name = chord['short_name']
-            if name not in chords_by_name:
-                chords_by_name[name] = []
-            chords_by_name[name].append(chord)
+        if self.current_type in self._core_types:
+            # === CORE ===
+            filtered = []
+            for chord in self.all_chords:
+                tonality = self.extract_tonality(chord['name'])
+                if tonality != self.current_tonality:
+                    continue
+                chord_types = chord['type'].split('|') if chord['type'] else []
+                if self.current_type not in chord_types and self.current_type != chord.get('type', ''):
+                    continue
+                filtered.append(chord)
 
-        self.available_chords = sorted(chords_by_name.keys())
+            chords_by_name = {}
+            for chord in filtered:
+                name = chord['short_name']
+                if name not in chords_by_name:
+                    chords_by_name[name] = []
+                chords_by_name[name].append(chord)
 
-        self.unified_menu.update_chord(len(self.available_chords))
+            self.available_chords = sorted(chords_by_name.keys())
 
-        if self.chord_selector is not None:
-            self.chord_selector.set_chords(
-                self.available_chords,
-                current_chord=self.current_chord_name
-            )
+            if self.unified_menu:
+                self.unified_menu.update_chord(len(self.available_chords))
+            if self.chord_selector is not None:
+                self.chord_selector.set_chords(
+                    self.available_chords,
+                    current_chord=self.current_chord_name
+                )
 
-        if self.available_chords:
+            if self.available_chords:
+                if self.current_chord_name not in self.available_chords:
+                    self.current_chord_index = 0
+                    self.current_chord_name = self.available_chords[0]
+
+                chord_data = chords_by_name.get(self.current_chord_name)
+                if chord_data:
+                    self.load_chord_variants(chord_data)
+            else:
+                self.current_variants = []
+                self.current_chord_data = None
+            return
+
+        # === SERVER ===
+        logger.info(f"📥 Список аккордов {self.current_tonality}/{self.current_type} с сервера...")
+
+        # Уникальный идентификатор запроса — чтобы игнорировать старые ответы
+        self._request_id += 1
+        my_id = self._request_id
+
+        def _on_list(chords):
+            if my_id != self._request_id:
+                logger.info(f"⏭️ Устаревший ответ списка (id={my_id}), игнор")
+                return
+
+            self.available_chords = list(chords or [])
+
+            if self.unified_menu:
+                self.unified_menu.update_chord(len(self.available_chords))
+            if self.chord_selector is not None:
+                self.chord_selector.set_chords(
+                    self.available_chords,
+                    current_chord=self.current_chord_name
+                )
+
+            if not self.available_chords:
+                self._show_temporary_hint(
+                    f"Аккорды {self.current_tonality}/{self.current_type} не найдены",
+                    2.0
+                )
+                self.current_variants = []
+                if self.unified_menu:
+                    self.unified_menu.update_variants(0)
+                return
+
+            # Если текущего нет в новом списке — сбрасываем на первый
             if self.current_chord_name not in self.available_chords:
                 self.current_chord_index = 0
                 self.current_chord_name = self.available_chords[0]
 
-            chord_data = chords_by_name.get(self.current_chord_name)
-            if chord_data:
-                self.load_chord_variants(chord_data)
-        else:
+            self._load_variants_for_chord(self.current_chord_name)
+
+        def _on_err(msg):
+            if my_id != self._request_id:
+                return
+            logger.error(f"Ошибка списка: {msg}")
             self.available_chords = []
-            self.current_variants = []
-            self.current_chord_data = None
+            if self.unified_menu:
+                self.unified_menu.update_chord(0)
+            self._show_temporary_hint("Не удалось получить список", 2.0)
+
+        self._chords_client.get_available_chords(
+            self.current_tonality, self.current_type,
+            on_success=_on_list,
+            on_error=_on_err,
+        )
 
     def extract_tonality(self, chord_name):
         if not chord_name:
@@ -1637,38 +1877,101 @@ class ChordsScreen(BaseScreen):
         self.current_variants = variants
         self.current_variant_index = 0
         self.current_position = 1
-        self.unified_menu.update_variants(len(variants))
+        if self.unified_menu:
+            self.unified_menu.update_variants(len(variants))
 
         self._rebuild_slides_for_current_chord()
         self._update_display()
 
     def _load_variants_for_chord(self, chord_name):
-        variants = []
-        for chord in self.all_chords:
-            if chord['short_name'] == chord_name:
-                tonality = self.extract_tonality(chord['name'])
-                if tonality == self.current_tonality:
-                    chord_types = chord['type'].split('|') if chord['type'] else []
-                    if self.current_type in chord_types or self.current_type == chord.get('type', ''):
-                        variants.append(chord)
+        if self.current_type in self._core_types:
+            variants = []
+            for chord in self.all_chords:
+                if chord['short_name'] == chord_name:
+                    tonality = self.extract_tonality(chord['name'])
+                    if tonality == self.current_tonality:
+                        chord_types = chord['type'].split('|') if chord['type'] else []
+                        if self.current_type in chord_types or self.current_type == chord.get('type', ''):
+                            variants.append(chord)
 
-        if variants:
-            variants.sort(key=lambda x: x['variant'])
-            self.current_variants = variants
+            if variants:
+                variants.sort(key=lambda x: x['variant'])
+                self.current_variants = variants
+                self.current_variant_index = 0
+                self.current_position = 1
+                if self.unified_menu:
+                    self.unified_menu.update_variants(len(variants))
+                self._rebuild_slides_for_current_chord()
+                self._update_display()
+            else:
+                self.current_variants = []
+                self.current_variant_index = 0
+                self.current_position = 1
+                if self.unified_menu:
+                    self.unified_menu.update_variants(0)
+            return
+
+        # === SERVER ===
+        logger.info(f"📥 Загрузка {chord_name}/{self.current_type} с сервера...")
+        self._server_loading = True
+        self._show_temporary_hint(f"Загрузка {chord_name}/{self.current_type}...", 3.0)
+
+        self._request_id += 1
+        my_id = self._request_id
+
+        def _on_success(variants):
+            if my_id != self._request_id:
+                logger.info(f"⏭️ Устаревший ответ вариантов (id={my_id}), игнор")
+                return
+
+            self._server_loading = False
+
+            normalized = []
+            for v in variants:
+                syn = v.get("synonyms") or [v.get("main_name", "?")]
+                normalized.append({
+                    "name": " | ".join(syn),
+                    "short_name": v.get("main_name", "?"),
+                    "variant": v.get("variant", 1),
+                    "type": v.get("chord_type", ""),
+                    "description": v.get("description", ""),
+                    "module": None,
+                    "server_data": v,
+                })
+            normalized.sort(key=lambda x: x["variant"])
+
+            self.current_variants = normalized
             self.current_variant_index = 0
             self.current_position = 1
-            self.unified_menu.update_variants(len(variants))
-
-            self._rebuild_slides_for_current_chord()
+            if self.unified_menu:
+                self.unified_menu.update_variants(len(normalized))
+            self._rebuild_server_slides()
             self._update_display()
-        else:
+            logger.info(f"✅ С сервера: {chord_name}/{self.current_type} "
+                        f"({len(normalized)} вариантов)")
+
+        def _on_error(msg):
+            if my_id != self._request_id:
+                return
+            self._server_loading = False
+            logger.error(f"❌ Не удалось загрузить {chord_name}/{self.current_type}: {msg}")
+            self._show_temporary_hint("Не удалось загрузить с сервера", 2.0)
             self.current_variants = []
             self.current_variant_index = 0
             self.current_position = 1
-            self.unified_menu.update_variants(0)
+            if self.unified_menu:
+                self.unified_menu.update_variants(0)
+
+        self._chords_client.get_chord(
+            chord_name, self.current_type,
+            on_success=_on_success,
+            on_error=_on_error,
+        )
+
+    # ============ ВЫБОР АККОРДА ПО ИМЕНИ ============
 
     def select_chord_by_name(self, chord_name):
-        logger.info(f"🎸 select_chord_by_name: ищем аккорд '{chord_name}'")
+        logger.info(f"🎸 select_chord_by_name: ищем '{chord_name}'")
 
         target_chord = None
         for chord in self.all_chords:
@@ -1678,33 +1981,20 @@ class ChordsScreen(BaseScreen):
 
         if not target_chord:
             for chord in self.all_chords:
-                name_variants = chord['name'].split('|')
-                for variant in name_variants:
-                    variant_clean = variant.strip().replace('$', '/')
-                    if variant_clean == chord_name:
+                for variant in chord['name'].split('|'):
+                    if variant.strip().replace('$', '/') == chord_name:
                         target_chord = chord
-                        logger.info(f"   Найден по альтернативному названию: {chord['short_name']}")
                         break
                 if target_chord:
                     break
 
-        if not target_chord:
-            alt_name = chord_name.replace('#', 'b')
-            if alt_name != chord_name:
-                logger.info(f"   Пробуем альтернативное написание: {alt_name}")
-                return self.select_chord_by_name(alt_name)
-
         if target_chord:
-            full_name = target_chord['name']
-            tonality = self._extract_tonality_from_name(full_name)
+            tonality = self._extract_tonality_from_name(target_chord['name'])
             chord_type = target_chord.get('type', 'Major')
-
-            logger.info(f"   Найден: {target_chord['short_name']}, тональность: {tonality}, тип: {chord_type}")
 
             if tonality in self.TONALITIES:
                 self.current_tonality = tonality
                 self.current_tonality_index = self.TONALITIES.index(tonality)
-
             if chord_type in self.CHORD_TYPES:
                 self.current_type = chord_type
                 self.current_type_index = self.CHORD_TYPES.index(chord_type)
@@ -1716,15 +2006,13 @@ class ChordsScreen(BaseScreen):
                 self.current_chord_name = chord_key
                 self.current_chord_index = self.available_chords.index(chord_key)
                 self._load_variants_for_chord(self.current_chord_name)
-                logger.info(f"✅ Аккорд {chord_name} успешно загружен")
+                logger.info(f"✅ Аккорд {chord_name} загружен из core")
                 return True
-            else:
-                logger.warning(f"⚠️ Аккорд {chord_key} не найден в available_chords")
-                return self._find_and_load_chord_variant(target_chord)
-        else:
-            logger.warning(f"⚠️ Аккорд {chord_name} не найден в базе")
-            notify.warning(f"Аккорд {chord_name} не найден")
-            return False
+            return self._find_and_load_chord_variant(target_chord)
+
+        logger.info(f"   Core не нашёл '{chord_name}', пробуем сервер...")
+        self._search_server(chord_name)
+        return True
 
     def _extract_tonality_from_name(self, chord_name):
         if not chord_name:
@@ -1735,28 +2023,27 @@ class ChordsScreen(BaseScreen):
         return chord_name[0] if chord_name else "A"
 
     def _find_and_load_chord_variant(self, target_chord):
-        logger.info(f"🔍 _find_and_load_chord_variant для {target_chord['short_name']}")
+        short = target_chord['short_name']
+        logger.info(f"🔍 _find_and_load_chord_variant: {short}")
 
-        variants = []
-        for chord in self.all_chords:
-            if chord['short_name'] == target_chord['short_name']:
-                variants.append(chord)
-
+        variants = [c for c in self.all_chords if c['short_name'] == short]
         if variants:
             variants.sort(key=lambda x: x['variant'])
             self.current_variants = variants
             self.current_variant_index = 0
             self.current_position = 1
-            self.unified_menu.update_variants(len(variants))
-            self.current_chord_name = target_chord['short_name']
-
+            if self.unified_menu:
+                self.unified_menu.update_variants(len(variants))
+            self.current_chord_name = short
             self._rebuild_slides_for_current_chord()
             self._update_display()
-            logger.info(f"✅ Загружен вариант аккорда {target_chord['short_name']}")
+            logger.info(f"✅ Загружен {short}")
             return True
-        else:
-            logger.error(f"❌ Не найдено вариантов для {target_chord['short_name']}")
-            return False
+
+        logger.error(f"❌ Не найдено вариантов для {short}")
+        return False
+
+    # ============ WINDOW RESIZE ============
 
     def _on_window_resize(self, window, width, height):
         if hasattr(self, '_update_griff_timer') and self._update_griff_timer:
