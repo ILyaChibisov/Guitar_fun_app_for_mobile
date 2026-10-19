@@ -28,17 +28,9 @@ os.environ['KIVY_AUDIO'] = 'sdl2'
 def get_sound_path(filename):
     """
     Возвращает абсолютный путь к звуковому файлу на Android и ПК
-
-    Args:
-        filename: Имя файла (например, 'click.wav')
-
-    Returns:
-        str: Абсолютный путь к файлу
     """
-    # Получаем путь к папке с main.py
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # На Android пробуем разные варианты
     if platform == 'android':
         possible_paths = [
             os.path.join(base_dir, 'sounds', filename),
@@ -49,10 +41,8 @@ def get_sound_path(filename):
         for path in possible_paths:
             if os.path.exists(path):
                 return path
-        # Если не нашли - возвращаем путь в папке приложения
         return os.path.join(base_dir, filename)
     else:
-        # На ПК сначала проверяем папку sounds
         pc_path = os.path.join(base_dir, 'sounds', filename)
         if os.path.exists(pc_path):
             return pc_path
@@ -105,7 +95,6 @@ if platform == 'android':
         ])
         print("✅ Разрешения запрошены")
 
-        # ✅ ЧЁРНЫЙ ФОН ВМЕСТО БЕЛОГО
         Window.clearcolor = (0, 0, 0, 1)
 
         View = autoclass('android.view.View')
@@ -114,18 +103,14 @@ if platform == 'android':
         window = mActivity.getWindow()
         decorView = window.getDecorView()
 
-        # ============ 1. ЧЁРНЫЕ ПАНЕЛИ ============
         window.setStatusBarColor(0xFF000000)
         window.setNavigationBarColor(0xFF000000)
 
-        # ============ 2. ФЛАГИ ДЛЯ СВЕТЛЫХ ЗНАЧКОВ ============
         flags = (
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            # ❌ НЕ ДОБАВЛЯЙ LAYOUT_HIDE_NAVIGATION
         )
 
-        # Светлые значки на статус-баре (Android 6.0+)
         if Build.VERSION.SDK_INT >= 23:
             try:
                 flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
@@ -133,7 +118,6 @@ if platform == 'android':
             except AttributeError:
                 pass
 
-        # Светлые значки на навигации (Android 8.0+)
         if Build.VERSION.SDK_INT >= 26:
             try:
                 flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
@@ -143,7 +127,6 @@ if platform == 'android':
 
         decorView.setSystemUiVisibility(flags)
 
-        # ============ 3. FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS ============
         try:
             params = window.getAttributes()
             if hasattr(WindowManager, 'FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS'):
@@ -153,10 +136,8 @@ if platform == 'android':
         except Exception as e:
             print(f"⚠️ FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS: {e}")
 
-        # ============ 4. ФИКСЫ ДЛЯ ПРОИЗВОДИТЕЛЕЙ ============
         manufacturer = Build.MANUFACTURER.lower()
 
-        # Xiaomi
         if "xiaomi" in manufacturer:
             try:
                 MIUI_NAVIGATION_BAR_DARK = 0x00000010
@@ -167,7 +148,6 @@ if platform == 'android':
             except:
                 pass
 
-        # Samsung
         if "samsung" in manufacturer:
             try:
                 if Build.VERSION.SDK_INT >= 26:
@@ -179,7 +159,6 @@ if platform == 'android':
             except:
                 pass
 
-        # ============ 5. ДИАГНОСТИКА ============
         print(f"🔍 Статус-бар: #{window.getStatusBarColor():08X}")
         print(f"🔍 Навигация: #{window.getNavigationBarColor():08X}")
         print("✅ Системные панели: ЧЁРНЫЕ + СВЕТЛЫЕ ЗНАЧКИ")
@@ -188,7 +167,6 @@ if platform == 'android':
         print(f"❌ Ошибка: {e}")
         Window.clearcolor = (0, 0, 0, 1)
 else:
-    # ✅ ЧЁРНЫЙ ФОН ДЛЯ WINDOWS
     Window.clearcolor = (0, 0, 0, 1)
     Window.borderless = False
     Window.size = (400, 750)
@@ -212,6 +190,9 @@ from screens.components.sidebar import Sidebar
 from screens.components.blocking_layer import BlockingLayer
 from config.system_bars import get_navigation_bar_height, get_status_bar_height, get_screen_density, get_all_system_info
 
+# ============ НАСТРОЙКИ ============
+from utils.settings_manager import settings_manager
+
 # ============ ОТКЛЮЧЕНИЕ RIPPLE ЭФФЕКТА ============
 from kivymd.uix.button import MDIconButton
 
@@ -232,7 +213,6 @@ logger = app_logger()
 
 
 def check_audio_support():
-    """Проверяет поддержку звука на устройстве"""
     try:
         from kivy.core.audio import SoundLoader
         logger.info("✅ SoundLoader доступен")
@@ -249,13 +229,11 @@ class RootWidget(MDFloatLayout):
         self.size_hint = (1, 1)
         self.padding = [0, 0, 0, 0]
 
-        # ✅ СНАЧАЛА устанавливаем цвет-заглушку (тёмный фон)
         with self.canvas.before:
-            Color(0.05, 0.05, 0.05, 1)  # Почти чёрный
+            Color(0.05, 0.05, 0.05, 1)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_rect, size=self._update_rect)
 
-        # ✅ ПОТОМ загружаем ассет
         self.load_background()
         logger.info("RootWidget создан")
 
@@ -280,7 +258,6 @@ class RootWidget(MDFloatLayout):
                         Color(1, 1, 1, 1)
                         self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
                     self.bind(pos=self._update_bg, size=self._update_bg)
-                    # ✅ Убираем цвет-заглушку после загрузки ассета
                     if hasattr(self, 'bg_rect'):
                         self.canvas.before.remove(self.bg_rect)
                     logger.info("✅ Фон загружен из ассета")
@@ -288,7 +265,6 @@ class RootWidget(MDFloatLayout):
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
 
-        # Если ассет не загрузился — оставляем тёмный фон
         logger.info("✅ Используем тёмный фон (ассет не найден)")
 
     def _update_bg(self, *args):
@@ -316,6 +292,32 @@ class GuitarFunsApp(MDApp):
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
         logger.info('🎸 ' + '=' * 50)
+
+    # ============ ПРИМЕНЕНИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ============
+
+    def apply_theme(self, theme_id):
+        """Глобально применяет тему и сохраняет в файл"""
+        logger.info(f"🎨 Глобальное применение темы: {theme_id}")
+
+        if theme_id == "dark":
+            self.theme_cls.theme_style = "Dark"
+        else:
+            self.theme_cls.theme_style = "Light"
+
+        if theme_id == "green":
+            self.theme_cls.primary_palette = "Teal"
+        elif theme_id == "light":
+            self.theme_cls.primary_palette = "Gray"
+
+        settings_manager.set_theme(theme_id)
+
+    def apply_language(self, lang_code):
+        """Глобально применяет язык (пока просто логирует)"""
+        logger.info(f"🌐 Глобальное применение языка: {lang_code}")
+        # TODO: Здесь позже будет логика смены языка через localization_manager
+        settings_manager.set_language(lang_code)
+
+    # ============ АВТОРИЗАЦИЯ ============
 
     def set_blocking(self, blocked):
         logger.info(f"set_blocking вызван: blocked={blocked}")
@@ -352,47 +354,35 @@ class GuitarFunsApp(MDApp):
         self.set_blocking(False)
 
     def _on_auth_success(self, provider=None):
-        """Обработчик успешной авторизации"""
         logger.info(f"Авторизация успешна: {provider}")
+        settings_manager.set_authenticated(True)
 
-        # Закрываем модальное окно
         if self.blocking_layer:
             self.blocking_layer.clear_modal_widget()
         self.current_auth_modal = None
         self.set_blocking(False)
 
-        # Загружаем данные пользователя
         if api.access_token:
             api.get_current_user(
                 on_success=self._on_user_data_loaded,
                 on_failure=lambda req, err: None
             )
 
-        # Обновляем текущий экран после авторизации
         Clock.schedule_once(self._refresh_current_screen, 0.3)
-
-        # Обновляем Sidebar
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
 
     def _on_user_data_loaded(self, user):
-        """Загружены данные пользователя"""
         api.user_data = user
         username = user.get('username', 'Гость')
         logger.info(f"Данные пользователя загружены: {username}")
-
-        # После загрузки данных пользователя — предзагружаем избранное
         Clock.schedule_once(lambda dt: self._preload_favorites(), 0.5)
-
-        # Обновляем Sidebar
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
     def _update_sidebar(self):
-        """Обновляет информацию в Sidebar"""
         if self.sidebar:
             self.sidebar.update_user_info()
 
     def _refresh_current_screen(self, dt):
-        """Обновляет текущий экран после авторизации"""
         if self.screen_manager:
             current_screen = self.screen_manager.current_screen
             if current_screen:
@@ -409,14 +399,7 @@ class GuitarFunsApp(MDApp):
                     if hasattr(home_screen, 'on_login_success'):
                         home_screen.on_login_success()
 
-    # ============ ПРЕДЗАГРУЗКА ИЗБРАННОГО ============
-
     def _preload_favorites(self):
-        """
-        Предзагружает избранное при запуске приложения.
-        Результат кладётся в api._favorites_cache (в памяти).
-        api.get_favorites сам асинхронный — внешний поток не нужен.
-        """
         if self._favorites_preloaded:
             logger.debug("ℹ️ Избранное уже предзагружено")
             return
@@ -427,8 +410,6 @@ class GuitarFunsApp(MDApp):
 
         logger.info("🔄 Фоновая предзагрузка избранного...")
 
-        # ✅ api.get_favorites уже асинхронный (внутри свой поток)
-        # Дополнительный threading.Thread не нужен
         api.get_favorites(
             on_success=self._on_favorites_preloaded,
             on_failure=lambda req, err: logger.warning(f"⚠️ Предзагрузка избранного не удалась: {err}"),
@@ -436,7 +417,6 @@ class GuitarFunsApp(MDApp):
         )
 
     def _on_favorites_preloaded(self, favorites):
-        """Обработчик успешной предзагрузки избранного"""
         self._favorites_preloaded = True
         logger.info(f"✅ Избранное предзагружено: {len(favorites)} песен")
 
@@ -456,13 +436,29 @@ class GuitarFunsApp(MDApp):
             except Exception as e:
                 logger.error(f"Ошибка настройки клавиатуры: {e}")
 
+        # ============ ПРИМЕНЕНИЕ СОХРАНЁННЫХ НАСТРОЕК ============
         self.theme_cls.primary_palette = "Teal"
         self.theme_cls.primary_hue = "300"
-        self.theme_cls.theme_style = "Light"
         self.theme_cls.material_style = "M3"
 
+        # Читаем сохранённую тему и язык из файла
+        saved_theme = settings_manager.theme
+        saved_language = settings_manager.language
+
+        if saved_theme == "dark":
+            self.theme_cls.theme_style = "Dark"
+        else:
+            self.theme_cls.theme_style = "Light"
+
+        if saved_theme == "green":
+            self.theme_cls.primary_palette = "Teal"
+        elif saved_theme == "light":
+            self.theme_cls.primary_palette = "Gray"
+
+        logger.info(f"⚙️ Загружены настройки: тема={saved_theme}, язык={saved_language}")
+
         # ============ СОЗДАЁМ ROOT ============
-        self.root = RootWidget()  # ← теперь используем RootWidget с фоном
+        self.root = RootWidget()
 
         # ============ ПОКАЗЫВАЕМ СПЛЕШ-СКРИН ============
         try:
@@ -474,7 +470,6 @@ class GuitarFunsApp(MDApp):
             logger.info("✅ SplashScreen создан и добавлен")
         except ImportError as e:
             logger.error(f"❌ Ошибка импорта SplashScreen: {e}")
-            # Fallback: сразу создаём приложение
             self._components_created = True
             self._create_app_components()
             self._show_app_components()
@@ -482,7 +477,6 @@ class GuitarFunsApp(MDApp):
         # ============ ПРЕДЗАГРУЗКА В ФОНЕ ============
         Clock.schedule_once(self._preload_app, 0.1)
 
-        # Предзагрузка иконок
         try:
             from utils.icon_cache import preload_icons
             preload_icons()
@@ -495,26 +489,21 @@ class GuitarFunsApp(MDApp):
         return self.root
 
     def _preload_app(self, dt):
-        """Предзагружает компоненты в фоне"""
         logger.info("🔄 Фоновая предзагрузка приложения...")
 
         if not self._components_created:
             self._create_app_components()
             self._components_created = True
 
-        # Предзагружаем избранное
         Clock.schedule_once(lambda dt: self._preload_favorites(), 0.5)
 
     def _create_app_components(self):
-        """Создаёт все компоненты приложения (без добавления в root)"""
         logger.info("📦 Создание компонентов приложения...")
 
-        # ScreenManager
         self.screen_manager = setup_screen_manager()
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
 
-        # TopNav
         self.top_nav = TopNav(self.screen_manager)
         self.top_nav.set_app(self)
         self.top_nav.size_hint = (1, None)
@@ -522,17 +511,13 @@ class GuitarFunsApp(MDApp):
         self.top_nav.update_title('home')
         self.top_nav._update_left_button('home')
         self.top_nav._update_right_buttons('home')
-        #self.top_nav.settings_btn.on_release = self._on_settings_press
 
-        # BottomNav
         self.bottom_nav = BottomNav(self.screen_manager)
         self.bottom_nav.pos_hint = {'y': 0}
 
-        # Sidebar
         self.sidebar = Sidebar(self.screen_manager)
         self.sidebar.close()
 
-        # BlockingLayer
         self.blocking_layer = BlockingLayer()
         self.blocking_layer.opacity = 0
         self.blocking_layer.disabled = True
@@ -540,24 +525,19 @@ class GuitarFunsApp(MDApp):
         logger.info("✅ Все компоненты созданы")
 
     def _show_app_components(self):
-        """Добавляет компоненты в root и показывает приложение"""
         logger.info("🎬 Показываем компоненты приложения")
 
-        # Добавляем компоненты в root
         self.root.add_widget(self.screen_manager)
         self.root.add_widget(self.bottom_nav)
         self.root.add_widget(self.top_nav)
         self.root.add_widget(self.sidebar)
         self.root.add_widget(self.blocking_layer)
 
-        # Инициализация сети
         network_manager.start_monitoring()
         Window.bind(on_resize=self.on_window_resize)
 
-        # Обновляем Sidebar
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
-        # Проверяем авторизацию
         if self.screen_manager and self.screen_manager.has_screen('home'):
             home_screen = self.screen_manager.get_screen('home')
             Clock.schedule_once(lambda dt: home_screen._check_auth(0), 0.5)
@@ -565,22 +545,18 @@ class GuitarFunsApp(MDApp):
         logger.info("✅ Компоненты приложения показаны")
 
     def _on_splash_complete(self):
-        """Сплеш-скрин завершил работу — показываем приложение"""
         logger.info("🎬 Сплеш-скрин завершён, показываем приложение")
 
-        # Удаляем сплеш-скрин
         if self.splash_screen and self.splash_screen.parent:
             self.root.remove_widget(self.splash_screen)
             self.splash_screen = None
 
-        # Показываем компоненты приложения
         if not self._components_created:
             self._create_app_components()
             self._components_created = True
 
         self._show_app_components()
 
-        # Анимация появления
         self.root.opacity = 0
         anim = Animation(opacity=1, duration=0.3, t='out_quad')
         anim.start(self.root)
@@ -590,7 +566,6 @@ class GuitarFunsApp(MDApp):
     # ============ ОБРАБОТЧИКИ ============
 
     def _on_settings_press(self, *args):
-        """Обработчик нажатия на иконку настроек (шестерёнка) - открывает Sidebar"""
         logger.info("⚙️ Нажата иконка настроек → открываем Sidebar")
 
     def on_window_resize(self, window, width, height):
@@ -628,10 +603,7 @@ class GuitarFunsApp(MDApp):
         logger.info('Приложение GuitarFuns запущено')
         check_audio_support()
 
-        # ============ ПРЕДЗАГРУЗКА ИЗБРАННОГО ============
         Clock.schedule_once(lambda dt: self._preload_favorites(), 1.0)
-
-        # Обновляем Sidebar при старте
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
 
         if HAS_ASSETS:
@@ -648,7 +620,6 @@ class GuitarFunsApp(MDApp):
 
     def on_resume(self):
         logger.debug('Приложение восстановлено')
-        # Обновляем Sidebar при возврате
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
     def on_stop(self):
