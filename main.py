@@ -351,6 +351,12 @@ class GuitarFunsApp(MDApp):
         if hasattr(self, 'bottom_nav') and self.bottom_nav:
             self.bottom_nav.update_language()
 
+        # Обновляем текущий экран, если у него есть метод update_language
+        if hasattr(self, 'screen_manager') and self.screen_manager:
+            current_screen = self.screen_manager.current_screen
+            if current_screen and hasattr(current_screen, 'update_language'):
+                current_screen.update_language()
+
     # ============ АВТОРИЗАЦИЯ ============
 
     def set_blocking(self, blocked):

@@ -198,8 +198,9 @@ class TopNav(MDCard):
             color = [0.1, 0.55, 0.3, 1]  # #1A8C4C
             self.line_color_inst.rgba = [0.1, 0.55, 0.3, 0.5]
         elif theme_id == 'dark':
-            # Яркий оранжевый акцент для тёмной темы
-            color = [1.0, 0.5, 0.0, 1]  # #FF8C00
+            # БЕЛЫЙ для тёмной темы (как в зелёной)
+            color = [1, 1, 1, 1]
+            # Полоску снизу оставляем оранжевой для акцента
             self.line_color_inst.rgba = [1.0, 0.5, 0.0, 0.5]
         else:  # green
             color = [1, 1, 1, 1]

@@ -1,8 +1,7 @@
 # screens/settings_screen.py
 """
 Экран настроек с выбором темы и языка.
-Единственный источник правды — JSON-файл.
-Устранена проблема перекрытия кнопок языка.
+6 языков, карточки в сетке 2x3.
 """
 import os
 import json
@@ -16,6 +15,7 @@ from io import BytesIO
 
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
@@ -43,7 +43,7 @@ _SETTINGS_FILE = os.path.join(config.CACHE_DIR, 'user_settings.json')
 
 
 def read_language_from_file():
-    """Читает язык из JSON-файла. Принудительно сбрасывает буфер."""
+    """Читает язык из JSON-файла."""
     try:
         if os.path.exists(_SETTINGS_FILE):
             with open(_SETTINGS_FILE, 'r', encoding='utf-8') as f:
@@ -63,7 +63,7 @@ def read_language_from_file():
 
 
 def write_language_to_file(lang_code):
-    """Записывает язык в JSON-файл с принудительным сбросом на диск."""
+    """Записывает язык в JSON-файл."""
     try:
         data = {}
         if os.path.exists(_SETTINGS_FILE):
@@ -79,27 +79,28 @@ def write_language_to_file(lang_code):
         logger.error(f"❌ Ошибка записи языка: {e}")
 
 
-# ============ ЗАГРУЗКА ФЛАГОВ ============
-_shared_rus_flag_texture = None
-_shared_eng_flag_texture = None
+# ============ КЭШ ФЛАГОВ ============
+_flag_textures_cache = {}
 
 
-def load_flags_sync():
-    global _shared_rus_flag_texture, _shared_eng_flag_texture
-    if _shared_rus_flag_texture is not None:
-        return
-    if HAS_ASSETS:
-        try:
-            rus_data = load_asset_as_bytes('rus_png')
-            if rus_data:
-                img = CoreImage(BytesIO(rus_data), ext="png")
-                _shared_rus_flag_texture = img.texture
-            eng_data = load_asset_as_bytes('eng_png')
-            if eng_data:
-                img = CoreImage(BytesIO(eng_data), ext="png")
-                _shared_eng_flag_texture = img.texture
-        except Exception as e:
-            logger.error(f"Ошибка загрузки флагов: {e}")
+def load_flag_texture(asset_name):
+    """Загружает и кэширует текстуру флага по имени ассета."""
+    if asset_name in _flag_textures_cache:
+        return _flag_textures_cache[asset_name]
+
+    if not HAS_ASSETS:
+        return None
+
+    try:
+        data = load_asset_as_bytes(asset_name)
+        if data:
+            img = CoreImage(BytesIO(data), ext="png")
+            _flag_textures_cache[asset_name] = img.texture
+            return img.texture
+    except Exception as e:
+        logger.error(f"Ошибка загрузки флага {asset_name}: {e}")
+
+    return None
 
 
 # ============================================================
@@ -120,9 +121,9 @@ class ThemeColors:
     @staticmethod
     def get_accent(theme_id):
         if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 1]  # <--- Яркий насыщенный изумрудный
+            return [0.1, 0.55, 0.3, 1]  # Яркий изумрудный
         elif theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 1]   # <--- Оранжевый
+            return [1.0, 0.5, 0.0, 1]  # Оранжевый
         elif theme_id == 'green':
             return [1, 1, 1, 1]
         else:
@@ -295,27 +296,26 @@ class ThemeSelector(MDCard):
 
 
 # ============================================================
-# ОПЦИЯ ЯЗЫКА (БЕЗ ПЕРЕКРЫТИЯ)
+# ОПЦИЯ ЯЗЫКА
 # ============================================================
 
 class LanguageOption(ButtonBehavior, MDBoxLayout):
-    """Опция языка. Используем BoxLayout вместо MDCard, чтобы избежать перекрытий."""
-
-    def __init__(self, lang_code, lang_text, current_theme_id, is_active=False, on_select=None, **kwargs):
+    def __init__(self, lang_code, lang_text, asset_name, current_theme_id, is_active=False, on_select=None, **kwargs):
         super().__init__(**kwargs)
         self.lang_code = lang_code
         self.current_theme_id = current_theme_id
         self._is_active = is_active
         self.on_select_callback = on_select
+        self.asset_name = asset_name
 
         self.orientation = 'vertical'
-        self.size_hint = (0.5, 1)
+        self.size_hint = (1, None)
+        self.height = dp(76)
         self.md_bg_color = [0, 0, 0, 0]
         self.padding = [0, dp(6), 0, dp(6)]
         self.spacing = dp(2)
         self.radius = [dp(10)]
 
-        # Контейнер для флага
         self.icon_container = MDBoxLayout(
             size_hint=(None, None),
             size=(dp(32), dp(32)),
@@ -328,10 +328,10 @@ class LanguageOption(ButtonBehavior, MDBoxLayout):
             allow_stretch=True,
             keep_ratio=True
         )
-        if lang_code == 'ru' and _shared_rus_flag_texture:
-            self.flag_image.texture = _shared_rus_flag_texture
-        elif lang_code == 'en' and _shared_eng_flag_texture:
-            self.flag_image.texture = _shared_eng_flag_texture
+
+        texture = load_flag_texture(asset_name)
+        if texture:
+            self.flag_image.texture = texture
         else:
             self.flag_image.source = ''
 
@@ -352,7 +352,6 @@ class LanguageOption(ButtonBehavior, MDBoxLayout):
         self.update_colors()
 
     def on_release(self):
-        logger.info(f"🖱️ НАЖАТА ОПЦИЯ: {self.lang_code}")
         if self.on_select_callback:
             self.on_select_callback(self.lang_code)
 
@@ -361,8 +360,6 @@ class LanguageOption(ButtonBehavior, MDBoxLayout):
         text_secondary = ThemeColors.get_text_secondary(self.current_theme_id)
 
         self.label.theme_text_color = "Custom"
-
-        # Очищаем старый фон
         self.canvas.before.clear()
 
         if self._is_active:
@@ -391,10 +388,10 @@ class LanguageOption(ButtonBehavior, MDBoxLayout):
 
 
 # ============================================================
-# СЕЛЕКТОР ЯЗЫКА
+# СЕЛЕКТОР ЯЗЫКА (СЕТКА 2x3)
 # ============================================================
 
-class LanguageSelector(MDCard):
+class LanguageSelector(MDGridLayout):
     def __init__(self, current_lang=None, current_theme='green', on_lang_selected=None, **kwargs):
         super().__init__(**kwargs)
 
@@ -402,32 +399,32 @@ class LanguageSelector(MDCard):
             current_lang = read_language_from_file()
 
         self.current_lang = current_lang
-        logger.info(f"📥 LanguageSelector создан с языком: {self.current_lang}")
-
         self.current_theme = current_theme
         self.on_lang_selected = on_lang_selected
 
-        self.orientation = 'horizontal'
+        self.cols = 2
         self.size_hint = (1, None)
-        self.height = dp(76)
-        self.radius = [dp(14)]
-        self.elevation = 0
-        self.line_width = 1
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
-        self.spacing = dp(8)  # Увеличен отступ
+        self.adaptive_height = True
+        self.spacing = dp(8)
+        self.padding = [0, 0, 0, 0]
 
         self.options = []
-        self.dividers = []
+        self.dividers = []  # Не используется в сетке, но оставим для совместимости
 
         languages = [
-            ('en', 'English'),
-            ('ru', 'Русский'),
+            ('ru', 'Русский', 'rus_png'),
+            ('en', 'English', 'eng_png'),
+            ('fr', 'Français', 'fra_png'),
+            ('it', 'Italiano', 'ita_png'),
+            ('es', 'Español', 'spa_png'),
+            ('pt', 'Português', 'por_png'),
         ]
 
-        for i, (lang_code, lang_text) in enumerate(languages):
+        for lang_code, lang_text, asset_name in languages:
             option = LanguageOption(
                 lang_code=lang_code,
                 lang_text=lang_text,
+                asset_name=asset_name,
                 current_theme_id=self.current_theme,
                 is_active=(lang_code == self.current_lang),
                 on_select=self._on_option_selected,
@@ -435,27 +432,9 @@ class LanguageSelector(MDCard):
             self.options.append(option)
             self.add_widget(option)
 
-            if i < len(languages) - 1:
-                div = MDBoxLayout(
-                    size_hint_x=None,
-                    width=dp(1),
-                    md_bg_color=[0, 0, 0, 0]
-                )
-                self.dividers.append(div)
-                self.add_widget(div)
-
         self.update_colors()
 
     def update_colors(self):
-        bg = ThemeColors.get_card_bg(self.current_theme)
-        divider_color = ThemeColors.get_divider(self.current_theme)
-
-        self.md_bg_color = bg
-        self.line_color = divider_color
-
-        for div in self.dividers:
-            div.md_bg_color = divider_color
-
         for option in self.options:
             option.current_theme_id = self.current_theme
             option.update_colors()
@@ -479,8 +458,6 @@ class SettingsScreen(BaseScreen):
         self.name = 'settings'
         self.bg_image = None
         self.bg_color_inst = None
-
-        load_flags_sync()
 
         self.current_theme = settings_manager.theme
 
@@ -533,7 +510,7 @@ class SettingsScreen(BaseScreen):
                 self.bg_color_inst.rgba = (0.1, 0.3, 0.2, 1)
         elif self.current_theme == 'dark':
             self.bg_rect.texture = None
-            self.bg_color_inst.rgba = (0.07, 0.07, 0.07, 1)  # #121212
+            self.bg_color_inst.rgba = (0.07, 0.07, 0.07, 1)
         elif self.current_theme == 'light':
             self.bg_rect.texture = None
             self.bg_color_inst.rgba = (0.969, 0.976, 0.969, 1)
@@ -598,10 +575,7 @@ class SettingsScreen(BaseScreen):
         self.theme_selector.current_theme = self.current_theme
         self.theme_selector.update_colors()
 
-        # Читаем язык из файла
         current_lang = read_language_from_file()
-        logger.info(f"🔄 refresh_theme_colors: язык из файла = {current_lang}")
-
         self.lang_selector.current_theme = self.current_theme
         self.lang_selector.current_lang = current_lang
         self.lang_selector.update_colors()
@@ -612,7 +586,6 @@ class SettingsScreen(BaseScreen):
         self.update_screen_background()
 
     def _on_theme_selected(self, theme_id):
-        logger.info(f"Выбрана тема: {theme_id}")
         self.current_theme = theme_id
         settings_manager.set_theme(theme_id)
 
@@ -623,7 +596,6 @@ class SettingsScreen(BaseScreen):
         self.refresh_theme_colors()
 
     def _on_language_selected(self, lang_code):
-        logger.info(f"🎯 _on_language_selected: {lang_code}")
         write_language_to_file(lang_code)
         settings_manager.set_language(lang_code)
 
@@ -632,11 +604,8 @@ class SettingsScreen(BaseScreen):
             app.apply_language(lang_code)
 
     def on_enter(self):
-        logger.info("🚪 Вход в экран настроек")
         self.current_theme = settings_manager.theme
-
         current_lang = read_language_from_file()
-        logger.info(f"📥 on_enter: язык из файла = {current_lang}")
 
         self.lang_selector.current_lang = current_lang
         self.lang_selector.update_colors()
@@ -646,6 +615,5 @@ class SettingsScreen(BaseScreen):
         self.refresh_theme_colors()
 
     def go_back(self, instance=None):
-        logger.info("🔙 Возврат на home")
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
