@@ -120,7 +120,9 @@ class ThemeColors:
     @staticmethod
     def get_accent(theme_id):
         if theme_id == 'light':
-            return ThemeColors.GOLD_ACCENT
+            return [0.18, 0.49, 0.20, 1]  # Тёмно-зелёный
+        elif theme_id == 'dark':
+            return [0.46, 0.70, 0.71, 1]  # Светлый зелёный
         elif theme_id == 'green':
             return [1, 1, 1, 1]
         else:
@@ -531,10 +533,10 @@ class SettingsScreen(BaseScreen):
                 self.bg_color_inst.rgba = (0.1, 0.3, 0.2, 1)
         elif self.current_theme == 'dark':
             self.bg_rect.texture = None
-            self.bg_color_inst.rgba = (0.14, 0.14, 0.14, 1)
+            self.bg_color_inst.rgba = (0.07, 0.07, 0.07, 1)  # #121212
         elif self.current_theme == 'light':
             self.bg_rect.texture = None
-            self.bg_color_inst.rgba = (0.965, 0.961, 0.949, 1)
+            self.bg_color_inst.rgba = (0.969, 0.976, 0.969, 1)
 
     def init_ui(self):
         self.content_layout = MDBoxLayout(

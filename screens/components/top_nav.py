@@ -190,16 +190,16 @@ class TopNav(MDCard):
         self.update_theme_colors()
 
     def update_theme_colors(self):
-        """Обновляет цвета иконок и текста в зависимости от темы"""
         theme_id = settings_manager.theme
         logger.info(f"🎨 TopNav: обновление цветов для темы {theme_id}")
 
         if theme_id == 'light':
-            # Тёмно-золотые / оранжевые иконки
-            color = [0.8, 0.55, 0.1, 1]  # #CC8C1A
-            self.line_color_inst.rgba = [0.8, 0.55, 0.1, 0.5]
-        else:
-            # Белые иконки для тёмной и зелёной
+            color = [0.18, 0.49, 0.20, 1]  # Тёмно-зелёный #2E7D32
+            self.line_color_inst.rgba = [0.18, 0.49, 0.20, 0.5]
+        elif theme_id == 'dark':
+            color = [0.46, 0.70, 0.71, 1]  # Фирменный зелёный #76B3B6
+            self.line_color_inst.rgba = [0.46, 0.70, 0.71, 0.3]
+        else:  # green
             color = [1, 1, 1, 1]
             self.line_color_inst.rgba = [0.46, 0.70, 0.71, 0.4]
 

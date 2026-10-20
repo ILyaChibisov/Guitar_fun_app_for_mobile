@@ -143,27 +143,31 @@ class NavItem(ButtonBehavior, BoxLayout):
         return False
 
     def update_state(self, instance, value):
-        """Обновляет активное состояние (цвета) в зависимости от темы"""
         theme_id = settings_manager.theme
 
-        # Цвета как в TopNav для светлой темы
-        gold_color = [0.8, 0.55, 0.1, 1]  # #CC8C1A
-        white_color = [1, 1, 1, 0.8]
-
         if theme_id == 'light':
-            # Для светлой темы ВСЕ иконки золотистые
-            self.icon_btn.icon_color = gold_color
-            self.text_label.text_color = gold_color
-            self.text_label.bold = value  # Жирный только если активен
-        else:
-            # Для тёмной и зелёной
-            if value:  # Активна
+            self.icon_btn.icon_color = [0.18, 0.49, 0.20, 1]  # Тёмно-зелёный
+            self.text_label.text_color = [0.18, 0.49, 0.20, 1]
+            self.text_label.bold = value
+        elif theme_id == 'dark':
+            active_color = [0.46, 0.70, 0.71, 1]  # Светлый зелёный
+            inactive_color = [0.69, 0.69, 0.69, 1]  # #B0B0B0
+            if value:
+                self.icon_btn.icon_color = active_color
+                self.text_label.text_color = active_color
+                self.text_label.bold = True
+            else:
+                self.icon_btn.icon_color = inactive_color
+                self.text_label.text_color = inactive_color
+                self.text_label.bold = False
+        else:  # green
+            if value:
                 self.icon_btn.icon_color = self.copper_gold
                 self.text_label.text_color = self.copper_gold
                 self.text_label.bold = True
-            else:  # Неактивна
-                self.icon_btn.icon_color = white_color
-                self.text_label.text_color = white_color
+            else:
+                self.icon_btn.icon_color = [1, 1, 1, 0.8]
+                self.text_label.text_color = [1, 1, 1, 0.8]
                 self.text_label.bold = False
 
     def on_release(self):
@@ -257,15 +261,15 @@ class BottomNav(BoxLayout):
             self.line.size = (self.width, dp(1))
 
     def update_theme_colors(self):
-        """Обновляет цвета разделителя и вкладок при смене темы"""
         theme_id = settings_manager.theme
 
         if theme_id == 'light':
-            self.line_color_inst.rgba = (0.8, 0.55, 0.1, 0.3)  # Золотистая линия
+            self.line_color_inst.rgba = (0.18, 0.49, 0.20, 0.3)
+        elif theme_id == 'dark':
+            self.line_color_inst.rgba = (0.17, 0.17, 0.17, 1)  # #2C2C2C
         else:
-            self.line_color_inst.rgba = (1, 1, 1, 0.08)  # Светлая линия
+            self.line_color_inst.rgba = (1, 1, 1, 0.08)
 
-        # Обновляем каждую вкладку
         for item in self.items:
             item.update_state(item, item.active)
 

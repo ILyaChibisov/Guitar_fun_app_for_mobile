@@ -279,9 +279,9 @@ class RootWidget(MDFloatLayout):
             self.bg_image = None
 
         if theme_id == "dark":
-            self.bg_color.rgba = (0.14, 0.14, 0.14, 1)
+            self.bg_color.rgba = (0.07, 0.07, 0.07, 1)  # #121212
         elif theme_id == "light":
-            self.bg_color.rgba = (0.965, 0.961, 0.949, 1)
+            self.bg_color.rgba = (0.969, 0.976, 0.969, 1)
         else:
             self.bg_color.rgba = (0, 0, 0, 0)
             if not hasattr(self, 'bg_image') or self.bg_image is None:
