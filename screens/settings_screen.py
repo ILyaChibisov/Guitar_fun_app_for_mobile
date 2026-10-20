@@ -120,9 +120,9 @@ class ThemeColors:
     @staticmethod
     def get_accent(theme_id):
         if theme_id == 'light':
-            return [0.18, 0.49, 0.20, 1]  # Тёмно-зелёный
+            return [0.1, 0.55, 0.3, 1]  # <--- Яркий насыщенный изумрудный
         elif theme_id == 'dark':
-            return [0.46, 0.70, 0.71, 1]  # Светлый зелёный
+            return [1.0, 0.5, 0.0, 1]   # <--- Оранжевый
         elif theme_id == 'green':
             return [1, 1, 1, 1]
         else:

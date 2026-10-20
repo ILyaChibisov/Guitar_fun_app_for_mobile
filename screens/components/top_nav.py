@@ -194,11 +194,13 @@ class TopNav(MDCard):
         logger.info(f"🎨 TopNav: обновление цветов для темы {theme_id}")
 
         if theme_id == 'light':
-            color = [0.18, 0.49, 0.20, 1]  # Тёмно-зелёный #2E7D32
-            self.line_color_inst.rgba = [0.18, 0.49, 0.20, 0.5]
+            # Насыщенный яркий изумрудный для светлой темы
+            color = [0.1, 0.55, 0.3, 1]  # #1A8C4C
+            self.line_color_inst.rgba = [0.1, 0.55, 0.3, 0.5]
         elif theme_id == 'dark':
-            color = [0.46, 0.70, 0.71, 1]  # Фирменный зелёный #76B3B6
-            self.line_color_inst.rgba = [0.46, 0.70, 0.71, 0.3]
+            # Яркий оранжевый акцент для тёмной темы
+            color = [1.0, 0.5, 0.0, 1]  # #FF8C00
+            self.line_color_inst.rgba = [1.0, 0.5, 0.0, 0.5]
         else:  # green
             color = [1, 1, 1, 1]
             self.line_color_inst.rgba = [0.46, 0.70, 0.71, 0.4]

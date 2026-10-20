@@ -146,12 +146,20 @@ class NavItem(ButtonBehavior, BoxLayout):
         theme_id = settings_manager.theme
 
         if theme_id == 'light':
-            self.icon_btn.icon_color = [0.18, 0.49, 0.20, 1]  # Тёмно-зелёный
-            self.text_label.text_color = [0.18, 0.49, 0.20, 1]
-            self.text_label.bold = value
+            # Насыщенный изумрудный
+            active_color = [0.1, 0.55, 0.3, 1]
+            inactive_color = [0.1, 0.55, 0.3, 1]
+            if value:
+                self.icon_btn.icon_color = [0.05, 0.4, 0.2, 1]  # Чуть темнее при активности (для контраста)
+                self.text_label.text_color = [0.05, 0.4, 0.2, 1]
+                self.text_label.bold = True
+            else:
+                self.icon_btn.icon_color = inactive_color
+                self.text_label.text_color = inactive_color
+                self.text_label.bold = False
         elif theme_id == 'dark':
-            active_color = [0.46, 0.70, 0.71, 1]  # Светлый зелёный
-            inactive_color = [0.69, 0.69, 0.69, 1]  # #B0B0B0
+            active_color = [1, 1, 1, 1]  # Ярко-белый при активности
+            inactive_color = [1.0, 0.5, 0.0, 1]  # Оранжевый для всех неактивных
             if value:
                 self.icon_btn.icon_color = active_color
                 self.text_label.text_color = active_color
@@ -264,9 +272,9 @@ class BottomNav(BoxLayout):
         theme_id = settings_manager.theme
 
         if theme_id == 'light':
-            self.line_color_inst.rgba = (0.18, 0.49, 0.20, 0.3)
+            self.line_color_inst.rgba = (0.1, 0.55, 0.3, 0.3)
         elif theme_id == 'dark':
-            self.line_color_inst.rgba = (0.17, 0.17, 0.17, 1)  # #2C2C2C
+            self.line_color_inst.rgba = (1.0, 0.5, 0.0, 0.3)
         else:
             self.line_color_inst.rgba = (1, 1, 1, 0.08)
 
