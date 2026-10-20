@@ -46,7 +46,6 @@ TRANSLATIONS = {
         "choose_tuning": "Выберите строй",
         "tuning": "Строй",
         "audio_not_init": "Аудио не инициализировано",
-        # ============ СТРОИ (ключи) ============
         "tuning_standard_6": "Стандартный",
         "tuning_drop_d": "Drop D",
         "tuning_open_g": "Open G",
@@ -56,6 +55,14 @@ TRANSLATIONS = {
         "tuning_bass_4": "Бас 4-струнный",
         "tuning_bass_5": "Бас 5-струнный",
         "tuning_ukulele": "Укулеле",
+        # ============ ИЗБРАННОЕ ============
+        "auth_required_title": "Требуется авторизация",
+        "auth_required_message": "Чтобы увидеть ваши избранные треки,\nнеобходимо войти в аккаунт",
+        "no_songs": "Нет песен",
+        "song_one": "песня",
+        "songs_many": "песен",
+        "no_favorites": "Нет избранных песен",
+        "loading_favorites": "Загрузка избранного...",
     },
     "en": {
         # ============ NAVIGATION ============
@@ -96,7 +103,6 @@ TRANSLATIONS = {
         "choose_tuning": "Choose tuning",
         "tuning": "Tuning",
         "audio_not_init": "Audio not initialized",
-        # ============ TUNINGS (keys) ============
         "tuning_standard_6": "Standard",
         "tuning_drop_d": "Drop D",
         "tuning_open_g": "Open G",
@@ -106,6 +112,14 @@ TRANSLATIONS = {
         "tuning_bass_4": "Bass 4-string",
         "tuning_bass_5": "Bass 5-string",
         "tuning_ukulele": "Ukulele",
+        # ============ FAVORITES ============
+        "auth_required_title": "Authorization required",
+        "auth_required_message": "To see your favorite tracks,\nyou need to log in",
+        "no_songs": "No songs",
+        "song_one": "song",
+        "songs_many": "songs",
+        "no_favorites": "No favorite songs",
+        "loading_favorites": "Loading favorites...",
     },
     "fr": {
         "home": "Accueil", "songs": "Chansons", "chords": "Accords", "tuner": "Accordeur",
@@ -150,6 +164,13 @@ TRANSLATIONS = {
         "tuning_bass_4": "Basse 4 cordes",
         "tuning_bass_5": "Basse 5 cordes",
         "tuning_ukulele": "Ukulélé",
+        "auth_required_title": "Autorisation requise",
+        "auth_required_message": "Pour voir vos titres favoris,\nvous devez vous connecter",
+        "no_songs": "Aucune chanson",
+        "song_one": "chanson",
+        "songs_many": "chansons",
+        "no_favorites": "Aucune chanson favorite",
+        "loading_favorites": "Chargement des favoris...",
     },
     "it": {
         "home": "Home", "songs": "Canzoni", "chords": "Accordi", "tuner": "Accordatore",
@@ -194,6 +215,13 @@ TRANSLATIONS = {
         "tuning_bass_4": "Basso 4 corde",
         "tuning_bass_5": "Basso 5 corde",
         "tuning_ukulele": "Ukulele",
+        "auth_required_title": "Autenticazione richiesta",
+        "auth_required_message": "Per vedere i tuoi brani preferiti,\ndevi accedere",
+        "no_songs": "Nessuna canzone",
+        "song_one": "canzone",
+        "songs_many": "canzoni",
+        "no_favorites": "Nessuna canzone preferita",
+        "loading_favorites": "Caricamento preferiti...",
     },
     "es": {
         "home": "Inicio", "songs": "Canciones", "chords": "Acordes", "tuner": "Afinador",
@@ -238,6 +266,13 @@ TRANSLATIONS = {
         "tuning_bass_4": "Bajo 4 cuerdas",
         "tuning_bass_5": "Bajo 5 cuerdas",
         "tuning_ukulele": "Ukelele",
+        "auth_required_title": "Autorización requerida",
+        "auth_required_message": "Para ver tus pistas favoritas,\ndebes iniciar sesión",
+        "no_songs": "Sin canciones",
+        "song_one": "canción",
+        "songs_many": "canciones",
+        "no_favorites": "Sin canciones favoritas",
+        "loading_favorites": "Cargando favoritos...",
     },
     "pt": {
         "home": "Início", "songs": "Canções", "chords": "Acordes", "tuner": "Afinador",
@@ -282,6 +317,13 @@ TRANSLATIONS = {
         "tuning_bass_4": "Baixo 4 cordas",
         "tuning_bass_5": "Baixo 5 cordas",
         "tuning_ukulele": "Ukulele",
+        "auth_required_title": "Autorização necessária",
+        "auth_required_message": "Para ver suas faixas favoritas,\nvocê precisa fazer login",
+        "no_songs": "Sem canções",
+        "song_one": "canção",
+        "songs_many": "canções",
+        "no_favorites": "Sem canções favoritas",
+        "loading_favorites": "Carregando favoritos...",
     }
 }
 
