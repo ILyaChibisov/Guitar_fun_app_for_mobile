@@ -330,14 +330,23 @@ class GuitarFunsApp(MDApp):
         elif theme_id == "light":
             self.theme_cls.primary_palette = "Gray"
 
-        # Тема сохраняется в SettingsScreen при выборе, здесь не нужно
-
         if hasattr(self, 'root') and self.root:
             self.root.apply_theme(theme_id)
+
         if hasattr(self, 'top_nav') and self.top_nav:
             self.top_nav.update_theme_colors()
         if hasattr(self, 'bottom_nav') and self.bottom_nav:
             self.bottom_nav.update_theme_colors()
+
+        # Обновляем все экраны
+        if hasattr(self, 'screen_manager') and self.screen_manager:
+            for screen_name in self.screen_manager.screen_names:
+                screen = self.screen_manager.get_screen(screen_name)
+                if hasattr(screen, 'update_theme_colors'):
+                    try:
+                        screen.update_theme_colors()
+                    except Exception as e:
+                        logger.debug(f"Не удалось обновить тему на экране {screen_name}: {e}")
 
     def apply_language(self, lang_code):
         """Глобально применяет язык"""
@@ -351,11 +360,15 @@ class GuitarFunsApp(MDApp):
         if hasattr(self, 'bottom_nav') and self.bottom_nav:
             self.bottom_nav.update_language()
 
-        # Обновляем текущий экран, если у него есть метод update_language
+        # Обновляем все экраны
         if hasattr(self, 'screen_manager') and self.screen_manager:
-            current_screen = self.screen_manager.current_screen
-            if current_screen and hasattr(current_screen, 'update_language'):
-                current_screen.update_language()
+            for screen_name in self.screen_manager.screen_names:
+                screen = self.screen_manager.get_screen(screen_name)
+                if hasattr(screen, 'update_language'):
+                    try:
+                        screen.update_language()
+                    except Exception as e:
+                        logger.debug(f"Не удалось обновить язык на экране {screen_name}: {e}")
 
     # ============ АВТОРИЗАЦИЯ ============
 
