@@ -26,9 +26,6 @@ os.environ['KIVY_AUDIO'] = 'sdl2'
 
 # ============ ФУНКЦИЯ ДЛЯ ПУТЕЙ К ЗВУКАМ (ANDROID/ПК) ============
 def get_sound_path(filename):
-    """
-    Возвращает абсолютный путь к звуковому файлу на Android и ПК
-    """
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
     if platform == 'android':
@@ -66,7 +63,6 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
-
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -226,21 +222,31 @@ class RootWidget(MDFloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.bg_image = None
+        self.bg_rect = None
         self.size_hint = (1, 1)
         self.padding = [0, 0, 0, 0]
 
+        self._init_canvas()
+        self.load_background()
+
+        # Применяем сохранённую тему (читается из файла)
+        self.apply_theme(settings_manager.theme)
+
+        logger.info("RootWidget создан")
+
+    def _init_canvas(self):
         with self.canvas.before:
-            Color(0.05, 0.05, 0.05, 1)
+            self.bg_color = Color(0.05, 0.05, 0.05, 1)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_rect, size=self._update_rect)
 
-        self.load_background()
-        logger.info("RootWidget создан")
-
     def _update_rect(self, *args):
-        if hasattr(self, 'bg_rect'):
+        if self.bg_rect:
             self.bg_rect.pos = self.pos
             self.bg_rect.size = self.size
+        if self.bg_image:
+            self.bg_image.pos = self.pos
+            self.bg_image.size = self.size
 
     def load_background(self):
         try:
@@ -255,22 +261,31 @@ class RootWidget(MDFloatLayout):
                 if bg_data:
                     img = CoreImage(BytesIO(bg_data), ext="jpg")
                     with self.canvas.before:
-                        Color(1, 1, 1, 1)
+                        self.img_color = Color(1, 1, 1, 1)
                         self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
-                    self.bind(pos=self._update_bg, size=self._update_bg)
-                    if hasattr(self, 'bg_rect'):
-                        self.canvas.before.remove(self.bg_rect)
-                    logger.info("✅ Фон загружен из ассета")
+                    self.bind(pos=self._update_rect, size=self._update_rect)
                     return
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
 
-        logger.info("✅ Используем тёмный фон (ассет не найден)")
+    def apply_theme(self, theme_id):
+        logger.info(f"🖼️ Применение фона для темы: {theme_id}")
 
-    def _update_bg(self, *args):
-        if self.bg_image:
-            self.bg_image.pos = self.pos
-            self.bg_image.size = self.size
+        if hasattr(self, 'img_color') and self.img_color:
+            self.canvas.before.remove(self.img_color)
+            self.img_color = None
+        if hasattr(self, 'bg_image') and self.bg_image:
+            self.canvas.before.remove(self.bg_image)
+            self.bg_image = None
+
+        if theme_id == "dark":
+            self.bg_color.rgba = (0.14, 0.14, 0.14, 1)
+        elif theme_id == "light":
+            self.bg_color.rgba = (0.965, 0.961, 0.949, 1)
+        else:
+            self.bg_color.rgba = (0, 0, 0, 0)
+            if not hasattr(self, 'bg_image') or self.bg_image is None:
+                self.load_background()
 
 
 class GuitarFunsApp(MDApp):
@@ -288,15 +303,21 @@ class GuitarFunsApp(MDApp):
         self._favorites_preloaded = False
         self.splash_screen = None
         self._components_created = False
+
+        # Читаем настройки из файла при старте
+        saved_theme = settings_manager.theme
+        saved_language = settings_manager.language
+
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
+        logger.info(f'🎸 Язык из файла: {saved_language}')
         logger.info('🎸 ' + '=' * 50)
 
     # ============ ПРИМЕНЕНИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ============
 
     def apply_theme(self, theme_id):
-        """Глобально применяет тему и сохраняет в файл"""
+        """Глобально применяет тему"""
         logger.info(f"🎨 Глобальное применение темы: {theme_id}")
 
         if theme_id == "dark":
@@ -309,13 +330,26 @@ class GuitarFunsApp(MDApp):
         elif theme_id == "light":
             self.theme_cls.primary_palette = "Gray"
 
-        settings_manager.set_theme(theme_id)
+        # Тема сохраняется в SettingsScreen при выборе, здесь не нужно
+
+        if hasattr(self, 'root') and self.root:
+            self.root.apply_theme(theme_id)
+        if hasattr(self, 'top_nav') and self.top_nav:
+            self.top_nav.update_theme_colors()
+        if hasattr(self, 'bottom_nav') and self.bottom_nav:
+            self.bottom_nav.update_theme_colors()
 
     def apply_language(self, lang_code):
-        """Глобально применяет язык (пока просто логирует)"""
+        """Глобально применяет язык"""
         logger.info(f"🌐 Глобальное применение языка: {lang_code}")
-        # TODO: Здесь позже будет логика смены языка через localization_manager
         settings_manager.set_language(lang_code)
+
+        if hasattr(self, 'top_nav') and self.top_nav:
+            current_screen = self.screen_manager.current if self.screen_manager else 'home'
+            self.top_nav.update_title(current_screen)
+
+        if hasattr(self, 'bottom_nav') and self.bottom_nav:
+            self.bottom_nav.update_language()
 
     # ============ АВТОРИЗАЦИЯ ============
 
@@ -441,7 +475,6 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.primary_hue = "300"
         self.theme_cls.material_style = "M3"
 
-        # Читаем сохранённую тему и язык из файла
         saved_theme = settings_manager.theme
         saved_language = settings_manager.language
 
@@ -457,10 +490,8 @@ class GuitarFunsApp(MDApp):
 
         logger.info(f"⚙️ Загружены настройки: тема={saved_theme}, язык={saved_language}")
 
-        # ============ СОЗДАЁМ ROOT ============
         self.root = RootWidget()
 
-        # ============ ПОКАЗЫВАЕМ СПЛЕШ-СКРИН ============
         try:
             from screens.splash_screen import SplashScreen
             self.splash_screen = SplashScreen(
@@ -474,7 +505,6 @@ class GuitarFunsApp(MDApp):
             self._create_app_components()
             self._show_app_components()
 
-        # ============ ПРЕДЗАГРУЗКА В ФОНЕ ============
         Clock.schedule_once(self._preload_app, 0.1)
 
         try:

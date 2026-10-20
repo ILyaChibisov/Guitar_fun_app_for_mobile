@@ -1,7 +1,8 @@
 # screens/components/bottom_nav.py
 """
-Нижняя панель навигации - с Material Design иконками
-Адаптивный шрифт без переносов
+Нижняя панель навигации - с Material Design иконками.
+Адаптивный шрифт без переносов.
+Поддерживает смену темы и языка.
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -21,6 +22,8 @@ from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import get_logger
 from config.system_bars import get_navigation_bar_height
+from utils.settings_manager import settings_manager
+from utils.localization import get_text
 
 logger = get_logger('BottomNav')
 
@@ -31,10 +34,11 @@ class NavItem(ButtonBehavior, BoxLayout):
     text = StringProperty('')
     active = BooleanProperty(False)
 
-    def __init__(self, icon_name, text, screen_name, **kwargs):
+    def __init__(self, icon_name, text_key, screen_name, **kwargs):
         super().__init__(**kwargs)
         self.icon_name = icon_name
-        self.text = text
+        self.text_key = text_key  # Сохраняем ключ для перевода
+        self.text = get_text(text_key, text_key.capitalize())  # Переводим
         self.screen_name = screen_name
 
         self.orientation = 'vertical'
@@ -50,7 +54,7 @@ class NavItem(ButtonBehavior, BoxLayout):
             label_height = dp(15)
             font_size = sp(10)
 
-        self.copper_gold = [0.85, 0.65, 0.25, 1]
+        self.copper_gold = [0.85, 0.65, 0.25, 1]  # Цвет активной иконки (золото)
 
         from kivy.uix.floatlayout import FloatLayout
         self.inner_layout = FloatLayout(size_hint=(1, 1))
@@ -68,7 +72,7 @@ class NavItem(ButtonBehavior, BoxLayout):
         self.icon_btn.bind(on_release=self._on_child_click)
 
         self.text_label = MDLabel(
-            text=text,
+            text=self.text,
             halign="center",
             valign="middle",
             size_hint=(1, None),
@@ -139,14 +143,28 @@ class NavItem(ButtonBehavior, BoxLayout):
         return False
 
     def update_state(self, instance, value):
-        if value:
-            self.icon_btn.icon_color = self.copper_gold
-            self.text_label.text_color = self.copper_gold
-            self.text_label.bold = True
+        """Обновляет активное состояние (цвета) в зависимости от темы"""
+        theme_id = settings_manager.theme
+
+        # Цвета как в TopNav для светлой темы
+        gold_color = [0.8, 0.55, 0.1, 1]  # #CC8C1A
+        white_color = [1, 1, 1, 0.8]
+
+        if theme_id == 'light':
+            # Для светлой темы ВСЕ иконки золотистые
+            self.icon_btn.icon_color = gold_color
+            self.text_label.text_color = gold_color
+            self.text_label.bold = value  # Жирный только если активен
         else:
-            self.icon_btn.icon_color = theme.TEXT_SECONDARY
-            self.text_label.text_color = theme.TEXT_SECONDARY
-            self.text_label.bold = False
+            # Для тёмной и зелёной
+            if value:  # Активна
+                self.icon_btn.icon_color = self.copper_gold
+                self.text_label.text_color = self.copper_gold
+                self.text_label.bold = True
+            else:  # Неактивна
+                self.icon_btn.icon_color = white_color
+                self.text_label.text_color = white_color
+                self.text_label.bold = False
 
     def on_release(self):
         app = MDApp.get_running_app()
@@ -158,20 +176,18 @@ class NavItem(ButtonBehavior, BoxLayout):
         anim.start(self)
 
         if hasattr(self.parent, 'switch_to'):
-            # ✅ ПЕРЕД переходом обновляем TopNav
             self._update_top_nav_before_switch(self.screen_name)
             self.parent.switch_to(self.screen_name)
 
     def _update_top_nav_before_switch(self, screen_name):
-        """Обновляет TopNav ПЕРЕД переходом на экран"""
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             titles = {
-                'songs': 'Песни',
-                'chords': 'Аккорды',
-                'tuner': 'Тюнер',
-                'metronome': 'Метроном',
-                'favorites': 'Избранное',
+                'songs': get_text('songs', 'Песни'),
+                'chords': get_text('chords', 'Аккорды'),
+                'tuner': get_text('tuner', 'Тюнер'),
+                'metronome': get_text('metronome', 'Метроном'),
+                'favorites': get_text('favorites', 'Избранное'),
             }
             if screen_name in titles:
                 app.top_nav.set_custom_title(titles[screen_name])
@@ -179,9 +195,8 @@ class NavItem(ButtonBehavior, BoxLayout):
 
 
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - 5 разделов (с Метрономом)"""
+    """Нижняя панель навигации - 5 разделов"""
 
-    # Список экранов, которые есть в нижнем меню
     NAV_SCREENS = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
 
     def __init__(self, screen_manager, **kwargs):
@@ -191,7 +206,6 @@ class BottomNav(BoxLayout):
         self.pos_hint = {'y': 0}
 
         nav_bar_height = get_navigation_bar_height()
-
         self.nav_height = dp(52)
 
         if platform == 'android':
@@ -208,30 +222,24 @@ class BottomNav(BoxLayout):
         self.md_bg_color = [0, 0, 0, 0]
 
         with self.canvas.before:
-            Color(1, 1, 1, 0.08)
+            self.line_color_inst = Color(1, 1, 1, 0.08)
             self.line = Rectangle(pos=(self.x, self.y + self.height - dp(1)),
                                   size=(self.width, dp(1)))
 
         self.bind(pos=self._update_line, size=self._update_line)
 
-        logger.info("=" * 70)
-        logger.info(f"📱 BOTTOM NAV - {platform.upper()}")
-        logger.info(f"📱 Высота панели: {self.nav_height}dp")
-        logger.info(f"📱 Отступ снизу (сист. навигация): {bottom_padding}dp")
-        logger.info(f"📱 Общая высота: {self.total_height}dp")
-        logger.info("=" * 70)
-
+        # Список вкладок: (иконка, ключ_перевода, экран)
         self.nav_items = [
-            ('guitar-electric', 'Песни', 'songs'),
-            ('music-note', 'Аккорды', 'chords'),
-            ('waveform', 'Тюнер', 'tuner'),
-            ('metronome', 'Метроном', 'metronome'),
-            ('heart', 'Избранное', 'favorites'),
+            ('guitar-electric', 'songs', 'songs'),
+            ('music-note', 'chords', 'chords'),
+            ('waveform', 'tuner', 'tuner'),
+            ('metronome', 'metronome', 'metronome'),
+            ('heart', 'favorites', 'favorites'),
         ]
 
         self.items = []
-        for icon, text, screen in self.nav_items:
-            item = NavItem(icon, text, screen)
+        for icon, text_key, screen in self.nav_items:
+            item = NavItem(icon, text_key, screen)
             item.active = (screen == 'songs')
             item.size_hint = (1, 1)
             self.add_widget(item)
@@ -240,26 +248,46 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
+        # Применяем цвета после создания
+        self.update_theme_colors()
+
     def _update_line(self, *args):
         if hasattr(self, 'line'):
             self.line.pos = (self.x, self.y + self.height - dp(1))
             self.line.size = (self.width, dp(1))
 
+    def update_theme_colors(self):
+        """Обновляет цвета разделителя и вкладок при смене темы"""
+        theme_id = settings_manager.theme
+
+        if theme_id == 'light':
+            self.line_color_inst.rgba = (0.8, 0.55, 0.1, 0.3)  # Золотистая линия
+        else:
+            self.line_color_inst.rgba = (1, 1, 1, 0.08)  # Светлая линия
+
+        # Обновляем каждую вкладку
+        for item in self.items:
+            item.update_state(item, item.active)
+
+    def update_language(self):
+        """Обновляет подписи при смене языка"""
+        for item, (_, text_key, _) in zip(self.items, self.nav_items):
+            translated_text = get_text(text_key, text_key.capitalize())
+            item.text = translated_text
+            item.text_label.text = translated_text
+            item._adjust_font_size()
+
     def on_screen_changed(self, screen_name):
-        """Обновляет активное состояние иконок при смене экрана"""
         self._update_active_state(screen_name)
 
     def _update_active_state(self, screen_name):
-        """Внутренний метод для обновления активного состояния"""
         if screen_name in self.NAV_SCREENS:
             for item, (_, _, screen) in zip(self.items, self.nav_items):
                 item.active = (screen == screen_name)
         else:
-            # Экран не в меню - сбрасываем все иконки
             self.clear_active()
 
     def clear_active(self):
-        """Сбрасывает активное состояние всех иконок"""
         for item in self.items:
             item.active = False
         logger.debug("🔽 Все иконки BottomNav сброшены")
@@ -289,7 +317,6 @@ class BottomNav(BoxLayout):
 
     def reload_config(self):
         nav_bar_height = get_navigation_bar_height()
-
         self.nav_height = dp(52)
 
         if platform == 'android':

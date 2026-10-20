@@ -1,8 +1,6 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации - с конфигом из top_nav_config.py
-ПРОЗРАЧНЫЙ ФОН + ЗЕЛЁНАЯ ПОЛОСКА СНИЗУ
-С ДИАГНОСТИКОЙ ВЫСОТЫ
+Верхняя панель навигации с поддержкой тем и языков.
 """
 from kivy.metrics import dp, sp
 from kivy.utils import platform
@@ -22,12 +20,14 @@ from config.logger_config import get_logger
 from config.system_bars import get_status_bar_height, get_screen_density
 from config.top_nav_config import top_nav_config
 from utils.screen_state import screen_state
+from utils.settings_manager import settings_manager
+from utils.localization import get_text  # <--- ИМПОРТ ПЕРЕВОДОВ
 
 logger = get_logger('TopNav')
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации с конфигом - ПРОЗРАЧНЫЙ ФОН + ПОЛОСКА"""
+    """Верхняя панель навигации с конфигом"""
 
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
@@ -71,27 +71,13 @@ class TopNav(MDCard):
 
         # ============ ЗЕЛЁНАЯ ПОЛОСКА СНИЗУ ============
         with self.canvas.before:
-            Color(0.46, 0.70, 0.71, 0.4)
+            self.line_color_inst = Color(0.46, 0.70, 0.71, 0.4)
             self.bottom_line = Rectangle(
                 pos=(self.x, self.y),
                 size=(self.width, dp(1.5))
             )
 
         self.bind(pos=self._update_bottom_line, size=self._update_bottom_line)
-
-        # ============ ДИАГНОСТИКА ПРИ СОЗДАНИИ ============
-        logger.info("=" * 70)
-        logger.info(f"📱 TOP NAV - {platform.upper()} - ПРОЗРАЧНЫЙ ФОН + ПОЛОСКА")
-        logger.info(f"📱 platform = {platform}")
-        logger.info(f"📱 status_h = {status_h}dp")
-        logger.info(f"📱 panel_height = {panel_height}dp")
-        logger.info(f"📱 self.height (расчёт) = {self.height}px = {self.height / dp(1):.1f}dp")
-        logger.info(f"📱 top_padding = {top_padding}dp")
-        logger.info(f"📱 self.padding = {self.padding}")
-        logger.info(f"📱 Window.height = {Window.height}px")
-        logger.info(f"📱 Window.dpi = {Window.dpi}")
-        logger.info(f"📱 get_screen_density() = {get_screen_density()}")
-        logger.info("=" * 70)
 
         # ============ КОНТЕЙНЕР ============
         self.container = MDFloatLayout(
@@ -137,7 +123,7 @@ class TopNav(MDCard):
 
         # ============ ЗАГОЛОВОК ============
         self.screen_title = MDLabel(
-            text=self._get_screen_title('home'),
+            text=get_text('home'),  # Используем перевод для стартового экрана
             font_size=sp(20),
             halign="center",
             valign="middle",
@@ -200,57 +186,50 @@ class TopNav(MDCard):
         if self.sm:
             self._on_screen_changed(self.sm, self.sm.current)
 
-        # ============ ДИАГНОСТИКА ПОСЛЕ СОЗДАНИЯ ============
-        Clock.schedule_once(self._log_top_nav_size, 0.1)
-        Clock.schedule_once(self._log_top_nav_size, 0.5)
-        Clock.schedule_once(self._log_top_nav_size, 1.0)
+        # ============ ПРИМЕНЯЕМ ЦВЕТА ТЕМЫ ============
+        self.update_theme_colors()
 
-    def _log_top_nav_size(self, dt):
-        """Логирует реальные размеры TopNav после отрисовки"""
-        logger.info("=" * 70)
-        logger.info(f"🔍 TOP NAV РЕАЛЬНЫЕ РАЗМЕРЫ (после отрисовки):")
-        logger.info(f"   self.height = {self.height}px = {self.height / dp(1):.1f}dp")
-        logger.info(f"   self.width = {self.width}px")
-        logger.info(f"   self.y = {self.y}px")
-        logger.info(f"   self.top = {self.top}px")
-        logger.info(f"   self.pos = {self.pos}")
-        logger.info(f"   self.padding = {self.padding}")
-        logger.info(f"   self.pos_hint = {self.pos_hint}")
+    def update_theme_colors(self):
+        """Обновляет цвета иконок и текста в зависимости от темы"""
+        theme_id = settings_manager.theme
+        logger.info(f"🎨 TopNav: обновление цветов для темы {theme_id}")
 
-        if self.parent:
-            parent_height = self.parent.height
-            logger.info(f"   parent.height = {parent_height}px")
-            logger.info(f"   parent класс = {self.parent.__class__.__name__}")
-            # Отступ сверху (сколько от верха родителя до верха TopNav)
-            top_offset = parent_height - self.top
-            logger.info(f"   ⚠️ Отступ сверху от родителя = {top_offset}px = {top_offset / dp(1):.1f}dp")
-            # Высота, которую реально занимает TopNav
-            logger.info(f"   ✅ Реальная высота TopNav = {self.height}px = {self.height / dp(1):.1f}dp")
+        if theme_id == 'light':
+            # Тёмно-золотые / оранжевые иконки
+            color = [0.8, 0.55, 0.1, 1]  # #CC8C1A
+            self.line_color_inst.rgba = [0.8, 0.55, 0.1, 0.5]
+        else:
+            # Белые иконки для тёмной и зелёной
+            color = [1, 1, 1, 1]
+            self.line_color_inst.rgba = [0.46, 0.70, 0.71, 0.4]
 
-        logger.info("=" * 70)
+        self.settings_btn.icon_color = color
+        self.back_btn.icon_color = color
+        self.home_btn.icon_color = color
+        self.search_btn.icon_color = color
+        self.screen_title.text_color = color
 
     def _update_bottom_line(self, *args):
-        """Обновляет позицию нижней полоски"""
         if hasattr(self, 'bottom_line'):
             self.bottom_line.pos = (self.x, self.y)
             self.bottom_line.size = (self.width, dp(1.5))
 
     def _get_screen_title(self, screen_name: str) -> str:
-        """Возвращает заголовок из конфига"""
-        return top_nav_config.get_title(screen_name)
+        """Возвращает заголовок из конфига с переводом"""
+        if screen_name not in top_nav_config.SCREENS:
+             return get_text(screen_name, screen_name)
+        return get_text(screen_name, top_nav_config.get_title(screen_name))
 
     def update_title(self, screen_name: str):
-        """Обновляет заголовок из конфига"""
         title = self._get_screen_title(screen_name)
         self.screen_title.text = title
         self._adjust_title_width()
 
     def set_custom_title(self, title: str):
-        """Устанавливает кастомный заголовок"""
         self.screen_title.text = title
         self._adjust_title_width()
 
-        if title == "Избранное":
+        if title == "Избранное" or title == "Favorites":
             if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
                 if self.custom_title_widget in self.container.children:
                     self.container.remove_widget(self.custom_title_widget)
@@ -261,7 +240,6 @@ class TopNav(MDCard):
                 self._adjust_title_width()
 
     def _adjust_title_width(self):
-        """Подстраивает ширину заголовка"""
         text = self.screen_title.text
         if not text:
             return
@@ -287,7 +265,6 @@ class TopNav(MDCard):
         self.screen_title.width = text_width
 
     def set_custom_title_widget(self, widget):
-        """Устанавливает кастомный виджет заголовка"""
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
@@ -316,28 +293,22 @@ class TopNav(MDCard):
 
         self.container.add_widget(widget)
         self.custom_title_widget = widget
-
         logger.info(f"✅ Установлен кастомный виджет заголовка")
 
     def clear_custom_title_widget(self):
-        """Удаляет кастомный виджет заголовка"""
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
             self.custom_title_widget = None
-            logger.info("✅ Кастомный виджет заголовка удалён")
 
         if self.screen_title not in self.container.children:
             self.container.add_widget(self.screen_title)
             self._adjust_title_width()
-            logger.info("✅ Стандартный заголовок восстановлен")
 
     def set_custom_back_callback(self, callback):
-        """Устанавливает кастомный callback для кнопки назад"""
         self._custom_back_callback = callback
 
     def clear_custom_back_callback(self):
-        """Удаляет кастомный callback"""
         self._custom_back_callback = None
 
     def _update_left_button(self, screen_name: str):
@@ -353,13 +324,10 @@ class TopNav(MDCard):
             self.left_container.add_widget(self.settings_btn)
         else:
             left_type = top_nav_config.get_left_button(screen_name)
-
             if left_type == top_nav_config.LEFT_BUTTON_BACK:
                 self.left_container.add_widget(self.back_btn)
             elif left_type == top_nav_config.LEFT_BUTTON_HAMBURGER:
                 self.left_container.add_widget(self.settings_btn)
-            else:
-                pass
 
     def _update_right_buttons(self, screen_name: str):
         self.right_container.clear_widgets()
@@ -370,16 +338,12 @@ class TopNav(MDCard):
             self.right_container.add_widget(self.home_btn)
         else:
             right_type = top_nav_config.get_right_button(screen_name)
-
             if right_type == top_nav_config.RIGHT_BUTTON_SEARCH:
                 self.right_container.add_widget(self.search_btn)
             elif right_type == top_nav_config.RIGHT_BUTTON_HOME:
                 self.right_container.add_widget(self.home_btn)
-            else:
-                pass
 
     def _set_artist_songs_mode(self):
-        """Принудительно устанавливает режим для artist_songs"""
         self.left_container.clear_widgets()
         self.left_container.add_widget(self.back_btn)
         self.back_btn.on_release = self._on_back_press
@@ -392,9 +356,7 @@ class TopNav(MDCard):
     def _on_screen_changed(self, instance, screen_name):
         if self._block_navigation:
             return
-
         old = self.current_screen_name
-
         if old == screen_name:
             return
 
@@ -603,5 +565,4 @@ class TopNav(MDCard):
         self.container.do_layout()
 
     def is_transparent(self):
-        """Возвращает True, если TopNav прозрачный (контент должен идти под ним)"""
         return True
