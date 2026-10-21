@@ -15,8 +15,10 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
+from kivy.animation import Animation
 from kivy.graphics import Color, Line, Rectangle
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -168,8 +170,13 @@ class SearchBar(MDCard):
         self.clear_wrapper.add_widget(self.clear_btn)
 
         self.search_btn = MDRaisedButton(
-            text="", size_hint=(None, 1), width=dp(70), text_color=[1, 1, 1, 1],
-            font_size=sp(13), elevation=0, pos_hint={'center_y': 0.5})
+            text="", size_hint=(None, None), size=(dp(64), dp(36)),
+            text_color=[1, 1, 1, 1], font_size=sp(13), elevation=0,
+            pos_hint={'center_y': 0.5})
+        try:
+            self.search_btn._radius = dp(10)
+        except Exception:
+            pass
         self.search_btn.bind(on_release=self._on_search_pressed)
 
         self.add_widget(self.search_field)
@@ -180,7 +187,7 @@ class SearchBar(MDCard):
         self.update_theme_colors()
 
     def update_language(self):
-        self.search_field.hint_text = get_text('search_terms', 'Поиск терминов')
+        self.search_field.hint_text = get_text('search', 'Поиск')
         self.search_btn.text = get_text('find')
 
     def update_theme_colors(self):
@@ -290,71 +297,6 @@ class SearchBar(MDCard):
 
 # ============ КОМПОНЕНТЫ МЕНЮ ============
 
-class FlagToggle(ButtonBehavior, MDBoxLayout):
-    def __init__(self, on_press=None, **kwargs):
-        super().__init__(**kwargs)
-        self.on_press_callback = on_press
-        self.current_language = 'ru'
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.padding = [dp(2)] * 4
-        self.spacing = dp(1)
-        self.md_bg_color = [0, 0, 0, 0]
-
-        flag_container = MDBoxLayout(orientation='vertical', size_hint=(1, None),
-                                      height=dp(28), md_bg_color=[0, 0, 0, 0])
-        self.flag_image = Image(size_hint=(None, None), size=(dp(24), dp(24)),
-                                pos_hint={'center_x': 0.5, 'center_y': 0.5},
-                                allow_stretch=True, keep_ratio=True)
-        flag_container.add_widget(self.flag_image)
-
-        self.label = MDLabel(text="RUS", font_size=sp(9), halign="center",
-                             valign="top", theme_text_color="Custom", bold=True,
-                             size_hint_y=None, height=dp(14))
-
-        self.add_widget(flag_container)
-        self.add_widget(self.label)
-        self._update_flag()
-        self.flag_image.bind(on_touch_down=self._on_press)
-        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
-        self.update_theme_colors()
-
-    def _on_enter(self, *args):
-        self.md_bg_color = [1, 1, 1, 0.05]
-
-    def _on_leave(self, *args):
-        self.md_bg_color = [0, 0, 0, 0]
-
-    def _on_press(self, instance, touch):
-        if self.collide_point(*touch.pos) and self.on_press_callback:
-            self.on_press_callback()
-            return True
-        return False
-
-    def _update_flag(self):
-        if self.current_language == 'ru':
-            if _shared_rus_flag_texture:
-                self.flag_image.texture = _shared_rus_flag_texture
-            else:
-                self.flag_image.text = "🇷🇺"
-            self.label.text = "RUS"
-        else:
-            if _shared_eng_flag_texture:
-                self.flag_image.texture = _shared_eng_flag_texture
-            else:
-                self.flag_image.text = "🇬🇧"
-            self.label.text = "ENG"
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        self.label.text_color = DictionaryColors.get_text_secondary(theme_id)
-
-    def set_language(self, language):
-        self.current_language = language
-        self._update_flag()
-
-
 class LetterButton(MDBoxLayout):
     def __init__(self, text, on_press=None, **kwargs):
         super().__init__(**kwargs)
@@ -363,12 +305,12 @@ class LetterButton(MDBoxLayout):
         self.is_selected = False
 
         self.size_hint = (None, 1)
-        self.width = dp(32)
+        self.width = dp(38)
         self.padding = [dp(2)] * 4
         self.spacing = 0
         self.md_bg_color = [0, 0, 0, 0]
 
-        self.label = MDLabel(text=text.upper(), font_size=sp(13),
+        self.label = MDLabel(text=text.upper(), font_size=sp(16),
                              halign="center", valign="middle",
                              theme_text_color="Custom", bold=True,
                              size_hint=(1, 1))
@@ -405,11 +347,47 @@ class LetterButton(MDBoxLayout):
         if self.is_selected:
             self.md_bg_color = accent
             self.label.text_color = [1, 1, 1, 1]
-            self.radius = [dp(6)]
+            self.radius = [dp(8)]
         else:
             self.md_bg_color = [0, 0, 0, 0]
             self.label.text_color = DictionaryColors.get_text_secondary(theme_id)
             self.radius = [0]
+
+
+class FlagLabel(MDBoxLayout):
+    """Некликабельная иконка-флаг перед группой букв."""
+    def __init__(self, flag_type='ru', **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, 1)
+        self.width = dp(38)
+        self.padding = [dp(2)] * 4
+        self.spacing = 0
+        self.md_bg_color = [0, 0, 0, 0]
+        self.flag_type = flag_type
+
+        container = AnchorLayout(anchor_x='center', anchor_y='center', size_hint=(1, 1))
+
+        texture = None
+        if flag_type == 'ru':
+            texture = _shared_rus_flag_texture
+        elif flag_type == 'en':
+            texture = _shared_eng_flag_texture
+
+        if texture:
+            img = Image(
+                texture=texture, size_hint=(None, None), size=(dp(22), dp(22)),
+                allow_stretch=True, keep_ratio=True
+            )
+            container.add_widget(img)
+        else:
+            lbl = MDLabel(
+                text="RU" if flag_type == 'ru' else "EN",
+                font_size=sp(10), halign="center", valign="middle",
+                theme_text_color="Custom", text_color=[1, 1, 1, 0.6], bold=True
+            )
+            container.add_widget(lbl)
+
+        self.add_widget(container)
 
 
 class AlphabetMenu(MDBoxLayout):
@@ -433,33 +411,76 @@ class AlphabetMenu(MDBoxLayout):
         self.padding = [dp(4)] * 4
         self.md_bg_color = [0, 0, 0, 0]
 
-        self.scroll = None
-        self.container = None
-        self.buttons = []
-        self._build_ui()
+        self.left_arrow = MDIconButton(
+            icon="chevron-left", size_hint=(None, 1), width=dp(28),
+            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
+            on_release=lambda x: self.scroll(-1)
+        )
+        self.right_arrow = MDIconButton(
+            icon="chevron-right", size_hint=(None, 1), width=dp(28),
+            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
+            on_release=lambda x: self.scroll(1)
+        )
 
-    def _build_ui(self):
-        self.scroll = ScrollView(size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
-                                  bar_width=0, bar_color=[0, 0, 0, 0],
-                                  bar_inactive_color=[0, 0, 0, 0], bar_margin=0)
-        self.container = MDBoxLayout(orientation='horizontal', size_hint_x=None,
-                                      spacing=dp(3), padding=[dp(4)] * 4)
+        self.add_widget(self.left_arrow)
+
+        self.scroll_view = ScrollView(
+            size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
+            bar_width=0, bar_color=[0, 0, 0, 0],
+            bar_inactive_color=[0, 0, 0, 0], bar_margin=0
+        )
+        self.container = MDBoxLayout(
+            orientation='horizontal', size_hint_x=None,
+            spacing=dp(2), padding=[dp(4)] * 4
+        )
         self.container.bind(minimum_width=self.container.setter('width'))
+        self.scroll_view.add_widget(self.container)
+        self.add_widget(self.scroll_view)
+
+        self.add_widget(self.right_arrow)
+
+        self.buttons = []
+        self._flag_widgets = []
         self._populate_items()
-        self.scroll.add_widget(self.container)
-        self.add_widget(self.scroll)
+        self.update_theme_colors()
 
     def _populate_items(self):
         self.container.clear_widgets()
         self.buttons = []
-        letters = self.RU_LETTERS if self.current_language == 'ru' else self.EN_LETTERS
-        for letter in letters:
-            btn = LetterButton(text=letter, on_press=self._on_letter_press)
-            if letter == self.current_selection:
-                btn.set_selected(True)
-            self.buttons.append(btn)
-            self.container.add_widget(btn)
-        self.container.width = sum(btn.width + dp(3) for btn in self.buttons) + dp(8)
+        self._flag_widgets = []
+
+        user_lang = settings_manager.language
+
+        # ✅ В словаре показываем ТОЛЬКО выбранный алфавит (один)
+        if user_lang == 'ru':
+            groups = [('ru', self.RU_LETTERS, True)]
+        else:
+            groups = [('en', self.EN_LETTERS, True)]
+
+        total_width = dp(8)
+        for group_type, letters, show_flag in groups:
+            if show_flag:
+                flag = FlagLabel(flag_type=group_type)
+                self.container.add_widget(flag)
+                self._flag_widgets.append(flag)
+                total_width += flag.width + dp(2)
+
+            for letter in letters:
+                btn = LetterButton(text=letter, on_press=self._on_letter_press)
+                if letter == self.current_selection:
+                    btn.set_selected(True)
+                self.buttons.append(btn)
+                self.container.add_widget(btn)
+                total_width += btn.width + dp(2)
+
+        self.container.width = total_width + dp(8)
+
+    def scroll(self, direction):
+        scroll_amount = 0.2
+        new_scroll = self.scroll_view.scroll_x + (direction * scroll_amount)
+        new_scroll = max(0, min(1, new_scroll))
+        anim = Animation(scroll_x=new_scroll, duration=0.2, t='out_quad')
+        anim.start(self.scroll_view)
 
     def _on_letter_press(self, letter):
         self.current_selection = letter
@@ -480,10 +501,17 @@ class AlphabetMenu(MDBoxLayout):
         for btn in self.buttons:
             btn.set_selected(btn.btn_text == letter)
 
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        accent = DictionaryColors.get_accent(theme_id)
+        self.left_arrow.icon_color = accent
+        self.right_arrow.icon_color = accent
+        for btn in self.buttons:
+            btn._update_style()
+
 
 class DictionaryMenu(MDCard):
-    def __init__(self, on_language_toggle=None, on_letter_press=None,
-                 current_language='ru', **kwargs):
+    def __init__(self, on_letter_press=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
@@ -493,39 +521,23 @@ class DictionaryMenu(MDCard):
         self.padding = [dp(4)] * 4
         self.spacing = dp(0)
 
-        self.alphabet_menu = AlphabetMenu(on_letter_press=on_letter_press,
-                                           current_language=current_language)
-
-        self.flag_toggle = FlagToggle(on_press=on_language_toggle)
-        self.flag_toggle.current_language = current_language
-        self.flag_toggle._update_flag()
-
-        flag_container = MDBoxLayout(size_hint_x=None, width=dp(44), orientation='vertical')
-        flag_container.add_widget(self.flag_toggle)
+        self.alphabet_menu = AlphabetMenu(
+            on_letter_press=on_letter_press,
+            current_language=settings_manager.language
+        )
 
         self.add_widget(self.alphabet_menu)
-        self.add_widget(self._create_divider())
-        self.add_widget(flag_container)
         self.update_theme_colors()
-
-    def _create_divider(self):
-        return MDBoxLayout(size_hint_x=None, width=dp(1))
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         self.md_bg_color = DictionaryColors.get_card_bg(theme_id)
         self.line_color = DictionaryColors.get_card_line(theme_id)
         self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
-        for child in self.children:
-            if isinstance(child, MDBoxLayout) and child.width == dp(1):
-                child.md_bg_color = DictionaryColors.get_card_line(theme_id)
-        if self.flag_toggle:
-            self.flag_toggle.update_theme_colors()
-        for btn in self.alphabet_menu.buttons:
-            btn._update_style()
+        if self.alphabet_menu:
+            self.alphabet_menu.update_theme_colors()
 
     def set_language(self, language):
-        self.flag_toggle.set_language(language)
         self.alphabet_menu.set_language(language)
 
     def set_current_letter(self, letter):
@@ -649,7 +661,7 @@ class DictionaryScreen(BaseScreen):
         self.is_search_mode = False
         self.search_results = []
         self._last_query = ""
-        self.current_language = 'ru'
+        self.current_language = settings_manager.language
         self._saved_scroll_position = 1.0
 
         self.search_bar = None
@@ -723,6 +735,8 @@ class DictionaryScreen(BaseScreen):
     def update_language(self):
         if self.search_bar: self.search_bar.update_language()
         self._restore_hint()
+        if self.dictionary_menu and self.dictionary_menu.alphabet_menu:
+            self.dictionary_menu.alphabet_menu._populate_items()
         if self._result_label and self._result_label.opacity > 0:
             if self.is_search_mode:
                 self._result_label.text = f"{get_text('found_terms')}: {len(self.search_results)}"
@@ -736,10 +750,11 @@ class DictionaryScreen(BaseScreen):
 
         top_zone = MDBoxLayout(
             orientation='vertical', size_hint=(1, None),
-            height=top_padding + dp(52) + dp(4) + dp(24) + dp(2) + dp(56) + dp(20),
+            height=top_padding + dp(8) + dp(52) + dp(4) + dp(24) + dp(2) + dp(56) + dp(20),
             spacing=0)
 
         top_zone.add_widget(Widget(size_hint_y=None, height=top_padding))
+        top_zone.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         search_container = MDBoxLayout(orientation='vertical', size_hint=(1, None),
                                         height=dp(52),
@@ -759,9 +774,8 @@ class DictionaryScreen(BaseScreen):
                                       height=dp(56), md_bg_color=[0, 0, 0, 0],
                                       padding=[padding[0], 0, padding[2], 0])
         self.dictionary_menu = DictionaryMenu(
-            on_language_toggle=self._toggle_language,
-            on_letter_press=self.on_letter_press,
-            current_language=self.current_language)
+            on_letter_press=self.on_letter_press
+        )
         menu_container.add_widget(self.dictionary_menu)
         top_zone.add_widget(menu_container)
 
@@ -784,18 +798,6 @@ class DictionaryScreen(BaseScreen):
         self.add_widget(main_layout)
 
         self.update_theme_colors()
-
-    def _toggle_language(self):
-        if self.current_language == 'ru':
-            self.current_language = 'en'
-            self._show_temporary_hint(get_text('selected_lang') + ": English", 1.2)
-        else:
-            self.current_language = 'ru'
-            self._show_temporary_hint(get_text('selected_lang') + ": Русский", 1.2)
-        self.dictionary_menu.set_language(self.current_language)
-        self.save_current_state()
-        self.current_letter = None
-        self.clear_search()
 
     def _show_hint(self, text):
         if hasattr(self, '_hint_timer') and self._hint_timer:

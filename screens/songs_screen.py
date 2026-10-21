@@ -1,10 +1,12 @@
 # screens/songs_screen.py
 """
-Экран песен - с единым меню (БУКВЫ | ЯЗЫК) и поиском.
+Экран песен - с единым меню (АЛФАВИТ) и поиском.
 Поддерживает 3 темы (green, light, dark) и 6 языков.
 Сохранение состояния и позиции скролла.
 """
 import time
+import re
+import unicodedata
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
@@ -15,14 +17,15 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
+from kivy.animation import Animation
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.textfield import MDTextField
 from kivymd.app import MDApp
 
 from kivy.uix.recycleview import RecycleView
@@ -51,19 +54,46 @@ except ImportError:
     def load_asset_as_bytes(name):
         return None
 
+
 # ============================================================
-# ЦВЕТА ДЛЯ ПЕСЕН (адаптация под темы)
+# ПРОВЕРКА СИМВОЛА
+# ============================================================
+
+def is_letter_or_digit(char):
+    """True, если символ — буква или цифра. False для # ! ( ) - & эмодзи и т.п."""
+    if not char:
+        return False
+    if char.isdigit():
+        return True
+    # Буква (включая кириллицу, латиницу, любые Unicode-буквы)
+    if char.isalpha():
+        return True
+    return False
+
+
+def is_non_letter_char(char):
+    """
+    True для '#' — если символ не буква (цифры, спецсимволы, эмодзи, знаки).
+    То есть '#'-категория — это всё, что НЕ буква.
+    """
+    if not char:
+        return False
+    return not char.isalpha()
+
+
+# ============================================================
+# ЦВЕТА ДЛЯ ПЕСЕН
 # ============================================================
 
 class SongsColors:
     @staticmethod
     def get_accent(theme_id):
         if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 1]      # Изумрудный
+            return [0.1, 0.55, 0.3, 1]
         elif theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 1]       # Оранжевый
+            return [1.0, 0.5, 0.0, 1]
         else:
-            return [0.46, 0.70, 0.71, 1]    # Бирюзовый
+            return [0.46, 0.70, 0.71, 1]
 
     @staticmethod
     def get_text_primary(theme_id):
@@ -186,9 +216,14 @@ class SearchBar(MDCard):
         self.clear_wrapper.add_widget(self.clear_btn)
 
         self.search_btn = MDRaisedButton(
-            text="", size_hint=(None, 1), width=dp(70), text_color=[1, 1, 1, 1],
-            font_size=sp(13), elevation=0, pos_hint={'center_y': 0.5}
+            text="", size_hint=(None, None), size=(dp(64), dp(36)),
+            text_color=[1, 1, 1, 1], font_size=sp(13), elevation=0,
+            pos_hint={'center_y': 0.5}
         )
+        try:
+            self.search_btn._radius = dp(10)
+        except Exception:
+            pass
         self.search_btn.bind(on_release=self._on_search_pressed)
 
         self.add_widget(self.search_field)
@@ -282,81 +317,6 @@ class SearchBar(MDCard):
 
 # ============ КОМПОНЕНТЫ МЕНЮ ============
 
-class FlagToggle(ButtonBehavior, MDBoxLayout):
-    def __init__(self, on_press=None, **kwargs):
-        super().__init__(**kwargs)
-        self.on_press_callback = on_press
-        self.current_language = 'ru'
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
-        self.spacing = dp(1)
-        self.md_bg_color = [0, 0, 0, 0]
-
-        flag_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None),
-            height=dp(28), md_bg_color=[0, 0, 0, 0]
-        )
-
-        self.flag_image = Image(
-            size_hint=(None, None), size=(dp(24), dp(24)),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            allow_stretch=True, keep_ratio=True
-        )
-        flag_container.add_widget(self.flag_image)
-
-        self.label = MDLabel(
-            text="RUS", font_size=sp(9), halign="center", valign="top",
-            theme_text_color="Custom", text_color=[1, 1, 1, 0.6], bold=True,
-            size_hint_y=None, height=dp(14)
-        )
-
-        self.add_widget(flag_container)
-        self.add_widget(self.label)
-
-        self._update_flag()
-        self.flag_image.bind(on_touch_down=self._on_press)
-        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
-
-    def _on_enter(self, *args):
-        self.md_bg_color = [1, 1, 1, 0.05]
-
-    def _on_leave(self, *args):
-        self.md_bg_color = [0, 0, 0, 0]
-
-    def _on_press(self, instance, touch):
-        if self.collide_point(*touch.pos) and self.on_press_callback:
-            self.on_press_callback()
-            return True
-        return False
-
-    def _update_flag(self):
-        if self.current_language == 'ru':
-            if _shared_rus_flag_texture:
-                self.flag_image.texture = _shared_rus_flag_texture
-            else:
-                self.flag_image.text = "🇷🇺"
-            self.label.text = "RUS"
-        elif self.current_language == 'en':
-            if _shared_eng_flag_texture:
-                self.flag_image.texture = _shared_eng_flag_texture
-            else:
-                self.flag_image.text = "🇬🇧"
-            self.label.text = "ENG"
-        else:
-            self.flag_image.text = "🔢"
-            self.label.text = "0-9"
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        self.label.text_color = SongsColors.get_text_secondary(theme_id)
-
-    def set_language(self, language):
-        self.current_language = language
-        self._update_flag()
-
-
 class LetterButton(MDBoxLayout):
     def __init__(self, text, on_press=None, **kwargs):
         super().__init__(**kwargs)
@@ -365,13 +325,13 @@ class LetterButton(MDBoxLayout):
         self.is_selected = False
 
         self.size_hint = (None, 1)
-        self.width = dp(32)
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.width = dp(38)
+        self.padding = [dp(2)] * 4
         self.spacing = 0
         self.md_bg_color = [0, 0, 0, 0]
 
         self.label = MDLabel(
-            text=text, font_size=sp(13), halign="center", valign="middle",
+            text=text, font_size=sp(16), halign="center", valign="middle",
             theme_text_color="Custom", text_color=[1, 1, 1, 0.7], bold=True,
             size_hint=(1, 1)
         )
@@ -409,11 +369,59 @@ class LetterButton(MDBoxLayout):
         if self.is_selected:
             self.md_bg_color = SongsColors.get_accent(theme_id)
             self.label.text_color = [1, 1, 1, 1]
-            self.radius = [dp(6)]
+            self.radius = [dp(8)]
         else:
             self.md_bg_color = [0, 0, 0, 0]
             self.label.text_color = SongsColors.get_text_secondary(theme_id)
             self.radius = [0]
+
+
+class FlagLabel(MDBoxLayout):
+    """Некликабельная иконка-флаг перед группой букв."""
+    def __init__(self, flag_type='ru', **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, 1)
+        self.width = dp(38)
+        self.padding = [dp(2)] * 4
+        self.spacing = 0
+        self.md_bg_color = [0, 0, 0, 0]
+        self.flag_type = flag_type
+
+        texture = None
+        if flag_type == 'ru':
+            texture = _shared_rus_flag_texture
+        elif flag_type == 'en':
+            texture = _shared_eng_flag_texture
+
+        # AnchorLayout с центрированием по X и Y
+        container = AnchorLayout(
+            anchor_x='center',
+            anchor_y='center',
+            size_hint=(1, 1)
+        )
+
+        if texture:
+            img = Image(
+                texture=texture,
+                size_hint=(None, None),
+                size=(dp(22), dp(22)),
+                allow_stretch=True,
+                keep_ratio=True
+            )
+            container.add_widget(img)
+        else:
+            lbl = MDLabel(
+                text="RU" if flag_type == 'ru' else "EN",
+                font_size=sp(10),
+                halign="center",
+                valign="middle",
+                theme_text_color="Custom",
+                text_color=[1, 1, 1, 0.6],
+                bold=True
+            )
+            container.add_widget(lbl)
+
+        self.add_widget(container)
 
 
 class AlphabetMenu(MDBoxLayout):
@@ -435,49 +443,85 @@ class AlphabetMenu(MDBoxLayout):
         self.orientation = 'horizontal'
         self.size_hint = (1, 1)
         self.spacing = dp(2)
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.padding = [dp(4)] * 4
         self.md_bg_color = [0, 0, 0, 0]
 
-        self.scroll = None
-        self.container = None
-        self.buttons = []
+        self.left_arrow = MDIconButton(
+            icon="chevron-left", size_hint=(None, 1), width=dp(28),
+            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
+            on_release=lambda x: self.scroll(-1)
+        )
+        self.right_arrow = MDIconButton(
+            icon="chevron-right", size_hint=(None, 1), width=dp(28),
+            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
+            on_release=lambda x: self.scroll(1)
+        )
 
-        self._build_ui()
+        self.add_widget(self.left_arrow)
 
-    def _build_ui(self):
-        self.scroll = ScrollView(
+        self.scroll_view = ScrollView(
             size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
             bar_width=0, bar_color=[0, 0, 0, 0],
             bar_inactive_color=[0, 0, 0, 0], bar_margin=0
         )
         self.container = MDBoxLayout(
             orientation='horizontal', size_hint_x=None,
-            spacing=dp(3), padding=[dp(4), dp(4), dp(4), dp(4)]
+            spacing=dp(2), padding=[dp(4)] * 4
         )
         self.container.bind(minimum_width=self.container.setter('width'))
+        self.scroll_view.add_widget(self.container)
+        self.add_widget(self.scroll_view)
+
+        self.add_widget(self.right_arrow)
+
+        self.buttons = []
+        self._flag_widgets = []
         self._populate_items()
-        self.scroll.add_widget(self.container)
-        self.add_widget(self.scroll)
+        self.update_theme_colors()
 
     def _populate_items(self):
         self.container.clear_widgets()
         self.buttons = []
+        self._flag_widgets = []
 
-        if self.current_language == 'ru':
-            letters = self.RU_LETTERS
-        elif self.current_language == 'en':
-            letters = self.EN_LETTERS
+        user_lang = settings_manager.language
+
+        if user_lang == 'ru':
+            groups = [
+                ('ru', self.RU_LETTERS, True),
+                ('symbols', self.DIGITS_LETTERS, False),
+                ('en', self.EN_LETTERS, True),
+            ]
         else:
-            letters = self.DIGITS_LETTERS
+            groups = [
+                ('en', self.EN_LETTERS, True),
+                ('symbols', self.DIGITS_LETTERS, False),
+            ]
 
-        for letter in letters:
-            btn = LetterButton(text=letter, on_press=self._on_letter_press)
-            if letter == self.current_selection:
-                btn.set_selected(True)
-            self.buttons.append(btn)
-            self.container.add_widget(btn)
+        total_width = dp(8)
+        for group_type, letters, show_flag in groups:
+            if show_flag:
+                flag = FlagLabel(flag_type=group_type)
+                self.container.add_widget(flag)
+                self._flag_widgets.append(flag)
+                total_width += flag.width + dp(2)
 
-        self.container.width = sum(btn.width + dp(3) for btn in self.buttons) + dp(8)
+            for letter in letters:
+                btn = LetterButton(text=letter, on_press=self._on_letter_press)
+                if letter == self.current_selection:
+                    btn.set_selected(True)
+                self.buttons.append(btn)
+                self.container.add_widget(btn)
+                total_width += btn.width + dp(2)
+
+        self.container.width = total_width + dp(8)
+
+    def scroll(self, direction):
+        scroll_amount = 0.2
+        new_scroll = self.scroll_view.scroll_x + (direction * scroll_amount)
+        new_scroll = max(0, min(1, new_scroll))
+        anim = Animation(scroll_x=new_scroll, duration=0.2, t='out_quad')
+        anim.start(self.scroll_view)
 
     def _on_letter_press(self, letter):
         self.current_selection = letter
@@ -487,8 +531,6 @@ class AlphabetMenu(MDBoxLayout):
             self.on_letter_press(letter)
 
     def set_language(self, language):
-        if self.current_language == language and self.buttons:
-            return
         self.current_language = language
         self.current_selection = None
         self._populate_items()
@@ -497,6 +539,14 @@ class AlphabetMenu(MDBoxLayout):
         self.current_selection = letter
         for btn in self.buttons:
             btn.set_selected(btn.btn_text == letter)
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        accent = SongsColors.get_accent(theme_id)
+        self.left_arrow.icon_color = accent
+        self.right_arrow.icon_color = accent
+        for btn in self.buttons:
+            btn._update_style()
 
 
 class SongsMenu(MDCard):
@@ -508,7 +558,7 @@ class SongsMenu(MDCard):
         self.height = dp(56)
         self.radius = [dp(16)]
         self.elevation = 0
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.padding = [dp(4)] * 4
         self.spacing = dp(0)
 
         self.alphabet_menu = AlphabetMenu(
@@ -516,42 +566,18 @@ class SongsMenu(MDCard):
             current_language=current_language
         )
 
-        self.flag_toggle = FlagToggle(on_press=on_language_toggle)
-        self.flag_toggle.current_language = current_language
-        self.flag_toggle._update_flag()
-
-        flag_container = MDBoxLayout(
-            size_hint_x=None, width=dp(44), orientation='vertical'
-        )
-        flag_container.add_widget(self.flag_toggle)
-
         self.add_widget(self.alphabet_menu)
-        self.add_widget(self._create_divider())
-        self.add_widget(flag_container)
-
         self.update_theme_colors()
-
-    def _create_divider(self):
-        return MDBoxLayout(
-            size_hint_x=None, width=dp(1),
-            md_bg_color=[1, 1, 1, 0.1]
-        )
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
         self.line_color = SongsColors.get_card_line(theme_id)
         self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
-
-        for child in self.children:
-            if isinstance(child, MDBoxLayout) and child.width == dp(1):
-                child.md_bg_color = SongsColors.get_card_line(theme_id)
-
-        if self.flag_toggle:
-            self.flag_toggle.update_theme_colors()
+        if self.alphabet_menu:
+            self.alphabet_menu.update_theme_colors()
 
     def set_language(self, language):
-        self.flag_toggle.set_language(language)
         self.alphabet_menu.set_language(language)
 
     def set_current_letter(self, letter):
@@ -777,8 +803,6 @@ class SongsRecycleView(RecycleView):
 # ============ ОСНОВНОЙ ЭКРАН ============
 
 class SongsScreen(BaseScreen):
-    LANGUAGES = ['ru', 'en', 'digits']
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'songs'
@@ -787,7 +811,6 @@ class SongsScreen(BaseScreen):
         self.is_search_mode = False
         self.search_results = []
         self.current_language = 'ru'
-        self._lang_index = 0
         self._selected_song_id = None
         self._temp_scroll_position = None
         self._is_restoring = False
@@ -867,8 +890,10 @@ class SongsScreen(BaseScreen):
 
     def update_theme_colors(self):
         self.update_screen_background()
-        if self.search_bar: self.search_bar.update_theme_colors()
-        if self.songs_menu: self.songs_menu.update_theme_colors()
+        if self.search_bar:
+            self.search_bar.update_theme_colors()
+        if self.songs_menu:
+            self.songs_menu.update_theme_colors()
         if self._main_label:
             theme_id = settings_manager.theme
             self._main_label.text_color = SongsColors.get_text_secondary(theme_id)
@@ -881,16 +906,16 @@ class SongsScreen(BaseScreen):
                     child.update_theme_colors()
 
     def update_language(self):
-        if self.search_bar: self.search_bar.update_language()
+        if self.search_bar:
+            self.search_bar.update_language()
         self._restore_hint()
+        if self.songs_menu and self.songs_menu.alphabet_menu:
+            self.songs_menu.alphabet_menu._populate_items()
         if self._result_label and self._result_label.opacity > 0:
             if self.is_search_mode:
                 self._result_label.text = f"{get_text('songs_found')}: {len(self.search_results)}"
             elif self.current_letter and self._all_artists:
                 self._result_label.text = f"{get_text('artists')}: {len(self._all_artists)} / {self._total_artists}"
-
-    def _update_bg(self, *args):
-        pass
 
     def init_ui(self):
         main_layout = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
@@ -898,6 +923,7 @@ class SongsScreen(BaseScreen):
 
         top_padding = layout_config.get_top_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
+        main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         content_padding = layout_config.get_content_padding()
         padding = content_padding
@@ -969,18 +995,7 @@ class SongsScreen(BaseScreen):
         logger.info(f"UI песен построен")
 
     def _toggle_language(self):
-        self._lang_index = (self._lang_index + 1) % len(self.LANGUAGES)
-        self.current_language = self.LANGUAGES[self._lang_index]
-
-        lang_keys = {'ru': 'lang_ru', 'en': 'lang_en', 'digits': 'lang_digits'}
-        lang_name = get_text(lang_keys[self.current_language])
-        selected_text = get_text('selected_lang')
-        self._show_temporary_hint(f"{selected_text}: {lang_name}", 1.2)
-
-        self.songs_menu.set_language(self.current_language)
-        self.current_letter = None
-        self.current_artist = None
-        self.clear_search()
+        pass
 
     def _show_hint(self, text):
         if hasattr(self, '_hint_timer') and self._hint_timer:
@@ -1028,6 +1043,21 @@ class SongsScreen(BaseScreen):
     def _hide_loading(self):
         self._restore_hint()
 
+    # ============ ФИЛЬТРАЦИЯ ПО СИМВОЛУ ============
+
+    def _matches_letter(self, name, letter):
+        """Проверяет, подходит ли имя исполнителя под выбранный символ."""
+        if not name or not letter:
+            return False
+        first = name[0]
+        if letter == '#':
+            # ✅ "#" — только спецсимволы:
+            # пунктуация (P*), валюта (Sc), математика (Sm), модификаторы (Sk).
+            # Исключаем буквы (L*), цифры (N*), эмодзи/смайлы (So), пробелы (Z*), прочее (C*).
+            cat = unicodedata.category(first)
+            return cat.startswith('P') or cat in ('Sc', 'Sm', 'Sk')
+        return first == letter
+
     # ============ ЗАГРУЗКА ИСПОЛНИТЕЛЕЙ ============
 
     def _load_artists(self, letter):
@@ -1046,7 +1076,8 @@ class SongsScreen(BaseScreen):
         self.recycle_view.clear()
         self._hide_empty()
 
-        if self.current_language == 'digits':
+        # ✅ Только '#' идёт через digits, всё остальное (включая 0-9) — через букву
+        if letter == '#':
             api.get_artists_by_digits(
                 limit=self._limit, offset=0,
                 on_success=self._on_digits_first_page_loaded,
@@ -1069,20 +1100,12 @@ class SongsScreen(BaseScreen):
             artists = []
             total = 0
 
+        # ✅ Фильтрация для '#' — все не-буквенные (цифры, #, спецсимволы, эмодзи)
         filtered_artists = []
         for a in artists:
             name = a.get('artist') if isinstance(a, dict) else None
-            if name:
-                first_char = name[0] if name else ''
-                if self.current_letter == '#':
-                    is_cyrillic = ('А' <= first_char <= 'Я') or ('а' <= first_char <= 'я') or first_char in ['Ё', 'ё']
-                    is_latin = ('A' <= first_char <= 'Z') or ('a' <= first_char <= 'z')
-                    is_digit = first_char.isdigit()
-                    if not is_cyrillic and not is_latin and not is_digit:
-                        filtered_artists.append(a)
-                else:
-                    if first_char == self.current_letter:
-                        filtered_artists.append(a)
+            if self._matches_letter(name, self.current_letter):
+                filtered_artists.append(a)
 
         self._total_artists = len(filtered_artists)
         for a in filtered_artists:
@@ -1128,23 +1151,11 @@ class SongsScreen(BaseScreen):
 
         for a in artists:
             name = a.get('artist') if isinstance(a, dict) else None
-            if name:
-                first_char = name[0] if name else ''
-                if self.current_letter == '#':
-                    is_cyrillic = ('А' <= first_char <= 'Я') or ('а' <= first_char <= 'я') or first_char in ['Ё', 'ё']
-                    is_latin = ('A' <= first_char <= 'Z') or ('a' <= first_char <= 'z')
-                    is_digit = first_char.isdigit()
-                    if not is_cyrillic and not is_latin and not is_digit:
-                        self._all_artists.append({
-                            'artist': name,
-                            'songs_count': a.get('songs_count', 0) if isinstance(a, dict) else 0
-                        })
-                else:
-                    if first_char == self.current_letter:
-                        self._all_artists.append({
-                            'artist': name,
-                            'songs_count': a.get('songs_count', 0) if isinstance(a, dict) else 0
-                        })
+            if self._matches_letter(name, self.current_letter):
+                self._all_artists.append({
+                    'artist': name,
+                    'songs_count': a.get('songs_count', 0) if isinstance(a, dict) else 0
+                })
 
         if len(self._all_artists) >= self._total_artists:
             self._has_more = False
@@ -1387,7 +1398,7 @@ class SongsScreen(BaseScreen):
         next_page = self._page + 1
         offset = next_page * self._limit
 
-        if self.current_language == 'digits':
+        if self.current_letter == '#':
             api.get_artists_by_digits(
                 limit=self._limit, offset=offset,
                 on_success=lambda data: self._append_artists(data, next_page),
@@ -1482,10 +1493,8 @@ class SongsScreen(BaseScreen):
             restored_artists = state.get('all_artists', [])
             scroll_position = state.get('scroll_position', 1.0)
 
-            if self.current_language in ['ru', 'en', 'digits']:
-                self._lang_index = ['ru', 'en', 'digits'].index(self.current_language)
-                if self.songs_menu:
-                    self.songs_menu.set_language(self.current_language)
+            if self.songs_menu:
+                self.songs_menu.set_language(self.current_language)
 
             if self.current_letter and self.songs_menu:
                 self.songs_menu.set_current_letter(self.current_letter)

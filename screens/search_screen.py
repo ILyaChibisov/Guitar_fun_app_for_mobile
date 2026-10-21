@@ -141,8 +141,13 @@ class SearchBar(MDCard):
         self.clear_wrapper.add_widget(self.clear_btn)
 
         self.search_btn = MDRaisedButton(
-            text="", size_hint=(None, 1), width=dp(70), text_color=[1, 1, 1, 1],
-            font_size=sp(13), elevation=0, pos_hint={'center_y': 0.5})
+            text="", size_hint=(None, None), size=(dp(64), dp(36)),
+            text_color=[1, 1, 1, 1], font_size=sp(13), elevation=0,
+            pos_hint={'center_y': 0.5})
+        try:
+            self.search_btn._radius = dp(10)
+        except Exception:
+            pass
         self.search_btn.bind(on_release=self._on_search_pressed)
 
         self.add_widget(self.search_field)
@@ -153,8 +158,8 @@ class SearchBar(MDCard):
         self.update_theme_colors()
 
     def update_language(self):
-        self.search_field.hint_text = get_text('search_placeholder', 'Поиск аккордов или песен...')
-        self.search_btn.text = get_text('find')
+        self.search_field.hint_text = get_text('search', 'Поиск')
+        self.search_btn.text = get_text('find', 'Найти')
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme

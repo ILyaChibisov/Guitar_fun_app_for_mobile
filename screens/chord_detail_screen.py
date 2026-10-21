@@ -109,11 +109,29 @@ class ChordsColors:
     @staticmethod
     def get_menu_bg(theme_id):
         if theme_id == 'light':
-            return [1, 1, 1, 0.9]
+            return [0.95, 0.95, 0.95, 1]
         elif theme_id == 'dark':
-            return [0.2, 0.2, 0.2, 1]
+            return [0.15, 0.15, 0.15, 1]
         else:
-            return [0, 0, 0, 0.08]
+            return [0, 0, 0, 0.15]
+
+    @staticmethod
+    def get_button_bg(theme_id):
+        if theme_id == 'light':
+            return [1, 1, 1, 1]
+        elif theme_id == 'dark':
+            return [0.25, 0.25, 0.25, 1]
+        else:
+            return [1, 1, 1, 0.15]
+
+    @staticmethod
+    def get_button_text(theme_id):
+        if theme_id == 'light':
+            return [0.15, 0.15, 0.15, 1]
+        elif theme_id == 'dark':
+            return [1, 1, 1, 0.9]
+        else:
+            return [1, 1, 1, 0.85]
 
     @staticmethod
     def get_hint_color(theme_id):
@@ -161,8 +179,9 @@ class SwipeContainer(MDBoxLayout):
         self.spacing = 0
 
         self.name_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None), height=dp(112),
-            padding=[dp(8), dp(8), dp(8), dp(20)], md_bg_color=[0, 0, 0, 0])
+            orientation='vertical', size_hint=(1, None), height=dp(100),
+            padding=[dp(8), dp(6), dp(8), dp(16)], spacing=dp(6),
+            md_bg_color=[0, 0, 0, 0])
 
         self.chord_name_card = MDCard(
             orientation='vertical', size_hint=(None, None), size=(dp(140), dp(52)),
@@ -216,7 +235,7 @@ class SwipeContainer(MDBoxLayout):
 
     def _build_griff_wrapper(self):
         return MDBoxLayout(orientation='vertical', size_hint=(1, 1),
-                            padding=[dp(8), dp(12), dp(8), dp(4)], md_bg_color=[0, 0, 0, 0])
+                            padding=[dp(8), dp(4), dp(8), dp(4)], md_bg_color=[0, 0, 0, 0])
 
     def add_slide(self, chord_module):
         slide = MDBoxLayout(orientation='vertical', size_hint=(1, 1), md_bg_color=[0, 0, 0, 0])
@@ -456,7 +475,7 @@ class BaseSelectorMenu(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(60)
+        self.height = 0
         self.radius = [dp(16)] * 4
         self.elevation = 0
         self.padding = [dp(4)] * 4
@@ -485,13 +504,18 @@ class BaseSelectorMenu(MDCard):
         self.md_bg_color = ChordsColors.get_menu_bg(theme_id)
         self.line_color = ChordsColors.get_card_line(theme_id)
         self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
+
+        idle_bg = ChordsColors.get_button_bg(theme_id)
+        idle_text = ChordsColors.get_button_text(theme_id)
+        accent = ChordsColors.get_accent(theme_id)
+
         for btn in self.buttons:
             if btn.text == self.current_selection:
-                btn.md_bg_color = ChordsColors.get_accent(theme_id)
+                btn.md_bg_color = accent
                 btn.text_color = [1, 1, 1, 1]
             else:
-                btn.md_bg_color = [0, 0, 0, 0]
-                btn.text_color = ChordsColors.get_text_secondary(theme_id)
+                btn.md_bg_color = idle_bg
+                btn.text_color = idle_text
 
     def _populate_items(self):
         pass
@@ -512,12 +536,16 @@ class BaseSelectorMenu(MDCard):
         self.is_visible = True
         self.opacity = 1
         self.disabled = False
+        self.height = dp(60)
         self._highlight_current()
+        if self.scroll:
+            Clock.schedule_once(lambda dt: setattr(self.scroll, 'scroll_x', 0), 0)
 
     def hide(self):
         self.is_visible = False
         self.opacity = 0
         self.disabled = True
+        self.height = 0
 
 
 class TonalitySelectorMenu(BaseSelectorMenu):
@@ -563,6 +591,51 @@ class TypeSelectorMenu(BaseSelectorMenu):
         self._highlight_current()
 
 
+class ChordSelectorMenu(BaseSelectorMenu):
+    def __init__(self, current_chord, on_confirm, on_cancel, chords=None, **kwargs):
+        self.current_chord = current_chord
+        self.chords = list(chords) if chords else []
+        super().__init__(on_confirm, on_cancel, **kwargs)
+
+    def _populate_items(self):
+        self.buttons = []
+        for chord_name in self.chords:
+            btn = MDRaisedButton(
+                text=chord_name, size_hint=(None, 1),
+                width=self._get_button_width(chord_name),
+                md_bg_color=[0, 0, 0, 0], font_size=sp(14), elevation=0,
+                on_release=lambda x, t=chord_name: self._on_item_press(t))
+            self.buttons.append(btn)
+            self.container.add_widget(btn)
+        self.current_selection = self.current_chord
+
+    def set_chords(self, chords, current_chord=None):
+        new_chords = list(chords) if chords else []
+
+        if new_chords == self.chords:
+            if current_chord is not None and current_chord != self.current_chord:
+                self.current_chord = current_chord
+                self.current_selection = current_chord
+                self._highlight_current()
+            return
+
+        self.chords = new_chords
+        if current_chord is not None:
+            self.current_chord = current_chord
+            self.current_selection = current_chord
+        self.container.clear_widgets()
+        self.buttons = []
+        self._populate_items()
+        self._highlight_current()
+
+    def set_current(self, chord_name):
+        if chord_name == self.current_chord:
+            return
+        self.current_chord = chord_name
+        self.current_selection = chord_name
+        self._highlight_current()
+
+
 # ============ ЕДИНОЕ МЕНЮ ============
 class UnifiedMenu(MDCard):
     def __init__(self, tonality_value, type_value, chord_value,
@@ -570,6 +643,9 @@ class UnifiedMenu(MDCard):
                  on_chord_press=None, on_variants_press=None, on_mode_toggle=None,
                  variants_count=1, current_mode="finger", chord_count=0, **kwargs):
         super().__init__(**kwargs)
+        # ✅ Сохраняем колбэк, чтобы update_chord мог его восстановить
+        self._on_chord_press_restore = on_chord_press
+
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(60)
@@ -621,14 +697,15 @@ class UnifiedMenu(MDCard):
                 child.md_bg_color = ChordsColors.get_card_line(theme_id)
 
     def update_chord(self, chord_count):
+        # ✅ Всегда восстанавливаем колбэк, если аккордов больше 1
         has_chords = chord_count > 1
         self.chord_item.is_active = has_chords
-        if not has_chords:
-            self.chord_item.on_press_callback = None
         if has_chords:
+            self.chord_item.on_press_callback = self._on_chord_press_restore
             self.chord_item.set_color([1.0, 0.7, 0.0, 1])
             self.chord_item.icon_btn.opacity = 1
         else:
+            self.chord_item.on_press_callback = None
             self.chord_item.set_color([1, 1, 1, 0.3])
             self.chord_item.icon_btn.opacity = 0.6
         self.chord_item.update_state()
@@ -687,6 +764,7 @@ class ChordDetailScreen(BaseScreen):
         self.bg_rect = None
         self.tonality_selector = None
         self.type_selector = None
+        self.chord_selector = None
         self._menu_cache_initialized = False
         self._griff_height = dp(280)
         self._update_griff_timer = None
@@ -696,6 +774,7 @@ class ChordDetailScreen(BaseScreen):
         self._current_main_name = ""
         self._current_alt_names = []
         self._current_all_names = []
+        self._pending_chord_list = None
 
         self.load_background()
         self.init_ui()
@@ -757,6 +836,8 @@ class ChordDetailScreen(BaseScreen):
             self.tonality_selector.update_theme_colors()
         if self.type_selector:
             self.type_selector.update_theme_colors()
+        if self.chord_selector:
+            self.chord_selector.update_theme_colors()
         if self._info_label:
             self._info_label.text_color = ChordsColors.get_hint_color(theme_id)
 
@@ -772,6 +853,7 @@ class ChordDetailScreen(BaseScreen):
             on_cancel=self._close_tonality_selector)
         self.tonality_selector.opacity = 0
         self.tonality_selector.disabled = True
+        self.tonality_selector.height = 0
         self._menu_container.add_widget(self.tonality_selector)
 
         self.type_selector = TypeSelectorMenu(
@@ -780,7 +862,18 @@ class ChordDetailScreen(BaseScreen):
             on_cancel=self._close_type_selector)
         self.type_selector.opacity = 0
         self.type_selector.disabled = True
+        self.type_selector.height = 0
         self._menu_container.add_widget(self.type_selector)
+
+        self.chord_selector = ChordSelectorMenu(
+            current_chord=self.current_chord_name,
+            on_confirm=self._on_chord_confirmed,
+            on_cancel=self._close_chord_selector,
+            chords=self.available_chords)
+        self.chord_selector.opacity = 0
+        self.chord_selector.disabled = True
+        self.chord_selector.height = 0
+        self._menu_container.add_widget(self.chord_selector)
 
         self._menu_cache_initialized = True
 
@@ -884,7 +977,7 @@ class ChordDetailScreen(BaseScreen):
         padding = layout_config.get_content_padding()
         horizontal_padding = [padding[0], 0, padding[2], 0]
         content = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
-        content.add_widget(Widget(size_hint_y=None, height=dp(16)))
+        content.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         self.swipe_container = SwipeContainer(on_swipe_horizontal=self._on_swipe_horizontal)
         self.swipe_container.size_hint = (1, None)
@@ -892,7 +985,7 @@ class ChordDetailScreen(BaseScreen):
         content.add_widget(self.swipe_container)
 
         Window.bind(on_resize=self._on_window_resize)
-        content.add_widget(Widget(size_hint_y=None, height=dp(4)))
+        content.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         menu_wrapper = MDBoxLayout(orientation='vertical', size_hint=(1, None),
                                     height=dp(60), padding=horizontal_padding)
@@ -907,7 +1000,7 @@ class ChordDetailScreen(BaseScreen):
             chord_value=self.current_chord_name,
             on_tonality_press=self._open_tonality_selector,
             on_type_press=self._open_type_selector,
-            on_chord_press=None,
+            on_chord_press=self._open_chord_selector,
             on_variants_press=self._next_variant,
             on_mode_toggle=self._toggle_mode,
             variants_count=len(self.current_variants),
@@ -930,7 +1023,6 @@ class ChordDetailScreen(BaseScreen):
         Clock.schedule_once(self._update_griff_size, 0.1)
         Clock.schedule_once(self._update_griff_size, 0.3)
         Clock.schedule_once(self._update_griff_size, 0.5)
-
         Clock.schedule_once(lambda dt: self.update_theme_colors(), 0.2)
 
     def _on_swipe_horizontal(self, step):
@@ -945,7 +1037,7 @@ class ChordDetailScreen(BaseScreen):
 
     def _show_description(self):
         if settings_manager.language != 'ru':
-            self._info_label.text = self._current_main_name or ""
+            self._info_label.text = ""
             return
         if not self.current_variants:
             self._info_label.text = ""
@@ -987,9 +1079,42 @@ class ChordDetailScreen(BaseScreen):
         self._hint_timer = None
         self._show_description()
 
+    def _show_selector(self, selector):
+        if self.unified_menu:
+            self.unified_menu.opacity = 0
+            self.unified_menu.disabled = True
+            self.unified_menu.height = 0
+        for sel in (self.tonality_selector, self.type_selector, self.chord_selector):
+            if sel is None or sel is selector:
+                continue
+            sel.opacity = 0
+            sel.disabled = True
+            sel.is_visible = False
+            sel.height = 0
+        if selector is not None:
+            selector.opacity = 1
+            selector.disabled = False
+            selector.is_visible = True
+            selector.height = dp(60)
+            if hasattr(selector, 'scroll') and selector.scroll:
+                Clock.schedule_once(lambda dt: setattr(selector.scroll, 'scroll_x', 0), 0)
+
+    def _restore_unified(self):
+        for sel in (self.tonality_selector, self.type_selector, self.chord_selector):
+            if sel is not None:
+                sel.opacity = 0
+                sel.disabled = True
+                sel.is_visible = False
+                sel.height = 0
+        if self.unified_menu:
+            self.unified_menu.opacity = 1
+            self.unified_menu.disabled = False
+            self.unified_menu.height = dp(60)
+        self._restore_description()
+
     def _open_tonality_selector(self):
         if self.tonality_selector and self.tonality_selector.is_visible:
-            self._close_tonality_selector()
+            self._restore_unified()
             return
         if not self.tonality_selector:
             self.tonality_selector = TonalitySelectorMenu(
@@ -998,12 +1123,10 @@ class ChordDetailScreen(BaseScreen):
                 on_cancel=self._close_tonality_selector)
             self.tonality_selector.opacity = 0
             self.tonality_selector.disabled = True
+            self.tonality_selector.height = 0
             self._menu_container.add_widget(self.tonality_selector)
         self.tonality_selector.set_current(self.current_tonality)
-        if self.unified_menu and self.unified_menu.parent:
-            self._menu_container.remove_widget(self.unified_menu)
-        self.tonality_selector.show()
-        self._menu_container.add_widget(self.tonality_selector)
+        self._show_selector(self.tonality_selector)
         self._show_hint(get_text('choose_tonality'))
 
     def _on_tonality_confirmed(self, selected_tonality):
@@ -1016,20 +1139,14 @@ class ChordDetailScreen(BaseScreen):
         self.current_variant_index = 0
         self.current_position = 1
         self.update_available_chords()
-        self._close_tonality_selector()
+        self._restore_unified()
 
     def _close_tonality_selector(self):
-        if self.tonality_selector:
-            self.tonality_selector.hide()
-            if self.tonality_selector.parent:
-                self._menu_container.remove_widget(self.tonality_selector)
-        if self.unified_menu and not self.unified_menu.parent:
-            self._menu_container.add_widget(self.unified_menu)
-        self._restore_description()
+        self._restore_unified()
 
     def _open_type_selector(self):
         if self.type_selector and self.type_selector.is_visible:
-            self._close_type_selector()
+            self._restore_unified()
             return
         if not self.type_selector:
             self.type_selector = TypeSelectorMenu(
@@ -1038,12 +1155,10 @@ class ChordDetailScreen(BaseScreen):
                 on_cancel=self._close_type_selector)
             self.type_selector.opacity = 0
             self.type_selector.disabled = True
+            self.type_selector.height = 0
             self._menu_container.add_widget(self.type_selector)
         self.type_selector.set_current(self.current_type)
-        if self.unified_menu and self.unified_menu.parent:
-            self._menu_container.remove_widget(self.unified_menu)
-        self.type_selector.show()
-        self._menu_container.add_widget(self.type_selector)
+        self._show_selector(self.type_selector)
         self._show_hint(get_text('choose_type'))
 
     def _on_type_confirmed(self, selected_type):
@@ -1056,16 +1171,42 @@ class ChordDetailScreen(BaseScreen):
         self.current_variant_index = 0
         self.current_position = 1
         self.update_available_chords()
-        self._close_type_selector()
+        self._restore_unified()
 
     def _close_type_selector(self):
-        if self.type_selector:
-            self.type_selector.hide()
-            if self.type_selector.parent:
-                self._menu_container.remove_widget(self.type_selector)
-        if self.unified_menu and not self.unified_menu.parent:
-            self._menu_container.add_widget(self.unified_menu)
-        self._restore_description()
+        self._restore_unified()
+
+    def _open_chord_selector(self):
+        if self.chord_selector and self.chord_selector.is_visible:
+            self._restore_unified()
+            return
+        if not self.available_chords and not self._pending_chord_list:
+            self._show_temporary_hint(get_text('no_chords'), 1.0)
+            return
+
+        if self.chord_selector is not None:
+            target_list = self._pending_chord_list if self._pending_chord_list is not None else self.available_chords
+            self.chord_selector.set_chords(target_list, current_chord=self.current_chord_name)
+            self._pending_chord_list = None
+
+        self.chord_selector.set_current(self.current_chord_name)
+        self._show_selector(self.chord_selector)
+        self._show_hint(get_text('choose_chord'))
+
+    def _on_chord_confirmed(self, selected_chord):
+        if not selected_chord or selected_chord == self.current_chord_name:
+            self._restore_unified()
+            return
+        self.current_chord_name = selected_chord
+        if selected_chord in self.available_chords:
+            self.current_chord_index = self.available_chords.index(selected_chord)
+        self._load_variants_for_chord(self.current_chord_name)
+        if self.unified_menu:
+            self.unified_menu.update_chord(len(self.available_chords))
+        self._restore_unified()
+
+    def _close_chord_selector(self):
+        self._restore_unified()
 
     def _toggle_mode(self):
         if self.current_mode == "finger":
@@ -1161,6 +1302,7 @@ class ChordDetailScreen(BaseScreen):
             self.available_chords = sorted(chords_by_name.keys())
             if self.unified_menu:
                 self.unified_menu.update_chord(len(self.available_chords))
+            self._pending_chord_list = list(self.available_chords)
             if self.available_chords:
                 if self.current_chord_name not in self.available_chords:
                     self.current_chord_index = 0
@@ -1181,6 +1323,7 @@ class ChordDetailScreen(BaseScreen):
             self.available_chords = list(chords or [])
             if self.unified_menu:
                 self.unified_menu.update_chord(len(self.available_chords))
+            self._pending_chord_list = list(self.available_chords)
             if not self.available_chords:
                 self._show_temporary_hint(f"{self.current_tonality}/{self.current_type}: {get_text('no_chords')}", 2.0)
                 self.current_variants = []
@@ -1196,6 +1339,7 @@ class ChordDetailScreen(BaseScreen):
             if my_id != self._request_id:
                 return
             self.available_chords = []
+            self._pending_chord_list = []
             if self.unified_menu:
                 self.unified_menu.update_chord(0)
             self._show_temporary_hint(get_text('loading_error'), 2.0)
@@ -1369,6 +1513,7 @@ class ChordDetailScreen(BaseScreen):
                 self.available_chords.sort()
             if self.unified_menu:
                 self.unified_menu.update_chord(len(self.available_chords))
+            self._pending_chord_list = list(self.available_chords)
             self.current_chord_name = target_name
             self.current_chord_index = self.available_chords.index(target_name)
             self._load_variants_for_chord(target_name)
@@ -1379,6 +1524,7 @@ class ChordDetailScreen(BaseScreen):
             self.current_chord_index = 0
             if self.unified_menu:
                 self.unified_menu.update_chord(1)
+            self._pending_chord_list = [target_name]
             self._load_variants_for_chord(target_name)
 
         self._chords_client.get_available_chords(
@@ -1410,7 +1556,7 @@ class ChordDetailScreen(BaseScreen):
     def _on_window_resize(self, window, width, height):
         if self._update_griff_timer:
             Clock.unschedule(self._update_griff_timer)
-        self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.1)
+        self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.15)
 
     def go_back(self, instance=None):
         screen_state.clear_pending_chord()
@@ -1436,10 +1582,12 @@ class ChordDetailScreen(BaseScreen):
             app.top_nav.back_btn.on_release = self.go_back
         self._close_tonality_selector()
         self._close_type_selector()
+        self._close_chord_selector()
 
     def on_leave(self):
         self._close_tonality_selector()
         self._close_type_selector()
+        self._close_chord_selector()
         if self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
@@ -1447,4 +1595,6 @@ class ChordDetailScreen(BaseScreen):
             self.swipe_container._stop_alt_cycle()
 
     def on_size(self, *args):
-        Clock.schedule_once(self._update_griff_size, 0.05)
+        if self._update_griff_timer:
+            Clock.unschedule(self._update_griff_timer)
+        self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.15)
