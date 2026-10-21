@@ -280,6 +280,10 @@ class HomeScreen(BaseScreen):
         for card in self._cards.values():
             card.update_theme(current_theme)
 
+    def update_theme_colors(self):
+        """Вызывается из app.apply_theme. Делегируем в существующий _apply_current_theme."""
+        self._apply_current_theme(0)
+
     def update_language(self):
         """Обновляет тексты на карточках при смене языка"""
         logger.info("🌐 Обновление языка на HomeScreen")

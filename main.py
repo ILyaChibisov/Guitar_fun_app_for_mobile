@@ -249,43 +249,52 @@ class RootWidget(MDFloatLayout):
             self.bg_image.size = self.size
 
     def load_background(self):
+        if not HAS_ASSETS:
+            return
+        # Не дублируем, если уже загружено
+        if getattr(self, 'bg_image', None) is not None:
+            return
         try:
-            if HAS_ASSETS:
-                asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
-                bg_data = None
-                for name in asset_names:
-                    bg_data = load_asset_as_bytes(name)
-                    if bg_data:
-                        logger.info(f"Фон загружен из ассета: {name}")
-                        break
+            asset_names = ["background_jpg", "background", "bg", "BACKGROUND_JPG"]
+            bg_data = None
+            for name in asset_names:
+                bg_data = load_asset_as_bytes(name)
                 if bg_data:
-                    img = CoreImage(BytesIO(bg_data), ext="jpg")
-                    with self.canvas.before:
-                        self.img_color = Color(1, 1, 1, 1)
-                        self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
-                    self.bind(pos=self._update_rect, size=self._update_rect)
-                    return
+                    logger.info(f"Фон загружен из ассета: {name}")
+                    break
+            if bg_data:
+                img = CoreImage(BytesIO(bg_data), ext="jpg")
+                with self.canvas.before:
+                    self.img_color = Color(1, 1, 1, 1)
+                    self.bg_image = Rectangle(texture=img.texture, pos=self.pos, size=self.size)
+                self._update_rect()
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
 
     def apply_theme(self, theme_id):
         logger.info(f"🖼️ Применение фона для темы: {theme_id}")
 
-        if hasattr(self, 'img_color') and self.img_color:
-            self.canvas.before.remove(self.img_color)
-            self.img_color = None
-        if hasattr(self, 'bg_image') and self.bg_image:
-            self.canvas.before.remove(self.bg_image)
-            self.bg_image = None
+        # Полностью очищаем canvas.before — убираем накопленные инструкции
+        self.canvas.before.clear()
+        self.bg_image = None
+        self.img_color = None
 
         if theme_id == "dark":
-            self.bg_color.rgba = (0.07, 0.07, 0.07, 1)  # #121212
+            with self.canvas.before:
+                self.bg_color = Color(0.07, 0.07, 0.07, 1)
+                self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+            self._update_rect()
         elif theme_id == "light":
-            self.bg_color.rgba = (0.969, 0.976, 0.969, 1)
-        else:
-            self.bg_color.rgba = (0, 0, 0, 0)
-            if not hasattr(self, 'bg_image') or self.bg_image is None:
-                self.load_background()
+            with self.canvas.before:
+                self.bg_color = Color(0.969, 0.976, 0.969, 1)
+                self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+            self._update_rect()
+        else:  # green
+            with self.canvas.before:
+                self.bg_color = Color(0, 0, 0, 0)
+                self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+            self._update_rect()
+            self.load_background()
 
 
 class GuitarFunsApp(MDApp):
@@ -317,36 +326,58 @@ class GuitarFunsApp(MDApp):
     # ============ ПРИМЕНЕНИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ============
 
     def apply_theme(self, theme_id):
-        """Глобально применяет тему"""
+        """Глобально применяет тему. KivyMD theme_cls в рантайме НЕ трогаем (это фризит)."""
         logger.info(f"🎨 Глобальное применение темы: {theme_id}")
 
-        if theme_id == "dark":
-            self.theme_cls.theme_style = "Dark"
-        else:
-            self.theme_cls.theme_style = "Light"
-
-        if theme_id == "green":
-            self.theme_cls.primary_palette = "Teal"
-        elif theme_id == "light":
-            self.theme_cls.primary_palette = "Gray"
+        # ❌ НЕ меняем self.theme_cls.theme_style / primary_palette —
+        # это триггерит KivyMD пересобирать canvas всех виджетов (3-4 сек фриза).
+        # Тему применяем вручную через update_theme_colors на каждом экране/компоненте.
 
         if hasattr(self, 'root') and self.root:
             self.root.apply_theme(theme_id)
 
-        if hasattr(self, 'top_nav') and self.top_nav:
-            self.top_nav.update_theme_colors()
-        if hasattr(self, 'bottom_nav') and self.bottom_nav:
-            self.bottom_nav.update_theme_colors()
+        def _refresh_nav():
+            if hasattr(self, 'top_nav') and self.top_nav:
+                try:
+                    self.top_nav.update_theme_colors()
+                except Exception as e:
+                    logger.debug(f"TopNav theme update failed: {e}")
+            if hasattr(self, 'bottom_nav') and self.bottom_nav:
+                try:
+                    self.bottom_nav.update_theme_colors()
+                except Exception as e:
+                    logger.debug(f"BottomNav theme update failed: {e}")
 
-        # Обновляем все экраны
-        if hasattr(self, 'screen_manager') and self.screen_manager:
-            for screen_name in self.screen_manager.screen_names:
-                screen = self.screen_manager.get_screen(screen_name)
-                if hasattr(screen, 'update_theme_colors'):
-                    try:
-                        screen.update_theme_colors()
-                    except Exception as e:
-                        logger.debug(f"Не удалось обновить тему на экране {screen_name}: {e}")
+        Clock.schedule_once(lambda dt: _refresh_nav(), 0)
+
+        if not hasattr(self, 'screen_manager') or not self.screen_manager:
+            return
+
+        sm = self.screen_manager
+        current = sm.current_screen if hasattr(sm, 'current_screen') else None
+
+        if current and hasattr(current, 'update_theme_colors'):
+            try:
+                current.update_theme_colors()
+            except Exception as e:
+                logger.debug(f"Не удалось обновить тему на экране {getattr(current, 'name', '?')}: {e}")
+
+        current_name = getattr(current, 'name', None)
+        others = [n for n in sm.screen_names if n != current_name]
+
+        def _update_next(names, idx=0):
+            if idx >= len(names):
+                return
+            name = names[idx]
+            try:
+                scr = sm.get_screen(name)
+                if hasattr(scr, 'update_theme_colors'):
+                    scr.update_theme_colors()
+            except Exception as e:
+                logger.debug(f"Не удалось обновить тему на экране {name}: {e}")
+            Clock.schedule_once(lambda dt: _update_next(names, idx + 1), 0)
+
+        Clock.schedule_once(lambda dt: _update_next(others), 0)
 
     def apply_language(self, lang_code):
         """Глобально применяет язык"""
