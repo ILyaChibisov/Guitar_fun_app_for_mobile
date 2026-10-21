@@ -115,13 +115,32 @@ class ChordsColors:
 
     @staticmethod
     def get_menu_bg(theme_id):
-        # ✅ Непрозрачные фоны — чтобы кнопки-квадратики были чёткими и читались
+        # ✅ Возвращаем полупрозрачный фон для зелёной темы
         if theme_id == 'light':
-            return [1, 1, 1, 1]              # чистый белый
+            return [0.95, 0.95, 0.95, 1]       # светлый (без изменений)
         elif theme_id == 'dark':
-            return [0.15, 0.15, 0.15, 1]     # плотный тёмный
-        else:
-            return [0.10, 0.30, 0.20, 1]     # тёмно-зелёный в тон фона green
+            return [0.15, 0.15, 0.15, 1]        # тёмный (без изменений)
+        else:  # green
+            return [0, 0, 0, 0.15]              # прозрачный с лёгким затемнением
+
+    @staticmethod
+    def get_button_bg(theme_id):
+        # ✅ Возвращаем полупрозрачный светлый фон для кнопок в зелёной теме
+        if theme_id == 'light':
+            return [1, 1, 1, 1]                # белый (без изменений)
+        elif theme_id == 'dark':
+            return [0.25, 0.25, 0.25, 1]       # серый (без изменений)
+        else:  # green
+            return [1, 1, 1, 0.15]             # полупрозрачный белый
+
+    @staticmethod
+    def get_button_text(theme_id):
+        if theme_id == 'light':
+            return [0.15, 0.15, 0.15, 1]       # тёмный (без изменений)
+        elif theme_id == 'dark':
+            return [1, 1, 1, 0.9]              # белый (без изменений)
+        else:  # green
+            return [1, 1, 1, 0.85]             # белый текст
 
     @staticmethod
     def get_hint_color(theme_id):
@@ -159,7 +178,6 @@ class SwipeContainer(MDBoxLayout):
         self.md_bg_color = [0, 0, 0, 0]
         self.spacing = 0
 
-        # ✅ ПРАВКА 2: уменьшил высоту контейнера имени и поправил отступы
         self.name_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, None), height=dp(100),
             padding=[dp(8), dp(6), dp(8), dp(16)], spacing=dp(6),
@@ -426,7 +444,6 @@ class SearchBar(MDCard):
         )
         self.clear_wrapper.add_widget(self.clear_btn)
 
-        # ✅ ПРАВКА 4: кнопка "Найти" уменьшена и скруглена (без radius в конструкторе)
         self.search_btn = MDRaisedButton(
             text="", size_hint=(None, None), size=(dp(64), dp(36)),
             text_color=[1, 1, 1, 1], font_size=sp(13), elevation=0,
@@ -588,7 +605,7 @@ class BaseSelectorMenu(MDCard):
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = 0          # скрыт по умолчанию, не занимает места
+        self.height = 0
         self.radius = [dp(16)]
         self.elevation = 0
         self.padding = [dp(4), dp(4), dp(4), dp(4)]
@@ -621,21 +638,14 @@ class BaseSelectorMenu(MDCard):
         self.line_color = ChordsColors.get_card_line(theme_id)
         self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
 
-        # ✅ Контрастные невыделенные кнопки под каждую тему
-        if theme_id == 'light':
-            idle_bg = [0, 0, 0, 0.06]
-            idle_text = [0.15, 0.15, 0.15, 1]
-        elif theme_id == 'dark':
-            idle_bg = [1, 1, 1, 0.10]
-            idle_text = [1, 1, 1, 0.85]
-        else:  # green
-            idle_bg = [1, 1, 1, 0.10]
-            idle_text = [1, 1, 1, 0.85]
+        idle_bg = ChordsColors.get_button_bg(theme_id)
+        idle_text = ChordsColors.get_button_text(theme_id)
+        accent = ChordsColors.get_accent(theme_id)
 
         for btn in self.buttons:
             is_selected = (btn.text == self.current_selection)
             if is_selected:
-                btn.md_bg_color = ChordsColors.get_accent(theme_id)
+                btn.md_bg_color = accent
                 btn.text_color = [1, 1, 1, 1]
             else:
                 btn.md_bg_color = idle_bg
@@ -732,7 +742,6 @@ class ChordSelectorMenu(BaseSelectorMenu):
     def set_chords(self, chords, current_chord=None):
         new_chords = list(chords) if chords else []
 
-        # Если список и выделение не изменились — только подсветка (дёшево)
         if new_chords == self.chords:
             if current_chord is not None and current_chord != self.current_chord:
                 self.current_chord = current_chord
@@ -1089,10 +1098,9 @@ class ChordsScreen(BaseScreen):
 
         content = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
 
-        # ✅ ПРАВКА 1: контейнер поиска как в songs_screen — height 52 и боковые отступы
+        # ✅ Поиск на всю ширину (без боковых padding), высота 52
         search_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None), height=dp(52),
-            padding=[horizontal_padding[0], 0, horizontal_padding[2], 0]
+            orientation='vertical', size_hint=(1, None), height=dp(52)
         )
         self.search_bar = SearchBar(on_search=self.do_search, on_clear=self.clear_search)
         search_container.add_widget(self.search_bar)
@@ -1114,7 +1122,6 @@ class ChordsScreen(BaseScreen):
 
         Window.bind(on_resize=self._on_window_resize)
 
-        # ✅ ПРАВКА 1: уменьшил отступ между грифом и меню
         content.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         menu_wrapper = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60),
@@ -1190,13 +1197,7 @@ class ChordsScreen(BaseScreen):
         self._update_display()
         self._show_temporary_hint(f"{get_text('variant', 'Вариант')} {self.current_position}/{total}", 1.0)
 
-    # ============================================================
-    # ВИДИМОСТЬ СЕЛЕКТОРОВ (height=0 у скрытых, без перестройки layout)
-    # ============================================================
-
     def _show_selector(self, selector):
-        """Показывает селектор, скрывая unified_menu и остальные селекторы.
-        Скрытые виджеты убираем из раскладки через height=0."""
         if self.unified_menu:
             self.unified_menu.opacity = 0
             self.unified_menu.disabled = True
@@ -1215,7 +1216,6 @@ class ChordsScreen(BaseScreen):
             selector.height = dp(60)
 
     def _restore_unified(self):
-        """Возвращает unified_menu, скрывая все селекторы (height=0)."""
         for sel in (self.tonality_selector, self.type_selector, self.chord_selector):
             if sel is not None:
                 sel.opacity = 0
@@ -1236,7 +1236,6 @@ class ChordsScreen(BaseScreen):
             self._show_temporary_hint(get_text('no_chords', "Нет доступных аккордов"), 1.0)
             return
 
-        # Ленивая перестройка списка, если он изменился
         if self.chord_selector is not None:
             target_list = self._pending_chord_list if self._pending_chord_list is not None else self.available_chords
             self.chord_selector.set_chords(target_list, current_chord=self.current_chord_name)
@@ -1262,7 +1261,6 @@ class ChordsScreen(BaseScreen):
         self._restore_unified()
 
     def _show_description(self):
-        # ✅ ПРАВКА 3: для не-русских языков описание не показываем вообще
         if settings_manager.language != 'ru':
             self._info_label.text = ""
             return
@@ -1583,7 +1581,6 @@ class ChordsScreen(BaseScreen):
                 chords_by_name[chord['short_name']].append(chord)
             self.available_chords = sorted(chords_by_name.keys())
             if self.unified_menu: self.unified_menu.update_chord(len(self.available_chords))
-            # Ленивая перестройка селектора — не дёргаем set_chords синхронно
             self._pending_chord_list = list(self.available_chords)
             if self.available_chords:
                 if self.current_chord_name not in self.available_chords:
