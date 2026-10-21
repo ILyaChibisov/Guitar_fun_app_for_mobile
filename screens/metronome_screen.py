@@ -464,7 +464,7 @@ class VerticalSlider(MDBoxLayout):
         self.width = dp(80)
         self.height = dp(300)
         self.spacing = dp(2)
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.padding = [dp(2), dp(10), dp(2), dp(6)]
 
         slider_container = BoxLayout(
             orientation='vertical', size_hint=(1, 1),
@@ -478,10 +478,11 @@ class VerticalSlider(MDBoxLayout):
             theme_text_color="Custom", bold=True
         )
 
+        # ✅ Дорожка слайдера — 48 dp (широкая, удобно нажимать пальцем)
         self.slider = MDSlider(
             min=min_value - 0.01, max=max_value + 0.01,
             value=initial, step=step, size_hint=(None, 1),
-            width=dp(40),
+            width=dp(48),
             orientation='vertical',
             pos_hint={'center_x': 0.5}, hint=False
         )
@@ -521,9 +522,11 @@ class VerticalSlider(MDBoxLayout):
         self.slider.thumb_color_inactive = accent
         self.slider.track_color_active = accent[:3] + [0.6]
         self.slider.track_color_inactive = MetronomeColors.get_slider_track_inactive(theme_id)
+
+        # ✅ Крупный thumb — 52 dp (чуть больше дорожки, удобно хватать)
         try:
-            self.slider.cursor_size = (dp(36), dp(36))
-            self.slider.hint_width = dp(36)
+            self.slider.cursor_size = (dp(52), dp(52))
+            self.slider.hint_width = dp(52)
         except Exception:
             pass
 
