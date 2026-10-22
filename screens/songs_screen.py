@@ -1,8 +1,10 @@
 # screens/songs_screen.py
 """
-Экран песен - с единым меню (АЛФАВИТ) и поиском.
+Экран песен - с алфавитом, поиском и пагинацией с батчевым кешированием.
+Кеш: {letter: {'items': {abs_index: artist}, 'total': N, 'batches': set}}
+Батч = 200, страница = 50. Тап на любую страницу → грузится РОВНО один батч.
+Пагинация: ≤ 6 кнопок → по центру (AnchorLayout), ≥ 7 → скролл.
 Поддерживает 3 темы (green, light, dark) и 6 языков.
-Сохранение состояния и позиции скролла.
 """
 import time
 import re
@@ -48,41 +50,18 @@ logger = screen_logger('Songs')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
 
 # ============================================================
-# ПРОВЕРКА СИМВОЛА
-# ============================================================
-
-def is_letter_or_digit(char):
-    """True, если символ — буква или цифра. False для # ! ( ) - & эмодзи и т.п."""
-    if not char:
-        return False
-    if char.isdigit():
-        return True
-    # Буква (включая кириллицу, латиницу, любые Unicode-буквы)
-    if char.isalpha():
-        return True
-    return False
-
-
-def is_non_letter_char(char):
-    """
-    True для '#' — если символ не буква (цифры, спецсимволы, эмодзи, знаки).
-    То есть '#'-категория — это всё, что НЕ буква.
-    """
-    if not char:
-        return False
-    return not char.isalpha()
-
-
-# ============================================================
-# ЦВЕТА ДЛЯ ПЕСЕН
+# ЦВЕТА
 # ============================================================
 
 class SongsColors:
@@ -116,6 +95,7 @@ class SongsColors:
         elif theme_id == 'dark':
             return [1, 1, 1, 0.1]
         else:
+            # Возвращаем ту самую легкую прозрачность (затемнение)
             return [0, 0, 0, 0.08]
 
     @staticmethod
@@ -125,7 +105,8 @@ class SongsColors:
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 0.5]
         else:
-            return [1, 1, 1, 0.15]
+            # В зелёной теме цвет обводки как у кнопки "Найти"
+            return [0.10, 0.42, 0.25, 1.0]
 
     @staticmethod
     def get_hint_color(theme_id):
@@ -180,8 +161,7 @@ def load_shared_icons_sync():
 # ============ ПОИСКОВАЯ СТРОКА ============
 
 class SearchBar(MDCard):
-    def __init__(self, on_search=None, on_clear=None,
-                 hint_text=None, button_text=None, **kwargs):
+    def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
         self.on_clear = on_clear
@@ -190,7 +170,7 @@ class SearchBar(MDCard):
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(48)
-        self.radius = [dp(16)]
+        self.radius = [dp(16)] * 4
         self.elevation = 0
         self.padding = [dp(12), dp(4), dp(6), dp(4)]
         self.spacing = dp(6)
@@ -204,24 +184,31 @@ class SearchBar(MDCard):
         self.search_field.bind(focus=self._on_focus)
 
         self.clear_wrapper = MDCard(
-            size_hint=(None, None), size=(dp(30), dp(30)), radius=[dp(15)],
+            size_hint=(None, None), size=(dp(30), dp(30)), radius=[dp(15)] * 4,
             md_bg_color=[0, 0, 0, 0], elevation=0, pos_hint={'center_y': 0.5},
             opacity=0, disabled=True,
         )
 
         self.clear_btn = MDIconButton(
             icon="close-circle-outline", size_hint=(1, 1), theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0], on_release=self._on_clear_pressed
+            md_bg_color=[0, 0, 0, 0], on_release=self._on_clear_pressed, ripple_scale=0
         )
         self.clear_wrapper.add_widget(self.clear_btn)
 
+        # Кнопка "Найти" - без теней, без серого круга
         self.search_btn = MDRaisedButton(
-            text="", size_hint=(None, None), size=(dp(64), dp(36)),
-            text_color=[1, 1, 1, 1], font_size=sp(13), elevation=0,
-            pos_hint={'center_y': 0.5}
+            text="",
+            size_hint=(None, None),
+            size=(dp(64), dp(36)),
+            text_color=[1, 1, 1, 1],
+            font_size=sp(13),
+            elevation=0,
+            pos_hint={'center_y': 0.5},
         )
         try:
             self.search_btn._radius = dp(10)
+            self.search_btn.ripple_scale = 0
+            self.search_btn.elevation = 0
         except Exception:
             pass
         self.search_btn.bind(on_release=self._on_search_pressed)
@@ -263,9 +250,10 @@ class SearchBar(MDCard):
             self.clear_btn.icon_color = accent
             self.search_btn.md_bg_color = accent
         else:
+            # Зелёная тема — обводка цвета кнопки "Найти", фон белый
             self.md_bg_color = [1, 1, 1, 1]
-            self.line_color = [0.08, 0.35, 0.20, 1]
-            self.line_width = 1.4
+            self.line_color = [0.10, 0.42, 0.25, 1]
+            self.line_width = 1.5
             self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
             self.search_field.hint_text_color = [0.55, 0.55, 0.55, 1]
             self.search_field.cursor_color = [0.1, 0.1, 0.1, 1]
@@ -297,8 +285,7 @@ class SearchBar(MDCard):
         self.search_field.focus = False
 
     def _on_focus(self, instance, value):
-        theme_id = settings_manager.theme
-        base_width = 1.5 if theme_id in ('dark', 'light') else 1.4
+        base_width = 1.5
         self.line_width = base_width + 0.3 if value else base_width
 
     def set_text(self, text):
@@ -367,17 +354,20 @@ class LetterButton(MDBoxLayout):
     def _update_style(self):
         theme_id = settings_manager.theme
         if self.is_selected:
-            self.md_bg_color = SongsColors.get_accent(theme_id)
+            if theme_id == 'green':
+                self.md_bg_color = [0.10, 0.42, 0.25, 1]  # Цвет кнопки найти
+            else:
+                self.md_bg_color = SongsColors.get_accent(theme_id)
             self.label.text_color = [1, 1, 1, 1]
             self.radius = [dp(8)]
         else:
+            # В обычном состоянии фон кнопки буквы прозрачный
             self.md_bg_color = [0, 0, 0, 0]
             self.label.text_color = SongsColors.get_text_secondary(theme_id)
             self.radius = [0]
 
 
 class FlagLabel(MDBoxLayout):
-    """Некликабельная иконка-флаг перед группой букв."""
     def __init__(self, flag_type='ru', **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, 1)
@@ -393,31 +383,19 @@ class FlagLabel(MDBoxLayout):
         elif flag_type == 'en':
             texture = _shared_eng_flag_texture
 
-        # AnchorLayout с центрированием по X и Y
-        container = AnchorLayout(
-            anchor_x='center',
-            anchor_y='center',
-            size_hint=(1, 1)
-        )
+        container = AnchorLayout(anchor_x='center', anchor_y='center', size_hint=(1, 1))
 
         if texture:
             img = Image(
-                texture=texture,
-                size_hint=(None, None),
-                size=(dp(22), dp(22)),
-                allow_stretch=True,
-                keep_ratio=True
+                texture=texture, size_hint=(None, None),
+                size=(dp(22), dp(22)), allow_stretch=True, keep_ratio=True
             )
             container.add_widget(img)
         else:
             lbl = MDLabel(
                 text="RU" if flag_type == 'ru' else "EN",
-                font_size=sp(10),
-                halign="center",
-                valign="middle",
-                theme_text_color="Custom",
-                text_color=[1, 1, 1, 0.6],
-                bold=True
+                font_size=sp(10), halign="center", valign="middle",
+                theme_text_color="Custom", text_color=[1, 1, 1, 0.6], bold=True
             )
             container.add_widget(lbl)
 
@@ -449,12 +427,12 @@ class AlphabetMenu(MDBoxLayout):
         self.left_arrow = MDIconButton(
             icon="chevron-left", size_hint=(None, 1), width=dp(28),
             theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.scroll(-1)
+            on_release=lambda x: self.scroll(-1), ripple_scale=0
         )
         self.right_arrow = MDIconButton(
             icon="chevron-right", size_hint=(None, 1), width=dp(28),
             theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.scroll(1)
+            on_release=lambda x: self.scroll(1), ripple_scale=0
         )
 
         self.add_widget(self.left_arrow)
@@ -556,7 +534,7 @@ class SongsMenu(MDCard):
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(56)
-        self.radius = [dp(16)]
+        self.radius = [dp(16)] * 4
         self.elevation = 0
         self.padding = [dp(4)] * 4
         self.spacing = dp(0)
@@ -571,9 +549,17 @@ class SongsMenu(MDCard):
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
+        # Возвращаем стандартный фон меню (с лёгким затемнением)
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
-        self.line_color = SongsColors.get_card_line(theme_id)
-        self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
+
+        # Обводка цвета кнопки "Найти" для зелёной темы
+        if theme_id == 'green':
+            self.line_color = [0.10, 0.42, 0.25, 1]
+            self.line_width = 1.5
+        else:
+            self.line_color = SongsColors.get_card_line(theme_id)
+            self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
+
         if self.alphabet_menu:
             self.alphabet_menu.update_theme_colors()
 
@@ -582,6 +568,307 @@ class SongsMenu(MDCard):
 
     def set_current_letter(self, letter):
         self.alphabet_menu.set_current(letter)
+
+
+# ============ ПАГИНАЦИЯ ============
+
+class PageButton(ButtonBehavior, MDBoxLayout):
+    """Кнопка страницы — цифра, без ripple. bold всегда True — ширина стабильна."""
+
+    def __init__(self, text, index, on_click=None, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint = (None, 1)
+        self.width = dp(48)
+        self.padding = [dp(2)] * 4
+        self.spacing = 0
+        self.md_bg_color = [0, 0, 0, 0]
+        self.is_selected = False
+        self.is_hover = False
+        self.page_index = index
+        self.on_click_callback = on_click
+
+        self.label = MDLabel(
+            text=text,
+            font_size=sp(14),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.7],
+            bold=True,
+            size_hint=(None, 1),
+            width=dp(44),
+            pos_hint={'center_x': 0.5},
+        )
+        self.add_widget(self.label)
+
+        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
+        self.bind(on_release=self._on_release)
+
+    def _on_release(self, *args):
+        if self.on_click_callback:
+            self.on_click_callback(self.page_index)
+
+    def _on_enter(self, *args):
+        self.is_hover = True
+        self.update_style()
+
+    def _on_leave(self, *args):
+        self.is_hover = False
+        self.update_style()
+
+    def set_selected(self, selected):
+        self.is_selected = selected
+        self.update_style()
+
+    def update_style(self):
+        theme_id = settings_manager.theme
+        accent = SongsColors.get_accent(theme_id)
+        text_s = SongsColors.get_text_secondary(theme_id)
+
+        if self.is_selected:
+            if theme_id == 'green':
+                self.md_bg_color = [0.10, 0.42, 0.25, 1]
+            else:
+                self.md_bg_color = accent
+            self.label.text_color = [1, 1, 1, 1]
+            self.radius = [dp(8)]
+        elif self.is_hover:
+            if theme_id == 'light':
+                self.md_bg_color = [0, 0, 0, 0.05]
+            else:
+                self.md_bg_color = [1, 1, 1, 0.08]
+            self.label.text_color = accent
+            self.radius = [dp(8)]
+        else:
+            self.md_bg_color = [0, 0, 0, 0]
+            self.label.text_color = text_s
+            self.radius = [0]
+
+
+class PaginationBar(MDBoxLayout):
+    """
+    Лента страниц 50, 100, 150, ...
+    ≤ 6 кнопок  → центрируется (AnchorLayout, без ScrollView).
+    ≥ 7 кнопок  → ScrollView со скроллом от левого края.
+    """
+
+    CENTERED_MAX_BUTTONS = 6
+
+    def __init__(self, on_page_select=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_page_select = on_page_select
+        self.current_page_index = 0
+        self.total_pages = 1
+        self._last_total = None
+        self._last_per_page = None
+
+        self.page_buttons = []
+
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(48)
+        self.spacing = dp(2)
+        self.md_bg_color = [0, 0, 0, 0]
+        self.padding = [dp(4), dp(2), dp(4), dp(2)]
+
+        self.left_arrow = MDIconButton(
+            icon="chevron-left", size_hint=(None, 1), width=dp(32),
+            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
+            on_release=lambda x: self.scroll_strip(-1), ripple_scale=0
+        )
+        self.right_arrow = MDIconButton(
+            icon="chevron-right", size_hint=(None, 1), width=dp(32),
+            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
+            on_release=lambda x: self.scroll_strip(1), ripple_scale=0
+        )
+
+        self.add_widget(self.left_arrow)
+
+        self.center_zone = MDBoxLayout(
+            orientation='horizontal', size_hint=(1, 1),
+            md_bg_color=[0, 0, 0, 0]
+        )
+        self.add_widget(self.center_zone)
+
+        self.add_widget(self.right_arrow)
+
+        self.container = MDBoxLayout(
+            orientation='horizontal', size_hint=(None, 1),
+            spacing=dp(4), padding=[dp(4)] * 4,
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        self.scroll_view = None
+        self._centered_mode = None
+
+        self.update_theme_colors()
+
+    def _rebuild_center_zone(self, force_center):
+        if self._centered_mode == force_center and self.center_zone.children:
+            return
+
+        self._centered_mode = force_center
+
+        if self.container.parent:
+            self.container.parent.remove_widget(self.container)
+
+        self.center_zone.clear_widgets()
+        self.scroll_view = None
+
+        if force_center:
+            anchor = AnchorLayout(
+                anchor_x='center',
+                anchor_y='center',
+                size_hint=(1, 1)
+            )
+            self.container.size_hint = (None, 1)
+            self.container.pos_hint = {}
+            anchor.add_widget(self.container)
+            self.center_zone.add_widget(anchor)
+        else:
+            self.container.size_hint = (None, 1)
+            self.container.pos_hint = {}
+            self.scroll_view = ScrollView(
+                size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
+                bar_width=0, bar_color=[0, 0, 0, 0],
+                bar_inactive_color=[0, 0, 0, 0], bar_margin=0
+            )
+            self.scroll_view.add_widget(self.container)
+            self.center_zone.add_widget(self.scroll_view)
+
+    def _apply_layout_mode(self):
+        n = len(self.page_buttons)
+        if n == 0:
+            return
+        force_center = (n <= self.CENTERED_MAX_BUTTONS)
+        self._rebuild_center_zone(force_center)
+
+    def set_total(self, total_items, per_page, current_page=0):
+        if self._last_total == total_items and self._last_per_page == per_page:
+            self.set_current_page(current_page)
+            return
+
+        self._last_total = total_items
+        self._last_per_page = per_page
+
+        self.container.clear_widgets()
+        self.page_buttons = []
+        self.total_pages = max(1, (total_items + per_page - 1) // per_page)
+        self.current_page_index = current_page
+
+        if self.total_pages <= 1:
+            self._rebuild_center_zone(True)
+            self.container.width = 0
+            self.update_theme_colors()
+            return
+
+        for i in range(self.total_pages):
+            count = (i + 1) * per_page
+            if count > total_items:
+                count = total_items
+            btn = PageButton(
+                text=str(count),
+                index=i,
+                on_click=self._on_page_click
+            )
+            self.page_buttons.append(btn)
+            self.container.add_widget(btn)
+
+        content_w = (
+                sum(b.width for b in self.page_buttons)
+                + max(0, len(self.page_buttons) - 1) * self.container.spacing
+                + self.container.padding[0] + self.container.padding[2]
+        )
+        self.container.width = content_w
+
+        self._apply_layout_mode()
+
+        self.update_theme_colors()
+        Clock.schedule_once(lambda dt: self._scroll_to_current(force=True), 0.1)
+
+    def set_current_page(self, page):
+        if not self.page_buttons:
+            self.current_page_index = page
+            return
+
+        if page == self.current_page_index:
+            for i, btn in enumerate(self.page_buttons):
+                btn.set_selected(i == page)
+            return
+
+        self.current_page_index = page
+        for i, btn in enumerate(self.page_buttons):
+            btn.set_selected(i == page)
+
+        if self._centered_mode is False and self.scroll_view:
+            Clock.schedule_once(lambda dt: self._scroll_to_current(force=False), 0.05)
+
+    def _on_page_click(self, index):
+        if index == self.current_page_index:
+            return
+        self.current_page_index = index
+        for i, btn in enumerate(self.page_buttons):
+            btn.set_selected(i == index)
+        if self.on_page_select:
+            self.on_page_select(index)
+
+    def scroll_strip(self, direction):
+        if not self.scroll_view:
+            return
+        scroll_amount = 0.2
+        new_scroll = self.scroll_view.scroll_x + (direction * scroll_amount)
+        new_scroll = max(0, min(1, new_scroll))
+        anim = Animation(scroll_x=new_scroll, duration=0.2, t='out_quad')
+        anim.start(self.scroll_view)
+
+    def _scroll_to_current(self, force=False):
+        if self._centered_mode is not False:
+            return
+        if not self.scroll_view or not self.page_buttons:
+            return
+        idx = self.current_page_index
+        if idx >= len(self.page_buttons):
+            idx = len(self.page_buttons) - 1
+        btn = self.page_buttons[idx]
+        if btn.width <= 0:
+            return
+        total_width = self.container.width - self.scroll_view.width
+        if total_width <= 0:
+            return
+
+        if not force:
+            viewport_w = self.scroll_view.width
+            content_w = self.container.width
+            if content_w > 0 and viewport_w > 0:
+                current_left = self.scroll_view.scroll_x * max(0, content_w - viewport_w)
+                current_right = current_left + viewport_w
+                btn_left = btn.x
+                btn_right = btn.x + btn.width
+                if current_left <= btn_left and btn_right <= current_right:
+                    return
+
+        x_target = btn.x - dp(4)
+        scroll_x = x_target / total_width
+        scroll_x = max(0, min(1, scroll_x))
+        Animation(scroll_x=scroll_x, duration=0.2, t='out_quad').start(self.scroll_view)
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        accent = SongsColors.get_accent(theme_id)
+
+        self.left_arrow.icon_color = accent
+        self.right_arrow.icon_color = accent
+
+        for i, btn in enumerate(self.page_buttons):
+            btn.set_selected(i == self.current_page_index)
+
+    def on_size(self, *args):
+        if not getattr(self, 'page_buttons', None):
+            return
+        if not getattr(self, 'container', None) or not getattr(self, 'center_zone', None):
+            return
+        Clock.schedule_once(lambda dt: self._apply_layout_mode(), 0.05)
 
 
 # ============ RECYCLEVIEW КАРТОЧКИ ============
@@ -598,7 +885,7 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
         self.height = dp(44)
         self.padding = [dp(10), dp(4), dp(10), dp(4)]
         self.spacing = dp(8)
-        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.radius = [dp(14)] * 4
         self.elevation = 0
         self.ripple_behavior = False
         self.clip = True
@@ -641,7 +928,7 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
         theme_id = settings_manager.theme
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
         self.line_color = SongsColors.get_card_line(theme_id)
-        self.line_width = 1.0 if theme_id in ('dark', 'light') else 0.5
+        self.line_width = 1.5
         self.artist_label.text_color = SongsColors.get_text_primary(theme_id)
         self.count_label.text_color = SongsColors.get_text_secondary(theme_id)
 
@@ -672,10 +959,10 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)
-        self.padding = [dp(10), dp(4), dp(10), dp(4)]
+        self.height = dp(48)
+        self.padding = [dp(10), dp(6), dp(10), dp(6)]
         self.spacing = dp(8)
-        self.radius = [theme.CORNER_RADIUS_SMALL] * 4
+        self.radius = [dp(14)] * 4
         self.elevation = 0
         self.ripple_behavior = False
         self.clip = True
@@ -705,7 +992,8 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
 
         self.title_label = MDLabel(
             font_size=sp(12), size_hint_y=None, height=dp(18),
-            theme_text_color="Custom", valign="middle"
+            theme_text_color="Custom", valign="middle",
+            shorten=True, shorten_from="right"
         )
 
         text_layout.add_widget(self.artist_label)
@@ -725,7 +1013,7 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
         theme_id = settings_manager.theme
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
         self.line_color = SongsColors.get_card_line(theme_id)
-        self.line_width = 1.0 if theme_id in ('dark', 'light') else 0.5
+        self.line_width = 1.5
         self.artist_label.text_color = SongsColors.get_text_primary(theme_id)
         self.title_label.text_color = SongsColors.get_text_secondary(theme_id)
 
@@ -769,7 +1057,7 @@ class SongsRecycleView(RecycleView):
             size_hint_y=None,
             height=dp(48) * 50,
             orientation='vertical',
-            spacing=dp(2)
+            spacing=dp(6)
         )
         self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
         self.add_widget(self.layout_manager)
@@ -815,26 +1103,29 @@ class SongsScreen(BaseScreen):
         self._temp_scroll_position = None
         self._is_restoring = False
         self._saved_scroll_position = 1.0
-        self._is_artist_songs_mode = False
 
         self._all_artists = []
         self._page = 0
-        self._limit = 200
+        self._limit = 50
+        self._batch_size = 200
         self._is_loading_more = False
         self._has_more = True
-        self._loading_all = False
         self._total_artists = 0
+
+        self._artists_cache = {}
+        self._batch_loading = False
+        self._pending_page = None
 
         self.search_bar = None
         self._main_label = None
         self._result_label = None
         self._songs_count_label = None
         self.songs_menu = None
-        self._songs_menu_widget = None
         self._hint_timer = None
         self.recycle_view = None
         self._main_layout = None
         self._menu_container = None
+        self._pagination_bar = None
 
         self._search_query = ""
         self._search_results = []
@@ -871,7 +1162,8 @@ class SongsScreen(BaseScreen):
             self.bg_rect.size = self.size
 
     def update_screen_background(self):
-        if not hasattr(self, 'bg_color_inst'): return
+        if not hasattr(self, 'bg_color_inst'):
+            return
         theme_id = settings_manager.theme
 
         if theme_id == 'green':
@@ -894,12 +1186,11 @@ class SongsScreen(BaseScreen):
             self.search_bar.update_theme_colors()
         if self.songs_menu:
             self.songs_menu.update_theme_colors()
+        if self._pagination_bar:
+            self._pagination_bar.update_theme_colors()
         if self._main_label:
             theme_id = settings_manager.theme
             self._main_label.text_color = SongsColors.get_text_secondary(theme_id)
-        if self._result_label:
-            theme_id = settings_manager.theme
-            self._result_label.text_color = SongsColors.get_hint_color(theme_id)
         if self.recycle_view:
             for child in self.recycle_view.layout_manager.children:
                 if hasattr(child, 'update_theme_colors'):
@@ -915,7 +1206,10 @@ class SongsScreen(BaseScreen):
             if self.is_search_mode:
                 self._result_label.text = f"{get_text('songs_found')}: {len(self.search_results)}"
             elif self.current_letter and self._all_artists:
-                self._result_label.text = f"{get_text('artists')}: {len(self._all_artists)} / {self._total_artists}"
+                current_count = min((self._page + 1) * self._limit, self._total_artists)
+                self._result_label.text = (
+                    f"{get_text('artists')}: {current_count} {get_text('of')} {self._total_artists}"
+                )
 
     def init_ui(self):
         main_layout = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
@@ -969,7 +1263,9 @@ class SongsScreen(BaseScreen):
         self._result_label = MDLabel(
             text="", font_size=sp(13), halign="center",
             size_hint_y=None, height=dp(20),
-            theme_text_color="Custom", opacity=0, bold=True
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],  # ← БЕЛЫЙ ЦВЕТ
+            opacity=0, bold=True
         )
         main_layout.add_widget(self._result_label)
 
@@ -977,15 +1273,24 @@ class SongsScreen(BaseScreen):
 
         wrapper = MDBoxLayout(
             orientation='vertical', size_hint=(1, 1),
-            spacing=0, padding=[padding[0], dp(4), padding[2], bottom_padding]
+            spacing=0, padding=[padding[0], dp(4), padding[2], dp(0)]
         )
 
         self.recycle_view = SongsRecycleView(
             on_item_click=self.on_item_selected, viewclass='ArtistCard'
         )
         wrapper.add_widget(self.recycle_view)
-
         main_layout.add_widget(wrapper)
+
+        self._pagination_bar = PaginationBar(
+            on_page_select=self._on_page_selected_from_bar,
+        )
+        self._pagination_bar.height = 0
+        self._pagination_bar.opacity = 0
+        self._pagination_bar.disabled = True
+        main_layout.add_widget(self._pagination_bar)
+
+        main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
 
         self.clear_widgets()
         self.add_widget(main_layout)
@@ -997,63 +1302,190 @@ class SongsScreen(BaseScreen):
     def _toggle_language(self):
         pass
 
-    def _show_hint(self, text):
-        if hasattr(self, '_hint_timer') and self._hint_timer:
-            Clock.unschedule(self._hint_timer)
-            self._hint_timer = None
-        if self._main_label:
-            self._main_label.text = text
+    # ============ ПАГИНАЦИЯ ============
 
-    def _show_temporary_hint(self, text, duration=1.5):
-        if self._main_label:
-            self._main_label.text = text
-            if hasattr(self, '_hint_timer') and self._hint_timer:
-                Clock.unschedule(self._hint_timer)
-            self._hint_timer = Clock.schedule_once(lambda dt: self._restore_hint(), duration)
+    def _hide_pagination(self):
+        if not self._pagination_bar:
+            return
+        self._pagination_bar.height = 0
+        self._pagination_bar.opacity = 0
+        self._pagination_bar.disabled = True
 
-    def _restore_hint(self):
-        if hasattr(self, '_hint_timer'):
-            self._hint_timer = None
-        if self.is_search_mode:
-            self._main_label.text = get_text('search_results')
-        elif self.current_artist:
-            self._main_label.text = f"{get_text('artist_songs')}: {self.current_artist}"
+    def _show_pagination_bar(self):
+        if not self._pagination_bar:
+            return
+        self._pagination_bar.height = dp(48)
+        self._pagination_bar.opacity = 1
+        self._pagination_bar.disabled = False
+        self._pagination_bar.set_total(self._total_artists, self._limit, self._page)
+
+    def _on_page_selected_from_bar(self, page_index):
+        if page_index == self._page:
+            return
+        self._load_page(page_index)
+
+    def _is_page_cached(self, cache, page):
+        start = page * self._limit
+        total = cache['total']
+        if total:
+            end = min(start + self._limit, total)
         else:
-            self._main_label.text = get_text('search_artists')
+            end = start + self._limit
+        for idx in range(start, end):
+            if idx not in cache['items']:
+                return False
+        return True
 
-    def _show_result_label(self, text):
-        if self._result_label:
-            self._result_label.text = text
-            self._result_label.opacity = 1
+    def _build_page_slice(self, cache, page):
+        start = page * self._limit
+        end = start + self._limit
+        total = cache['total']
+        if total:
+            end = min(end, total)
+        result = []
+        for idx in range(start, end):
+            item = cache['items'].get(idx)
+            if item is not None:
+                result.append(item)
+        return result
 
-    def _hide_result_label(self):
-        if self._result_label:
-            self._result_label.text = ""
-            self._result_label.opacity = 0
+    def _load_page(self, page):
+        if not self.current_letter:
+            return
 
-    def _show_empty(self, text=None):
-        self._show_result_label(text or get_text('no_artists'))
+        cache = self._artists_cache.get(self.current_letter)
+        if cache is None:
+            return
 
-    def _hide_empty(self):
-        self._hide_result_label()
+        self._total_artists = cache['total']
+        self._page = page
 
-    def _show_loading(self, text=None):
-        self._show_hint(text or get_text('loading'))
+        if self._is_page_cached(cache, page):
+            self._all_artists = self._build_page_slice(cache, page)
+            self._display_artists()
+            return
 
-    def _hide_loading(self):
-        self._restore_hint()
+        if self._batch_loading:
+            self._pending_page = page
+            logger.info(f"⏳ Батч уже грузится — запомнили страницу {page}")
+            return
 
-    # ============ ФИЛЬТРАЦИЯ ПО СИМВОЛУ ============
+        batch_offset = (page * self._limit) // self._batch_size * self._batch_size
+        self._load_batch(letter=self.current_letter, batch_offset=batch_offset, target_page=page)
+
+    def _load_batch(self, letter, batch_offset, target_page):
+        cache = self._artists_cache.get(letter)
+        if cache is None:
+            cache = {'items': {}, 'total': 0, 'batches': set()}
+            self._artists_cache[letter] = cache
+
+        if batch_offset in cache['batches']:
+            logger.info(f"♻️ Батч {batch_offset} уже в кеше")
+            self._batch_loading = False
+            self._all_artists = self._build_page_slice(cache, target_page)
+            self._display_artists()
+            return
+
+        self._batch_loading = True
+        self._show_loading()
+
+        def _on_success(data):
+            try:
+                self._batch_loading = False
+
+                if data is None:
+                    data = {"artists": [], "total": 0}
+                if not isinstance(data, dict):
+                    data = {"artists": [], "total": 0}
+
+                artists = data.get('artists', [])
+                total = data.get('total', 0)
+                if not isinstance(artists, list):
+                    artists = []
+
+                for i, a in enumerate(artists):
+                    name = a.get('artist') if isinstance(a, dict) else None
+                    count = a.get('songs_count', 0) if isinstance(a, dict) else 0
+                    if name and (letter != '#' or self._matches_letter(name, '#')):
+                        cache['items'][batch_offset + i] = {
+                            'artist': name,
+                            'songs_count': count,
+                        }
+
+                if total > 0:
+                    cache['total'] = total
+                if batch_offset not in cache['batches']:
+                    cache['batches'].add(batch_offset)
+
+                self._total_artists = cache['total']
+
+                logger.info(
+                    f"📦 Батч загружен для '{letter}' offset={batch_offset}: "
+                    f"+{len(artists)} (в кеше {len(cache['items'])}/{cache['total']}, "
+                    f"батчей {len(cache['batches'])})"
+                )
+
+                show_page = self._pending_page
+                self._pending_page = None
+                if show_page is None:
+                    show_page = target_page
+
+                self._page = show_page
+
+                if not self._is_page_cached(cache, show_page):
+                    if cache['total'] and show_page * self._limit >= cache['total']:
+                        self._hide_loading()
+                        self._all_artists = self._build_page_slice(cache, show_page)
+                        self._display_artists()
+                        return
+
+                    batch_offset2 = (show_page * self._limit) // self._batch_size * self._batch_size
+                    logger.info(
+                        f"📥 Для страницы {show_page} нужен ещё батч offset={batch_offset2}"
+                    )
+                    self._load_batch(letter=letter, batch_offset=batch_offset2, target_page=show_page)
+                    return
+
+                self._hide_loading()
+                self._all_artists = self._build_page_slice(cache, show_page)
+                self._display_artists()
+
+            except Exception as e:
+                self._batch_loading = False
+                self._pending_page = None
+                self._hide_loading()
+                logger.error(f"❌ Ошибка в _on_success: {e}")
+                import traceback
+                traceback.print_exc()
+                self._show_empty(get_text('loading_error'))
+
+        def _on_error(req, err):
+            self._batch_loading = False
+            self._pending_page = None
+            self._hide_loading()
+            self._show_empty(get_text('loading_error'))
+            logger.error(f"Ошибка загрузки батча: {err}")
+
+        if letter == '#':
+            api.get_artists_by_digits(
+                limit=self._batch_size, offset=batch_offset,
+                on_success=_on_success,
+                on_failure=_on_error
+            )
+        else:
+            api.get_artists_by_letter(
+                letter=letter, limit=self._batch_size, offset=batch_offset,
+                on_success=_on_success,
+                on_failure=_on_error
+            )
+
+    # ============ ФИЛЬТРАЦИЯ ============
 
     def _matches_letter(self, name, letter):
-        """Проверяет, подходит ли имя исполнителя под выбранный символ."""
         if not name or not letter:
             return False
         first = name[0]
         if letter == '#':
-            # ✅ "#" — только спецсимволы:
-            # пунктуация (P*), валюта (Sc), математика (Sm), модификаторы (Sk).
-            # Исключаем буквы (L*), цифры (N*), эмодзи/смайлы (So), пробелы (Z*), прочее (C*).
             cat = unicodedata.category(first)
             return cat.startswith('P') or cat in ('Sc', 'Sm', 'Sk')
         return first == letter
@@ -1063,206 +1495,61 @@ class SongsScreen(BaseScreen):
     def _load_artists(self, letter):
         self.current_artist = None
         self.current_letter = letter
-        self._show_loading()
         self._hide_result_label()
 
         self._page = 0
+        self._batch_loading = False
+        self._pending_page = None
+
+        if letter in self._artists_cache:
+            cache = self._artists_cache[letter]
+            self._total_artists = cache['total']
+            self.recycle_view.viewclass = 'ArtistCard'
+            if self._is_page_cached(cache, 0):
+                self._all_artists = self._build_page_slice(cache, 0)
+                self._display_artists()
+            else:
+                self._load_page(0)
+            return
+
         self._all_artists = []
+        self._total_artists = 0
         self._has_more = True
         self._is_loading_more = False
-        self._total_artists = 0
 
         self.recycle_view.viewclass = 'ArtistCard'
         self.recycle_view.clear()
         self._hide_empty()
+        self._hide_pagination()
 
-        # ✅ Только '#' идёт через digits, всё остальное (включая 0-9) — через букву
-        if letter == '#':
-            api.get_artists_by_digits(
-                limit=self._limit, offset=0,
-                on_success=self._on_digits_first_page_loaded,
-                on_failure=self._on_artists_page_failed
-            )
-        else:
-            api.get_artists_by_letter(
-                letter=letter, limit=self._limit, offset=0,
-                on_success=self._on_artists_first_page_loaded,
-                on_failure=self._on_artists_page_failed
-            )
-
-    def _on_digits_first_page_loaded(self, data):
-        if data is None: data = {"artists": [], "total": 0}
-        if not isinstance(data, dict): data = {"artists": [], "total": 0}
-
-        artists = data.get('artists', [])
-        total = data.get('total', 0)
-        if not isinstance(artists, list):
-            artists = []
-            total = 0
-
-        # ✅ Фильтрация для '#' — все не-буквенные (цифры, #, спецсимволы, эмодзи)
-        filtered_artists = []
-        for a in artists:
-            name = a.get('artist') if isinstance(a, dict) else None
-            if self._matches_letter(name, self.current_letter):
-                filtered_artists.append(a)
-
-        self._total_artists = len(filtered_artists)
-        for a in filtered_artists:
-            name = a.get('artist') if isinstance(a, dict) else None
-            count = a.get('songs_count', 0) if isinstance(a, dict) else 0
-            if name:
-                self._all_artists.append({'artist': name, 'songs_count': count})
-
-        if len(self._all_artists) >= self._total_artists:
-            self._has_more = False
-            self._display_artists()
-            return
-        self._load_next_digits_pages()
-
-    def _load_next_digits_pages(self):
-        if not self._has_more or self._is_loading_more:
-            return
-        if self._total_artists > 0 and len(self._all_artists) >= self._total_artists:
-            self._has_more = False
-            self._display_artists()
-            return
-
-        self._is_loading_more = True
-        self._page += 1
-        offset = self._page * self._limit
-
-        api.get_artists_by_digits(
-            limit=self._limit, offset=offset,
-            on_success=self._on_digits_next_page_loaded,
-            on_failure=self._on_artists_page_failed
-        )
-
-    def _on_digits_next_page_loaded(self, data):
-        self._is_loading_more = False
-        if data is None: data = {"artists": [], "total": 0}
-        if not isinstance(data, dict): data = {"artists": [], "total": 0}
-
-        artists = data.get('artists', [])
-        if not isinstance(artists, list) or not artists:
-            self._has_more = False
-            self._display_artists()
-            return
-
-        for a in artists:
-            name = a.get('artist') if isinstance(a, dict) else None
-            if self._matches_letter(name, self.current_letter):
-                self._all_artists.append({
-                    'artist': name,
-                    'songs_count': a.get('songs_count', 0) if isinstance(a, dict) else 0
-                })
-
-        if len(self._all_artists) >= self._total_artists:
-            self._has_more = False
-            self._display_artists()
-            return
-        Clock.schedule_once(lambda dt: self._load_next_digits_pages(), 0.1)
-
-    def _on_artists_first_page_loaded(self, data):
-        if data is None: data = {"artists": [], "total": 0}
-        if not isinstance(data, dict): data = {"artists": [], "total": 0}
-
-        artists = data.get('artists', [])
-        total = data.get('total', 0)
-        if not isinstance(artists, list):
-            artists = []
-            total = 0
-
-        self._total_artists = total
-        for a in artists:
-            name = a.get('artist') if isinstance(a, dict) else None
-            count = a.get('songs_count', 0) if isinstance(a, dict) else 0
-            if name:
-                self._all_artists.append({'artist': name, 'songs_count': count})
-
-        if len(self._all_artists) >= total:
-            self._has_more = False
-            self._display_artists()
-            return
-        self._load_next_artists_pages()
-
-    def _load_next_artists_pages(self):
-        if not self._has_more or self._is_loading_more:
-            return
-        if self._total_artists > 0 and len(self._all_artists) >= self._total_artists:
-            self._has_more = False
-            self._display_artists()
-            return
-
-        self._is_loading_more = True
-        self._page += 1
-        offset = self._page * self._limit
-
-        api.get_artists_by_letter(
-            letter=self.current_letter, limit=self._limit, offset=offset,
-            on_success=self._on_artists_next_page_loaded,
-            on_failure=self._on_artists_page_failed
-        )
-
-    def _on_artists_next_page_loaded(self, data):
-        self._is_loading_more = False
-        if data is None: data = {"artists": [], "total": 0}
-        if not isinstance(data, dict): data = {"artists": [], "total": 0}
-
-        artists = data.get('artists', [])
-        if not isinstance(artists, list) or not artists:
-            self._has_more = False
-            self._display_artists()
-            return
-
-        for artist in artists:
-            name = artist.get('artist') if isinstance(artist, dict) else None
-            count = artist.get('songs_count', 0) if isinstance(artist, dict) else 0
-            if name:
-                self._all_artists.append({'artist': name, 'songs_count': count})
-
-        if len(self._all_artists) >= self._total_artists:
-            self._has_more = False
-            self._display_artists()
-            return
-        Clock.schedule_once(lambda dt: self._load_next_artists_pages(), 0.1)
-
-    def _display_artists(self):
-        self._hide_loading()
-        if not self._all_artists:
-            self._show_empty()
-            self.recycle_view.clear()
-            return
-        self._hide_empty()
-        self.recycle_view.viewclass = 'ArtistCard'
-        self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
-        Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
-        self._show_result_label(f"{get_text('artists')}: {len(self._all_artists)}")
-        self._bind_scroll_for_load()
-
-    def _on_artists_page_failed(self, req, error):
-        self._is_loading_more = False
-        self._hide_loading()
-        logger.error(f"❌ Ошибка загрузки исполнителей: {error}")
-        self._show_empty(get_text('loading_error'))
-
-    # ============ ОТСЛЕЖИВАНИЕ СКРОЛЛА ============
-
-    def _bind_scroll_for_load(self):
-        if self.recycle_view:
-            try:
-                self.recycle_view.unbind(scroll_y=self._check_scroll_for_load)
-            except:
-                pass
-            self.recycle_view.bind(scroll_y=self._check_scroll_for_load)
-
-    def _check_scroll_for_load(self, instance, value):
-        if value > 0.05: return
-        if self._is_loading_more or self._is_restoring: return
-        if self.current_letter and self._has_more and len(self._all_artists) < self._total_artists:
-            self._load_remaining_artists()
+        self._artists_cache[letter] = {'items': {}, 'total': 0, 'batches': set()}
+        self._load_batch(letter=letter, batch_offset=0, target_page=0)
 
     # ============ ОБРАБОТЧИКИ ============
+
+    def on_item_selected(self, item_type, *args):
+        pass
+
+    def on_song_selected(self, song_id, title):
+        if not song_id:
+            notify.error(get_text('load_error'))
+            return
+
+        self.save_search_state()
+        self.save_current_state()
+        screen_state.set_previous_screen('songs')
+
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('search_detail'):
+                search_detail_screen = self.manager.get_screen('search_detail')
+                search_detail_screen.set_song(song_id)
+                self.manager.current = 'search_detail'
+            else:
+                if self.manager.has_screen('song_detail'):
+                    song_detail_screen = self.manager.get_screen('song_detail')
+                    song_detail_screen.set_previous_screen('songs')
+                    song_detail_screen.set_song(song_id)
+                    self.manager.current = 'song_detail'
 
     def on_letter_press(self, letter):
         self.is_search_mode = False
@@ -1286,10 +1573,9 @@ class SongsScreen(BaseScreen):
                 artist_songs_screen.artist_name = artist
                 artist_songs_screen._total_songs = 0
                 artist_songs_screen._page = 0
-                artist_songs_screen._artist_songs = []
-                artist_songs_screen._has_more = True
-                artist_songs_screen._is_loading_more = False
                 artist_songs_screen._is_loading = False
+                artist_songs_screen._batch_loading = False
+                artist_songs_screen._pending_page = None
                 artist_songs_screen._update_top_nav_title(artist)
                 artist_songs_screen._load_artist_songs(artist)
                 self.manager.current = 'artist_songs'
@@ -1308,6 +1594,7 @@ class SongsScreen(BaseScreen):
         self._show_loading()
         self.recycle_view.clear()
         self.recycle_view.viewclass = 'SearchSongCard'
+        self._hide_pagination()
 
         api.search_songs(
             query=query, limit=50,
@@ -1357,86 +1644,82 @@ class SongsScreen(BaseScreen):
         self._hide_result_label()
         self._hide_loading()
         self._hide_empty()
+        self._hide_pagination()
         self.current_letter = None
         self.current_artist = None
         if self.songs_menu:
             self.songs_menu.set_current_letter(None)
         self._show_hint(get_text('search_artists'))
 
-    def on_item_selected(self, item_type, *args):
-        pass
-
-    def on_song_selected(self, song_id, title):
-        if not song_id:
-            notify.error(get_text('load_error'))
+    def _display_artists(self):
+        self._hide_loading()
+        if not self._all_artists:
+            self._show_empty()
+            self.recycle_view.clear()
+            self._hide_pagination()
             return
-
-        self.save_search_state()
-        self.save_current_state()
-        screen_state.set_previous_screen('songs')
-
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('search_detail'):
-                search_detail_screen = self.manager.get_screen('search_detail')
-                search_detail_screen.set_song(song_id)
-                self.manager.current = 'search_detail'
-            else:
-                if self.manager.has_screen('song_detail'):
-                    song_detail_screen = self.manager.get_screen('song_detail')
-                    song_detail_screen.set_previous_screen('songs')
-                    song_detail_screen.set_song(song_id)
-                    self.manager.current = 'song_detail'
-
-    def _load_remaining_artists(self):
-        if not self.current_letter: return
-        if self._is_loading_more: return
-        if len(self._all_artists) >= self._total_artists:
-            self._has_more = False
-            return
-
-        self._is_loading_more = True
-        next_page = self._page + 1
-        offset = next_page * self._limit
-
-        if self.current_letter == '#':
-            api.get_artists_by_digits(
-                limit=self._limit, offset=offset,
-                on_success=lambda data: self._append_artists(data, next_page),
-                on_failure=self._on_artists_page_failed
-            )
-        else:
-            api.get_artists_by_letter(
-                letter=self.current_letter, limit=self._limit, offset=offset,
-                on_success=lambda data: self._append_artists(data, next_page),
-                on_failure=self._on_artists_page_failed
-            )
-
-    def _append_artists(self, data, page):
-        self._is_loading_more = False
-        if data is None: return
-        if not isinstance(data, dict): return
-
-        artists = data.get('artists', [])
-        if not artists:
-            self._has_more = False
-            return
-
-        for artist in artists:
-            name = artist.get('artist') if isinstance(artist, dict) else None
-            count = artist.get('songs_count', 0) if isinstance(artist, dict) else 0
-            if name:
-                self._all_artists.append({'artist': name, 'songs_count': count})
-
-        self._page = page
-        self._has_more = len(self._all_artists) < self._total_artists
-
+        self._hide_empty()
+        self.recycle_view.viewclass = 'ArtistCard'
         self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
-        self._show_result_label(f"{get_text('artists')}: {len(self._all_artists)} / {self._total_artists}")
+        Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
 
-        if not self._has_more:
-            self._hide_loading()
+        current_count = min((self._page + 1) * self._limit, self._total_artists)
+        self._show_result_label(
+            f"{get_text('artists')}: {current_count} {get_text('of')} {self._total_artists}"
+        )
 
-    # ============ СОХРАНЕНИЕ СОСТОЯНИЯ ============
+        if self._total_artists > self._limit:
+            self._show_pagination_bar()
+        else:
+            self._hide_pagination()
+
+    def _show_hint(self, text):
+        if hasattr(self, '_hint_timer') and self._hint_timer:
+            Clock.unschedule(self._hint_timer)
+            self._hint_timer = None
+        if self._main_label:
+            self._main_label.text = text
+
+    def _show_temporary_hint(self, text, duration=1.5):
+        if self._main_label:
+            self._main_label.text = text
+            if hasattr(self, '_hint_timer') and self._hint_timer:
+                Clock.unschedule(self._hint_timer)
+            self._hint_timer = Clock.schedule_once(lambda dt: self._restore_hint(), duration)
+
+    def _restore_hint(self):
+        if hasattr(self, '_hint_timer'):
+            self._hint_timer = None
+        if self.is_search_mode:
+            self._main_label.text = get_text('search_results')
+        elif self.current_artist:
+            self._main_label.text = f"{get_text('artist_songs')}: {self.current_artist}"
+        else:
+            self._main_label.text = get_text('search_artists')
+
+    def _show_result_label(self, text):
+        if self._result_label:
+            self._result_label.text = text
+            self._result_label.opacity = 1
+
+    def _hide_result_label(self):
+        if self._result_label:
+            self._result_label.text = ""
+            self._result_label.opacity = 0
+
+    def _show_empty(self, text=None):
+        self._show_result_label(text or get_text('no_artists'))
+
+    def _hide_empty(self):
+        self._hide_result_label()
+
+    def _show_loading(self, text=None):
+        self._show_hint(text or get_text('loading'))
+
+    def _hide_loading(self):
+        self._restore_hint()
+
+    # ============ СОСТОЯНИЕ ============
 
     def save_current_state(self):
         scroll_position = 1.0
@@ -1503,22 +1786,28 @@ class SongsScreen(BaseScreen):
                 self._all_artists = restored_artists
                 self.recycle_view.viewclass = 'ArtistCard'
                 self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
-                self._show_result_label(f"{get_text('artists')}: {len(self._all_artists)} / {self._total_artists}")
 
-                self._bind_scroll_for_load()
+                current_count = min((self._page + 1) * self._limit, self._total_artists)
+                self._show_result_label(
+                    f"{get_text('artists')}: {current_count} {get_text('of')} {self._total_artists}"
+                )
+
+                if self._total_artists > self._limit:
+                    self._show_pagination_bar()
+                else:
+                    self._hide_pagination()
 
                 def restore_scroll(dt):
                     if self.recycle_view:
                         self.recycle_view.scroll_y = scroll_position
+
                 Clock.schedule_once(restore_scroll, 0.1)
                 Clock.schedule_once(restore_scroll, 0.2)
-
-                if self._has_more and len(self._all_artists) < self._total_artists:
-                    Clock.schedule_once(lambda dt: self._load_remaining_artists(), 0.3)
             else:
                 self.recycle_view.clear()
                 self._show_hint(get_text('search_artists'))
                 self._hide_result_label()
+                self._hide_pagination()
 
             self._is_restoring = False
             return True
@@ -1544,6 +1833,7 @@ class SongsScreen(BaseScreen):
             self._show_hint(get_text('search_artists'))
             self._hide_result_label()
             self.recycle_view.clear()
+            self._hide_pagination()
 
     def on_leave(self):
         if self.recycle_view:
@@ -1556,3 +1846,9 @@ class SongsScreen(BaseScreen):
     def go_back(self, instance=None):
         if hasattr(self, 'manager') and self.manager:
             self.manager.current = 'home'
+
+    def _bind_scroll_for_load(self):
+        pass
+
+    def _check_scroll_for_load(self, instance, value):
+        pass

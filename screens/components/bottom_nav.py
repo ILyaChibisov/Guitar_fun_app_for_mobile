@@ -3,6 +3,7 @@
 Нижняя панель навигации - с Material Design иконками.
 Адаптивный шрифт без переносов.
 Поддерживает смену темы и языка.
+В зелёной теме каждая иконка и подпись — своего цвета по смыслу вкладки.
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -28,6 +29,21 @@ from utils.localization import get_text
 logger = get_logger('BottomNav')
 
 
+# ============================================================
+# ПАЛИТРА ДЛЯ ЗЕЛЁНОЙ ТЕМЫ [0.97, 0.65, 0.77, 1.0],
+# ============================================================
+# Яркие цвета по смыслу вкладок.
+GREEN_THEME_COLORS = {
+    'songs': [1.0, 0.95, 0.30, 1.0],      # коралл
+            'chords': [0.20, 0.60, 1.0, 1.0],     # золотистый
+            'tuner': [0.66, 0.90, 0.85, 1.0],     # мятный
+            'metronome': [1.0, 0.55, 0.20, 1.0] , # пудрово-розовый
+            'favorites': [1.0, 0.10, 0.20, 1.0], # лавандовый
+        }
+
+GREEN_ACTIVE_COLOR = [0.90, 0.95, 1.0, 1.0]  # белый для активной вкладки
+
+
 class NavItem(ButtonBehavior, BoxLayout):
     """Элемент нижней навигации с Material Design иконками"""
 
@@ -37,8 +53,8 @@ class NavItem(ButtonBehavior, BoxLayout):
     def __init__(self, icon_name, text_key, screen_name, **kwargs):
         super().__init__(**kwargs)
         self.icon_name = icon_name
-        self.text_key = text_key  # Сохраняем ключ для перевода
-        self.text = get_text(text_key, text_key.capitalize())  # Переводим
+        self.text_key = text_key
+        self.text = get_text(text_key, text_key.capitalize())
         self.screen_name = screen_name
 
         self.orientation = 'vertical'
@@ -54,7 +70,11 @@ class NavItem(ButtonBehavior, BoxLayout):
             label_height = dp(15)
             font_size = sp(10)
 
-        self.copper_gold = [0.85, 0.65, 0.25, 1]  # Цвет активной иконки (золото)
+        # Свой цвет для зелёной темы по каждой вкладке
+        self.green_inactive_color = GREEN_THEME_COLORS.get(
+            screen_name, [1, 1, 1, 0.8]
+        )
+        self.green_active_color = GREEN_ACTIVE_COLOR
 
         from kivy.uix.floatlayout import FloatLayout
         self.inner_layout = FloatLayout(size_hint=(1, 1))
@@ -146,11 +166,10 @@ class NavItem(ButtonBehavior, BoxLayout):
         theme_id = settings_manager.theme
 
         if theme_id == 'light':
-            # Насыщенный изумрудный
             active_color = [0.1, 0.55, 0.3, 1]
             inactive_color = [0.1, 0.55, 0.3, 1]
             if value:
-                self.icon_btn.icon_color = [0.05, 0.4, 0.2, 1]  # Чуть темнее при активности (для контраста)
+                self.icon_btn.icon_color = [0.05, 0.4, 0.2, 1]
                 self.text_label.text_color = [0.05, 0.4, 0.2, 1]
                 self.text_label.bold = True
             else:
@@ -158,8 +177,8 @@ class NavItem(ButtonBehavior, BoxLayout):
                 self.text_label.text_color = inactive_color
                 self.text_label.bold = False
         elif theme_id == 'dark':
-            active_color = [1, 1, 1, 1]  # Ярко-белый при активности
-            inactive_color = [1.0, 0.5, 0.0, 1]  # Оранжевый для всех неактивных
+            active_color = [1, 1, 1, 1]
+            inactive_color = [1.0, 0.5, 0.0, 1]
             if value:
                 self.icon_btn.icon_color = active_color
                 self.text_label.text_color = active_color
@@ -170,12 +189,12 @@ class NavItem(ButtonBehavior, BoxLayout):
                 self.text_label.bold = False
         else:  # green
             if value:
-                self.icon_btn.icon_color = self.copper_gold
-                self.text_label.text_color = self.copper_gold
+                self.icon_btn.icon_color = self.green_active_color
+                self.text_label.text_color = self.green_active_color
                 self.text_label.bold = True
             else:
-                self.icon_btn.icon_color = [1, 1, 1, 0.8]
-                self.text_label.text_color = [1, 1, 1, 0.8]
+                self.icon_btn.icon_color = self.green_inactive_color
+                self.text_label.text_color = self.green_inactive_color
                 self.text_label.bold = False
 
     def on_release(self):
@@ -240,7 +259,6 @@ class BottomNav(BoxLayout):
 
         self.bind(pos=self._update_line, size=self._update_line)
 
-        # Список вкладок: (иконка, ключ_перевода, экран)
         self.nav_items = [
             ('guitar-electric', 'songs', 'songs'),
             ('music-note', 'chords', 'chords'),
@@ -260,7 +278,6 @@ class BottomNav(BoxLayout):
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
-        # Применяем цвета после создания
         self.update_theme_colors()
 
     def _update_line(self, *args):
@@ -282,7 +299,6 @@ class BottomNav(BoxLayout):
             item.update_state(item, item.active)
 
     def update_language(self):
-        """Обновляет подписи при смене языка"""
         for item, (_, text_key, _) in zip(self.items, self.nav_items):
             translated_text = get_text(text_key, text_key.capitalize())
             item.text = translated_text
