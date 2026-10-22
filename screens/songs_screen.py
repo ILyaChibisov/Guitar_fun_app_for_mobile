@@ -23,6 +23,7 @@ from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.animation import Animation
+from kivy.uix.stencilview import StencilView
 
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
@@ -151,6 +152,13 @@ def load_shared_icons_sync():
 
         except Exception as e:
             logger.error(f"Ошибка загрузки иконок: {e}")
+
+
+# ============ КОНТЕЙНЕР ДЛЯ ОБРЕЗКИ ============
+
+class StencilBox(StencilView, MDBoxLayout):
+    """Контейнер, который жестко обрезает всё, что выходит за его пределы."""
+    pass
 
 
 # ============ ПОИСКОВАЯ СТРОКА ============
@@ -1295,24 +1303,20 @@ class SongsScreen(BaseScreen):
 
         bottom_padding = layout_config.get_bottom_padding()
 
-        # === ИСПРАВЛЕНИЕ НАЛОЖЕНИЯ ===
-        # Создаем контейнер для списка с четкими границами
-        wrapper = MDBoxLayout(
+        # === ГЛАВНОЕ ИСПРАВЛЕНИЕ: Используем StencilBox для жесткой обрезки ===
+        wrapper = StencilBox(
             orientation='vertical', size_hint=(1, 1),
             spacing=0, padding=[padding[0], dp(4), padding[2], dp(0)],
             md_bg_color=[0, 0, 0, 0]
         )
-        wrapper.clip = True  # ← Устанавливаем clip ПОСЛЕ создания
 
         self.recycle_view = SongsRecycleView(
             on_item_click=self.on_item_selected, viewclass='ArtistCard'
         )
-        self.recycle_view.clip = True
-        self.recycle_view.size_hint = (1, 1)
 
         wrapper.add_widget(self.recycle_view)
         main_layout.add_widget(wrapper)
-        # =============================
+        # =====================================================================
 
         self._pagination_bar = PaginationBar(
             on_page_select=self._on_page_selected_from_bar,
