@@ -108,7 +108,9 @@ class SongsColors:
 
     @staticmethod
     def get_hint_color(theme_id):
-        return [1, 1, 1, 1]  # Белый
+        if theme_id == 'light':
+            return [0.1, 0.1, 0.1, 1]  # Черный для светлой
+        return [1, 1, 1, 1]  # Белый для остальных
 
 
 # ============ ГЛОБАЛЬНЫЕ ИКОНКИ ============
@@ -233,6 +235,7 @@ class SearchBar(MDCard):
             self.search_field.cursor_color = accent
             self.clear_btn.icon_color = accent
             self.search_btn.md_bg_color = accent
+            self.search_btn.text_color = [0, 0, 0, 1]  # Чёрный текст для кнопки
         elif theme_id == 'dark':
             self.md_bg_color = [0.15, 0.15, 0.15, 1]
             self.line_color = line
@@ -242,6 +245,7 @@ class SearchBar(MDCard):
             self.search_field.cursor_color = accent
             self.clear_btn.icon_color = accent
             self.search_btn.md_bg_color = accent
+            self.search_btn.text_color = [1, 1, 1, 1]
         else:
             self.md_bg_color = [1, 1, 1, 1]
             self.line_color = line
@@ -251,6 +255,7 @@ class SearchBar(MDCard):
             self.search_field.cursor_color = [0.1, 0.1, 0.1, 1]
             self.clear_btn.icon_color = [0.4, 0.4, 0.4, 0.8]
             self.search_btn.md_bg_color = accent
+            self.search_btn.text_color = [1, 1, 1, 1]
 
     def _on_text_change(self, instance, text):
         self.current_query = text
@@ -507,8 +512,11 @@ class AlphabetMenu(MDBoxLayout):
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        self.left_arrow.icon_color = [1, 1, 1, 1]
-        self.right_arrow.icon_color = [1, 1, 1, 1]
+        # Стрелки алфавита: черные для светлой темы, белые для остальных
+        arrow_color = [0, 0, 0, 1] if theme_id == 'light' else [1, 1, 1, 1]
+        self.left_arrow.icon_color = arrow_color
+        self.right_arrow.icon_color = arrow_color
+
         for btn in self.buttons:
             btn._update_style()
 
@@ -825,8 +833,10 @@ class PaginationBar(MDBoxLayout):
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        self.left_arrow.icon_color = [1, 1, 1, 1]
-        self.right_arrow.icon_color = [1, 1, 1, 1]
+        # Цвет стрелок пагинации: в светлой теме чёрный, в остальных белый
+        arrow_color = [0, 0, 0, 1] if theme_id == 'light' else [1, 1, 1, 1]
+        self.left_arrow.icon_color = arrow_color
+        self.right_arrow.icon_color = arrow_color
 
         for i, btn in enumerate(self.page_buttons):
             btn.set_selected(i == self.current_page_index)
@@ -849,43 +859,28 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (1, None)
-        self.height = dp(56)
-        self.radius = [dp(16)] * 4
+        self.height = dp(48)
+        self.radius = [dp(10)] * 4
         self.elevation = 0
         self.ripple_behavior = False
         self.clip = True
-        self.padding = [0, 0, 0, 0]  # Убираем padding
 
-        # Включаем стандартный фон (с прозрачностью)
-        self.line_color = [0, 0, 0, 0]
+        self.padding = [0, dp(4), 0, dp(4)]
+        self.spacing = dp(8)
 
         self._build_ui()
-
-        # Рисуем ТОЛЬКО линию (без заливки)
-        with self.canvas.after:  # canvas.after рисует поверх фона
-            self._color = Color(0, 0, 0, 1)
-            self._border = Line(
-                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(16)),
-                width=2.0
-            )
-
-        self.bind(pos=self._update_border, size=self._update_border)
         self.update_theme_colors()
-
-    def _update_border(self, *args):
-        if hasattr(self, '_border'):
-            self._border.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(16))
 
     def _build_ui(self):
         content = MDBoxLayout(
             orientation='horizontal',
-            padding=[dp(12), dp(6), dp(12), dp(6)],
+            padding=[dp(12), 0, dp(12), 0],
             spacing=dp(8),
             md_bg_color=[0, 0, 0, 0]
         )
 
         self.icon = Image(
-            size_hint=(None, 1), width=dp(28),
+            size_hint=(None, 1), width=dp(24),
             allow_stretch=True, keep_ratio=True
         )
         if _shared_artist_icon_texture:
@@ -894,7 +889,7 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
             self.icon.text = "🎤"
 
         self.artist_label = MDLabel(
-            font_size=sp(16), theme_text_color="Custom",
+            font_size=sp(15), theme_text_color="Custom",
             bold=True, shorten=True, shorten_from="right",
             valign="middle", size_hint_x=1
         )
@@ -904,8 +899,8 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
             halign="right", valign="middle", theme_text_color="Custom"
         )
 
-        arrow = MDLabel(
-            text="›", font_size=sp(22), size_hint_x=None, width=dp(24),
+        self.arrow = MDLabel(
+            text="›", font_size=sp(20), size_hint_x=None, width=dp(20),
             halign="center", valign="middle", theme_text_color="Custom",
             text_color=[1, 1, 1, 0.3]
         )
@@ -913,19 +908,24 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
         content.add_widget(self.icon)
         content.add_widget(self.artist_label)
         content.add_widget(self.count_label)
-        content.add_widget(arrow)
+        content.add_widget(self.arrow)
 
         self.add_widget(content)
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
-
-        if hasattr(self, '_color'):
-            self._color.rgba = SongsColors.get_card_line(theme_id)
+        self.line_color = SongsColors.get_card_line(theme_id)
+        self.line_width = 2.0
 
         self.artist_label.text_color = SongsColors.get_text_primary(theme_id)
         self.count_label.text_color = SongsColors.get_text_secondary(theme_id)
+
+        # Цвет стрелки: черный в светлой теме, белый/прозрачный в остальных
+        if theme_id == 'light':
+            self.arrow.text_color = [0, 0, 0, 0.6]  # Чёрная стрелка
+        else:
+            self.arrow.text_color = [1, 1, 1, 0.3]
 
     def refresh_view_attrs(self, rv, index, data):
         self.artist_name = data.get('artist', '')
@@ -953,41 +953,28 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (1, None)
-        self.height = dp(56)
-        self.radius = [dp(16)] * 4
+        self.height = dp(48)
+        self.radius = [dp(10)] * 4
         self.elevation = 0
         self.ripple_behavior = False
         self.clip = True
-        self.padding = [0, 0, 0, 0]
 
-        self.line_color = [0, 0, 0, 0]
+        self.padding = [0, dp(4), 0, dp(4)]
+        self.spacing = dp(8)
 
         self._build_ui()
-
-        with self.canvas.after:
-            self._color = Color(0, 0, 0, 1)
-            self._border = Line(
-                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(16)),
-                width=2.0
-            )
-
-        self.bind(pos=self._update_border, size=self._update_border)
         self.update_theme_colors()
-
-    def _update_border(self, *args):
-        if hasattr(self, '_border'):
-            self._border.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(16))
 
     def _build_ui(self):
         content = MDBoxLayout(
             orientation='horizontal',
-            padding=[dp(12), dp(6), dp(12), dp(6)],
+            padding=[dp(12), 0, dp(12), 0],
             spacing=dp(8),
             md_bg_color=[0, 0, 0, 0]
         )
 
         self.icon = Image(
-            size_hint=(None, 1), width=dp(28),
+            size_hint=(None, 1), width=dp(24),
             allow_stretch=True, keep_ratio=True
         )
         if _shared_song_icon_texture:
@@ -997,17 +984,17 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
 
         text_layout = MDBoxLayout(
             orientation='vertical', size_hint_x=1,
-            spacing=dp(2), pos_hint={'center_y': 0.5}
+            spacing=dp(1), pos_hint={'center_y': 0.5}
         )
 
         self.artist_label = MDLabel(
-            font_size=sp(16), size_hint_y=None, height=dp(22),
+            font_size=sp(15), size_hint_y=None, height=dp(20),
             theme_text_color="Custom", bold=True,
             shorten=True, shorten_from="right", valign="middle"
         )
 
         self.title_label = MDLabel(
-            font_size=sp(13), size_hint_y=None, height=dp(18),
+            font_size=sp(12), size_hint_y=None, height=dp(16),
             theme_text_color="Custom", valign="middle",
             shorten=True, shorten_from="right"
         )
@@ -1015,27 +1002,32 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
         text_layout.add_widget(self.artist_label)
         text_layout.add_widget(self.title_label)
 
-        arrow = MDLabel(
-            text="›", font_size=sp(22), size_hint_x=None, width=dp(24),
+        self.arrow = MDLabel(
+            text="›", font_size=sp(20), size_hint_x=None, width=dp(20),
             halign="center", valign="middle", theme_text_color="Custom",
             text_color=[1, 1, 1, 0.3]
         )
 
         content.add_widget(self.icon)
         content.add_widget(text_layout)
-        content.add_widget(arrow)
+        content.add_widget(self.arrow)
 
         self.add_widget(content)
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
-
-        if hasattr(self, '_color'):
-            self._color.rgba = SongsColors.get_card_line(theme_id)
+        self.line_color = SongsColors.get_card_line(theme_id)
+        self.line_width = 2.0
 
         self.artist_label.text_color = SongsColors.get_text_primary(theme_id)
         self.title_label.text_color = SongsColors.get_text_secondary(theme_id)
+
+        # Цвет стрелки: черный в светлой теме, белый/прозрачный в остальных
+        if theme_id == 'light':
+            self.arrow.text_color = [0, 0, 0, 0.6]  # Чёрная стрелка
+        else:
+            self.arrow.text_color = [1, 1, 1, 0.3]
 
     def refresh_view_attrs(self, rv, index, data):
         self.artist = data.get('artist', '')
@@ -1055,29 +1047,31 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
         return super().on_touch_down(touch)
 
 
-Factory.register('ArtistCard', cls=ArtistCard)
-Factory.register('SearchSongCard', cls=SearchSongCard)
-
-
 class SongsRecycleView(RecycleView):
     def __init__(self, on_item_click=None, viewclass='ArtistCard', **kwargs):
         super().__init__(**kwargs)
         self.on_item_click = on_item_click
         self.animate_scroll = False
         self.size_hint = (1, 1)
+
+        # === ГЛАВНОЕ ИСПРАВЛЕНИЕ ДЛЯ КЛИППИНГА ===
         self.clip = True
+        self.scroll_type = ['bars', 'content']
+        # =========================================
+
         self.bar_width = 0
         self.bar_color = [0, 0, 0, 0]
         self.bar_inactive_color = [0, 0, 0, 0]
         self.viewclass = viewclass
 
         self.layout_manager = RecycleBoxLayout(
-            default_size=(None, dp(56)),
+            default_size=(None, dp(48)),
             default_size_hint=(1, None),
             size_hint_y=None,
-            height=dp(56) * 50,
+            height=dp(48) * 50,
             orientation='vertical',
-            spacing=dp(8)
+            spacing=dp(6),
+            padding=[dp(4), dp(8), dp(4), dp(8)]
         )
         self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
         self.add_widget(self.layout_manager)
@@ -1106,6 +1100,10 @@ class SongsRecycleView(RecycleView):
     def clear(self):
         self.data = []
         self.refresh_from_data()
+
+
+Factory.register('ArtistCard', cls=ArtistCard)
+Factory.register('SearchSongCard', cls=SearchSongCard)
 
 
 # ============ ОСНОВНОЙ ЭКРАН ============
@@ -1211,6 +1209,12 @@ class SongsScreen(BaseScreen):
         if self._main_label:
             theme_id = settings_manager.theme
             self._main_label.text_color = SongsColors.get_text_secondary(theme_id)
+
+        # Обновляем цвет надписи "Исполнители"
+        if self._result_label:
+            theme_id = settings_manager.theme
+            self._result_label.text_color = SongsColors.get_hint_color(theme_id)
+
         if self.recycle_view:
             for child in self.recycle_view.layout_manager.children:
                 if hasattr(child, 'update_theme_colors'):
@@ -1284,23 +1288,31 @@ class SongsScreen(BaseScreen):
             text="", font_size=sp(13), halign="center",
             size_hint_y=None, height=dp(20),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
+            text_color=SongsColors.get_hint_color(settings_manager.theme),
             opacity=0, bold=True
         )
         main_layout.add_widget(self._result_label)
 
         bottom_padding = layout_config.get_bottom_padding()
 
+        # === ИСПРАВЛЕНИЕ НАЛОЖЕНИЯ ===
+        # Создаем контейнер для списка с четкими границами
         wrapper = MDBoxLayout(
             orientation='vertical', size_hint=(1, 1),
-            spacing=0, padding=[padding[0], dp(4), padding[2], dp(0)]
+            spacing=0, padding=[padding[0], dp(4), padding[2], dp(0)],
+            md_bg_color=[0, 0, 0, 0]
         )
+        wrapper.clip = True  # ← Устанавливаем clip ПОСЛЕ создания
 
         self.recycle_view = SongsRecycleView(
             on_item_click=self.on_item_selected, viewclass='ArtistCard'
         )
+        self.recycle_view.clip = True
+        self.recycle_view.size_hint = (1, 1)
+
         wrapper.add_widget(self.recycle_view)
         main_layout.add_widget(wrapper)
+        # =============================
 
         self._pagination_bar = PaginationBar(
             on_page_select=self._on_page_selected_from_bar,
