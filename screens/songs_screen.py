@@ -11,7 +11,7 @@ import re
 import unicodedata
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, Line, RoundedRectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
@@ -72,7 +72,7 @@ class SongsColors:
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 1]
         else:
-            return [0.46, 0.70, 0.71, 1]
+            return [0.10, 0.42, 0.25, 1]
 
     @staticmethod
     def get_text_primary(theme_id):
@@ -95,7 +95,6 @@ class SongsColors:
         elif theme_id == 'dark':
             return [1, 1, 1, 0.1]
         else:
-            # Возвращаем ту самую легкую прозрачность (затемнение)
             return [0, 0, 0, 0.08]
 
     @staticmethod
@@ -105,17 +104,11 @@ class SongsColors:
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 0.5]
         else:
-            # В зелёной теме цвет обводки как у кнопки "Найти"
-            return [0.10, 0.42, 0.25, 1.0]
+            return [0.10, 0.42, 0.25, 1]
 
     @staticmethod
     def get_hint_color(theme_id):
-        if theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 1]
-        elif theme_id == 'light':
-            return [0.1, 0.55, 0.3, 1]
-        else:
-            return [1, 1, 1, 0.5]
+        return [1, 1, 1, 1]  # Белый
 
 
 # ============ ГЛОБАЛЬНЫЕ ИКОНКИ ============
@@ -195,7 +188,7 @@ class SearchBar(MDCard):
         )
         self.clear_wrapper.add_widget(self.clear_btn)
 
-        # Кнопка "Найти" - без теней, без серого круга
+        # Кнопка "Найти"
         self.search_btn = MDRaisedButton(
             text="",
             size_hint=(None, None),
@@ -234,7 +227,7 @@ class SearchBar(MDCard):
         if theme_id == 'light':
             self.md_bg_color = [1, 1, 1, 1]
             self.line_color = line
-            self.line_width = 1.5
+            self.line_width = 2.0
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
@@ -243,22 +236,21 @@ class SearchBar(MDCard):
         elif theme_id == 'dark':
             self.md_bg_color = [0.15, 0.15, 0.15, 1]
             self.line_color = line
-            self.line_width = 1.5
+            self.line_width = 2.0
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
             self.clear_btn.icon_color = accent
             self.search_btn.md_bg_color = accent
         else:
-            # Зелёная тема — обводка цвета кнопки "Найти", фон белый
             self.md_bg_color = [1, 1, 1, 1]
-            self.line_color = [0.10, 0.42, 0.25, 1]
-            self.line_width = 1.5
+            self.line_color = line
+            self.line_width = 2.0
             self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
             self.search_field.hint_text_color = [0.55, 0.55, 0.55, 1]
             self.search_field.cursor_color = [0.1, 0.1, 0.1, 1]
             self.clear_btn.icon_color = [0.4, 0.4, 0.4, 0.8]
-            self.search_btn.md_bg_color = [0.10, 0.42, 0.25, 1]
+            self.search_btn.md_bg_color = accent
 
     def _on_text_change(self, instance, text):
         self.current_query = text
@@ -285,8 +277,7 @@ class SearchBar(MDCard):
         self.search_field.focus = False
 
     def _on_focus(self, instance, value):
-        base_width = 1.5
-        self.line_width = base_width + 0.3 if value else base_width
+        self.line_width = 2.5 if value else 2.0
 
     def set_text(self, text):
         self.search_field.text = text or ""
@@ -354,14 +345,10 @@ class LetterButton(MDBoxLayout):
     def _update_style(self):
         theme_id = settings_manager.theme
         if self.is_selected:
-            if theme_id == 'green':
-                self.md_bg_color = [0.10, 0.42, 0.25, 1]  # Цвет кнопки найти
-            else:
-                self.md_bg_color = SongsColors.get_accent(theme_id)
+            self.md_bg_color = SongsColors.get_accent(theme_id)
             self.label.text_color = [1, 1, 1, 1]
             self.radius = [dp(8)]
         else:
-            # В обычном состоянии фон кнопки буквы прозрачный
             self.md_bg_color = [0, 0, 0, 0]
             self.label.text_color = SongsColors.get_text_secondary(theme_id)
             self.radius = [0]
@@ -520,9 +507,8 @@ class AlphabetMenu(MDBoxLayout):
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        accent = SongsColors.get_accent(theme_id)
-        self.left_arrow.icon_color = accent
-        self.right_arrow.icon_color = accent
+        self.left_arrow.icon_color = [1, 1, 1, 1]
+        self.right_arrow.icon_color = [1, 1, 1, 1]
         for btn in self.buttons:
             btn._update_style()
 
@@ -549,16 +535,9 @@ class SongsMenu(MDCard):
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        # Возвращаем стандартный фон меню (с лёгким затемнением)
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
-
-        # Обводка цвета кнопки "Найти" для зелёной темы
-        if theme_id == 'green':
-            self.line_color = [0.10, 0.42, 0.25, 1]
-            self.line_width = 1.5
-        else:
-            self.line_color = SongsColors.get_card_line(theme_id)
-            self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
+        self.line_color = SongsColors.get_card_line(theme_id)
+        self.line_width = 2.0
 
         if self.alphabet_menu:
             self.alphabet_menu.update_theme_colors()
@@ -573,7 +552,7 @@ class SongsMenu(MDCard):
 # ============ ПАГИНАЦИЯ ============
 
 class PageButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка страницы — цифра, без ripple. bold всегда True — ширина стабильна."""
+    """Кнопка страницы — цифра, без ripple."""
 
     def __init__(self, text, index, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -627,10 +606,7 @@ class PageButton(ButtonBehavior, MDBoxLayout):
         text_s = SongsColors.get_text_secondary(theme_id)
 
         if self.is_selected:
-            if theme_id == 'green':
-                self.md_bg_color = [0.10, 0.42, 0.25, 1]
-            else:
-                self.md_bg_color = accent
+            self.md_bg_color = accent
             self.label.text_color = [1, 1, 1, 1]
             self.radius = [dp(8)]
         elif self.is_hover:
@@ -647,12 +623,6 @@ class PageButton(ButtonBehavior, MDBoxLayout):
 
 
 class PaginationBar(MDBoxLayout):
-    """
-    Лента страниц 50, 100, 150, ...
-    ≤ 6 кнопок  → центрируется (AnchorLayout, без ScrollView).
-    ≥ 7 кнопок  → ScrollView со скроллом от левого края.
-    """
-
     CENTERED_MAX_BUTTONS = 6
 
     def __init__(self, on_page_select=None, **kwargs):
@@ -855,10 +825,8 @@ class PaginationBar(MDBoxLayout):
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        accent = SongsColors.get_accent(theme_id)
-
-        self.left_arrow.icon_color = accent
-        self.right_arrow.icon_color = accent
+        self.left_arrow.icon_color = [1, 1, 1, 1]
+        self.right_arrow.icon_color = [1, 1, 1, 1]
 
         for i, btn in enumerate(self.page_buttons):
             btn.set_selected(i == self.current_page_index)
@@ -880,19 +848,42 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(44)
-        self.padding = [dp(10), dp(4), dp(10), dp(4)]
-        self.spacing = dp(8)
-        self.radius = [dp(14)] * 4
+        self.height = dp(56)
+        self.radius = [dp(16)] * 4
         self.elevation = 0
         self.ripple_behavior = False
         self.clip = True
+        self.padding = [0, 0, 0, 0]  # Убираем padding
+
+        # Включаем стандартный фон (с прозрачностью)
+        self.line_color = [0, 0, 0, 0]
+
         self._build_ui()
+
+        # Рисуем ТОЛЬКО линию (без заливки)
+        with self.canvas.after:  # canvas.after рисует поверх фона
+            self._color = Color(0, 0, 0, 1)
+            self._border = Line(
+                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(16)),
+                width=2.0
+            )
+
+        self.bind(pos=self._update_border, size=self._update_border)
         self.update_theme_colors()
 
+    def _update_border(self, *args):
+        if hasattr(self, '_border'):
+            self._border.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(16))
+
     def _build_ui(self):
+        content = MDBoxLayout(
+            orientation='horizontal',
+            padding=[dp(12), dp(6), dp(12), dp(6)],
+            spacing=dp(8),
+            md_bg_color=[0, 0, 0, 0]
+        )
+
         self.icon = Image(
             size_hint=(None, 1), width=dp(28),
             allow_stretch=True, keep_ratio=True
@@ -903,13 +894,13 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
             self.icon.text = "🎤"
 
         self.artist_label = MDLabel(
-            font_size=sp(15), theme_text_color="Custom",
+            font_size=sp(16), theme_text_color="Custom",
             bold=True, shorten=True, shorten_from="right",
             valign="middle", size_hint_x=1
         )
 
         self.count_label = MDLabel(
-            text="", font_size=sp(11), size_hint_x=None, width=dp(40),
+            text="", font_size=sp(12), size_hint_x=None, width=dp(40),
             halign="right", valign="middle", theme_text_color="Custom"
         )
 
@@ -919,16 +910,20 @@ class ArtistCard(RecycleDataViewBehavior, MDCard):
             text_color=[1, 1, 1, 0.3]
         )
 
-        self.add_widget(self.icon)
-        self.add_widget(self.artist_label)
-        self.add_widget(self.count_label)
-        self.add_widget(arrow)
+        content.add_widget(self.icon)
+        content.add_widget(self.artist_label)
+        content.add_widget(self.count_label)
+        content.add_widget(arrow)
+
+        self.add_widget(content)
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
-        self.line_color = SongsColors.get_card_line(theme_id)
-        self.line_width = 1.5
+
+        if hasattr(self, '_color'):
+            self._color.rgba = SongsColors.get_card_line(theme_id)
+
         self.artist_label.text_color = SongsColors.get_text_primary(theme_id)
         self.count_label.text_color = SongsColors.get_text_secondary(theme_id)
 
@@ -957,19 +952,40 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(48)
-        self.padding = [dp(10), dp(6), dp(10), dp(6)]
-        self.spacing = dp(8)
-        self.radius = [dp(14)] * 4
+        self.height = dp(56)
+        self.radius = [dp(16)] * 4
         self.elevation = 0
         self.ripple_behavior = False
         self.clip = True
+        self.padding = [0, 0, 0, 0]
+
+        self.line_color = [0, 0, 0, 0]
+
         self._build_ui()
+
+        with self.canvas.after:
+            self._color = Color(0, 0, 0, 1)
+            self._border = Line(
+                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(16)),
+                width=2.0
+            )
+
+        self.bind(pos=self._update_border, size=self._update_border)
         self.update_theme_colors()
 
+    def _update_border(self, *args):
+        if hasattr(self, '_border'):
+            self._border.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(16))
+
     def _build_ui(self):
+        content = MDBoxLayout(
+            orientation='horizontal',
+            padding=[dp(12), dp(6), dp(12), dp(6)],
+            spacing=dp(8),
+            md_bg_color=[0, 0, 0, 0]
+        )
+
         self.icon = Image(
             size_hint=(None, 1), width=dp(28),
             allow_stretch=True, keep_ratio=True
@@ -985,13 +1001,13 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
         )
 
         self.artist_label = MDLabel(
-            font_size=sp(15), size_hint_y=None, height=dp(22),
+            font_size=sp(16), size_hint_y=None, height=dp(22),
             theme_text_color="Custom", bold=True,
             shorten=True, shorten_from="right", valign="middle"
         )
 
         self.title_label = MDLabel(
-            font_size=sp(12), size_hint_y=None, height=dp(18),
+            font_size=sp(13), size_hint_y=None, height=dp(18),
             theme_text_color="Custom", valign="middle",
             shorten=True, shorten_from="right"
         )
@@ -1005,15 +1021,19 @@ class SearchSongCard(RecycleDataViewBehavior, MDCard):
             text_color=[1, 1, 1, 0.3]
         )
 
-        self.add_widget(self.icon)
-        self.add_widget(text_layout)
-        self.add_widget(arrow)
+        content.add_widget(self.icon)
+        content.add_widget(text_layout)
+        content.add_widget(arrow)
+
+        self.add_widget(content)
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         self.md_bg_color = SongsColors.get_card_bg(theme_id)
-        self.line_color = SongsColors.get_card_line(theme_id)
-        self.line_width = 1.5
+
+        if hasattr(self, '_color'):
+            self._color.rgba = SongsColors.get_card_line(theme_id)
+
         self.artist_label.text_color = SongsColors.get_text_primary(theme_id)
         self.title_label.text_color = SongsColors.get_text_secondary(theme_id)
 
@@ -1052,12 +1072,12 @@ class SongsRecycleView(RecycleView):
         self.viewclass = viewclass
 
         self.layout_manager = RecycleBoxLayout(
-            default_size=(None, dp(48)),
+            default_size=(None, dp(56)),
             default_size_hint=(1, None),
             size_hint_y=None,
-            height=dp(48) * 50,
+            height=dp(56) * 50,
             orientation='vertical',
-            spacing=dp(6)
+            spacing=dp(8)
         )
         self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
         self.add_widget(self.layout_manager)
@@ -1264,7 +1284,7 @@ class SongsScreen(BaseScreen):
             text="", font_size=sp(13), halign="center",
             size_hint_y=None, height=dp(20),
             theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],  # ← БЕЛЫЙ ЦВЕТ
+            text_color=[1, 1, 1, 1],
             opacity=0, bold=True
         )
         main_layout.add_widget(self._result_label)
