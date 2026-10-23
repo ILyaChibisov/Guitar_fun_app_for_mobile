@@ -1,10 +1,6 @@
 # screens/songs_screen.py
 """
 Экран песен - с алфавитом, поиском и пагинацией с батчевым кешированием.
-Кеш: {letter: {'items': {abs_index: artist}, 'total': N, 'batches': set}}
-Батч = 200, страница = 50. Тап на любую страницу → грузится РОВНО один батч.
-Пагинация: ≤ 6 кнопок → по центру (AnchorLayout), ≥ 7 → скролл.
-Поддерживает 3 темы (green, light, dark) и 6 языков.
 """
 import time
 import re
@@ -232,7 +228,7 @@ class SearchBar(MDCard):
         if theme_id == 'light':
             self.md_bg_color = [1, 1, 1, 1]
             self.line_color = line
-            self.line_width = 4.0  # 🔥 УВЕЛИЧЕНО В 2 РАЗА (было 2.0)
+            self.line_width = 4.0
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
@@ -242,7 +238,7 @@ class SearchBar(MDCard):
         elif theme_id == 'dark':
             self.md_bg_color = [0.15, 0.15, 0.15, 1]
             self.line_color = line
-            self.line_width = 4.0  # 🔥 УВЕЛИЧЕНО В 2 РАЗА (было 2.0)
+            self.line_width = 4.0
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
@@ -252,7 +248,7 @@ class SearchBar(MDCard):
         else:
             self.md_bg_color = [1, 1, 1, 1]
             self.line_color = line
-            self.line_width = 4.0  # 🔥 УВЕЛИЧЕНО В 2 РАЗА (было 2.0)
+            self.line_width = 4.0
             self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
             self.search_field.hint_text_color = [0.55, 0.55, 0.55, 1]
             self.search_field.cursor_color = [0.1, 0.1, 0.1, 1]
@@ -276,16 +272,16 @@ class SearchBar(MDCard):
                 self.on_search(text)
 
     def _on_clear_pressed(self, instance):
+        if self.on_clear:
+            self.on_clear()
+
         self.search_field.text = ""
         self.clear_wrapper.opacity = 0
         self.clear_wrapper.disabled = True
         self.current_query = ""
-        if self.on_clear:
-            self.on_clear()
-        self.search_field.focus = False
 
     def _on_focus(self, instance, value):
-        self.line_width = 2.5 if value else 2.0
+        self.line_width = 5.0 if value else 4.0
 
     def set_text(self, text):
         self.search_field.text = text or ""
@@ -311,13 +307,13 @@ class LetterButton(MDBoxLayout):
         self.is_selected = False
 
         self.size_hint = (None, 1)
-        self.width = dp(38)
+        self.width = dp(32)
         self.padding = [dp(2)] * 4
         self.spacing = 0
         self.md_bg_color = [0, 0, 0, 0]
 
         self.label = MDLabel(
-            text=text, font_size=sp(16), halign="center", valign="middle",
+            text=text, font_size=sp(15), halign="center", valign="middle",
             theme_text_color="Custom", text_color=[1, 1, 1, 0.7], bold=True,
             size_hint=(1, 1)
         )
@@ -524,7 +520,7 @@ class AlphabetMenu(MDBoxLayout):
 
 
 class SongsMenu(MDBoxLayout):
-    """Прозрачное меню с алфавитом — без рамки и фона"""
+    """Прозрачное меню с алфавитом — без рамки и фона, на всю ширину"""
 
     def __init__(self, on_language_toggle=None, on_letter_press=None,
                  current_language='ru', **kwargs):
@@ -1124,6 +1120,8 @@ class SongsScreen(BaseScreen):
         self._all_search_results = []
         self._search_page = 0
         self._search_limit = 10
+        self._search_token = ""
+        self._search_in_progress = False
 
         self.search_bar = None
         self._main_label = None
@@ -1221,7 +1219,11 @@ class SongsScreen(BaseScreen):
             self.songs_menu.alphabet_menu._populate_items()
         if self._result_label and self._result_label.opacity > 0:
             if self.is_search_mode:
-                self._result_label.text = f"{get_text('songs_found')}: {len(self._search_results)}"
+                start = self._search_page * self._search_limit
+                end = min(start + self._search_limit, len(self._all_search_results))
+                current = end - start
+                total = len(self._all_search_results)
+                self._result_label.text = f"{get_text('songs_found')}: {current} {get_text('of')} {total}"
             elif self.current_letter and self._all_artists:
                 current_count = min((self._page + 1) * self._limit, self._total_artists)
                 self._result_label.text = (
@@ -1253,7 +1255,7 @@ class SongsScreen(BaseScreen):
 
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
-        # 2. Основной лейбл
+        # 2. Основной лейбл (подсказка "Поиск по алфавиту")
         self._main_label = MDLabel(
             text=get_text('search_artists'),
             font_size=sp(14), halign="center",
@@ -1264,11 +1266,10 @@ class SongsScreen(BaseScreen):
 
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(2)))
 
-        # 3. Меню алфавита (прозрачное)
+        # 3. Меню алфавита (прозрачное, на всю ширину)
         menu_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, None), height=dp(56),
-            md_bg_color=[0, 0, 0, 0],
-            padding=[padding[0], 0, padding[2], 0]
+            md_bg_color=[0, 0, 0, 0]
         )
         self._menu_container = menu_container
 
@@ -1280,7 +1281,7 @@ class SongsScreen(BaseScreen):
         menu_container.add_widget(self.songs_menu)
         main_layout.add_widget(menu_container)
 
-        # 4. Лейбл с результатами
+        # 4. Лейбл с результатами ("Найдено песен...")
         self._result_label = MDLabel(
             text="", font_size=sp(13), halign="center",
             size_hint_y=None, height=dp(20),
@@ -1304,7 +1305,7 @@ class SongsScreen(BaseScreen):
         wrapper.add_widget(self.recycle_view)
         main_layout.add_widget(wrapper)
 
-        # 6. Пагинация для алфавита
+        # 6. Пагинации
         self._pagination_bar = PaginationBar(
             on_page_select=self._on_page_selected_from_bar,
         )
@@ -1313,7 +1314,6 @@ class SongsScreen(BaseScreen):
         self._pagination_bar.disabled = True
         main_layout.add_widget(self._pagination_bar)
 
-        # 6.1 Пагинация для поиска (второй экземпляр)
         self._search_pagination_bar = PaginationBar(
             on_page_select=self._on_search_page_selected,
         )
@@ -1322,7 +1322,7 @@ class SongsScreen(BaseScreen):
         self._search_pagination_bar.disabled = True
         main_layout.add_widget(self._search_pagination_bar)
 
-        # 7. Отступ под BottomNav — после пагинации
+        # 7. Отступ под BottomNav
         bottom_padding = layout_config.get_bottom_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
 
@@ -1336,29 +1336,64 @@ class SongsScreen(BaseScreen):
     def _toggle_language(self):
         pass
 
-    # ============ ПАГИНАЦИЯ (Алфавит) ============
+    # ============ ПОИСК / АЛФАВИТ ============
 
-    def _hide_pagination(self):
-        if not self._pagination_bar:
+    def _hide_alphabet_for_search(self):
+        # Физически убираем из лэйаута, чтобы освободить место
+        if self._menu_container and self._menu_container.parent:
+            self._menu_container.parent.remove_widget(self._menu_container)
+        if self._main_label and self._main_label.parent:
+            self._main_label.parent.remove_widget(self._main_label)
+
+    def _show_alphabet_for_search(self):
+        # Возвращаем обратно в правильном порядке
+        if self._main_layout:
+            # Проверяем, что _main_label нет в лэйауте и добавляем его перед _result_label
+            if self._main_label and self._main_label.parent is None:
+                if self._result_label and self._result_label.parent:
+                    idx = self._main_layout.children.index(self._result_label)
+                    self._main_layout.add_widget(self._main_label, index=len(self._main_layout.children) - idx)
+                else:
+                    self._main_layout.add_widget(self._main_label)
+
+            # Проверяем, что _menu_container нет в лэйауте и добавляем его перед _result_label
+            if self._menu_container and self._menu_container.parent is None:
+                if self._result_label and self._result_label.parent:
+                    idx = self._main_layout.children.index(self._result_label)
+                    self._main_layout.add_widget(self._menu_container, index=len(self._main_layout.children) - idx)
+                else:
+                    self._main_layout.add_widget(self._menu_container)
+
+    def _show_search_page(self, page_idx):
+        if not self._all_search_results:
+            self._hide_search_pagination()
             return
-        self._pagination_bar.height = 0
-        self._pagination_bar.opacity = 0
-        self._pagination_bar.disabled = True
 
-    def _show_pagination_bar(self):
-        if not self._pagination_bar:
+        self._search_page = page_idx
+        start = page_idx * self._search_limit
+        end = min(start + self._search_limit, len(self._all_search_results))
+        page_slice = self._all_search_results[start:end]
+
+        self.recycle_view.set_songs(page_slice, self.on_song_selected)
+
+        total_pages = (len(self._all_search_results) + self._search_limit - 1) // self._search_limit
+        if total_pages > 1:
+            self._show_search_pagination(len(self._all_search_results))
+        else:
+            self._hide_search_pagination()
+
+        self._update_search_result_label()
+        Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
+
+    def _update_search_result_label(self):
+        if not self._all_search_results:
+            self._hide_result_label()
             return
-        self._pagination_bar.height = dp(48)
-        self._pagination_bar.opacity = 1
-        self._pagination_bar.disabled = False
-        self._pagination_bar.set_total(self._total_artists, self._limit, self._page)
-
-    def _on_page_selected_from_bar(self, page_index):
-        if page_index == self._page:
-            return
-        self._load_page(page_index)
-
-    # ============ ПАГИНАЦИЯ (Поиск) ============
+        start = self._search_page * self._search_limit
+        end = min(start + self._search_limit, len(self._all_search_results))
+        current = end - start
+        total = len(self._all_search_results)
+        self._show_result_label(f"{get_text('songs_found')}: {current} {get_text('of')} {total}")
 
     def _hide_search_pagination(self):
         if not self._search_pagination_bar:
@@ -1383,27 +1418,27 @@ class SongsScreen(BaseScreen):
             return
         self._show_search_page(page_index)
 
-    def _show_search_page(self, page_idx):
-        if not self._all_search_results:
-            self._hide_search_pagination()
+    def _hide_pagination(self):
+        if not self._pagination_bar:
             return
+        self._pagination_bar.height = 0
+        self._pagination_bar.opacity = 0
+        self._pagination_bar.disabled = True
 
-        self._search_page = page_idx
-        start = page_idx * self._search_limit
-        end = min(start + self._search_limit, len(self._all_search_results))
-        page_slice = self._all_search_results[start:end]
+    def _show_pagination_bar(self):
+        if not self._pagination_bar:
+            return
+        self._pagination_bar.height = dp(48)
+        self._pagination_bar.opacity = 1
+        self._pagination_bar.disabled = False
+        self._pagination_bar.set_total(self._total_artists, self._limit, self._page)
 
-        self.recycle_view.set_songs(page_slice, self.on_song_selected)
+    def _on_page_selected_from_bar(self, page_index):
+        if page_index == self._page:
+            return
+        self._load_page(page_index)
 
-        total_pages = (len(self._all_search_results) + self._search_limit - 1) // self._search_limit
-        if total_pages > 1:
-            self._show_search_pagination(len(self._all_search_results))
-        else:
-            self._hide_search_pagination()
-
-        Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
-
-    # ============ ПАГИНАЦИЯ (Алфавит логика) ============
+    # ============ ЛОГИКА АЛФАВИТА ============
 
     def _is_page_cached(self, cache, page):
         start = page * self._limit
@@ -1560,8 +1595,6 @@ class SongsScreen(BaseScreen):
                 on_failure=_on_error
             )
 
-    # ============ ФИЛЬТРАЦИЯ ============
-
     def _matches_letter(self, name, letter):
         if not name or not letter:
             return False
@@ -1570,8 +1603,6 @@ class SongsScreen(BaseScreen):
             cat = unicodedata.category(first)
             return cat.startswith('P') or cat in ('Sc', 'Sm', 'Sk')
         return first == letter
-
-    # ============ ЗАГРУЗКА ИСПОЛНИТЕЛЕЙ ============
 
     def _load_artists(self, letter):
         self.current_artist = None
@@ -1672,19 +1703,33 @@ class SongsScreen(BaseScreen):
         self.current_artist = None
         if self.songs_menu:
             self.songs_menu.set_current_letter(None)
+
+        self._search_token = str(time.time())
+        current_token = self._search_token
+        self._search_in_progress = True
+
+        self._hide_alphabet_for_search()
+        self._hide_result_label()
         self._show_loading()
+
         self.recycle_view.clear()
         self.recycle_view.viewclass = 'SearchSongCard'
+
         self._hide_pagination()
         self._hide_search_pagination()
 
         api.search_songs(
             query=query, limit=100,
-            on_success=self._on_search_success,
-            on_failure=self._on_search_failed
+            on_success=lambda res: self._on_search_success(res, current_token),
+            on_failure=lambda req, err: self._on_search_failed(req, err, current_token)
         )
 
-    def _on_search_success(self, results):
+    def _on_search_success(self, results, token):
+        if token != self._search_token:
+            return
+
+        self._search_in_progress = False
+
         if isinstance(results, dict):
             raw_results = results.get('results', [])
         elif isinstance(results, list):
@@ -1712,10 +1757,13 @@ class SongsScreen(BaseScreen):
             self._hide_search_pagination()
         else:
             self._show_search_page(0)
-            self._show_result_label(f"{get_text('songs_found')}: {len(self._all_search_results)}")
-            self._show_hint(get_text('search_results'))
 
-    def _on_search_failed(self, req, error):
+    def _on_search_failed(self, req, error, token):
+        if token != self._search_token:
+            return
+
+        self._search_in_progress = False
+
         self._all_search_results = []
         self._search_results = []
         self.recycle_view.clear()
@@ -1725,11 +1773,14 @@ class SongsScreen(BaseScreen):
         logger.error(f"Ошибка поиска: {error}")
 
     def clear_search(self):
+        # 1. Сбрасываем флаги и данные
         self.is_search_mode = False
         self.search_results = []
         self._all_search_results = []
-        self.search_bar.clear()
-        self.recycle_view.clear()
+        self._search_in_progress = False
+        self._search_token = str(time.time())
+
+        # 2. Скрываем старые лейблы и возвращаем алфавит
         self._hide_result_label()
         self._hide_loading()
         self._hide_empty()
@@ -1739,7 +1790,13 @@ class SongsScreen(BaseScreen):
         self.current_artist = None
         if self.songs_menu:
             self.songs_menu.set_current_letter(None)
+
+        self._show_alphabet_for_search()
         self._show_hint(get_text('search_artists'))
+
+        # 3. Очищаем RecycleView
+        self.recycle_view.clear()
+        self.recycle_view.viewclass = 'ArtistCard'
 
     def _display_artists(self):
         self._hide_loading()
@@ -1782,7 +1839,7 @@ class SongsScreen(BaseScreen):
         if hasattr(self, '_hint_timer'):
             self._hint_timer = None
         if self.is_search_mode:
-            self._main_label.text = get_text('search_results')
+            self._main_label.text = ""
         elif self.current_artist:
             self._main_label.text = f"{get_text('artist_songs')}: {self.current_artist}"
         else:
@@ -1805,7 +1862,10 @@ class SongsScreen(BaseScreen):
         self._hide_result_label()
 
     def _show_loading(self, text=None):
-        self._show_hint(text or get_text('loading'))
+        if text:
+            self._show_hint(text)
+        else:
+            self._hide_result_label()
 
     def _hide_loading(self):
         self._restore_hint()
@@ -1844,11 +1904,9 @@ class SongsScreen(BaseScreen):
                 self.songs_menu.set_current_letter(None)
             self.recycle_view.viewclass = 'SearchSongCard'
 
+            self._hide_alphabet_for_search()
             self._all_search_results = self._search_results
             self._show_search_page(0)
-
-            self._show_result_label(f"{get_text('songs_found')}: {len(self._all_search_results)}")
-            self._show_hint(get_text('search_results'))
 
     def restore_state(self):
         if self.manager and self.manager.current != 'songs':
@@ -1902,6 +1960,7 @@ class SongsScreen(BaseScreen):
                 self._show_hint(get_text('search_artists'))
                 self._hide_result_label()
                 self._hide_pagination()
+                self._show_alphabet_for_search()
 
             self._is_restoring = False
             return True
@@ -1929,6 +1988,7 @@ class SongsScreen(BaseScreen):
             self.recycle_view.clear()
             self._hide_pagination()
             self._hide_search_pagination()
+            self._show_alphabet_for_search()
 
     def on_leave(self):
         if self.recycle_view:
