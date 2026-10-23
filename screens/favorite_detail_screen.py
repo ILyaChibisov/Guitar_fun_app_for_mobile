@@ -1155,6 +1155,8 @@ class FavoriteDetailScreen(BaseScreen):
             self.manager.current = 'home'
 
     def on_enter(self):
+        super().on_enter()
+
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             if hasattr(app.top_nav, 'left_container'):
@@ -1171,6 +1173,7 @@ class FavoriteDetailScreen(BaseScreen):
             def _init_panel(dt):
                 self._floating_panel._init_position()
                 self._floating_panel.hide()
+
             Clock.schedule_once(_init_panel, 0.1)
 
     def on_leave(self):

@@ -1031,20 +1031,26 @@ class SearchScreenDetail(BaseScreen):
         Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.3)
 
     def _toggle_theme(self, *args):
-        """Переключение глобальной темы через settings_manager."""
+        """Переключение глобальной темы через settings_state."""
+        from state.settings_state import settings_state
+
         order = ['green', 'light', 'dark']
-        cur = settings_manager.theme
+        cur = settings_state.theme
         try:
             idx = order.index(cur)
         except ValueError:
             idx = 0
         new_theme = order[(idx + 1) % len(order)]
-        settings_manager.theme = new_theme
+
+        settings_state.set_theme(new_theme)
+
         app = MDApp.get_running_app()
         if app and hasattr(app, 'apply_theme'):
-            app.apply_theme()
+            app.apply_theme(new_theme)
         else:
             self.update_theme_colors()
+
+        self._applied_theme_version = settings_state.theme_version
 
     def _fix_slider_thumb(self, slider):
         if slider:
@@ -1456,6 +1462,8 @@ class SearchScreenDetail(BaseScreen):
             self.manager.current = 'home'
 
     def on_enter(self):
+        super().on_enter()
+
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             if hasattr(app.top_nav, 'left_container'):

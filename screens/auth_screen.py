@@ -400,15 +400,14 @@ class AuthScreen(BaseScreen):
             self.manager.current = 'home'
 
     def on_enter(self):
-        """При входе на экран"""
+        super().on_enter()
+
         logger.info("🚪 Вход в экран авторизации")
 
-        # Если уже авторизован - сразу переходим на главную
         if api.is_authenticated():
             Clock.schedule_once(self._go_home, 0.1)
             return
 
-        # Обновляем TopNav
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
@@ -417,12 +416,10 @@ class AuthScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
 
-        # Очищаем поля
         self.email_field.text = ""
         self.password_field.text = ""
         self.confirm_field.text = ""
 
-        # Если в режиме регистрации - переключаем на вход
         if not self._login_mode:
             self._toggle_mode(None)
 

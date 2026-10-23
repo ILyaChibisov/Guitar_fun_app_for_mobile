@@ -1750,6 +1750,8 @@ class SongsScreen(BaseScreen):
         return super().on_pre_leave()
 
     def on_enter(self):
+        super().on_enter()
+
         if self._last_display_key is not None and not self._is_search_mode:
             self._show_alphabet_for_search()
             self._update_result_label_for_artists()

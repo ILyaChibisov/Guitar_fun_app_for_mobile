@@ -1570,6 +1570,8 @@ class ChordDetailScreen(BaseScreen):
                 self.manager.current = 'home'
 
     def on_enter(self):
+        super().on_enter()
+
         self.update_theme_colors()
         self._update_griff_size()
         pending_chord = screen_state.get_pending_chord()

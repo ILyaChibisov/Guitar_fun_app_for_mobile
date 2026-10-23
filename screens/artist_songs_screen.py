@@ -1004,6 +1004,8 @@ class ArtistSongsScreen(BaseScreen):
             return False
 
     def on_enter(self):
+        super().on_enter()
+
         if self._last_display_key is not None and self.artist_name:
             self._update_top_nav_title(self.artist_name)
             self._update_count_label(self._total_songs)

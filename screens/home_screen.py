@@ -481,10 +481,12 @@ class HomeScreen(BaseScreen):
         logger.info(f'Данные пользователя обновлены: {username}')
 
     def on_enter(self):
+        super().on_enter()
+
         logger.info("Вход в главный экран")
 
         self._apply_current_theme(0)
-        self.update_language()  # Обновляем язык при входе на всякий случай
+        self.update_language()
 
         try:
             app = MDApp.get_running_app()

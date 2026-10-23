@@ -2,6 +2,11 @@
 """
 Экран настроек с выбором темы и языка.
 6 языков, карточки в сетке 2x3.
+
+Быстрая смена темы/языка:
+  - settings_state.set_* — асинхронная запись файла (без fsync);
+  - app.apply_theme/apply_language — только hot-панели + текущий экран;
+  - остальные экраны подхватят изменения сами в on_enter (BaseScreen).
 """
 import os
 import json
@@ -23,9 +28,8 @@ from kivymd.uix.button import MDIconButton
 
 from config.logger_config import screen_logger
 from screens.base_screen import BaseScreen
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state
 from utils.localization import get_text
-from config.app_config import config
 
 logger = screen_logger('Settings')
 
@@ -39,46 +43,6 @@ except ImportError:
 
     def load_asset_as_bytes(name):
         return None
-
-# ============ ПУТЬ К ФАЙЛУ ============
-_SETTINGS_FILE = os.path.join(config.CACHE_DIR, 'user_settings.json')
-
-
-def read_language_from_file():
-    """Читает язык из JSON-файла (совместимость)."""
-    try:
-        if os.path.exists(_SETTINGS_FILE):
-            with open(_SETTINGS_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                lang = data.get('language', 'ru')
-                logger.info(f"📖 read_language_from_file: {lang}")
-                return lang
-        else:
-            default = {"theme": "green", "language": "ru", "is_authenticated": False}
-            with open(_SETTINGS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(default, f, ensure_ascii=False, indent=4)
-            logger.info("📖 read_language_from_file: файл создан, язык = ru")
-            return 'ru'
-    except Exception as e:
-        logger.error(f"❌ Ошибка чтения языка: {e}")
-        return 'ru'
-
-
-def write_language_to_file(lang_code):
-    """Записывает язык в JSON-файл (совместимость со старым форматом)."""
-    try:
-        data = {}
-        if os.path.exists(_SETTINGS_FILE):
-            with open(_SETTINGS_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-        data['language'] = lang_code
-        with open(_SETTINGS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-            f.flush()
-            os.fsync(f.fileno())
-        logger.info(f"💾 write_language_to_file: {lang_code}")
-    except Exception as e:
-        logger.error(f"❌ Ошибка записи языка: {e}")
 
 
 # ============ КЭШ ФЛАГОВ ============
@@ -164,7 +128,7 @@ class ThemeOption(MDCard):
         self.size_hint = (1, 1)
         self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
-        self.ripple_behavior = False          # отключаем серый ripple-шарик
+        self.ripple_behavior = False
         self.padding = [0, dp(6), 0, dp(6)]
         self.spacing = dp(2)
         self.radius = [dp(10)]
@@ -204,13 +168,12 @@ class ThemeOption(MDCard):
         """Мгновенная визуальная реакция на касание — до тяжёлой смены темы."""
         if not self.collide_point(*touch.pos):
             return False
-        # Сразу подсвечиваем себя как выбранный (без ожидания set_active из селектора)
-        accent = ThemeColors.get_accent(self.theme_id)  # акцент выбранной темы
+        accent = ThemeColors.get_accent(self.theme_id)
         self.md_bg_color = [*accent[:3], 0.15] if self.theme_id != 'green' else [1, 1, 1, 0.15]
         self.icon_btn.icon_color = accent
         self.label.text_color = accent
         self.label.bold = True
-        return False  # не перехватываем, пусть дальше идёт on_release
+        return False
 
     def update_colors(self):
         accent = ThemeColors.get_accent(self.current_theme_id)
@@ -242,7 +205,7 @@ class ThemeOption(MDCard):
 class ThemeSelector(MDCard):
     def __init__(self, current_theme='green', on_theme_selected=None, **kwargs):
         super().__init__(**kwargs)
-        self.ripple_behavior = False          # отключаем ripple у самой карточки-селектора
+        self.ripple_behavior = False
         self.current_theme = current_theme
         self.on_theme_selected = on_theme_selected
 
@@ -316,16 +279,11 @@ class ThemeSelector(MDCard):
     def _on_option_selected(self, theme_id):
         if theme_id == self.current_theme:
             return
-
-        # 1) Мгновенно обновляем визуал всех опций (дёшево)
         self.current_theme = theme_id
         for option in self.options:
             option.set_active(option.theme_id == theme_id)
-
-        # 2) Тяжёлое применение темы — в следующем кадре,
-        #    чтобы подсветка успела отрисоваться
         if self.on_theme_selected:
-            Clock.schedule_once(lambda dt: self.on_theme_selected(theme_id), 0)
+            self.on_theme_selected(theme_id)
 
 
 # ============================================================
@@ -335,7 +293,6 @@ class ThemeSelector(MDCard):
 class LanguageOption(ButtonBehavior, MDBoxLayout):
     def __init__(self, lang_code, lang_text, asset_name, current_theme_id, is_active=False, on_select=None, **kwargs):
         super().__init__(**kwargs)
-        # Отключаем ripple, если он есть у базового класса
         if hasattr(self, 'ripple_behavior'):
             self.ripple_behavior = False
 
@@ -433,7 +390,7 @@ class LanguageSelector(MDGridLayout):
         super().__init__(**kwargs)
 
         if current_lang is None:
-            current_lang = settings_manager.language
+            current_lang = settings_state.language
 
         self.current_lang = current_lang
         self.current_theme = current_theme
@@ -496,7 +453,7 @@ class SettingsScreen(BaseScreen):
         self.bg_image = None
         self.bg_color_inst = None
 
-        self.current_theme = settings_manager.theme
+        self.current_theme = settings_state.theme
 
         self.theme_selector = None
         self.lang_selector = None
@@ -612,8 +569,7 @@ class SettingsScreen(BaseScreen):
         self.theme_selector.current_theme = self.current_theme
         self.theme_selector.update_colors()
 
-        # Берём язык из кэша менеджера, а не с диска
-        current_lang = settings_manager.language
+        current_lang = settings_state.language
         self.lang_selector.current_theme = self.current_theme
         self.lang_selector.current_lang = current_lang
         self.lang_selector.update_colors()
@@ -626,8 +582,6 @@ class SettingsScreen(BaseScreen):
     def update_language(self):
         """Обновляет подписи экрана при смене языка."""
         logger.info("🌐 SettingsScreen: обновление языка")
-        # Заголовки секций оставляем "THEME / ТЕМА" и "LANGUAGE / ЯЗЫК" — по запросу.
-        # Подписи тем в карточках:
         if self.theme_selector:
             self.theme_selector.update_language()
 
@@ -636,33 +590,47 @@ class SettingsScreen(BaseScreen):
             return
 
         self.current_theme = theme_id
-        settings_manager.set_theme(theme_id)            # файл + кэш (быстро)
 
-        # 1) Глобальное применение темы (не блокирует — обход экранов отложен)
+        # 1) Состояние: файл запишется сам через 0.3 с (без fsync).
+        settings_state.set_theme(theme_id)
+
+        # 2) Мгновенно: hot-панели + текущий экран (это settings).
         app = MDApp.get_running_app()
         if app and hasattr(app, 'apply_theme'):
             app.apply_theme(theme_id)
 
-        # 2) Локальный перекрас экрана настроек — после apply_theme
+        # 3) Локальный перекрас экрана настроек.
         self.refresh_theme_colors()
 
-    def _on_language_selected(self, lang_code):
-        logger.info(f"🌐 Выбран язык: {lang_code}")
-        write_language_to_file(lang_code)               # файл (совместимость)
-        settings_manager.set_language(lang_code)        # файл + кэш
+        # 4) Отмечаем применённую версию для BaseScreen.
+        self._applied_theme_version = settings_state.theme_version
 
-        # Подписи тем в карточках — сразу
+    def _on_language_selected(self, lang_code):
+        if lang_code == settings_state.language:
+            return
+
+        logger.info(f"🌐 Выбран язык: {lang_code}")
+
+        # 1) Состояние (файл — асинхронно).
+        settings_state.set_language(lang_code)
+
+        # 2) Мгновенно: hot-панели + текущий экран.
+        app = MDApp.get_running_app()
+        if app and hasattr(app, 'apply_language'):
+            app.apply_language(lang_code)
+
+        # 3) Локально: подписи тем в карточках.
         if self.theme_selector:
             self.theme_selector.update_language()
 
-        # Глобальное применение языка — в фон
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'apply_language'):
-            Clock.schedule_once(lambda dt: app.apply_language(lang_code), 0)
+        self._applied_language_version = settings_state.language_version
 
     def on_enter(self):
-        self.current_theme = settings_manager.theme
-        current_lang = settings_manager.language
+        # Базовый вход: layout + ленивая синхронизация
+        super().on_enter()
+
+        self.current_theme = settings_state.theme
+        current_lang = settings_state.language
 
         self.lang_selector.current_lang = current_lang
         self.lang_selector.update_colors()

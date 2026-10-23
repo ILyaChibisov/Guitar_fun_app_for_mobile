@@ -1467,6 +1467,8 @@ class DictionaryScreen(BaseScreen):
         return super().on_pre_leave()
 
     def on_enter(self):
+        super().on_enter()
+
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):

@@ -154,6 +154,8 @@ class FeedbackScreen(BaseScreen):
         notify.info("Функция обратной связи будет доступна в следующей версии")
 
     def on_enter(self):
+        super().on_enter()
+
         logger.info("🚪 Вход в экран обратной связи")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):

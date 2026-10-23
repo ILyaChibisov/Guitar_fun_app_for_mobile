@@ -1241,6 +1241,8 @@ class MetronomeScreen(BaseScreen):
             self.tick_count = (self.tick_count + 1) % self.beats_per_measure
 
     def on_enter(self):
+        super().on_enter()
+
         self.update_theme_colors()
         self._update_indicators(self.beats_per_measure)
         self._update_beat_indicators()

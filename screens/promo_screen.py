@@ -148,6 +148,8 @@ class PromoScreen(BaseScreen):
         notify.info("Функция активации промокодов будет доступна в следующей версии")
 
     def on_enter(self):
+        super().on_enter()
+
         logger.info("🚪 Вход в экран промокода")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):

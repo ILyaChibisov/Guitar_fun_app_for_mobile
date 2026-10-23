@@ -341,7 +341,8 @@ class TasksScreen(BaseScreen):
         self.build_ui(content_widget=content, use_scroll=False)
 
     def on_enter(self):
-        """При входе на экран"""
+        super().on_enter()
+
         logger.info("🚪 Вход в экран задач")
 
         app = MDApp.get_running_app()
@@ -349,7 +350,6 @@ class TasksScreen(BaseScreen):
             app.top_nav.set_custom_title("Задачи")
             app.top_nav.back_btn.on_release = self.go_back
 
-        # Загружаем задачи
         self.load_tasks()
 
     def load_tasks(self, force_refresh=False):

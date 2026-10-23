@@ -917,7 +917,8 @@ class TaskDetailScreen(BaseScreen):
             self.manager.current = 'tasks'
 
     def on_enter(self):
-        """При входе на экран"""
+        super().on_enter()
+
         logger.info("🚪 Вход в детальный просмотр задачи")
 
         title = self.task_data.get('title', 'Задача') if self.task_data else "Задача"

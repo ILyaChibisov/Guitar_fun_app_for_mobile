@@ -1746,6 +1746,8 @@ class ChordsScreen(BaseScreen):
         self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.15)
 
     def on_enter(self):
+        super().on_enter()
+
         self.update_theme_colors()
         Clock.schedule_once(self._update_griff_size, 0.1)
         Clock.schedule_once(self._update_griff_size, 0.3)

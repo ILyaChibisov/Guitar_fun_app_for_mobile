@@ -636,6 +636,8 @@ class FavoritesScreen(BaseScreen):
         self._update_top_nav()
 
     def on_enter(self):
+        super().on_enter()
+
         self._register_listener()
         self.load_favorites(force_refresh=False)
 

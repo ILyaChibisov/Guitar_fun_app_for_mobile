@@ -186,8 +186,8 @@ from screens.components.sidebar import Sidebar
 from screens.components.blocking_layer import BlockingLayer
 from config.system_bars import get_navigation_bar_height, get_status_bar_height, get_screen_density, get_all_system_info
 
-# ============ НАСТРОЙКИ ============
-from utils.settings_manager import settings_manager
+# ============ НАСТРОЙКИ (единый источник правды) ============
+from state.settings_state import settings_state
 
 # ============ ОТКЛЮЧЕНИЕ RIPPLE ЭФФЕКТА ============
 from kivymd.uix.button import MDIconButton
@@ -229,8 +229,8 @@ class RootWidget(MDFloatLayout):
         self._init_canvas()
         self.load_background()
 
-        # Применяем сохранённую тему (читается из файла)
-        self.apply_theme(settings_manager.theme)
+        # Применяем сохранённую тему (из settings_state)
+        self.apply_theme(settings_state.theme)
 
         logger.info("RootWidget создан")
 
@@ -251,7 +251,6 @@ class RootWidget(MDFloatLayout):
     def load_background(self):
         if not HAS_ASSETS:
             return
-        # Не дублируем, если уже загружено
         if getattr(self, 'bg_image', None) is not None:
             return
         try:
@@ -313,93 +312,99 @@ class GuitarFunsApp(MDApp):
         self.splash_screen = None
         self._components_created = False
 
-        # Читаем настройки из файла при старте
-        saved_theme = settings_manager.theme
-        saved_language = settings_manager.language
+        # ============ ЗАГРУЗКА НАСТРОЕК ============
+        # Единый источник правды — settings_state.
+        # Путь берём из config.CACHE_DIR (как раньше делал settings_manager).
+        settings_file = os.path.join(config.CACHE_DIR, 'user_settings.json')
+        settings_state.load(settings_file)
 
         logger.info('🎸 ' + '=' * 50)
         logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
-        logger.info(f'🎸 Язык из файла: {saved_language}')
+        logger.info(f'🎸 Тема: {settings_state.theme}')
+        logger.info(f'🎸 Язык: {settings_state.language}')
         logger.info('🎸 ' + '=' * 50)
 
     # ============ ПРИМЕНЕНИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ============
 
     def apply_theme(self, theme_id):
-        """Глобально применяет тему. KivyMD theme_cls в рантайме НЕ трогаем (это фризит)."""
-        logger.info(f"🎨 Глобальное применение темы: {theme_id}")
+        """
+        Быстрое применение темы.
 
-        # ❌ НЕ меняем self.theme_cls.theme_style / primary_palette —
-        # это триггерит KivyMD пересобирать canvas всех виджетов (3-4 сек фриза).
-        # Тему применяем вручную через update_theme_colors на каждом экране/компоненте.
+        Мгновенно (синхронно, < 100 мс) обновляются:
+          - RootWidget (фон)
+          - TopNav, BottomNav (горячие панели)
+          - ТЕКУЩИЙ экран
 
-        if hasattr(self, 'root') and self.root:
-            self.root.apply_theme(theme_id)
+        Остальные экраны обновятся сами в on_enter
+        через BaseScreen._sync_settings_if_needed.
+        """
+        logger.info(f"🎨 apply_theme({theme_id})")
 
-        def _refresh_nav():
-            if hasattr(self, 'top_nav') and self.top_nav:
-                try:
-                    self.top_nav.update_theme_colors()
-                except Exception as e:
-                    logger.debug(f"TopNav theme update failed: {e}")
-            if hasattr(self, 'bottom_nav') and self.bottom_nav:
-                try:
-                    self.bottom_nav.update_theme_colors()
-                except Exception as e:
-                    logger.debug(f"BottomNav theme update failed: {e}")
-
-        Clock.schedule_once(lambda dt: _refresh_nav(), 0)
-
-        if not hasattr(self, 'screen_manager') or not self.screen_manager:
-            return
-
-        sm = self.screen_manager
-        current = sm.current_screen if hasattr(sm, 'current_screen') else None
-
-        if current and hasattr(current, 'update_theme_colors'):
+        # 1) Фон
+        if self.root:
             try:
-                current.update_theme_colors()
+                self.root.apply_theme(theme_id)
             except Exception as e:
-                logger.debug(f"Не удалось обновить тему на экране {getattr(current, 'name', '?')}: {e}")
+                logger.error(f"root.apply_theme: {e}")
 
-        current_name = getattr(current, 'name', None)
-        others = [n for n in sm.screen_names if n != current_name]
-
-        def _update_next(names, idx=0):
-            if idx >= len(names):
-                return
-            name = names[idx]
+        # 2) Горячие панели
+        if self.top_nav:
             try:
-                scr = sm.get_screen(name)
-                if hasattr(scr, 'update_theme_colors'):
-                    scr.update_theme_colors()
+                self.top_nav.update_theme_colors()
             except Exception as e:
-                logger.debug(f"Не удалось обновить тему на экране {name}: {e}")
-            Clock.schedule_once(lambda dt: _update_next(names, idx + 1), 0)
+                logger.debug(f"top_nav theme: {e}")
+        if self.bottom_nav:
+            try:
+                self.bottom_nav.update_theme_colors()
+            except Exception as e:
+                logger.debug(f"bottom_nav theme: {e}")
 
-        Clock.schedule_once(lambda dt: _update_next(others), 0)
+        # 3) Текущий экран — сразу, чтобы пользователь не видел рассинхрона
+        if self.screen_manager:
+            current = self.screen_manager.current_screen
+            if current and hasattr(current, 'update_theme_colors'):
+                try:
+                    current.update_theme_colors()
+                    if hasattr(current, '_applied_theme_version'):
+                        current._applied_theme_version = settings_state.theme_version
+                except Exception as e:
+                    logger.debug(
+                        f"current.update_theme_colors ({getattr(current, 'name', '?')}): {e}"
+                    )
+
+        # ❌ Остальные экраны НЕ обходим.
 
     def apply_language(self, lang_code):
-        """Глобально применяет язык"""
-        logger.info(f"🌐 Глобальное применение языка: {lang_code}")
-        settings_manager.set_language(lang_code)
+        """
+        Быстрое применение языка: только горячие панели + текущий экран.
+        Остальные экраны — в on_enter.
+        """
+        logger.info(f"🌐 apply_language({lang_code})")
 
-        if hasattr(self, 'top_nav') and self.top_nav:
-            current_screen = self.screen_manager.current if self.screen_manager else 'home'
-            self.top_nav.update_title(current_screen)
+        if self.top_nav and self.screen_manager:
+            try:
+                self.top_nav.update_title(self.screen_manager.current)
+            except Exception as e:
+                logger.debug(f"top_nav title: {e}")
 
-        if hasattr(self, 'bottom_nav') and self.bottom_nav:
-            self.bottom_nav.update_language()
+        if self.bottom_nav:
+            try:
+                self.bottom_nav.update_language()
+            except Exception as e:
+                logger.debug(f"bottom_nav lang: {e}")
 
-        # Обновляем все экраны
-        if hasattr(self, 'screen_manager') and self.screen_manager:
-            for screen_name in self.screen_manager.screen_names:
-                screen = self.screen_manager.get_screen(screen_name)
-                if hasattr(screen, 'update_language'):
-                    try:
-                        screen.update_language()
-                    except Exception as e:
-                        logger.debug(f"Не удалось обновить язык на экране {screen_name}: {e}")
+        if self.screen_manager:
+            current = self.screen_manager.current_screen
+            if current and hasattr(current, 'update_language'):
+                try:
+                    current.update_language()
+                    if hasattr(current, '_applied_language_version'):
+                        current._applied_language_version = settings_state.language_version
+                except Exception as e:
+                    logger.debug(
+                        f"current.update_language ({getattr(current, 'name', '?')}): {e}"
+                    )
 
     # ============ АВТОРИЗАЦИЯ ============
 
@@ -439,7 +444,7 @@ class GuitarFunsApp(MDApp):
 
     def _on_auth_success(self, provider=None):
         logger.info(f"Авторизация успешна: {provider}")
-        settings_manager.set_authenticated(True)
+        settings_state.set_authenticated(True)
 
         if self.blocking_layer:
             self.blocking_layer.clear_modal_widget()
@@ -525,8 +530,8 @@ class GuitarFunsApp(MDApp):
         self.theme_cls.primary_hue = "300"
         self.theme_cls.material_style = "M3"
 
-        saved_theme = settings_manager.theme
-        saved_language = settings_manager.language
+        saved_theme = settings_state.theme
+        saved_language = settings_state.language
 
         if saved_theme == "dark":
             self.theme_cls.theme_style = "Dark"
@@ -613,6 +618,12 @@ class GuitarFunsApp(MDApp):
         self.root.add_widget(self.sidebar)
         self.root.add_widget(self.blocking_layer)
 
+        # Подписываем «горячие» панели на изменения настроек.
+        # Это гарантия: даже если кто-то забудет вызвать apply_theme,
+        # панели всё равно перекрасятся.
+        settings_state.add_theme_listener(self._on_theme_changed_hot)
+        settings_state.add_language_listener(self._on_language_changed_hot)
+
         network_manager.start_monitoring()
         Window.bind(on_resize=self.on_window_resize)
 
@@ -623,6 +634,37 @@ class GuitarFunsApp(MDApp):
             Clock.schedule_once(lambda dt: home_screen._check_auth(0), 0.5)
 
         logger.info("✅ Компоненты приложения показаны")
+
+    def _on_theme_changed_hot(self, theme_id):
+        """Реакция горячих панелей на смену темы."""
+        if self.root:
+            try:
+                self.root.apply_theme(theme_id)
+            except Exception as e:
+                logger.debug(f"root theme: {e}")
+        if self.top_nav:
+            try:
+                self.top_nav.update_theme_colors()
+            except Exception as e:
+                logger.debug(f"top_nav theme: {e}")
+        if self.bottom_nav:
+            try:
+                self.bottom_nav.update_theme_colors()
+            except Exception as e:
+                logger.debug(f"bottom_nav theme: {e}")
+
+    def _on_language_changed_hot(self, lang_code):
+        """Реакция горячих панелей на смену языка."""
+        if self.top_nav and self.screen_manager:
+            try:
+                self.top_nav.update_title(self.screen_manager.current)
+            except Exception as e:
+                logger.debug(f"top_nav title: {e}")
+        if self.bottom_nav:
+            try:
+                self.bottom_nav.update_language()
+            except Exception as e:
+                logger.debug(f"bottom_nav lang: {e}")
 
     def _on_splash_complete(self):
         logger.info("🎬 Сплеш-скрин завершён, показываем приложение")
@@ -696,6 +738,10 @@ class GuitarFunsApp(MDApp):
 
     def on_pause(self):
         logger.debug('Приложение свернуто')
+        try:
+            settings_state.flush()
+        except Exception as e:
+            logger.error(f"flush on_pause: {e}")
         return True
 
     def on_resume(self):
@@ -705,6 +751,10 @@ class GuitarFunsApp(MDApp):
     def on_stop(self):
         logger.info('Приложение закрыто')
         network_manager.stop_monitoring()
+        try:
+            settings_state.flush()
+        except Exception as e:
+            logger.error(f"flush on_stop: {e}")
 
     def hide_bottom_nav(self):
         if hasattr(self, 'bottom_nav') and self.bottom_nav and self.bottom_nav.parent:

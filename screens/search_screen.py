@@ -600,6 +600,8 @@ class SearchScreen(BaseScreen):
                     app.top_nav.right_container.add_widget(app.top_nav.home_btn)
 
     def on_enter(self):
+        super().on_enter()
+
         self._block_transition = False
         if not self._state_restored:
             restored = self.restore_state()

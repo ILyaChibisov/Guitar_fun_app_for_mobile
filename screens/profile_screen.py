@@ -60,6 +60,16 @@ class ProfileScreen(BaseScreen):
 
         logger.info('Экран профиля создан (BaseScreen)')
 
+    def update_theme_colors(self):
+        """Профиль использует статичные цвета — перекраска не требуется."""
+        # TODO: перекрасить карточку и иконки при смене темы
+        pass
+
+    def update_language(self):
+        """Профиль пока без локализации — заглушка для BaseScreen."""
+        # TODO: локализовать подписи при смене языка
+        pass
+
     def load_background(self):
         """Загружает фоновое изображение"""
         try:

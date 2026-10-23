@@ -1,6 +1,7 @@
 # screens/base_screen.py
 """
 Базовый класс для всех экранов с автоматическими отступами
+и ленивым применением темы/языка при входе.
 """
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -14,6 +15,7 @@ from kivy.core.window import Window
 from config.layout_config import layout_config
 from config.logger_config import screen_logger
 from config.system_bars import get_navigation_bar_height
+from state.settings_state import settings_state
 
 logger = screen_logger('BaseScreen')
 
@@ -22,6 +24,10 @@ class BaseScreen(MDScreen):
     """
     Базовый экран с автоматическими отступами для контента.
     Все экраны должны наследоваться от этого класса.
+
+    Также отвечает за ленивое применение темы/языка:
+    если настройки изменились, пока экран был невидим,
+    они применятся в on_enter (а не в момент смены настроек).
     """
 
     # Текущая высота BottomNav (должна совпадать с bottom_nav.py)
@@ -47,8 +53,57 @@ class BaseScreen(MDScreen):
         # Используется в экранах детального просмотра (song_detail, favorite_detail, etc.)
         self._manage_padding_manually = False
 
+        # Какие версии настроек уже применены на этом экране.
+        # -1 — значит «ничего ещё не применялось», при первом on_enter применим.
+        self._applied_theme_version = -1
+        self._applied_language_version = -1
+
         # Привязываемся к изменению размера окна (поворот экрана)
         Window.bind(on_resize=self._on_window_resize)
+
+    # ============ ЛЕНИВОЕ ПРИМЕНЕНИЕ НАСТРОЕК ============
+
+    def _sync_settings_if_needed(self):
+        """
+        Применяет тему/язык, если они изменились с момента последнего
+        посещения этого экрана. Вызывается из on_enter.
+
+        Экран, который сейчас невидим, НЕ перекрашивается.
+        Перекрасится, когда пользователь на него войдёт.
+        """
+        theme_v = settings_state.theme_version
+        lang_v = settings_state.language_version
+
+        theme_changed = (self._applied_theme_version != theme_v)
+        lang_changed = (self._applied_language_version != lang_v)
+
+        if theme_changed:
+            try:
+                if hasattr(self, 'update_theme_colors'):
+                    self.update_theme_colors()
+                self._applied_theme_version = theme_v
+                logger.debug(
+                    f"{getattr(self, 'name', '?')}: тема применена (v{theme_v})"
+                )
+            except Exception as e:
+                logger.error(
+                    f"{getattr(self, 'name', '?')}: ошибка update_theme_colors: {e}"
+                )
+
+        if lang_changed:
+            try:
+                if hasattr(self, 'update_language'):
+                    self.update_language()
+                self._applied_language_version = lang_v
+                logger.debug(
+                    f"{getattr(self, 'name', '?')}: язык применён (v{lang_v})"
+                )
+            except Exception as e:
+                logger.error(
+                    f"{getattr(self, 'name', '?')}: ошибка update_language: {e}"
+                )
+
+    # ============ ОБРАБОТКА ИЗМЕНЕНИЯ РАЗМЕРА ОКНА ============
 
     def _on_window_resize(self, window, width, height):
         """Обработчик изменения размера окна - обновляем отступы"""
@@ -59,14 +114,12 @@ class BaseScreen(MDScreen):
         if not hasattr(self, '_main_layout') or not self._main_layout:
             return
 
-        # ============ ЕСЛИ ЭКРАН САМ УПРАВЛЯЕТ ОТСТУПАМИ — НЕ ТРОГАЕМ ============
         if self._manage_padding_manually:
             logger.debug(f"{self.name}: ручное управление отступами, пропускаем _update_layout")
             return
 
         logger.debug(f"{self.name}: обновление layout после поворота")
 
-        # Используем include_top_nav=True для всех экранов (TopNav прозрачный)
         top_padding = layout_config.get_top_padding(include_top_nav=True)
         bottom_padding = self._get_bottom_padding()
 
@@ -76,13 +129,11 @@ class BaseScreen(MDScreen):
         if self._bottom_spacer:
             self._bottom_spacer.height = bottom_padding
 
-        # Обновляем отступ в ScrollView
         if self._scroll_view and self._use_scroll and self._scroll_content:
             nav_bar_height = get_navigation_bar_height()
             extra_bottom = self.BOTTOM_NAV_HEIGHT + nav_bar_height + self.BOTTOM_NAV_GAP
             self._scroll_content.padding = [0, 0, 0, extra_bottom]
 
-        # Обновляем padding контента
         if self._content_container and self._custom_padding is None:
             padding = layout_config.get_content_padding()
             self._content_container.padding = padding
@@ -94,13 +145,22 @@ class BaseScreen(MDScreen):
         nav_bar_height = get_navigation_bar_height()
         return self.BOTTOM_NAV_HEIGHT + nav_bar_height + self.BOTTOM_NAV_GAP
 
+    # ============ ЖИЗНЕННЫЙ ЦИКЛ ============
+
     def on_enter(self):
-        """Вызывается при входе на экран - можно переопределить в дочерних классах"""
+        """
+        При входе на экран:
+          1) обновляем layout (мог измениться размер окна);
+          2) применяем тему/язык, если их версии изменились.
+        """
         self._update_layout()
+        self._sync_settings_if_needed()
 
     def on_leave(self):
         """Вызывается при выходе с экрана - можно переопределить в дочерних классах"""
         pass
+
+    # ============ ПОСТРОЕНИЕ UI ============
 
     def build_ui(self, content_widget=None, top_widget=None, bottom_widget=None,
                  use_scroll=False, custom_padding=None, bottom_offset=0):
@@ -113,25 +173,21 @@ class BaseScreen(MDScreen):
             bottom_widget: Дополнительный виджет под контентом
             use_scroll: Использовать ли ScrollView для контента
             custom_padding: Свои отступы [left, top, right, bottom] (в dp)
-            bottom_offset: Дополнительный отступ снизу (для экранов с панелью настроек)
+            bottom_offset: Дополнительный отступ снизу
         """
         self._use_scroll = use_scroll
         self._custom_padding = custom_padding
         self._content_widget = content_widget
 
-        # Создаём основной контейнер
         self._main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
-        # Верхний отступ (под статус-бар и TopNav)
         top_padding = layout_config.get_top_padding()
         self._top_spacer = Widget(size_hint_y=None, height=top_padding)
         self._main_layout.add_widget(self._top_spacer)
 
-        # Дополнительный виджет сверху (если есть)
         if top_widget:
             self._main_layout.add_widget(top_widget)
 
-        # Контейнер для контента
         if custom_padding:
             padding = custom_padding
         else:
@@ -143,13 +199,10 @@ class BaseScreen(MDScreen):
             padding=padding
         )
 
-        # Добавляем основной контент (с ScrollView или без)
         if use_scroll:
-            # Получаем правильный нижний отступ
             nav_bar_height = get_navigation_bar_height()
             extra_bottom = self.BOTTOM_NAV_HEIGHT + nav_bar_height + self.BOTTOM_NAV_GAP + dp(bottom_offset)
 
-            # Создаём ScrollView со СКРЫТЫМ скроллбаром
             self._scroll_view = ScrollView(
                 size_hint=(1, 1),
                 do_scroll_x=False,
@@ -159,7 +212,6 @@ class BaseScreen(MDScreen):
                 bar_margin=0
             )
 
-            # Создаём внутренний контейнер для отступов
             self._scroll_content = MDBoxLayout(
                 orientation='vertical',
                 size_hint_y=None,
@@ -181,11 +233,9 @@ class BaseScreen(MDScreen):
 
         self._main_layout.add_widget(self._content_container)
 
-        # Дополнительный виджет снизу (если есть)
         if bottom_widget:
             self._main_layout.add_widget(bottom_widget)
 
-        # Нижний отступ (зазор перед BottomNav)
         bottom_padding = self._get_bottom_padding()
         self._bottom_spacer = Widget(size_hint_y=None, height=bottom_padding)
         self._main_layout.add_widget(self._bottom_spacer)

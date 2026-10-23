@@ -129,6 +129,8 @@ class HelpScreen(BaseScreen):
         self.build_ui(content_widget=content, use_scroll=True)
 
     def on_enter(self):
+        super().on_enter()
+
         logger.info("🚪 Вход в экран помощи")
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):

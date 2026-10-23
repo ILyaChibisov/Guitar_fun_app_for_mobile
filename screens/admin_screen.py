@@ -486,7 +486,8 @@ class AdminScreen(BaseScreen):
                 notify.error("Ошибка навигации")
 
     def on_enter(self):
-        """При входе на экран"""
+        super().on_enter()
+
         logger.info("Вход в админ панель")
 
     def go_back(self, instance=None):

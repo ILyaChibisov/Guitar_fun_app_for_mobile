@@ -1238,6 +1238,8 @@ class TunerScreen(BaseScreen):
         self._clear_error()
 
     def on_enter(self):
+        super().on_enter()
+
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.set_custom_back_callback(self.go_back)
