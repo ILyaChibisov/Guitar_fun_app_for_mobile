@@ -1134,6 +1134,7 @@ class SongsScreen(BaseScreen):
         self._menu_container = None
         self._pagination_bar = None
         self._search_pagination_bar = None
+        self._top_section = None
 
         self._search_query = ""
         self._search_results = []
@@ -1255,18 +1256,21 @@ class SongsScreen(BaseScreen):
 
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
-        # 2. Основной лейбл (подсказка "Поиск по алфавиту")
+        # 2. Контейнер для верхней части (лейбл + меню)
+        self._top_section = MDBoxLayout(
+            orientation='vertical', size_hint_y=None, height=dp(80)
+        )
+
+        # 2.1 Основной лейбл
         self._main_label = MDLabel(
             text=get_text('search_artists'),
             font_size=sp(14), halign="center",
             size_hint_y=None, height=dp(24),
             theme_text_color="Custom"
         )
-        main_layout.add_widget(self._main_label)
+        self._top_section.add_widget(self._main_label)
 
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(2)))
-
-        # 3. Меню алфавита (прозрачное, на всю ширину)
+        # 2.2 Меню алфавита
         menu_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, None), height=dp(56),
             md_bg_color=[0, 0, 0, 0]
@@ -1279,9 +1283,11 @@ class SongsScreen(BaseScreen):
             current_language=self.current_language
         )
         menu_container.add_widget(self.songs_menu)
-        main_layout.add_widget(menu_container)
+        self._top_section.add_widget(menu_container)
 
-        # 4. Лейбл с результатами ("Найдено песен...")
+        main_layout.add_widget(self._top_section)
+
+        # 3. Лейбл с результатами
         self._result_label = MDLabel(
             text="", font_size=sp(13), halign="center",
             size_hint_y=None, height=dp(20),
@@ -1291,7 +1297,7 @@ class SongsScreen(BaseScreen):
         )
         main_layout.add_widget(self._result_label)
 
-        # 5. Список (растягивается)
+        # 4. Список (растягивается)
         wrapper = MDBoxLayout(
             orientation='vertical', size_hint=(1, 1),
             spacing=0, padding=[padding[0], dp(4), padding[2], dp(0)],
@@ -1305,7 +1311,7 @@ class SongsScreen(BaseScreen):
         wrapper.add_widget(self.recycle_view)
         main_layout.add_widget(wrapper)
 
-        # 6. Пагинации
+        # 5. Пагинации
         self._pagination_bar = PaginationBar(
             on_page_select=self._on_page_selected_from_bar,
         )
@@ -1322,7 +1328,7 @@ class SongsScreen(BaseScreen):
         self._search_pagination_bar.disabled = True
         main_layout.add_widget(self._search_pagination_bar)
 
-        # 7. Отступ под BottomNav
+        # 6. Отступ под BottomNav
         bottom_padding = layout_config.get_bottom_padding()
         main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
 
@@ -1339,30 +1345,22 @@ class SongsScreen(BaseScreen):
     # ============ ПОИСК / АЛФАВИТ ============
 
     def _hide_alphabet_for_search(self):
-        # Физически убираем из лэйаута, чтобы освободить место
-        if self._menu_container and self._menu_container.parent:
-            self._menu_container.parent.remove_widget(self._menu_container)
-        if self._main_label and self._main_label.parent:
-            self._main_label.parent.remove_widget(self._main_label)
+        if hasattr(self, '_top_section') and self._top_section:
+            if self._top_section.parent:
+                self._top_section.parent.remove_widget(self._top_section)
 
     def _show_alphabet_for_search(self):
-        # Возвращаем обратно в правильном порядке
-        if self._main_layout:
-            # Проверяем, что _main_label нет в лэйауте и добавляем его перед _result_label
-            if self._main_label and self._main_label.parent is None:
+        if hasattr(self, '_top_section') and self._top_section:
+            if self._top_section.parent is None and hasattr(self, '_main_layout'):
                 if self._result_label and self._result_label.parent:
                     idx = self._main_layout.children.index(self._result_label)
-                    self._main_layout.add_widget(self._main_label, index=len(self._main_layout.children) - idx)
+                    insert_idx = len(self._main_layout.children) - idx
+                    self._main_layout.add_widget(self._top_section, index=insert_idx)
                 else:
-                    self._main_layout.add_widget(self._main_label)
+                    self._main_layout.add_widget(self._top_section)
 
-            # Проверяем, что _menu_container нет в лэйауте и добавляем его перед _result_label
-            if self._menu_container and self._menu_container.parent is None:
-                if self._result_label and self._result_label.parent:
-                    idx = self._main_layout.children.index(self._result_label)
-                    self._main_layout.add_widget(self._menu_container, index=len(self._main_layout.children) - idx)
-                else:
-                    self._main_layout.add_widget(self._menu_container)
+        if self._main_label:
+            self._main_label.text = get_text('search_artists')
 
     def _show_search_page(self, page_idx):
         if not self._all_search_results:
@@ -1773,14 +1771,13 @@ class SongsScreen(BaseScreen):
         logger.error(f"Ошибка поиска: {error}")
 
     def clear_search(self):
-        # 1. Сбрасываем флаги и данные
+        # 1. Сначала сбрасываем данные и скрываем старые лейблы
         self.is_search_mode = False
         self.search_results = []
         self._all_search_results = []
         self._search_in_progress = False
         self._search_token = str(time.time())
 
-        # 2. Скрываем старые лейблы и возвращаем алфавит
         self._hide_result_label()
         self._hide_loading()
         self._hide_empty()
@@ -1791,12 +1788,12 @@ class SongsScreen(BaseScreen):
         if self.songs_menu:
             self.songs_menu.set_current_letter(None)
 
-        self._show_alphabet_for_search()
-        self._show_hint(get_text('search_artists'))
-
-        # 3. Очищаем RecycleView
+        # 2. Очищаем RecycleView
         self.recycle_view.clear()
         self.recycle_view.viewclass = 'ArtistCard'
+
+        # 3. Возвращаем верхнюю часть
+        self._show_alphabet_for_search()
 
     def _display_artists(self):
         self._hide_loading()
