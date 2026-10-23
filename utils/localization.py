@@ -22,11 +22,13 @@ TRANSLATIONS = {
         # ============ ОБЩИЕ ============
         "search": "Поиск", "find": "Найти", "theme": "Тема", "language": "Язык",
         "theme_green": "Зелёная", "theme_light": "Светлая", "theme_dark": "Тёмная",
-        "loading": "Загрузка", "min_chars": "Введите минимум 2 символа",
+        "loading": "Загрузка...", "min_chars": "Введите минимум 2 символа",
         "selected_lang": "Выбран", "lang_ru": "Русский", "lang_en": "English",
         "lang_digits": "0-9", "load_error": "Ошибка: не удалось загрузить песню",
         "close": "Закрыть", "cancel": "Отмена", "ok": "ОК", "apply": "Применить",
         "yes": "Да", "no": "Нет",
+        "retry": "Повторить",
+        "page_of": "Страница {current} из {total}",
 
         # ============ АККОРДЫ ============
         "search_chord": "Поиск аккорда", "search_found": "Мы нашли ваш аккорд",
@@ -49,6 +51,7 @@ TRANSLATIONS = {
         "loading_error": "Ошибка загрузки\nПроверьте интернет",
         "loading_songs": "Загрузка песен...",
         "no_artist_songs": "Нет песен у этого исполнителя",
+        "tap_letter_to_retry": "Нажмите букву ещё раз, чтобы повторить",
 
         # ============ ТЮНЕР ============
         "in_tune": "В СТРОЕ!", "cents": "цент",
@@ -115,11 +118,13 @@ TRANSLATIONS = {
 
         "search": "Search", "find": "Find", "theme": "Theme", "language": "Language",
         "theme_green": "Green", "theme_light": "Light", "theme_dark": "Dark",
-        "loading": "Loading", "min_chars": "Enter at least 2 characters",
+        "loading": "Loading...", "min_chars": "Enter at least 2 characters",
         "selected_lang": "Selected", "lang_ru": "Russian", "lang_en": "English",
         "lang_digits": "0-9", "load_error": "Error: failed to load song",
         "close": "Close", "cancel": "Cancel", "ok": "OK", "apply": "Apply",
         "yes": "Yes", "no": "No",
+        "retry": "Retry",
+        "page_of": "Page {current} of {total}",
 
         "search_chord": "Search chord", "search_found": "Chord found",
         "search_not_found": "Nothing found", "no_variants": "No other variants",
@@ -137,6 +142,7 @@ TRANSLATIONS = {
         "loading_error": "Loading error\nCheck connection",
         "loading_songs": "Loading songs...",
         "no_artist_songs": "No songs by this artist",
+        "tap_letter_to_retry": "Tap the letter again to retry",
 
         "in_tune": "IN TUNE!", "cents": "cents",
         "guitar": "🎸 Guitar", "bass": "🎸 Bass", "ukulele": "🎵 Ukulele",
@@ -193,11 +199,13 @@ TRANSLATIONS = {
 
         "search": "Recherche", "find": "Chercher", "theme": "Thème", "language": "Langue",
         "theme_green": "Vert", "theme_light": "Clair", "theme_dark": "Sombre",
-        "loading": "Chargement", "min_chars": "Entrez au moins 2 caractères",
+        "loading": "Chargement...", "min_chars": "Entrez au moins 2 caractères",
         "selected_lang": "Sélectionné", "lang_ru": "Russe", "lang_en": "Anglais",
         "lang_digits": "0-9", "load_error": "Erreur: impossible de charger la chanson",
         "close": "Fermer", "cancel": "Annuler", "ok": "OK", "apply": "Appliquer",
         "yes": "Oui", "no": "Non",
+        "retry": "Réessayer",
+        "page_of": "Page {current} sur {total}",
 
         "search_chord": "Chercher un accord", "search_found": "Accord trouvé",
         "search_not_found": "Rien trouvé", "no_variants": "Pas d'autres variantes",
@@ -215,6 +223,7 @@ TRANSLATIONS = {
         "loading_error": "Erreur de chargement\nVérifiez la connexion",
         "loading_songs": "Chargement des chansons...",
         "no_artist_songs": "Aucune chanson de cet artiste",
+        "tap_letter_to_retry": "Appuyez à nouveau sur la lettre pour réessayer",
 
         "in_tune": "ACCORDÉ !", "cents": "cents",
         "guitar": "🎸 Guitare", "bass": "🎸 Basse", "ukulele": "🎵 Ukulélé",
@@ -271,11 +280,13 @@ TRANSLATIONS = {
 
         "search": "Cerca", "find": "Trova", "theme": "Tema", "language": "Lingua",
         "theme_green": "Verde", "theme_light": "Chiaro", "theme_dark": "Scuro",
-        "loading": "Caricamento", "min_chars": "Inserisci almeno 2 caratteri",
+        "loading": "Caricamento...", "min_chars": "Inserisci almeno 2 caratteri",
         "selected_lang": "Selezionato", "lang_ru": "Russo", "lang_en": "Inglese",
         "lang_digits": "0-9", "load_error": "Errore: impossibile caricare la canzone",
         "close": "Chiudi", "cancel": "Annulla", "ok": "OK", "apply": "Applica",
         "yes": "Sì", "no": "No",
+        "retry": "Riprova",
+        "page_of": "Pagina {current} di {total}",
 
         "search_chord": "Cerca accordo", "search_found": "Accordo trovato",
         "search_not_found": "Niente trovato", "no_variants": "Nessun'altra variante",
@@ -293,6 +304,7 @@ TRANSLATIONS = {
         "loading_error": "Errore di caricamento\nControlla la connessione",
         "loading_songs": "Caricamento canzoni...",
         "no_artist_songs": "Nessuna canzone di questo artista",
+        "tap_letter_to_retry": "Tocca di nuovo la lettera per riprovare",
 
         "in_tune": "ACCORDATO!", "cents": "cents",
         "guitar": "🎸 Chitarra", "bass": "🎸 Basso", "ukulele": "🎵 Ukulele",
@@ -349,11 +361,13 @@ TRANSLATIONS = {
 
         "search": "Buscar", "find": "Buscar", "theme": "Tema", "language": "Idioma",
         "theme_green": "Verde", "theme_light": "Claro", "theme_dark": "Oscuro",
-        "loading": "Cargando", "min_chars": "Introduce al menos 2 caracteres",
+        "loading": "Cargando...", "min_chars": "Introduce al menos 2 caracteres",
         "selected_lang": "Seleccionado", "lang_ru": "Ruso", "lang_en": "Inglés",
         "lang_digits": "0-9", "load_error": "Error: no se pudo cargar la canción",
         "close": "Cerrar", "cancel": "Cancelar", "ok": "OK", "apply": "Aplicar",
         "yes": "Sí", "no": "No",
+        "retry": "Reintentar",
+        "page_of": "Página {current} de {total}",
 
         "search_chord": "Buscar acorde", "search_found": "Acorde encontrado",
         "search_not_found": "Nada encontrado", "no_variants": "Sin otras variantes",
@@ -371,6 +385,7 @@ TRANSLATIONS = {
         "loading_error": "Error de carga\nVerifica la conexión",
         "loading_songs": "Cargando canciones...",
         "no_artist_songs": "Sin canciones de este artista",
+        "tap_letter_to_retry": "Toca la letra de nuevo para reintentar",
 
         "in_tune": "¡AFINADO!", "cents": "cents",
         "guitar": "🎸 Guitarra", "bass": "🎸 Bajo", "ukulele": "🎵 Ukelele",
@@ -427,11 +442,13 @@ TRANSLATIONS = {
 
         "search": "Pesquisar", "find": "Procurar", "theme": "Tema", "language": "Idioma",
         "theme_green": "Verde", "theme_light": "Claro", "theme_dark": "Escuro",
-        "loading": "Carregando", "min_chars": "Digite pelo menos 2 caracteres",
+        "loading": "Carregando...", "min_chars": "Digite pelo menos 2 caracteres",
         "selected_lang": "Selecionado", "lang_ru": "Russo", "lang_en": "Inglês",
         "lang_digits": "0-9", "load_error": "Erro: não foi possível carregar a música",
         "close": "Fechar", "cancel": "Cancelar", "ok": "OK", "apply": "Aplicar",
         "yes": "Sim", "no": "Não",
+        "retry": "Tentar novamente",
+        "page_of": "Página {current} de {total}",
 
         "search_chord": "Procurar acorde", "search_found": "Acorde encontrado",
         "search_not_found": "Nada encontrado", "no_variants": "Sem outras variantes",
@@ -449,6 +466,7 @@ TRANSLATIONS = {
         "loading_error": "Erro de carregamento\nVerifique a conexão",
         "loading_songs": "Carregando canções...",
         "no_artist_songs": "Sem canções deste artista",
+        "tap_letter_to_retry": "Toque na letra novamente para tentar de novo",
 
         "in_tune": "AFINADO!", "cents": "cents",
         "guitar": "🎸 Guitarra", "bass": "🎸 Baixo", "ukulele": "🎵 Ukulele",
@@ -505,6 +523,18 @@ def get_text(key, default=None):
     if text is None:
         text = TRANSLATIONS['ru'].get(key, default if default else key)
     return text
+
+
+def format_text(key, default=None, **kwargs):
+    """
+    Возвращает перевод с подстановкой {placeholder}.
+    Пример: format_text('page_of', current=3, total=25)
+    """
+    text = get_text(key, default)
+    try:
+        return text.format(**kwargs)
+    except Exception:
+        return text
 
 
 def get_available_languages():
