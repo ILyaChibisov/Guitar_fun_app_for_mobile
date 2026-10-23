@@ -50,7 +50,6 @@ class CompatScreenState:
     def save_screen_state(self, screen_name, state_dict):
         """Перенаправляет в соответствующий менеджер по имени экрана."""
         if screen_name == 'songs':
-            # Разделяем на alphabet и search
             if state_dict.get('is_search_mode'):
                 songs_state.save_search({
                     'query': state_dict.get('query', ''),
@@ -58,14 +57,32 @@ class CompatScreenState:
                     'search_page': state_dict.get('page', 0),
                 })
             else:
-                songs_state.save_alphabet(state_dict)
+                # Не перетираем _alphabet пустым/неполным state_dict.
+                # Если нет ключа 'current_letter' и 'page' — считаем
+                # состояние неполным и не сохраняем (иначе restore_state
+                # прочитает page=None и сломает _ensure_valid_page).
+                if ('current_letter' not in state_dict
+                        and 'page' not in state_dict):
+                    logger.debug(
+                        "⏭️ save_screen_state('songs'): "
+                        "state_dict не содержит current_letter/page — пропуск"
+                    )
+                    return
+                # Дополняем недостающие поля значениями по умолчанию,
+                # чтобы save_alphabet всегда писала валидный словарь.
+                data = dict(state_dict)
+                data.setdefault('current_letter', None)
+                data.setdefault('current_language', 'ru')
+                data.setdefault('page', 0)
+                data.setdefault('total_artists', 0)
+                data.setdefault('has_more', True)
+                data.setdefault('scroll_position', 1.0)
+                songs_state.save_alphabet(data)
         else:
-            # fallback — старое поведение
             self._generic_save(screen_name, state_dict)
 
     def get_screen_state(self, screen_name, max_age=60):
         if screen_name == 'songs':
-            # Пытаемся сначала search, потом alphabet
             data = songs_state.get_search()
             if data:
                 return {

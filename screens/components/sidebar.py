@@ -1,8 +1,12 @@
 # screens/components/sidebar.py
 """
-Выдвижная боковая панель (Navigation Drawer)
-ПОЛНАЯ ВЫСОТА: от верхней до нижней системной панели
-С прозрачными областями для статус-бара и навигации
+Выдвижная боковая панель (Navigation Drawer).
+ПОЛНАЯ ВЫСОТА: от верхней до нижней системной панели.
+Прозрачные области для статус-бара и навигации.
+
+ВАЖНО: при ЗАКРЫТОЙ панели on_touch_down возвращает False сразу
+(без свайп-перехвата у левого края), чтобы не съедать касания
+по левым кнопкам пагинации и другим элементам у края экрана.
 """
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
@@ -113,13 +117,6 @@ class SidebarItem(CircularRippleBehavior, MDCard):
         self.add_widget(self.title_label)
 
         self.bind(on_release=self._on_click)
-        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
-
-    def _on_enter(self, *args):
-        self.md_bg_color = [1, 1, 1, 0.05]
-
-    def _on_leave(self, *args):
-        self.md_bg_color = [0, 0, 0, 0]
 
     def _on_click(self, instance):
         if self.on_click_callback:
@@ -281,8 +278,8 @@ class SidebarOverlay(Widget):
 
 class Sidebar(FloatLayout):
     """
-    Выдвижная боковая панель
-    ПОЛНАЯ ВЫСОТА: от верхней до нижней системной панели
+    Выдвижная боковая панель.
+    При закрытом состоянии НЕ перехватывает касания.
     """
 
     panel_x = NumericProperty(0)
@@ -367,40 +364,32 @@ class Sidebar(FloatLayout):
         )
         self.menu_container.bind(minimum_height=self.menu_container.setter('height'))
 
-        # ============ ПУНКТЫ МЕНЮ (НОВЫЙ ПОРЯДОК) ============
+        # ============ ПУНКТЫ МЕНЮ ============
         self.menu_item_refs = {}
 
-        # 1. Войти / Выйти из аккаунта (первый пункт)
         self.auth_item = self.add_menu_item('login', 'Войти', 'auth')
         self.menu_item_refs['auth'] = self.auth_item
 
-        # 2. Аккаунт (второй пункт)
         item = self.add_menu_item('account', 'Аккаунт', 'profile')
         self.menu_item_refs['profile'] = item
 
-        # 3. Настройки
         item = self.add_menu_item('cog', 'Настройки', 'settings')
         self.menu_item_refs['settings'] = item
 
-        # 4. Помощь
         item = self.add_menu_item('help-circle', 'Помощь', 'help')
         self.menu_item_refs['help'] = item
 
-        # 5. Промокод
         item = self.add_menu_item('ticket-percent', 'Промокод', 'promo')
         self.menu_item_refs['promo'] = item
 
-        # 6. Обратная связь
         item = self.add_menu_item('chat', 'Обратная связь', 'feedback')
         self.menu_item_refs['feedback'] = item
 
-        # 7. Админка (только для админа)
         self.admin_item = self.add_menu_item('shield-account', 'Админка', 'admin', is_admin=True)
         self.admin_item.opacity = 1 if api.is_admin() else 0
         self.admin_item.disabled = not api.is_admin()
         self.menu_item_refs['admin'] = self.admin_item
 
-        # Разделитель
         self.menu_container.add_widget(
             MDBoxLayout(
                 size_hint=(1, None),
@@ -410,7 +399,6 @@ class Sidebar(FloatLayout):
             )
         )
 
-        # Версия
         version_label = MDLabel(
             text=f"Версия {api.config.VERSION}",
             font_size=sp(11),
@@ -509,7 +497,6 @@ class Sidebar(FloatLayout):
         return item
 
     def _on_item_click(self, screen_name):
-        """Обработчик клика по пункту меню"""
         logger.info(f"📍 ВЫЗВАН _on_item_click для: {screen_name}")
 
         self.close()
@@ -584,7 +571,6 @@ class Sidebar(FloatLayout):
             self.close()
             Clock.schedule_once(lambda dt: setattr(self.sm, 'current', 'auth_screen'), 0.15)
         else:
-            # Если экрана нет, используем старый метод
             app = MDApp.get_running_app()
             if app and hasattr(app, 'open_profile'):
                 app.open_profile()
@@ -634,7 +620,10 @@ class Sidebar(FloatLayout):
     # ============ ОБРАБОТКА СВАЙПА ============
 
     def on_touch_down(self, touch):
-        if self.disabled and not self._is_dragging:
+        # ФИКС: при закрытой панели НЕ перехватываем касания,
+        # иначе левые кнопки пагинации и другие элементы у края
+        # экрана становятся «некликабельными».
+        if not self.is_open and not self._is_dragging:
             return False
 
         if not self.is_open:

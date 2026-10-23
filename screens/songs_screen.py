@@ -1,20 +1,13 @@
 # screens/songs_screen.py
 """
 Экран песен:
-  - алфавит сверху, показывается всегда;
-  - карточки БЕЗ вертикального скролла — заполняют экран;
-  - PAGE_SIZE рассчитывается от высоты экрана (on_size);
-  - пагинация: динамические центрированные ряды цифр (без RecycleView);
-  - ряд формируется по реальной ширине center_zone (3-9 цифр);
-  - стрелки листают РЯДЫ (шаг = размер ряда);
-  - короткий тап = 1 ряд, долгий (0.4с) = 10 рядов;
-  - клик по цифре — переход;
-  - текущая страница всегда в ряду (окно центрируется);
-  - тема/язык применяются лениво (BaseScreen);
-  - при ошибке сети кэш помечается failed, повторный клик = повторный запрос.
-
-СОСТОЯНИЕ: используется только songs_state.save_alphabet / get_alphabet
-и songs_state.save_search / get_search / invalidate_search.
+  - алфавит сверху;
+  - карточки без скролла, PAGE_SIZE от высоты экрана;
+  - пагинация: динамические центрированные ряды цифр;
+  - container — Widget, x кнопок ставится вручную (collide_point совпадает);
+  - стрелки листают ряды, долгий тап = 10 рядов;
+  - тема/язык лениво (BaseScreen);
+  - состояние: songs_state.save_alphabet / get_alphabet, save_search / get_search.
 """
 import time
 import unicodedata
@@ -474,7 +467,7 @@ class SongsMenu(MDBoxLayout):
         self.alphabet_menu.set_current(letter)
 
 
-# ============ КАРТОЧКИ БЕЗ СКРОЛЛА (с переиспользованием) ============
+# ============ КАРТОЧКИ ============
 
 class StaticArtistCard(MDCard):
     def __init__(self, artist_name='', songs_count=0, on_click=None, **kwargs):
@@ -703,7 +696,7 @@ class PageCardsContainer(MDBoxLayout):
             c.update_theme_colors()
 
 
-# ============ ПАГИНАЦИЯ: ДИНАМИЧЕСКИЕ ЦЕНТРИРОВАННЫЕ РЯДЫ ============
+# ============ ПАГИНАЦИЯ ============
 
 class ArrowButton(MDBoxLayout):
     LONG_PRESS_TIME = 0.4
@@ -783,10 +776,11 @@ class PageButton(MDBoxLayout):
     def __init__(self, text, index, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
-        self.size_hint = (None, 1)
+        self.size_hint = (None, None)
         self.size_hint_x = None
-        self.size_hint_y = 1
-        self.width = dp(32)
+        self.size_hint_y = None
+        self.width = dp(36)
+        self.height = dp(48)
         self.padding = [dp(2)] * 4
         self.md_bg_color = [0, 0, 0, 0]
         self.is_selected = False
@@ -794,7 +788,7 @@ class PageButton(MDBoxLayout):
         self.on_click_callback = on_click
 
         self.label = MDLabel(
-            text=text, font_size=sp(15), halign="center", valign="middle",
+            text=text, font_size=sp(16), halign="center", valign="middle",
             theme_text_color="Custom", text_color=[1, 1, 1, 0.7],
             bold=True, size_hint=(1, 1),
         )
@@ -823,7 +817,7 @@ class PageButton(MDBoxLayout):
             self.md_bg_color = accent
             self.label.text_color = [1, 1, 1, 1]
             self.label.bold = True
-            self.radius = [dp(8)]
+            self.radius = [dp(9)]
         else:
             self.md_bg_color = [0, 0, 0, 0]
             self.label.text_color = text_s
@@ -833,14 +827,15 @@ class PageButton(MDBoxLayout):
 
 class PaginationBar(MDBoxLayout):
     """
-    Пагинация с динамическими центрированными рядами цифр.
-    center_zone БЕЗ padding — клик по краю цифры работает.
+    Пагинация. container — Widget, x кнопок ставится вручную,
+    поэтому collide_point совпадает с визуальной позицией.
+    BTN_WIDTH=36, BTN_SPACING=6 — крупные равномерные зазоры.
     """
     LONG_PRESS_JUMP_ROWS = 10
     MIN_ROW_SIZE = 3
     MAX_ROW_SIZE = 9
-    BTN_WIDTH = dp(32)
-    BTN_SPACING = dp(2)
+    BTN_WIDTH = dp(36)
+    BTN_SPACING = dp(6)
 
     def __init__(self, on_page_select=None, **kwargs):
         super().__init__(**kwargs)
@@ -851,11 +846,12 @@ class PaginationBar(MDBoxLayout):
         self._last_per_page = None
         self._window_start = 0
         self.page_buttons = []
+        self._row_size_cache = None
 
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(56)
-        self.spacing = dp(2)
+        self.spacing = dp(4)
         self.md_bg_color = [0, 0, 0, 0]
         self.padding = [dp(4)] * 4
 
@@ -873,22 +869,9 @@ class PaginationBar(MDBoxLayout):
         )
         self.add_widget(self.center_zone)
 
-        anchor = AnchorLayout(
-            anchor_x='center', anchor_y='center',
-            size_hint=(1, 1),
-        )
-        self.center_zone.add_widget(anchor)
-
-        self.container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(None, 1),
-            size_hint_x=None,
-            size_hint_y=1,
-            spacing=self.BTN_SPACING,
-            padding=[dp(0)] * 4,
-            md_bg_color=[0, 0, 0, 0],
-        )
-        anchor.add_widget(self.container)
+        # Widget — не перезаписывает x/y детей при do_layout
+        self.container = Widget(size_hint=(1, 1))
+        self.center_zone.add_widget(self.container)
 
         self.right_arrow = ArrowButton(
             icon_name="chevron-right",
@@ -900,15 +883,20 @@ class PaginationBar(MDBoxLayout):
         self.update_theme_colors()
 
     def _calc_row_size(self):
-        try:
-            avail = self.center_zone.width
-        except Exception:
-            avail = 0
+        if self._row_size_cache is not None:
+            return self._row_size_cache
+        avail = self.center_zone.width
         if avail <= 0:
             return self.MIN_ROW_SIZE
         unit = self.BTN_WIDTH + self.BTN_SPACING
-        n = int((avail + self.BTN_SPACING) / unit)
-        return max(self.MIN_ROW_SIZE, min(self.MAX_ROW_SIZE, n))
+        n = int((avail + self.BTN_SPACING) // unit)
+        while n > self.MIN_ROW_SIZE:
+            row_w = n * self.BTN_WIDTH + (n - 1) * self.BTN_SPACING
+            if row_w <= avail:
+                break
+            n -= 1
+        self._row_size_cache = max(self.MIN_ROW_SIZE, min(self.MAX_ROW_SIZE, n))
+        return self._row_size_cache
 
     def _max_window_start(self):
         row_size = self._calc_row_size()
@@ -932,34 +920,43 @@ class PaginationBar(MDBoxLayout):
         self.page_buttons = []
 
         if self.total_pages <= 0:
-            self.container.width = 0
             self._update_arrows()
             return
 
         row_size = self._calc_row_size()
         start = self._window_start
         end = min(start + row_size, self.total_pages)
-
         if (end - start < row_size) and start > 0:
             start = max(0, self.total_pages - row_size)
             end = min(start + row_size, self.total_pages)
             self._window_start = start
 
-        total_w = 0
-        for idx, i in enumerate(range(start, end)):
+        n = end - start
+        if n == 0:
+            self._update_arrows()
+            return
+
+        total_w = n * self.BTN_WIDTH + (n - 1) * self.BTN_SPACING
+        avail = self.center_zone.width
+        start_x = int(max(0, (avail - total_w) / 2))
+
+        h = self.center_zone.height or dp(48)
+
+        for i in range(n):
             btn = PageButton(
-                text=str(i + 1),
-                index=i,
+                text=str(start + i + 1),
+                index=start + i,
                 on_click=self._on_page_click,
             )
-            btn.set_selected(i == self.current_page_index)
-            self.page_buttons.append(btn)
+            btn.set_selected((start + i) == self.current_page_index)
+            btn.size_hint = (None, None)
+            btn.width = self.BTN_WIDTH
+            btn.height = h
+            btn.x = self.center_zone.x + start_x + i * (self.BTN_WIDTH + self.BTN_SPACING)
+            btn.y = self.center_zone.y + (self.center_zone.height - h) / 2
             self.container.add_widget(btn)
-            total_w += btn.width
-            if idx > 0:
-                total_w += self.container.spacing
+            self.page_buttons.append(btn)
 
-        self.container.width = total_w
         self._update_arrows()
 
     def _update_arrows(self):
@@ -982,6 +979,7 @@ class PaginationBar(MDBoxLayout):
         self._last_per_page = per_page
         self.total_pages = new_total_pages
         self.current_page_index = max(0, min(current_page, self.total_pages - 1))
+        self._row_size_cache = None
         self._center_window_on(self.current_page_index)
         self._rebuild_row()
         self.update_theme_colors()
@@ -989,13 +987,13 @@ class PaginationBar(MDBoxLayout):
     def set_current_page(self, page):
         self.current_page_index = max(0, min(page, self.total_pages - 1))
         if not self._window_contains(self.current_page_index):
+            self._row_size_cache = None
             self._center_window_on(self.current_page_index)
             self._rebuild_row()
         else:
             for btn in self.page_buttons:
                 btn.set_selected(btn.page_index == self.current_page_index)
             self._update_arrows()
-        # update_theme_colors не вызываем — set_selected уже сделал всё
 
     def _on_page_click(self, index):
         if index == self.current_page_index:
@@ -1041,9 +1039,14 @@ class PaginationBar(MDBoxLayout):
             btn.set_selected(btn.page_index == self.current_page_index)
 
     def on_size(self, *args):
-        if not self.page_buttons and self.total_pages <= 1:
+        if self.total_pages <= 1:
             return
-        Clock.schedule_once(lambda dt: self._rebuild_row(), 0)
+        Clock.schedule_once(lambda dt: self._on_size_recalc(), 0)
+
+    def _on_size_recalc(self):
+        self._row_size_cache = None
+        self._center_window_on(self.current_page_index)
+        self._rebuild_row()
 
 
 # ============ ОСНОВНОЙ ЭКРАН ============
@@ -1087,6 +1090,8 @@ class SongsScreen(BaseScreen):
         self._cards_wrapper = None
         self._pagination_bar = None
         self._search_pagination_bar = None
+
+        self._manage_padding_manually = True
 
         load_shared_icons_sync()
         self.init_ui()
@@ -1279,8 +1284,6 @@ class SongsScreen(BaseScreen):
         if self._page > max_page:
             self._page = max_page
 
-    # ---------- ПОИСК ----------
-
     def _show_search_page(self, page_idx):
         if not self._all_search_results:
             self._hide_search_pagination()
@@ -1332,17 +1335,17 @@ class SongsScreen(BaseScreen):
         self._search_pagination_bar.height = dp(56)
         self._search_pagination_bar.opacity = 1
         self._search_pagination_bar.disabled = False
-        self._search_pagination_bar.set_total(
-            total_items, self._page_size, self._search_page,
-            on_click=self._on_search_page_selected
+        Clock.schedule_once(
+            lambda dt: self._search_pagination_bar.set_total(
+                total_items, self._page_size, self._search_page,
+                on_click=self._on_search_page_selected
+            ), 0
         )
 
     def _on_search_page_selected(self, page_index):
         if page_index == self._search_page:
             return
         self._show_search_page(page_index)
-
-    # ---------- ПАГИНАЦИЯ АРТИСТОВ ----------
 
     def _hide_pagination(self):
         if not self._pagination_bar:
@@ -1360,16 +1363,16 @@ class SongsScreen(BaseScreen):
         self._pagination_bar.height = dp(56)
         self._pagination_bar.opacity = 1
         self._pagination_bar.disabled = False
-        self._pagination_bar.set_total(
-            self._total_artists, self._page_size, self._page
+        Clock.schedule_once(
+            lambda dt: self._pagination_bar.set_total(
+                self._total_artists, self._page_size, self._page
+            ), 0
         )
 
     def _on_page_selected_from_bar(self, page_index):
         if page_index == self._page:
             return
         self._load_page(page_index)
-
-    # ---------- КЭШ И ЗАГРУЗКА АРТИСТОВ ----------
 
     def _is_page_cached(self, cache, page):
         start = page * self._page_size
@@ -1539,8 +1542,6 @@ class SongsScreen(BaseScreen):
         self._artists_cache[letter] = {'items': {}, 'total': 0, 'batches': set(), 'failed': False}
         self._load_batch(letter=letter, batch_offset=0, target_page=0)
 
-    # ---------- КЛИКИ ----------
-
     def on_song_selected(self, song_id, title):
         if not song_id:
             notify.error(get_text('load_error'))
@@ -1581,8 +1582,6 @@ class SongsScreen(BaseScreen):
             scr._update_top_nav_title(artist)
             scr._load_artist_songs(artist)
             self.manager.current = 'artist_songs'
-
-    # ---------- ПОИСК ----------
 
     def do_search(self, query):
         query = query.strip()
@@ -1665,8 +1664,6 @@ class SongsScreen(BaseScreen):
             self.songs_menu.set_current_letter(None)
         self.cards_container.clear()
 
-    # ---------- ОТОБРАЖЕНИЕ ----------
-
     def _display_current_page(self):
         self._hide_loading()
         self._hide_search_pagination()
@@ -1732,8 +1729,6 @@ class SongsScreen(BaseScreen):
 
     def _hide_loading(self):
         self._restore_hint()
-
-    # ---------- СОХРАНЕНИЕ / ВОССТАНОВЛЕНИЕ (save_alphabet / get_alphabet) ----------
 
     def save_current_state(self):
         songs_state.save_alphabet({
@@ -1820,8 +1815,6 @@ class SongsScreen(BaseScreen):
                 f"{get_text('artists')}: {current_count} "
                 f"{get_text('of')} {self._total_artists}"
             )
-
-    # ---------- LIFECYCLE ----------
 
     def on_pre_leave(self):
         self.save_search_state()
