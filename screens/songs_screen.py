@@ -39,6 +39,7 @@ from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 from utils.screen_state import screen_state
+from state.songs_state import songs_state
 from utils.settings_manager import settings_manager
 from utils.localization import get_text
 
@@ -1123,6 +1124,10 @@ class SongsScreen(BaseScreen):
         self._search_token = ""
         self._search_in_progress = False
 
+        # === КЛЮЧИ ДЛЯ ОПТИМИЗАЦИИ (пункт A+C) ===
+        self._last_display_key = None
+        self._last_search_display_key = None
+
         self.search_bar = None
         self._main_label = None
         self._result_label = None
@@ -1372,7 +1377,13 @@ class SongsScreen(BaseScreen):
         end = min(start + self._search_limit, len(self._all_search_results))
         page_slice = self._all_search_results[start:end]
 
-        self.recycle_view.set_songs(page_slice, self.on_song_selected)
+        # === ОПТИМИЗАЦИЯ: не пересоздаём, если данные те же ===
+        first_song = page_slice[0]['song_id'] if page_slice else 0
+        display_key = (self._search_page, len(page_slice), first_song)
+
+        if self._last_search_display_key != display_key:
+            self.recycle_view.set_songs(page_slice, self.on_song_selected)
+            self._last_search_display_key = display_key
 
         total_pages = (len(self._all_search_results) + self._search_limit - 1) // self._search_limit
         if total_pages > 1:
@@ -1381,6 +1392,11 @@ class SongsScreen(BaseScreen):
             self._hide_search_pagination()
 
         self._update_search_result_label()
+        # Сохраняем текущую страницу поиска
+        songs_state.save_search({
+            'query': self.search_bar.current_query if self.search_bar else "",
+            'search_page': self._search_page,
+        })
         Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
 
     def _update_search_result_label(self):
@@ -1706,6 +1722,15 @@ class SongsScreen(BaseScreen):
         current_token = self._search_token
         self._search_in_progress = True
 
+        # Сбрасываем ключ поиска — новый запрос
+        self._last_search_display_key = None
+
+        # Сохраняем query в state сразу
+        songs_state.save_search({
+            'query': query,
+            'search_page': 0,
+        })
+
         self._hide_alphabet_for_search()
         self._hide_result_label()
         self._show_loading()
@@ -1748,6 +1773,9 @@ class SongsScreen(BaseScreen):
         self._search_results = formatted_results
         self._search_page = 0
 
+        # Сбрасываем ключ — данные новые
+        self._last_search_display_key = None
+
         if not self._all_search_results:
             self.recycle_view.clear()
             self._hide_result_label()
@@ -1778,6 +1806,10 @@ class SongsScreen(BaseScreen):
         self._search_in_progress = False
         self._search_token = str(time.time())
 
+        # Сбрасываем ключ поиска
+        self._last_search_display_key = None  # 2. Инвалидируем search в state
+        songs_state.invalidate_search()
+
         self._hide_result_label()
         self._hide_loading()
         self._hide_empty()
@@ -1788,11 +1820,11 @@ class SongsScreen(BaseScreen):
         if self.songs_menu:
             self.songs_menu.set_current_letter(None)
 
-        # 2. Очищаем RecycleView
+        # 3. Очищаем RecycleView
         self.recycle_view.clear()
         self.recycle_view.viewclass = 'ArtistCard'
 
-        # 3. Возвращаем верхнюю часть
+        # 4. Возвращаем верхнюю часть
         self._show_alphabet_for_search()
 
     def _display_artists(self):
@@ -1805,13 +1837,23 @@ class SongsScreen(BaseScreen):
             return
         self._hide_empty()
         self.recycle_view.viewclass = 'ArtistCard'
-        self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
-        Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
+
+        # === ОПТИМИЗАЦИЯ: не пересоздаём, если данные те же ===
+        first_artist = self._all_artists[0].get('artist', '') if self._all_artists else ''
+        display_key = (self.current_letter, self._page, len(self._all_artists), first_artist)
+
+        if self._last_display_key != display_key:
+            self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
+            self._last_display_key = display_key
+            Clock.schedule_once(lambda dt: setattr(self.recycle_view, 'scroll_y', 1.0), 0.1)
 
         current_count = min((self._page + 1) * self._limit, self._total_artists)
         self._show_result_label(
             f"{get_text('artists')}: {current_count} {get_text('of')} {self._total_artists}"
         )
+
+        # Сохраняем метаданные алфавита
+        self.save_current_state()
 
         if self._total_artists > self._limit:
             self._show_pagination_bar()
@@ -1874,56 +1916,75 @@ class SongsScreen(BaseScreen):
         if self.recycle_view:
             scroll_position = self.recycle_view.scroll_y
 
-        state = {
+        songs_state.save_alphabet({
             'current_letter': self.current_letter,
             'current_language': self.current_language,
-            'is_search_mode': self.is_search_mode,
-            'all_artists': self._all_artists,
-            'total_artists': self._total_artists,
             'page': self._page,
+            'total_artists': self._total_artists,
             'has_more': self._has_more,
             'scroll_position': scroll_position,
-        }
-        screen_state.save_screen_state('songs', state)
+        })
 
     def save_search_state(self):
-        self._search_query = self.search_bar.current_query if self.search_bar else ""
-        self._search_results = self._all_search_results
-        self._is_search_mode = self.is_search_mode
+        if not self._is_search_mode:
+            return
+
+        query = self.search_bar.current_query if self.search_bar else ""
+        songs_state.save_search({
+            'query': query,
+            'search_page': self._search_page,
+        })
 
     def restore_search_state(self):
-        if self._is_search_mode and self._search_query:
-            self.search_bar.set_text(self._search_query)
-            self.is_search_mode = True
-            self.current_letter = None
-            self.current_artist = None
-            if self.songs_menu:
-                self.songs_menu.set_current_letter(None)
-            self.recycle_view.viewclass = 'SearchSongCard'
+        saved = songs_state.get_search()
+        if not saved:
+            return
 
+        query = saved.get('query', '')
+        if not query:
+            return
+
+        self.search_bar.set_text(query)
+        self.is_search_mode = True
+        self.current_letter = None
+        self.current_artist = None
+        if self.songs_menu:
+            self.songs_menu.set_current_letter(None)
+        self.recycle_view.viewclass = 'SearchSongCard'
+
+        self._search_page = saved.get('search_page', 0)
+
+        if self._all_search_results:
             self._hide_alphabet_for_search()
-            self._all_search_results = self._search_results
-            self._show_search_page(0)
+            self._show_search_page(self._search_page)
+        else:
+            self._hide_alphabet_for_search()
+            self._show_loading()
+            current_token = str(time.time())
+            self._search_token = current_token
+            api.search_songs(
+                query=query, limit=100,
+                on_success=lambda res: self._on_search_success(res, current_token),
+                on_failure=lambda req, err: self._on_search_failed(req, err, current_token)
+            )
 
     def restore_state(self):
         if self.manager and self.manager.current != 'songs':
             return False
 
-        state = screen_state.get_screen_state('songs', max_age=300)
-        if not state:
+        saved = songs_state.get_alphabet(allow_stale=True)
+        if not saved:
             return False
 
         try:
             self._is_restoring = True
-            self.current_letter = state.get('current_letter')
-            self.is_search_mode = state.get('is_search_mode', False)
-            self.current_language = state.get('current_language', 'ru')
-            self._total_artists = state.get('total_artists', 0)
-            self._page = state.get('page', 0)
-            self._has_more = state.get('has_more', True)
 
-            restored_artists = state.get('all_artists', [])
-            scroll_position = state.get('scroll_position', 1.0)
+            self.current_letter = saved.get('current_letter')
+            self.current_language = saved.get('current_language', 'ru')
+            self._total_artists = saved.get('total_artists', 0)
+            self._page = saved.get('page', 0)
+            self._has_more = saved.get('has_more', True)
+            scroll_position = saved.get('scroll_position', 1.0)
 
             if self.songs_menu:
                 self.songs_menu.set_language(self.current_language)
@@ -1931,33 +1992,27 @@ class SongsScreen(BaseScreen):
             if self.current_letter and self.songs_menu:
                 self.songs_menu.set_current_letter(self.current_letter)
 
-            if restored_artists:
-                self._all_artists = restored_artists
-                self.recycle_view.viewclass = 'ArtistCard'
-                self.recycle_view.set_items(self._all_artists, self.on_artist_selected)
+            if self.current_letter and self.current_letter in self._artists_cache:
+                cache = self._artists_cache[self.current_letter]
+                self._total_artists = cache['total']
 
-                current_count = min((self._page + 1) * self._limit, self._total_artists)
-                self._show_result_label(
-                    f"{get_text('artists')}: {current_count} {get_text('of')} {self._total_artists}"
-                )
+                if self._is_page_cached(cache, self._page):
+                    self._all_artists = self._build_page_slice(cache, self._page)
+                    self._display_artists()
 
-                if self._total_artists > self._limit:
-                    self._show_pagination_bar()
+                    def restore_scroll(dt):
+                        if self.recycle_view:
+                            self.recycle_view.scroll_y = scroll_position
+
+                    Clock.schedule_once(restore_scroll, 0.1)
+                    Clock.schedule_once(restore_scroll, 0.2)
                 else:
-                    self._hide_pagination()
-
-                def restore_scroll(dt):
-                    if self.recycle_view:
-                        self.recycle_view.scroll_y = scroll_position
-
-                Clock.schedule_once(restore_scroll, 0.1)
-                Clock.schedule_once(restore_scroll, 0.2)
+                    self._load_page(self._page)
             else:
                 self.recycle_view.clear()
                 self._show_hint(get_text('search_artists'))
                 self._hide_result_label()
                 self._hide_pagination()
-                self._show_alphabet_for_search()
 
             self._is_restoring = False
             return True
@@ -1977,6 +2032,14 @@ class SongsScreen(BaseScreen):
         return super().on_pre_leave()
 
     def on_enter(self):
+        # === ОПТИМИЗАЦИЯ: если данные уже показаны — не трогаем список ===
+        # Если вернулись с другой вкладки и всё уже на месте — ничего не делаем.
+        if self._last_display_key is not None and not self._is_search_mode:
+            # Уже показываем тот же список — просто убеждаемся, что топ-секция на месте
+            self._show_alphabet_for_search()
+            self._update_result_label_for_artists()
+            return
+
         self.restore_search_state()
         restored = self.restore_state()
         if not restored and not self._is_search_mode:
@@ -1986,6 +2049,14 @@ class SongsScreen(BaseScreen):
             self._hide_pagination()
             self._hide_search_pagination()
             self._show_alphabet_for_search()
+
+    def _update_result_label_for_artists(self):
+        """Обновить лейбл 'Исполнители: X из Y' без пересоздания списка."""
+        if self.current_letter and self._all_artists:
+            current_count = min((self._page + 1) * self._limit, self._total_artists)
+            self._show_result_label(
+                f"{get_text('artists')}: {current_count} {get_text('of')} {self._total_artists}"
+            )
 
     def on_leave(self):
         if self.recycle_view:
