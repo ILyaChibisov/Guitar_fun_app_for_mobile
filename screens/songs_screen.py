@@ -1,6 +1,6 @@
 # screens/songs_screen.py
 """
-Экран песен.
+Экран песен с свайпом страниц и long press на карточках.
 """
 import time
 import unicodedata
@@ -485,9 +485,103 @@ class SongsMenu(MDBoxLayout):
         self.alphabet_menu.set_current(letter)
 
 
+# ============ LONG PRESS MIXIN ============
+
+class LongPressCardMixin:
+    """
+    Миксин для карточки: тап = обычный клик,
+    long press (0.5с) = тоже открытие, но с визуальным откликом.
+    При свайпе (>dp(15) смещения) long press отменяется.
+    """
+    TAP_THRESHOLD = dp(15)
+    LONG_PRESS_TIME = 0.5
+    LONG_PRESS_MOVE_TOLERANCE = dp(10)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._touch_down_pos = None
+        self._long_press_event = None
+        self._long_press_triggered = False
+
+    def on_touch_down(self, touch):
+        if not self.collide_point(*touch.pos):
+            return super().on_touch_down(touch)
+
+        self._touch_down_pos = touch.pos
+        self._long_press_triggered = False
+        self._long_press_event = Clock.schedule_once(
+            self._trigger_long_press, self.LONG_PRESS_TIME
+        )
+        return True
+
+    def on_touch_move(self, touch):
+        if self._touch_down_pos is None:
+            return super().on_touch_move(touch)
+
+        dx = touch.x - self._touch_down_pos[0]
+        dy = touch.y - self._touch_down_pos[1]
+        if (abs(dx) > self.LONG_PRESS_MOVE_TOLERANCE
+                or abs(dy) > self.LONG_PRESS_MOVE_TOLERANCE):
+            self._cancel_long_press()
+
+        return super().on_touch_move(touch)
+
+    def on_touch_up(self, touch):
+        if self._touch_down_pos is None:
+            return super().on_touch_up(touch)
+
+        self._cancel_long_press()
+
+        dx = touch.x - self._touch_down_pos[0]
+        dy = touch.y - self._touch_down_pos[1]
+        was_long = self._long_press_triggered
+        self._touch_down_pos = None
+        self._long_press_triggered = False
+
+        if was_long:
+            return True
+
+        if abs(dx) < self.TAP_THRESHOLD and abs(dy) < self.TAP_THRESHOLD:
+            self._handle_normal_click()
+
+        return True
+
+    def _trigger_long_press(self, dt):
+        self._long_press_event = None
+        if self._touch_down_pos is None:
+            return
+        self._long_press_triggered = True
+        self._handle_long_press()
+
+    def _cancel_long_press(self):
+        if self._long_press_event:
+            self._long_press_event.cancel()
+            self._long_press_event = None
+
+    def _flash_feedback(self):
+        """Короткая пульсация фона — визуальный отклик на long press."""
+        if not hasattr(self, 'md_bg_color'):
+            return
+        accent = SongsColors.get_accent(settings_manager.theme)
+        original = list(self.md_bg_color)
+
+        anim = (
+            Animation(md_bg_color=accent[:3] + [0.45], duration=0.08, t='out_quad') +
+            Animation(md_bg_color=original, duration=0.25, t='in_quad')
+        )
+        anim.start(self)
+
+    # Переопределить в карточках:
+    def _handle_normal_click(self):
+        pass
+
+    def _handle_long_press(self):
+        pass
+
+
 # ============ КАРТОЧКИ ============
 
-class StaticArtistCard(MDCard):
+class StaticArtistCard(LongPressCardMixin, MDCard):
     CARD_HEIGHT = dp(48)
 
     def __init__(self, artist_name='', songs_count=0, on_click=None, **kwargs):
@@ -544,15 +638,23 @@ class StaticArtistCard(MDCard):
         self.artist_label.text = artist_name
         self.count_label.text = str(songs_count) if songs_count > 0 else ""
 
-        self.bind(on_touch_down=self._handle_touch)
         self.update_theme_colors()
 
-    def _handle_touch(self, instance, touch):
-        if not self.collide_point(*touch.pos):
-            return False
+    def _handle_normal_click(self):
         if self.on_click_callback:
             self.on_click_callback(self.artist_name, self.songs_count)
-        return True
+
+    def _handle_long_press(self):
+        # Визуальный отклик + то же открытие
+        self._flash_feedback()
+        if self.on_click_callback:
+            # Небольшая задержка, чтобы анимация началась раньше перехода
+            Clock.schedule_once(
+                lambda dt: self.on_click_callback(
+                    self.artist_name, self.songs_count
+                ),
+                0.12
+            )
 
     def update_data(self, artist_name, songs_count, on_click):
         self.artist_name = artist_name
@@ -571,7 +673,7 @@ class StaticArtistCard(MDCard):
         self.arrow.text_color = [0, 0, 0, 0.6] if theme_id == 'light' else [1, 1, 1, 0.3]
 
 
-class StaticSearchSongCard(MDCard):
+class StaticSearchSongCard(LongPressCardMixin, MDCard):
     CARD_HEIGHT = dp(48)
 
     def __init__(self, artist='', title='', song_id=0, on_click=None, **kwargs):
@@ -635,15 +737,19 @@ class StaticSearchSongCard(MDCard):
         self.artist_label.text = artist
         self.title_label.text = title
 
-        self.bind(on_touch_down=self._handle_touch)
         self.update_theme_colors()
 
-    def _handle_touch(self, instance, touch):
-        if not self.collide_point(*touch.pos):
-            return False
+    def _handle_normal_click(self):
         if self.on_click_callback:
             self.on_click_callback(self.song_id, self.title)
-        return True
+
+    def _handle_long_press(self):
+        self._flash_feedback()
+        if self.on_click_callback:
+            Clock.schedule_once(
+                lambda dt: self.on_click_callback(self.song_id, self.title),
+                0.12
+            )
 
     def update_data(self, artist, title, song_id, on_click):
         self.artist = artist
@@ -725,6 +831,54 @@ class PageCardsContainer(MDBoxLayout):
     def update_theme_colors(self):
         for c in self.cards:
             c.update_theme_colors()
+
+
+# ============ ОБЁРТКА СО СВАЙПОМ ============
+
+class SwipeableCardsWrapper(MDBoxLayout):
+    SWIPE_THRESHOLD = dp(40)
+    SWIPE_TIME_LIMIT = 0.5
+
+    def __init__(self, on_swipe_up=None, on_swipe_down=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_swipe_up = on_swipe_up
+        self.on_swipe_down = on_swipe_down
+        self._touch_start = None
+        self._touch_start_time = None
+        self._swipe_handled = False
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            self._touch_start = touch.pos
+            self._touch_start_time = time.perf_counter()
+            self._swipe_handled = False
+        return super().on_touch_down(touch)
+
+    def on_touch_up(self, touch):
+        if self._touch_start is None:
+            return super().on_touch_up(touch)
+
+        if self._swipe_handled:
+            self._touch_start = None
+            return super().on_touch_up(touch)
+
+        dx = touch.x - self._touch_start[0]
+        dy = touch.y - self._touch_start[1]
+        dt = time.perf_counter() - self._touch_start_time
+
+        if (abs(dy) > self.SWIPE_THRESHOLD
+                and abs(dy) > abs(dx) * 1.2
+                and dt < self.SWIPE_TIME_LIMIT):
+            self._swipe_handled = True
+            if dy > 0:
+                if self.on_swipe_down:
+                    self.on_swipe_down()
+            else:
+                if self.on_swipe_up:
+                    self.on_swipe_up()
+
+        self._touch_start = None
+        return super().on_touch_up(touch)
 
 
 # ============ ПАГИНАЦИЯ (⟪ ‹ N › ⟫) ============
@@ -843,8 +997,6 @@ class PaginationBar(MDBoxLayout):
         self.update_theme_colors()
 
     def on_touch_down(self, touch):
-        # ✅ ФИКС: если родительский контейнер скрыт (height=0),
-        # пагинация не должна перехватывать touch'и.
         if self.parent is not None and self.parent.height < dp(10):
             return False
         return super().on_touch_down(touch)
@@ -1145,10 +1297,14 @@ class SongsScreen(BaseScreen):
             )
             main_layout.add_widget(self._result_label)
 
-            # === КАРТОЧКИ ===
-            self._cards_wrapper = MDBoxLayout(
-                orientation='vertical', size_hint=(1, 1),
-                spacing=0, padding=[padding[0], dp(4), padding[2], dp(0)],
+            # === КАРТОЧКИ (обёрнуты в SwipeableCardsWrapper) ===
+            self._cards_wrapper = SwipeableCardsWrapper(
+                on_swipe_up=self._on_swipe_up,
+                on_swipe_down=self._on_swipe_down,
+                orientation='vertical',
+                size_hint=(1, 1),
+                spacing=0,
+                padding=[padding[0], dp(4), padding[2], dp(0)],
                 md_bg_color=[0, 0, 0, 0]
             )
             self._cards_wrapper.clip = True
@@ -1166,7 +1322,6 @@ class SongsScreen(BaseScreen):
             )
             self._pagination_container.clip = True
 
-            # ✅ FloatLayout + pos_hint по центру
             self._pagination_anchor = FloatLayout(size_hint=(1, 1))
 
             self._pagination_bar = PaginationBar(
@@ -1187,7 +1342,6 @@ class SongsScreen(BaseScreen):
             )
             self._search_pagination_container.clip = True
 
-            # ✅ FloatLayout + pos_hint по центру
             self._search_pagination_anchor = FloatLayout(size_hint=(1, 1))
 
             self._search_pagination_bar = PaginationBar(
@@ -1209,6 +1363,38 @@ class SongsScreen(BaseScreen):
 
     def _toggle_language(self):
         pass
+
+    # ---------- СВАЙП ----------
+
+    def _on_swipe_up(self):
+        """Свайп вверх → следующая страница."""
+        if self.is_search_mode:
+            if not self._all_search_results:
+                return
+            total_pages = (len(self._all_search_results) + self._page_size - 1) // self._page_size
+            if self._search_page < total_pages - 1:
+                self._show_search_page(self._search_page + 1)
+        else:
+            if self._total_artists <= 0:
+                return
+            max_page = (self._total_artists - 1) // self._page_size
+            if self._page < max_page:
+                self._load_page(self._page + 1)
+
+    def _on_swipe_down(self):
+        """Свайп вниз → предыдущая страница."""
+        if self.is_search_mode:
+            if not self._all_search_results:
+                return
+            if self._search_page > 0:
+                self._show_search_page(self._search_page - 1)
+        else:
+            if self._total_artists <= 0:
+                return
+            if self._page > 0:
+                self._load_page(self._page - 1)
+
+    # ---------- РАЗМЕР СТРАНИЦЫ ----------
 
     def _calc_page_size(self):
         fixed_h = (
