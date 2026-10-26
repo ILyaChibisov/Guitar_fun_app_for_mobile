@@ -1,19 +1,6 @@
 # screens/songs_screen.py
 """
-Экран песен:
-  - алфавит сверху;
-  - карточки dp(48), spacing dp(4);
-  - PAGE_SIZE по Window.height - фикс. отступы, фиксируется один раз;
-  - пагинация: ⟪ ‹ N › ⟫ — без иконки страницы;
-  - ⟪ / ⟫ — на первую / последнюю;
-  - ‹ / › — на одну назад / вперёд.
-
-ФИКС:
-  - PaginationBar внутри FloatLayout (не AnchorLayout) — FloatLayout
-    обрезает касания по своим границам, поэтому скрытая пагинация
-    (контейнер height=0) НЕ перехватывает касания в области карточек.
-  - PaginationBar.size_hint = (None, None) + height = dp(48)
-    + pos_hint по центру.
+Экран песен.
 """
 import time
 import unicodedata
@@ -411,9 +398,6 @@ class AlphabetMenu(MDBoxLayout):
         if (not force
                 and self._built_language == self.current_language
                 and self.buttons):
-            _perf_log.debug(
-                f"alphabet.populate_items: skip (lang={self.current_language})"
-            )
             return
 
         with perf('songs.alphabet.populate_items', log_every=False):
@@ -800,10 +784,6 @@ class PaginationArrow(MDBoxLayout):
 
 
 class PaginationBar(MDBoxLayout):
-    """
-    ⟪ ‹ N › ⟫
-    size_hint=(None, None) + height=dp(48), чтобы сам задавал размер.
-    """
     def __init__(self, on_page_select=None, **kwargs):
         super().__init__(**kwargs)
         self.on_page_select = on_page_select
@@ -862,6 +842,13 @@ class PaginationBar(MDBoxLayout):
         self._update_width()
         self.update_theme_colors()
 
+    def on_touch_down(self, touch):
+        # ✅ ФИКС: если родительский контейнер скрыт (height=0),
+        # пагинация не должна перехватывать touch'и.
+        if self.parent is not None and self.parent.height < dp(10):
+            return False
+        return super().on_touch_down(touch)
+
     def _update_width(self):
         w = (
             dp(4) + dp(4)
@@ -872,8 +859,6 @@ class PaginationBar(MDBoxLayout):
             + self.last_arrow.width
         )
         self.width = w
-
-    # ---------- API ----------
 
     def set_total(self, total_items, per_page, current_page=0, on_click=None):
         with perf('songs.pagination.set_total', log_every=False):
@@ -915,8 +900,6 @@ class PaginationBar(MDBoxLayout):
         self._update_width()
         self._rebuild_count += 1
         self._total_rebuilds += 1
-
-    # ---------- КЛИКИ ----------
 
     def _go_first_page(self):
         if self.current_page_index == 0:
@@ -960,8 +943,6 @@ class PaginationBar(MDBoxLayout):
             if self.on_page_select:
                 self.on_page_select(last)
         _perf_log.info(f"📄 page_click index={last} (last)")
-
-    # ---------- ТЕМА ----------
 
     def update_theme_colors(self):
         with perf('songs.pagination.update_theme', log_every=False):
@@ -1185,9 +1166,7 @@ class SongsScreen(BaseScreen):
             )
             self._pagination_container.clip = True
 
-            # ВАЖНО: FloatLayout — обрезает касания по своим границам.
-            # При height=0 контейнера — FloatLayout тоже 0dp,
-            # касания в этой области не перехватываются.
+            # ✅ FloatLayout + pos_hint по центру
             self._pagination_anchor = FloatLayout(size_hint=(1, 1))
 
             self._pagination_bar = PaginationBar(
@@ -1208,6 +1187,7 @@ class SongsScreen(BaseScreen):
             )
             self._search_pagination_container.clip = True
 
+            # ✅ FloatLayout + pos_hint по центру
             self._search_pagination_anchor = FloatLayout(size_hint=(1, 1))
 
             self._search_pagination_bar = PaginationBar(
@@ -1316,10 +1296,8 @@ class SongsScreen(BaseScreen):
             total_pages = (len(self._all_search_results) + self._page_size - 1) // self._page_size
             if total_pages > 1:
                 self._search_pagination_container.height = self.PAGINATION_HEIGHT
+                self._search_pagination_container.opacity = 1
                 self._search_pagination_container.disabled = False
-                self._search_pagination_anchor.disabled = False
-                self._search_pagination_bar.disabled = False
-                self._search_pagination_bar.opacity = 1
                 self._search_pagination_bar.set_total(
                     len(self._all_search_results), self._page_size, self._search_page,
                     on_click=self._on_search_page_selected
@@ -1359,11 +1337,8 @@ class SongsScreen(BaseScreen):
         if not self._search_pagination_container:
             return
         self._search_pagination_container.height = 0
+        self._search_pagination_container.opacity = 0
         self._search_pagination_container.disabled = True
-        self._search_pagination_anchor.disabled = True
-        if self._search_pagination_bar:
-            self._search_pagination_bar.opacity = 0
-            self._search_pagination_bar.disabled = True
 
     def _on_search_page_selected(self, page_index):
         if page_index == self._search_page:
@@ -1377,11 +1352,8 @@ class SongsScreen(BaseScreen):
         if not self._pagination_container:
             return
         self._pagination_container.height = 0
+        self._pagination_container.opacity = 0
         self._pagination_container.disabled = True
-        self._pagination_anchor.disabled = True
-        if self._pagination_bar:
-            self._pagination_bar.opacity = 0
-            self._pagination_bar.disabled = True
 
     def _show_pagination_bar(self):
         with perf('songs._show_pagination_bar', log_every=False):
@@ -1391,10 +1363,8 @@ class SongsScreen(BaseScreen):
                 self._hide_pagination()
                 return
             self._pagination_container.height = self.PAGINATION_HEIGHT
+            self._pagination_container.opacity = 1
             self._pagination_container.disabled = False
-            self._pagination_anchor.disabled = False
-            self._pagination_bar.opacity = 1
-            self._pagination_bar.disabled = False
             self._pagination_bar.set_total(
                 self._total_artists, self._page_size, self._page
             )
