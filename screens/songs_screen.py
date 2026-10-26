@@ -1,12 +1,18 @@
 # screens/songs_screen.py
 """
-Экран песен с свайпом страниц и long press на карточках.
+Экран песен:
+- свайп страниц вверх/вниз,
+- long press на карточках (визуальный отклик + открытие),
+- анимированный индикатор загрузки (оверлей по центру),
+- мгновенная установка каретки на букву,
+- защита от пустого кэша при ошибке сети,
+- исправление типов карточек.
 """
 import time
 import unicodedata
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, Line
 from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
 from kivy.uix.image import Image
@@ -33,7 +39,6 @@ from state.songs_state import songs_state
 from utils.settings_manager import settings_manager
 from utils.localization import get_text
 
-# ============ ПРОФАЙЛЕР ============
 from utils.perf import perf, perf_registry
 from kivy.logger import Logger
 _perf_log = Logger.getChild('Songs:Perf')
@@ -136,6 +141,99 @@ def load_shared_icons_sync():
                     _shared_artist_icon_texture = CoreImage(BytesIO(artist_data), ext="png").texture
             except Exception as e:
                 logger.error(f"Ошибка загрузки иконок: {e}")
+
+
+# ============ АНИМИРОВАННЫЙ ИНДИКАТОР ЗАГРУЗКИ ============
+
+from kivy.graphics.context_instructions import Rotate, PushMatrix, PopMatrix
+
+
+class LoadingSpinner(Widget):
+    """Кружочек, который крутится + надпись 'Загрузка...'."""
+    SIZE = dp(40)
+    LINE_WIDTH = dp(3)
+
+    def __init__(self, text=None, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, None)
+        self.size = (dp(120), dp(90))
+        self._angle = 0
+        self._event = None
+
+        theme_id = settings_manager.theme
+        if theme_id == 'light':
+            self._arc_color = (0.1, 0.55, 0.3, 1)
+            self._text_color = (0.2, 0.2, 0.2, 1)
+        elif theme_id == 'dark':
+            self._arc_color = (1.0, 0.5, 0.0, 1)
+            self._text_color = (1, 1, 1, 0.85)
+        else:
+            self._arc_color = (1, 1, 1, 1)
+            self._text_color = (1, 1, 1, 0.85)
+
+        self.text = text or get_text('loading', 'Загрузка...')
+
+        with self.canvas:
+            PushMatrix()
+            self._rotate = Rotate(angle=0, origin=self.center)
+            Color(*self._arc_color)
+            self._arc = Line(
+                circle=(
+                    self.center_x, self.center_y + dp(15),
+                    self.SIZE / 2,
+                    0, 270
+                ),
+                width=self.LINE_WIDTH,
+                cap='round',
+            )
+            PopMatrix()
+
+        self._label = MDLabel(
+            text=self.text,
+            font_size=sp(13),
+            halign='center',
+            valign='middle',
+            theme_text_color='Custom',
+            text_color=self._text_color,
+            size_hint=(None, None),
+            size=(dp(120), dp(20)),
+        )
+
+        self.bind(pos=self._on_pos_change, size=self._on_pos_change)
+        self.add_widget(self._label)
+
+    def _on_pos_change(self, *args):
+        self._label.pos = (self.x, self.y + dp(5))
+
+        self.canvas.remove(self._arc)
+        with self.canvas:
+            Color(*self._arc_color)
+            self._arc = Line(
+                circle=(
+                    self.center_x, self.center_y + dp(15),
+                    self.SIZE / 2,
+                    0, 270
+                ),
+                width=self.LINE_WIDTH,
+                cap='round',
+            )
+        if self._rotate:
+            self._rotate.origin = (self.center_x, self.center_y + dp(15))
+
+    def start(self):
+        if self._event:
+            return
+        self._event = Clock.schedule_interval(self._spin, 1 / 30)
+
+    def stop(self):
+        if self._event:
+            self._event.cancel()
+            self._event = None
+
+    def _spin(self, dt):
+        self._angle = (self._angle + 10) % 360
+        if self._rotate:
+            self._rotate.angle = self._angle
 
 
 # ============ ПОИСКОВАЯ СТРОКА ============
@@ -488,11 +586,6 @@ class SongsMenu(MDBoxLayout):
 # ============ LONG PRESS MIXIN ============
 
 class LongPressCardMixin:
-    """
-    Миксин для карточки: тап = обычный клик,
-    long press (0.5с) = тоже открытие, но с визуальным откликом.
-    При свайпе (>dp(15) смещения) long press отменяется.
-    """
     TAP_THRESHOLD = dp(15)
     LONG_PRESS_TIME = 0.5
     LONG_PRESS_MOVE_TOLERANCE = dp(10)
@@ -559,19 +652,18 @@ class LongPressCardMixin:
             self._long_press_event = None
 
     def _flash_feedback(self):
-        """Короткая пульсация фона — визуальный отклик на long press."""
         if not hasattr(self, 'md_bg_color'):
             return
         accent = SongsColors.get_accent(settings_manager.theme)
+        bright = [min(1.0, c * 1.4 + 0.15) for c in accent[:3]] + [0.7]
         original = list(self.md_bg_color)
 
         anim = (
-            Animation(md_bg_color=accent[:3] + [0.45], duration=0.08, t='out_quad') +
-            Animation(md_bg_color=original, duration=0.25, t='in_quad')
+            Animation(md_bg_color=bright, duration=0.1, t='out_quad') +
+            Animation(md_bg_color=original, duration=0.3, t='in_quad')
         )
         anim.start(self)
 
-    # Переопределить в карточках:
     def _handle_normal_click(self):
         pass
 
@@ -645,15 +737,13 @@ class StaticArtistCard(LongPressCardMixin, MDCard):
             self.on_click_callback(self.artist_name, self.songs_count)
 
     def _handle_long_press(self):
-        # Визуальный отклик + то же открытие
         self._flash_feedback()
         if self.on_click_callback:
-            # Небольшая задержка, чтобы анимация началась раньше перехода
             Clock.schedule_once(
                 lambda dt: self.on_click_callback(
                     self.artist_name, self.songs_count
                 ),
-                0.12
+                0.15
             )
 
     def update_data(self, artist_name, songs_count, on_click):
@@ -748,7 +838,7 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
         if self.on_click_callback:
             Clock.schedule_once(
                 lambda dt: self.on_click_callback(self.song_id, self.title),
-                0.12
+                0.15
             )
 
     def update_data(self, artist, title, song_id, on_click):
@@ -770,6 +860,9 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
 
 
 class PageCardsContainer(MDBoxLayout):
+    CARD_TYPE_ARTISTS = 'artists'
+    CARD_TYPE_SONGS = 'songs'
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
@@ -777,9 +870,15 @@ class PageCardsContainer(MDBoxLayout):
         self.md_bg_color = [0, 0, 0, 0]
         self.cards = []
         self.padding = [0, 0, 0, 0]
+        self._current_type = None
 
     def set_artists(self, artists, on_click):
         with perf('songs.cards.set_artists', log_every=False):
+            if self._current_type != self.CARD_TYPE_ARTISTS:
+                self.clear_widgets()
+                self.cards = []
+                self._current_type = self.CARD_TYPE_ARTISTS
+
             if len(self.cards) == len(artists):
                 for card, data in zip(self.cards, artists):
                     card.update_data(
@@ -802,6 +901,11 @@ class PageCardsContainer(MDBoxLayout):
 
     def set_songs(self, songs, on_click):
         with perf('songs.cards.set_songs', log_every=False):
+            if self._current_type != self.CARD_TYPE_SONGS:
+                self.clear_widgets()
+                self.cards = []
+                self._current_type = self.CARD_TYPE_SONGS
+
             if len(self.cards) == len(songs):
                 for card, data in zip(self.cards, songs):
                     card.update_data(
@@ -827,6 +931,7 @@ class PageCardsContainer(MDBoxLayout):
     def clear(self):
         self.clear_widgets()
         self.cards = []
+        self._current_type = None
 
     def update_theme_colors(self):
         for c in self.cards:
@@ -881,7 +986,7 @@ class SwipeableCardsWrapper(MDBoxLayout):
         return super().on_touch_up(touch)
 
 
-# ============ ПАГИНАЦИЯ (⟪ ‹ N › ⟫) ============
+# ============ ПАГИНАЦИЯ ============
 
 class PaginationArrow(MDBoxLayout):
     WIDTH = dp(40)
@@ -1161,6 +1266,8 @@ class SongsScreen(BaseScreen):
         self._search_pagination_container = None
         self._pagination_anchor = None
         self._search_pagination_anchor = None
+        self._loading_spinner = None          # ← оверлей
+        self._loading_spinner_widget = None   # ← сам спиннер
 
         with perf('songs.init.load_shared_icons', log_every=False):
             load_shared_icons_sync()
@@ -1297,7 +1404,7 @@ class SongsScreen(BaseScreen):
             )
             main_layout.add_widget(self._result_label)
 
-            # === КАРТОЧКИ (обёрнуты в SwipeableCardsWrapper) ===
+            # === КАРТОЧКИ ===
             self._cards_wrapper = SwipeableCardsWrapper(
                 on_swipe_up=self._on_swipe_up,
                 on_swipe_down=self._on_swipe_down,
@@ -1367,7 +1474,6 @@ class SongsScreen(BaseScreen):
     # ---------- СВАЙП ----------
 
     def _on_swipe_up(self):
-        """Свайп вверх → следующая страница."""
         if self.is_search_mode:
             if not self._all_search_results:
                 return
@@ -1382,7 +1488,6 @@ class SongsScreen(BaseScreen):
                 self._load_page(self._page + 1)
 
     def _on_swipe_down(self):
-        """Свайп вниз → предыдущая страница."""
         if self.is_search_mode:
             if not self._all_search_results:
                 return
@@ -1467,6 +1572,48 @@ class SongsScreen(BaseScreen):
         if self._page > max_page:
             self._page = max_page
 
+    # ---------- АНИМИРОВАННЫЙ ЗАГРУЗЧИК (ОВЕРЛЕЙ) ----------
+
+    def _show_loading_spinner(self):
+        """Показать анимированный кружочек по центру ЭКРАНА (оверлей)."""
+        if self._loading_spinner:
+            return
+
+        overlay = FloatLayout(size_hint=(1, 1))
+
+        # Полупрозрачный фон, чтобы спиннер был заметен
+        with overlay.canvas.before:
+            Color(0, 0, 0, 0.35)
+            rect = Rectangle(pos=overlay.pos, size=overlay.size)
+        overlay.bind(
+            pos=lambda inst, val: setattr(rect, 'pos', val),
+            size=lambda inst, val: setattr(rect, 'size', val),
+        )
+
+        spinner = LoadingSpinner()
+        spinner.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        overlay.add_widget(spinner)
+        spinner.start()
+
+        self._loading_spinner = overlay
+        self._loading_spinner_widget = spinner
+
+        # Добавляем ПОВЕРХ всего экрана
+        self.add_widget(overlay)
+
+    def _hide_loading_spinner(self):
+        """Скрыть оверлей со спиннером."""
+        if not self._loading_spinner:
+            return
+
+        if self._loading_spinner_widget:
+            self._loading_spinner_widget.stop()
+            self._loading_spinner_widget = None
+
+        if self._loading_spinner.parent:
+            self._loading_spinner.parent.remove_widget(self._loading_spinner)
+        self._loading_spinner = None
+
     # ---------- ПОИСК ----------
 
     def _show_search_page(self, page_idx):
@@ -1514,8 +1661,9 @@ class SongsScreen(BaseScreen):
             return
         start = self._search_page * self._page_size
         end = min(start + self._page_size, len(self._all_search_results))
+        # «Показано 14 из 100» — накопительно, обновляется при свайпе
         self._show_result_label(
-            f"{get_text('songs_found')}: {end - start} "
+            f"{get_text('songs_found')}: {end} "
             f"{get_text('of')} {len(self._all_search_results)}"
         )
 
@@ -1618,7 +1766,7 @@ class SongsScreen(BaseScreen):
         self._load_token += 1
         my_token = self._load_token
         self._batch_loading = True
-        self._show_loading()
+        self._show_loading_spinner()
 
         t_net = time.perf_counter()
 
@@ -1661,20 +1809,20 @@ class SongsScreen(BaseScreen):
                     self._ensure_valid_page()
                     if not self._is_page_cached(cache, self._page):
                         if cache['total'] and self._page * self._page_size >= cache['total']:
-                            self._hide_loading()
+                            self._hide_loading_spinner()
                             self._all_artists = self._build_page_slice(cache, self._page)
                             self._display_current_page()
                             return
                         batch_offset2 = (self._page * self._page_size) // self._batch_size * self._batch_size
                         self._load_batch(letter=letter, batch_offset=batch_offset2, target_page=self._page)
                         return
-                    self._hide_loading()
+                    self._hide_loading_spinner()
                     self._all_artists = self._build_page_slice(cache, self._page)
                     self._display_current_page()
             except Exception as e:
                 self._batch_loading = False
                 self._pending_page = None
-                self._hide_loading()
+                self._hide_loading_spinner()
                 logger.error(f"❌ Ошибка _on_success: {e}")
                 self._show_empty(get_text('loading_error'))
 
@@ -1687,7 +1835,7 @@ class SongsScreen(BaseScreen):
             )
             self._batch_loading = False
             self._pending_page = None
-            self._hide_loading()
+            self._hide_loading_spinner()
             cache['failed'] = True
             logger.warning(f"⚠️ Ошибка загрузки '{letter}': {err}")
             self._show_retry_error(letter)
@@ -1730,7 +1878,9 @@ class SongsScreen(BaseScreen):
             self._pending_page = None
 
             cache = self._artists_cache.get(letter)
-            if cache is not None and not cache.get('failed') and (cache['batches'] or cache['total'] > 0):
+            if (cache is not None
+                    and not cache.get('failed')
+                    and (cache.get('total', 0) > 0 or cache.get('batches'))):
                 self._total_artists = cache['total']
                 if self._is_page_cached(cache, 0):
                     self._all_artists = self._build_page_slice(cache, 0)
@@ -1769,11 +1919,11 @@ class SongsScreen(BaseScreen):
 
     def on_letter_press(self, letter):
         with perf('songs.action.on_letter_press', log_every=False):
+            if self.songs_menu:
+                self.songs_menu.set_current_letter(letter)
             self.is_search_mode = False
             self.current_artist = None
             self.search_bar.clear()
-            if self.songs_menu:
-                self.songs_menu.set_current_letter(letter)
             self._load_artists(letter)
 
     def on_artist_selected(self, artist, songs_count):
@@ -1818,7 +1968,7 @@ class SongsScreen(BaseScreen):
             self._last_search_display_key = None
             songs_state.save_search({'query': query, 'search_page': 0})
 
-            self._show_loading()
+            self._show_loading_spinner()
 
             t_net = time.perf_counter()
 
@@ -1849,6 +1999,7 @@ class SongsScreen(BaseScreen):
             if token != self._search_token:
                 return
             self._search_in_progress = False
+            self._hide_loading_spinner()
             raw = results.get('results', []) if isinstance(results, dict) else (
                 results if isinstance(results, list) else []
             )
@@ -1873,6 +2024,7 @@ class SongsScreen(BaseScreen):
         if token != self._search_token:
             return
         self._search_in_progress = False
+        self._hide_loading_spinner()
         self._all_search_results = []
         self._search_results = []
         self.cards_container.clear()
@@ -1891,7 +2043,7 @@ class SongsScreen(BaseScreen):
             self._last_search_display_key = None
             songs_state.invalidate_search()
             self._hide_result_label()
-            self._hide_loading()
+            self._hide_loading_spinner()
             self._hide_empty()
             self._hide_pagination()
             self._hide_search_pagination()
@@ -1905,7 +2057,7 @@ class SongsScreen(BaseScreen):
 
     def _display_current_page(self):
         with perf('songs._display_current_page', log_every=False):
-            self._hide_loading()
+            self._hide_loading_spinner()
             self._hide_search_pagination()
             if not self._all_artists:
                 self._show_empty()
@@ -1970,11 +2122,10 @@ class SongsScreen(BaseScreen):
         self._hide_result_label()
 
     def _show_loading(self, text=None):
-        if self._hint_label:
-            self._hint_label.text = text or get_text('loading', 'Загрузка...')
+        self._show_loading_spinner()
 
     def _hide_loading(self):
-        self._restore_hint()
+        self._hide_loading_spinner()
 
     # ---------- СОХРАНЕНИЕ / ВОССТАНОВЛЕНИЕ ----------
 
@@ -2014,7 +2165,7 @@ class SongsScreen(BaseScreen):
             if self._all_search_results:
                 self._show_search_page(self._search_page)
             else:
-                self._show_loading()
+                self._show_loading_spinner()
                 token = str(time.time())
                 self._search_token = token
 
@@ -2106,6 +2257,11 @@ class SongsScreen(BaseScreen):
                 self.cards_container.clear()
                 self._hide_pagination()
                 self._hide_search_pagination()
+
+            # ✅ ФИКС: если вернулись в режим поиска — принудительно перерисовать
+            if self.is_search_mode and self._all_search_results:
+                self._last_search_display_key = None
+                self._show_search_page(self._search_page)
 
     def on_leave(self):
         try:
