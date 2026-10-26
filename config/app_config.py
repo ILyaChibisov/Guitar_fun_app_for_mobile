@@ -22,7 +22,7 @@ class AppConfig:
     API_HEALTH = f"{API_BASE_URL}/health"
 
     # Таймауты
-    CONNECTION_TIMEOUT = 10
+    CONNECTION_TIMEOUT = (5, 30)
     READ_TIMEOUT = 30
 
     # ============ НАСТРОЙКИ КЭША ============

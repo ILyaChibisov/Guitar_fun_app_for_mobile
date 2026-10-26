@@ -308,17 +308,19 @@ class APIClient:
                 Logger.error(f'❌ Ошибка запроса (без SSL): {e2}')
                 return {"artists": [], "total": 0}
 
+
         except requests.exceptions.Timeout as e:
             Logger.error(f"⏱️ Таймаут: {e}")
-            return {"artists": [], "total": 0}
+            return {"error": "timeout", "artists": [], "songs": [], "favorites": [], "results": [], "total": 0}
+
 
         except requests.exceptions.ConnectionError as e:
             Logger.error(f"🔌 Ошибка соединения: {e}")
-            return {"artists": [], "total": 0}
+            return {"error": "connection", "artists": [], "songs": [], "favorites": [], "results": [], "total": 0}
 
         except Exception as e:
             Logger.error(f'❌ Ошибка запроса: {e}')
-            return {"artists": [], "total": 0}
+            return {"error": "unknown", "artists": [], "songs": [], "favorites": [], "results": [], "total": 0}
 
     def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
         """Асинхронный запрос"""
