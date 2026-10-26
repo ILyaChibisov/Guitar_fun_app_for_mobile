@@ -1,13 +1,19 @@
 # screens/songs_screen.py
 """
 Экран песен:
-  - алфавит сверху, показывается всегда;
-  - карточки фиксированной высоты dp(48), spacing dp(4);
-  - PAGE_SIZE определяется ОДИН РАЗ по Window.height (фиксированные отступы
-    известны), не зависит от _cards_wrapper.height (который гуляет);
-  - пересчёт только при реальной смене размера окна (порог dp(50));
-  - пагинация: прозрачное окно из ROW_SIZE кнопок (без ScrollView);
-  - стрелки листают ряд, кнопки переиспользуются.
+  - алфавит сверху;
+  - карточки dp(48), spacing dp(4);
+  - PAGE_SIZE по Window.height - фикс. отступы, фиксируется один раз;
+  - пагинация: ⟪ ‹ N › ⟫ — без иконки страницы;
+  - ⟪ / ⟫ — на первую / последнюю;
+  - ‹ / › — на одну назад / вперёд.
+
+ФИКС:
+  - PaginationBar внутри FloatLayout (не AnchorLayout) — FloatLayout
+    обрезает касания по своим границам, поэтому скрытая пагинация
+    (контейнер height=0) НЕ перехватывает касания в области карточек.
+  - PaginationBar.size_hint = (None, None) + height = dp(48)
+    + pos_hint по центру.
 """
 import time
 import unicodedata
@@ -19,6 +25,7 @@ from kivy.core.window import Window
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from io import BytesIO
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
@@ -736,13 +743,12 @@ class PageCardsContainer(MDBoxLayout):
             c.update_theme_colors()
 
 
-# ============ ПАГИНАЦИЯ ============
+# ============ ПАГИНАЦИЯ (⟪ ‹ N › ⟫) ============
 
-class ArrowButton(MDBoxLayout):
-    LONG_PRESS_TIME = 0.4
-    WIDTH = dp(32)
+class PaginationArrow(MDBoxLayout):
+    WIDTH = dp(40)
 
-    def __init__(self, icon_name, short_press=None, long_press=None,
+    def __init__(self, icon_name, on_press=None,
                  icon_color=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
@@ -751,26 +757,20 @@ class ArrowButton(MDBoxLayout):
         self.padding = [dp(2)] * 4
         self.md_bg_color = [0, 0, 0, 0]
 
-        self._on_short_press = short_press
-        self._on_long_press = long_press
-        self._long_press_event = None
-        self._long_press_fired = False
-        self._pressed = False
+        self._on_press = on_press
         self._enabled = True
+        self._pressed = False
 
         container = AnchorLayout(anchor_x='center', anchor_y='center',
                                   size_hint=(1, 1))
         self.icon_widget = MDIcon(
-            icon=icon_name, font_size=sp(24),
+            icon=icon_name, font_size=sp(26),
             theme_text_color="Custom",
             text_color=icon_color if icon_color else [1, 1, 1, 1],
-            size_hint=(None, None), size=(dp(24), dp(24)),
+            size_hint=(None, None), size=(dp(28), dp(28)),
         )
         container.add_widget(self.icon_widget)
         self.add_widget(container)
-
-        self.bind(on_touch_down=self._handle_touch_down,
-                  on_touch_up=self._handle_touch_up)
 
     def set_enabled(self, enabled):
         self._enabled = enabled
@@ -779,247 +779,101 @@ class ArrowButton(MDBoxLayout):
     def set_color(self, color):
         self.icon_widget.text_color = color
 
-    def _handle_touch_down(self, instance, touch):
+    def on_touch_down(self, touch):
         if not self.collide_point(*touch.pos):
-            return False
+            return super().on_touch_down(touch)
         if not self._enabled:
             return True
         self._pressed = True
-        self._long_press_fired = False
-        self._long_press_event = Clock.schedule_once(
-            lambda dt: self._fire_long_press(), self.LONG_PRESS_TIME
-        )
+        touch.grab(self)
         return True
 
-    def _fire_long_press(self):
-        self._long_press_fired = True
-        self._long_press_event = None
-        if self._on_long_press and self._pressed and self._enabled:
-            self._on_long_press()
-
-    def _handle_touch_up(self, instance, touch):
-        if not self._pressed:
-            return False
-        if self._long_press_event:
-            self._long_press_event.cancel()
-            self._long_press_event = None
-        if (not self._long_press_fired and self._enabled
-                and self.collide_point(*touch.pos)
-                and self._on_short_press):
-            self._on_short_press()
-        self._pressed = False
+    def on_touch_up(self, touch):
+        if touch.grab_current is not self:
+            return super().on_touch_up(touch)
+        touch.ungrab(self)
+        if self._pressed:
+            self._pressed = False
+            if self._enabled and self.collide_point(*touch.pos) and self._on_press:
+                self._on_press()
         return True
-
-
-class PageButton(MDBoxLayout):
-    WIDTH = dp(32)
-
-    def __init__(self, text, index, on_click=None, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (None, 1)
-        self.size_hint_x = None
-        self.size_hint_y = 1
-        self.width = self.WIDTH
-        self.padding = [dp(2)] * 4
-        self.md_bg_color = [0, 0, 0, 0]
-        self.is_selected = False
-        self.page_index = index
-        self.on_click_callback = on_click
-
-        self.label = MDLabel(
-            text=text,
-            font_size=sp(15),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.85],
-            bold=True,
-            size_hint=(1, 1),
-        )
-        self.add_widget(self.label)
-        self.bind(on_touch_down=self._handle_touch_down)
-        self.update_style()
-
-    def _handle_touch_down(self, instance, touch):
-        if not self.collide_point(*touch.pos):
-            return False
-        if self.on_click_callback:
-            with perf('songs.action.page_click.total'):
-                self.on_click_callback(self.page_index)
-        return True
-
-    def set_selected(self, selected):
-        if self.is_selected == selected:
-            return
-        self.is_selected = selected
-        self.update_style()
-
-    def set_page_index(self, index, text):
-        self.page_index = index
-        if self.label.text != text:
-            self.label.text = text
-
-    def update_style(self):
-        theme_id = settings_manager.theme
-        accent = SongsColors.get_accent(theme_id)
-        if self.is_selected:
-            self.md_bg_color = accent
-            self.label.text_color = [1, 1, 1, 1]
-            self.radius = [dp(8)]
-        else:
-            self.md_bg_color = [0, 0, 0, 0]
-            self.label.text_color = [1, 1, 1, 0.85]
-            self.radius = [0]
 
 
 class PaginationBar(MDBoxLayout):
-    LONG_PRESS_JUMP_ROWS = 10
-    BTN_WIDTH = dp(32)
-    BTN_SPACING = dp(2)
-    BAR_HEIGHT = dp(48)
-    MIN_ROW_SIZE = 3
-    MAX_ROW_SIZE = 9
-
+    """
+    ⟪ ‹ N › ⟫
+    size_hint=(None, None) + height=dp(48), чтобы сам задавал размер.
+    """
     def __init__(self, on_page_select=None, **kwargs):
         super().__init__(**kwargs)
         self.on_page_select = on_page_select
         self.current_page_index = 0
         self.total_pages = 1
-        self._window_start = 0
-        self.page_buttons = []
+        self._last_total = None
+        self._last_per_page = None
 
         self._rebuild_count = 0
         self._total_rebuilds = 0
 
         self.orientation = 'horizontal'
-        self.size_hint = (1, None)
-        self.height = self.BAR_HEIGHT
+        self.size_hint = (None, None)
+        self.height = dp(48)
         self.padding = [dp(4), 0, dp(4), 0]
-        self.spacing = dp(2)
+        self.spacing = dp(4)
         self.md_bg_color = [0, 0, 0, 0]
 
-        self.left_arrow = ArrowButton(
+        self.first_arrow = PaginationArrow(
+            icon_name="page-first",
+            on_press=self._go_first_page,
+        )
+        self.add_widget(self.first_arrow)
+
+        self.prev_arrow = PaginationArrow(
             icon_name="chevron-left",
-            short_press=self._go_prev_row,
-            long_press=self._jump_prev_rows,
+            on_press=self._go_prev_page,
         )
-        self.add_widget(self.left_arrow)
+        self.add_widget(self.prev_arrow)
 
-        self.center_zone = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0],
-            padding=[dp(0)] * 4,
-        )
-        self.add_widget(self.center_zone)
-
-        anchor = AnchorLayout(
-            anchor_x='center', anchor_y='center',
-            size_hint=(1, 1),
-        )
-        self.center_zone.add_widget(anchor)
-
-        self.container = MDBoxLayout(
-            orientation='horizontal',
+        self.page_label = MDLabel(
+            text="1",
+            font_size=sp(18),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            bold=True,
             size_hint=(None, 1),
-            size_hint_x=None,
-            size_hint_y=1,
-            spacing=self.BTN_SPACING,
-            padding=[dp(0)] * 4,
-            md_bg_color=[0, 0, 0, 0],
+            width=dp(40),
         )
-        anchor.add_widget(self.container)
+        self.add_widget(self.page_label)
 
-        self.right_arrow = ArrowButton(
+        self.next_arrow = PaginationArrow(
             icon_name="chevron-right",
-            short_press=self._go_next_row,
-            long_press=self._jump_next_rows,
+            on_press=self._go_next_page,
         )
-        self.add_widget(self.right_arrow)
+        self.add_widget(self.next_arrow)
 
+        self.last_arrow = PaginationArrow(
+            icon_name="page-last",
+            on_press=self._go_last_page,
+        )
+        self.add_widget(self.last_arrow)
+
+        self._update_width()
         self.update_theme_colors()
 
-    def _calc_row_size(self):
-        try:
-            avail = self.center_zone.width
-        except Exception:
-            avail = 0
-        if avail <= 0:
-            return self.MAX_ROW_SIZE
-        unit = self.BTN_WIDTH + self.BTN_SPACING
-        n = int((avail + self.BTN_SPACING) / unit)
-        return max(self.MIN_ROW_SIZE, min(self.MAX_ROW_SIZE, n))
+    def _update_width(self):
+        w = (
+            dp(4) + dp(4)
+            + self.first_arrow.width + self.spacing
+            + self.prev_arrow.width + self.spacing
+            + self.page_label.width + self.spacing
+            + self.next_arrow.width + self.spacing
+            + self.last_arrow.width
+        )
+        self.width = w
 
-    def _max_window_start(self):
-        row_size = self._calc_row_size()
-        return max(0, self.total_pages - row_size)
-
-    def _clamp_window_start(self, start):
-        return max(0, min(start, self._max_window_start()))
-
-    def _center_window_on(self, page_index):
-        row_size = self._calc_row_size()
-        half = row_size // 2
-        start = page_index - half
-        self._window_start = self._clamp_window_start(start)
-
-    def _window_contains(self, page_index):
-        row_size = self._calc_row_size()
-        return self._window_start <= page_index < self._window_start + row_size
-
-    def _rebuild_row(self):
-        self._rebuild_count += 1
-        self._total_rebuilds += 1
-        with perf('songs.pagination.rebuild_row', log_every=False):
-            if self.total_pages <= 0:
-                self.container.clear_widgets()
-                self.page_buttons = []
-                self.container.width = 0
-                self._update_arrows()
-                return
-
-            row_size = self._calc_row_size()
-            start = self._window_start
-            end = min(start + row_size, self.total_pages)
-
-            if (end - start < row_size) and start > 0:
-                start = max(0, self.total_pages - row_size)
-                end = min(start + row_size, self.total_pages)
-                self._window_start = start
-
-            visible = end - start
-
-            while len(self.page_buttons) < visible:
-                btn = PageButton(text="", index=0, on_click=self._on_page_click)
-                self.page_buttons.append(btn)
-                self.container.add_widget(btn)
-
-            while len(self.page_buttons) > visible:
-                btn = self.page_buttons.pop()
-                if btn.parent is self.container:
-                    self.container.remove_widget(btn)
-
-            total_w = 0
-            for idx, i in enumerate(range(start, end)):
-                btn = self.page_buttons[idx]
-                btn.set_page_index(i, str(i + 1))
-                btn.set_selected(i == self.current_page_index)
-                total_w += btn.width
-                if idx > 0:
-                    total_w += self.container.spacing
-
-            self.container.width = total_w
-            self._update_arrows()
-
-    def _update_arrows(self):
-        if not self.page_buttons:
-            self.left_arrow.set_enabled(False)
-            self.right_arrow.set_enabled(False)
-            return
-        self.left_arrow.set_enabled(self._window_start > 0)
-        can_next = self._window_start < self._max_window_start()
-        self.right_arrow.set_enabled(can_next)
+    # ---------- API ----------
 
     def set_total(self, total_items, per_page, current_page=0, on_click=None):
         with perf('songs.pagination.set_total', log_every=False):
@@ -1027,87 +881,102 @@ class PaginationBar(MDBoxLayout):
                 self.on_page_select = on_click
             new_total_pages = max(1, (total_items + per_page - 1) // per_page)
 
-            if self.total_pages == new_total_pages and self.page_buttons:
+            if (self._last_total == total_items
+                    and self._last_per_page == per_page
+                    and self.total_pages == new_total_pages):
                 self.set_current_page(current_page)
                 return
 
+            self._last_total = total_items
+            self._last_per_page = per_page
             self.total_pages = new_total_pages
             self.current_page_index = max(0, min(current_page, self.total_pages - 1))
-            self._center_window_on(self.current_page_index)
-            # Откладываем _rebuild_row на следующий кадр,
-            # чтобы center_zone.width уже был вычислен
-            Clock.schedule_once(lambda dt: self._rebuild_row(), 0)
-            Clock.schedule_once(lambda dt: self.update_theme_colors(), 0)
+            self._apply_page()
+            self.update_theme_colors()
 
     def set_current_page(self, page):
         with perf('songs.pagination.set_current_page', log_every=False):
             self.current_page_index = max(0, min(page, self.total_pages - 1))
-            if not self._window_contains(self.current_page_index):
-                self._center_window_on(self.current_page_index)
-                Clock.schedule_once(lambda dt: self._rebuild_row(), 0)
-            else:
-                for btn in self.page_buttons:
-                    btn.set_selected(btn.page_index == self.current_page_index)
-                self._update_arrows()
+            self._apply_page()
 
-    def _on_page_click(self, index):
-        if index == self.current_page_index:
+    def _apply_page(self):
+        self.page_label.text = str(self.current_page_index + 1)
+        digits = len(str(self.total_pages))
+        self.page_label.width = dp(12) * max(2, digits) + dp(4)
+
+        at_first = self.current_page_index == 0
+        at_last = self.current_page_index >= self.total_pages - 1
+
+        self.first_arrow.set_enabled(not at_first)
+        self.prev_arrow.set_enabled(not at_first)
+        self.next_arrow.set_enabled(not at_last)
+        self.last_arrow.set_enabled(not at_last)
+
+        self._update_width()
+        self._rebuild_count += 1
+        self._total_rebuilds += 1
+
+    # ---------- КЛИКИ ----------
+
+    def _go_first_page(self):
+        if self.current_page_index == 0:
             return
-        self._rebuild_count = 0
-        with perf('songs.pagination.on_page_click', log_every=False):
-            self.set_current_page(index)
+        with perf('songs.pagination.go_first', log_every=False):
+            self.current_page_index = 0
+            self._apply_page()
             if self.on_page_select:
-                with perf('songs.pagination.on_page_select_cb', log_every=False):
-                    self.on_page_select(index)
-        _perf_log.info(
-            f"📄 page_click index={index} rebuild_count={self._rebuild_count}"
-        )
+                self.on_page_select(0)
+        _perf_log.info("📄 page_click index=0 (first)")
 
-    def _go_prev_row(self):
-        if self._window_start <= 0:
+    def _go_prev_page(self):
+        if self.current_page_index <= 0:
             return
-        with perf('songs.pagination.go_prev_row', log_every=False):
-            step = self._calc_row_size()
-            self._window_start = self._clamp_window_start(self._window_start - step)
-            self._rebuild_row()
-            self.update_theme_colors()
+        with perf('songs.pagination.go_prev_page', log_every=False):
+            new_index = self.current_page_index - 1
+            self.current_page_index = new_index
+            self._apply_page()
+            if self.on_page_select:
+                self.on_page_select(new_index)
+        _perf_log.info(f"📄 page_click index={new_index} (prev)")
 
-    def _go_next_row(self):
-        if self._window_start >= self._max_window_start():
+    def _go_next_page(self):
+        if self.current_page_index >= self.total_pages - 1:
             return
-        with perf('songs.pagination.go_next_row', log_every=False):
-            step = self._calc_row_size()
-            self._window_start = self._clamp_window_start(self._window_start + step)
-            self._rebuild_row()
-            self.update_theme_colors()
+        with perf('songs.pagination.go_next_page', log_every=False):
+            new_index = self.current_page_index + 1
+            self.current_page_index = new_index
+            self._apply_page()
+            if self.on_page_select:
+                self.on_page_select(new_index)
+        _perf_log.info(f"📄 page_click index={new_index} (next)")
 
-    def _jump_prev_rows(self):
-        with perf('songs.pagination.jump_prev_rows', log_every=False):
-            step = self._calc_row_size() * self.LONG_PRESS_JUMP_ROWS
-            self._window_start = self._clamp_window_start(self._window_start - step)
-            self._rebuild_row()
-            self.update_theme_colors()
+    def _go_last_page(self):
+        last = self.total_pages - 1
+        if self.current_page_index >= last:
+            return
+        with perf('songs.pagination.go_last', log_every=False):
+            self.current_page_index = last
+            self._apply_page()
+            if self.on_page_select:
+                self.on_page_select(last)
+        _perf_log.info(f"📄 page_click index={last} (last)")
 
-    def _jump_next_rows(self):
-        with perf('songs.pagination.jump_next_rows', log_every=False):
-            step = self._calc_row_size() * self.LONG_PRESS_JUMP_ROWS
-            self._window_start = self._clamp_window_start(self._window_start + step)
-            self._rebuild_row()
-            self.update_theme_colors()
+    # ---------- ТЕМА ----------
 
     def update_theme_colors(self):
         with perf('songs.pagination.update_theme', log_every=False):
             theme_id = settings_manager.theme
             arrow_color = SongsColors.get_arrow_color(theme_id)
-            self.left_arrow.set_color(arrow_color)
-            self.right_arrow.set_color(arrow_color)
-            for btn in self.page_buttons:
-                btn.set_selected(btn.page_index == self.current_page_index)
+            if theme_id == 'light':
+                edge_color = [0, 0, 0, 0.7]
+            else:
+                edge_color = [1, 1, 1, 0.7]
 
-    def on_size(self, *args):
-        if not self.page_buttons and self.total_pages <= 1:
-            return
-        Clock.schedule_once(lambda dt: self._rebuild_row(), 0)
+            self.first_arrow.set_color(edge_color)
+            self.last_arrow.set_color(edge_color)
+            self.prev_arrow.set_color(arrow_color)
+            self.next_arrow.set_color(arrow_color)
+            self.page_label.text_color = SongsColors.get_text_primary(theme_id)
 
 
 # ============ ОСНОВНОЙ ЭКРАН ============
@@ -1157,6 +1026,8 @@ class SongsScreen(BaseScreen):
         self._search_pagination_bar = None
         self._pagination_container = None
         self._search_pagination_container = None
+        self._pagination_anchor = None
+        self._search_pagination_anchor = None
 
         with perf('songs.init.load_shared_icons', log_every=False):
             load_shared_icons_sync()
@@ -1299,6 +1170,7 @@ class SongsScreen(BaseScreen):
                 spacing=0, padding=[padding[0], dp(4), padding[2], dp(0)],
                 md_bg_color=[0, 0, 0, 0]
             )
+            self._cards_wrapper.clip = True
             self.cards_container = PageCardsContainer()
             self._cards_wrapper.add_widget(self.cards_container)
             main_layout.add_widget(self._cards_wrapper)
@@ -1311,8 +1183,19 @@ class SongsScreen(BaseScreen):
                 md_bg_color=[0, 0, 0, 0],
                 padding=[padding[0], dp(1), padding[2], dp(2)],
             )
-            self._pagination_bar = PaginationBar(on_page_select=self._on_page_selected_from_bar)
-            self._pagination_container.add_widget(self._pagination_bar)
+            self._pagination_container.clip = True
+
+            # ВАЖНО: FloatLayout — обрезает касания по своим границам.
+            # При height=0 контейнера — FloatLayout тоже 0dp,
+            # касания в этой области не перехватываются.
+            self._pagination_anchor = FloatLayout(size_hint=(1, 1))
+
+            self._pagination_bar = PaginationBar(
+                on_page_select=self._on_page_selected_from_bar,
+            )
+            self._pagination_bar.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+            self._pagination_anchor.add_widget(self._pagination_bar)
+            self._pagination_container.add_widget(self._pagination_anchor)
             main_layout.add_widget(self._pagination_container)
 
             # === ПАГИНАЦИЯ ПОИСКА ===
@@ -1323,8 +1206,16 @@ class SongsScreen(BaseScreen):
                 md_bg_color=[0, 0, 0, 0],
                 padding=[padding[0], dp(1), padding[2], dp(2)],
             )
-            self._search_pagination_bar = PaginationBar(on_page_select=self._on_search_page_selected)
-            self._search_pagination_container.add_widget(self._search_pagination_bar)
+            self._search_pagination_container.clip = True
+
+            self._search_pagination_anchor = FloatLayout(size_hint=(1, 1))
+
+            self._search_pagination_bar = PaginationBar(
+                on_page_select=self._on_search_page_selected,
+            )
+            self._search_pagination_bar.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+            self._search_pagination_anchor.add_widget(self._search_pagination_bar)
+            self._search_pagination_container.add_widget(self._search_pagination_anchor)
             main_layout.add_widget(self._search_pagination_container)
 
             bottom_padding = layout_config.get_bottom_padding()
@@ -1334,17 +1225,12 @@ class SongsScreen(BaseScreen):
             self.add_widget(main_layout)
             self.update_theme_colors()
 
-            # ОДИН РАЗ при старте — определяем PAGE_SIZE
             Clock.schedule_once(lambda dt: self._recalc_page_size(force=True), 0.3)
 
     def _toggle_language(self):
         pass
 
     def _calc_page_size(self):
-        """
-        Считаем от Window.height — фиксированные высоты всех виджетов известны.
-        _cards_wrapper.height НЕ используем — он гуляет при показе/скрытии пагинации.
-        """
         fixed_h = (
             layout_config.get_top_padding()
             + dp(8)
@@ -1387,7 +1273,6 @@ class SongsScreen(BaseScreen):
                 self._display_current_page()
 
     def on_size(self, *args):
-        """Пересчёт только при РЕАЛЬНОЙ смене размера окна (порог dp(50))."""
         current_size = (Window.width, Window.height)
         if self._last_window_size is not None:
             old_w, old_h = self._last_window_size
@@ -1432,6 +1317,8 @@ class SongsScreen(BaseScreen):
             if total_pages > 1:
                 self._search_pagination_container.height = self.PAGINATION_HEIGHT
                 self._search_pagination_container.disabled = False
+                self._search_pagination_anchor.disabled = False
+                self._search_pagination_bar.disabled = False
                 self._search_pagination_bar.opacity = 1
                 self._search_pagination_bar.set_total(
                     len(self._all_search_results), self._page_size, self._search_page,
@@ -1473,8 +1360,10 @@ class SongsScreen(BaseScreen):
             return
         self._search_pagination_container.height = 0
         self._search_pagination_container.disabled = True
+        self._search_pagination_anchor.disabled = True
         if self._search_pagination_bar:
             self._search_pagination_bar.opacity = 0
+            self._search_pagination_bar.disabled = True
 
     def _on_search_page_selected(self, page_index):
         if page_index == self._search_page:
@@ -1489,8 +1378,10 @@ class SongsScreen(BaseScreen):
             return
         self._pagination_container.height = 0
         self._pagination_container.disabled = True
+        self._pagination_anchor.disabled = True
         if self._pagination_bar:
             self._pagination_bar.opacity = 0
+            self._pagination_bar.disabled = True
 
     def _show_pagination_bar(self):
         with perf('songs._show_pagination_bar', log_every=False):
@@ -1501,7 +1392,9 @@ class SongsScreen(BaseScreen):
                 return
             self._pagination_container.height = self.PAGINATION_HEIGHT
             self._pagination_container.disabled = False
+            self._pagination_anchor.disabled = False
             self._pagination_bar.opacity = 1
+            self._pagination_bar.disabled = False
             self._pagination_bar.set_total(
                 self._total_artists, self._page_size, self._page
             )
