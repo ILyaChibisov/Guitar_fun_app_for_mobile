@@ -1,12 +1,6 @@
 # screens/songs_screen.py
 """
-Экран песен:
-- свайп страниц вверх/вниз,
-- long press на карточках,
-- анимированный индикатор загрузки (MDSpinner),
-- мгновенная установка каретки на букву,
-- обработка ошибок сети (таймаут/нет соединения),
-- исправление типов карточек.
+Экран песен с оптимизированной раскладкой.
 """
 import time
 import unicodedata
@@ -39,7 +33,6 @@ from state.songs_state import songs_state
 from utils.settings_manager import settings_manager
 from utils.localization import get_text
 
-# ✅ Импортируем твой компонент спиннера
 from screens.components.loading_spinner import LoadingSpinner
 
 from utils.perf import perf, perf_registry
@@ -478,7 +471,7 @@ class SongsMenu(MDBoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(56)
+        self.height = dp(48)
         self.md_bg_color = [0, 0, 0, 0]
         self.alphabet_menu = AlphabetMenu(
             on_letter_press=on_letter_press,
@@ -903,14 +896,14 @@ class SwipeableCardsWrapper(MDBoxLayout):
 # ============ ПАГИНАЦИЯ ============
 
 class PaginationArrow(MDBoxLayout):
-    WIDTH = dp(40)
+    DEFAULT_WIDTH = dp(40)
 
     def __init__(self, icon_name, on_press=None,
-                 icon_color=None, **kwargs):
+                 icon_color=None, width=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint = (None, 1)
-        self.width = self.WIDTH
+        self.width = width if width else self.DEFAULT_WIDTH
         self.padding = [dp(2)] * 4
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -921,10 +914,10 @@ class PaginationArrow(MDBoxLayout):
         container = AnchorLayout(anchor_x='center', anchor_y='center',
                                  size_hint=(1, 1))
         self.icon_widget = MDIcon(
-            icon=icon_name, font_size=sp(26),
+            icon=icon_name, font_size=sp(22),
             theme_text_color="Custom",
             text_color=icon_color if icon_color else [1, 1, 1, 1],
-            size_hint=(None, None), size=(dp(28), dp(28)),
+            size_hint=(None, None), size=(dp(24), dp(24)),
         )
         container.add_widget(self.icon_widget)
         self.add_widget(container)
@@ -964,7 +957,6 @@ class PaginationBar(MDBoxLayout):
         self.total_pages = 1
         self._last_total = None
         self._last_per_page = None
-
         self._rebuild_count = 0
         self._total_rebuilds = 0
 
@@ -972,24 +964,33 @@ class PaginationBar(MDBoxLayout):
         self.size_hint = (None, None)
         self.height = dp(48)
         self.padding = [dp(4), 0, dp(4), 0]
-        self.spacing = dp(4)
+        self.spacing = dp(2)
         self.md_bg_color = [0, 0, 0, 0]
 
         self.first_arrow = PaginationArrow(
             icon_name="page-first",
             on_press=self._go_first_page,
+            width=dp(32),
         )
         self.add_widget(self.first_arrow)
+
+        self.jump_back_arrow = PaginationArrow(
+            icon_name="chevron-double-left",
+            on_press=self._go_back_10,
+            width=dp(32),
+        )
+        self.add_widget(self.jump_back_arrow)
 
         self.prev_arrow = PaginationArrow(
             icon_name="chevron-left",
             on_press=self._go_prev_page,
+            width=dp(32),
         )
         self.add_widget(self.prev_arrow)
 
         self.page_label = MDLabel(
             text="1",
-            font_size=sp(18),
+            font_size=sp(16),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -1003,12 +1004,21 @@ class PaginationBar(MDBoxLayout):
         self.next_arrow = PaginationArrow(
             icon_name="chevron-right",
             on_press=self._go_next_page,
+            width=dp(32),
         )
         self.add_widget(self.next_arrow)
+
+        self.jump_forward_arrow = PaginationArrow(
+            icon_name="chevron-double-right",
+            on_press=self._go_forward_10,
+            width=dp(32),
+        )
+        self.add_widget(self.jump_forward_arrow)
 
         self.last_arrow = PaginationArrow(
             icon_name="page-last",
             on_press=self._go_last_page,
+            width=dp(32),
         )
         self.add_widget(self.last_arrow)
 
@@ -1024,9 +1034,11 @@ class PaginationBar(MDBoxLayout):
         w = (
                 dp(4) + dp(4)
                 + self.first_arrow.width + self.spacing
+                + self.jump_back_arrow.width + self.spacing
                 + self.prev_arrow.width + self.spacing
                 + self.page_label.width + self.spacing
                 + self.next_arrow.width + self.spacing
+                + self.jump_forward_arrow.width + self.spacing
                 + self.last_arrow.width
         )
         self.width = w
@@ -1064,8 +1076,10 @@ class PaginationBar(MDBoxLayout):
         at_last = self.current_page_index >= self.total_pages - 1
 
         self.first_arrow.set_enabled(not at_first)
+        self.jump_back_arrow.set_enabled(not at_first)
         self.prev_arrow.set_enabled(not at_first)
         self.next_arrow.set_enabled(not at_last)
+        self.jump_forward_arrow.set_enabled(not at_last)
         self.last_arrow.set_enabled(not at_last)
 
         self._update_width()
@@ -1081,6 +1095,17 @@ class PaginationBar(MDBoxLayout):
             if self.on_page_select:
                 self.on_page_select(0)
         _perf_log.info("📄 page_click index=0 (first)")
+
+    def _go_back_10(self):
+        if self.current_page_index <= 0:
+            return
+        with perf('songs.pagination.go_back_10', log_every=False):
+            new_index = max(0, self.current_page_index - 10)
+            self.current_page_index = new_index
+            self._apply_page()
+            if self.on_page_select:
+                self.on_page_select(new_index)
+        _perf_log.info(f"📄 page_click index={new_index} (back 10)")
 
     def _go_prev_page(self):
         if self.current_page_index <= 0:
@@ -1104,6 +1129,17 @@ class PaginationBar(MDBoxLayout):
                 self.on_page_select(new_index)
         _perf_log.info(f"📄 page_click index={new_index} (next)")
 
+    def _go_forward_10(self):
+        if self.current_page_index >= self.total_pages - 1:
+            return
+        with perf('songs.pagination.go_forward_10', log_every=False):
+            new_index = min(self.total_pages - 1, self.current_page_index + 10)
+            self.current_page_index = new_index
+            self._apply_page()
+            if self.on_page_select:
+                self.on_page_select(new_index)
+        _perf_log.info(f"📄 page_click index={new_index} (forward 10)")
+
     def _go_last_page(self):
         last = self.total_pages - 1
         if self.current_page_index >= last:
@@ -1126,6 +1162,8 @@ class PaginationBar(MDBoxLayout):
 
             self.first_arrow.set_color(edge_color)
             self.last_arrow.set_color(edge_color)
+            self.jump_back_arrow.set_color(arrow_color)
+            self.jump_forward_arrow.set_color(arrow_color)
             self.prev_arrow.set_color(arrow_color)
             self.next_arrow.set_color(arrow_color)
             self.page_label.text_color = SongsColors.get_text_primary(theme_id)
@@ -1135,7 +1173,7 @@ class PaginationBar(MDBoxLayout):
 
 class SongsScreen(BaseScreen):
     MIN_PAGE_SIZE = 3
-    MAX_PAGE_SIZE = 10
+    MAX_PAGE_SIZE = 12
     PAGINATION_HEIGHT = dp(48) + dp(1) + dp(2)
 
     def __init__(self, **kwargs):
@@ -1168,7 +1206,6 @@ class SongsScreen(BaseScreen):
         self._last_search_display_key = None
 
         self.search_bar = None
-        self._hint_label = None
         self._result_label = None
         self.songs_menu = None
         self._hint_timer = None
@@ -1240,8 +1277,6 @@ class SongsScreen(BaseScreen):
                 self._pagination_bar.update_theme_colors()
             if self._search_pagination_bar:
                 self._search_pagination_bar.update_theme_colors()
-            if self._hint_label:
-                self._hint_label.text_color = SongsColors.get_text_secondary(settings_manager.theme)
             if self._result_label:
                 self._result_label.text_color = SongsColors.get_hint_color(settings_manager.theme)
             if self.cards_container:
@@ -1251,7 +1286,6 @@ class SongsScreen(BaseScreen):
         with perf('songs.update_language', log_every=False):
             if self.search_bar:
                 self.search_bar.update_language()
-            self._restore_hint()
             if self.songs_menu:
                 self.songs_menu.set_language(settings_manager.language)
             if self._result_label and self._result_label.opacity > 0:
@@ -1266,13 +1300,15 @@ class SongsScreen(BaseScreen):
 
             top_padding = layout_config.get_top_padding()
             main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
-            main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
+
+            # ✅ Минимальный отступ между TopNav и алфавитом
+            main_layout.add_widget(Widget(size_hint_y=None, height=dp(2)))
 
             padding = layout_config.get_content_padding()
 
-            # === АЛФАВИТ ===
+            # === АЛФАВИТ (сразу под TopNav) ===
             menu_container = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(56),
+                orientation='vertical', size_hint=(1, None), height=dp(48),
                 md_bg_color=[0, 0, 0, 0],
                 padding=[padding[0], 0, padding[2], 0]
             )
@@ -1284,34 +1320,22 @@ class SongsScreen(BaseScreen):
             menu_container.add_widget(self.songs_menu)
             main_layout.add_widget(menu_container)
 
-            main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
-
-            # === ПОИСК ===
+            # === ПОИСК (сразу под алфавитом) ===
             search_container = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(52),
-                padding=[padding[0], 0, padding[2], 0]
+                orientation='vertical', size_hint=(1, None), height=dp(48),
+                padding=[padding[0], dp(4), padding[2], dp(4)]
             )
             self.search_bar = SearchBar(on_search=self.do_search, on_clear=self.clear_search)
             search_container.add_widget(self.search_bar)
             main_layout.add_widget(search_container)
 
-            main_layout.add_widget(Widget(size_hint_y=None, height=dp(2)))
+            # ✅ Отступ между поиском и результатами
+            main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
-            # === HINT ===
-            self._hint_label = MDLabel(
-                text="",
-                font_size=sp(13), halign="center",
-                size_hint_y=None, height=dp(20),
-                theme_text_color="Custom",
-                text_color=SongsColors.get_text_secondary(settings_manager.theme),
-                bold=False
-            )
-            main_layout.add_widget(self._hint_label)
-
-            # === RESULT LABEL ===
+            # === RESULT LABEL (объединённый) ===
             self._result_label = MDLabel(
                 text="", font_size=sp(12), halign="center",
-                size_hint_y=None, height=dp(18),
+                size_hint_y=None, height=dp(22),
                 theme_text_color="Custom",
                 text_color=SongsColors.get_hint_color(settings_manager.theme),
                 opacity=0, bold=True
@@ -1325,7 +1349,7 @@ class SongsScreen(BaseScreen):
                 orientation='vertical',
                 size_hint=(1, 1),
                 spacing=0,
-                padding=[padding[0], dp(4), padding[2], dp(0)],
+                padding=[padding[0], dp(4), padding[2], dp(4)],
                 md_bg_color=[0, 0, 0, 0]
             )
             self._cards_wrapper.clip = True
@@ -1339,7 +1363,7 @@ class SongsScreen(BaseScreen):
                 size_hint=(1, None),
                 height=0,
                 md_bg_color=[0, 0, 0, 0],
-                padding=[padding[0], dp(1), padding[2], dp(2)],
+                padding=[padding[0], dp(2), padding[2], dp(2)],
             )
             self._pagination_container.clip = True
 
@@ -1359,7 +1383,7 @@ class SongsScreen(BaseScreen):
                 size_hint=(1, None),
                 height=0,
                 md_bg_color=[0, 0, 0, 0],
-                padding=[padding[0], dp(1), padding[2], dp(2)],
+                padding=[padding[0], dp(2), padding[2], dp(2)],
             )
             self._search_pagination_container.clip = True
 
@@ -1373,6 +1397,7 @@ class SongsScreen(BaseScreen):
             self._search_pagination_container.add_widget(self._search_pagination_anchor)
             main_layout.add_widget(self._search_pagination_container)
 
+            # ✅ Нормальный отступ снизу — учитывает BottomNav + системную навигацию
             bottom_padding = layout_config.get_bottom_padding()
             main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
 
@@ -1416,18 +1441,17 @@ class SongsScreen(BaseScreen):
     # ---------- РАЗМЕР СТРАНИЦЫ ----------
 
     def _calc_page_size(self):
+        # ✅ Пересчитано под новую раскладку
         fixed_h = (
                 layout_config.get_top_padding()
-                + dp(8)
-                + dp(56)
-                + dp(4)
-                + dp(52)
-                + dp(2)
-                + dp(20)
-                + dp(18)
-                + dp(4)
-                + self.PAGINATION_HEIGHT
-                + layout_config.get_bottom_padding()
+                + dp(2)  # отступ TopNav → алфавит
+                + dp(48)  # алфавит
+                + dp(48)  # поиск
+                + dp(4)  # отступ поиск → результаты
+                + dp(22)  # result label
+                + dp(8)  # padding карточек сверху/снизу
+                + self.PAGINATION_HEIGHT  # пагинация
+                + layout_config.get_bottom_padding()  # BottomNav + системная навигация
         )
         available_h = Window.height - fixed_h
         if available_h <= 0:
@@ -1489,24 +1513,23 @@ class SongsScreen(BaseScreen):
     # ---------- АНИМИРОВАННЫЙ ЗАГРУЗЧИК (MDSPINNER) ----------
 
     def _show_loading_spinner(self):
-        """Показать анимированный кружочек по центру ЭКРАНА (оверлей)."""
         if self._loading_spinner:
             return
 
         overlay = FloatLayout(size_hint=(1, 1))
 
-        # Полупрозрачный фон
+        spinner = LoadingSpinner(text=get_text('loading', 'Загрузка'))
+        spinner.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+
+        overlay_color = spinner.get_overlay_color()
         with overlay.canvas.before:
-            Color(0, 0, 0, 0.4)
+            Color(*overlay_color)
             rect = Rectangle(pos=overlay.pos, size=overlay.size)
         overlay.bind(
             pos=lambda inst, val: setattr(rect, 'pos', val),
             size=lambda inst, val: setattr(rect, 'size', val),
         )
 
-        # Используем компонент MDSpinner
-        spinner = LoadingSpinner(text=get_text('loading', 'Загрузка...'))
-        spinner.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         overlay.add_widget(spinner)
         spinner.start_animation()
 
@@ -1515,7 +1538,6 @@ class SongsScreen(BaseScreen):
         self.add_widget(overlay)
 
     def _hide_loading_spinner(self):
-        """Скрыть оверлей со спиннером."""
         if not self._loading_spinner:
             return
         if self._loading_spinner_widget:
@@ -1573,7 +1595,7 @@ class SongsScreen(BaseScreen):
         start = self._search_page * self._page_size
         end = min(start + self._page_size, len(self._all_search_results))
         self._show_result_label(
-            f"{get_text('songs_found')}: {end - start} "
+            f"{get_text('songs_found')}: {end} "
             f"{get_text('of')} {len(self._all_search_results)}"
         )
 
@@ -1684,7 +1706,6 @@ class SongsScreen(BaseScreen):
             if my_token != self._load_token:
                 return
 
-            # ✅ ПРОВЕРКА НА ОШИБКУ СЕТИ
             if isinstance(data, dict) and data.get('error'):
                 self._batch_loading = False
                 self._hide_loading_spinner()
@@ -1692,8 +1713,7 @@ class SongsScreen(BaseScreen):
                 logger.warning(f"⚠️ Сетевая ошибка для '{letter}': {data.get('error')}")
 
                 self.cards_container.clear()
-                self._show_result_label("Нет ответа от сервера. Проверьте интернет.")
-                self._hint_label.text = get_text('tap_letter_to_retry', 'Нажмите букву ещё раз')
+                self._show_result_label("Нет ответа от сервера. Проверьте интернет.", is_error=True)
                 return
 
             dt_net = (time.perf_counter() - t_net) * 1000.0
@@ -1710,7 +1730,6 @@ class SongsScreen(BaseScreen):
                     artists = data.get('artists', []) or []
                     total = data.get('total', 0) or 0
 
-                    # ✅ ПРОВЕРКА НА ПУСТОЙ РЕЗУЛЬТАТ
                     if total == 0 and len(artists) == 0:
                         self._hide_loading_spinner()
                         self.cards_container.clear()
@@ -1756,7 +1775,7 @@ class SongsScreen(BaseScreen):
                 self._pending_page = None
                 self._hide_loading_spinner()
                 logger.error(f"❌ Ошибка _on_success: {e}")
-                self._show_empty(get_text('loading_error'))
+                self._show_result_label("Ошибка загрузки", is_error=True)
 
         def _on_error(req, err):
             if my_token != self._load_token:
@@ -1785,10 +1804,9 @@ class SongsScreen(BaseScreen):
 
     def _show_retry_error(self, letter):
         self.cards_container.clear()
-        self._show_result_label(get_text('loading_error'))
-        self._hint_label.text = get_text(
-            'tap_letter_to_retry',
-            'Нажмите букву ещё раз, чтобы повторить'
+        self._show_result_label(
+            "Нет ответа. Нажмите букву ещё раз",
+            is_error=True
         )
 
     def _matches_letter(self, name, letter):
@@ -1851,7 +1869,6 @@ class SongsScreen(BaseScreen):
 
     def on_letter_press(self, letter):
         with perf('songs.action.on_letter_press', log_every=False):
-            # 1. СРАЗУ ставим каретку
             if self.songs_menu:
                 self.songs_menu.set_current_letter(letter)
 
@@ -1859,7 +1876,10 @@ class SongsScreen(BaseScreen):
             self.current_artist = None
             self.search_bar.clear()
 
-            # 2. Запускаем загрузку с задержкой (50 мс), чтобы Kivy успел отрисовать каретку
+            self.cards_container.clear()
+            self._hide_pagination()
+            self._hide_result_label()
+
             Clock.schedule_once(lambda dt: self._load_artists(letter), 0.05)
 
     def on_artist_selected(self, artist, songs_count):
@@ -1937,12 +1957,11 @@ class SongsScreen(BaseScreen):
             self._search_in_progress = False
             self._hide_loading_spinner()
 
-            # ✅ Проверка на сетевую ошибку
             if isinstance(results, dict) and results.get('error'):
                 self._all_search_results = []
                 self.cards_container.clear()
                 self._hide_search_pagination()
-                self._show_empty("Нет ответа от сервера. Проверьте интернет.")
+                self._show_result_label("Нет ответа от сервера. Проверьте интернет.", is_error=True)
                 return
 
             raw = results.get('results', []) if isinstance(results, dict) else (
@@ -1961,7 +1980,7 @@ class SongsScreen(BaseScreen):
             if not self._all_search_results:
                 self.cards_container.clear()
                 self._hide_result_label()
-                self._show_empty(get_text('nothing_found', 'Ничего не найдено'))
+                self._show_result_label(get_text('nothing_found', 'Ничего не найдено'))
                 self._hide_search_pagination()
             else:
                 self._show_search_page(0)
@@ -1976,7 +1995,7 @@ class SongsScreen(BaseScreen):
         self.cards_container.clear()
         self._hide_result_label()
         self._hide_search_pagination()
-        self._show_empty("Нет ответа от сервера. Проверьте интернет.")
+        self._show_result_label("Нет ответа от сервера. Проверьте интернет.", is_error=True)
         logger.error(f"Ошибка поиска: {error}")
 
     def clear_search(self):
@@ -2039,22 +2058,28 @@ class SongsScreen(BaseScreen):
             self.save_current_state()
 
     def _show_temporary_hint(self, text, duration=1.5):
-        if self._hint_label:
-            self._hint_label.text = text
-            if self._hint_timer:
-                Clock.unschedule(self._hint_timer)
-            self._hint_timer = Clock.schedule_once(lambda dt: self._restore_hint(), duration)
+        self._show_result_label(text)
+        if self._hint_timer:
+            Clock.unschedule(self._hint_timer)
+        self._hint_timer = Clock.schedule_once(lambda dt: self._restore_hint(), duration)
 
     def _restore_hint(self):
         self._hint_timer = None
-        if self._hint_label is None:
-            return
-        self._hint_label.text = ""
+        if self._all_artists:
+            self._update_result_label_for_artists()
+        elif self._all_search_results:
+            self._update_search_result_label()
+        elif self._result_label:
+            self._hide_result_label()
 
-    def _show_result_label(self, text):
+    def _show_result_label(self, text, is_error=False):
         if self._result_label:
             self._result_label.text = text
             self._result_label.opacity = 1
+            if is_error:
+                self._result_label.text_color = [0.8, 0.3, 0.3, 1]  # Красный для ошибок
+            else:
+                self._result_label.text_color = SongsColors.get_hint_color(settings_manager.theme)
 
     def _hide_result_label(self):
         if self._result_label:
@@ -2068,6 +2093,7 @@ class SongsScreen(BaseScreen):
         self._hide_result_label()
 
     def _show_loading(self, text=None):
+        self._show_result_label(text or get_text('loading', 'Загрузка'))
         self._show_loading_spinner()
 
     def _hide_loading(self):
@@ -2204,7 +2230,6 @@ class SongsScreen(BaseScreen):
                 self._hide_pagination()
                 self._hide_search_pagination()
 
-            # ✅ ФИКС: если в режиме поиска — принудительно перерисовать карточки
             if self.is_search_mode and self._all_search_results:
                 self._last_search_display_key = None
                 self._show_search_page(self._search_page)
