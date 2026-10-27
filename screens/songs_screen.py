@@ -600,7 +600,9 @@ class StaticArtistCard(LongPressCardMixin, MDCard):
         self.clip = True
         self.theme_line_color = "Custom"
         self.theme_bg_color = "Custom"
-        self.padding = [0, dp(4), 0, dp(4)]
+
+        # ✅ Ноль вертикального padding — карточка ровно 48dp
+        self.padding = [0, 0, 0, 0]
         self.spacing = dp(8)
 
         content = MDBoxLayout(
@@ -691,7 +693,9 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
         self.clip = True
         self.theme_line_color = "Custom"
         self.theme_bg_color = "Custom"
-        self.padding = [0, dp(4), 0, dp(4)]
+
+        # ✅ Ноль вертикального padding
+        self.padding = [0, 0, 0, 0]
         self.spacing = dp(8)
 
         content = MDBoxLayout(
@@ -769,6 +773,9 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
 
 
 class PageCardsContainer(MDBoxLayout):
+    """
+    Контейнер карточек с пулом переиспользуемых виджетов.
+    """
     CARD_TYPE_ARTISTS = 'artists'
     CARD_TYPE_SONGS = 'songs'
 
@@ -780,70 +787,80 @@ class PageCardsContainer(MDBoxLayout):
         self.cards = []
         self.padding = [0, 0, 0, 0]
         self._current_type = None
+        self._card_pool = []
+        self._pool_class = None
+        self.size_hint_y = None
+        self.height = 0
+
+    def _ensure_pool(self, count, card_class, on_click):
+        if self._pool_class is not card_class:
+            self.clear_widgets()
+            self._card_pool = []
+            self._pool_class = card_class
+
+        while len(self._card_pool) < count:
+            card = card_class(on_click=on_click)
+            self.add_widget(card)
+            self._card_pool.append(card)
+
+    def _apply_pool(self, items, card_class, on_click, update_fn):
+        self._ensure_pool(len(items), card_class, on_click)
+        visible = 0
+        for i, card in enumerate(self._card_pool):
+            if i < len(items):
+                update_fn(card, items[i], on_click)
+                card.height = card_class.CARD_HEIGHT
+                card.opacity = 1
+                card.disabled = False
+                visible += 1
+            else:
+                card.height = 0
+                card.opacity = 0
+                card.disabled = True
+        self.cards = self._card_pool[:len(items)]
+
+        if visible > 0:
+            self.height = visible * card_class.CARD_HEIGHT + (visible - 1) * self.spacing
+        else:
+            self.height = 0
 
     def set_artists(self, artists, on_click):
         with perf('songs.cards.set_artists', log_every=False):
-            if self._current_type != self.CARD_TYPE_ARTISTS:
-                self.clear_widgets()
-                self.cards = []
-                self._current_type = self.CARD_TYPE_ARTISTS
+            self._current_type = self.CARD_TYPE_ARTISTS
 
-            if len(self.cards) == len(artists):
-                for card, data in zip(self.cards, artists):
-                    card.update_data(
-                        artist_name=data.get('artist', ''),
-                        songs_count=data.get('songs_count', 0),
-                        on_click=on_click,
-                    )
-                return
-            self.clear_widgets()
-            self.cards = []
-            for a in artists:
-                card = StaticArtistCard(
-                    artist_name=a.get('artist', ''),
-                    songs_count=a.get('songs_count', 0),
-                    on_click=on_click,
+            def _update(card, data, cb):
+                card.update_data(
+                    artist_name=data.get('artist', ''),
+                    songs_count=data.get('songs_count', 0),
+                    on_click=cb,
                 )
-                self.add_widget(card)
-                self.cards.append(card)
-            self.add_widget(Widget(size_hint_y=1))
+
+            self._apply_pool(artists, StaticArtistCard, on_click, _update)
 
     def set_songs(self, songs, on_click):
         with perf('songs.cards.set_songs', log_every=False):
-            if self._current_type != self.CARD_TYPE_SONGS:
-                self.clear_widgets()
-                self.cards = []
-                self._current_type = self.CARD_TYPE_SONGS
+            self._current_type = self.CARD_TYPE_SONGS
 
-            if len(self.cards) == len(songs):
-                for card, data in zip(self.cards, songs):
-                    card.update_data(
-                        artist=data.get('artist', ''),
-                        title=data.get('title', ''),
-                        song_id=data.get('song_id', 0),
-                        on_click=on_click,
-                    )
-                return
-            self.clear_widgets()
-            self.cards = []
-            for s in songs:
-                card = StaticSearchSongCard(
-                    artist=s.get('artist', ''),
-                    title=s.get('title', ''),
-                    song_id=s.get('song_id', 0),
-                    on_click=on_click,
+            def _update(card, data, cb):
+                card.update_data(
+                    artist=data.get('artist', ''),
+                    title=data.get('title', ''),
+                    song_id=data.get('song_id', 0),
+                    on_click=cb,
                 )
-                self.add_widget(card)
-                self.cards.append(card)
-            self.add_widget(Widget(size_hint_y=1))
+
+            self._apply_pool(songs, StaticSearchSongCard, on_click, _update)
 
     def clear(self):
-        self.clear_widgets()
+        for card in self._card_pool:
+            card.height = 0
+            card.opacity = 0
+            card.disabled = True
         self.cards = []
-        self._current_type = None
+        self.height = 0
 
     def update_theme_colors(self):
-        for c in self.cards:
+        for c in self._card_pool:
             c.update_theme_colors()
 
 
@@ -1290,7 +1307,7 @@ class SongsScreen(BaseScreen):
             # === RESULT LABEL ===
             self._result_label = MDLabel(
                 text="", font_size=sp(12), halign="center",
-                size_hint_y=None, height=dp(22),
+                size_hint_y=None, height=dp(24),
                 theme_text_color="Custom",
                 text_color=SongsColors.get_hint_color(settings_manager.theme),
                 opacity=0, bold=True
@@ -1298,18 +1315,21 @@ class SongsScreen(BaseScreen):
             main_layout.add_widget(self._result_label)
 
             # === КАРТОЧКИ ===
+            # ✅ Фиксированный отступ сверху 8dp, независимо от количества карточек
             self._cards_wrapper = SwipeableCardsWrapper(
                 on_swipe_up=self._on_swipe_up,
                 on_swipe_down=self._on_swipe_down,
                 orientation='vertical',
                 size_hint=(1, 1),
                 spacing=0,
-                padding=[padding[0], dp(4), padding[2], dp(4)],
+                padding=[padding[0], dp(8), padding[2], dp(0)],
                 md_bg_color=[0, 0, 0, 0]
             )
             self._cards_wrapper.clip = True
             self.cards_container = PageCardsContainer()
             self._cards_wrapper.add_widget(self.cards_container)
+            # ✅ Распорка снизу — карточки всегда прижаты к верху
+            self._cards_wrapper.add_widget(Widget(size_hint_y=1))
             main_layout.add_widget(self._cards_wrapper)
 
             # === ПАГИНАЦИЯ АРТИСТОВ ===
@@ -1397,11 +1417,12 @@ class SongsScreen(BaseScreen):
     def _calc_page_size(self):
         fixed_h = (
                 layout_config.get_top_padding()
-                + dp(48)
-                + dp(48)
-                + dp(4)
-                + dp(22)
-                + dp(8)
+                + dp(48)   # алфавит
+                + dp(48)   # поиск
+                + dp(4)    # отступ поиск → лейбл
+                + dp(24)   # result label
+                + dp(8)    # padding обёртки сверху
+                + dp(0)    # padding обёртки снизу
                 + self.PAGINATION_HEIGHT
                 + layout_config.get_pagination_bottom_padding()
         )
@@ -1410,9 +1431,6 @@ class SongsScreen(BaseScreen):
             return self.MIN_PAGE_SIZE
 
         card_h = StaticArtistCard.CARD_HEIGHT + self.cards_container.spacing
-        if card_h <= 0:
-            card_h = dp(52)
-
         n = int(available_h / card_h)
         return max(self.MIN_PAGE_SIZE, min(self.MAX_PAGE_SIZE, n))
 
@@ -1518,17 +1536,13 @@ class SongsScreen(BaseScreen):
             end = min(start + self._page_size, len(self._all_search_results))
             page_slice = self._all_search_results[start:end][:self._page_size]
 
-            total_pages = (len(self._all_search_results) + self._page_size - 1) // self._page_size
-            if total_pages > 1:
-                self._search_pagination_container.height = self.PAGINATION_HEIGHT
-                self._search_pagination_container.opacity = 1
-                self._search_pagination_container.disabled = False
-                self._search_pagination_bar.set_total(
-                    len(self._all_search_results), self._page_size, self._search_page,
-                    on_click=self._on_search_page_selected
-                )
-            else:
-                self._hide_search_pagination()
+            self._search_pagination_container.height = self.PAGINATION_HEIGHT
+            self._search_pagination_container.opacity = 1
+            self._search_pagination_container.disabled = False
+            self._search_pagination_bar.set_total(
+                len(self._all_search_results), self._page_size, self._search_page,
+                on_click=self._on_search_page_selected
+            )
 
             first_song = page_slice[0]['song_id'] if page_slice else 0
             display_key = (
@@ -1584,14 +1598,11 @@ class SongsScreen(BaseScreen):
         with perf('songs._show_pagination_bar', log_every=False):
             if not self._pagination_bar:
                 return
-            if self._total_artists <= self._page_size:
-                self._hide_pagination()
-                return
             self._pagination_container.height = self.PAGINATION_HEIGHT
             self._pagination_container.opacity = 1
             self._pagination_container.disabled = False
             self._pagination_bar.set_total(
-                self._total_artists, self._page_size, self._page
+                max(self._total_artists, 1), self._page_size, self._page
             )
 
     def _on_page_selected_from_bar(self, page_index):
@@ -1651,10 +1662,9 @@ class SongsScreen(BaseScreen):
         if batch_offset in cache['batches']:
             self._batch_loading = False
             self._all_artists = self._build_page_slice(cache, target_page)
-            self._display_current_page()
+            Clock.schedule_once(lambda dt: self._display_current_page(), 0)
             return
 
-        # ✅ Если token не передан — инкрементируем сами
         if token is None:
             self._load_token += 1
             token = self._load_token
@@ -1725,14 +1735,14 @@ class SongsScreen(BaseScreen):
                         if cache['total'] and self._page * self._page_size >= cache['total']:
                             self._hide_loading_spinner()
                             self._all_artists = self._build_page_slice(cache, self._page)
-                            self._display_current_page()
+                            Clock.schedule_once(lambda dt: self._display_current_page(), 0)
                             return
                         batch_offset2 = (self._page * self._page_size) // self._batch_size * self._batch_size
                         self._load_batch(letter=letter, batch_offset=batch_offset2, target_page=self._page)
                         return
                     self._hide_loading_spinner()
                     self._all_artists = self._build_page_slice(cache, self._page)
-                    self._display_current_page()
+                    Clock.schedule_once(lambda dt: self._display_current_page(), 0)
             except Exception as e:
                 self._batch_loading = False
                 self._pending_page = None
@@ -1789,17 +1799,8 @@ class SongsScreen(BaseScreen):
             self._batch_loading = False
             self._pending_page = None
 
-            # ✅ Отменяем предыдущие загрузки
             self._load_token += 1
             my_token = self._load_token
-
-            # ✅ Быстрая очистка: только если что-то есть
-            if self.cards_container and self.cards_container.cards:
-                self.cards_container.clear()
-            if self._pagination_container and self._pagination_container.height > 0:
-                self._hide_pagination()
-            if self._result_label and self._result_label.opacity > 0:
-                self._hide_result_label()
 
             cache = self._artists_cache.get(letter)
             if (cache is not None
@@ -1808,7 +1809,7 @@ class SongsScreen(BaseScreen):
                 self._total_artists = cache['total']
                 if self._is_page_cached(cache, 0):
                     self._all_artists = self._build_page_slice(cache, 0)
-                    self._display_current_page()
+                    Clock.schedule_once(lambda dt: self._display_current_page(), 0)
                 else:
                     self._load_page(0)
                 return
@@ -1817,7 +1818,6 @@ class SongsScreen(BaseScreen):
             self._total_artists = 0
             self._artists_cache[letter] = {'items': {}, 'total': 0, 'batches': set(), 'failed': False}
 
-            # ✅ Запускаем загрузку батча сразу, с нашим токеном
             self._load_batch(letter=letter, batch_offset=0, target_page=0, token=my_token)
 
     # ---------- КЛИКИ ----------
@@ -1842,7 +1842,6 @@ class SongsScreen(BaseScreen):
 
     def on_letter_press(self, letter):
         with perf('songs.action.on_letter_press', log_every=False):
-            # ✅ 1. МГНОВЕННО отменяем все текущие загрузки
             self._load_token += 1
 
             if self.songs_menu:
@@ -1851,14 +1850,10 @@ class SongsScreen(BaseScreen):
             self.is_search_mode = False
             self.current_artist = None
 
-            # ✅ 2. Мгновенно очищаем поиск (без перерисовки)
             if self.search_bar and self.search_bar.search_field.text:
                 self.search_bar.clear()
 
-            # ✅ 3. Сбрасываем ключ отображения
             self._last_display_key = None
-
-            # ✅ 4. Запускаем загрузку СРАЗУ (без Clock.schedule_once)
             self._load_artists(letter)
 
     def on_artist_selected(self, artist, songs_count):
@@ -1895,7 +1890,6 @@ class SongsScreen(BaseScreen):
             self._hide_pagination()
             self._hide_search_pagination()
             self._hide_result_label()
-            self.cards_container.clear()
 
             self._search_token = str(time.time())
             token = self._search_token
@@ -2010,10 +2004,7 @@ class SongsScreen(BaseScreen):
                 return
             self._hide_empty()
 
-            if self._total_artists > self._page_size:
-                self._show_pagination_bar()
-            else:
-                self._hide_pagination()
+            self._show_pagination_bar()
 
             artists_to_show = self._all_artists[:self._page_size]
 
@@ -2161,7 +2152,7 @@ class SongsScreen(BaseScreen):
                     self._ensure_valid_page()
                     if self._is_page_cached(cache, self._page):
                         self._all_artists = self._build_page_slice(cache, self._page)
-                        self._display_current_page()
+                        Clock.schedule_once(lambda dt: self._display_current_page(), 0)
                     else:
                         self._load_page(self._page)
                 else:
