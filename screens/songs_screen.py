@@ -9,6 +9,7 @@ from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
+from kivy.utils import platform
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from io import BytesIO
@@ -25,6 +26,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
+from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
@@ -471,7 +473,7 @@ class SongsMenu(MDBoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.height = dp(48)
+        self.height = dp(40)  # ✅ Уменьшили, так как контейнер теперь даёт отступ снизу
         self.md_bg_color = [0, 0, 0, 0]
         self.alphabet_menu = AlphabetMenu(
             on_letter_press=on_letter_press,
@@ -964,27 +966,22 @@ class PaginationBar(MDBoxLayout):
         self.size_hint = (None, None)
         self.height = dp(48)
         self.padding = [dp(4), 0, dp(4), 0]
-        self.spacing = dp(2)
+        self.spacing = dp(4)  # немного увеличим для красоты, так как стрелок стало меньше
         self.md_bg_color = [0, 0, 0, 0]
 
-        self.first_arrow = PaginationArrow(
-            icon_name="page-first",
-            on_press=self._go_first_page,
-            width=dp(32),
-        )
-        self.add_widget(self.first_arrow)
+        # ❌ Убрали first_arrow
 
         self.jump_back_arrow = PaginationArrow(
             icon_name="chevron-double-left",
             on_press=self._go_back_10,
-            width=dp(32),
+            width=dp(36),
         )
         self.add_widget(self.jump_back_arrow)
 
         self.prev_arrow = PaginationArrow(
             icon_name="chevron-left",
             on_press=self._go_prev_page,
-            width=dp(32),
+            width=dp(36),
         )
         self.add_widget(self.prev_arrow)
 
@@ -1004,23 +1001,18 @@ class PaginationBar(MDBoxLayout):
         self.next_arrow = PaginationArrow(
             icon_name="chevron-right",
             on_press=self._go_next_page,
-            width=dp(32),
+            width=dp(36),
         )
         self.add_widget(self.next_arrow)
 
         self.jump_forward_arrow = PaginationArrow(
             icon_name="chevron-double-right",
             on_press=self._go_forward_10,
-            width=dp(32),
+            width=dp(36),
         )
         self.add_widget(self.jump_forward_arrow)
 
-        self.last_arrow = PaginationArrow(
-            icon_name="page-last",
-            on_press=self._go_last_page,
-            width=dp(32),
-        )
-        self.add_widget(self.last_arrow)
+        # ❌ Убрали last_arrow
 
         self._update_width()
         self.update_theme_colors()
@@ -1033,13 +1025,11 @@ class PaginationBar(MDBoxLayout):
     def _update_width(self):
         w = (
                 dp(4) + dp(4)
-                + self.first_arrow.width + self.spacing
                 + self.jump_back_arrow.width + self.spacing
                 + self.prev_arrow.width + self.spacing
                 + self.page_label.width + self.spacing
                 + self.next_arrow.width + self.spacing
-                + self.jump_forward_arrow.width + self.spacing
-                + self.last_arrow.width
+                + self.jump_forward_arrow.width
         )
         self.width = w
 
@@ -1075,12 +1065,11 @@ class PaginationBar(MDBoxLayout):
         at_first = self.current_page_index == 0
         at_last = self.current_page_index >= self.total_pages - 1
 
-        self.first_arrow.set_enabled(not at_first)
+        # ❌ Убрали first_arrow и last_arrow
         self.jump_back_arrow.set_enabled(not at_first)
         self.prev_arrow.set_enabled(not at_first)
         self.next_arrow.set_enabled(not at_last)
         self.jump_forward_arrow.set_enabled(not at_last)
-        self.last_arrow.set_enabled(not at_last)
 
         self._update_width()
         self._rebuild_count += 1
@@ -1155,13 +1144,8 @@ class PaginationBar(MDBoxLayout):
         with perf('songs.pagination.update_theme', log_every=False):
             theme_id = settings_manager.theme
             arrow_color = SongsColors.get_arrow_color(theme_id)
-            if theme_id == 'light':
-                edge_color = [0, 0, 0, 0.7]
-            else:
-                edge_color = [1, 1, 1, 0.7]
 
-            self.first_arrow.set_color(edge_color)
-            self.last_arrow.set_color(edge_color)
+            # ❌ Убрали first_arrow и last_arrow
             self.jump_back_arrow.set_color(arrow_color)
             self.jump_forward_arrow.set_color(arrow_color)
             self.prev_arrow.set_color(arrow_color)
@@ -1301,35 +1285,33 @@ class SongsScreen(BaseScreen):
             top_padding = layout_config.get_top_padding()
             main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-            # ✅ Минимальный отступ между TopNav и алфавитом
-            main_layout.add_widget(Widget(size_hint_y=None, height=dp(2)))
-
             padding = layout_config.get_content_padding()
 
-            # === АЛФАВИТ (сразу под TopNav) ===
+            # === АЛФЕВИТ ===
             menu_container = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(48),
+                orientation='vertical', size_hint=(1, None), height=dp(48),  # Общая высота контейнера
                 md_bg_color=[0, 0, 0, 0],
-                padding=[padding[0], 0, padding[2], 0]
+                padding=[padding[0], 0, padding[2], dp(8)]  # ✅ Отступ СНИЗУ 8dp
             )
             self.songs_menu = SongsMenu(
                 on_language_toggle=self._toggle_language,
                 on_letter_press=self.on_letter_press,
                 current_language=self.current_language
             )
+            self.songs_menu.height = dp(40)  # ✅ Высота самих букв 40dp
             menu_container.add_widget(self.songs_menu)
             main_layout.add_widget(menu_container)
 
-            # === ПОИСК (сразу под алфавитом) ===
+            # === ПОИСК ===
             search_container = MDBoxLayout(
                 orientation='vertical', size_hint=(1, None), height=dp(48),
-                padding=[padding[0], dp(4), padding[2], dp(4)]
+                padding=[padding[0], 0, padding[2], 0]  # Без лишних отступов
             )
             self.search_bar = SearchBar(on_search=self.do_search, on_clear=self.clear_search)
             search_container.add_widget(self.search_bar)
             main_layout.add_widget(search_container)
 
-            # ✅ Отступ между поиском и результатами
+            # ✅ Отступ между поиском и результатами (оставляем 4dp)
             main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
             # === RESULT LABEL (объединённый) ===
@@ -1363,7 +1345,7 @@ class SongsScreen(BaseScreen):
                 size_hint=(1, None),
                 height=0,
                 md_bg_color=[0, 0, 0, 0],
-                padding=[padding[0], dp(2), padding[2], dp(2)],
+                padding=[padding[0], dp(0), padding[2], dp(0)],
             )
             self._pagination_container.clip = True
 
@@ -1383,7 +1365,7 @@ class SongsScreen(BaseScreen):
                 size_hint=(1, None),
                 height=0,
                 md_bg_color=[0, 0, 0, 0],
-                padding=[padding[0], dp(2), padding[2], dp(2)],
+                padding=[padding[0], dp(0), padding[2], dp(0)],
             )
             self._search_pagination_container.clip = True
 
@@ -1397,8 +1379,8 @@ class SongsScreen(BaseScreen):
             self._search_pagination_container.add_widget(self._search_pagination_anchor)
             main_layout.add_widget(self._search_pagination_container)
 
-            # ✅ Нормальный отступ снизу — учитывает BottomNav + системную навигацию
-            bottom_padding = layout_config.get_bottom_padding()
+            # ✅ Немного уменьшаем отступ снизу, чтобы пагинация прижалась к меню
+            bottom_padding = max(layout_config.get_bottom_padding() - dp(10), dp(4))
             main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
 
             self.clear_widgets()
@@ -1441,17 +1423,15 @@ class SongsScreen(BaseScreen):
     # ---------- РАЗМЕР СТРАНИЦЫ ----------
 
     def _calc_page_size(self):
-        # ✅ Пересчитано под новую раскладку
         fixed_h = (
                 layout_config.get_top_padding()
-                + dp(2)  # отступ TopNav → алфавит
-                + dp(48)  # алфавит
+                + dp(48)  # алфавит (было 44, стало 48)
                 + dp(48)  # поиск
                 + dp(4)  # отступ поиск → результаты
                 + dp(22)  # result label
                 + dp(8)  # padding карточек сверху/снизу
                 + self.PAGINATION_HEIGHT  # пагинация
-                + layout_config.get_bottom_padding()  # BottomNav + системная навигация
+                + max(layout_config.get_bottom_padding() - dp(10), dp(4))
         )
         available_h = Window.height - fixed_h
         if available_h <= 0:
