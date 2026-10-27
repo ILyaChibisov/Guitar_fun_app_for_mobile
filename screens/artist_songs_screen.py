@@ -1,7 +1,11 @@
 # screens/artist_songs_screen.py
 """
 Экран списка песен исполнителя — аналог songs_screen.
-Цвета — SongsColors (как в songs_screen).
+Гарантирует:
+- синхронизацию max_cards ↔ _page_size;
+- обновление темы на каждой карточке при смене;
+- отсутствие «белых пустых» карточек;
+- логи через perf('artist_songs.*').
 """
 import time
 import unicodedata
@@ -52,7 +56,7 @@ except ImportError:
 
 
 # ============================================================
-# ЦВЕТА — точная копия SongsColors из songs_screen.py
+# ЦВЕТА — точная копия SongsColors
 # ============================================================
 
 class SongColors:
@@ -323,7 +327,7 @@ class StaticSongCard(LongPressCardMixin, MDCard):
 
 
 # ============================================================
-# КОНТЕЙНЕР
+# КОНТЕЙНЕР КАРТОЧЕК (с гарантией синхронизации)
 # ============================================================
 
 class PageCardsContainer(MDBoxLayout):
@@ -341,13 +345,32 @@ class PageCardsContainer(MDBoxLayout):
         self.max_cards = 8
 
     def _ensure_pool(self, count):
+        if len(self._card_pool) > count:
+            # лишние карточки надо удалить
+            while len(self._card_pool) > count:
+                card = self._card_pool.pop()
+                if card.parent:
+                    self.remove_widget(card)
         while len(self._card_pool) < count:
             card = StaticSongCard()
             self.add_widget(card)
             self._card_pool.append(card)
 
+    def sync_max_cards(self, max_cards):
+        """✅ Публичный метод: синхронизировать размер пула с page_size."""
+        if self.max_cards == max_cards and len(self._card_pool) == max_cards:
+            return
+        self.max_cards = max_cards
+        self._ensure_pool(max_cards)
+        self.height = (
+            self.max_cards * StaticSongCard.CARD_HEIGHT
+            + (self.max_cards - 1) * self.spacing
+        ) if self.max_cards > 0 else 0
+
     def _apply_pool(self, items, on_click):
-        self._ensure_pool(self.max_cards)
+        # ✅ Синхронизируем пул
+        self.sync_max_cards(self.max_cards)
+
         for i in range(self.max_cards):
             card = self._card_pool[i]
             if i < len(items):
@@ -365,6 +388,8 @@ class PageCardsContainer(MDBoxLayout):
                 card.height = StaticSongCard.CARD_HEIGHT
                 card.opacity = 0
                 card.disabled = True
+            # ✅ Принудительно обновить цвета — вдруг тема сменилась
+            card.update_theme_colors()
 
         self.cards = self._card_pool[:len(items)]
 
@@ -831,7 +856,8 @@ class ArtistSongsScreen(BaseScreen):
             self._cards_right_pad = padding[2]
 
             self.cards_container = PageCardsContainer()
-            self.cards_container.max_cards = self._page_size
+            # ✅ при инициализации явно синхронизируем
+            self.cards_container.sync_max_cards(self._page_size)
             self._cards_wrapper.add_widget(self.cards_container)
 
             self._cards_wrapper.bind(
@@ -879,7 +905,10 @@ class ArtistSongsScreen(BaseScreen):
         if self._cards_wrapper.height <= 1:
             return
 
-        self.cards_container.max_cards = self._page_size
+        # ✅ Гарантируем, что max_cards совпадает с page_size
+        if self.cards_container.max_cards != self._page_size:
+            self.cards_container.sync_max_cards(self._page_size)
+
         h_card = StaticSongCard.CARD_HEIGHT
 
         self.cards_container.x = self._cards_wrapper.x + self._cards_left_pad
@@ -890,9 +919,9 @@ class ArtistSongsScreen(BaseScreen):
 
         n_total = self.cards_container.max_cards
         self.cards_container.spacing = dp(4)
-        self.cards_container.height = (
-            n_total * h_card + (n_total - 1) * self.cards_container.spacing
-        )
+        expected_h = n_total * h_card + (n_total - 1) * self.cards_container.spacing
+        if abs(self.cards_container.height - expected_h) > 1:
+            self.cards_container.height = expected_h
 
         try:
             label_bottom = self.count_label.to_window(
@@ -960,6 +989,11 @@ class ArtistSongsScreen(BaseScreen):
             self._page_size = new_size
             self._page_size_locked = True
             logger.info(f"📐 PAGE_SIZE(artist_songs) определён: {new_size}")
+
+            # ✅ Сразу синхронизируем пул
+            if self.cards_container:
+                self.cards_container.sync_max_cards(new_size)
+
             if self.artist_name:
                 self._ensure_valid_page()
                 cache = self._songs_cache.get(self.artist_name)
@@ -981,6 +1015,8 @@ class ArtistSongsScreen(BaseScreen):
         new_size = self._calc_page_size()
         if new_size != self._page_size:
             self._page_size = new_size
+            if self.cards_container:
+                self.cards_container.sync_max_cards(new_size)
             if self.artist_name:
                 self._ensure_valid_page()
                 cache = self._songs_cache.get(self.artist_name)
@@ -1236,6 +1272,8 @@ class ArtistSongsScreen(BaseScreen):
             display_key = (self.artist_name, self._page, len(songs_slice), first_song)
             if self._last_display_key != display_key:
                 if self.cards_container:
+                    # ✅ перед set_songs синхронизируем пул
+                    self.cards_container.sync_max_cards(self._page_size)
                     self.cards_container.set_songs(songs_slice, self.on_song_selected)
                 self._last_display_key = display_key
 
