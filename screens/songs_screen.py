@@ -1395,6 +1395,9 @@ class SongsScreen(BaseScreen):
     # ---------- СВАЙП ----------
 
     def _on_swipe_up(self):
+        """
+        Свайп ВВЕРХ (палец движется вверх) -> Следующая страница (в конец).
+        """
         if self.is_search_mode:
             if not self._all_search_results:
                 return
@@ -1409,6 +1412,9 @@ class SongsScreen(BaseScreen):
                 self._load_page(self._page + 1)
 
     def _on_swipe_down(self):
+        """
+        Свайп ВНИЗ (палец движется вниз) -> Предыдущая страница (в начало).
+        """
         if self.is_search_mode:
             if not self._all_search_results:
                 return
