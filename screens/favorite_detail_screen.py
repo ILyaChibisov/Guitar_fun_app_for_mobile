@@ -11,6 +11,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
+from kivymd.uix.slider import MDSlider
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle, RoundedRectangle
@@ -45,9 +46,12 @@ logger = screen_logger('FavoriteDetail')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -140,6 +144,7 @@ class EdgeSwipeCatcher(Widget):
     Прозрачная зона справа экрана, ловит свайп влево,
     чтобы открыть панель, когда она задвинута.
     """
+
     def __init__(self, on_swipe_open=None, **kwargs):
         super().__init__(**kwargs)
         self.on_swipe_open = on_swipe_open
@@ -185,49 +190,41 @@ class EdgeSwipeCatcher(Widget):
 # ============================================================
 
 class FloatingPanelItem(ButtonBehavior, MDBoxLayout):
-    """Иконка + мелкая подпись."""
-    def __init__(self, icon, label, on_click=None, **kwargs):
+    """Иконка без подписи с индивидуальным цветом."""
+
+    def __init__(self, icon, action, color, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint = (1, None)
         self.height = dp(44)
-        self.spacing = dp(0)
         self.md_bg_color = [0, 0, 0, 0]
         self.on_click_callback = on_click
+        self.action = action
 
-        theme_id = settings_manager.theme
-        accent = DetailColors.get_accent(theme_id)
-        text_s = DetailColors.get_text_secondary(theme_id)
+        # Сохраняем базовый цвет для текущей темы
+        self.base_color = color
 
         self.icon_btn = MDIconButton(
-            icon=icon, size_hint=(1, None), height=dp(28),
-            theme_icon_color='Custom', icon_color=accent,
-            md_bg_color=[0, 0, 0, 0], ripple_scale=0
-        )
-        self.label = MDLabel(
-            text=label, font_size=sp(4),
-            halign='center', valign='top',
-            size_hint=(1, None), height=dp(10),
-            theme_text_color='Custom', text_color=text_s,
-            shorten=True, shorten_from='right',
-            text_size=(52, None)
+            icon=icon,
+            size_hint=(1, 1),
+            theme_icon_color='Custom',
+            icon_color=self.base_color,
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0
         )
         self.add_widget(self.icon_btn)
-        self.add_widget(self.label)
 
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
             if self.on_click_callback:
-                self.on_click_callback()
+                self.on_click_callback(self.action)
             return True
         return super().on_touch_down(touch)
 
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        accent = DetailColors.get_accent(theme_id)
-        text_s = DetailColors.get_text_secondary(theme_id)
-        self.icon_btn.icon_color = accent
-        self.label.text_color = text_s
+    def update_theme_colors(self, new_color):
+        """Обновляем цвет при смене темы."""
+        self.base_color = new_color
+        self.icon_btn.icon_color = self.base_color
 
 
 class FloatingPanel(MDCard):
@@ -235,9 +232,10 @@ class FloatingPanel(MDCard):
     Панель с встроенной ручкой слева.
     Старт — задвинута, видна только ручка.
     Свайп влево — выдвинуть, вправо — задвинуть.
+    Режимы: 'menu' (главное меню) и 'font' (редактирование шрифта).
     """
-    PANEL_WIDTH = dp(64)
-    HANDLE_WIDTH = dp(24)
+    PANEL_WIDTH = dp(44)  # Уже, так как нет подписей
+    HANDLE_WIDTH = dp(20)  # Уже
     TOTAL_WIDTH = PANEL_WIDTH + HANDLE_WIDTH
     VISIBLE_MARGIN = dp(4)
 
@@ -252,7 +250,8 @@ class FloatingPanel(MDCard):
 
         self.size_hint = (None, None)
         self.width = self.TOTAL_WIDTH
-        self.height = dp(44) * 6 + dp(8) + dp(1) + dp(44) + dp(8)
+        # Высота будет пересчитана в _build_menu
+        self.height = dp(44) * 7 + dp(8)
         self.pos_hint = {}
         self.radius = [dp(16), 0, 0, dp(16)]
         self.elevation = 6
@@ -315,44 +314,158 @@ class FloatingPanel(MDCard):
         self.y = (Window.height - self.height) / 2
         self._is_visible = False
 
+    def _get_menu_colors(self):
+        """Возвращает словарь цветов для иконок в зависимости от темы."""
+        theme_id = settings_manager.theme
+        if theme_id == 'light':
+            return {
+                'chords': [0.8, 0.2, 0.2, 1],  # Красный
+                'tonality': [0.2, 0.5, 0.8, 1],  # Синий
+                'scroll': [0.2, 0.6, 0.3, 1],  # Зелёный
+                'tabs': [0.6, 0.3, 0.8, 1],  # Фиолетовый
+                'font': [0.8, 0.5, 0.1, 1],  # Оранжевый
+                'theme': [0.1, 0.6, 0.6, 1],  # Бирюзовый
+                'unfavorite': [0.8, 0.2, 0.3, 1]  # Розово-красный
+            }
+        elif theme_id == 'dark':
+            return {
+                'chords': [1.0, 0.4, 0.4, 1],  # Светло-красный
+                'tonality': [0.4, 0.7, 1.0, 1],  # Голубой
+                'scroll': [0.4, 0.8, 0.5, 1],  # Мятный
+                'tabs': [0.8, 0.6, 1.0, 1],  # Лавандовый
+                'font': [1.0, 0.7, 0.3, 1],  # Золотистый
+                'theme': [0.3, 0.8, 0.8, 1],  # Бирюзовый
+                'unfavorite': [1.0, 0.4, 0.5, 1]  # Розовый
+            }
+        else:  # green
+            return {
+                'chords': [1.0, 0.8, 0.2, 1],  # Золотистый
+                'tonality': [0.3, 0.7, 1.0, 1],  # Голубой
+                'scroll': [0.4, 0.9, 0.6, 1],  # Салатовый
+                'tabs': [0.8, 0.5, 1.0, 1],  # Лавандовый
+                'font': [1.0, 0.6, 0.3, 1],  # Оранжевый
+                'theme': [0.4, 0.9, 0.9, 1],  # Бирюзовый
+                'unfavorite': [1.0, 0.4, 0.4, 1]  # Коралловый
+            }
+
     def _build_menu(self):
         self.content.clear_widgets()
         self.mode = 'menu'
         self.items = []
 
+        colors = self._get_menu_colors()
+
         items = [
-            ('music', 'chords', get_text('chords', 'Аккорды')),
-            ('tune', 'tonality', get_text('tonality', 'Тональность')),
-            ('play-circle', 'scroll', get_text('started', 'Прокрутка')),
-            ('folder-music', 'tabs', get_text('variant', 'Подборы')),
-            ('format-size', 'font', get_text('settings', 'Шрифт')),
-            ('palette', 'theme', get_text('theme', 'Тема')),
+            ('music', 'chords'),
+            ('tune', 'tonality'),
+            ('play-circle', 'scroll'),
+            ('folder-music', 'tabs'),
+            ('magnify', 'font'),  # <-- ЛУПА вместо format-size
+            ('palette', 'theme'),
         ]
 
-        for icon, action, label in items:
+        for icon, action in items:
             item = FloatingPanelItem(
-                icon=icon, label=label,
-                on_click=lambda a=action: self._on_menu_item(a)
+                icon=icon,
+                action=action,
+                color=colors[action],
+                on_click=self._on_menu_item
             )
             self.items.append(item)
             self.content.add_widget(item)
 
+        # Разделитель
         div = MDBoxLayout(
             orientation='horizontal', size_hint=(1, None), height=dp(1),
             md_bg_color=DetailColors.get_divider(settings_manager.theme)
         )
         self.content.add_widget(div)
 
+        # Кнопка "Убрать из избранного"
         unfav = FloatingPanelItem(
-            icon='star-off', label=get_text('remove_from_favorites', 'Убрать'),
-            on_click=lambda: self._on_menu_item('unfavorite')
+            icon='star-off',
+            action='unfavorite',
+            color=colors['unfavorite'],
+            on_click=self._on_menu_item
         )
         self.items.append(unfav)
         self.content.add_widget(unfav)
 
+        # Обновляем высоту панели (6 иконок + разделитель + 1 иконка)
         self.height = dp(44) * 6 + dp(8) + dp(1) + dp(44) + dp(8)
         if self._hidden_x is not None:
             self.y = (Window.height - self.height) / 2
+
+    def _build_font_mode(self):
+        """Режим редактирования шрифта: вертикальный слайдер + кнопка принять."""
+        self.content.clear_widgets()
+        self.mode = 'font'
+
+        theme_id = settings_manager.theme
+        accent = DetailColors.get_accent(theme_id)
+        text_color = DetailColors.get_text_primary(theme_id)
+
+        # Значок "шрифт" сверху (для ориентира)
+        header = MDIconButton(
+            icon='format-size',
+            size_hint=(1, None),
+            height=dp(40),
+            theme_icon_color='Custom',
+            icon_color=accent,
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0
+        )
+        self.content.add_widget(header)
+
+        # Вертикальный слайдер
+        # KivyMD MDSlider — горизонтальный. Повернём его через FloatLayout с rotation.
+        from kivy.uix.floatlayout import FloatLayout
+
+        slider_holder = FloatLayout(size_hint=(1, None), height=dp(260))
+        self.font_slider = MDSlider(
+            orientation='vertical',
+            min=14,
+            max=60,
+            value=self.parent_screen.current_font_size if self.parent_screen else 30,
+            size_hint=(None, None),
+            size=(dp(260), dp(30)),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            color=accent,
+            hint=False,
+            step=1
+        )
+        # Поворот на -90, чтобы слайдер стал вертикальным
+        self.font_slider.rotation = -90
+        self.font_slider.bind(value=self._on_font_value_change)
+
+        slider_holder.add_widget(self.font_slider)
+        self.content.add_widget(slider_holder)
+
+        # Кнопка "Принять" (галочка)
+        accept_btn = MDIconButton(
+            icon='check',
+            size_hint=(1, None),
+            height=dp(48),
+            theme_icon_color='Custom',
+            icon_color=[0.2, 0.8, 0.4, 1],  # Ярко-зелёный, всегда
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0
+        )
+        accept_btn.bind(on_release=lambda x: self._build_menu())
+        self.content.add_widget(accept_btn)
+
+        # Обновляем высоту панели (header + slider-holder + accept)
+        self.height = dp(40) + dp(260) + dp(48) + dp(16)
+        if self._hidden_x is not None:
+            self.y = (Window.height - self.height) / 2
+
+    def _on_font_value_change(self, instance, value):
+        """Меняем размер шрифта на лету."""
+        if self.parent_screen:
+            self.parent_screen.current_font_size = value
+            if hasattr(self.parent_screen, 'content_label'):
+                self.parent_screen.content_label.font_size = value
+                self.parent_screen._update_content_height()
 
     def _on_menu_item(self, action):
         if action == 'chords':
@@ -363,7 +476,8 @@ class FloatingPanel(MDCard):
         elif action == 'scroll':
             notify.info(get_text('started'))
         elif action == 'font':
-            notify.info(get_text('settings'))
+            # Переключаем панель в режим редактирования шрифта
+            self._build_font_mode()
         elif action == 'tabs':
             if self.parent_screen:
                 self.parent_screen.show_tabs_picker()
@@ -382,12 +496,11 @@ class FloatingPanel(MDCard):
         if hasattr(self, '_handle_icon'):
             self._handle_icon.icon_color = DetailColors.get_accent(theme_id)
 
+        # Пересобираем активный режим, чтобы применились цвета для новой темы
         if self.mode == 'menu':
-            for item in self.items:
-                item.update_theme_colors()
-            for child in self.content.children:
-                if isinstance(child, MDBoxLayout) and child.height == dp(1):
-                    child.md_bg_color = DetailColors.get_divider(theme_id)
+            self._build_menu()
+        elif self.mode == 'font':
+            self._build_font_mode()
 
     def on_touch_down(self, touch):
         if self._visible_x is None or self._hidden_x is None:
@@ -409,7 +522,7 @@ class FloatingPanel(MDCard):
             if child is self:
                 continue
             if hasattr(child, 'collide_point') and child.collide_point(*touch.pos):
-                if isinstance(child, MDIconButton) or isinstance(child, FloatingPanelItem):
+                if isinstance(child, (MDIconButton, FloatingPanelItem, MDSlider)):
                     return True
         return False
 
@@ -603,8 +716,8 @@ class FavoriteDetailScreen(BaseScreen):
         if hasattr(self, 'content_label'):
             self.content_label.text_color = text_p
         for div in (getattr(self, 'top_divider', None),
-                     getattr(self, 'panel_divider', None),
-                     getattr(self, 'bottom_divider', None)):
+                    getattr(self, 'panel_divider', None),
+                    getattr(self, 'bottom_divider', None)):
             if div:
                 div.md_bg_color = div_color
         if getattr(self, 'griff_divider', None):
@@ -625,7 +738,7 @@ class FavoriteDetailScreen(BaseScreen):
         bottom_nav_total = layout_config.get_bottom_nav_total_height()
 
         card_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1),
-                                       padding=[0, top_offset, 0, 0])
+                                     padding=[0, top_offset, 0, 0])
 
         self.song_card = MDCard(
             orientation='vertical', size_hint=(1, 1),
@@ -633,7 +746,7 @@ class FavoriteDetailScreen(BaseScreen):
             radius=[0, 0, 0, 0], md_bg_color=[0, 0, 0, 0], elevation=0)
 
         self.top_divider = MDBoxLayout(orientation='horizontal',
-                                        size_hint=(1, None), height=dp(2))
+                                       size_hint=(1, None), height=dp(2))
         self.song_card.add_widget(self.top_divider)
 
         self.content_scroll = MDScrollView(
@@ -656,7 +769,7 @@ class FavoriteDetailScreen(BaseScreen):
         self.song_card.add_widget(self.content_scroll)
 
         self.bottom_divider = MDBoxLayout(orientation='horizontal',
-                                           size_hint=(1, None), height=dp(2))
+                                          size_hint=(1, None), height=dp(2))
         self.song_card.add_widget(self.bottom_divider)
 
         card_container.add_widget(self.song_card)
@@ -733,7 +846,7 @@ class FavoriteDetailScreen(BaseScreen):
             padding=[dp(10), dp(4), dp(10), dp(4)])
 
         self.chords_carousel = Carousel(direction='right', loop=True,
-                                         size_hint=(1, 1), anim_move_duration=0.3)
+                                        size_hint=(1, 1), anim_move_duration=0.3)
         self.chords_carousel.bind(current_slide=self._on_carousel_slide)
         self.chord_renderers = []
         self.chord_slides = []
@@ -760,8 +873,8 @@ class FavoriteDetailScreen(BaseScreen):
         self.griff_container.add_widget(self.chords_carousel)
 
         self.griff_divider = MDBoxLayout(orientation='horizontal',
-                                           size_hint=(1, None), height=dp(2),
-                                           md_bg_color=DetailColors.get_divider(theme_id))
+                                         size_hint=(1, None), height=dp(2),
+                                         md_bg_color=DetailColors.get_divider(theme_id))
 
         content_scroll = self.content_scroll
         bottom_divider = self.bottom_divider
@@ -826,7 +939,7 @@ class FavoriteDetailScreen(BaseScreen):
         if self.manager and self.manager.has_screen('chords'):
             chords_screen = self.manager.get_screen('chords')
             variants = [c for c in chords_screen.all_chords
-                         if c['short_name'].lower() == chord_name.lower()]
+                        if c['short_name'].lower() == chord_name.lower()]
             variants.sort(key=lambda x: x['variant'])
             self.chord_variants = variants
             if variants:
@@ -935,6 +1048,7 @@ class FavoriteDetailScreen(BaseScreen):
         if self.is_scrolling:
             return
         self.is_scrolling = True
+
         def update_scroll(dt):
             if not self.is_scrolling:
                 return False
@@ -945,6 +1059,7 @@ class FavoriteDetailScreen(BaseScreen):
                 return False
             self.content_scroll.scroll_y = new_y
             return True
+
         self.scroll_animation = Clock.schedule_interval(update_scroll, 1.0 / 60.0)
 
     def stop_scroll(self):
@@ -966,7 +1081,7 @@ class FavoriteDetailScreen(BaseScreen):
         accent = DetailColors.get_accent(theme_id)
 
         content = MDBoxLayout(orientation='vertical', spacing=dp(8),
-                               padding=dp(16), size_hint_y=None, adaptive_height=True)
+                              padding=dp(16), size_hint_y=None, adaptive_height=True)
         for i in range(len(self.tabs)):
             btn = MDRaisedButton(
                 text=f"{get_text('variant')} {i + 1}",
@@ -976,9 +1091,9 @@ class FavoriteDetailScreen(BaseScreen):
                 on_release=lambda x, idx=i: self._select_tab(idx))
             content.add_widget(btn)
         dialog = MDDialog(title=get_text('choose_chord'), type="custom",
-                           content_cls=content,
-                           buttons=[MDRaisedButton(text=get_text('close'),
-                                                    on_release=lambda x: dialog.dismiss())])
+                          content_cls=content,
+                          buttons=[MDRaisedButton(text=get_text('close'),
+                                                  on_release=lambda x: dialog.dismiss())])
         dialog.open()
         self.tabs_dialog = dialog
 
@@ -1029,9 +1144,9 @@ class FavoriteDetailScreen(BaseScreen):
     def load_song_data(self):
         self.show_loading()
         api.get_tab(song_id=self.song_id,
-                     on_success=self.on_song_loaded,
-                     on_failure=self.on_load_failed,
-                     force_refresh=False)
+                    on_success=self.on_song_loaded,
+                    on_failure=self.on_load_failed,
+                    force_refresh=False)
 
     def show_loading(self):
         if self.is_loading:
@@ -1101,8 +1216,8 @@ class FavoriteDetailScreen(BaseScreen):
             buttons=[
                 MDRaisedButton(text=get_text('close'), on_release=lambda x: dialog.dismiss()),
                 MDRaisedButton(text=get_text('reset'),
-                                on_release=confirm,
-                                md_bg_color=[0.8, 0.3, 0.3, 1]),
+                               on_release=confirm,
+                               md_bg_color=[0.8, 0.3, 0.3, 1]),
             ])
         dialog.open()
 
@@ -1117,8 +1232,8 @@ class FavoriteDetailScreen(BaseScreen):
             notify.error(get_text('search_error'))
 
         api.remove_from_favorites(song_id=self.song_id,
-                                    on_success=on_success,
-                                    on_failure=on_failure)
+                                  on_success=on_success,
+                                  on_failure=on_failure)
 
     def update_top_nav_title(self):
         app = MDApp.get_running_app()
@@ -1129,15 +1244,15 @@ class FavoriteDetailScreen(BaseScreen):
         text_s = DetailColors.get_text_secondary(theme_id)
 
         container = MDBoxLayout(orientation='vertical', size_hint=(1, 1),
-                                  spacing=dp(2), padding=[dp(8), dp(4), dp(8), dp(4)])
+                                spacing=dp(2), padding=[dp(8), dp(4), dp(8), dp(4)])
         title = MDLabel(text=self.song_title or get_text('artist_songs'),
-                         font_size=sp(18), halign="center", valign="middle",
-                         theme_text_color="Custom", text_color=text_p,
-                         bold=True, shorten=True, shorten_from="right")
+                        font_size=sp(18), halign="center", valign="middle",
+                        theme_text_color="Custom", text_color=text_p,
+                        bold=True, shorten=True, shorten_from="right")
         artist = MDLabel(text=self.song_artist or "",
-                          font_size=sp(12), halign="center", valign="middle",
-                          theme_text_color="Custom", text_color=text_s,
-                          shorten=True, shorten_from="right")
+                         font_size=sp(12), halign="center", valign="middle",
+                         theme_text_color="Custom", text_color=text_s,
+                         shorten=True, shorten_from="right")
         container.add_widget(title)
         container.add_widget(artist)
         app.top_nav.set_custom_title_widget(container)
