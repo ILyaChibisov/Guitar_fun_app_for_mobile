@@ -1380,7 +1380,8 @@ class SongsScreen(BaseScreen):
             main_layout.add_widget(self._search_pagination_container)
 
             # ✅ Немного уменьшаем отступ снизу, чтобы пагинация прижалась к меню
-            bottom_padding = max(layout_config.get_bottom_padding() - dp(10), dp(4))
+            # (используем новый метод layout_config.get_pagination_bottom_padding())
+            bottom_padding = layout_config.get_pagination_bottom_padding()
             main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
 
             self.clear_widgets()
@@ -1437,7 +1438,7 @@ class SongsScreen(BaseScreen):
                 + dp(22)  # result label
                 + dp(8)  # padding карточек сверху/снизу
                 + self.PAGINATION_HEIGHT  # пагинация
-                + max(layout_config.get_bottom_padding() - dp(10), dp(4))
+                + layout_config.get_pagination_bottom_padding()  # ✅ новый метод
         )
         available_h = Window.height - fixed_h
         if available_h <= 0:

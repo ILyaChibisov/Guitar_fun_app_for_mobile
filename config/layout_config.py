@@ -16,8 +16,8 @@ class LayoutConfig:
 
     # ========== РЕАЛЬНЫЕ РАЗМЕРЫ ПАНЕЛЕЙ ==========
     # ВАЖНО: эти значения должны СОВПАДАТЬ с top_nav.py!
-    TOP_NAV_PANEL_HEIGHT = 64      # Windows
-    ANDROID_PANEL_HEIGHT = 52      # Android
+    TOP_NAV_PANEL_HEIGHT = 64  # Windows
+    ANDROID_PANEL_HEIGHT = 52  # Android
 
     EXTRA_TOP_PADDING = 4
 
@@ -84,6 +84,23 @@ class LayoutConfig:
         return cls.get_bottom_nav_height() + nav_bar_height + dp(cls.GAP_BETWEEN_CONTENT_AND_NAV)
 
     @classmethod
+    def get_pagination_bottom_padding(cls):
+        """
+        Возвращает нижний отступ для пагинации (только на экране songs).
+
+        На Android пагинация должна быть ближе к BottomNav,
+        поэтому вычитаем 20dp компенсации.
+        На Windows оставляем как было.
+        """
+        if platform == 'android':
+            return max(
+                cls.get_bottom_nav_height() + get_navigation_bar_height() - dp(20),
+                dp(4)
+            )
+        else:
+            return max(cls.get_bottom_padding() - dp(10), dp(4))
+
+    @classmethod
     def get_content_padding(cls):
         return [
             dp(cls.SIDE_PADDING),
@@ -104,6 +121,7 @@ class LayoutConfig:
         logger.info(f"📱 get_top_nav_height(): {cls.get_top_nav_height()}dp")
         logger.info(f"📱 get_top_padding(): {cls.get_top_padding()}dp")
         logger.info(f"📱 get_bottom_padding(): {cls.get_bottom_padding()}dp")
+        logger.info(f"📱 get_pagination_bottom_padding(): {cls.get_pagination_bottom_padding()}dp")
         logger.info("=" * 70)
 
 
