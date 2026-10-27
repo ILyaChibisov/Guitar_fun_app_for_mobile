@@ -1,8 +1,8 @@
 # screens/favorite_detail_screen.py
 """
 Экран просмотра песни ИЗ ИЗБРАННОГО.
-С встроенной ручкой в панель справа и ловушкой свайпа.
-Адаптирован под 3 темы и 6 языков.
+Панель справа (FloatingPanel) с клювиком и иконками.
+Слайдеры (Шрифт, Прокрутка, Тональность) выезжают внутри панели.
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
@@ -14,25 +14,24 @@ from kivymd.uix.dialog import MDDialog
 from kivymd.uix.slider import MDSlider
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse
 from kivy.core.image import Image as CoreImage
 from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.animation import Animation
 from kivy.core.window import Window
+from kivy.uix.floatlayout import FloatLayout
+from kivy.utils import platform
 from io import BytesIO
 import re
-from kivy.utils import platform
 
-from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
-from config.system_bars import get_navigation_bar_height, get_status_bar_height
 from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
+from screens.components.compact_vertical_slider import CompactVerticalSlider
 from api.client import api
 from utils.notifications import notify
-from utils.screen_state import screen_state
 from utils.settings_manager import settings_manager
 from utils.localization import get_text
 from utils.chord_highlighter import (
@@ -102,8 +101,7 @@ class DetailColors:
 
 
 def clean_text(text):
-    if not text:
-        return ""
+    if not text: return ""
     temp_text = re.sub(r'<[^>]+>', '', text)
     html_entities = {
         '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"',
@@ -116,43 +114,29 @@ def clean_text(text):
     }
     for entity, char in html_entities.items():
         temp_text = temp_text.replace(entity, char)
-
     lines = temp_text.split('\n')
     cleaned_lines = []
     for i, line in enumerate(lines):
-        if i < 4:
-            continue
-        if 'источник:' in line.lower() or 'source:' in line.lower():
-            continue
+        if i < 4: continue
+        if 'источник:' in line.lower() or 'source:' in line.lower(): continue
         cleaned_lines.append(line)
-
     while cleaned_lines and not cleaned_lines[-1].strip():
         cleaned_lines.pop()
-
     result = '\n'.join(cleaned_lines)
-    if not result.strip():
-        result = '\n'.join(lines[4:])
+    if not result.strip(): result = '\n'.join(lines[4:])
     return result
 
 
 # ============================================================
 # ЛОВУШКА СВАЙПА
 # ============================================================
-
 class EdgeSwipeCatcher(Widget):
-    """
-    Прозрачная зона справа экрана, ловит свайп влево,
-    чтобы открыть панель, когда она задвинута.
-    """
-
     def __init__(self, on_swipe_open=None, **kwargs):
         super().__init__(**kwargs)
         self.on_swipe_open = on_swipe_open
-
         self.size_hint = (None, 1)
         self.width = dp(24)
         self.pos_hint = {'right': 1, 'center_y': 0.5}
-
         self._touch_start_x = 0
         self._dragging = False
 
@@ -169,73 +153,120 @@ class EdgeSwipeCatcher(Widget):
             dx = touch.x - self._touch_start_x
             if dx < -dp(10) and not self._dragging:
                 self._dragging = True
-                if self.on_swipe_open:
-                    self.on_swipe_open()
+                if self.on_swipe_open: self.on_swipe_open()
             return True
         return super().on_touch_move(touch)
 
     def on_touch_up(self, touch):
         if touch.grab_current is self:
             touch.ungrab(self)
-            if not self._dragging:
-                if self.on_swipe_open:
-                    self.on_swipe_open()
+            if not self._dragging and self.on_swipe_open:
+                self.on_swipe_open()
             self._dragging = False
             return True
         return super().on_touch_up(touch)
 
 
 # ============================================================
-# ПАНЕЛЬ С РУЧКОЙ
+# КОМПОНЕНТЫ ПАНЕЛИ
 # ============================================================
 
-class FloatingPanelItem(ButtonBehavior, MDBoxLayout):
-    """Иконка без подписи с индивидуальным цветом."""
+class PanelIcon(ButtonBehavior, MDBoxLayout):
+    """Иконка без подписи."""
 
-    def __init__(self, icon, action, color, on_click=None, **kwargs):
+    def __init__(self, icon, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint = (1, None)
-        self.height = dp(44)
+        self.height = dp(48)
         self.md_bg_color = [0, 0, 0, 0]
         self.on_click_callback = on_click
-        self.action = action
-
-        # Сохраняем базовый цвет для текущей темы
-        self.base_color = color
 
         self.icon_btn = MDIconButton(
-            icon=icon,
-            size_hint=(1, 1),
-            theme_icon_color='Custom',
-            icon_color=self.base_color,
-            md_bg_color=[0, 0, 0, 0],
-            ripple_scale=0
+            icon=icon, size_hint=(None, None), size=(dp(32), dp(32)),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            theme_icon_color='Custom', md_bg_color=[0, 0, 0, 0], ripple_scale=0
         )
         self.add_widget(self.icon_btn)
+        self.bind(on_release=self._on_click)
 
-    def on_touch_down(self, touch):
-        if self.collide_point(*touch.pos):
-            if self.on_click_callback:
-                self.on_click_callback(self.action)
-            return True
-        return super().on_touch_down(touch)
+    def _on_click(self, instance):
+        if self.on_click_callback: self.on_click_callback()
 
-    def update_theme_colors(self, new_color):
-        """Обновляем цвет при смене темы."""
-        self.base_color = new_color
-        self.icon_btn.icon_color = self.base_color
+    def set_color(self, color):
+        self.icon_btn.icon_color = color
+
+
+class CustomHandle(MDBoxLayout):
+    """Круглый клювик (закладка), который торчит из панели."""
+
+    def __init__(self, color, bg_color, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint = (None, None)
+        self.size = (dp(16), dp(48))  # Уже
+        self.md_bg_color = [0, 0, 0, 0]
+
+        with self.canvas.before:
+            self.bg_color_inst = Color(*bg_color)
+            # Скругляем ВСЕ 4 угла, чтобы получился овал/кружок
+            self.bg_rect = RoundedRectangle(
+                pos=self.pos,
+                size=self.size,
+                radius=[dp(8), dp(8), dp(8), dp(8)]  # Полный овал
+            )
+        self.bind(pos=self._update_rect, size=self._update_rect)
+
+        self.dot_color = color
+        self._build_dots()
+
+    def _update_rect(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+
+    def _build_dots(self):
+        self.clear_widgets()
+        from kivy.uix.floatlayout import FloatLayout
+        layout = FloatLayout(size_hint=(1, 1))
+
+        class DotsWidget(Widget):
+            def __init__(self, color, **kwargs):
+                super().__init__(**kwargs)
+                self.color = color
+                self.size_hint = (None, None)
+                self.size = (dp(16), dp(48))
+                self.bind(pos=self.redraw, size=self.redraw)
+                self.redraw()
+
+            def redraw(self, *args):
+                self.canvas.clear()
+                cx = self.center_x
+                cy = self.center_y
+                r = dp(2.0)  # Точки чуть меньше
+                sp = dp(5)
+                with self.canvas:
+                    Color(*self.color)
+                    Ellipse(pos=(cx - r, cy + sp - r), size=(r * 2, r * 2))
+                    Ellipse(pos=(cx - r, cy - r), size=(r * 2, r * 2))
+                    Ellipse(pos=(cx - r, cy - sp - r), size=(r * 2, r * 2))
+
+        self.dots = DotsWidget(color=self.dot_color)
+        self.dots.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        layout.add_widget(self.dots)
+        self.add_widget(layout)
+
+    def set_color(self, color, bg_color=None):
+        self.dot_color = color
+        if hasattr(self, 'dots'):
+            self.dots.color = color
+            self.dots.redraw()
+        if bg_color:
+            self.bg_color_inst.rgba = bg_color
 
 
 class FloatingPanel(MDCard):
-    """
-    Панель с встроенной ручкой слева.
-    Старт — задвинута, видна только ручка.
-    Свайп влево — выдвинуть, вправо — задвинуть.
-    Режимы: 'menu' (главное меню) и 'font' (редактирование шрифта).
-    """
-    PANEL_WIDTH = dp(44)  # Уже, так как нет подписей
-    HANDLE_WIDTH = dp(20)  # Уже
+    PANEL_WIDTH = dp(64)
+    HANDLE_WIDTH = dp(16)  # Ширина клювика
     TOTAL_WIDTH = PANEL_WIDTH + HANDLE_WIDTH
     VISIBLE_MARGIN = dp(4)
 
@@ -246,18 +277,16 @@ class FloatingPanel(MDCard):
 
         theme_id = settings_manager.theme
         panel_bg = DetailColors.get_panel_bg(theme_id)
-        bg_color = [panel_bg[0], panel_bg[1], panel_bg[2], 0.96]
 
         self.size_hint = (None, None)
         self.width = self.TOTAL_WIDTH
-        # Высота будет пересчитана в _build_menu
-        self.height = dp(44) * 7 + dp(8)
-        self.pos_hint = {}
-        self.radius = [dp(16), 0, 0, dp(16)]
+        self.height = dp(100)
+
+        # Левые углы панели тоже скругляем, так как клювик теперь овальный
+        self.radius = [dp(16), dp(16), dp(16), dp(16)]
         self.elevation = 6
-        self.md_bg_color = bg_color
-        self.padding = [0, dp(6), 0, dp(6)]
-        self.spacing = 0
+        self.md_bg_color = [*panel_bg[:3], 0.96]
+        self.padding = [0, 0, 0, 0]
 
         self._visible_x = None
         self._hidden_x = None
@@ -267,240 +296,251 @@ class FloatingPanel(MDCard):
         self._start_panel_x = 0
         self._dragging = False
 
-        self._build_handle()
+        self.mode = 'menu'
+        self.items = []
+        self._active_slider = None
 
+        # --- КЛЮВИК ---
+        self.handle_widget = CustomHandle(
+            color=DetailColors.get_accent(theme_id),
+            bg_color=[*panel_bg[:3], 0.96],
+            pos_hint={'center_y': 0.5, 'right': 1}  # Прижимаем к правому краю контейнера клювика
+        )
+
+        # Контейнер для клювика (чтобы он выступал)
+        self.handle_container = FloatLayout(
+            size_hint=(None, 1),
+            width=self.HANDLE_WIDTH,
+            pos_hint={'x': 0}  # Левый край
+        )
+        self.handle_container.add_widget(self.handle_widget)
+        self.add_widget(self.handle_container)
+
+        # --- КОНТЕЙНЕР КОНТЕНТА (adaptive_height) ---
         self.content = MDBoxLayout(
             orientation='vertical',
-            size_hint=(1, 1),
+            size_hint=(None, None),
+            width=self.PANEL_WIDTH,
+            pos_hint={'right': 1, 'center_y': 0.5},
             spacing=0,
-            padding=[dp(2), 0, dp(2), 0]
+            padding=[0, dp(8), 0, dp(8)],
+            adaptive_height=True
         )
+        self.content.bind(minimum_height=self.content.setter('height'))
         self.add_widget(self.content)
 
-        self.mode = 'menu'
+        self.content.bind(height=self._on_content_height_changed)
+
         self._build_menu()
         Clock.schedule_once(lambda dt: self._init_position(), 0.5)
 
-    def _build_handle(self):
-        theme_id = settings_manager.theme
-        accent = DetailColors.get_accent(theme_id)
-
-        handle = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(None, 1),
-            width=self.HANDLE_WIDTH,
-            pos_hint={'x': 0, 'center_y': 0.5},
-            padding=[dp(2), 0, dp(2), 0]
-        )
-        self._handle_icon = MDIconButton(
-            icon='dots-vertical',
-            size_hint=(1, None),
-            height=dp(24),
-            pos_hint={'center_y': 0.5},
-            theme_icon_color='Custom',
-            icon_color=accent,
-            md_bg_color=[0, 0, 0, 0],
-            ripple_scale=0
-        )
-        handle.add_widget(Widget(size_hint_y=1))
-        handle.add_widget(self._handle_icon)
-        handle.add_widget(Widget(size_hint_y=1))
-        self.add_widget(handle)
+    def _on_content_height_changed(self, instance, value):
+        self.height = max(value, dp(100))
+        self._recenter()
 
     def _init_position(self):
-        self._visible_x = Window.width - self.TOTAL_WIDTH - self.VISIBLE_MARGIN
         self._hidden_x = Window.width - self.HANDLE_WIDTH
+        self._visible_x = Window.width - self.TOTAL_WIDTH - self.VISIBLE_MARGIN
         self.x = self._hidden_x
-        self.y = (Window.height - self.height) / 2
+        self._recenter()
         self._is_visible = False
 
-    def _get_menu_colors(self):
-        """Возвращает словарь цветов для иконок в зависимости от темы."""
-        theme_id = settings_manager.theme
-        if theme_id == 'light':
-            return {
-                'chords': [0.8, 0.2, 0.2, 1],  # Красный
-                'tonality': [0.2, 0.5, 0.8, 1],  # Синий
-                'scroll': [0.2, 0.6, 0.3, 1],  # Зелёный
-                'tabs': [0.6, 0.3, 0.8, 1],  # Фиолетовый
-                'font': [0.8, 0.5, 0.1, 1],  # Оранжевый
-                'theme': [0.1, 0.6, 0.6, 1],  # Бирюзовый
-                'unfavorite': [0.8, 0.2, 0.3, 1]  # Розово-красный
-            }
-        elif theme_id == 'dark':
-            return {
-                'chords': [1.0, 0.4, 0.4, 1],  # Светло-красный
-                'tonality': [0.4, 0.7, 1.0, 1],  # Голубой
-                'scroll': [0.4, 0.8, 0.5, 1],  # Мятный
-                'tabs': [0.8, 0.6, 1.0, 1],  # Лавандовый
-                'font': [1.0, 0.7, 0.3, 1],  # Золотистый
-                'theme': [0.3, 0.8, 0.8, 1],  # Бирюзовый
-                'unfavorite': [1.0, 0.4, 0.5, 1]  # Розовый
-            }
-        else:  # green
-            return {
-                'chords': [1.0, 0.8, 0.2, 1],  # Золотистый
-                'tonality': [0.3, 0.7, 1.0, 1],  # Голубой
-                'scroll': [0.4, 0.9, 0.6, 1],  # Салатовый
-                'tabs': [0.8, 0.5, 1.0, 1],  # Лавандовый
-                'font': [1.0, 0.6, 0.3, 1],  # Оранжевый
-                'theme': [0.4, 0.9, 0.9, 1],  # Бирюзовый
-                'unfavorite': [1.0, 0.4, 0.4, 1]  # Коралловый
-            }
+    def _recenter(self):
+        if self._hidden_x is None: return
+        self.y = (Window.height - self.height) / 2
+
+    # ============ МЕНЮ ============
 
     def _build_menu(self):
         self.content.clear_widgets()
         self.mode = 'menu'
         self.items = []
-
-        colors = self._get_menu_colors()
+        self._active_slider = None
 
         items = [
             ('music', 'chords'),
             ('tune', 'tonality'),
             ('play-circle', 'scroll'),
             ('folder-music', 'tabs'),
-            ('magnify', 'font'),  # <-- ЛУПА вместо format-size
+            ('format-size', 'font'),
             ('palette', 'theme'),
         ]
 
         for icon, action in items:
-            item = FloatingPanelItem(
-                icon=icon,
-                action=action,
-                color=colors[action],
-                on_click=self._on_menu_item
-            )
+            item = PanelIcon(icon=icon, on_click=lambda a=action: self._on_menu_item(a))
             self.items.append(item)
             self.content.add_widget(item)
 
-        # Разделитель
         div = MDBoxLayout(
             orientation='horizontal', size_hint=(1, None), height=dp(1),
             md_bg_color=DetailColors.get_divider(settings_manager.theme)
         )
         self.content.add_widget(div)
 
-        # Кнопка "Убрать из избранного"
-        unfav = FloatingPanelItem(
-            icon='star-off',
-            action='unfavorite',
-            color=colors['unfavorite'],
-            on_click=self._on_menu_item
-        )
+        unfav = PanelIcon(icon='star-off', on_click=lambda: self._on_menu_item('unfavorite'))
         self.items.append(unfav)
         self.content.add_widget(unfav)
 
-        # Обновляем высоту панели (6 иконок + разделитель + 1 иконка)
-        self.height = dp(44) * 6 + dp(8) + dp(1) + dp(44) + dp(8)
-        if self._hidden_x is not None:
-            self.y = (Window.height - self.height) / 2
+        self.update_theme_colors()
 
-    def _build_font_mode(self):
-        """Режим редактирования шрифта: вертикальный слайдер + кнопка принять."""
+    # ============ ПОД-ПАНЕЛИ ============
+
+    def _build_slider_panel(self, type_str):
         self.content.clear_widgets()
-        self.mode = 'font'
+        self.mode = type_str
+        self._active_slider = None
 
+        parent = self.parent_screen
         theme_id = settings_manager.theme
         accent = DetailColors.get_accent(theme_id)
-        text_color = DetailColors.get_text_primary(theme_id)
 
-        # Значок "шрифт" сверху (для ориентира)
-        header = MDIconButton(
-            icon='format-size',
+        slider_box = MDBoxLayout(
+            orientation='horizontal',
             size_hint=(1, None),
-            height=dp(40),
-            theme_icon_color='Custom',
-            icon_color=accent,
-            md_bg_color=[0, 0, 0, 0],
-            ripple_scale=0
+            height=dp(300),
+            padding=[dp(4), dp(10), dp(4), dp(10)]
         )
-        self.content.add_widget(header)
 
-        # Вертикальный слайдер
-        # KivyMD MDSlider — горизонтальный. Повернём его через FloatLayout с rotation.
-        from kivy.uix.floatlayout import FloatLayout
-
-        slider_holder = FloatLayout(size_hint=(1, None), height=dp(260))
-        self.font_slider = MDSlider(
-            orientation='vertical',
-            min=14,
-            max=60,
-            value=self.parent_screen.current_font_size if self.parent_screen else 30,
-            size_hint=(None, None),
-            size=(dp(260), dp(30)),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            color=accent,
-            hint=False,
-            step=1
+        apply_btn = MDIconButton(
+            icon='check', size_hint=(None, None), size=(dp(36), dp(36)),
+            theme_icon_color='Custom', icon_color=accent,
+            md_bg_color=[0, 0, 0, 0], ripple_scale=0
         )
-        # Поворот на -90, чтобы слайдер стал вертикальным
-        self.font_slider.rotation = -90
-        self.font_slider.bind(value=self._on_font_value_change)
+        apply_btn.bind(on_release=lambda *a: self._build_menu())
 
-        slider_holder.add_widget(self.font_slider)
-        self.content.add_widget(slider_holder)
+        if type_str == 'font':
+            if platform == 'android':
+                font_sizes = [30, 34, 38, 42, 46, 50, 54, 58, 60]
+            else:
+                font_sizes = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
 
-        # Кнопка "Принять" (галочка)
-        accept_btn = MDIconButton(
-            icon='check',
-            size_hint=(1, None),
-            height=dp(48),
-            theme_icon_color='Custom',
-            icon_color=[0.2, 0.8, 0.4, 1],  # Ярко-зелёный, всегда
-            md_bg_color=[0, 0, 0, 0],
-            ripple_scale=0
+            def s2l(s):
+                try:
+                    return font_sizes.index(s)
+                except ValueError:
+                    return font_sizes.index(min(font_sizes, key=lambda x: abs(x - s)))
+
+            def l2s(v):
+                return font_sizes[max(0, min(len(font_sizes) - 1, int(round(v))))]
+
+            curr_size = getattr(parent, 'current_font_size', font_sizes[3])
+
+            def fmt(v):
+                return parent._get_font_multiplier(l2s(v)) if parent else str(l2s(v))
+
+            def on_ch(v):
+                if parent:
+                    parent.current_font_size = l2s(v)
+                    parent.content_label.font_size = parent.current_font_size
+                    parent._update_content_height()
+
+            slider = CompactVerticalSlider(
+                min_value=0, max_value=len(font_sizes) - 1, step=1,
+                initial=s2l(curr_size), formatter=fmt, on_change=on_ch
+            )
+            self._active_slider = slider
+            slider_box.add_widget(slider)
+
+        elif type_str == 'scroll':
+            def s2l(s):
+                return int(1 + (s - 0.2) / 0.03) if s <= 0.5 else int(10 + (s - 0.5) / 0.1)
+
+            def l2s(v):
+                return 0.2 + (v - 1) * 0.03 if v <= 10 else 0.5 + (v - 10) * 0.1
+
+            curr_speed = getattr(parent, 'scroll_speed', 1.0)
+
+            def fmt(v):
+                return f"{l2s(v):.1f}x"
+
+            def on_ch(v):
+                if parent: parent.scroll_speed = l2s(v)
+
+            slider = CompactVerticalSlider(
+                min_value=1, max_value=28, step=1,
+                initial=max(1, min(28, s2l(curr_speed))), formatter=fmt, on_change=on_ch
+            )
+            self._active_slider = slider
+            slider_box.add_widget(slider)
+
+        elif type_str == 'tonality':
+            curr_ton = getattr(parent, 'current_tonality', 0)
+
+            def fmt(v):
+                return "0" if v == 0 else f"{int(v):+d}"
+
+            def on_ch(v):
+                if parent:
+                    step = int(v) / 2
+                    if step != parent.current_tonality:
+                        parent.current_tonality = step
+                        parent.apply_tonality(step)
+
+            slider = CompactVerticalSlider(
+                min_value=-6, max_value=6, step=1,
+                initial=int(round(curr_ton * 2)), formatter=fmt, on_change=on_ch
+            )
+            self._active_slider = slider
+            slider_box.add_widget(slider)
+
+        bottom_box = MDBoxLayout(
+            orientation='horizontal', size_hint=(1, None), height=dp(48),
+            padding=[0, 0, 0, dp(4)]
         )
-        accept_btn.bind(on_release=lambda x: self._build_menu())
-        self.content.add_widget(accept_btn)
+        bottom_box.add_widget(Widget(size_hint_x=1))
+        bottom_box.add_widget(apply_btn)
+        bottom_box.add_widget(Widget(size_hint_x=1))
 
-        # Обновляем высоту панели (header + slider-holder + accept)
-        self.height = dp(40) + dp(260) + dp(48) + dp(16)
-        if self._hidden_x is not None:
-            self.y = (Window.height - self.height) / 2
-
-    def _on_font_value_change(self, instance, value):
-        """Меняем размер шрифта на лету."""
-        if self.parent_screen:
-            self.parent_screen.current_font_size = value
-            if hasattr(self.parent_screen, 'content_label'):
-                self.parent_screen.content_label.font_size = value
-                self.parent_screen._update_content_height()
+        self.content.add_widget(slider_box)
+        self.content.add_widget(bottom_box)
+        self.update_theme_colors()
+        Clock.schedule_once(lambda dt: self._recenter(), 0.05)
 
     def _on_menu_item(self, action):
         if action == 'chords':
-            if self.parent_screen:
-                self.parent_screen.show_chords_section()
+            self._build_menu()
+            if self.parent_screen: self.parent_screen.show_chords_section()
         elif action == 'tonality':
-            notify.info(get_text('tonality'))
+            self._build_slider_panel('tonality')
         elif action == 'scroll':
-            notify.info(get_text('started'))
+            self._build_slider_panel('scroll')
         elif action == 'font':
-            # Переключаем панель в режим редактирования шрифта
-            self._build_font_mode()
+            self._build_slider_panel('font')
         elif action == 'tabs':
-            if self.parent_screen:
-                self.parent_screen.show_tabs_picker()
+            self._build_menu()
+            if self.parent_screen: self.parent_screen.show_tabs_picker()
         elif action == 'theme':
-            if self.parent_screen:
-                self.parent_screen._toggle_theme()
+            self._build_menu()
+            if self.parent_screen: self.parent_screen._toggle_theme()
         elif action == 'unfavorite':
-            if self.parent_screen:
-                self.parent_screen.toggle_favorite()
+            if self.parent_screen: self.parent_screen.toggle_favorite()
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         panel_bg = DetailColors.get_panel_bg(theme_id)
-        self.md_bg_color = [panel_bg[0], panel_bg[1], panel_bg[2], 0.96]
+        self.md_bg_color = [*panel_bg[:3], 0.96]
 
-        if hasattr(self, '_handle_icon'):
-            self._handle_icon.icon_color = DetailColors.get_accent(theme_id)
+        if hasattr(self, 'handle_widget'):
+            self.handle_widget.set_color(
+                color=DetailColors.get_accent(theme_id),
+                bg_color=[*panel_bg[:3], 0.96]
+            )
 
-        # Пересобираем активный режим, чтобы применились цвета для новой темы
         if self.mode == 'menu':
-            self._build_menu()
-        elif self.mode == 'font':
-            self._build_font_mode()
+            for item in self.items: item.set_color(DetailColors.get_accent(theme_id))
+            for child in self.content.children:
+                if isinstance(child, MDBoxLayout) and child.height == dp(1):
+                    child.md_bg_color = DetailColors.get_divider(theme_id)
+        else:
+            if self._active_slider:
+                self._active_slider.update_theme_colors()
+            for child in self.content.children:
+                if isinstance(child, MDBoxLayout):
+                    for sub in child.children:
+                        if isinstance(sub, MDIconButton):
+                            sub.icon_color = DetailColors.get_accent(theme_id)
+
+    # ============ СВАЙП ============
 
     def on_touch_down(self, touch):
         if self._visible_x is None or self._hidden_x is None:
@@ -509,7 +549,6 @@ class FloatingPanel(MDCard):
         if self.collide_point(*touch.pos):
             if self._is_child_interactive(touch):
                 return super().on_touch_down(touch)
-
             self._touch_start_x = touch.x
             self._start_panel_x = self.x
             self._dragging = False
@@ -519,18 +558,16 @@ class FloatingPanel(MDCard):
 
     def _is_child_interactive(self, touch):
         for child in self.walk():
-            if child is self:
-                continue
+            if child is self: continue
             if hasattr(child, 'collide_point') and child.collide_point(*touch.pos):
-                if isinstance(child, (MDIconButton, FloatingPanelItem, MDSlider)):
+                if isinstance(child, (MDIconButton, PanelIcon, CompactVerticalSlider, MDSlider)):
                     return True
         return False
 
     def on_touch_move(self, touch):
         if touch.grab_current is self:
             dx = touch.x - self._touch_start_x
-            if abs(dx) > dp(10):
-                self._dragging = True
+            if abs(dx) > dp(10): self._dragging = True
             new_x = self._start_panel_x + dx
             new_x = max(self._visible_x, min(self._hidden_x, new_x))
             self.x = new_x
@@ -551,47 +588,18 @@ class FloatingPanel(MDCard):
         return super().on_touch_up(touch)
 
     def show(self):
-        if self._is_visible:
-            return
+        if self._is_visible: return
         self._is_visible = True
-        if self._anim:
-            self._anim.cancel(self)
+        if self._anim: self._anim.cancel(self)
         self._anim = Animation(x=self._visible_x, duration=0.25, t='out_quad')
         self._anim.start(self)
 
     def hide(self):
-        if not self._is_visible:
-            return
+        if not self._is_visible: return
         self._is_visible = False
-        if self._anim:
-            self._anim.cancel(self)
+        if self._anim: self._anim.cancel(self)
         self._anim = Animation(x=self._hidden_x, duration=0.25, t='in_quad')
         self._anim.start(self)
-
-
-# ============================================================
-# ОСТАЛЬНЫЕ КОМПОНЕНТЫ
-# ============================================================
-
-class LoadingSpinner(MDBoxLayout):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.spacing = dp(16)
-        theme_id = settings_manager.theme
-        self.label = MDLabel(
-            text=get_text('loading'), halign="center", font_size=sp(16),
-            theme_text_color="Custom",
-            text_color=DetailColors.get_text_secondary(theme_id),
-            size_hint_y=None, height=dp(30))
-        self.add_widget(self.label)
-
-    def start_animation(self):
-        pass
-
-    def stop_animation(self):
-        pass
 
 
 # ============================================================
@@ -599,8 +607,6 @@ class LoadingSpinner(MDBoxLayout):
 # ============================================================
 
 class FavoriteDetailScreen(BaseScreen):
-    """Экран просмотра песни ИЗ ИЗБРАННОГО."""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'favorite_detail'
@@ -622,12 +628,8 @@ class FavoriteDetailScreen(BaseScreen):
 
         if platform == 'android':
             self.STANDARD_FONT_SIZE = 42
-            self.MIN_FONT_SIZE = 30
-            self.MAX_FONT_SIZE = 60
         else:
             self.STANDARD_FONT_SIZE = 20
-            self.MIN_FONT_SIZE = 14
-            self.MAX_FONT_SIZE = 32
         self.current_font_size = self.STANDARD_FONT_SIZE
 
         self._song_chords = []
@@ -690,8 +692,7 @@ class FavoriteDetailScreen(BaseScreen):
             self.bg_rect.size = self.size
 
     def update_screen_background(self):
-        if not hasattr(self, 'bg_color_inst') or not hasattr(self, 'bg_rect'):
-            return
+        if not hasattr(self, 'bg_color_inst') or not hasattr(self, 'bg_rect'): return
         theme_id = settings_manager.theme
         if theme_id == 'green':
             if self.texture:
@@ -718,19 +719,10 @@ class FavoriteDetailScreen(BaseScreen):
         for div in (getattr(self, 'top_divider', None),
                     getattr(self, 'panel_divider', None),
                     getattr(self, 'bottom_divider', None)):
-            if div:
-                div.md_bg_color = div_color
-        if getattr(self, 'griff_divider', None):
-            self.griff_divider.md_bg_color = div_color
-        if self.chord_name_label:
-            self.chord_name_label.text_color = text_p
-
-        if self._floating_panel:
-            self._floating_panel.update_theme_colors()
-
-    def update_language(self):
-        if self.song_title:
-            self.update_top_nav_title()
+            if div: div.md_bg_color = div_color
+        if getattr(self, 'griff_divider', None): self.griff_divider.md_bg_color = div_color
+        if self.chord_name_label: self.chord_name_label.text_color = text_p
+        if self._floating_panel: self._floating_panel.update_theme_colors()
 
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1))
@@ -776,28 +768,14 @@ class FavoriteDetailScreen(BaseScreen):
         main_container.add_widget(card_container)
         self.add_widget(main_container)
 
-        # === Панель с ручкой ===
-        self._floating_panel = FloatingPanel(
-            parent_screen=self,
-            on_action=self._on_drawer_action
-        )
+        self._floating_panel = FloatingPanel(parent_screen=self)
         self.add_widget(self._floating_panel)
 
-        # === Ловушка свайпа справа ===
-        self._edge_catcher = EdgeSwipeCatcher(
-            on_swipe_open=self._floating_panel.show
-        )
+        self._edge_catcher = EdgeSwipeCatcher(on_swipe_open=self._floating_panel.show)
         self.add_widget(self._edge_catcher)
 
-        Clock.schedule_once(lambda dt: self._update_card_size(), 0.1)
-        Clock.schedule_once(lambda dt: self._update_card_size(), 0.3)
         Clock.schedule_once(lambda dt: self.update_theme_colors(), 0.2)
         Clock.schedule_once(lambda dt: self._floating_panel._init_position(), 0.5)
-
-    def _update_card_size(self, *args):
-        if self.song_card:
-            self.song_card.size_hint = (1, 1)
-            self.song_card.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
     def _update_content_height(self, *args):
         if not self.content_label.texture:
@@ -809,13 +787,7 @@ class FavoriteDetailScreen(BaseScreen):
             self.content_label.parent.height = text_height + dp(16)
         self.content_scroll.scroll_y = 1.0
 
-    def _on_drawer_action(self, action):
-        pass
-
     def show_chords_section(self):
-        if self.is_tonality_mode: self.close_tonality_panel()
-        if self.is_font_mode: self.close_font_panel()
-        if self.is_scroll_mode: self.close_scroll_panel()
         if not self._song_chords:
             notify.info(get_text('no_chords'))
             return
@@ -826,8 +798,7 @@ class FavoriteDetailScreen(BaseScreen):
         self._show_chords_layer()
 
     def _show_chords_layer(self):
-        if self._griff_added:
-            return
+        if self._griff_added: return
         from kivy.uix.carousel import Carousel
         theme_id = settings_manager.theme
         text_p = DetailColors.get_text_primary(theme_id)
@@ -863,8 +834,8 @@ class FavoriteDetailScreen(BaseScreen):
                     griff_img = CoreImage(BytesIO(griff_data), ext="png")
                     if griff_img and griff_img.texture:
                         renderer.set_background(griff_img.texture)
-            except Exception as e:
-                logger.error(f"Ошибка загрузки фона грифа: {e}")
+            except Exception:
+                pass
             slide.add_widget(renderer)
             self.chords_carousel.add_widget(slide)
             self.chord_renderers.append(renderer)
@@ -878,10 +849,8 @@ class FavoriteDetailScreen(BaseScreen):
 
         content_scroll = self.content_scroll
         bottom_divider = self.bottom_divider
-        if content_scroll in self.song_card.children:
-            self.song_card.remove_widget(content_scroll)
-        if bottom_divider in self.song_card.children:
-            self.song_card.remove_widget(bottom_divider)
+        if content_scroll in self.song_card.children: self.song_card.remove_widget(content_scroll)
+        if bottom_divider in self.song_card.children: self.song_card.remove_widget(bottom_divider)
 
         self.song_card.add_widget(self.chord_name_section)
         self.song_card.add_widget(self.griff_container)
@@ -898,8 +867,7 @@ class FavoriteDetailScreen(BaseScreen):
                 self.chords_carousel.load_slide(self.chord_slides[0])
 
     def _on_carousel_slide(self, instance, slide):
-        if not self.chord_slides:
-            return
+        if not self.chord_slides: return
         try:
             index = self.chord_slides.index(slide)
             if index != self._current_chord_index:
@@ -909,21 +877,17 @@ class FavoriteDetailScreen(BaseScreen):
             pass
 
     def _hide_chords_layer(self):
-        if not self._griff_added:
-            return
+        if not self._griff_added: return
         content_scroll = self.content_scroll
         bottom_divider = self.bottom_divider
         for w in (self.chord_name_section, self.griff_container, self.griff_divider):
-            if w and w in self.song_card.children:
-                self.song_card.remove_widget(w)
+            if w and w in self.song_card.children: self.song_card.remove_widget(w)
         self.chord_name_section = None
         self.griff_container = None
         self.griff_divider = None
         self.chord_name_label = None
-        if content_scroll not in self.song_card.children:
-            self.song_card.add_widget(content_scroll)
-        if bottom_divider not in self.song_card.children:
-            self.song_card.add_widget(bottom_divider)
+        if content_scroll not in self.song_card.children: self.song_card.add_widget(content_scroll)
+        if bottom_divider not in self.song_card.children: self.song_card.add_widget(bottom_divider)
         self.chords_carousel = None
         self.chord_renderers = []
         self.chord_slides = []
@@ -942,30 +906,21 @@ class FavoriteDetailScreen(BaseScreen):
                         if c['short_name'].lower() == chord_name.lower()]
             variants.sort(key=lambda x: x['variant'])
             self.chord_variants = variants
-            if variants:
-                self.load_current_variant()
+            if variants: self.load_current_variant()
 
     def load_current_variant(self):
-        if not self.chord_variants:
-            return
+        if not self.chord_variants: return
         variant = self.chord_variants[self.chord_variant_index]
         chord_module = variant.get('module') or variant.get('module_1')
-        if not chord_module:
-            for key, value in variant.items():
-                if 'module' in key.lower() and value:
-                    chord_module = value
-                    break
         if chord_module and self._current_chord_index < len(self.chord_renderers):
             renderer = self.chord_renderers[self._current_chord_index]
             renderer.load_chord(chord_module)
             renderer.set_mode(self.display_mode)
 
     def _update_chords_display(self):
-        if not self._song_chords:
-            return
+        if not self._song_chords: return
         chord_name = self._song_chords[self._current_chord_index]
-        if self.chord_name_label:
-            self.chord_name_label.text = chord_name
+        if self.chord_name_label: self.chord_name_label.text = chord_name
         self._load_chord_variants(chord_name)
 
     def _extract_and_cache_chords(self):
@@ -976,12 +931,6 @@ class FavoriteDetailScreen(BaseScreen):
                 cleaned = clean_text(content)
                 chords.update(extract_chords_from_text(cleaned))
         self._song_chords = sorted(list(chords))
-
-    def show_tonality_panel(self):
-        self.is_tonality_mode = True
-
-    def close_tonality_panel(self):
-        self.is_tonality_mode = False
 
     def apply_tonality(self, step):
         transposed = self.transposed_text_cache.get(step)
@@ -1002,39 +951,22 @@ class FavoriteDetailScreen(BaseScreen):
             self.transposed_text_cache[step] = transpose_text(cleaned_text, step)
             self.transposed_chords_cache[step] = transpose_chord_list(self._song_chords, step)
 
-    def show_font_panel(self):
-        self.is_font_mode = True
-
-    def close_font_panel(self):
-        self.is_font_mode = False
-
     def _get_font_multiplier(self, font_size):
         ratio = round(font_size / self.STANDARD_FONT_SIZE * 10) / 10
         return f"{int(ratio)}x" if ratio == int(ratio) else f"{ratio:.1f}x"
 
     def _toggle_theme(self, *args):
         app = MDApp.get_running_app()
-        if not app:
-            return
+        if not app: return
         current = settings_manager.theme
         new_theme = 'dark' if current == 'light' else ('green' if current == 'dark' else 'light')
-        if hasattr(app, 'apply_theme'):
-            app.apply_theme(new_theme)
+        if hasattr(app, 'apply_theme'): app.apply_theme(new_theme)
 
     def reset_font_size(self):
         self.current_font_size = self.STANDARD_FONT_SIZE
         if hasattr(self, 'content_label'):
             self.content_label.font_size = self.current_font_size
             self._update_content_height()
-
-    def show_scroll_panel(self):
-        self.is_scroll_mode = True
-        self.toggle_scroll()
-
-    def close_scroll_panel(self):
-        if self.is_scrolling:
-            self.stop_scroll()
-        self.is_scroll_mode = False
 
     def toggle_scroll(self):
         if not self.is_scrolling and self.content_scroll.scroll_y <= 0.01:
@@ -1045,13 +977,11 @@ class FavoriteDetailScreen(BaseScreen):
             self.stop_scroll()
 
     def start_scroll(self):
-        if self.is_scrolling:
-            return
+        if self.is_scrolling: return
         self.is_scrolling = True
 
         def update_scroll(dt):
-            if not self.is_scrolling:
-                return False
+            if not self.is_scrolling: return False
             new_y = self.content_scroll.scroll_y - 0.0004 * self.scroll_speed
             if new_y <= 0:
                 self.content_scroll.scroll_y = 0
@@ -1069,8 +999,7 @@ class FavoriteDetailScreen(BaseScreen):
         self.is_scrolling = False
 
     def reset_scroll_position(self):
-        if self.is_scrolling:
-            self.stop_scroll()
+        if self.is_scrolling: self.stop_scroll()
         self.content_scroll.scroll_y = 1.0
 
     def show_tabs_picker(self):
@@ -1098,8 +1027,7 @@ class FavoriteDetailScreen(BaseScreen):
         self.tabs_dialog = dialog
 
     def _select_tab(self, index):
-        if hasattr(self, 'tabs_dialog'):
-            self.tabs_dialog.dismiss()
+        if hasattr(self, 'tabs_dialog'): self.tabs_dialog.dismiss()
         self.current_tab_index = index
         self._load_current_tab()
 
@@ -1107,7 +1035,12 @@ class FavoriteDetailScreen(BaseScreen):
         if self.tabs and self.current_tab_index < len(self.tabs):
             cleaned = clean_text(self.tabs[self.current_tab_index].get('content', ''))
             if cleaned:
-                self.content_label.text = highlight_chords_in_text(cleaned)
+                self.current_tonality = 0
+                self.transposed_text_cache = {}
+                self.transposed_chords_cache = {}
+                self._extract_and_cache_chords()
+                self.precompute_transpositions(cleaned)
+                self.content_label.text = self.transposed_text_cache.get(0, cleaned)
                 self.content_label.markup = True
             else:
                 self.content_label.text = get_text('loading_error')
@@ -1129,9 +1062,6 @@ class FavoriteDetailScreen(BaseScreen):
         self.transposed_text_cache = {}
         self.original_cleaned_text = ""
         if self.is_chords_mode: self.close_chords_section()
-        if self.is_tonality_mode: self.close_tonality_panel()
-        if self.is_font_mode: self.close_font_panel()
-        if self.is_scroll_mode: self.close_scroll_panel()
         self.eye_active = False
         self._current_chord_index = 0
         self.reset_font_size()
@@ -1143,23 +1073,18 @@ class FavoriteDetailScreen(BaseScreen):
 
     def load_song_data(self):
         self.show_loading()
-        api.get_tab(song_id=self.song_id,
-                    on_success=self.on_song_loaded,
-                    on_failure=self.on_load_failed,
-                    force_refresh=False)
+        api.get_tab(song_id=self.song_id, on_success=self.on_song_loaded,
+                    on_failure=self.on_load_failed, force_refresh=False)
 
     def show_loading(self):
-        if self.is_loading:
-            return
+        if self.is_loading: return
         self.is_loading = True
-        self.loading_spinner = LoadingSpinner()
+        self.loading_spinner = MDBoxLayout()
         self.add_widget(self.loading_spinner)
-        self.loading_spinner.start_animation()
 
     def hide_loading(self):
         self.is_loading = False
         if self.loading_spinner:
-            self.loading_spinner.stop_animation()
             self.remove_widget(self.loading_spinner)
             self.loading_spinner = None
 
@@ -1180,12 +1105,10 @@ class FavoriteDetailScreen(BaseScreen):
             self._update_content_height()
 
         self.is_favorite = api.is_song_favorited(self.song_id)
-        if not self.is_favorite:
-            self.is_favorite = data.get('is_favorite', True)
+        if not self.is_favorite: self.is_favorite = data.get('is_favorite', True)
         self.update_top_nav_title()
         self.hide_loading()
-        for delay in [0.3, 0.5, 0.8, 1.0, 1.5, 2.0, 3.0]:
-            Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
+        for delay in [0.3, 0.5, 0.8, 1.0]: Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
 
     def _wait_for_ready_and_scroll(self, dt):
         if hasattr(self, 'content_label') and self.content_label.text:
@@ -1202,8 +1125,7 @@ class FavoriteDetailScreen(BaseScreen):
     def toggle_favorite(self, *args):
         if not api.is_authenticated():
             app = MDApp.get_running_app()
-            if app and hasattr(app, 'open_profile'):
-                app.open_profile()
+            if app and hasattr(app, 'open_profile'): app.open_profile()
             return
 
         def confirm(instance):
@@ -1215,9 +1137,7 @@ class FavoriteDetailScreen(BaseScreen):
             text=f"{self.song_title}",
             buttons=[
                 MDRaisedButton(text=get_text('close'), on_release=lambda x: dialog.dismiss()),
-                MDRaisedButton(text=get_text('reset'),
-                               on_release=confirm,
-                               md_bg_color=[0.8, 0.3, 0.3, 1]),
+                MDRaisedButton(text=get_text('reset'), on_release=confirm, md_bg_color=[0.8, 0.3, 0.3, 1]),
             ])
         dialog.open()
 
@@ -1231,14 +1151,11 @@ class FavoriteDetailScreen(BaseScreen):
             self.is_favorite = True
             notify.error(get_text('search_error'))
 
-        api.remove_from_favorites(song_id=self.song_id,
-                                  on_success=on_success,
-                                  on_failure=on_failure)
+        api.remove_from_favorites(song_id=self.song_id, on_success=on_success, on_failure=on_failure)
 
     def update_top_nav_title(self):
         app = MDApp.get_running_app()
-        if not app or not hasattr(app, 'top_nav'):
-            return
+        if not app or not hasattr(app, 'top_nav'): return
         theme_id = settings_manager.theme
         text_p = DetailColors.get_text_primary(theme_id)
         text_s = DetailColors.get_text_secondary(theme_id)
@@ -1271,7 +1188,6 @@ class FavoriteDetailScreen(BaseScreen):
 
     def on_enter(self):
         super().on_enter()
-
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             if hasattr(app.top_nav, 'left_container'):
@@ -1281,8 +1197,7 @@ class FavoriteDetailScreen(BaseScreen):
             if hasattr(app.top_nav, 'right_container') and hasattr(app.top_nav, 'home_btn'):
                 app.top_nav.right_container.clear_widgets()
                 app.top_nav.right_container.add_widget(app.top_nav.home_btn)
-        if self.song_title:
-            self.update_top_nav_title()
+        if self.song_title: self.update_top_nav_title()
         self.update_theme_colors()
         if self._floating_panel:
             def _init_panel(dt):
