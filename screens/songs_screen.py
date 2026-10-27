@@ -492,7 +492,7 @@ class SongsMenu(MDBoxLayout):
         self.alphabet_menu.set_current(letter)
 
 
-# ============ LONG PRESS MIXIN ============
+# ============ LONG PRESS MIXIN (С ПОДДЕРЖКОЙ DISABLED) ============
 
 class LongPressCardMixin:
     TAP_THRESHOLD = dp(15)
@@ -506,6 +506,10 @@ class LongPressCardMixin:
         self._long_press_triggered = False
 
     def on_touch_down(self, touch):
+        # ✅ невидимые (disabled) не перехватывают касание
+        if getattr(self, 'disabled', False) or self.opacity < 0.1:
+            return False
+
         if not self.collide_point(*touch.pos):
             return super().on_touch_down(touch)
 
@@ -514,23 +518,40 @@ class LongPressCardMixin:
         self._long_press_event = Clock.schedule_once(
             self._trigger_long_press, self.LONG_PRESS_TIME
         )
+        touch.grab(self)
         return True
 
     def on_touch_move(self, touch):
+        if touch.grab_current is not self:
+            return False
+
+        if getattr(self, 'disabled', False) or self.opacity < 0.1:
+            return False
+
         if self._touch_down_pos is None:
-            return super().on_touch_move(touch)
+            return False
 
         dx = touch.x - self._touch_down_pos[0]
         dy = touch.y - self._touch_down_pos[1]
         if (abs(dx) > self.LONG_PRESS_MOVE_TOLERANCE
                 or abs(dy) > self.LONG_PRESS_MOVE_TOLERANCE):
             self._cancel_long_press()
-
-        return super().on_touch_move(touch)
+            # ✅ отдаём касание родителю (wrapper'у) для свайпа
+            touch.ungrab(self)
+            return False
+        return False
 
     def on_touch_up(self, touch):
+        if touch.grab_current is not self:
+            return False
+
+        touch.ungrab(self)
+
+        if getattr(self, 'disabled', False) or self.opacity < 0.1:
+            return False
+
         if self._touch_down_pos is None:
-            return super().on_touch_up(touch)
+            return False
 
         self._cancel_long_press()
 
@@ -601,7 +622,6 @@ class StaticArtistCard(LongPressCardMixin, MDCard):
         self.theme_line_color = "Custom"
         self.theme_bg_color = "Custom"
 
-        # ✅ Ноль вертикального padding — карточка ровно 48dp
         self.padding = [0, 0, 0, 0]
         self.spacing = dp(8)
 
@@ -694,7 +714,6 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
         self.theme_line_color = "Custom"
         self.theme_bg_color = "Custom"
 
-        # ✅ Ноль вертикального padding
         self.padding = [0, 0, 0, 0]
         self.spacing = dp(8)
 
@@ -774,7 +793,8 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
 
 class PageCardsContainer(MDBoxLayout):
     """
-    Контейнер карточек с пулом переиспользуемых виджетов.
+    Контейнер карточек с пулом на max_cards.
+    Невидимые карточки-заполнители прозрачны и не перехватывают касания.
     """
     CARD_TYPE_ARTISTS = 'artists'
     CARD_TYPE_SONGS = 'songs'
@@ -789,8 +809,10 @@ class PageCardsContainer(MDBoxLayout):
         self._current_type = None
         self._card_pool = []
         self._pool_class = None
-        self.size_hint_y = None
+        self.size_hint = (None, None)
         self.height = 0
+        self.width = 0
+        self.max_cards = 8
 
     def _ensure_pool(self, count, card_class, on_click):
         if self._pool_class is not card_class:
@@ -804,25 +826,31 @@ class PageCardsContainer(MDBoxLayout):
             self._card_pool.append(card)
 
     def _apply_pool(self, items, card_class, on_click, update_fn):
-        self._ensure_pool(len(items), card_class, on_click)
-        visible = 0
-        for i, card in enumerate(self._card_pool):
+        self._ensure_pool(self.max_cards, card_class, on_click)
+
+        for i in range(self.max_cards):
+            card = self._card_pool[i]
             if i < len(items):
                 update_fn(card, items[i], on_click)
                 card.height = card_class.CARD_HEIGHT
                 card.opacity = 1
                 card.disabled = False
-                visible += 1
             else:
-                card.height = 0
+                card.height = card_class.CARD_HEIGHT
                 card.opacity = 0
                 card.disabled = True
+
         self.cards = self._card_pool[:len(items)]
 
-        if visible > 0:
-            self.height = visible * card_class.CARD_HEIGHT + (visible - 1) * self.spacing
-        else:
-            self.height = 0
+        self.height = (
+            self.max_cards * card_class.CARD_HEIGHT
+            + (self.max_cards - 1) * self.spacing
+        ) if self.max_cards > 0 else 0
+
+        if self.parent and hasattr(self.parent, '_update_cards_layout'):
+            Clock.schedule_once(
+                lambda dt: self.parent._update_cards_layout(len(items)), 0
+            )
 
     def set_artists(self, artists, on_click):
         with perf('songs.cards.set_artists', log_every=False):
@@ -853,11 +881,17 @@ class PageCardsContainer(MDBoxLayout):
 
     def clear(self):
         for card in self._card_pool:
-            card.height = 0
             card.opacity = 0
             card.disabled = True
         self.cards = []
-        self.height = 0
+        self.height = (
+            self.max_cards * StaticArtistCard.CARD_HEIGHT
+            + (self.max_cards - 1) * self.spacing
+        ) if self.max_cards > 0 else 0
+        if self.parent and hasattr(self.parent, '_update_cards_layout'):
+            Clock.schedule_once(
+                lambda dt: self.parent._update_cards_layout(0), 0
+            )
 
     def update_theme_colors(self):
         for c in self._card_pool:
@@ -866,7 +900,7 @@ class PageCardsContainer(MDBoxLayout):
 
 # ============ ОБЁРТКА СО СВАЙПОМ ============
 
-class SwipeableCardsWrapper(MDBoxLayout):
+class SwipeableCardsWrapper(FloatLayout):
     SWIPE_THRESHOLD = dp(40)
     SWIPE_TIME_LIMIT = 0.5
 
@@ -879,36 +913,38 @@ class SwipeableCardsWrapper(MDBoxLayout):
         self._swipe_handled = False
 
     def on_touch_down(self, touch):
-        if self.collide_point(*touch.pos):
-            self._touch_start = touch.pos
-            self._touch_start_time = time.perf_counter()
-            self._swipe_handled = False
+        if not self.collide_point(*touch.pos):
+            return super().on_touch_down(touch)
+
+        # ✅ запоминаем старт, но не перехватываем — пусть карточки
+        #    обработают клик первыми
+        self._touch_start = touch.pos
+        self._touch_start_time = time.perf_counter()
+        self._swipe_handled = False
         return super().on_touch_down(touch)
+
+    def on_touch_move(self, touch):
+        # ✅ если это свайп — выполняем и поглощаем
+        if self._touch_start is not None and not self._swipe_handled:
+            dx = touch.x - self._touch_start[0]
+            dy = touch.y - self._touch_start[1]
+            if abs(dy) > self.SWIPE_THRESHOLD and abs(dy) > abs(dx) * 1.2:
+                self._swipe_handled = True
+                if dy > 0:
+                    if self.on_swipe_down:
+                        self.on_swipe_down()
+                else:
+                    if self.on_swipe_up:
+                        self.on_swipe_up()
+                self._touch_start = None
+                return True
+        return super().on_touch_move(touch)
 
     def on_touch_up(self, touch):
         if self._touch_start is None:
             return super().on_touch_up(touch)
-
-        if self._swipe_handled:
-            self._touch_start = None
-            return super().on_touch_up(touch)
-
-        dx = touch.x - self._touch_start[0]
-        dy = touch.y - self._touch_start[1]
-        dt = time.perf_counter() - self._touch_start_time
-
-        if (abs(dy) > self.SWIPE_THRESHOLD
-                and abs(dy) > abs(dx) * 1.2
-                and dt < self.SWIPE_TIME_LIMIT):
-            self._swipe_handled = True
-            if dy > 0:
-                if self.on_swipe_down:
-                    self.on_swipe_down()
-            else:
-                if self.on_swipe_up:
-                    self.on_swipe_up()
-
         self._touch_start = None
+        self._swipe_handled = False
         return super().on_touch_up(touch)
 
 
@@ -1185,6 +1221,9 @@ class SongsScreen(BaseScreen):
         self._hint_timer = None
         self.cards_container = None
         self._cards_wrapper = None
+        self._cards_top_offset = dp(6)
+        self._cards_left_pad = dp(0)
+        self._cards_right_pad = dp(0)
         self._pagination_bar = None
         self._search_pagination_bar = None
         self._pagination_container = None
@@ -1306,30 +1345,39 @@ class SongsScreen(BaseScreen):
 
             # === RESULT LABEL ===
             self._result_label = MDLabel(
-                text="", font_size=sp(12), halign="center",
+                text="", font_size=sp(12), halign="center", valign="middle",
                 size_hint_y=None, height=dp(24),
                 theme_text_color="Custom",
                 text_color=SongsColors.get_hint_color(settings_manager.theme),
-                opacity=0, bold=True
+                opacity=0, bold=True,
+            )
+            self._result_label.text_size = (Window.width, dp(24))
+            self._result_label.bind(
+                width=lambda inst, val: setattr(inst, 'text_size', (val, dp(24)))
             )
             main_layout.add_widget(self._result_label)
 
             # === КАРТОЧКИ ===
-            # ✅ Фиксированный отступ сверху 8dp, независимо от количества карточек
             self._cards_wrapper = SwipeableCardsWrapper(
                 on_swipe_up=self._on_swipe_up,
                 on_swipe_down=self._on_swipe_down,
-                orientation='vertical',
                 size_hint=(1, 1),
-                spacing=0,
-                padding=[padding[0], dp(8), padding[2], dp(0)],
-                md_bg_color=[0, 0, 0, 0]
             )
             self._cards_wrapper.clip = True
+
+            self._cards_top_offset = dp(6)
+            self._cards_left_pad = padding[0]
+            self._cards_right_pad = padding[2]
+
             self.cards_container = PageCardsContainer()
+            self.cards_container.max_cards = self._page_size
             self._cards_wrapper.add_widget(self.cards_container)
-            # ✅ Распорка снизу — карточки всегда прижаты к верху
-            self._cards_wrapper.add_widget(Widget(size_hint_y=1))
+
+            self._cards_wrapper.bind(
+                size=lambda *a: self._update_cards_layout(len(self.cards_container.cards)),
+                pos=lambda *a: self._update_cards_layout(len(self.cards_container.cards)),
+            )
+
             main_layout.add_widget(self._cards_wrapper)
 
             # === ПАГИНАЦИЯ АРТИСТОВ ===
@@ -1379,7 +1427,59 @@ class SongsScreen(BaseScreen):
             self.add_widget(main_layout)
             self.update_theme_colors()
 
+            Clock.schedule_once(lambda dt: self._update_cards_layout(0), 0)
+            Clock.schedule_once(lambda dt: self._update_cards_layout(0), 0.15)
             Clock.schedule_once(lambda dt: self._recalc_page_size(force=True), 0.3)
+
+    def _update_cards_layout(self, count):
+        """
+        Layout фиксирован: max_cards по page_size, top = label_bottom - offset.
+        """
+        if not getattr(self, 'cards_container', None):
+            return
+        if not getattr(self, '_cards_wrapper', None):
+            return
+        if self._cards_wrapper.height <= 1:
+            return
+
+        self.cards_container.max_cards = self._page_size
+        h_card = StaticArtistCard.CARD_HEIGHT
+
+        self.cards_container.x = self._cards_wrapper.x + self._cards_left_pad
+        self.cards_container.width = max(
+            dp(50),
+            self._cards_wrapper.width - self._cards_left_pad - self._cards_right_pad
+        )
+
+        n_total = self.cards_container.max_cards
+        self.cards_container.spacing = dp(4)
+        self.cards_container.height = (
+            n_total * h_card + (n_total - 1) * self.cards_container.spacing
+        )
+
+        try:
+            label_bottom = self._result_label.to_window(
+                self._result_label.x, self._result_label.y, initial=False
+            )[1]
+            wrapper_top = self._cards_wrapper.to_window(
+                self._cards_wrapper.x, self._cards_wrapper.y, initial=False
+            )[1] + self._cards_wrapper.height
+            desired_top = label_bottom - self._cards_top_offset
+            max_top = wrapper_top - self._cards_top_offset
+            self.cards_container.top = min(desired_top, max_top)
+
+            cards_top = self.cards_container.to_window(
+                self.cards_container.x, self.cards_container.y, initial=False
+            )[1] + self.cards_container.height
+            gap = label_bottom - cards_top
+            logger.info(
+                f"🔍 LAYOUT: n_real={count}, n_total={n_total}, gap={gap:.1f}, "
+                f"spacing={self.cards_container.spacing:.1f}, "
+                f"cards_h={self.cards_container.height:.1f}"
+            )
+        except Exception as e:
+            self.cards_container.top = self._cards_wrapper.top - self._cards_top_offset
+            logger.debug(f"🔍 LAYOUT debug error: {e}")
 
     def _toggle_language(self):
         pass
@@ -1417,12 +1517,12 @@ class SongsScreen(BaseScreen):
     def _calc_page_size(self):
         fixed_h = (
                 layout_config.get_top_padding()
-                + dp(48)   # алфавит
-                + dp(48)   # поиск
-                + dp(4)    # отступ поиск → лейбл
-                + dp(24)   # result label
-                + dp(8)    # padding обёртки сверху
-                + dp(0)    # padding обёртки снизу
+                + dp(48)
+                + dp(48)
+                + dp(4)
+                + dp(24)
+                + self._cards_top_offset
+                + dp(0)
                 + self.PAGINATION_HEIGHT
                 + layout_config.get_pagination_bottom_padding()
         )
@@ -1430,8 +1530,15 @@ class SongsScreen(BaseScreen):
         if available_h <= 0:
             return self.MIN_PAGE_SIZE
 
-        card_h = StaticArtistCard.CARD_HEIGHT + self.cards_container.spacing
+        card_h = StaticArtistCard.CARD_HEIGHT + dp(4)
         n = int(available_h / card_h)
+
+        logger.info(
+            f"🔍 _calc_page_size: window_h={Window.height}, fixed_h={fixed_h}, "
+            f"available_h={available_h}, card_h={card_h}, n={n}, "
+            f"offset={self._cards_top_offset}"
+        )
+
         return max(self.MIN_PAGE_SIZE, min(self.MAX_PAGE_SIZE, n))
 
     def _recalc_page_size(self, force=False):
@@ -2027,6 +2134,13 @@ class SongsScreen(BaseScreen):
             )
             self.save_current_state()
 
+            Clock.schedule_once(
+                lambda dt: self._update_cards_layout(len(artists_to_show)), 0
+            )
+            Clock.schedule_once(
+                lambda dt: self._update_cards_layout(len(artists_to_show)), 0.15
+            )
+
     def _show_temporary_hint(self, text, duration=1.5):
         self._show_result_label(text)
         if self._hint_timer:
@@ -2187,6 +2301,9 @@ class SongsScreen(BaseScreen):
 
             if self._last_display_key is not None and not self.is_search_mode:
                 self._update_result_label_for_artists()
+                Clock.schedule_once(
+                    lambda dt: self._update_cards_layout(len(self.cards_container.cards)), 0
+                )
                 return
 
             with perf('songs.on_enter.restore_search', log_every=False):
