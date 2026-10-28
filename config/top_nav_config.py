@@ -239,10 +239,10 @@ class TopNavConfig:
         'settings': {
             'title': 'Настройки',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_HAMBURGER,  # ← БЫЛО BACK, СТАЛО HAMBURGER
+            'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': False,  # ← БЫЛО True, СТАЛО False
-            'custom_back_callback': None,
+            'show_back_button': True,
+            'custom_back_callback': None,  # <-- Убрали 'go_back'
             'custom_title_widget': None,
         },
 

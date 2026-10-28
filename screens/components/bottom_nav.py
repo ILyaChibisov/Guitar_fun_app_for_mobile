@@ -3,7 +3,8 @@
 Нижняя панель навигации - с Material Design иконками.
 Адаптивный шрифт без переносов.
 Поддерживает смену темы и языка.
-В зелёной теме каждая иконка и подпись — своего цвета по смыслу вкладки.
+В зелёной теме: неактивные кнопки — мятные (цвет тюнера),
+активная — своего цвета, активный тюнер — белый.
 """
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -30,18 +31,22 @@ logger = get_logger('BottomNav')
 
 
 # ============================================================
-# ПАЛИТРА ДЛЯ ЗЕЛЁНОЙ ТЕМЫ [0.97, 0.65, 0.77, 1.0],
+# ПАЛИТРА ДЛЯ ЗЕЛЁНОЙ ТЕМЫ
 # ============================================================
-# Яркие цвета по смыслу вкладок.
-GREEN_THEME_COLORS = {
-    'songs': [1.0, 0.95, 0.30, 1.0],      # коралл
-            'chords': [0.20, 0.60, 1.0, 1.0],     # золотистый
-            'tuner': [0.66, 0.90, 0.85, 1.0],     # мятный
-            'metronome': [1.0, 0.55, 0.20, 1.0] , # пудрово-розовый
-            'favorites': [1.0, 0.10, 0.20, 1.0], # лавандовый
-        }
 
-GREEN_ACTIVE_COLOR = [0.90, 0.95, 1.0, 1.0]  # белый для активной вкладки
+# Индивидуальные цвета для активной вкладки (кроме тюнера)
+GREEN_ACTIVE_COLORS = {
+    'songs': [1.0, 0.95, 0.30, 1.0],      # Коралл
+    'chords': [0.20, 0.60, 1.0, 1.0],     # Синий
+    'metronome': [1.0, 0.55, 0.20, 1.0],  # Оранжевый
+    'favorites': [1.0, 0.10, 0.20, 1.0],  # Красный
+}
+
+# Цвет для неактивных кнопок (мятный, как тюнер)
+GREEN_INACTIVE_COLOR = [0.66, 0.90, 0.85, 0.7]
+
+# Активный тюнер — белый
+GREEN_TUNER_ACTIVE = [1, 1, 1, 1]
 
 
 class NavItem(ButtonBehavior, BoxLayout):
@@ -69,12 +74,6 @@ class NavItem(ButtonBehavior, BoxLayout):
             icon_size = dp(26)
             label_height = dp(15)
             font_size = sp(10)
-
-        # Свой цвет для зелёной темы по каждой вкладке
-        self.green_inactive_color = GREEN_THEME_COLORS.get(
-            screen_name, [1, 1, 1, 0.8]
-        )
-        self.green_active_color = GREEN_ACTIVE_COLOR
 
         from kivy.uix.floatlayout import FloatLayout
         self.inner_layout = FloatLayout(size_hint=(1, 1))
@@ -167,7 +166,7 @@ class NavItem(ButtonBehavior, BoxLayout):
 
         if theme_id == 'light':
             active_color = [0.1, 0.55, 0.3, 1]
-            inactive_color = [0.1, 0.55, 0.3, 1]
+            inactive_color = [0.1, 0.55, 0.3, 0.7]
             if value:
                 self.icon_btn.icon_color = [0.05, 0.4, 0.2, 1]
                 self.text_label.text_color = [0.05, 0.4, 0.2, 1]
@@ -178,7 +177,7 @@ class NavItem(ButtonBehavior, BoxLayout):
                 self.text_label.bold = False
         elif theme_id == 'dark':
             active_color = [1, 1, 1, 1]
-            inactive_color = [1.0, 0.5, 0.0, 1]
+            inactive_color = [1.0, 0.5, 0.0, 0.7]
             if value:
                 self.icon_btn.icon_color = active_color
                 self.text_label.text_color = active_color
@@ -189,12 +188,18 @@ class NavItem(ButtonBehavior, BoxLayout):
                 self.text_label.bold = False
         else:  # green
             if value:
-                self.icon_btn.icon_color = self.green_active_color
-                self.text_label.text_color = self.green_active_color
+                if self.screen_name == 'tuner':
+                    active_color = GREEN_TUNER_ACTIVE
+                else:
+                    active_color = GREEN_ACTIVE_COLORS.get(
+                        self.screen_name, [1, 1, 1, 1]
+                    )
+                self.icon_btn.icon_color = active_color
+                self.text_label.text_color = active_color
                 self.text_label.bold = True
             else:
-                self.icon_btn.icon_color = self.green_inactive_color
-                self.text_label.text_color = self.green_inactive_color
+                self.icon_btn.icon_color = GREEN_INACTIVE_COLOR
+                self.text_label.text_color = GREEN_INACTIVE_COLOR
                 self.text_label.bold = False
 
     def on_release(self):

@@ -6,7 +6,7 @@
 - Пагинация снизу.
 - Динамический page_size.
 - Лейбл "Избранное: X из Y".
-- Кнопка "Повторить".
+- 3 попытки авто-загрузки, при провале — текст ошибки (без кнопки "Повторить").
 - Логирование через perf('favorites.*').
 """
 import time
@@ -29,7 +29,7 @@ from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton, MDRaisedButton
+from kivymd.uix.button import MDIconButton
 
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
@@ -47,9 +47,11 @@ logger = screen_logger('Favorites')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
 
     def load_asset_as_bytes(name):
         return None
@@ -370,8 +372,8 @@ class PageCardsContainer(MDBoxLayout):
         self.max_cards = max_cards
         self._ensure_pool(max_cards)
         self.height = (
-            self.max_cards * FavoriteSongCard.CARD_HEIGHT
-            + (self.max_cards - 1) * self.spacing
+                self.max_cards * FavoriteSongCard.CARD_HEIGHT
+                + (self.max_cards - 1) * self.spacing
         ) if self.max_cards > 0 else 0
 
     def _apply_pool(self, items, on_click):
@@ -399,8 +401,8 @@ class PageCardsContainer(MDBoxLayout):
         self.cards = self._card_pool[:len(items)]
 
         self.height = (
-            self.max_cards * FavoriteSongCard.CARD_HEIGHT
-            + (self.max_cards - 1) * self.spacing
+                self.max_cards * FavoriteSongCard.CARD_HEIGHT
+                + (self.max_cards - 1) * self.spacing
         ) if self.max_cards > 0 else 0
 
         if self.parent and hasattr(self.parent, '_update_cards_layout'):
@@ -418,8 +420,8 @@ class PageCardsContainer(MDBoxLayout):
             card.disabled = True
         self.cards = []
         self.height = (
-            self.max_cards * FavoriteSongCard.CARD_HEIGHT
-            + (self.max_cards - 1) * self.spacing
+                self.max_cards * FavoriteSongCard.CARD_HEIGHT
+                + (self.max_cards - 1) * self.spacing
         ) if self.max_cards > 0 else 0
         if self.parent and hasattr(self.parent, '_update_cards_layout'):
             Clock.schedule_once(
@@ -685,6 +687,7 @@ class FavoritesScreen(BaseScreen):
     MIN_PAGE_SIZE = 3
     MAX_PAGE_SIZE = 15
     PAGINATION_HEIGHT = dp(48) + dp(1) + dp(2)
+    MAX_RETRIES = 3  # Максимальное количество попыток авто-загрузки
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -698,6 +701,7 @@ class FavoritesScreen(BaseScreen):
 
         self._load_token = 0
         self._last_display_key = None
+        self._retry_count = 0  # Счетчик текущих попыток
 
         self.cards_container = None
         self._cards_wrapper = None
@@ -717,8 +721,6 @@ class FavoritesScreen(BaseScreen):
         self._loading_spinner = None
         self._loading_spinner_widget = None
         self._spinner_pending = False
-        self._retry_btn = None
-        self._retry_container = None
         self._auth_card = None
         self._listener_registered = False
 
@@ -784,8 +786,6 @@ class FavoritesScreen(BaseScreen):
             self.empty_label.text_color = FavoritesColors.get_hint_color(theme_id)
         if self._pagination_bar:
             self._pagination_bar.update_theme_colors()
-        if self._retry_btn:
-            self._retry_btn.md_bg_color = FavoritesColors.get_accent(theme_id)
         if self._auth_card:
             self._auth_card.update_theme_colors()
         if self.cards_container:
@@ -794,8 +794,6 @@ class FavoritesScreen(BaseScreen):
     def update_language(self):
         if self.count_label and self.count_label.opacity > 0:
             self._update_count_label(self._total)
-        if self._retry_btn:
-            self._retry_btn.text = get_text('retry', 'Повторить')
         if self._auth_card:
             self._auth_card.update_language()
 
@@ -826,30 +824,6 @@ class FavoritesScreen(BaseScreen):
                 width=lambda inst, val: setattr(inst, 'text_size', (val, dp(24)))
             )
             main_layout.add_widget(self.count_label)
-
-            # === Кнопка "Повторить" ===
-            self._retry_container = MDBoxLayout(
-                orientation='horizontal',
-                size_hint=(1, None),
-                height=0,
-                md_bg_color=[0, 0, 0, 0],
-                padding=[0, dp(4), 0, dp(4)]
-            )
-            self._retry_anchor = AnchorLayout(
-                anchor_x='center', anchor_y='center', size_hint=(1, 1)
-            )
-            self._retry_btn = MDRaisedButton(
-                text=get_text('retry', 'Повторить'),
-                size_hint=(None, None),
-                size=(dp(140), dp(40)),
-                font_size=sp(13),
-                md_bg_color=FavoritesColors.get_accent(settings_manager.theme),
-                text_color=[1, 1, 1, 1],
-                on_release=self._on_retry_pressed
-            )
-            self._retry_anchor.add_widget(self._retry_btn)
-            self._retry_container.add_widget(self._retry_anchor)
-            main_layout.add_widget(self._retry_container)
 
             # === Карточки ===
             self._cards_wrapper = SwipeableCardsWrapper(
@@ -970,12 +944,6 @@ class FavoritesScreen(BaseScreen):
         card_h = FavoriteSongCard.CARD_HEIGHT + dp(6)
         n = int(available_h / card_h)
 
-        logger.info(
-            f"🔍 _calc_page_size(favorites): window_h={Window.height}, "
-            f"fixed_h={fixed_h}, available_h={available_h}, "
-            f"card_h={card_h}, n={n}, bottom_pad={bottom_pad}"
-        )
-
         return max(self.MIN_PAGE_SIZE, min(self.MAX_PAGE_SIZE, n))
 
     def _recalc_page_size(self, force=False):
@@ -986,11 +954,9 @@ class FavoritesScreen(BaseScreen):
             if new_size == self._page_size:
                 if not self._page_size_locked:
                     self._page_size_locked = True
-                    logger.info(f"📐 PAGE_SIZE(favorites) зафиксирован: {new_size}")
                 return
             self._page_size = new_size
             self._page_size_locked = True
-            logger.info(f"📐 PAGE_SIZE(favorites) определён: {new_size}")
 
             if self.cards_container:
                 self.cards_container.sync_max_cards(new_size)
@@ -1058,30 +1024,6 @@ class FavoritesScreen(BaseScreen):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.force_update_title(get_text('favorites'), show_back=False)
-
-    # ============================================================
-    # RETRY
-    # ============================================================
-
-    def _show_retry_button(self):
-        if not self._retry_container:
-            return
-        self._retry_container.height = dp(56)
-        self._retry_container.opacity = 1
-        self._retry_container.disabled = False
-        if self._retry_btn:
-            self._retry_btn.text = get_text('retry', 'Повторить')
-
-    def _hide_retry_button(self):
-        if not self._retry_container:
-            return
-        self._retry_container.height = 0
-        self._retry_container.opacity = 0
-        self._retry_container.disabled = True
-
-    def _on_retry_pressed(self, instance):
-        self._hide_retry_button()
-        self.load_favorites(force_refresh=True)
 
     # ============================================================
     # ПАГИНАЦИЯ
@@ -1156,7 +1098,7 @@ class FavoritesScreen(BaseScreen):
     def _render_favorites(self, favorites):
         with perf('favorites._render_favorites', log_every=False):
             self._hide_loading()
-            self._hide_retry_button()
+            self._retry_count = 0  # Сбрасываем счетчик при успехе
 
             if not api.is_authenticated():
                 self._show_auth_message()
@@ -1238,29 +1180,30 @@ class FavoritesScreen(BaseScreen):
         self._update_top_nav()
         self._update_count_label(0)
 
-        from screens.components.favorites_auth_card import AuthMessageCard  # local
-        # AuthMessageCard определён ниже в этом файле — просто импорт не нужен
         self._auth_card = AuthMessageCard()
         if self._cards_wrapper:
             self._cards_wrapper.add_widget(self._auth_card)
 
     def _show_error(self):
+        """Показывает текст ошибки, если все попытки загрузки провалились."""
         self._clear_extra_widgets()
         if self.cards_container:
             self.cards_container.clear()
         self._hide_pagination()
 
         theme_id = settings_manager.theme
+        # Сообщение об ошибке согласно требованию
+        error_text = "Проверьте соединение интернета.\nДанные не загружены."
+
         self.empty_label = MDLabel(
-            text=get_text('loading_error'),
+            text=error_text,
             halign="center", font_size=sp(14),
             theme_text_color="Custom",
-            text_color=[1, 0.3, 0.3, 0.8],
-            size_hint_y=None, height=dp(60)
+            text_color=[1, 0.3, 0.3, 0.9],
+            size_hint_y=None, height=dp(80)
         )
         if self._cards_wrapper:
             self._cards_wrapper.add_widget(self.empty_label)
-        self._show_retry_button()
 
     # ============================================================
     # СПИННЕР
@@ -1309,7 +1252,7 @@ class FavoritesScreen(BaseScreen):
         self._loading_spinner = None
 
     # ============================================================
-    # ЗАГРУЗКА
+    # ЗАГРУЗКА (с 3 попытками)
     # ============================================================
 
     def load_favorites(self, force_refresh=False):
@@ -1317,6 +1260,10 @@ class FavoritesScreen(BaseScreen):
             if not api.is_authenticated():
                 self._show_auth_message()
                 return
+
+            # Если это не принудительное обновление, сбрасываем счетчик
+            if not force_refresh:
+                self._retry_count = 0
 
             cached = api._load_favorites_cache(allow_stale=True)
 
@@ -1333,26 +1280,43 @@ class FavoritesScreen(BaseScreen):
             if cached is None:
                 self._show_loading()
 
-            api.get_favorites(
-                on_success=self._on_network_loaded,
-                on_failure=self._on_load_failed,
-                force_refresh=force_refresh)
+            self._attempt_fetch()
+
+    def _attempt_fetch(self):
+        """Запускает попытку загрузки с сервера."""
+        api.get_favorites(
+            on_success=self._on_network_loaded,
+            on_failure=self._on_load_failed,
+            force_refresh=True)
 
     def _on_network_loaded(self, favorites):
         self._hide_loading()
+        self._retry_count = 0  # Сброс счетчика при успехе
         self._render_favorites(favorites)
 
     def _on_background_update(self, favorites):
         self._render_favorites(favorites)
 
     def _on_load_failed(self, req, error):
-        self._hide_loading()
+        self._retry_count += 1
         error_str = str(error)
+
         if "401" in error_str or "Unauthorized" in error_str:
+            self._hide_loading()
             self._show_auth_message()
             return
-        self._show_error()
-        notify.error(get_text('loading_error'))
+
+        # Если попытки еще есть, пробуем снова
+        if self._retry_count < self.MAX_RETRIES:
+            logger.info(f"Попытка загрузки {self._retry_count}/{self.MAX_RETRIES} не удалась. Повтор...")
+            # Увеличиваем задержку перед следующей попыткой (1с, 2с...)
+            delay = self._retry_count * 1.0
+            Clock.schedule_once(lambda dt: self._attempt_fetch(), delay)
+        else:
+            # Все попытки исчерпаны
+            logger.error(f"Все {self.MAX_RETRIES} попытки загрузки провалились.")
+            self._hide_loading()
+            self._show_error()
 
     def _on_favorites_changed(self, favorites):
         self._render_favorites(favorites)

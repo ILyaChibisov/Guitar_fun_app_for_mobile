@@ -501,6 +501,11 @@ class Sidebar(FloatLayout):
 
         self.close()
 
+        if screen_name == 'settings':
+            # Запоминаем, откуда пришли, прямо в экран настроек
+            settings_screen = self.sm.get_screen('settings')
+            settings_screen._return_screen = self.sm.current
+
         if screen_name == 'auth':
             Clock.schedule_once(lambda dt: self._handle_auth(), 0.1)
             return
@@ -511,12 +516,29 @@ class Sidebar(FloatLayout):
 
         if not self.sm.has_screen(screen_name):
             logger.error(f"❌ Экран '{screen_name}' не найден в ScreenManager!")
-            logger.info(f"📋 Доступные экраны: {self.sm.screen_names}")
             return
 
         if self.sm.current == screen_name:
             logger.info(f"ℹ️ Уже на экране {screen_name}")
             return
+
+        # 👇 СОХРАНЯЕМ ПРЕДЫДУЩИЙ ЭКРАН ДО ПЕРЕХОДА
+        from utils.screen_state import screen_state
+        prev = self.sm.current
+        screen_state.set_previous_screen(prev)
+        logger.info(f"📌 Запомнили предыдущий экран: {prev}")
+
+        def do_navigation(dt):
+            try:
+                logger.info(f"🚀 Переход на экран: {screen_name}")
+                self.sm.current = screen_name
+                logger.info(f"✅ Переход выполнен на: {screen_name}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка перехода: {e}")
+                import traceback
+                traceback.print_exc()
+
+        Clock.schedule_once(do_navigation, 0.15)
 
         def do_navigation(dt):
             try:

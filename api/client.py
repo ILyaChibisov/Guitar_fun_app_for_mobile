@@ -801,6 +801,19 @@ class APIClient:
             include_auth=False
         )
 
+    def search_terms_sync(self, query: str, lang: str = 'ru', limit: int = 20) -> dict:
+        """Синхронный поиск терминов (для фоновых потоков)"""
+        import urllib.parse
+        try:
+            q_enc = urllib.parse.quote(query, safe='')
+            url = f"{self.config.API_BASE_URL}/dictionary/search?q={q_enc}&lang={lang}&limit={limit}"
+            response = self.session.get(url, timeout=self.config.CONNECTION_TIMEOUT)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"❌ Ошибка синхронного поиска терминов: {e}")
+            return {"results": [], "total": 0}
+
     def get_term(self, term_id: int, on_success=None, on_failure=None):
         """Получить полное описание термина по ID"""
         return self._request(

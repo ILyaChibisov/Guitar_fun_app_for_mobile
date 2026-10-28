@@ -571,7 +571,12 @@ class StaticTermCard(LongPressCardMixin, MDCard):
         self.line_color = DictionaryColors.get_card_line(theme_id)
         self.line_width = DictionaryColors.get_card_line_width(theme_id)
 
-        self.icon.text_color = accent
+        # Иконка термина: синяя в зелёной теме, акцентная в остальных
+        if theme_id == 'green':
+            self.icon.text_color = [0.2, 0.6, 1.0, 1]
+        else:
+            self.icon.text_color = accent
+
         self.name_label.text_color = DictionaryColors.get_text_primary(theme_id)
         self.arrow.text_color = [0, 0, 0, 0.6] if theme_id == 'light' else [1, 1, 1, 0.3]
 

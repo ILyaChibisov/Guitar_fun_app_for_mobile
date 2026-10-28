@@ -641,4 +641,8 @@ class SettingsScreen(BaseScreen):
 
     def go_back(self, instance=None):
         if hasattr(self, 'manager') and self.manager:
-            self.manager.current = 'home'
+            prev = getattr(self, '_return_screen', None)
+            if prev and self.manager.has_screen(prev):
+                self.manager.current = prev
+            else:
+                self.manager.current = 'home'

@@ -319,7 +319,7 @@ class TopNav(MDCard):
 
         nav_screens_with_hamburger = [
             'songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary',
-            'profile', 'settings', 'help', 'promo', 'feedback',
+            'profile', 'help', 'promo', 'feedback',
             'admin'
         ]
 
@@ -521,19 +521,11 @@ class TopNav(MDCard):
             return
 
         if self.sm and self.sm.has_screen('search'):
-            if self.sm.has_screen('chords'):
-                chords_screen = self.sm.get_screen('chords')
-                search_screen = self.sm.get_screen('search')
-                search_screen.set_chords_screen(chords_screen)
-
-            if self.sm.has_screen('dictionary'):
-                dictionary_screen = self.sm.get_screen('dictionary')
-                search_screen = self.sm.get_screen('search')
-                search_screen.set_dictionary_screen(dictionary_screen)
-
             if self.sm.current == 'search':
                 search_screen = self.sm.get_screen('search')
-                search_screen.refresh_search()
+                # Если мы уже на экране поиска, просто фокусируем поле ввода
+                if hasattr(search_screen, 'search_bar') and search_screen.search_bar:
+                    search_screen.search_bar.search_field.focus = True
             else:
                 self.sm.current = 'search'
 

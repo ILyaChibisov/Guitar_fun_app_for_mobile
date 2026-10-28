@@ -1434,6 +1434,7 @@ class ChordDetailScreen(BaseScreen):
         if not self._data_loaded:
             self._chord_to_load = chord_name
             return False
+
         target_chord = None
         for chord in self.all_chords:
             if chord['short_name'] == chord_name:
@@ -1447,10 +1448,12 @@ class ChordDetailScreen(BaseScreen):
                         break
                 if target_chord:
                     break
+
         if not target_chord:
             alt = chord_name.replace('#', 'b')
             if alt != chord_name:
                 return self.select_chord_by_name(alt)
+
         if target_chord:
             tonality = self._extract_tonality_from_name(target_chord['name'])
             chord_type = target_chord.get('type', 'Major')
@@ -1467,6 +1470,13 @@ class ChordDetailScreen(BaseScreen):
                 self._load_variants_for_chord(self.current_chord_name)
                 return True
             return self._find_and_load_chord_variant(target_chord)
+
+        # Если локально не нашли, идем на сервер (и показываем "Загрузку")
+        if self.swipe_container:
+            self.swipe_container.update_chord_name(chord_name, [])
+        if self._info_label:
+            self._info_label.text = "Загрузка..."
+
         self._search_server_and_select(chord_name)
         return True
 
