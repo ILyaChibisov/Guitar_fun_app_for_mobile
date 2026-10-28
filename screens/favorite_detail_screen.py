@@ -198,22 +198,25 @@ class PanelIcon(ButtonBehavior, MDBoxLayout):
 
 
 class CustomHandle(MDBoxLayout):
-    """Круглый клювик (закладка), который торчит из панели."""
+    """
+    Клювик-ручка. Прилегает к левому краю панели.
+    Скруглен только слева. Справа — прямой край (сливается с панелью).
+    """
 
     def __init__(self, color, bg_color, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint = (None, None)
-        self.size = (dp(16), dp(48))  # Уже
+        self.size = (dp(16), dp(48))  # Маленький и аккуратный
         self.md_bg_color = [0, 0, 0, 0]
 
         with self.canvas.before:
             self.bg_color_inst = Color(*bg_color)
-            # Скругляем ВСЕ 4 угла, чтобы получился овал/кружок
+            # Скругляем ТОЛЬКО левые углы (верхний левый и нижний левый)
             self.bg_rect = RoundedRectangle(
                 pos=self.pos,
                 size=self.size,
-                radius=[dp(8), dp(8), dp(8), dp(8)]  # Полный овал
+                radius=[dp(8), 0, 0, dp(8)]
             )
         self.bind(pos=self._update_rect, size=self._update_rect)
 
@@ -242,7 +245,7 @@ class CustomHandle(MDBoxLayout):
                 self.canvas.clear()
                 cx = self.center_x
                 cy = self.center_y
-                r = dp(2.0)  # Точки чуть меньше
+                r = dp(2.0)
                 sp = dp(5)
                 with self.canvas:
                     Color(*self.color)
@@ -282,8 +285,8 @@ class FloatingPanel(MDCard):
         self.width = self.TOTAL_WIDTH
         self.height = dp(100)
 
-        # Левые углы панели тоже скругляем, так как клювик теперь овальный
-        self.radius = [dp(16), dp(16), dp(16), dp(16)]
+        # Скругляем ТОЛЬКО правые углы панели (левые прямые, чтобы клювик прилегал вплотную)
+        self.radius = [0, dp(16), dp(16), 0]
         self.elevation = 6
         self.md_bg_color = [*panel_bg[:3], 0.96]
         self.padding = [0, 0, 0, 0]
@@ -301,22 +304,24 @@ class FloatingPanel(MDCard):
         self._active_slider = None
 
         # --- КЛЮВИК ---
+        # 1. Создаем клювик (цвет фона берем от панели)
         self.handle_widget = CustomHandle(
             color=DetailColors.get_accent(theme_id),
             bg_color=[*panel_bg[:3], 0.96],
-            pos_hint={'center_y': 0.5, 'right': 1}  # Прижимаем к правому краю контейнера клювика
+            pos_hint={'center_y': 0.5, 'right': 1}  # Прижимаем к правому краю своего контейнера
         )
 
-        # Контейнер для клювика (чтобы он выступал)
+        # 2. Создаем контейнер для клювика, который будет висеть слева от панели
         self.handle_container = FloatLayout(
             size_hint=(None, 1),
             width=self.HANDLE_WIDTH,
-            pos_hint={'x': 0}  # Левый край
+            pos_hint={'x': 0}  # Прижимаем к левому краю всей панели
         )
         self.handle_container.add_widget(self.handle_widget)
         self.add_widget(self.handle_container)
 
         # --- КОНТЕЙНЕР КОНТЕНТА (adaptive_height) ---
+        # Сдвинут вправо, чтобы не перекрывать клювик
         self.content = MDBoxLayout(
             orientation='vertical',
             size_hint=(None, None),
@@ -339,8 +344,11 @@ class FloatingPanel(MDCard):
         self._recenter()
 
     def _init_position(self):
+        # Когда панель ЗАКРЫТА, сдвигаем её вправо так, чтобы торчал только клювик
         self._hidden_x = Window.width - self.HANDLE_WIDTH
+        # Когда ОТКРЫТА, показываем всю панель
         self._visible_x = Window.width - self.TOTAL_WIDTH - self.VISIBLE_MARGIN
+
         self.x = self._hidden_x
         self._recenter()
         self._is_visible = False

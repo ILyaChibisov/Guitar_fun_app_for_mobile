@@ -2,7 +2,7 @@
 """
 Состояние экрана «Словарь».
 Хранит только метаданные (буква, страница, скролл, запрос, режим поиска).
-Списки терминов живут в all_terms / terms_by_letter на экране.
+Списки терминов живут в _terms_cache на самом экране.
 """
 import time
 import threading
@@ -34,7 +34,8 @@ class DictionaryStateManager:
             self._data = dict(data)
             self._timestamp = time.time()
         logger.debug(
-            f"💾 Dictionary: letter={data.get('current_letter')}, "
+            f"💾 Dictionary: lang={data.get('current_language')}, "
+            f"letter={data.get('current_letter')}, "
             f"search={data.get('is_search_mode')}, "
             f"page={data.get('page')}, "
             f"query='{data.get('query', '')[:20]}'"
@@ -55,16 +56,6 @@ class DictionaryStateManager:
             self._data = {}
             self._timestamp = 0
         logger.debug("🗑️ Dictionary инвалидирован")
-
-    # ============ Совместимость с старым screen_state API ============
-    def save_screen_state(self, screen_name, state_dict):
-        self.save(state_dict)
-
-    def get_screen_state(self, screen_name, max_age=60):
-        return self.get(allow_stale=False)
-
-    def clear_screen_state(self, screen_name):
-        self.invalidate()
 
 
 dictionary_state = DictionaryStateManager()

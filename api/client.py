@@ -763,6 +763,54 @@ class APIClient:
             Logger.error(f"❌ Ошибка синхронного поиска: {e}")
             return {"results": [], "total": 0}
 
+    # ============ API СЛОВАРЯ ============
+
+    def get_dictionary_alphabet(self, on_success=None, on_failure=None):
+        """Получить доступные буквы по языкам"""
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/dictionary/alphabet",
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
+    def get_terms_by_letter(self, letter: str, lang: str = 'ru', limit: int = 200, offset: int = 0,
+                            on_success=None, on_failure=None):
+        """Получить термины по букве с пагинацией"""
+        import urllib.parse
+        encoded_letter = urllib.parse.quote(letter, safe='')
+        url = f"{self.config.API_BASE_URL}/dictionary/terms/{encoded_letter}?lang={lang}&limit={limit}&offset={offset}"
+        return self._request(
+            url=url, method='GET',
+            on_success=on_success, on_failure=on_failure,
+            include_auth=False
+        )
+
+    def search_terms(self, query: str, lang: str = None, limit: int = 100, offset: int = 0,
+                     on_success=None, on_failure=None):
+        """Поиск по терминам"""
+        import urllib.parse
+        encoded_query = urllib.parse.quote(query, safe='')
+        url = f"{self.config.API_BASE_URL}/dictionary/search?q={encoded_query}&limit={limit}&offset={offset}"
+        if lang:
+            url += f"&lang={lang}"
+        return self._request(
+            url=url, method='GET',
+            on_success=on_success, on_failure=on_failure,
+            include_auth=False
+        )
+
+    def get_term(self, term_id: int, on_success=None, on_failure=None):
+        """Получить полное описание термина по ID"""
+        return self._request(
+            url=f"{self.config.API_BASE_URL}/dictionary/term/{term_id}",
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
     # ============ МЕТОДЫ ДЛЯ РАБОТЫ С ЗАДАЧАМИ ============
 
     def get_tasks(self, on_success=None, on_failure=None, force_refresh=False, status=None):

@@ -1,63 +1,52 @@
 # screens/dictionary_screen.py
-"""
-Экран словаря терминов.
-Состояние — в state/dictionary_state.py.
-Оформление — идентично songs_screen: обводки, падинги, шаг пагинации,
-белые стрелки в green-теме.
-Пагинация снизу — и для алфавита, и для поиска, с адаптивным шагом.
-"""
-import importlib
-import pkgutil
+import time
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
+from kivy.core.window import Window
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
-from kivy.uix.behaviors import ButtonBehavior
-from kivy.uix.boxlayout import BoxLayout
 from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.animation import Animation
-from kivy.graphics import Color, Line, Rectangle
-from kivymd.uix.label import MDLabel
+
+from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.app import MDApp
 
-from kivy.uix.recycleview import RecycleView
-from kivy.uix.recycleview.views import RecycleDataViewBehavior
-from kivy.uix.recycleboxlayout import RecycleBoxLayout
-from kivy.properties import StringProperty, ObjectProperty, NumericProperty
-from kivy.factory import Factory
-
-from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
+from api.client import api
 from utils.notifications import notify
 from utils.screen_state import screen_state
 from state.dictionary_state import dictionary_state
 from utils.settings_manager import settings_manager
 from utils.localization import get_text
+from screens.components.loading_spinner import LoadingSpinner
 
 logger = screen_logger('Dictionary')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
 
 # ============================================================
-# ЦВЕТА
+# ЦВЕТА (1-в-1 как в SONGS_SCREEN)
 # ============================================================
 
 class DictionaryColors:
@@ -67,19 +56,16 @@ class DictionaryColors:
             return [0.1, 0.55, 0.3, 1]
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 1]
-        else:
-            return [0.46, 0.70, 0.71, 1]
+        return [0.10, 0.42, 0.25, 1]
 
     @staticmethod
     def get_text_primary(theme_id):
-        if theme_id == 'light':
-            return [0.1, 0.1, 0.1, 1]
-        return [1, 1, 1, 0.95]
+        if theme_id == 'light': return [0.1, 0.1, 0.1, 1]
+        return [1, 1, 1, 1]
 
     @staticmethod
     def get_text_secondary(theme_id):
-        if theme_id == 'light':
-            return [0.4, 0.4, 0.4, 1]
+        if theme_id == 'light': return [0.4, 0.4, 0.4, 1]
         return [1, 1, 1, 0.7]
 
     @staticmethod
@@ -104,11 +90,13 @@ class DictionaryColors:
 
     @staticmethod
     def get_hint_color(theme_id):
-        if theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 1]
-        elif theme_id == 'light':
-            return [0.1, 0.55, 0.3, 1]
-        return [0.46, 0.70, 0.71, 1]
+        if theme_id == 'light': return [0.1, 0.1, 0.1, 1]
+        return [1, 1, 1, 1]
+
+    @staticmethod
+    def get_arrow_color(theme_id):
+        if theme_id == 'light': return [0, 0, 0, 1]
+        return [1, 1, 1, 1]
 
 
 # ============ ГЛОБАЛЬНЫЕ ИКОНКИ ============
@@ -118,32 +106,24 @@ _shared_eng_flag_texture = None
 
 def load_shared_icons_sync():
     global _shared_rus_flag_texture, _shared_eng_flag_texture
-    if _shared_rus_flag_texture is not None:
-        return
+    if _shared_rus_flag_texture is not None: return
     if HAS_ASSETS:
         try:
             rus_data = load_asset_as_bytes('rus_png')
-            if rus_data:
-                _shared_rus_flag_texture = CoreImage(BytesIO(rus_data), ext="png").texture
+            if rus_data: _shared_rus_flag_texture = CoreImage(BytesIO(rus_data), ext="png").texture
             eng_data = load_asset_as_bytes('eng_png')
-            if eng_data:
-                _shared_eng_flag_texture = CoreImage(BytesIO(eng_data), ext="png").texture
+            if eng_data: _shared_eng_flag_texture = CoreImage(BytesIO(eng_data), ext="png").texture
         except Exception as e:
-            logger.error(f"Ошибка загрузки иконок: {e}")
+            logger.error(f"Ошибка иконок: {e}")
 
 
 # ============ ПОИСКОВАЯ СТРОКА ============
-
 class SearchBar(MDCard):
-    _DEBOUNCE_SEC = 0.5
-
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
         self.on_clear = on_clear
         self.current_query = ""
-        self._search_timer = None
-
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(48)
@@ -151,8 +131,6 @@ class SearchBar(MDCard):
         self.elevation = 0
         self.padding = [dp(12), dp(4), dp(6), dp(4)]
         self.spacing = dp(6)
-        self.theme_line_color = "Custom"
-        self.theme_bg_color = "Custom"
 
         self.search_field = TextInput(
             multiline=False, size_hint_x=1, height=dp(40), font_size=sp(16),
@@ -185,13 +163,12 @@ class SearchBar(MDCard):
         self.add_widget(self.search_field)
         self.add_widget(self.clear_wrapper)
         self.add_widget(self.search_btn)
-
         self.update_language()
         self.update_theme_colors()
 
     def update_language(self):
         self.search_field.hint_text = get_text('search', 'Поиск')
-        self.search_btn.text = get_text('find')
+        self.search_btn.text = get_text('find', 'Найти')
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
@@ -233,50 +210,20 @@ class SearchBar(MDCard):
 
     def _on_text_change(self, instance, text):
         self.current_query = text
-        if text.strip():
-            self.clear_wrapper.opacity = 1
-            self.clear_wrapper.disabled = False
-        else:
-            self.clear_wrapper.opacity = 0
-            self.clear_wrapper.disabled = True
-
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
-
-        if not text.strip():
-            if self.on_clear:
-                self.on_clear()
-        else:
-            self._search_timer = Clock.schedule_once(
-                lambda dt: self._do_debounced_search(), self._DEBOUNCE_SEC)
-
-    def _do_debounced_search(self):
-        self._search_timer = None
-        if self.on_search and self.current_query:
-            t = self.current_query.strip()
-            if t:
-                self.on_search(t)
+        self.clear_wrapper.opacity = 1 if text.strip() else 0
+        self.clear_wrapper.disabled = not bool(text.strip())
 
     def _on_search_pressed(self, *args):
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
         if self.on_search:
             t = self.search_field.text.strip()
-            if t:
-                self.on_search(t)
+            if t: self.on_search(t)
 
     def _on_clear_pressed(self, instance):
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
         self.search_field.text = ""
         self.clear_wrapper.opacity = 0
         self.clear_wrapper.disabled = True
         self.current_query = ""
-        if self.on_clear:
-            self.on_clear()
+        if self.on_clear: self.on_clear()
         self.search_field.focus = False
 
     def _on_focus(self, instance, value):
@@ -287,20 +234,13 @@ class SearchBar(MDCard):
         self._on_text_change(None, self.search_field.text)
 
     def clear(self):
-        if self._search_timer:
-            Clock.unschedule(self._search_timer)
-            self._search_timer = None
         self.search_field.text = ""
         self.clear_wrapper.opacity = 0
         self.clear_wrapper.disabled = True
         self.current_query = ""
 
-    def focus(self):
-        self.search_field.focus = True
 
-
-# ============ КОМПОНЕНТЫ МЕНЮ ============
-
+# ============ АЛФАВИТ ============
 class LetterButton(MDBoxLayout):
     def __init__(self, text, on_press=None, **kwargs):
         super().__init__(**kwargs)
@@ -313,38 +253,26 @@ class LetterButton(MDBoxLayout):
         self.md_bg_color = [0, 0, 0, 0]
         self.label = MDLabel(text=text.upper(), font_size=sp(15),
                              halign="center", valign="middle",
-                             theme_text_color="Custom", bold=True,
-                             size_hint=(1, 1))
+                             theme_text_color="Custom", bold=True, size_hint=(1, 1))
         self.add_widget(self.label)
         self.bind(on_touch_down=self._on_touch_down)
-        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
         self._update_style()
-
-    def _on_enter(self, *args):
-        if not self.is_selected:
-            self.md_bg_color = [1, 1, 1, 0.05]
-
-    def _on_leave(self, *args):
-        if not self.is_selected:
-            self.md_bg_color = [0, 0, 0, 0]
-            self.label.text_color = DictionaryColors.get_text_secondary(settings_manager.theme)
 
     def _on_touch_down(self, instance, touch):
         if self.collide_point(*touch.pos):
-            if self.on_press_callback:
-                self.on_press_callback(self.btn_text)
+            if self.on_press_callback: self.on_press_callback(self.btn_text)
             return True
         return False
 
     def set_selected(self, selected):
+        if self.is_selected == selected: return
         self.is_selected = selected
         self._update_style()
 
     def _update_style(self):
         theme_id = settings_manager.theme
-        accent = DictionaryColors.get_accent(theme_id)
         if self.is_selected:
-            self.md_bg_color = accent
+            self.md_bg_color = DictionaryColors.get_accent(theme_id)
             self.label.text_color = [1, 1, 1, 1]
             self.radius = [dp(8)]
         else:
@@ -364,19 +292,17 @@ class FlagLabel(MDBoxLayout):
                    else _shared_eng_flag_texture if flag_type == 'en' else None)
         container = AnchorLayout(anchor_x='center', anchor_y='center', size_hint=(1, 1))
         if texture:
-            container.add_widget(Image(
-                texture=texture, size_hint=(None, None),
-                size=(dp(22), dp(22)), allow_stretch=True, keep_ratio=True))
+            container.add_widget(Image(texture=texture, size_hint=(None, None),
+                                       size=(dp(22), dp(22)), allow_stretch=True, keep_ratio=True))
         else:
-            container.add_widget(MDLabel(
-                text="RU" if flag_type == 'ru' else "EN",
-                font_size=sp(10), halign="center", valign="middle",
-                theme_text_color="Custom", text_color=[1, 1, 1, 0.6], bold=True))
+            container.add_widget(MDLabel(text="RU" if flag_type == 'ru' else "EN",
+                                         font_size=sp(10), halign="center", valign="middle",
+                                         theme_text_color="Custom", text_color=[1, 1, 1, 0.6], bold=True))
         self.add_widget(container)
 
 
 class AlphabetMenu(MDBoxLayout):
-    RU_LETTERS = list('абвгдеёжзийклмнопрстуфхцчшщъыьэюя')
+    RU_LETTERS = list('абвгдеёжзийклмнопрстуфхцчшщыэюя')
     EN_LETTERS = list('abcdefghijklmnopqrstuvwxyz')
 
     def __init__(self, on_letter_press=None, current_language='ru', **kwargs):
@@ -389,24 +315,21 @@ class AlphabetMenu(MDBoxLayout):
         self.spacing = dp(2)
         self.padding = [dp(4)] * 4
         self.md_bg_color = [0, 0, 0, 0]
+        self._built_language = None
 
-        self.left_arrow = MDIconButton(
-            icon="chevron-left", size_hint=(None, 1), width=dp(28),
-            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.scroll(-1), ripple_scale=0)
-        self.right_arrow = MDIconButton(
-            icon="chevron-right", size_hint=(None, 1), width=dp(28),
-            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.scroll(1), ripple_scale=0)
+        self.left_arrow = MDIconButton(icon="chevron-left", size_hint=(None, 1), width=dp(28),
+                                       theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
+                                       on_release=lambda x: self.scroll(-1), ripple_scale=0)
+        self.right_arrow = MDIconButton(icon="chevron-right", size_hint=(None, 1), width=dp(28),
+                                        theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
+                                        on_release=lambda x: self.scroll(1), ripple_scale=0)
         self.add_widget(self.left_arrow)
 
-        self.scroll_view = ScrollView(
-            size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
-            bar_width=0, bar_color=[0, 0, 0, 0],
-            bar_inactive_color=[0, 0, 0, 0], bar_margin=0)
-        self.container = MDBoxLayout(
-            orientation='horizontal', size_hint_x=None,
-            spacing=dp(2), padding=[dp(4)] * 4)
+        self.scroll_view = ScrollView(size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
+                                      bar_width=0, bar_color=[0, 0, 0, 0],
+                                      bar_inactive_color=[0, 0, 0, 0], bar_margin=0)
+        self.container = MDBoxLayout(orientation='horizontal', size_hint_x=None,
+                                     spacing=dp(2), padding=[dp(4)] * 4)
         self.container.bind(minimum_width=self.container.setter('width'))
         self.scroll_view.add_widget(self.container)
         self.add_widget(self.scroll_view)
@@ -417,15 +340,13 @@ class AlphabetMenu(MDBoxLayout):
         self._populate_items()
         self.update_theme_colors()
 
-    def _populate_items(self):
+    def _populate_items(self, force=False):
+        if not force and self._built_language == self.current_language and self.buttons: return
         self.container.clear_widgets()
         self.buttons = []
         self._flag_widgets = []
-        user_lang = settings_manager.language
-        if user_lang == 'ru':
-            groups = [('ru', self.RU_LETTERS, True)]
-        else:
-            groups = [('en', self.EN_LETTERS, True)]
+
+        groups = [('ru', self.RU_LETTERS, True)] if self.current_language == 'ru' else [('en', self.EN_LETTERS, True)]
 
         total_width = dp(8)
         for group_type, letters, show_flag in groups:
@@ -436,12 +357,12 @@ class AlphabetMenu(MDBoxLayout):
                 total_width += flag.width + dp(2)
             for letter in letters:
                 btn = LetterButton(text=letter, on_press=self._on_letter_press)
-                if letter == self.current_selection:
-                    btn.set_selected(True)
+                if letter == self.current_selection: btn.set_selected(True)
                 self.buttons.append(btn)
                 self.container.add_widget(btn)
                 total_width += btn.width + dp(2)
         self.container.width = total_width + dp(8)
+        self._built_language = self.current_language
 
     def scroll(self, direction):
         new_scroll = max(0, min(1, self.scroll_view.scroll_x + direction * 0.2))
@@ -451,15 +372,13 @@ class AlphabetMenu(MDBoxLayout):
         self.current_selection = letter
         for btn in self.buttons:
             btn.set_selected(btn.btn_text == letter)
-        if self.on_letter_press:
-            self.on_letter_press(letter)
+        if self.on_letter_press: self.on_letter_press(letter)
 
     def set_language(self, language):
-        if self.current_language == language and self.buttons:
-            return
+        if self.current_language == language and self._built_language == language: return
         self.current_language = language
         self.current_selection = None
-        self._populate_items()
+        self._populate_items(force=True)
 
     def set_current(self, letter):
         self.current_selection = letter
@@ -467,15 +386,10 @@ class AlphabetMenu(MDBoxLayout):
             btn.set_selected(btn.btn_text == letter)
 
     def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        if theme_id == 'green':
-            arrow_color = [1, 1, 1, 1]
-        else:
-            arrow_color = DictionaryColors.get_accent(theme_id)
+        arrow_color = DictionaryColors.get_arrow_color(settings_manager.theme)
         self.left_arrow.icon_color = arrow_color
         self.right_arrow.icon_color = arrow_color
-        for btn in self.buttons:
-            btn._update_style()
+        for btn in self.buttons: btn._update_style()
 
 
 class DictionaryMenu(MDBoxLayout):
@@ -485,14 +399,12 @@ class DictionaryMenu(MDBoxLayout):
         self.size_hint = (1, None)
         self.height = dp(56)
         self.md_bg_color = [0, 0, 0, 0]
-        self.alphabet_menu = AlphabetMenu(
-            on_letter_press=on_letter_press,
-            current_language=settings_manager.language)
+        self.alphabet_menu = AlphabetMenu(on_letter_press=on_letter_press,
+                                          current_language=settings_manager.language)
         self.add_widget(self.alphabet_menu)
 
     def update_theme_colors(self):
-        if self.alphabet_menu:
-            self.alphabet_menu.update_theme_colors()
+        if self.alphabet_menu: self.alphabet_menu.update_theme_colors()
 
     def set_language(self, language):
         self.alphabet_menu.set_language(language)
@@ -501,51 +413,306 @@ class DictionaryMenu(MDBoxLayout):
         self.alphabet_menu.set_current(letter)
 
 
-# ============ ПАГИНАЦИЯ ============
+# ============ КАРТОЧКИ ============
+class LongPressCardMixin:
+    TAP_THRESHOLD = dp(15)
+    LONG_PRESS_TIME = 0.5
+    LONG_PRESS_MOVE_TOLERANCE = dp(10)
 
-class PageButton(ButtonBehavior, MDBoxLayout):
-    def __init__(self, text, index, on_click=None, **kwargs):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._touch_down_pos = None
+        self._long_press_event = None
+        self._long_press_triggered = False
+
+    def on_touch_down(self, touch):
+        if getattr(self, 'disabled', False) or self.opacity < 0.1: return False
+        if not self.collide_point(*touch.pos): return super().on_touch_down(touch)
+        self._touch_down_pos = touch.pos
+        self._long_press_triggered = False
+        self._long_press_event = Clock.schedule_once(self._trigger_long_press, self.LONG_PRESS_TIME)
+        touch.grab(self)
+        return True
+
+    def on_touch_move(self, touch):
+        if touch.grab_current is not self or getattr(self, 'disabled', False) or self.opacity < 0.1:
+            return False
+        if self._touch_down_pos is None: return False
+        dx, dy = touch.x - self._touch_down_pos[0], touch.y - self._touch_down_pos[1]
+        if abs(dx) > self.LONG_PRESS_MOVE_TOLERANCE or abs(dy) > self.LONG_PRESS_MOVE_TOLERANCE:
+            self._cancel_long_press()
+            touch.ungrab(self)
+            return False
+        return False
+
+    def on_touch_up(self, touch):
+        if touch.grab_current is not self: return False
+        touch.ungrab(self)
+        if getattr(self, 'disabled', False) or self.opacity < 0.1 or self._touch_down_pos is None:
+            return False
+        self._cancel_long_press()
+        dx, dy = touch.x - self._touch_down_pos[0], touch.y - self._touch_down_pos[1]
+        was_long = self._long_press_triggered
+        self._touch_down_pos = None
+        self._long_press_triggered = False
+        if was_long: return True
+        if abs(dx) < self.TAP_THRESHOLD and abs(dy) < self.TAP_THRESHOLD: self._handle_normal_click()
+        return True
+
+    def _trigger_long_press(self, dt):
+        self._long_press_event = None
+        if self._touch_down_pos is None: return
+        self._long_press_triggered = True
+        self._handle_long_press()
+
+    def _cancel_long_press(self):
+        if self._long_press_event:
+            self._long_press_event.cancel()
+            self._long_press_event = None
+
+    def _flash_feedback(self):
+        if not hasattr(self, 'md_bg_color'): return
+        accent = DictionaryColors.get_accent(settings_manager.theme)
+        bright = [min(1.0, c * 1.4 + 0.15) for c in accent[:3]] + [0.7]
+        original = list(self.md_bg_color)
+        anim = Animation(md_bg_color=bright, duration=0.1, t='out_quad') + \
+               Animation(md_bg_color=original, duration=0.3, t='in_quad')
+        anim.start(self)
+
+    def _handle_normal_click(self):
+        pass
+
+    def _handle_long_press(self):
+        pass
+
+
+class StaticTermCard(LongPressCardMixin, MDCard):
+    CARD_HEIGHT = dp(48)
+
+    def __init__(self, term_id=0, name='', on_click=None, **kwargs):
+        super().__init__(**kwargs)
+        self.term_id = term_id
+        self.name = name
+        self.on_click_callback = on_click
+
+        self.size_hint_y = None
+        self.height = self.CARD_HEIGHT
+        self.radius = [dp(10)] * 4
+        self.elevation = 0
+        self.ripple_behavior = False
+        self.clip = True
+        self.theme_line_color = "Custom"
+        self.theme_bg_color = "Custom"
+        self.padding = [0, 0, 0, 0]
+        self.spacing = dp(8)
+
+        content = MDBoxLayout(
+            orientation='horizontal',
+            padding=[dp(12), 0, dp(12), 0],
+            spacing=dp(8),
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        self.icon = MDIcon(
+            icon="book-open-variant",
+            size_hint=(None, 1),
+            width=dp(24),
+            theme_text_color="Custom",
+            font_size=sp(20)
+        )
+
+        self.name_label = MDLabel(
+            font_size=sp(15),
+            theme_text_color="Custom",
+            bold=True,
+            shorten=True,
+            shorten_from="right",
+            valign="middle",
+            size_hint_x=1
+        )
+
+        self.arrow = MDLabel(
+            text="›",
+            font_size=sp(20),
+            size_hint_x=None,
+            width=dp(20),
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom"
+        )
+
+        content.add_widget(self.icon)
+        content.add_widget(self.name_label)
+        content.add_widget(self.arrow)
+        self.add_widget(content)
+
+        self.name_label.text = name
+        self.update_theme_colors()
+
+    def _handle_normal_click(self):
+        if self.on_click_callback: self.on_click_callback(self.term_id, self.name)
+
+    def _handle_long_press(self):
+        self._flash_feedback()
+        if self.on_click_callback:
+            Clock.schedule_once(lambda dt: self.on_click_callback(self.term_id, self.name), 0.15)
+
+    def update_data(self, term_id, name, on_click):
+        self.term_id = term_id
+        self.name = name
+        self.on_click_callback = on_click
+        self.name_label.text = name
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        accent = DictionaryColors.get_accent(theme_id)
+
+        self.md_bg_color = DictionaryColors.get_card_bg(theme_id)
+        self.line_color = DictionaryColors.get_card_line(theme_id)
+        self.line_width = DictionaryColors.get_card_line_width(theme_id)
+
+        self.icon.text_color = accent
+        self.name_label.text_color = DictionaryColors.get_text_primary(theme_id)
+        self.arrow.text_color = [0, 0, 0, 0.6] if theme_id == 'light' else [1, 1, 1, 0.3]
+
+
+class PageCardsContainer(MDBoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.spacing = dp(4)
+        self.md_bg_color = [0, 0, 0, 0]
+        self.cards = []
+        self.padding = [0, 0, 0, 0]
+        self._card_pool = []
+        self.size_hint = (None, None)
+        self.height = 0
+        self.width = 0
+        self.max_cards = 8
+
+    def _ensure_pool(self, count, on_click):
+        while len(self._card_pool) < count:
+            card = StaticTermCard(on_click=on_click)
+            self.add_widget(card)
+            self._card_pool.append(card)
+
+    def _apply_pool(self, items, on_click):
+        self._ensure_pool(self.max_cards, on_click)
+        for i in range(self.max_cards):
+            card = self._card_pool[i]
+            if i < len(items):
+                card.update_data(items[i].get('id', 0), items[i].get('name', ''), on_click)
+                card.height = StaticTermCard.CARD_HEIGHT
+                card.opacity = 1
+                card.disabled = False
+            else:
+                card.height = StaticTermCard.CARD_HEIGHT
+                card.opacity = 0
+                card.disabled = True
+
+        self.cards = self._card_pool[:len(items)]
+        self.height = (self.max_cards * StaticTermCard.CARD_HEIGHT + (
+                    self.max_cards - 1) * self.spacing) if self.max_cards > 0 else 0
+
+        if self.parent and hasattr(self.parent, '_update_cards_layout'):
+            Clock.schedule_once(lambda dt: self.parent._update_cards_layout(len(items)), 0)
+
+    def set_terms(self, terms, on_click):
+        self._apply_pool(terms, on_click)
+
+    def clear(self):
+        for card in self._card_pool:
+            card.opacity = 0
+            card.disabled = True
+        self.cards = []
+        self.height = (self.max_cards * StaticTermCard.CARD_HEIGHT + (
+                    self.max_cards - 1) * self.spacing) if self.max_cards > 0 else 0
+        if self.parent and hasattr(self.parent, '_update_cards_layout'):
+            Clock.schedule_once(lambda dt: self.parent._update_cards_layout(0), 0)
+
+    def update_theme_colors(self):
+        for c in self._card_pool: c.update_theme_colors()
+
+
+class SwipeableCardsWrapper(FloatLayout):
+    SWIPE_THRESHOLD = dp(40)
+
+    def __init__(self, on_swipe_up=None, on_swipe_down=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_swipe_up = on_swipe_up
+        self.on_swipe_down = on_swipe_down
+        self._touch_start = None
+        self._swipe_handled = False
+
+    def on_touch_down(self, touch):
+        if not self.collide_point(*touch.pos): return super().on_touch_down(touch)
+        self._touch_start = touch.pos
+        self._swipe_handled = False
+        return super().on_touch_down(touch)
+
+    def on_touch_move(self, touch):
+        if self._touch_start is not None and not self._swipe_handled:
+            dx, dy = touch.x - self._touch_start[0], touch.y - self._touch_start[1]
+            if abs(dy) > self.SWIPE_THRESHOLD and abs(dy) > abs(dx) * 1.2:
+                self._swipe_handled = True
+                if dy > 0 and self.on_swipe_down:
+                    self.on_swipe_down()
+                elif dy < 0 and self.on_swipe_up:
+                    self.on_swipe_up()
+                self._touch_start = None
+                return True
+        return super().on_touch_move(touch)
+
+    def on_touch_up(self, touch):
+        if self._touch_start is None: return super().on_touch_up(touch)
+        self._touch_start = None
+        self._swipe_handled = False
+        return super().on_touch_up(touch)
+
+
+class PaginationArrow(MDBoxLayout):
+    def __init__(self, icon_name, on_press=None, icon_color=None, width=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint = (None, 1)
-        self.width = dp(48)
+        self.width = width if width else dp(40)
+        self.padding = [dp(2)] * 4
         self.md_bg_color = [0, 0, 0, 0]
-        self.is_selected = False
-        self.page_index = index
-        self.on_click_callback = on_click
-        self.label = MDLabel(
-            text=text, font_size=sp(14), halign="center", valign="middle",
-            theme_text_color="Custom", text_color=[1, 1, 1, 0.7],
-            bold=True, size_hint=(None, 1), width=dp(44),
-            pos_hint={'center_x': 0.5})
-        self.add_widget(self.label)
-        self.bind(on_release=self._on_release)
+        self._on_press = on_press
+        self._enabled = True
+        self._pressed = False
 
-    def _on_release(self, *args):
-        if self.on_click_callback:
-            self.on_click_callback(self.page_index)
+        container = AnchorLayout(anchor_x='center', anchor_y='center', size_hint=(1, 1))
+        self.icon_widget = MDIcon(icon=icon_name, font_size=sp(22), theme_text_color="Custom",
+                                  text_color=icon_color if icon_color else [1, 1, 1, 1],
+                                  size_hint=(None, None), size=(dp(24), dp(24)))
+        container.add_widget(self.icon_widget)
+        self.add_widget(container)
 
-    def set_selected(self, selected):
-        self.is_selected = selected
-        self.update_style()
+    def set_enabled(self, enabled):
+        self._enabled = enabled
+        self.opacity = 1.0 if enabled else 0.3
 
-    def update_style(self):
-        theme_id = settings_manager.theme
-        accent = DictionaryColors.get_accent(theme_id)
-        text_s = DictionaryColors.get_text_secondary(theme_id)
-        if self.is_selected:
-            self.md_bg_color = accent
-            self.label.text_color = [1, 1, 1, 1]
-            self.radius = [dp(8)]
-        else:
-            self.md_bg_color = [0, 0, 0, 0]
-            self.label.text_color = text_s
-            self.radius = [0]
+    def set_color(self, color):
+        self.icon_widget.text_color = color
+
+    def on_touch_down(self, touch):
+        if not self.collide_point(*touch.pos): return super().on_touch_down(touch)
+        if not self._enabled: return True
+        self._pressed = True
+        touch.grab(self)
+        return True
+
+    def on_touch_up(self, touch):
+        if touch.grab_current is not self: return super().on_touch_up(touch)
+        touch.ungrab(self)
+        if self._pressed:
+            self._pressed = False
+            if self._enabled and self.collide_point(*touch.pos) and self._on_press: self._on_press()
+        return True
 
 
 class PaginationBar(MDBoxLayout):
-    CENTERED_MAX_BUTTONS = 6
-
     def __init__(self, on_page_select=None, **kwargs):
         super().__init__(**kwargs)
         self.on_page_select = on_page_select
@@ -553,324 +720,161 @@ class PaginationBar(MDBoxLayout):
         self.total_pages = 1
         self._last_total = None
         self._last_per_page = None
-        self.page_buttons = []
         self.orientation = 'horizontal'
-        self.size_hint = (1, None)
+        self.size_hint = (None, None)
         self.height = dp(48)
-        self.spacing = dp(2)
+        self.padding = [dp(4), 0, dp(4), 0]
+        self.spacing = dp(4)
         self.md_bg_color = [0, 0, 0, 0]
-        self.padding = [dp(4), dp(2), dp(4), dp(2)]
 
-        self.left_arrow = MDIconButton(
-            icon="chevron-left", size_hint=(None, 1), width=dp(32),
-            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.scroll_strip(-1), ripple_scale=0)
-        self.right_arrow = MDIconButton(
-            icon="chevron-right", size_hint=(None, 1), width=dp(32),
-            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.scroll_strip(1), ripple_scale=0)
-        self.add_widget(self.left_arrow)
+        self.jump_back_arrow = PaginationArrow("chevron-double-left", on_press=self._go_back_10, width=dp(36))
+        self.prev_arrow = PaginationArrow("chevron-left", on_press=self._go_prev_page, width=dp(36))
+        self.page_label = MDLabel(text="1", font_size=sp(16), halign="center", valign="middle",
+                                  theme_text_color="Custom", text_color=[1, 1, 1, 1], bold=True,
+                                  size_hint=(None, 1), width=dp(40))
+        self.next_arrow = PaginationArrow("chevron-right", on_press=self._go_next_page, width=dp(36))
+        self.jump_forward_arrow = PaginationArrow("chevron-double-right", on_press=self._go_forward_10, width=dp(36))
 
-        self.center_zone = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, 1), md_bg_color=[0, 0, 0, 0])
-        self.add_widget(self.center_zone)
-        self.add_widget(self.right_arrow)
+        self.add_widget(self.jump_back_arrow)
+        self.add_widget(self.prev_arrow)
+        self.add_widget(self.page_label)
+        self.add_widget(self.next_arrow)
+        self.add_widget(self.jump_forward_arrow)
 
-        self.container = MDBoxLayout(
-            orientation='horizontal', size_hint=(None, 1),
-            spacing=dp(4), padding=[dp(4)] * 4, md_bg_color=[0, 0, 0, 0])
-        self.scroll_view = None
-        self._centered_mode = None
+        self._update_width()
         self.update_theme_colors()
 
-    def _rebuild_center_zone(self, force_center):
-        if self._centered_mode == force_center and self.center_zone.children:
-            return
-        self._centered_mode = force_center
-        if self.container.parent:
-            self.container.parent.remove_widget(self.container)
-        self.center_zone.clear_widgets()
-        self.scroll_view = None
-        if force_center:
-            anchor = AnchorLayout(anchor_x='center', anchor_y='center', size_hint=(1, 1))
-            self.container.size_hint = (None, 1)
-            self.container.pos_hint = {}
-            anchor.add_widget(self.container)
-            self.center_zone.add_widget(anchor)
-        else:
-            self.container.size_hint = (None, 1)
-            self.container.pos_hint = {}
-            self.scroll_view = ScrollView(
-                size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
-                bar_width=0, bar_color=[0, 0, 0, 0],
-                bar_inactive_color=[0, 0, 0, 0], bar_margin=0)
-            self.scroll_view.add_widget(self.container)
-            self.center_zone.add_widget(self.scroll_view)
+    def on_touch_down(self, touch):
+        if self.parent is not None and self.parent.height < dp(10): return False
+        return super().on_touch_down(touch)
 
-    def _apply_layout_mode(self):
-        n = len(self.page_buttons)
-        if n == 0:
-            return
-        self._rebuild_center_zone(n <= self.CENTERED_MAX_BUTTONS)
+    def _update_width(self):
+        self.width = (dp(4) + dp(4) + self.jump_back_arrow.width + self.spacing +
+                      self.prev_arrow.width + self.spacing + self.page_label.width +
+                      self.spacing + self.next_arrow.width + self.spacing + self.jump_forward_arrow.width)
 
     def set_total(self, total_items, per_page, current_page=0, on_click=None):
-        if on_click:
-            self.on_page_select = on_click
-        if self._last_total == total_items and self._last_per_page == per_page:
+        if on_click: self.on_page_select = on_click
+        new_total_pages = max(1, (total_items + per_page - 1) // per_page)
+        if self._last_total == total_items and self._last_per_page == per_page and self.total_pages == new_total_pages:
             self.set_current_page(current_page)
             return
         self._last_total = total_items
         self._last_per_page = per_page
-        self.container.clear_widgets()
-        self.page_buttons = []
-        self.total_pages = max(1, (total_items + per_page - 1) // per_page)
-        self.current_page_index = current_page
-        if self.total_pages <= 1:
-            self._rebuild_center_zone(True)
-            self.container.width = 0
-            self.update_theme_colors()
-            return
-        for i in range(self.total_pages):
-            count = min((i + 1) * per_page, total_items)
-            btn = PageButton(text=str(count), index=i, on_click=self._on_page_click)
-            self.page_buttons.append(btn)
-            self.container.add_widget(btn)
-        content_w = (
-            sum(b.width for b in self.page_buttons)
-            + max(0, len(self.page_buttons) - 1) * self.container.spacing
-            + self.container.padding[0] + self.container.padding[2])
-        self.container.width = content_w
-        self._apply_layout_mode()
+        self.total_pages = new_total_pages
+        self.current_page_index = max(0, min(current_page, self.total_pages - 1))
+        self._apply_page()
         self.update_theme_colors()
-        Clock.schedule_once(lambda dt: self._scroll_to_current(force=True), 0.1)
 
     def set_current_page(self, page):
-        if not self.page_buttons:
-            self.current_page_index = page
-            return
-        if page == self.current_page_index:
-            for i, btn in enumerate(self.page_buttons):
-                btn.set_selected(i == page)
-            return
-        self.current_page_index = page
-        for i, btn in enumerate(self.page_buttons):
-            btn.set_selected(i == page)
-        if self._centered_mode is False and self.scroll_view:
-            Clock.schedule_once(lambda dt: self._scroll_to_current(force=False), 0.05)
+        self.current_page_index = max(0, min(page, self.total_pages - 1))
+        self._apply_page()
 
-    def _on_page_click(self, index):
-        if index == self.current_page_index:
-            return
-        self.current_page_index = index
-        for i, btn in enumerate(self.page_buttons):
-            btn.set_selected(i == index)
-        if self.on_page_select:
-            self.on_page_select(index)
+    def _apply_page(self):
+        self.page_label.text = str(self.current_page_index + 1)
+        digits = len(str(self.total_pages))
+        self.page_label.width = dp(12) * max(2, digits) + dp(4)
+        at_first = self.current_page_index == 0
+        at_last = self.current_page_index >= self.total_pages - 1
+        self.jump_back_arrow.set_enabled(not at_first)
+        self.prev_arrow.set_enabled(not at_first)
+        self.next_arrow.set_enabled(not at_last)
+        self.jump_forward_arrow.set_enabled(not at_last)
+        self._update_width()
 
-    def scroll_strip(self, direction):
-        if not self.scroll_view:
-            return
-        new_scroll = max(0, min(1, self.scroll_view.scroll_x + direction * 0.2))
-        Animation(scroll_x=new_scroll, duration=0.2, t='out_quad').start(self.scroll_view)
+    def _go_back_10(self):
+        if self.current_page_index > 0:
+            self.current_page_index = max(0, self.current_page_index - 10)
+            self._apply_page()
+            if self.on_page_select: self.on_page_select(self.current_page_index)
 
-    def _scroll_to_current(self, force=False):
-        if self._centered_mode is not False:
-            return
-        if not self.scroll_view or not self.page_buttons:
-            return
-        idx = min(self.current_page_index, len(self.page_buttons) - 1)
-        btn = self.page_buttons[idx]
-        if btn.width <= 0:
-            return
-        total_width = self.container.width - self.scroll_view.width
-        if total_width <= 0:
-            return
-        if not force:
-            viewport_w = self.scroll_view.width
-            content_w = self.container.width
-            if content_w > 0 and viewport_w > 0:
-                current_left = self.scroll_view.scroll_x * max(0, content_w - viewport_w)
-                current_right = current_left + viewport_w
-                if current_left <= btn.x and btn.x + btn.width <= current_right:
-                    return
-        scroll_x = max(0, min(1, (btn.x - dp(4)) / total_width))
-        Animation(scroll_x=scroll_x, duration=0.2, t='out_quad').start(self.scroll_view)
+    def _go_prev_page(self):
+        if self.current_page_index > 0:
+            self.current_page_index -= 1
+            self._apply_page()
+            if self.on_page_select: self.on_page_select(self.current_page_index)
+
+    def _go_next_page(self):
+        if self.current_page_index < self.total_pages - 1:
+            self.current_page_index += 1
+            self._apply_page()
+            if self.on_page_select: self.on_page_select(self.current_page_index)
+
+    def _go_forward_10(self):
+        if self.current_page_index < self.total_pages - 1:
+            self.current_page_index = min(self.total_pages - 1, self.current_page_index + 10)
+            self._apply_page()
+            if self.on_page_select: self.on_page_select(self.current_page_index)
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        if theme_id == 'green':
-            arrow_color = [1, 1, 1, 1]
-        else:
-            arrow_color = DictionaryColors.get_accent(theme_id)
-        self.left_arrow.icon_color = arrow_color
-        self.right_arrow.icon_color = arrow_color
-        for i, btn in enumerate(self.page_buttons):
-            btn.set_selected(i == self.current_page_index)
-
-    def on_size(self, *args):
-        if not getattr(self, 'page_buttons', None):
-            return
-        if not getattr(self, 'container', None) or not getattr(self, 'center_zone', None):
-            return
-        Clock.schedule_once(lambda dt: self._apply_layout_mode(), 0.05)
-
-
-# ============ КАРТОЧКА ТЕРМИНА ============
-
-class SearchTermCard(RecycleDataViewBehavior, MDCard):
-    term_name = StringProperty('')
-    on_click = ObjectProperty(None)
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.size_hint = (1, None)
-        self.height = dp(48)
-        self.radius = [dp(10)] * 4
-        self.elevation = 0
-        self.ripple_behavior = False
-        self.clip = True
-        self.theme_line_color = "Custom"
-        self.theme_bg_color = "Custom"
-        self.padding = [0, dp(4), 0, dp(4)]
-        self.spacing = dp(8)
-        self._build_ui()
-        self.update_theme_colors()
-
-    def _build_ui(self):
-        content = MDBoxLayout(
-            orientation='horizontal',
-            padding=[dp(12), 0, dp(12), 0],
-            spacing=dp(8),
-            md_bg_color=[0, 0, 0, 0])
-        self.icon = MDIconButton(
-            icon="book-open-variant", size_hint=(None, None),
-            size=(dp(24), dp(24)), theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0], pos_hint={'center_y': 0.5},
-            ripple_scale=0)
-        self.term_label = MDLabel(
-            font_size=sp(15), theme_text_color="Custom", bold=True,
-            shorten=True, shorten_from="right", valign="middle", size_hint_x=1)
-        self.arrow = MDLabel(
-            text="›", font_size=sp(20), size_hint_x=None, width=dp(20),
-            halign="center", valign="middle", theme_text_color="Custom")
-        content.add_widget(self.icon)
-        content.add_widget(self.term_label)
-        content.add_widget(self.arrow)
-        self.add_widget(content)
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        accent = DictionaryColors.get_accent(theme_id)
-        self.md_bg_color = DictionaryColors.get_card_bg(theme_id)
-        self.line_color = DictionaryColors.get_card_line(theme_id)
-        self.line_width = DictionaryColors.get_card_line_width(theme_id)
-        self.icon.icon_color = accent
-        self.term_label.text_color = DictionaryColors.get_text_primary(theme_id)
-        self.arrow.text_color = accent
-
-    def refresh_view_attrs(self, rv, index, data):
-        self.term_name = data.get('term_name', '')
-        self.on_click = data.get('on_click')
-        self.term_label.text = self.term_name.capitalize()
-        self.update_theme_colors()
-        return super().refresh_view_attrs(rv, index, data)
-
-    def on_touch_down(self, touch):
-        if self.collide_point(*touch.pos):
-            if self.on_click:
-                self.on_click(self.term_name)
-            return True
-        return super().on_touch_down(touch)
-
-
-Factory.register('SearchTermCard', cls=SearchTermCard)
-
-
-class TermRecycleView(RecycleView):
-    def __init__(self, on_term_click=None, **kwargs):
-        super().__init__(**kwargs)
-        self.on_term_click = on_term_click
-        self.animate_scroll = False
-        self.size_hint = (1, 1)
-        self.clip = True
-        self.scroll_type = ['bars', 'content']
-        self.bar_width = 0
-        self.bar_color = [0, 0, 0, 0]
-        self.bar_inactive_color = [0, 0, 0, 0]
-        self.layout_manager = RecycleBoxLayout(
-            default_size=(None, dp(48)), default_size_hint=(1, None),
-            size_hint_y=None, height=dp(48) * 50,
-            orientation='vertical', spacing=dp(6),
-            padding=[dp(4), dp(8), dp(4), dp(8)])
-        self.layout_manager.bind(minimum_height=self.layout_manager.setter('height'))
-        self.viewclass = 'SearchTermCard'
-        self.add_widget(self.layout_manager)
-
-    def set_terms(self, terms, on_click):
-        self.data = [{'term_name': t, 'on_click': on_click} for t in terms]
-        self.refresh_from_data()
-
-    def clear(self):
-        self.data = []
-        self.refresh_from_data()
-
-    def get_scroll_position(self):
-        return self.scroll_y
-
-    def set_scroll_position(self, position):
-        if 0 <= position <= 1:
-            self.scroll_y = position
+        arrow_color = DictionaryColors.get_arrow_color(theme_id)
+        self.jump_back_arrow.set_color(arrow_color)
+        self.jump_forward_arrow.set_color(arrow_color)
+        self.prev_arrow.set_color(arrow_color)
+        self.next_arrow.set_color(arrow_color)
+        self.page_label.text_color = DictionaryColors.get_text_primary(theme_id)
 
 
 # ============ ОСНОВНОЙ ЭКРАН ============
-
 class DictionaryScreen(BaseScreen):
-    RU_LETTERS = AlphabetMenu.RU_LETTERS
-    EN_LETTERS = AlphabetMenu.EN_LETTERS
+    MIN_PAGE_SIZE = 3
+    MAX_PAGE_SIZE = 12
+    PAGINATION_HEIGHT = dp(48) + dp(1) + dp(2)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'dictionary'
-        self.bg_image = None
-        self.bg_color_inst = None
-        self.bg_rect = None
-
-        self.all_terms = {}
-        self.terms_by_letter = {}
         self.current_letter = None
         self.is_search_mode = False
-        self.search_results = []
-        self._last_query = ""
-        self.current_language = settings_manager.language
-        self._saved_scroll_position = 1.0
 
-        # Пагинация алфавита
+        self.current_language = self._get_dict_lang()
+
+        self._all_terms = []
         self._page = 0
+        self._page_size = 6
+        self._page_size_locked = False
+        self._last_window_size = None
+        self._batch_size = 200
         self._total_terms = 0
-        self._page_terms = []
+        self._terms_cache = {}
+        self._batch_loading = False
+        self._pending_page = None
 
-        # Пагинация поиска
+        self._all_search_results = []
         self._search_page = 0
-        self._search_page_size_default = 10  # fallback
+        self._search_token = ""
+        self._search_in_progress = False
 
-        # Оптимизация
+        self._load_token = 0
         self._last_display_key = None
         self._last_search_display_key = None
 
         self.search_bar = None
-        self._main_label = None
         self._result_label = None
         self.dictionary_menu = None
         self._hint_timer = None
-        self.search_recycle_view = None
+        self.cards_container = None
+        self._cards_wrapper = None
+        self._cards_top_offset = dp(6)
+        self._cards_left_pad = dp(0)
+        self._cards_right_pad = dp(0)
         self._pagination_bar = None
         self._search_pagination_bar = None
+        self._pagination_container = None
+        self._search_pagination_container = None
+        self._loading_spinner = None
+        self._loading_spinner_widget = None
+        self._spinner_pending = False
 
         load_shared_icons_sync()
-        self.load_background()
         self.init_ui()
-        self.scan_terms()
+        self.load_background()
         logger.info('Экран словаря создан')
+
+    def _get_dict_lang(self):
+        """Маппинг: русский -> ru, все остальные -> en"""
+        return 'ru' if settings_manager.language == 'ru' else 'en'
 
     def load_background(self):
         with self.canvas.before:
@@ -881,10 +885,9 @@ class DictionaryScreen(BaseScreen):
         try:
             if HAS_ASSETS:
                 bg_data = load_asset_as_bytes("background_jpg")
-                if bg_data:
-                    self.texture = CoreImage(BytesIO(bg_data), ext="jpg").texture
+                if bg_data: self.texture = CoreImage(BytesIO(bg_data), ext="jpg").texture
         except Exception as e:
-            logger.error(f'Ошибка загрузки фона: {e}')
+            logger.error(f'Ошибка фона: {e}')
         self.update_screen_background()
 
     def _update_rect(self, *args):
@@ -893,8 +896,7 @@ class DictionaryScreen(BaseScreen):
             self.bg_rect.size = self.size
 
     def update_screen_background(self):
-        if not hasattr(self, 'bg_color_inst') or not hasattr(self, 'bg_rect'):
-            return
+        if not hasattr(self, 'bg_color_inst'): return
         theme_id = settings_manager.theme
         if theme_id == 'green':
             if self.texture:
@@ -912,555 +914,642 @@ class DictionaryScreen(BaseScreen):
 
     def update_theme_colors(self):
         self.update_screen_background()
-        theme_id = settings_manager.theme
-        if self.search_bar:
-            self.search_bar.update_theme_colors()
-        if self.dictionary_menu:
-            self.dictionary_menu.update_theme_colors()
-        if self._pagination_bar:
-            self._pagination_bar.update_theme_colors()
-        if self._search_pagination_bar:
-            self._search_pagination_bar.update_theme_colors()
-        if self._main_label:
-            self._main_label.text_color = DictionaryColors.get_text_secondary(theme_id)
-        if self._result_label:
-            self._result_label.text_color = DictionaryColors.get_hint_color(theme_id)
-        if self.search_recycle_view:
-            for child in self.search_recycle_view.layout_manager.children:
-                if hasattr(child, 'update_theme_colors'):
-                    child.update_theme_colors()
+        if self.search_bar: self.search_bar.update_theme_colors()
+        if self.dictionary_menu: self.dictionary_menu.update_theme_colors()
+        if self._pagination_bar: self._pagination_bar.update_theme_colors()
+        if self._search_pagination_bar: self._search_pagination_bar.update_theme_colors()
+        if self._result_label: self._result_label.text_color = DictionaryColors.get_hint_color(settings_manager.theme)
+        if self.cards_container: self.cards_container.update_theme_colors()
 
     def update_language(self):
-        if self.search_bar:
-            self.search_bar.update_language()
-        self._restore_hint()
-        if self.dictionary_menu and self.dictionary_menu.alphabet_menu:
-            self.dictionary_menu.alphabet_menu._populate_items()
+        if self.search_bar: self.search_bar.update_language()
+        new_lang = self._get_dict_lang()
+        if self.current_language != new_lang:
+            self.current_language = new_lang
+            self._terms_cache.clear()
+            self._last_display_key = None
+            self.current_letter = None
+            if self.dictionary_menu:
+                self.dictionary_menu.set_language(self.current_language)
+                self.dictionary_menu.set_current_letter(None)
+            if self.cards_container:
+                self.cards_container.clear()
+            self._hide_pagination()
+            self._hide_result_label()
+
         if self._result_label and self._result_label.opacity > 0:
             if self.is_search_mode:
                 self._update_search_result_label()
-            elif self.current_letter:
+            elif self.current_letter and self._all_terms:
                 self._update_result_label_for_letter()
 
     def init_ui(self):
         main_layout = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
-        self._main_layout = main_layout
-
-        top_padding = layout_config.get_top_padding()
-        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
-        main_layout.add_widget(Widget(size_hint_y=None, height=dp(8)))
-
+        main_layout.add_widget(Widget(size_hint_y=None, height=layout_config.get_top_padding()))
         padding = layout_config.get_content_padding()
 
-        # 1. Поиск
-        search_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None), height=dp(52),
-            padding=[padding[0], 0, padding[2], 0])
+        # 1. АЛФАВИТ
+        menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(48),
+                                     md_bg_color=[0, 0, 0, 0], padding=[padding[0], 0, padding[2], dp(8)])
+        self.dictionary_menu = DictionaryMenu(on_letter_press=self.on_letter_press)
+        self.dictionary_menu.height = dp(40)
+        menu_container.add_widget(self.dictionary_menu)
+        main_layout.add_widget(menu_container)
+
+        # 2. ПОИСК
+        search_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(48),
+                                       padding=[padding[0], 0, padding[2], 0])
         self.search_bar = SearchBar(on_search=self.do_search, on_clear=self.clear_search)
         search_container.add_widget(self.search_bar)
         main_layout.add_widget(search_container)
         main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
-        # 2. Top section (лейбл + меню алфавита)
-        top_section = MDBoxLayout(
-            orientation='vertical', size_hint_y=None, height=dp(80))
-        self._main_label = MDLabel(
-            text=get_text('search_by_alphabet'), font_size=sp(14), halign="center",
-            size_hint_y=None, height=dp(24), theme_text_color="Custom")
-        top_section.add_widget(self._main_label)
-
-        menu_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None), height=dp(56),
-            md_bg_color=[0, 0, 0, 0], padding=[padding[0], 0, padding[2], 0])
-        self.dictionary_menu = DictionaryMenu(on_letter_press=self.on_letter_press)
-        menu_container.add_widget(self.dictionary_menu)
-        top_section.add_widget(menu_container)
-        main_layout.add_widget(top_section)
-
-        # 3. Result label
-        self._result_label = MDLabel(
-            text="", font_size=sp(13), halign="center",
-            size_hint_y=None, height=dp(20),
-            theme_text_color="Custom",
-            text_color=DictionaryColors.get_hint_color(settings_manager.theme),
-            opacity=0, bold=True)
+        # 3. RESULT LABEL
+        self._result_label = MDLabel(text="", font_size=sp(12), halign="center", valign="middle",
+                                     size_hint_y=None, height=dp(24), theme_text_color="Custom",
+                                     text_color=DictionaryColors.get_hint_color(settings_manager.theme),
+                                     opacity=0, bold=True)
+        self._result_label.text_size = (Window.width, dp(24))
+        self._result_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, dp(24))))
         main_layout.add_widget(self._result_label)
 
-        # 4. Список
-        wrapper = MDBoxLayout(
-            orientation='vertical', size_hint=(1, 1),
-            spacing=0, padding=[padding[0], dp(4), padding[2], dp(0)],
-            md_bg_color=[0, 0, 0, 0])
-        self.search_recycle_view = TermRecycleView(on_term_click=self.on_term_selected)
-        wrapper.add_widget(self.search_recycle_view)
-        main_layout.add_widget(wrapper)
+        # 4. КАРТОЧКИ
+        self._cards_wrapper = SwipeableCardsWrapper(on_swipe_up=self._on_swipe_up,
+                                                    on_swipe_down=self._on_swipe_down, size_hint=(1, 1))
+        self._cards_wrapper.clip = True
+        self._cards_top_offset = dp(6)
+        self._cards_left_pad = padding[0]
+        self._cards_right_pad = padding[2]
 
-        # 5. Пагинация алфавита
-        self._pagination_bar = PaginationBar(
-            on_page_select=self._on_page_selected_from_bar)
-        self._pagination_bar.height = 0
-        self._pagination_bar.opacity = 0
-        self._pagination_bar.disabled = True
-        main_layout.add_widget(self._pagination_bar)
+        self.cards_container = PageCardsContainer()
+        self.cards_container.max_cards = self._page_size
+        self._cards_wrapper.add_widget(self.cards_container)
+        self._cards_wrapper.bind(size=lambda *a: self._update_cards_layout(len(self.cards_container.cards)),
+                                 pos=lambda *a: self._update_cards_layout(len(self.cards_container.cards)))
+        main_layout.add_widget(self._cards_wrapper)
 
-        # 6. Пагинация поиска
-        self._search_pagination_bar = PaginationBar(
-            on_page_select=self._on_search_page_selected)
-        self._search_pagination_bar.height = 0
-        self._search_pagination_bar.opacity = 0
-        self._search_pagination_bar.disabled = True
-        main_layout.add_widget(self._search_pagination_bar)
+        # 5. ПАГИНАЦИЯ
+        self._pagination_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=0,
+                                                 md_bg_color=[0, 0, 0, 0],
+                                                 padding=[padding[0], dp(0), padding[2], dp(0)])
+        self._pagination_anchor = FloatLayout(size_hint=(1, 1))
+        self._pagination_bar = PaginationBar(on_page_select=self._on_page_selected_from_bar)
+        self._pagination_bar.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self._pagination_anchor.add_widget(self._pagination_bar)
+        self._pagination_container.add_widget(self._pagination_anchor)
+        main_layout.add_widget(self._pagination_container)
 
-        # 7. Отступ под BottomNav
-        bottom_padding = layout_config.get_bottom_padding()
-        main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
+        # 6. ПАГИНАЦИЯ ПОИСКА
+        self._search_pagination_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=0,
+                                                        md_bg_color=[0, 0, 0, 0],
+                                                        padding=[padding[0], dp(0), padding[2], dp(0)])
+        self._search_pagination_anchor = FloatLayout(size_hint=(1, 1))
+        self._search_pagination_bar = PaginationBar(on_page_select=self._on_search_page_selected)
+        self._search_pagination_bar.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self._search_pagination_anchor.add_widget(self._search_pagination_bar)
+        self._search_pagination_container.add_widget(self._search_pagination_anchor)
+        main_layout.add_widget(self._search_pagination_container)
 
+        main_layout.add_widget(Widget(size_hint_y=None, height=layout_config.get_pagination_bottom_padding()))
         self.clear_widgets()
         self.add_widget(main_layout)
         self.update_theme_colors()
+        Clock.schedule_once(lambda dt: self._update_cards_layout(0), 0)
+        Clock.schedule_once(lambda dt: self._recalc_page_size(force=True), 0.3)
 
-    # ============ АДАПТИВНЫЙ ШАГ ============
+    def _update_cards_layout(self, count):
+        if not self.cards_container or not self._cards_wrapper or self._cards_wrapper.height <= 1: return
+        self.cards_container.max_cards = self._page_size
+        self.cards_container.x = self._cards_wrapper.x + self._cards_left_pad
+        self.cards_container.width = max(dp(50),
+                                         self._cards_wrapper.width - self._cards_left_pad - self._cards_right_pad)
+        n_total = self.cards_container.max_cards
+        self.cards_container.spacing = dp(4)
+        self.cards_container.height = (
+                    n_total * StaticTermCard.CARD_HEIGHT + (n_total - 1) * self.cards_container.spacing)
+        try:
+            label_bottom = self._result_label.to_window(self._result_label.x, self._result_label.y, initial=False)[1]
+            wrapper_top = self._cards_wrapper.to_window(self._cards_wrapper.x, self._cards_wrapper.y, initial=False)[
+                              1] + self._cards_wrapper.height
+            self.cards_container.top = min(label_bottom - self._cards_top_offset, wrapper_top - self._cards_top_offset)
+        except Exception:
+            self.cards_container.top = self._cards_wrapper.top - self._cards_top_offset
 
-    def _get_page_size(self):
-        """Адаптивный шаг для алфавита."""
-        total = self._total_terms
-        if total <= 100:
-            return 10
-        elif total <= 300:
-            return 25
-        else:
-            return 50
+    def _calc_page_size(self):
+        fixed_h = (layout_config.get_top_padding() + dp(48) + dp(48) + dp(4) + dp(24) +
+                   self._cards_top_offset + self.PAGINATION_HEIGHT + layout_config.get_pagination_bottom_padding())
+        available_h = Window.height - fixed_h
+        if available_h <= 0: return self.MIN_PAGE_SIZE
+        return max(self.MIN_PAGE_SIZE, min(self.MAX_PAGE_SIZE, int(available_h / (StaticTermCard.CARD_HEIGHT + dp(4)))))
 
-    def _get_search_page_size(self):
-        """Адаптивный шаг для поиска."""
-        total = len(self.search_results)
-        if total <= 100:
-            return 10
-        elif total <= 300:
-            return 25
-        else:
-            return 50
+    def _recalc_page_size(self, force=False):
+        if self._page_size_locked and not force: return
+        new_size = self._calc_page_size()
+        if new_size == self._page_size:
+            if not self._page_size_locked: self._page_size_locked = True
+            return
+        self._page_size = new_size
+        self._page_size_locked = True
+        if self.current_letter:
+            self._ensure_valid_page()
+            self._display_current_page()
+
+    def on_size(self, *args):
+        current_size = (Window.width, Window.height)
+        if self._last_window_size is not None:
+            old_w, old_h = self._last_window_size
+            if abs(old_w - current_size[0]) < dp(50) and abs(old_h - current_size[1]) < dp(50): return
+        self._last_window_size = current_size
+        if self._page_size_locked: Clock.schedule_once(lambda dt: self._recalc_on_rotation(), 0.3)
+
+    def _recalc_on_rotation(self):
+        new_size = self._calc_page_size()
+        if new_size != self._page_size:
+            self._page_size = new_size
+            if self.current_letter:
+                self._ensure_valid_page()
+                self._display_current_page()
 
     def _ensure_valid_page(self):
-        page_size = self._get_page_size()
-        if self._total_terms <= 0:
-            self._page = 0
+        if self._total_terms <= 0: self._page = 0; return
+        max_page = (self._total_terms - 1) // self._page_size
+        if self._page > max_page: self._page = max_page
+
+    def _show_loading_spinner(self):
+        if self._loading_spinner or self._spinner_pending: return
+        self._spinner_pending = True
+
+        def _actually_show(dt):
+            if not self._spinner_pending: return
+            self._spinner_pending = False
+            if self._loading_spinner: return
+            overlay = FloatLayout(size_hint=(1, 1))
+            spinner = LoadingSpinner(text=get_text('loading', 'Загрузка'))
+            spinner.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+            overlay_color = spinner.get_overlay_color()
+            with overlay.canvas.before:
+                Color(*overlay_color)
+                rect = Rectangle(pos=overlay.pos, size=overlay.size)
+            overlay.bind(pos=lambda inst, val: setattr(rect, 'pos', val),
+                         size=lambda inst, val: setattr(rect, 'size', val))
+            overlay.add_widget(spinner)
+            spinner.start_animation()
+            self._loading_spinner = overlay
+            self._loading_spinner_widget = spinner
+            self.add_widget(overlay)
+
+        Clock.schedule_once(_actually_show, 0.25)
+
+    def _hide_loading_spinner(self):
+        if self._spinner_pending: self._spinner_pending = False
+        if not self._loading_spinner: return
+        if self._loading_spinner_widget:
+            self._loading_spinner_widget.stop_animation()
+            self._loading_spinner_widget = None
+        if self._loading_spinner.parent: self._loading_spinner.parent.remove_widget(self._loading_spinner)
+        self._loading_spinner = None
+
+    def _on_swipe_up(self):
+        if self.is_search_mode:
+            if not self._all_search_results: return
+            total_pages = (len(self._all_search_results) + self._page_size - 1) // self._page_size
+            if self._search_page < total_pages - 1: self._show_search_page(self._search_page + 1)
+        else:
+            if self._total_terms <= 0: return
+            max_page = (self._total_terms - 1) // self._page_size
+            if self._page < max_page: self._load_page(self._page + 1)
+
+    def _on_swipe_down(self):
+        if self.is_search_mode:
+            if not self._all_search_results: return
+            if self._search_page > 0: self._show_search_page(self._search_page - 1)
+        else:
+            if self._total_terms <= 0: return
+            if self._page > 0: self._load_page(self._page - 1)
+
+    def _show_search_page(self, page_idx):
+        if not self._all_search_results:
+            self._hide_search_pagination()
             return
-        max_page = (self._total_terms - 1) // page_size
-        if self._page > max_page:
-            self._page = max_page
+        self._search_page = page_idx
+        start = page_idx * self._page_size
+        end = min(start + self._page_size, len(self._all_search_results))
+        page_slice = self._all_search_results[start:end][:self._page_size]
 
-    def _ensure_valid_search_page(self):
-        page_size = self._get_search_page_size()
-        total = len(self.search_results)
-        if total <= 0:
-            self._search_page = 0
+        self._search_pagination_container.height = self.PAGINATION_HEIGHT
+        self._search_pagination_container.opacity = 1
+        self._search_pagination_container.disabled = False
+        self._search_pagination_bar.set_total(len(self._all_search_results), self._page_size, self._search_page,
+                                              on_click=self._on_search_page_selected)
+
+        first_term = page_slice[0]['id'] if page_slice else 0
+        display_key = (self._search_page, len(page_slice), first_term, self._page_size)
+        if self._last_search_display_key != display_key:
+            self.cards_container.set_terms(page_slice, self.on_term_selected)
+            self._last_search_display_key = display_key
+
+        self._update_search_result_label()
+        dictionary_state.save(
+            {'is_search_mode': True, 'query': self.search_bar.current_query, 'search_page': self._search_page})
+
+    def _update_search_result_label(self):
+        if not self._all_search_results:
+            self._hide_result_label()
             return
-        max_page = (total - 1) // page_size
-        if self._search_page > max_page:
-            self._search_page = max_page
+        end = min((self._search_page + 1) * self._page_size, len(self._all_search_results))
+        self._show_result_label(
+            f"{get_text('found_terms', 'Найдено')}: {end} {get_text('of', 'из')} {len(self._all_search_results)}")
 
-    # ============ ПОИСК / АЛФАВИТ ============
+    def _hide_search_pagination(self):
+        if not self._search_pagination_container: return
+        self._search_pagination_container.height = 0
+        self._search_pagination_container.opacity = 0
+        self._search_pagination_container.disabled = True
 
-    def _show_hint(self, text):
-        if self._hint_timer:
-            Clock.unschedule(self._hint_timer)
-            self._hint_timer = None
-        if self._main_label:
-            self._main_label.text = text
+    def _on_search_page_selected(self, page_index):
+        if page_index == self._search_page: return
+        self._show_search_page(page_index)
+
+    def _hide_pagination(self):
+        if not self._pagination_container: return
+        self._pagination_container.height = 0
+        self._pagination_container.opacity = 0
+        self._pagination_container.disabled = True
+
+    def _show_pagination_bar(self):
+        if not self._pagination_bar: return
+        self._pagination_container.height = self.PAGINATION_HEIGHT
+        self._pagination_container.opacity = 1
+        self._pagination_container.disabled = False
+        self._pagination_bar.set_total(max(self._total_terms, 1), self._page_size, self._page)
+
+    def _on_page_selected_from_bar(self, page_index):
+        if page_index == self._page: return
+        self._load_page(page_index)
+
+    def _is_page_cached(self, cache, page):
+        start = page * self._page_size
+        total = cache['total']
+        end = min(start + self._page_size, total) if total else start + self._page_size
+        for idx in range(start, end):
+            if idx not in cache['items']: return False
+        return True
+
+    def _build_page_slice(self, cache, page):
+        start = page * self._page_size
+        end = start + self._page_size
+        total = cache['total']
+        if total: end = min(end, total)
+        return [cache['items'][i] for i in range(start, end) if i in cache['items']]
+
+    def _load_page(self, page):
+        if not self.current_letter: return
+        cache = self._terms_cache.get(self.current_letter)
+        if cache is None: return
+        if cache.get('failed'):
+            self._load_batch(letter=self.current_letter, batch_offset=0, target_page=page)
+            return
+        self._total_terms = cache['total']
+        self._page = page
+        if self._is_page_cached(cache, page):
+            self._all_terms = self._build_page_slice(cache, page)
+            self._display_current_page()
+            return
+        if self._batch_loading:
+            self._pending_page = page
+            return
+        batch_offset = (page * self._page_size) // self._batch_size * self._batch_size
+        self._load_batch(letter=self.current_letter, batch_offset=batch_offset, target_page=page)
+
+    def _load_batch(self, letter, batch_offset, target_page, token=None):
+        cache = self._terms_cache.get(letter)
+        if cache is None:
+            cache = {'items': {}, 'total': 0, 'batches': set(), 'failed': False}
+            self._terms_cache[letter] = cache
+        if batch_offset in cache['batches']:
+            self._batch_loading = False
+            self._all_terms = self._build_page_slice(cache, target_page)
+            Clock.schedule_once(lambda dt: self._display_current_page(), 0)
+            return
+
+        if token is None:
+            self._load_token += 1
+            token = self._load_token
+        my_token = token
+
+        self._batch_loading = True
+        self._show_loading_spinner()
+
+        def _on_success(data):
+            if my_token != self._load_token: return
+            if isinstance(data, dict) and data.get('error'):
+                self._batch_loading = False
+                self._hide_loading_spinner()
+                cache['failed'] = True
+                self.cards_container.clear()
+                self._show_result_label("Нет ответа от сервера. Проверьте интернет.", is_error=True)
+                return
+            try:
+                self._batch_loading = False
+                cache['failed'] = False
+                if not isinstance(data, dict): data = {"terms": [], "total": 0}
+                terms = data.get('terms', []) or []
+                total = data.get('total', 0) or 0
+
+                if total == 0 and len(terms) == 0:
+                    self._hide_loading_spinner()
+                    self.cards_container.clear()
+                    self._show_result_label("Терминов не найдено")
+                    self._hide_pagination()
+                    return
+
+                for i, a in enumerate(terms):
+                    if isinstance(a, dict):
+                        cache['items'][batch_offset + i] = {'id': a.get('id', 0), 'name': a.get('name', '')}
+                if total > 0: cache['total'] = total
+                cache['batches'].add(batch_offset)
+                self._total_terms = cache['total']
+
+                show_page = self._pending_page
+                self._pending_page = None
+                if show_page is None: show_page = target_page
+                self._page = show_page
+                self._ensure_valid_page()
+
+                if not self._is_page_cached(cache, self._page):
+                    if cache['total'] and self._page * self._page_size >= cache['total']:
+                        self._hide_loading_spinner()
+                        self._all_terms = self._build_page_slice(cache, self._page)
+                        Clock.schedule_once(lambda dt: self._display_current_page(), 0)
+                        return
+                    batch_offset2 = (self._page * self._page_size) // self._batch_size * self._batch_size
+                    self._load_batch(letter=letter, batch_offset=batch_offset2, target_page=self._page)
+                    return
+                self._hide_loading_spinner()
+                self._all_terms = self._build_page_slice(cache, self._page)
+                Clock.schedule_once(lambda dt: self._display_current_page(), 0)
+            except Exception as e:
+                self._batch_loading = False
+                self._pending_page = None
+                self._hide_loading_spinner()
+                logger.error(f"❌ Ошибка _on_success: {e}")
+                self._show_result_label("Ошибка загрузки", is_error=True)
+
+        def _on_error(req, err):
+            if my_token != self._load_token: return
+            self._batch_loading = False
+            self._pending_page = None
+            self._hide_loading_spinner()
+            cache['failed'] = True
+            self._show_retry_error(letter)
+
+        api.get_terms_by_letter(letter=letter, lang=self.current_language, limit=self._batch_size,
+                                offset=batch_offset, on_success=_on_success, on_failure=_on_error)
+
+    def _show_retry_error(self, letter):
+        self.cards_container.clear()
+        self._show_result_label("Нет ответа. Нажмите букву ещё раз", is_error=True)
+
+    def _load_terms(self, letter):
+        self.current_letter = letter
+        self._page = 0
+        self._batch_loading = False
+        self._pending_page = None
+        self._load_token += 1
+        my_token = self._load_token
+
+        cache = self._terms_cache.get(letter)
+        if cache is not None and not cache.get('failed') and (cache.get('total', 0) > 0 or cache.get('batches')):
+            self._total_terms = cache['total']
+            if self._is_page_cached(cache, 0):
+                self._all_terms = self._build_page_slice(cache, 0)
+                Clock.schedule_once(lambda dt: self._display_current_page(), 0)
+            else:
+                self._load_page(0)
+            return
+
+        self._all_terms = []
+        self._total_terms = 0
+        self._terms_cache[letter] = {'items': {}, 'total': 0, 'batches': set(), 'failed': False}
+        self._load_batch(letter=letter, batch_offset=0, target_page=0, token=my_token)
+
+    def on_term_selected(self, term_id, term_name):
+        self.save_current_state()
+        screen_state.set_previous_screen('dictionary')
+        if self.manager and self.manager.has_screen('term_detail'):
+            scr = self.manager.get_screen('term_detail')
+            scr.set_term(term_id, previous_screen='dictionary')
+            self.manager.current = 'term_detail'
+
+    def on_letter_press(self, letter):
+        self._load_token += 1
+        if self.dictionary_menu: self.dictionary_menu.set_current_letter(letter)
+        self.is_search_mode = False
+        if self.search_bar and self.search_bar.search_field.text: self.search_bar.clear()
+        self._last_display_key = None
+        self._load_terms(letter)
+
+    # ---------- ПОИСК ----------
+    def do_search(self, query):
+        query = query.strip()
+        if len(query) < 2:
+            self._show_temporary_hint(get_text('min_chars'), 1.5)
+            return
+
+        self.current_language = self._get_dict_lang()
+
+        self.is_search_mode = True
+        self.current_letter = None
+        if self.dictionary_menu: self.dictionary_menu.set_current_letter(None)
+        self._hide_pagination()
+        self._hide_search_pagination()
+        self._hide_result_label()
+
+        self._search_token = str(time.time())
+        token = self._search_token
+        self._search_in_progress = True
+        self._last_search_display_key = None
+        dictionary_state.save({'is_search_mode': True, 'query': query, 'search_page': 0})
+        self._show_loading_spinner()
+
+        def _on_success(res):
+            Clock.schedule_once(lambda dt: self._on_search_success(res, token), 0)
+
+        def _on_failure(req, err):
+            Clock.schedule_once(lambda dt: self._on_search_failed(req, err, token), 0)
+
+        api.search_terms(query=query, lang=self.current_language, limit=100, on_success=_on_success,
+                         on_failure=_on_failure)
+
+    def _on_search_success(self, results, token):
+        if token != self._search_token: return
+        self._search_in_progress = False
+        self._hide_loading_spinner()
+
+        if isinstance(results, dict) and results.get('error'):
+            self._all_search_results = []
+            self.cards_container.clear()
+            self._hide_search_pagination()
+            self._show_result_label("Нет ответа от сервера. Проверьте интернет.", is_error=True)
+            return
+
+        raw = results.get('results', []) if isinstance(results, dict) else (
+            results if isinstance(results, list) else [])
+        self._all_search_results = [{'id': r.get('id', 0), 'name': r.get('name', '')} for r in raw if
+                                    isinstance(r, dict)]
+        self._search_page = 0
+        self._last_search_display_key = None
+
+        if not self._all_search_results:
+            self.cards_container.clear()
+            self._hide_result_label()
+            self._show_result_label(get_text('nothing_found', 'Ничего не найдено'))
+            self._hide_search_pagination()
+        else:
+            self._show_search_page(0)
+
+    def _on_search_failed(self, req, error, token):
+        if token != self._search_token: return
+        self._search_in_progress = False
+        self._hide_loading_spinner()
+        self._all_search_results = []
+        self.cards_container.clear()
+        self._hide_result_label()
+        self._hide_search_pagination()
+        self._show_result_label("Нет ответа от сервера. Проверьте интернет.", is_error=True)
+
+    def clear_search(self):
+        self.is_search_mode = False
+        self._all_search_results = []
+        self._search_in_progress = False
+        self._search_token = str(time.time())
+        self._last_search_display_key = None
+        self._hide_result_label()
+        self._hide_loading_spinner()
+        self._hide_pagination()
+        self._hide_search_pagination()
+        self.current_letter = None
+        if self.dictionary_menu: self.dictionary_menu.set_current_letter(None)
+        self.cards_container.clear()
+
+    def _display_current_page(self):
+        self._hide_loading_spinner()
+        self._hide_search_pagination()
+        if not self._all_terms:
+            self._show_empty()
+            self.cards_container.clear()
+            self._hide_pagination()
+            return
+        self._hide_empty()
+        self._show_pagination_bar()
+
+        terms_to_show = self._all_terms[:self._page_size]
+        first_term = terms_to_show[0].get('id', '') if terms_to_show else ''
+        display_key = (self.current_letter, self._page, len(terms_to_show), first_term, self._page_size)
+        if self._last_display_key != display_key:
+            self.cards_container.set_terms(terms_to_show, self.on_term_selected)
+            self._last_display_key = display_key
+
+        current_count = min((self._page + 1) * self._page_size, self._total_terms)
+        self._show_result_label(
+            f"{get_text('terms_by_letter', 'Термины')}: {current_count} {get_text('of', 'из')} {self._total_terms}")
+        self.save_current_state()
+        Clock.schedule_once(lambda dt: self._update_cards_layout(len(terms_to_show)), 0)
 
     def _show_temporary_hint(self, text, duration=1.5):
-        if self._main_label:
-            self._main_label.text = text
-            if self._hint_timer:
-                Clock.unschedule(self._hint_timer)
-            self._hint_timer = Clock.schedule_once(lambda dt: self._restore_hint(), duration)
+        self._show_result_label(text)
+        if self._hint_timer: Clock.unschedule(self._hint_timer)
+        self._hint_timer = Clock.schedule_once(lambda dt: self._restore_hint(), duration)
 
     def _restore_hint(self):
         self._hint_timer = None
-        if self.is_search_mode:
-            self._main_label.text = get_text('search_results')
-        else:
-            self._main_label.text = get_text('search_by_alphabet')
+        if self._all_terms:
+            self._update_result_label_for_letter()
+        elif self._all_search_results:
+            self._update_search_result_label()
+        elif self._result_label:
+            self._hide_result_label()
 
-    def _show_result_label(self, text):
+    def _show_result_label(self, text, is_error=False):
         if self._result_label:
             self._result_label.text = text
             self._result_label.opacity = 1
+            self._result_label.text_color = [0.8, 0.3, 0.3, 1] if is_error else DictionaryColors.get_hint_color(
+                settings_manager.theme)
 
     def _hide_result_label(self):
         if self._result_label:
             self._result_label.text = ""
             self._result_label.opacity = 0
 
-    def _update_result_label_for_letter(self):
-        if self.current_letter:
-            page_size = self._get_page_size()
-            if self._total_terms > page_size:
-                current_count = min((self._page + 1) * page_size, self._total_terms)
-                self._show_result_label(
-                    f"{get_text('terms_by_letter')} {self.current_letter.upper()}: "
-                    f"{current_count} {get_text('of')} {self._total_terms}")
-            else:
-                self._show_result_label(
-                    f"{get_text('terms_by_letter')} {self.current_letter.upper()}")
+    def _show_empty(self, text=None):
+        self._show_result_label(text or get_text('no_terms_for_letter', 'Нет терминов на эту букву'))
 
-    def _update_search_result_label(self):
-        if not self.search_results:
-            self._hide_result_label()
-            return
-        page_size = self._get_search_page_size()
-        total = len(self.search_results)
-        if total > page_size:
-            start = self._search_page * page_size
-            end = min(start + page_size, total)
-            current = end - start
-            self._show_result_label(
-                f"{get_text('found_terms')}: {current} {get_text('of')} {total}")
-        else:
-            self._show_result_label(
-                f"{get_text('found_terms')}: {total}")
-
-    # ============ ПАГИНАЦИЯ АЛФАВИТА ============
-
-    def _hide_pagination(self):
-        if not self._pagination_bar:
-            return
-        self._pagination_bar.height = 0
-        self._pagination_bar.opacity = 0
-        self._pagination_bar.disabled = True
-
-    def _show_pagination_bar(self):
-        if not self._pagination_bar:
-            return
-        page_size = self._get_page_size()
-        if self._total_terms <= page_size:
-            self._hide_pagination()
-            return
-        self._pagination_bar.height = dp(48)
-        self._pagination_bar.opacity = 1
-        self._pagination_bar.disabled = False
-        self._pagination_bar.set_total(self._total_terms, page_size, self._page)
-
-    def _on_page_selected_from_bar(self, page_index):
-        if page_index == self._page:
-            return
-        self._page = page_index
-        self._display_letter_page()
-
-    def _display_letter_page(self):
-        if not self.current_letter:
-            return
-        terms = self.terms_by_letter.get(self.current_letter, [])
-        self._total_terms = len(terms)
-        self._ensure_valid_page()
-        page_size = self._get_page_size()
-        start = self._page * page_size
-        end = min(start + page_size, self._total_terms)
-        page_terms = terms[start:end]
-        self._page_terms = page_terms
-        if page_terms:
-            self._set_terms_view(page_terms)
-            self._update_result_label_for_letter()
-        else:
-            self.search_recycle_view.clear()
-            self._show_result_label(
-                f"{get_text('no_terms_for_letter')} {self.current_letter.upper()}")
-        if self._total_terms > page_size:
-            self._show_pagination_bar()
-        else:
-            self._hide_pagination()
-
-    def _show_letter_terms(self, letter):
-        self.current_letter = letter
-        self._page = 0
-        terms = self.terms_by_letter.get(letter, [])
-        self._total_terms = len(terms)
-        self._ensure_valid_page()
-        if terms:
-            self._display_letter_page()
-        else:
-            self.search_recycle_view.clear()
-            self._page_terms = []
-            self._show_result_label(
-                f"{get_text('no_terms_for_letter')} {letter.upper()}")
-            self._hide_pagination()
-
-    def _set_terms_view(self, terms):
-        first = terms[0] if terms else ''
-        display_key = ('letter', self.current_letter, self._page, len(terms), first)
-        if self._last_display_key != display_key:
-            self.search_recycle_view.set_terms(terms, self.on_term_selected)
-            self._last_display_key = display_key
-            Clock.schedule_once(
-                lambda dt: setattr(self.search_recycle_view, 'scroll_y', 1.0), 0.1)
-
-    # ============ ПАГИНАЦИЯ ПОИСКА ============
-
-    def _hide_search_pagination(self):
-        if not self._search_pagination_bar:
-            return
-        self._search_pagination_bar.height = 0
-        self._search_pagination_bar.opacity = 0
-        self._search_pagination_bar.disabled = True
-
-    def _show_search_pagination_bar(self):
-        if not self._search_pagination_bar:
-            return
-        page_size = self._get_search_page_size()
-        total = len(self.search_results)
-        if total <= page_size:
-            self._hide_search_pagination()
-            return
-        self._search_pagination_bar.height = dp(48)
-        self._search_pagination_bar.opacity = 1
-        self._search_pagination_bar.disabled = False
-        self._search_pagination_bar.set_total(total, page_size, self._search_page)
-
-    def _on_search_page_selected(self, page_index):
-        if page_index == self._search_page:
-            return
-        self._show_search_page(page_index)
-
-    def _show_search_page(self, page_idx):
-        if not self.search_results:
-            self._hide_search_pagination()
-            return
-        self._search_page = page_idx
-        self._ensure_valid_search_page()
-        page_size = self._get_search_page_size()
-        start = self._search_page * page_size
-        end = min(start + page_size, len(self.search_results))
-        page_slice = self.search_results[start:end]
-
-        first = page_slice[0] if page_slice else ''
-        display_key = ('search', self._search_page, len(page_slice), first)
-        if self._last_search_display_key != display_key:
-            self.search_recycle_view.set_terms(page_slice, self.on_term_selected)
-            self._last_search_display_key = display_key
-            Clock.schedule_once(
-                lambda dt: setattr(self.search_recycle_view, 'scroll_y', 1.0), 0.1)
-
-        self._update_search_result_label()
-
-        if len(self.search_results) > page_size:
-            self._show_search_pagination_bar()
-        else:
-            self._hide_search_pagination()
-
-    def do_search(self, query):
-        query_lower = query.strip().lower()
-        self._last_query = query
-
-        if len(query_lower) < 2:
-            self._show_temporary_hint(get_text('min_chars'), 1.5)
-            return
-
-        self.is_search_mode = True
-        self.current_letter = None
-        self.dictionary_menu.set_current_letter(None)
-        self._show_hint(get_text('search_results'))
-        self._hide_pagination()
-
-        query_words = query_lower.split()
-        exact, prefix, contains, word_m = [], [], [], []
-
-        for term_name in self.all_terms:
-            term_lower = term_name.lower()
-            if term_lower == query_lower:
-                if term_name not in exact:
-                    exact.append(term_name)
-                continue
-            if term_lower.startswith(query_lower):
-                if term_name not in prefix:
-                    prefix.append(term_name)
-                continue
-            if query_lower in term_lower:
-                if term_name not in contains:
-                    contains.append(term_name)
-                continue
-            for w in query_words:
-                if len(w) >= 2 and w in term_lower:
-                    if term_name not in word_m:
-                        word_m.append(term_name)
-                    break
-
-        results = []
-        for lst in (exact, prefix, contains, word_m):
-            for r in lst:
-                if r not in results:
-                    results.append(r)
-        self.search_results = results
-        self._search_page = 0
-        self._last_search_display_key = None
-
-        if not self.search_results:
-            self.search_recycle_view.clear()
-            self._last_display_key = None
-            self._hide_result_label()
-            self._hide_search_pagination()
-            self._show_hint(f'{get_text("nothing_found")}: "{query}"')
-        else:
-            self._show_search_page(0)
-
-    def clear_search(self):
-        self.is_search_mode = False
-        self.search_results = []
-        self._search_page = 0
-        self.search_bar.clear()
-        self.search_recycle_view.clear()
-        self._last_query = ""
-        self._last_display_key = None
-        self._last_search_display_key = None
+    def _hide_empty(self):
         self._hide_result_label()
-        self._hide_pagination()
-        self._hide_search_pagination()
-        self.current_letter = None
-        self.dictionary_menu.set_current_letter(None)
-        self._show_hint(get_text('search_by_alphabet'))
-
-    def on_letter_press(self, letter):
-        self.save_current_state()
-        self.current_letter = letter
-        self.dictionary_menu.set_current_letter(letter)
-        self.is_search_mode = False
-        self.search_bar.clear()
-        self._last_query = ""
-        self._last_display_key = None
-        self._last_search_display_key = None
-        self._hide_search_pagination()
-        self._show_letter_terms(letter)
-
-    def on_term_selected(self, term_name):
-        term_data = self.all_terms.get(term_name)
-        if not term_data:
-            self._show_temporary_hint(get_text('term_not_found'), 1.5)
-            return
-        self.save_current_state()
-        screen_state.set_previous_screen('dictionary')
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('term_detail'):
-                term_detail = self.manager.get_screen('term_detail')
-                term_detail.set_term(term_name, term_data, self.name)
-                self.manager.current = 'term_detail'
-
-    def scan_terms(self):
-        self.all_terms.clear()
-        self.terms_by_letter.clear()
-        try:
-            import dicts
-            try:
-                from dicts.ru import RU_TERMS_BY_LETTER, get_all_ru_terms
-                ru_terms = get_all_ru_terms()
-                for name, data in ru_terms.items():
-                    self.all_terms[name] = data.to_dict() if hasattr(data, 'to_dict') else data
-                for letter, terms in RU_TERMS_BY_LETTER.items():
-                    if terms:
-                        for t in terms:
-                            first = self._get_first_letter(t)
-                            if first:
-                                self.terms_by_letter.setdefault(first, []).append(t)
-            except ImportError as e:
-                logger.error(f"Ошибка русских терминов: {e}")
-            try:
-                from dicts.en import EN_TERMS_BY_LETTER, get_all_en_terms
-                en_terms = get_all_en_terms()
-                for name, data in en_terms.items():
-                    self.all_terms[name] = data.to_dict() if hasattr(data, 'to_dict') else data
-                for letter, terms in EN_TERMS_BY_LETTER.items():
-                    if terms:
-                        for t in terms:
-                            first = self._get_first_letter(t)
-                            if first:
-                                self.terms_by_letter.setdefault(first, []).append(t)
-            except ImportError as e:
-                logger.error(f"Ошибка английских терминов: {e}")
-        except ImportError as e:
-            logger.error(f"Пакет dicts не найден: {e}")
-        self.all_terms = dict(sorted(self.all_terms.items()))
-        for letter in self.terms_by_letter:
-            self.terms_by_letter[letter].sort()
-
-    def _get_first_letter(self, term_name):
-        if not term_name:
-            return None
-        clean = term_name.lstrip('«»"\'')
-        if not clean:
-            return None
-        c = clean[0].lower()
-        if ('а' <= c <= 'я') or ('a' <= c <= 'z'):
-            return c
-        return None
-
-    # ============ СОСТОЯНИЕ ============
 
     def save_current_state(self):
-        scroll = 1.0
-        if self.search_recycle_view:
-            scroll = self.search_recycle_view.get_scroll_position()
         dictionary_state.save({
             'current_letter': self.current_letter,
             'is_search_mode': self.is_search_mode,
             'current_language': self.current_language,
-            'query': self._last_query,
             'page': self._page,
-            'search_page': self._search_page,
             'total_terms': self._total_terms,
-            'scroll_position': scroll,
+            'search_page': self._search_page,
+            'query': self.search_bar.current_query if self.search_bar else "",
         })
 
     def restore_state(self):
         saved = dictionary_state.get(allow_stale=True)
-        if not saved:
-            return False
+        if not saved: return False
         try:
             self.current_letter = saved.get('current_letter')
             self.is_search_mode = saved.get('is_search_mode', False)
-            self.current_language = saved.get('current_language', 'ru')
-            self._last_query = saved.get('query', '')
             self._page = saved.get('page', 0)
-            self._search_page = saved.get('search_page', 0)
             self._total_terms = saved.get('total_terms', 0)
-            scroll = saved.get('scroll_position', 1.0)
-            self._last_display_key = None
-            self._last_search_display_key = None
+            self._search_page = saved.get('search_page', 0)
 
             if self.dictionary_menu:
                 self.dictionary_menu.set_language(self.current_language)
-
-            if self.is_search_mode and self._last_query:
-                self.search_bar.set_text(self._last_query)
-                self.is_search_mode = True
-                self._hide_pagination()
-                # Восстанавливаем query и страницу, но результаты в памяти — если есть
-                if self.search_results:
-                    self._show_search_page(self._search_page)
-                else:
-                    self._hide_search_pagination()
-                    self._show_hint(get_text('search_results'))
-            elif self.current_letter:
                 self.dictionary_menu.set_current_letter(self.current_letter)
-                terms = self.terms_by_letter.get(self.current_letter, [])
-                self._total_terms = len(terms)
+
+            if self.is_search_mode:
+                query = saved.get('query', '')
+                if query:
+                    self.search_bar.set_text(query)
+                    if self._all_search_results:
+                        self._show_search_page(self._search_page)
+                        return True
+                    else:
+                        self.do_search(query)
+                        return True
+
+            if self.current_letter and self.current_letter in self._terms_cache:
+                cache = self._terms_cache[self.current_letter]
+                self._total_terms = cache['total']
                 self._ensure_valid_page()
-                self._display_letter_page()
+                if self._is_page_cached(cache, self._page):
+                    self._all_terms = self._build_page_slice(cache, self._page)
+                    Clock.schedule_once(lambda dt: self._display_current_page(), 0)
+                else:
+                    self._load_page(self._page)
+            elif self.current_letter:
+                self._load_terms(self.current_letter)
             else:
-                self.search_recycle_view.clear()
-                self._show_hint(get_text('search_by_alphabet'))
+                self.cards_container.clear()
+                self._restore_hint()
                 self._hide_result_label()
                 self._hide_pagination()
-                self._hide_search_pagination()
-
-            def restore_scroll(dt):
-                if self.search_recycle_view:
-                    self.search_recycle_view.set_scroll_position(scroll)
-
-            Clock.schedule_once(restore_scroll, 0.1)
-            Clock.schedule_once(restore_scroll, 0.2)
             return True
         except Exception as e:
-            logger.error(f"Ошибка восстановления: {e}")
+            logger.error(f"❌ Ошибка восстановления: {e}")
             return False
+
+    def _update_result_label_for_letter(self):
+        if self.current_letter and self._all_terms:
+            current_count = min((self._page + 1) * self._page_size, self._total_terms)
+            self._show_result_label(
+                f"{get_text('terms_by_letter', 'Термины')}: {current_count} {get_text('of', 'из')} {self._total_terms}")
 
     def on_pre_leave(self):
         self.save_current_state()
@@ -1469,27 +1558,41 @@ class DictionaryScreen(BaseScreen):
     def on_enter(self):
         super().on_enter()
 
+        new_lang = self._get_dict_lang()
+        if self.current_language != new_lang:
+            self.current_language = new_lang
+            self._terms_cache.clear()
+            self._last_display_key = None
+            self.current_letter = None
+            self.is_search_mode = False
+            self._all_search_results = []
+            if self.dictionary_menu:
+                self.dictionary_menu.set_language(self.current_language)
+                self.dictionary_menu.set_current_letter(None)
+            if self.cards_container:
+                self.cards_container.clear()
+            self._hide_pagination()
+            self._hide_search_pagination()
+            self._hide_result_label()
+
         try:
             app = MDApp.get_running_app()
             if app and hasattr(app, 'top_nav'):
                 app.top_nav.set_custom_title(get_text('dictionary'))
                 app.top_nav.back_btn.on_release = self.go_back
-        except Exception as e:
-            logger.error(f"Ошибка обновления TopNav: {e}")
+        except Exception:
+            pass
 
-        if self._last_display_key is not None and not self.is_search_mode:
-            self._update_result_label_for_letter()
+        if self._last_search_display_key is not None and self.is_search_mode:
             return
 
         restored = self.restore_state()
         if not restored:
-            self._show_hint(get_text('search_by_alphabet'))
+            self._restore_hint()
             self._hide_result_label()
-            self.search_recycle_view.clear()
-            self.current_letter = None
-            self._last_display_key = None
-            if self.dictionary_menu:
-                self.dictionary_menu.set_current_letter(None)
+            self.cards_container.clear()
+            self._hide_pagination()
+            self._hide_search_pagination()
 
     def on_leave(self):
         self.save_current_state()
@@ -1498,5 +1601,5 @@ class DictionaryScreen(BaseScreen):
             self._hint_timer = None
 
     def go_back(self, instance=None):
-        if hasattr(self, 'manager') and self.manager:
+        if self.manager:
             self.manager.current = 'home'
