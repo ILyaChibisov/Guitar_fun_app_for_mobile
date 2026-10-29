@@ -1,20 +1,21 @@
 # screens/favorite_detail_screen.py
 """
 Экран просмотра песни ИЗ ИЗБРАННОГО.
-Панель справа (FloatingPanel) с клювиком и иконками.
-Слайдеры (Шрифт, Прокрутка, Тональность) выезжают внутри панели.
+Панель справа (FloatingPanel) с клювиком.
+Вертикальное меню аккордов и тональности.
 """
 from kivymd.app import MDApp
-from kivymd.uix.label import MDLabel
+from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.slider import MDSlider
+from kivymd.uix.gridlayout import MDGridLayout
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse
+from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse, Triangle, Line
 from kivy.core.image import Image as CoreImage
 from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
@@ -91,6 +92,15 @@ class DetailColors:
             return [0.12, 0.12, 0.12, 0.98]
         else:
             return [0.1, 0.3, 0.2, 0.95]
+
+    @staticmethod
+    def get_panel_line(theme_id):
+        if theme_id == 'light':
+            return [0.1, 0.55, 0.3, 0.8]
+        elif theme_id == 'dark':
+            return [1.0, 0.5, 0.0, 0.8]
+        else:
+            return [1, 1, 1, 0.3]
 
     @staticmethod
     def get_divider(theme_id):
@@ -181,95 +191,81 @@ class PanelIcon(ButtonBehavior, MDBoxLayout):
         self.height = dp(48)
         self.md_bg_color = [0, 0, 0, 0]
         self.on_click_callback = on_click
+        self.icon_name = icon
 
-        self.icon_btn = MDIconButton(
-            icon=icon, size_hint=(None, None), size=(dp(32), dp(32)),
+        self.icon_widget = MDIcon(
+            icon=icon,
+            size_hint=(None, None),
+            size=(dp(32), dp(32)),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            theme_icon_color='Custom', md_bg_color=[0, 0, 0, 0], ripple_scale=0
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1]
         )
-        self.add_widget(self.icon_btn)
+        self.add_widget(self.icon_widget)
         self.bind(on_release=self._on_click)
 
     def _on_click(self, instance):
-        if self.on_click_callback: self.on_click_callback()
+        if self.on_click_callback:
+            self.on_click_callback()
 
     def set_color(self, color):
-        self.icon_btn.icon_color = color
+        self.icon_widget.text_color = color
+
+    def set_icon(self, icon_name):
+        self.icon_name = icon_name
+        self.icon_widget.icon = icon_name
 
 
-class CustomHandle(MDBoxLayout):
-    """
-    Клювик-ручка. Прилегает к левому краю панели.
-    Скруглен только слева. Справа — прямой край (сливается с панелью).
-    """
+class CustomHandle(Widget):
+    """Пухлый полукруглый клювик со стрелкой."""
 
     def __init__(self, color, bg_color, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'vertical'
         self.size_hint = (None, None)
-        self.size = (dp(16), dp(48))  # Маленький и аккуратный
-        self.md_bg_color = [0, 0, 0, 0]
+        self.size = (dp(22), dp(70))
+        self.bg_color = bg_color
+        self.arrow_color = color
+        self.panel_is_open = False
 
-        with self.canvas.before:
-            self.bg_color_inst = Color(*bg_color)
-            # Скругляем ТОЛЬКО левые углы (верхний левый и нижний левый)
+        self.bind(pos=self.redraw, size=self.redraw)
+        self.redraw()
+
+    def redraw(self, *args):
+        self.canvas.clear()
+        cy = self.center_y
+
+        with self.canvas:
+            Color(*self.bg_color)
             self.bg_rect = RoundedRectangle(
-                pos=self.pos,
-                size=self.size,
-                radius=[dp(8), 0, 0, dp(8)]
+                pos=(self.x, self.y),
+                size=(self.width + dp(10), self.height),
+                radius=[dp(14)] * 4
             )
-        self.bind(pos=self._update_rect, size=self._update_rect)
 
-        self.dot_color = color
-        self._build_dots()
+            Color(*self.arrow_color)
+            cx = self.x + dp(8)
+            size = dp(6)
+            if self.panel_is_open:
+                points = [cx - size, cy + size, cx - size, cy - size, cx + size, cy]
+            else:
+                points = [cx + size, cy + size, cx + size, cy - size, cx - size, cy]
 
-    def _update_rect(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
+            Triangle(points=points)
 
-    def _build_dots(self):
-        self.clear_widgets()
-        from kivy.uix.floatlayout import FloatLayout
-        layout = FloatLayout(size_hint=(1, 1))
-
-        class DotsWidget(Widget):
-            def __init__(self, color, **kwargs):
-                super().__init__(**kwargs)
-                self.color = color
-                self.size_hint = (None, None)
-                self.size = (dp(16), dp(48))
-                self.bind(pos=self.redraw, size=self.redraw)
-                self.redraw()
-
-            def redraw(self, *args):
-                self.canvas.clear()
-                cx = self.center_x
-                cy = self.center_y
-                r = dp(2.0)
-                sp = dp(5)
-                with self.canvas:
-                    Color(*self.color)
-                    Ellipse(pos=(cx - r, cy + sp - r), size=(r * 2, r * 2))
-                    Ellipse(pos=(cx - r, cy - r), size=(r * 2, r * 2))
-                    Ellipse(pos=(cx - r, cy - sp - r), size=(r * 2, r * 2))
-
-        self.dots = DotsWidget(color=self.dot_color)
-        self.dots.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-        layout.add_widget(self.dots)
-        self.add_widget(layout)
+    def set_state(self, is_open):
+        self.panel_is_open = is_open
+        self.redraw()
 
     def set_color(self, color, bg_color=None):
-        self.dot_color = color
-        if hasattr(self, 'dots'):
-            self.dots.color = color
-            self.dots.redraw()
+        self.arrow_color = color
         if bg_color:
-            self.bg_color_inst.rgba = bg_color
+            self.bg_color = bg_color
+        self.redraw()
 
 
 class FloatingPanel(MDCard):
     PANEL_WIDTH = dp(64)
-    HANDLE_WIDTH = dp(16)  # Ширина клювика
+    HANDLE_WIDTH = dp(22)
     TOTAL_WIDTH = PANEL_WIDTH + HANDLE_WIDTH
     VISIBLE_MARGIN = dp(4)
 
@@ -285,11 +281,34 @@ class FloatingPanel(MDCard):
         self.width = self.TOTAL_WIDTH
         self.height = dp(100)
 
-        # Скругляем ТОЛЬКО правые углы панели (левые прямые, чтобы клювик прилегал вплотную)
-        self.radius = [0, dp(16), dp(16), 0]
-        self.elevation = 6
-        self.md_bg_color = [*panel_bg[:3], 0.96]
+        self.md_bg_color = [0, 0, 0, 0]
+        self.radius = [0, 0, 0, 0]
+        self.elevation = 0
         self.padding = [0, 0, 0, 0]
+
+        # Фон панели и тень
+        with self.canvas.before:
+            Color(0, 0, 0, 0.3)
+            self.shadow_rect = RoundedRectangle(
+                pos=(self.x + self.HANDLE_WIDTH + dp(2), self.y - dp(2)),
+                size=(self.PANEL_WIDTH, self.height),
+                radius=[dp(16)] * 4
+            )
+            self.bg_color_inst = Color(*panel_bg)
+            self.bg_rect = RoundedRectangle(
+                pos=(self.x + self.HANDLE_WIDTH, self.y),
+                size=(self.PANEL_WIDTH, self.height),
+                radius=[dp(16)] * 4
+            )
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
+        # Обводка панели
+        with self.canvas.after:
+            self.line_color_inst = Color(*DetailColors.get_panel_line(theme_id))
+            self.outline_rect = Line(
+                rounded_rectangle=(self.x + self.HANDLE_WIDTH, self.y, self.PANEL_WIDTH, self.height, dp(16)),
+                width=1.2
+            )
 
         self._visible_x = None
         self._hidden_x = None
@@ -304,24 +323,21 @@ class FloatingPanel(MDCard):
         self._active_slider = None
 
         # --- КЛЮВИК ---
-        # 1. Создаем клювик (цвет фона берем от панели)
         self.handle_widget = CustomHandle(
             color=DetailColors.get_accent(theme_id),
-            bg_color=[*panel_bg[:3], 0.96],
-            pos_hint={'center_y': 0.5, 'right': 1}  # Прижимаем к правому краю своего контейнера
+            bg_color=panel_bg,
+            pos_hint={'center_y': 0.5, 'right': 1}
         )
 
-        # 2. Создаем контейнер для клювика, который будет висеть слева от панели
         self.handle_container = FloatLayout(
             size_hint=(None, 1),
             width=self.HANDLE_WIDTH,
-            pos_hint={'x': 0}  # Прижимаем к левому краю всей панели
+            pos_hint={'x': 0}
         )
         self.handle_container.add_widget(self.handle_widget)
         self.add_widget(self.handle_container)
 
-        # --- КОНТЕЙНЕР КОНТЕНТА (adaptive_height) ---
-        # Сдвинут вправо, чтобы не перекрывать клювик
+        # --- КОНТЕЙНЕР КОНТЕНТА ---
         self.content = MDBoxLayout(
             orientation='vertical',
             size_hint=(None, None),
@@ -339,19 +355,31 @@ class FloatingPanel(MDCard):
         self._build_menu()
         Clock.schedule_once(lambda dt: self._init_position(), 0.5)
 
+    def _update_bg(self, *args):
+        self.bg_rect.pos = (self.x + self.HANDLE_WIDTH, self.y)
+        self.bg_rect.size = (self.PANEL_WIDTH, self.height)
+        self.shadow_rect.pos = (self.x + self.HANDLE_WIDTH + dp(2), self.y - dp(2))
+        self.shadow_rect.size = (self.PANEL_WIDTH, self.height)
+        self.outline_rect.rounded_rectangle = (
+            self.x + self.HANDLE_WIDTH, self.y,
+            self.PANEL_WIDTH, self.height, dp(16)
+        )
+
     def _on_content_height_changed(self, instance, value):
-        self.height = max(value, dp(100))
+        if self.mode == 'chords':
+            self.height = max(value, dp(350))
+        else:
+            self.height = max(value, dp(100))
         self._recenter()
 
     def _init_position(self):
-        # Когда панель ЗАКРЫТА, сдвигаем её вправо так, чтобы торчал только клювик
-        self._hidden_x = Window.width - self.HANDLE_WIDTH
-        # Когда ОТКРЫТА, показываем всю панель
+        self._hidden_x = Window.width - self.HANDLE_WIDTH + dp(4)
         self._visible_x = Window.width - self.TOTAL_WIDTH - self.VISIBLE_MARGIN
 
         self.x = self._hidden_x
         self._recenter()
         self._is_visible = False
+        self.handle_widget.set_state(False)
 
     def _recenter(self):
         if self._hidden_x is None: return
@@ -372,142 +400,148 @@ class FloatingPanel(MDCard):
             ('folder-music', 'tabs'),
             ('format-size', 'font'),
             ('palette', 'theme'),
+            ('star-off', 'unfavorite')
         ]
 
-        for icon, action in items:
+        for i, (icon, action) in enumerate(items):
             item = PanelIcon(icon=icon, on_click=lambda a=action: self._on_menu_item(a))
             self.items.append(item)
             self.content.add_widget(item)
 
-        div = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, None), height=dp(1),
-            md_bg_color=DetailColors.get_divider(settings_manager.theme)
-        )
-        self.content.add_widget(div)
-
-        unfav = PanelIcon(icon='star-off', on_click=lambda: self._on_menu_item('unfavorite'))
-        self.items.append(unfav)
-        self.content.add_widget(unfav)
+            if i < len(items) - 1:
+                div = MDBoxLayout(
+                    orientation='horizontal', size_hint=(1, None), height=dp(1),
+                    md_bg_color=DetailColors.get_divider(settings_manager.theme),
+                    padding=[dp(12), 0, dp(12), 0]
+                )
+                inner_div = MDBoxLayout(size_hint=(1, 1), md_bg_color=[0.5, 0.5, 0.5, 0.3])
+                div.add_widget(inner_div)
+                div._inner_line = inner_div
+                self.content.add_widget(div)
 
         self.update_theme_colors()
 
-    # ============ ПОД-ПАНЕЛИ ============
+    # ============ ВЕРТИКАЛЬНОЕ МЕНЮ АККОРДОВ ============
 
-    def _build_slider_panel(self, type_str):
+    def _build_chords_panel(self):
         self.content.clear_widgets()
-        self.mode = type_str
+        self.mode = 'chords'
         self._active_slider = None
 
-        parent = self.parent_screen
         theme_id = settings_manager.theme
         accent = DetailColors.get_accent(theme_id)
 
-        slider_box = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(300),
-            padding=[dp(4), dp(10), dp(4), dp(10)]
+        # 1. Стрелки пагинации
+        pag_box = MDBoxLayout(
+            orientation='horizontal', size_hint=(1, None), height=dp(44),
+            spacing=dp(2), padding=[dp(2), 0, dp(2), 0]
+        )
+        prev_btn = MDIconButton(
+            icon="chevron-left", size_hint=(1, 1),
+            theme_icon_color="Custom", icon_color=accent,
+            md_bg_color=[0, 0, 0, 0], ripple_scale=0,
+            on_release=lambda *a: self._switch_chord(-1)
+        )
+        next_btn = MDIconButton(
+            icon="chevron-right", size_hint=(1, 1),
+            theme_icon_color="Custom", icon_color=accent,
+            md_bg_color=[0, 0, 0, 0], ripple_scale=0,
+            on_release=lambda *a: self._switch_chord(1)
+        )
+        pag_box.add_widget(prev_btn)
+        pag_box.add_widget(next_btn)
+        self.content.add_widget(pag_box)
+
+        div = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1),
+                          md_bg_color=DetailColors.get_divider(theme_id))
+        self.content.add_widget(div)
+
+        # 2. Иконки действий
+        self.variant_item = PanelIcon(
+            icon="format-list-bulleted-square",
+            on_click=lambda: self._on_menu_item('variant')
+        )
+        self.mode_item = PanelIcon(
+            icon="music-note",
+            on_click=lambda: self._on_menu_item('mode')
+        )
+        self.eye_item = PanelIcon(
+            icon="eye",
+            on_click=lambda: self._on_menu_item('eye')
+        )
+        self.griff_zoom_item = PanelIcon(
+            icon="magnify",
+            on_click=lambda: self._on_menu_item('zoom')
         )
 
-        apply_btn = MDIconButton(
-            icon='check', size_hint=(None, None), size=(dp(36), dp(36)),
-            theme_icon_color='Custom', icon_color=accent,
-            md_bg_color=[0, 0, 0, 0], ripple_scale=0
+        self.content.add_widget(self.variant_item)
+        self.content.add_widget(self.mode_item)
+        self.content.add_widget(self.eye_item)
+        self.content.add_widget(self.griff_zoom_item)
+
+        div_bottom = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1),
+                                 md_bg_color=DetailColors.get_divider(theme_id))
+        self.content.add_widget(div_bottom)
+
+        # 3. Кнопка "Назад"
+        back_btn = MDIconButton(
+            icon="arrow-left", size_hint=(1, None), height=dp(48),
+            theme_icon_color="Custom", icon_color=accent,
+            md_bg_color=[0, 0, 0, 0], ripple_scale=0,
+            on_release=lambda *a: self._build_menu()
         )
-        apply_btn.bind(on_release=lambda *a: self._build_menu())
+        self.content.add_widget(back_btn)
 
-        if type_str == 'font':
-            if platform == 'android':
-                font_sizes = [30, 34, 38, 42, 46, 50, 54, 58, 60]
-            else:
-                font_sizes = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
-
-            def s2l(s):
-                try:
-                    return font_sizes.index(s)
-                except ValueError:
-                    return font_sizes.index(min(font_sizes, key=lambda x: abs(x - s)))
-
-            def l2s(v):
-                return font_sizes[max(0, min(len(font_sizes) - 1, int(round(v))))]
-
-            curr_size = getattr(parent, 'current_font_size', font_sizes[3])
-
-            def fmt(v):
-                return parent._get_font_multiplier(l2s(v)) if parent else str(l2s(v))
-
-            def on_ch(v):
-                if parent:
-                    parent.current_font_size = l2s(v)
-                    parent.content_label.font_size = parent.current_font_size
-                    parent._update_content_height()
-
-            slider = CompactVerticalSlider(
-                min_value=0, max_value=len(font_sizes) - 1, step=1,
-                initial=s2l(curr_size), formatter=fmt, on_change=on_ch
-            )
-            self._active_slider = slider
-            slider_box.add_widget(slider)
-
-        elif type_str == 'scroll':
-            def s2l(s):
-                return int(1 + (s - 0.2) / 0.03) if s <= 0.5 else int(10 + (s - 0.5) / 0.1)
-
-            def l2s(v):
-                return 0.2 + (v - 1) * 0.03 if v <= 10 else 0.5 + (v - 10) * 0.1
-
-            curr_speed = getattr(parent, 'scroll_speed', 1.0)
-
-            def fmt(v):
-                return f"{l2s(v):.1f}x"
-
-            def on_ch(v):
-                if parent: parent.scroll_speed = l2s(v)
-
-            slider = CompactVerticalSlider(
-                min_value=1, max_value=28, step=1,
-                initial=max(1, min(28, s2l(curr_speed))), formatter=fmt, on_change=on_ch
-            )
-            self._active_slider = slider
-            slider_box.add_widget(slider)
-
-        elif type_str == 'tonality':
-            curr_ton = getattr(parent, 'current_tonality', 0)
-
-            def fmt(v):
-                return "0" if v == 0 else f"{int(v):+d}"
-
-            def on_ch(v):
-                if parent:
-                    step = int(v) / 2
-                    if step != parent.current_tonality:
-                        parent.current_tonality = step
-                        parent.apply_tonality(step)
-
-            slider = CompactVerticalSlider(
-                min_value=-6, max_value=6, step=1,
-                initial=int(round(curr_ton * 2)), formatter=fmt, on_change=on_ch
-            )
-            self._active_slider = slider
-            slider_box.add_widget(slider)
-
-        bottom_box = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, None), height=dp(48),
-            padding=[0, 0, 0, dp(4)]
-        )
-        bottom_box.add_widget(Widget(size_hint_x=1))
-        bottom_box.add_widget(apply_btn)
-        bottom_box.add_widget(Widget(size_hint_x=1))
-
-        self.content.add_widget(slider_box)
-        self.content.add_widget(bottom_box)
         self.update_theme_colors()
-        Clock.schedule_once(lambda dt: self._recenter(), 0.05)
+
+        def _set_height(dt):
+            self.height = dp(350)
+            self._recenter()
+
+        Clock.schedule_once(_set_height, 0.05)
+
+    def _switch_chord(self, direction):
+        parent = self.parent_screen
+        if not parent or not hasattr(parent, '_song_chords'): return
+
+        song_chords = parent._song_chords
+        if not song_chords: return
+
+        current = parent._current_chord_index
+        new_idx = (current + direction) % len(song_chords)
+        parent._current_chord_index = new_idx
+
+        if hasattr(parent, '_update_chords_display'):
+            parent._update_chords_display()
+
+        if parent.chords_carousel and parent.chord_slides:
+            if new_idx < len(parent.chord_slides):
+                parent.chords_carousel.load_slide(parent.chord_slides[new_idx])
 
     def _on_menu_item(self, action):
         if action == 'chords':
-            self._build_menu()
-            if self.parent_screen: self.parent_screen.show_chords_section()
+            if self.parent_screen:
+                self.parent_screen.show_chords_section()
+                self._build_chords_panel()
+        elif action == 'variant':
+            if self.parent_screen and hasattr(self.parent_screen, '_next_chord_variant'):
+                self.parent_screen._next_chord_variant()
+        elif action == 'mode':
+            if self.parent_screen and hasattr(self.parent_screen, '_toggle_display_mode'):
+                self.parent_screen._toggle_display_mode()
+                parent_mode = getattr(self.parent_screen, 'display_mode', 'finger')
+                self.mode_item.set_icon("gesture-tap" if parent_mode == "notes" else "music-note")
+        elif action == 'eye':
+            if self.parent_screen and hasattr(self.parent_screen, '_toggle_eye'):
+                self.parent_screen._toggle_eye()
+                is_active = getattr(self.parent_screen, 'eye_active', False)
+                self.eye_item.set_color(
+                    [0.8, 0.2, 0.2, 1] if is_active else DetailColors.get_text_secondary(settings_manager.theme))
+        elif action == 'zoom':
+            if self.parent_screen and hasattr(self.parent_screen, '_toggle_griff_zoom'):
+                self.parent_screen._toggle_griff_zoom()
+                new_scale = getattr(self.parent_screen, 'griff_scale', 1.0)
+                self.griff_zoom_item.set_icon("magnify" if new_scale == 1.0 else "magnify-plus")
         elif action == 'tonality':
             self._build_slider_panel('tonality')
         elif action == 'scroll':
@@ -523,30 +557,299 @@ class FloatingPanel(MDCard):
         elif action == 'unfavorite':
             if self.parent_screen: self.parent_screen.toggle_favorite()
 
+    # ============ ПОД-ПАНЕЛИ (ШРИФТ/ПРОКРУТКА/ТОНАЛЬНОСТЬ) ============
+
+    def _build_slider_panel(self, type_str):
+        self.content.clear_widgets()
+        self.mode = type_str
+        self._active_slider = None
+
+        parent = self.parent_screen
+        theme_id = settings_manager.theme
+        accent = DetailColors.get_accent(theme_id)
+        text_p = DetailColors.get_text_primary(theme_id)
+        div_color = DetailColors.get_divider(theme_id)
+
+        # ✅ Фиксированная высота панели
+        self.height = dp(360)
+        self._recenter()
+
+        # Главный контейнер панели
+        panel = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            spacing=dp(4),
+            padding=[dp(2), dp(4), dp(2), dp(4)]
+        )
+
+        # 1. Заголовок
+        title_text = "Тон" if type_str == 'tonality' else ("Шрифт" if type_str == 'font' else "Скорость")
+        title_lbl = MDLabel(
+            text=title_text, halign="center", valign="middle",
+            theme_text_color="Custom", text_color=text_p, bold=True,
+            size_hint_y=None, height=dp(24), font_size=sp(13)
+        )
+        panel.add_widget(title_lbl)
+
+        # 2. Значение
+        self._sub_val_label = MDLabel(
+            text="0", halign="center", valign="middle",
+            theme_text_color="Custom", text_color=accent, bold=True,
+            size_hint_y=None, height=dp(28), font_size=sp(16)
+        )
+        panel.add_widget(self._sub_val_label)
+
+        # 3. Разделитель
+        panel.add_widget(
+            MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1), md_bg_color=div_color))
+
+        # 4. КАРТОЧКА ДЛЯ ШКАЛЫ (жесткий контейнер)
+        slider_card = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(None, None),
+            size=(dp(50), dp(180)),  # Жесткий размер карточки для слайдера
+            pos_hint={'center_x': 0.5},
+            padding=[dp(4), dp(8), dp(4), dp(8)],
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        # Плюс
+        slider_card.add_widget(MDLabel(
+            text="+", halign="center", valign="middle",
+            theme_text_color="Custom", text_color=[0.3, 0.7, 0.3, 0.9],
+            size_hint_y=None, height=dp(16), bold=True, font_size=sp(12)
+        ))
+
+        if type_str == 'tonality':
+            current_val = int(round(getattr(parent, 'current_tonality', 0) * 2))
+            self._sub_val_label.text = "0" if current_val == 0 else f"{current_val / 2:+g}"
+
+            self.ton_slider = MDSlider(
+                min=-6.01, max=6.01, value=current_val, step=1,
+                orientation='vertical',
+                size_hint=(None, None),
+                size=(dp(36), dp(140)),  # Жесткий размер самого слайдера
+                pos_hint={'center_x': 0.5},
+                hint=False
+            )
+            self.ton_slider.ripple_scale = 0
+            self.ton_slider.thumb_color_active = accent
+            self.ton_slider.thumb_color_inactive = accent
+            self.ton_slider.thumb_color_disabled = accent
+            self.ton_slider.track_color_active = accent[:3] + [0.5]
+            self.ton_slider.track_color_inactive = [1, 1, 1, 0.3]
+            self.ton_slider.color = accent
+            try:
+                self.ton_slider.cursor_size = (dp(24), dp(24))
+            except Exception:
+                pass
+
+            def on_ton_change(instance, value):
+                if value < -6:
+                    int_val = -6
+                elif value > 6:
+                    int_val = 6
+                else:
+                    int_val = int(round(value))
+                if self.ton_slider.value != int_val:
+                    self.ton_slider.value = int_val
+                val_half = int_val / 2
+                self._sub_val_label.text = "0" if val_half == 0 else f"{val_half:+g}"
+                if parent and val_half != getattr(parent, 'current_tonality', 0):
+                    parent.current_tonality = val_half
+                    if hasattr(parent, 'apply_tonality'):
+                        parent.apply_tonality(val_half)
+
+            self.ton_slider.bind(value=on_ton_change)
+            slider_card.add_widget(self.ton_slider)
+
+        elif type_str == 'font':
+            if platform == 'android':
+                font_sizes = [30, 34, 38, 42, 46, 50, 54, 58, 60]
+            else:
+                font_sizes = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
+            total_steps = len(font_sizes) - 1
+            curr_size = getattr(parent, 'current_font_size', font_sizes[3])
+            current_val = font_sizes.index(curr_size) if curr_size in font_sizes else 3
+
+            self._sub_val_label.text = self._get_font_multiplier(curr_size)
+
+            self.font_slider = MDSlider(
+                min=-0.01, max=float(total_steps + 0.01), value=current_val, step=1,
+                orientation='vertical',
+                size_hint=(None, None),
+                size=(dp(36), dp(140)),
+                pos_hint={'center_x': 0.5},
+                hint=False
+            )
+            self.font_slider.ripple_scale = 0
+            self.font_slider.thumb_color_active = accent
+            self.font_slider.thumb_color_inactive = accent
+            self.font_slider.thumb_color_disabled = accent
+            self.font_slider.track_color_active = accent[:3] + [0.5]
+            self.font_slider.track_color_inactive = [1, 1, 1, 0.3]
+            self.font_slider.color = accent
+            try:
+                self.font_slider.cursor_size = (dp(24), dp(24))
+            except Exception:
+                pass
+
+            def on_font_change(instance, value):
+                int_val = max(0, min(total_steps, int(round(value))))
+                if self.font_slider.value != int_val:
+                    self.font_slider.value = int_val
+                new_size = font_sizes[int_val]
+                self._sub_val_label.text = self._get_font_multiplier(new_size)
+                if parent and getattr(parent, 'current_font_size', 0) != new_size:
+                    parent.current_font_size = new_size
+                    if hasattr(parent, 'content_label'):
+                        parent.content_label.font_size = new_size
+                    if hasattr(parent, '_update_content_height'):
+                        parent._update_content_height()
+
+            self.font_slider.bind(value=on_font_change)
+            slider_card.add_widget(self.font_slider)
+
+        elif type_str == 'scroll':
+            def speed_to_slider(s):
+                return int(1 + (s - 0.2) / 0.03) if s <= 0.5 else int(10 + (s - 0.5) / 0.1)
+
+            def slider_to_speed(v):
+                return 0.2 + (v - 1) * 0.03 if v <= 10 else 0.5 + (v - 10) * 0.1
+
+            curr_speed = getattr(parent, 'scroll_speed', 1.0)
+            current_val = speed_to_slider(curr_speed)
+            self._sub_val_label.text = f"{curr_speed:.1f}x"
+
+            self.scroll_slider = MDSlider(
+                min=0.99, max=28.01, value=current_val, step=1,
+                orientation='vertical',
+                size_hint=(None, None),
+                size=(dp(36), dp(140)),
+                pos_hint={'center_x': 0.5},
+                hint=False
+            )
+            self.scroll_slider.ripple_scale = 0
+            self.scroll_slider.thumb_color_active = accent
+            self.scroll_slider.thumb_color_inactive = accent
+            self.scroll_slider.thumb_color_disabled = accent
+            self.scroll_slider.track_color_active = accent[:3] + [0.5]
+            self.scroll_slider.track_color_inactive = [1, 1, 1, 0.3]
+            self.scroll_slider.color = accent
+            try:
+                self.scroll_slider.cursor_size = (dp(24), dp(24))
+            except Exception:
+                pass
+
+            def on_scroll_change(instance, value):
+                int_val = max(1, min(28, int(round(value))))
+                if self.scroll_slider.value != int_val:
+                    self.scroll_slider.value = int_val
+                new_speed = slider_to_speed(int_val)
+                self._sub_val_label.text = f"{new_speed:.1f}x"
+                if parent:
+                    parent.scroll_speed = new_speed
+
+            self.scroll_slider.bind(value=on_scroll_change)
+            slider_card.add_widget(self.scroll_slider)
+
+        # Минус
+        slider_card.add_widget(MDLabel(
+            text="-", halign="center", valign="middle",
+            theme_text_color="Custom", text_color=[0.8, 0.3, 0.3, 0.9],
+            size_hint_y=None, height=dp(16), bold=True, font_size=sp(12)
+        ))
+
+        # Добавляем карточку в панель
+        panel.add_widget(slider_card)
+
+        # 5. Кнопка "Назад"
+        bottom_box = MDBoxLayout(
+            orientation='horizontal', size_hint=(1, None), height=dp(44),
+            padding=[dp(2), dp(2), dp(2), dp(2)]
+        )
+        back_btn = MDIconButton(
+            icon="arrow-left", size_hint=(None, None), size=(dp(36), dp(36)),
+            theme_icon_color="Custom", icon_color=accent,
+            md_bg_color=[0, 0, 0, 0], ripple_scale=0,
+            on_release=lambda *a: self._build_menu()
+        )
+        bottom_box.add_widget(Widget(size_hint_x=1))
+        bottom_box.add_widget(back_btn)
+        bottom_box.add_widget(Widget(size_hint_x=1))
+
+        panel.add_widget(bottom_box)
+        self.content.add_widget(panel)
+        self.update_theme_colors()
+
+        # Принудительно обновляем размеры после добавления
+        def _force_resize(dt):
+            self.height = dp(360)
+            self._recenter()
+
+        Clock.schedule_once(_force_resize, 0.05)
+        Clock.schedule_once(_force_resize, 0.2)
+
+    def _get_font_multiplier(self, font_size):
+        parent = self.parent_screen
+        if parent is None:
+            return f"{int(font_size)}px"
+
+        std = getattr(parent, 'STANDARD_FONT_SIZE', None)
+        if std is None:
+            return f"{int(font_size)}px"
+
+        ratio = round(font_size / std * 10) / 10
+        return f"{int(ratio)}x" if ratio == int(ratio) else f"{ratio:.1f}x"
+
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         panel_bg = DetailColors.get_panel_bg(theme_id)
-        self.md_bg_color = [*panel_bg[:3], 0.96]
+        panel_line = DetailColors.get_panel_line(theme_id)
+
+        self.bg_color_inst.rgba = panel_bg
+        self.line_color_inst.rgba = panel_line
 
         if hasattr(self, 'handle_widget'):
             self.handle_widget.set_color(
                 color=DetailColors.get_accent(theme_id),
-                bg_color=[*panel_bg[:3], 0.96]
+                bg_color=panel_bg
             )
 
         if self.mode == 'menu':
             for item in self.items: item.set_color(DetailColors.get_accent(theme_id))
             for child in self.content.children:
-                if isinstance(child, MDBoxLayout) and child.height == dp(1):
-                    child.md_bg_color = DetailColors.get_divider(theme_id)
-        else:
-            if self._active_slider:
-                self._active_slider.update_theme_colors()
+                if hasattr(child, '_inner_line'):
+                    child._inner_line.md_bg_color = DetailColors.get_divider(theme_id)
+        elif self.mode == 'chords':
+            if hasattr(self, 'variant_item'):
+                self.variant_item.set_color(DetailColors.get_accent(theme_id))
+                self.mode_item.set_color(DetailColors.get_accent(theme_id))
+                self.griff_zoom_item.set_color(DetailColors.get_accent(theme_id))
+                is_eye = getattr(self.parent_screen, 'eye_active', False)
+                self.eye_item.set_color([0.8, 0.2, 0.2, 1] if is_eye else DetailColors.get_text_secondary(theme_id))
+
+            accent = DetailColors.get_accent(theme_id)
             for child in self.content.children:
                 if isinstance(child, MDBoxLayout):
                     for sub in child.children:
                         if isinstance(sub, MDIconButton):
-                            sub.icon_color = DetailColors.get_accent(theme_id)
+                            sub.icon_color = accent
+                elif isinstance(child, MDIconButton):
+                    child.icon_color = accent
+        elif self.mode in ['font', 'scroll', 'tonality']:
+            accent = DetailColors.get_accent(theme_id)
+            for child in self.content.children:
+                if isinstance(child, MDBoxLayout):
+                    for sub in child.children:
+                        if isinstance(sub, MDIconButton):
+                            sub.icon_color = accent
+                        elif isinstance(sub, MDSlider):
+                            sub.thumb_color_active = accent
+                            sub.thumb_color_inactive = accent
+                            sub.thumb_color_disabled = accent
+                            sub.track_color_active = accent[:3] + [0.6]
+                            sub.color = accent
 
     # ============ СВАЙП ============
 
@@ -568,7 +871,9 @@ class FloatingPanel(MDCard):
         for child in self.walk():
             if child is self: continue
             if hasattr(child, 'collide_point') and child.collide_point(*touch.pos):
-                if isinstance(child, (MDIconButton, PanelIcon, CompactVerticalSlider, MDSlider)):
+                if isinstance(child, (MDIconButton, PanelIcon, CompactVerticalSlider, MDSlider, MDRaisedButton)):
+                    return True
+                if hasattr(child, 'children') and isinstance(child, MDScrollView):
                     return True
         return False
 
@@ -598,6 +903,7 @@ class FloatingPanel(MDCard):
     def show(self):
         if self._is_visible: return
         self._is_visible = True
+        self.handle_widget.set_state(True)
         if self._anim: self._anim.cancel(self)
         self._anim = Animation(x=self._visible_x, duration=0.25, t='out_quad')
         self._anim.start(self)
@@ -605,6 +911,7 @@ class FloatingPanel(MDCard):
     def hide(self):
         if not self._is_visible: return
         self._is_visible = False
+        self.handle_widget.set_state(False)
         if self._anim: self._anim.cancel(self)
         self._anim = Animation(x=self._hidden_x, duration=0.25, t='in_quad')
         self._anim.start(self)
@@ -924,6 +1231,34 @@ class FavoriteDetailScreen(BaseScreen):
             renderer = self.chord_renderers[self._current_chord_index]
             renderer.load_chord(chord_module)
             renderer.set_mode(self.display_mode)
+
+    def _next_chord_variant(self):
+        if not self.chord_variants: return
+        self.chord_variant_index = (self.chord_variant_index + 1) % len(self.chord_variants)
+        self.load_current_variant()
+
+    def _toggle_display_mode(self):
+        if self.display_mode == "finger":
+            self.display_mode = "notes"
+        else:
+            self.display_mode = "finger"
+        if self._current_chord_index < len(self.chord_renderers):
+            self.chord_renderers[self._current_chord_index].set_mode(self.display_mode)
+
+    def _toggle_eye(self):
+        self.eye_active = not self.eye_active
+
+    def _toggle_griff_zoom(self):
+        if not self.griff_container: return
+        zoom_levels = [1.0, 1.3, 1.6]
+        current = self.griff_scale
+        if current in zoom_levels:
+            next_index = (zoom_levels.index(current) + 1) % len(zoom_levels)
+            new_scale = zoom_levels[next_index]
+        else:
+            new_scale = 1.0
+        self.griff_scale = new_scale
+        self.griff_container.height = int(dp(120) * new_scale)
 
     def _update_chords_display(self):
         if not self._song_chords: return

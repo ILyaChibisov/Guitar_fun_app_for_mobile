@@ -115,32 +115,30 @@ class ChordsColors:
 
     @staticmethod
     def get_menu_bg(theme_id):
-        # ✅ Возвращаем полупрозрачный фон для зелёной темы
         if theme_id == 'light':
-            return [0.95, 0.95, 0.95, 1]       # светлый (без изменений)
+            return [0.95, 0.95, 0.95, 1]
         elif theme_id == 'dark':
-            return [0.15, 0.15, 0.15, 1]        # тёмный (без изменений)
-        else:  # green
-            return [0, 0, 0, 0.15]              # прозрачный с лёгким затемнением
+            return [0.15, 0.15, 0.15, 1]
+        else:
+            return [0, 0, 0, 0.15]
 
     @staticmethod
     def get_button_bg(theme_id):
-        # ✅ Возвращаем полупрозрачный светлый фон для кнопок в зелёной теме
         if theme_id == 'light':
-            return [1, 1, 1, 1]                # белый (без изменений)
+            return [1, 1, 1, 1]
         elif theme_id == 'dark':
-            return [0.25, 0.25, 0.25, 1]       # серый (без изменений)
-        else:  # green
-            return [1, 1, 1, 0.15]             # полупрозрачный белый
+            return [0.25, 0.25, 0.25, 1]
+        else:
+            return [1, 1, 1, 0.15]
 
     @staticmethod
     def get_button_text(theme_id):
         if theme_id == 'light':
-            return [0.15, 0.15, 0.15, 1]       # тёмный (без изменений)
+            return [0.15, 0.15, 0.15, 1]
         elif theme_id == 'dark':
-            return [1, 1, 1, 0.9]              # белый (без изменений)
-        else:  # green
-            return [1, 1, 1, 0.85]             # белый текст
+            return [1, 1, 1, 0.9]
+        else:
+            return [1, 1, 1, 0.85]
 
     @staticmethod
     def get_hint_color(theme_id):
@@ -178,9 +176,11 @@ class SwipeContainer(MDBoxLayout):
         self.md_bg_color = [0, 0, 0, 0]
         self.spacing = 0
 
+        # === Отступ сверху увеличен (≈ ×3), снизу уменьшен ===
         self.name_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, None), height=dp(100),
-            padding=[dp(8), dp(6), dp(8), dp(16)], spacing=dp(6),
+            padding=[dp(8), dp(22), dp(8), dp(2)],   # top: 6→22, bottom: 16→2
+            spacing=dp(6),
             md_bg_color=[0, 0, 0, 0]
         )
 
@@ -419,7 +419,7 @@ class SearchBar(MDCard):
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(48)
-        self.radius = [dp(16)]
+        self.radius = [dp(16)] * 4
         self.elevation = 0
         self.padding = [dp(12), dp(4), dp(6), dp(4)]
         self.spacing = dp(6)
@@ -433,24 +433,25 @@ class SearchBar(MDCard):
         self.search_field.bind(focus=self._on_focus)
 
         self.clear_wrapper = MDCard(
-            size_hint=(None, None), size=(dp(30), dp(30)), radius=[dp(15)],
+            size_hint=(None, None), size=(dp(30), dp(30)), radius=[dp(15)] * 4,
             md_bg_color=[0, 0, 0, 0], elevation=0, pos_hint={'center_y': 0.5},
             opacity=0, disabled=True,
         )
-
         self.clear_btn = MDIconButton(
             icon="close-circle-outline", size_hint=(1, 1), theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0], on_release=self._on_clear_pressed
+            md_bg_color=[0, 0, 0, 0], on_release=self._on_clear_pressed, ripple_scale=0
         )
         self.clear_wrapper.add_widget(self.clear_btn)
 
         self.search_btn = MDRaisedButton(
             text="", size_hint=(None, None), size=(dp(64), dp(36)),
             text_color=[1, 1, 1, 1], font_size=sp(13), elevation=0,
-            pos_hint={'center_y': 0.5}
+            pos_hint={'center_y': 0.5},
         )
         try:
             self.search_btn._radius = dp(10)
+            self.search_btn.ripple_scale = 0
+            self.search_btn.elevation = 0
         except Exception:
             pass
         self.search_btn.bind(on_release=self._on_search_pressed)
@@ -476,30 +477,33 @@ class SearchBar(MDCard):
         if theme_id == 'light':
             self.md_bg_color = [1, 1, 1, 1]
             self.line_color = line
-            self.line_width = 1.5
+            self.line_width = 4.0
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
             self.clear_btn.icon_color = accent
             self.search_btn.md_bg_color = accent
+            self.search_btn.text_color = [0, 0, 0, 1]
         elif theme_id == 'dark':
             self.md_bg_color = [0.15, 0.15, 0.15, 1]
             self.line_color = line
-            self.line_width = 1.5
+            self.line_width = 4.0
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
             self.clear_btn.icon_color = accent
             self.search_btn.md_bg_color = accent
-        else:
+            self.search_btn.text_color = [1, 1, 1, 1]
+        else:  # green — как в songs_screen
             self.md_bg_color = [1, 1, 1, 1]
-            self.line_color = [0.08, 0.35, 0.20, 1]
-            self.line_width = 1.4
+            self.line_color = line
+            self.line_width = 4.0
             self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
             self.search_field.hint_text_color = [0.55, 0.55, 0.55, 1]
             self.search_field.cursor_color = [0.1, 0.1, 0.1, 1]
             self.clear_btn.icon_color = [0.4, 0.4, 0.4, 0.8]
             self.search_btn.md_bg_color = [0.10, 0.42, 0.25, 1]
+            self.search_btn.text_color = [1, 1, 1, 1]
 
     def _on_text_change(self, instance, text):
         self.current_query = text
@@ -525,9 +529,7 @@ class SearchBar(MDCard):
         self.search_field.focus = False
 
     def _on_focus(self, instance, value):
-        theme_id = settings_manager.theme
-        base_width = 1.5 if theme_id in ('dark', 'light') else 1.4
-        self.line_width = base_width + 0.3 if value else base_width
+        self.line_width = 5.0 if value else 4.0
 
     def clear(self):
         self.search_field.text = ""
@@ -1098,13 +1100,20 @@ class ChordsScreen(BaseScreen):
 
         content = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
 
-        # ✅ Поиск на всю ширину (без боковых padding), высота 52
+        # === Отступ сверху: BaseScreen уже добавляет top_padding,
+        #     поэтому здесь только «фантом» под алфавит (48dp) ===
+        content.add_widget(Widget(size_hint_y=None, height=dp(48)))
+
+        # === Поиск: как в songs_screen ===
         search_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None), height=dp(52)
+            orientation='vertical', size_hint=(1, None), height=dp(48),
+            padding=[padding[0], 0, padding[2], 0],
         )
         self.search_bar = SearchBar(on_search=self.do_search, on_clear=self.clear_search)
         search_container.add_widget(self.search_bar)
         content.add_widget(search_container)
+
+        content.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
         self.search_status_label = MDLabel(
             text="", font_size=sp(11), halign="center", valign="middle",
@@ -1113,7 +1122,7 @@ class ChordsScreen(BaseScreen):
         self.search_status_label.text_size = (None, None)
         content.add_widget(self.search_status_label)
 
-        content.add_widget(Widget(size_hint_y=None, height=dp(8)))
+        content.add_widget(Widget(size_hint_y=None, height=dp(4)))
 
         self.swipe_container = SwipeContainer(on_swipe_horizontal=self._on_swipe_horizontal)
         self.swipe_container.size_hint = (1, None)
@@ -1151,7 +1160,11 @@ class ChordsScreen(BaseScreen):
 
         content.add_widget(Widget(size_hint_y=1))
 
-        self.build_ui(content_widget=content, use_scroll=False)
+        self.build_ui(
+            content_widget=content,
+            use_scroll=False,
+            custom_padding=[0, 0, 0, 0],   # ← убираем padding BaseScreen, чтобы поиск ровно как в songs
+        )
 
         Clock.schedule_once(self._update_griff_size, 0.1)
         Clock.schedule_once(self._update_griff_size, 0.3)
