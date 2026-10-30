@@ -29,11 +29,10 @@ android.enable_androidx = True
 android.accept_sdk_license = True
 
 # --- NETWORK SECURITY CONFIG ---
-# Строка с extra_manifest_application_arguments удалена, так как она вызывает баг в Buildozer.
-# Атрибут добавляется автоматически через шаг в build.yml (Patch AndroidManifest).
-android.extra_manifest_xml = android_res/manifest_fragment.xml
+# ВСЁ УДАЛЕНО. Мы не даем Buildozer трогать манифест.
+# Атрибут добавляется скриптом напрямую в файл AndroidManifest.xml (см. build.yml)
 
-# ВАЖНО: собираем только под одну архитектуру для ускорения.
+# --- АРХИТЕКТУРА ---
 android.archs = arm64-v8a
 
 # --- ОТЛАДКА ---
@@ -43,7 +42,7 @@ log_level = 2
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
 android.gradle_repository_threads = 4
 
-# --- ПОДПИСЬ (для релиза) ---
+# --- ПОДПИСЬ ---
 android.keystore = guitarfuns_keystore.jks
 android.keystore_alias = guitarfuns
 android.keystore_key_password = lexx311285
