@@ -6,7 +6,7 @@
 - Пагинация снизу.
 - Динамический page_size.
 - Лейбл "Избранное: X из Y".
-- 3 попытки авто-загрузки, при провале — текст ошибки (без кнопки "Повторить").
+- 3 попытки авто-загрузки, при провале — текст ошибки в верхнем лейбле.
 - Логирование через perf('favorites.*').
 """
 import time
@@ -107,6 +107,12 @@ class FavoritesColors:
         if theme_id == 'light':
             return [0.1, 0.1, 0.1, 1]
         return [1, 1, 1, 1]
+
+    @staticmethod
+    def get_error_color(theme_id):
+        if theme_id == 'light':
+            return [0.8, 0.1, 0.1, 1]
+        return [1, 0.3, 0.3, 1]
 
     @staticmethod
     def get_arrow_color(theme_id):
@@ -274,20 +280,34 @@ class FavoriteSongCard(LongPressCardMixin, MDCard):
         else:
             self.icon.text = "🎵"
 
+        # --- БЛОК С ТЕКСТОМ ---
         text_layout = MDBoxLayout(
-            orientation='vertical', size_hint_x=1,
-            spacing=dp(2), pos_hint={'center_y': 0.5}
+            orientation='vertical',
+            size_hint_x=1,
+            size_hint_y=None,
+            height=dp(42),  # Фиксированная высота под два лейбла
+            spacing=dp(2),
+            pos_hint={'center_y': 0.5},  # Центрируем блок по вертикали
+            padding=[0, 0, 0, 0]
         )
+
         self.artist_label = MDLabel(
             font_size=sp(15), size_hint_y=None, height=dp(22),
-            theme_text_color="Custom", bold=True, valign="middle",
+            theme_text_color="Custom", bold=True,
+            valign="middle", halign="center",  # Центрируем текст внутри лейбла
             shorten=True, shorten_from="right"
         )
         self.title_label = MDLabel(
             font_size=sp(12), size_hint_y=None, height=dp(18),
-            theme_text_color="Custom", valign="middle",
+            theme_text_color="Custom",
+            valign="middle", halign="center",  # Центрируем текст внутри лейбла
             shorten=True, shorten_from="right"
         )
+
+        # Привязываем ширину текста к ширине лейбла, чтобы центрирование работало
+        self.artist_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
+        self.title_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
+
         text_layout.add_widget(self.artist_label)
         text_layout.add_widget(self.title_label)
 
@@ -701,7 +721,7 @@ class FavoritesScreen(BaseScreen):
 
         self._load_token = 0
         self._last_display_key = None
-        self._retry_count = 0  # Счетчик текущих попыток
+        self._retry_count = 0
 
         self.cards_container = None
         self._cards_wrapper = None
@@ -711,7 +731,6 @@ class FavoritesScreen(BaseScreen):
 
         self._main_layout = None
         self.count_label = None
-        self.empty_label = None
         self.bg_color_inst = None
         self.bg_rect = None
         self.texture = None
@@ -721,8 +740,9 @@ class FavoritesScreen(BaseScreen):
         self._loading_spinner = None
         self._loading_spinner_widget = None
         self._spinner_pending = False
-        self._auth_card = None
         self._listener_registered = False
+        self._count_label_is_status = False
+        self._status_key = None
 
         self._initialized = False
         self._going_back = False
@@ -781,21 +801,22 @@ class FavoritesScreen(BaseScreen):
         self.update_screen_background()
         theme_id = settings_manager.theme
         if self.count_label:
-            self.count_label.text_color = FavoritesColors.get_hint_color(theme_id)
-        if self.empty_label:
-            self.empty_label.text_color = FavoritesColors.get_hint_color(theme_id)
+            if self._count_label_is_status and self._status_key == 'error':
+                self.count_label.text_color = FavoritesColors.get_error_color(theme_id)
+            else:
+                self.count_label.text_color = FavoritesColors.get_hint_color(theme_id)
         if self._pagination_bar:
             self._pagination_bar.update_theme_colors()
-        if self._auth_card:
-            self._auth_card.update_theme_colors()
         if self.cards_container:
             self.cards_container.update_theme_colors()
 
     def update_language(self):
         if self.count_label and self.count_label.opacity > 0:
-            self._update_count_label(self._total)
-        if self._auth_card:
-            self._auth_card.update_language()
+            if self._count_label_is_status:
+                if self._status_key:
+                    self._apply_status_text(self._status_key)
+            else:
+                self._update_count_label(self._total)
 
     # ============================================================
     # UI
@@ -811,7 +832,6 @@ class FavoritesScreen(BaseScreen):
 
             padding = layout_config.get_content_padding()
 
-            # === Лейбл "Избранное: X из Y" ===
             self.count_label = MDLabel(
                 text="", font_size=sp(12), halign="center", valign="middle",
                 size_hint_y=None, height=dp(24),
@@ -825,7 +845,6 @@ class FavoritesScreen(BaseScreen):
             )
             main_layout.add_widget(self.count_label)
 
-            # === Карточки ===
             self._cards_wrapper = SwipeableCardsWrapper(
                 on_swipe_up=self._on_swipe_up,
                 on_swipe_down=self._on_swipe_down,
@@ -848,7 +867,6 @@ class FavoritesScreen(BaseScreen):
 
             main_layout.add_widget(self._cards_wrapper)
 
-            # === Пагинация ===
             self._pagination_container = MDBoxLayout(
                 orientation='vertical',
                 size_hint=(1, None),
@@ -868,7 +886,6 @@ class FavoritesScreen(BaseScreen):
             self._pagination_container.add_widget(self._pagination_anchor)
             main_layout.add_widget(self._pagination_container)
 
-            # === Отступ снизу ===
             bottom_padding = layout_config.get_pagination_bottom_padding()
             main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
 
@@ -1001,10 +1018,17 @@ class FavoritesScreen(BaseScreen):
     def _update_count_label(self, total):
         if not self.count_label:
             return
+        self._count_label_is_status = False
+        self._status_key = None
+
+        hint_color = FavoritesColors.get_hint_color(settings_manager.theme)
+
         if total == 0:
             self.count_label.text = get_text('no_favorites')
+            self.count_label.text_color = hint_color
             self.count_label.opacity = 1
             return
+
         page_size = self._page_size
         if total > page_size:
             current_count = min((self._page + 1) * page_size, total)
@@ -1016,6 +1040,8 @@ class FavoritesScreen(BaseScreen):
             self.count_label.text = f"{get_text('favorites')}: 1 {get_text('of')} 1"
         else:
             self.count_label.text = f"{get_text('favorites')}: {total} {get_text('of')} {total}"
+
+        self.count_label.text_color = hint_color
         self.count_label.opacity = 1
 
     def _update_top_nav(self):
@@ -1098,7 +1124,7 @@ class FavoritesScreen(BaseScreen):
     def _render_favorites(self, favorites):
         with perf('favorites._render_favorites', log_every=False):
             self._hide_loading()
-            self._retry_count = 0  # Сбрасываем счетчик при успехе
+            self._retry_count = 0
 
             if not api.is_authenticated():
                 self._show_auth_message()
@@ -1144,66 +1170,68 @@ class FavoritesScreen(BaseScreen):
             )
 
     # ============================================================
-    # EMPTY / AUTH / ERROR
+    # EMPTY / AUTH / ERROR  (текст всегда в верхнем count_label)
     # ============================================================
 
     def _clear_extra_widgets(self):
-        if self._auth_card and self._auth_card.parent:
-            self._auth_card.parent.remove_widget(self._auth_card)
-        self._auth_card = None
-        if self.empty_label and self.empty_label.parent:
-            self.empty_label.parent.remove_widget(self.empty_label)
-        self.empty_label = None
+        self._count_label_is_status = False
+        self._status_key = None
+
+    def _apply_status_text(self, key):
+        self._status_key = key
+        self._count_label_is_status = True
+
+        if key == 'auth':
+            text = get_text(
+                'favorites_no_songs',
+                'У вас нет песен в избранном'
+            )
+            color = FavoritesColors.get_hint_color(settings_manager.theme)
+        elif key == 'error':
+            text = get_text(
+                'favorites_connection_error',
+                'Проверьте интернет соединение, нет связи с сервером'
+            )
+            color = FavoritesColors.get_error_color(settings_manager.theme)
+        else:  # 'empty'
+            text = get_text('no_favorites')
+            color = FavoritesColors.get_hint_color(settings_manager.theme)
+
+        if self.count_label:
+            self.count_label.text = text
+            self.count_label.text_color = color
+            self.count_label.opacity = 1
 
     def _show_empty(self):
-        self._clear_extra_widgets()
         if self.cards_container:
             self.cards_container.clear()
+        self._last_display_key = None
         self._hide_pagination()
-
-        theme_id = settings_manager.theme
-        self.empty_label = MDLabel(
-            text=get_text('no_favorites'),
-            halign="center", font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=FavoritesColors.get_hint_color(theme_id),
-            size_hint_y=None, height=dp(60)
-        )
-        if self._cards_wrapper:
-            self._cards_wrapper.add_widget(self.empty_label)
+        self._all_favorites = []
+        self._total = 0
+        self._page = 0
+        self._apply_status_text('empty')
 
     def _show_auth_message(self):
-        self._clear_extra_widgets()
         if self.cards_container:
             self.cards_container.clear()
+        self._last_display_key = None
         self._hide_pagination()
+        self._all_favorites = []
+        self._total = 0
+        self._page = 0
         self._update_top_nav()
-        self._update_count_label(0)
-
-        self._auth_card = AuthMessageCard()
-        if self._cards_wrapper:
-            self._cards_wrapper.add_widget(self._auth_card)
+        self._apply_status_text('auth')
 
     def _show_error(self):
-        """Показывает текст ошибки, если все попытки загрузки провалились."""
-        self._clear_extra_widgets()
         if self.cards_container:
             self.cards_container.clear()
+        self._last_display_key = None
         self._hide_pagination()
-
-        theme_id = settings_manager.theme
-        # Сообщение об ошибке согласно требованию
-        error_text = "Проверьте соединение интернета.\nДанные не загружены."
-
-        self.empty_label = MDLabel(
-            text=error_text,
-            halign="center", font_size=sp(14),
-            theme_text_color="Custom",
-            text_color=[1, 0.3, 0.3, 0.9],
-            size_hint_y=None, height=dp(80)
-        )
-        if self._cards_wrapper:
-            self._cards_wrapper.add_widget(self.empty_label)
+        self._all_favorites = []
+        self._total = 0
+        self._page = 0
+        self._apply_status_text('error')
 
     # ============================================================
     # СПИННЕР
@@ -1261,7 +1289,6 @@ class FavoritesScreen(BaseScreen):
                 self._show_auth_message()
                 return
 
-            # Если это не принудительное обновление, сбрасываем счетчик
             if not force_refresh:
                 self._retry_count = 0
 
@@ -1283,7 +1310,6 @@ class FavoritesScreen(BaseScreen):
             self._attempt_fetch()
 
     def _attempt_fetch(self):
-        """Запускает попытку загрузки с сервера."""
         api.get_favorites(
             on_success=self._on_network_loaded,
             on_failure=self._on_load_failed,
@@ -1291,7 +1317,7 @@ class FavoritesScreen(BaseScreen):
 
     def _on_network_loaded(self, favorites):
         self._hide_loading()
-        self._retry_count = 0  # Сброс счетчика при успехе
+        self._retry_count = 0
         self._render_favorites(favorites)
 
     def _on_background_update(self, favorites):
@@ -1306,14 +1332,11 @@ class FavoritesScreen(BaseScreen):
             self._show_auth_message()
             return
 
-        # Если попытки еще есть, пробуем снова
         if self._retry_count < self.MAX_RETRIES:
             logger.info(f"Попытка загрузки {self._retry_count}/{self.MAX_RETRIES} не удалась. Повтор...")
-            # Увеличиваем задержку перед следующей попыткой (1с, 2с...)
             delay = self._retry_count * 1.0
             Clock.schedule_once(lambda dt: self._attempt_fetch(), delay)
         else:
-            # Все попытки исчерпаны
             logger.error(f"Все {self.MAX_RETRIES} попытки загрузки провалились.")
             self._hide_loading()
             self._show_error()
@@ -1407,52 +1430,3 @@ class FavoritesScreen(BaseScreen):
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.force_update_title(get_text('favorites'), show_back=False)
-
-
-# ============================================================
-# AUTH CARD (вспомогательная)
-# ============================================================
-
-class AuthMessageCard(MDCard):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (1, None)
-        self.height = dp(160)
-        self.padding = [dp(20)] * 4
-        self.spacing = dp(12)
-        self.radius = [dp(14)] * 4
-        self.elevation = 0
-        self.ripple_behavior = False
-        self.clip = True
-
-        self.icon_label = MDLabel(
-            text="🔒", font_size=sp(48), halign="center",
-            size_hint_y=None, height=dp(56), theme_text_color="Custom")
-        self.title_label = MDLabel(
-            text=get_text('auth_required_title'), font_size=sp(16),
-            halign="center", size_hint_y=None, height=dp(30),
-            theme_text_color="Custom", bold=True)
-        self.message_label = MDLabel(
-            text=get_text('auth_required_message'), font_size=sp(12),
-            halign="center", size_hint_y=None, height=dp(50),
-            theme_text_color="Custom", line_height=1.4)
-
-        self.add_widget(self.icon_label)
-        self.add_widget(self.title_label)
-        self.add_widget(self.message_label)
-        self.update_theme_colors()
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        accent = FavoritesColors.get_accent(theme_id)
-        self.md_bg_color = FavoritesColors.get_card_bg(theme_id)
-        self.line_color = FavoritesColors.get_card_line(theme_id)
-        self.line_width = 1.0 if theme_id in ('dark', 'light') else 0.5
-        self.icon_label.text_color = accent
-        self.title_label.text_color = FavoritesColors.get_text_primary(theme_id)
-        self.message_label.text_color = FavoritesColors.get_text_secondary(theme_id)
-
-    def update_language(self):
-        self.title_label.text = get_text('auth_required_title')
-        self.message_label.text = get_text('auth_required_message')

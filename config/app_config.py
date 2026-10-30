@@ -28,6 +28,12 @@ class AppConfig:
     READ_TIMEOUT = 60
     CONNECTION_TIMEOUT = (CONNECT_TIMEOUT, READ_TIMEOUT)
 
+    # ============ РЕТРАИ ============
+    # Сколько раз повторять запрос при ReadTimeout / ConnectionError
+    MAX_RETRIES = 2
+    # Базовая пауза между ретраями (сек): 0.7, 1.4, ...
+    RETRY_BACKOFF = 0.7
+
     # ============ НАСТРОЙКИ КЭША ============
     # Время жизни кэша избранного (в секундах)
     FAVORITES_CACHE_TTL = 60  # 1 минута

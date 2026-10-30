@@ -213,38 +213,50 @@ class APIClient:
 
     def _refresh_access_token(self) -> bool:
         """
-        Пытается обновить access_token через refresh_token.
-        Возвращает True, если удалось, False — если нет.
-
-        ВАЖНО: сервер теперь принимает refresh_token в JSON-теле.
+        Обновляет access_token через refresh_token с ретраями на таймаут.
         """
         if not self.refresh_token:
             Logger.warning("API: Нет refresh_token, обновление невозможно")
             return False
 
-        try:
-            Logger.info("🔄 Обновление access_token через refresh_token...")
-            response = self.session.post(
-                f"{self.config.API_BASE_URL}/auth/refresh",
-                json={"refresh_token": self.refresh_token},  # ← JSON-тело
-                timeout=config.CONNECTION_TIMEOUT
-            )
+        for attempt in range(config.MAX_RETRIES + 1):
+            try:
+                Logger.info(f"🔄 Обновление access_token (попытка {attempt + 1})...")
+                response = self.session.post(
+                    f"{self.config.API_BASE_URL}/auth/refresh",
+                    json={"refresh_token": self.refresh_token},
+                    timeout=config.CONNECTION_TIMEOUT
+                )
 
-            if response.status_code == 200:
-                result = response.json()
-                new_access = result.get('access_token')
-                if new_access:
-                    self.access_token = new_access
-                    self._save_tokens()
-                    Logger.info("✅ access_token успешно обновлён")
-                    return True
+                if response.status_code == 200:
+                    result = response.json()
+                    new_access = result.get('access_token')
+                    if new_access:
+                        self.access_token = new_access
+                        self._save_tokens()
+                        Logger.info("✅ access_token успешно обновлён")
+                        return True
 
-            Logger.warning(f"⚠️ Не удалось обновить токен, статус: {response.status_code}")
-            return False
+                Logger.warning(f"⚠️ Не удалось обновить токен, статус: {response.status_code}")
+                return False
 
-        except Exception as e:
-            Logger.error(f"❌ Ошибка обновления токена: {e}")
-            return False
+            except requests.exceptions.Timeout as e:
+                if attempt < config.MAX_RETRIES:
+                    delay = config.RETRY_BACKOFF * (attempt + 1)
+                    Logger.warning(
+                        f"⏱ Таймаут refresh (попытка {attempt + 1}), "
+                        f"ретрай через {delay:.1f}с"
+                    )
+                    time.sleep(delay)
+                    continue
+                Logger.error(f"❌ Таймаут refresh после ретраев: {e}")
+                return False
+
+            except Exception as e:
+                Logger.error(f"❌ Ошибка обновления токена: {e}")
+                return False
+
+        return False
 
     # ============ ЗАПРОСЫ ============
 
@@ -270,19 +282,21 @@ class APIClient:
         else:
             return self.session.request(method, url, json=data, **kwargs)
 
-    def _request_sync(self, url, method='GET', data=None, include_auth=True, _retry=True):
+    def _request_sync(self, url, method='GET', data=None,
+                      include_auth=True, _retry=True, _attempt=0):
         """
-        Синхронный запрос с обработкой SSL ошибок и автообновлением токена.
-        _retry — внутренний флаг, чтобы не зациклиться при повторной попытке.
+        Синхронный запрос:
+        - автообновление токена при 401;
+        - fallback без SSL при SSLError;
+        - ретрай с новой сессией при «мёртвом» keep-alive;
+        - ретраи с паузой при ReadTimeout.
         """
         headers = self._get_headers(include_auth)
         try:
             response = self._do_request(method, url, headers, data)
 
-            # ============ АВТООБНОВЛЕНИЕ ТОКЕНА ПРИ 401 ============
             if response.status_code == 401 and include_auth and _retry:
                 Logger.warning("⚠️ Получен 401, пробуем обновить токен...")
-
                 if self._refresh_access_token():
                     Logger.info("🔄 Повторяем исходный запрос с новым токеном...")
                     return self._request_sync(url, method, data, include_auth, _retry=False)
@@ -302,7 +316,6 @@ class APIClient:
         except requests.exceptions.SSLError as e:
             Logger.error(f"❌ SSL Error: {e}")
             Logger.warning("⚠️ Пробуем запрос без проверки SSL (fallback)...")
-
             try:
                 response = self._do_request(method, url, headers, data, verify=False)
                 response.raise_for_status()
@@ -314,22 +327,18 @@ class APIClient:
 
         except (requests.exceptions.ConnectionError,
                 requests.exceptions.ChunkedEncodingError) as e:
-            # Это типичные симптомы "мёртвого" keep-alive сокета.
-            # Делаем ОДИН ретрай с новой сессией — это спасает после resume.
             err_text = str(e)
             is_dead_socket = any(s in err_text for s in (
                 "RemoteDisconnected", "Connection aborted",
                 "Connection reset", "Read timed out",
                 "Connection broken",
             ))
-
             if is_dead_socket and _retry:
                 Logger.warning(f"🔌 Обрыв соединения ({err_text[:80]}), ретрай с новой сессией...")
                 try:
                     self.reset_session()
                 except Exception:
                     pass
-                # _retry=False — чтобы не зациклиться
                 return self._request_sync(url, method, data, include_auth, _retry=False)
 
             Logger.error(f"🔌 Ошибка соединения: {e}")
@@ -337,7 +346,18 @@ class APIClient:
                     "favorites": [], "results": [], "total": 0}
 
         except requests.exceptions.Timeout as e:
-            Logger.error(f"⏱️ Таймаут: {e}")
+            if _attempt < config.MAX_RETRIES and _retry:
+                delay = config.RETRY_BACKOFF * (_attempt + 1)
+                Logger.warning(
+                    f"⏱ Таймаут (попытка {_attempt + 1}/{config.MAX_RETRIES + 1}), "
+                    f"ретрай через {delay:.1f}с — {e}"
+                )
+                time.sleep(delay)
+                return self._request_sync(
+                    url, method, data, include_auth,
+                    _retry=_retry, _attempt=_attempt + 1
+                )
+            Logger.error(f"⏱ Таймаут после ретраев: {e}")
             return {"error": "timeout", "artists": [], "songs": [],
                     "favorites": [], "results": [], "total": 0}
 
@@ -346,27 +366,41 @@ class APIClient:
             return {"error": "unknown", "artists": [], "songs": [],
                     "favorites": [], "results": [], "total": 0}
 
-    def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
-        """Асинхронный запрос (в отдельном потоке)"""
+    def _request_async(self, url, method='GET', data=None,
+                       on_success=None, on_failure=None, include_auth=True):
+        """
+        Асинхронный запрос.
+        ВАЖНО: значения (result / error_msg) фиксируются в аргументах
+        лямбды через default-параметры, чтобы не было NameError
+        на удалённой переменной 'e' в замыкании.
+        """
 
         def worker():
             try:
                 result = self._request_sync(url, method, data, include_auth)
 
                 if isinstance(result, dict) and result.get('error') == 'unauthorized':
-                    error_msg = "unauthorized"
                     if on_failure:
-                        Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
+                        Clock.schedule_once(
+                            lambda dt, msg="unauthorized": on_failure(None, msg), 0
+                        )
                     else:
                         Logger.error("API: Требуется повторная авторизация")
                     return
 
                 if on_success:
-                    Clock.schedule_once(lambda dt: on_success(result), 0)
+                    Clock.schedule_once(
+                        lambda dt, res=result: on_success(res), 0
+                    )
+
             except Exception as e:
                 error_msg = str(e)
+                Logger.error(f"API: Ошибка запроса в потоке — {error_msg}")
+
                 if on_failure:
-                    Clock.schedule_once(lambda dt: on_failure(None, error_msg), 0)
+                    Clock.schedule_once(
+                        lambda dt, msg=error_msg: on_failure(None, msg), 0
+                    )
                 else:
                     Logger.error(f'API: Ошибка - {error_msg}')
 
@@ -870,7 +904,8 @@ class APIClient:
 
     # ============ AUTH METHODS ============
 
-    def register(self, username, email, password, full_name=None, on_success=None, on_failure=None):
+    def register(self, username, email, password, full_name=None,
+                 on_success=None, on_failure=None):
         data = {'username': username, 'email': email, 'password': password}
         if full_name:
             data['full_name'] = full_name
@@ -879,15 +914,20 @@ class APIClient:
             try:
                 response = self.session.post(
                     config.API_AUTH_REGISTER, json=data,
-                    headers=self._get_headers(include_auth=False), timeout=config.CONNECTION_TIMEOUT
+                    headers=self._get_headers(include_auth=False),
+                    timeout=config.CONNECTION_TIMEOUT
                 )
                 response.raise_for_status()
                 result = response.json() if response.content else None
                 if on_success:
-                    Clock.schedule_once(lambda dt: on_success(result), 0)
+                    Clock.schedule_once(lambda dt, res=result: on_success(res), 0)
             except Exception as e:
+                msg = str(e)
+                Logger.error(f"API register: {msg}")
                 if on_failure:
-                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+                    Clock.schedule_once(
+                        lambda dt, m=msg: on_failure(None, m), 0
+                    )
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -898,7 +938,6 @@ class APIClient:
             self.access_token = result.get('access_token')
             self.refresh_token = result.get('refresh_token')
             self._save_tokens()
-            # ✅ Сбрасываем кэш избранного при входе
             self._clear_favorites_cache()
             if on_success:
                 on_success(result)
@@ -907,14 +946,22 @@ class APIClient:
 
         def worker():
             try:
-                response = self.session.post(config.API_AUTH_LOGIN, data=data, headers=headers,
-                                             timeout=config.CONNECTION_TIMEOUT)
+                response = self.session.post(
+                    config.API_AUTH_LOGIN, data=data, headers=headers,
+                    timeout=config.CONNECTION_TIMEOUT
+                )
                 response.raise_for_status()
                 result = response.json()
-                Clock.schedule_once(lambda dt: _on_success(result), 0)
+                Clock.schedule_once(
+                    lambda dt, res=result: _on_success(res), 0
+                )
             except Exception as e:
+                msg = str(e)
+                Logger.error(f"API login: {msg}")
                 if on_failure:
-                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+                    Clock.schedule_once(
+                        lambda dt, m=msg: on_failure(None, m), 0
+                    )
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -960,16 +1007,23 @@ class APIClient:
     def get_current_user(self, on_success=None, on_failure=None):
         def worker():
             try:
-                response = self.session.get(config.API_USER_ME, headers=self._get_headers(include_auth=True),
-                                            timeout=config.CONNECTION_TIMEOUT)
+                response = self.session.get(
+                    config.API_USER_ME,
+                    headers=self._get_headers(include_auth=True),
+                    timeout=config.CONNECTION_TIMEOUT
+                )
                 response.raise_for_status()
                 result = response.json()
                 self.user_data = result
                 if on_success:
-                    Clock.schedule_once(lambda dt: on_success(result), 0)
+                    Clock.schedule_once(lambda dt, res=result: on_success(res), 0)
             except Exception as e:
+                msg = str(e)
+                Logger.error(f"API get_current_user: {msg}")
                 if on_failure:
-                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+                    Clock.schedule_once(
+                        lambda dt, m=msg: on_failure(None, m), 0
+                    )
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -984,11 +1038,11 @@ class APIClient:
     def get_letters_sync(self):
         url = f"{self.config.API_BASE_URL}/songs/alphabet"
         try:
-            response = self.session.get(url, timeout=10)
+            response = self.session.get(url, timeout=config.CONNECTION_TIMEOUT)
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            print(f"Ошибка получения букв: {e}")
+            Logger.error(f"Ошибка получения букв: {e}")
             return None
 
     def force_refresh_favorites(self, on_success=None):

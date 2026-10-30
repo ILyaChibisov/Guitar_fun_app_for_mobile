@@ -35,11 +35,19 @@ logger = get_logger('BottomNav')
 # ============================================================
 
 # Индивидуальные цвета для активной вкладки (кроме тюнера)
+# GREEN_ACTIVE_COLORS = {
+#     'songs': [1.0, 0.95, 0.30, 1.0],      # Коралл
+#     'chords': [0.20, 0.60, 1.0, 1.0],     # Синий
+#     'metronome': [1.0, 0.55, 0.20, 1.0],  # Оранжевый
+#     'favorites': [1.0, 0.10, 0.20, 1.0],  # Красный
+# }
+
+# Единый жёлтый цвет для всех активных вкладок в зелёной теме
 GREEN_ACTIVE_COLORS = {
-    'songs': [1.0, 0.95, 0.30, 1.0],      # Коралл
-    'chords': [0.20, 0.60, 1.0, 1.0],     # Синий
-    'metronome': [1.0, 0.55, 0.20, 1.0],  # Оранжевый
-    'favorites': [1.0, 0.10, 0.20, 1.0],  # Красный
+    'songs': [1.0, 0.95, 0.30, 1.0],
+    'chords': [1.0, 0.95, 0.30, 1.0],
+    'metronome': [1.0, 0.95, 0.30, 1.0],
+    'favorites': [1.0, 0.95, 0.30, 1.0],
 }
 
 # Цвет для неактивных кнопок (мятный, как тюнер)
@@ -188,12 +196,9 @@ class NavItem(ButtonBehavior, BoxLayout):
                 self.text_label.bold = False
         else:  # green
             if value:
-                if self.screen_name == 'tuner':
-                    active_color = GREEN_TUNER_ACTIVE
-                else:
-                    active_color = GREEN_ACTIVE_COLORS.get(
-                        self.screen_name, [1, 1, 1, 1]
-                    )
+                active_color = GREEN_ACTIVE_COLORS.get(
+                    self.screen_name, [1.0, 0.95, 0.30, 1.0]
+                )
                 self.icon_btn.icon_color = active_color
                 self.text_label.text_color = active_color
                 self.text_label.bold = True

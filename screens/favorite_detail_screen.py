@@ -188,7 +188,8 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
         self.anchor_x = 'center'
         self.anchor_y = 'center'
         self.size_hint = (1, None)
-        self.height = dp(56)  # Фиксированная высота ячейки для равного распределения
+        # Изменено: приводим высоту ячейки к единому стандарту меню аккордов
+        self.height = dp(48)
         self.on_click_callback = on_click
         self.icon_name = icon
 
@@ -465,6 +466,7 @@ class FloatingPanel(MDCard):
         self._anim.start(self)
 
     # ============ МЕНЮ ============
+
     def _build_menu(self):
         self.content.clear_widgets()
         self.mode = 'menu'
@@ -490,8 +492,7 @@ class FloatingPanel(MDCard):
                     orientation='horizontal',
                     size_hint=(1, None),
                     height=dp(1),
-                    padding=[dp(10), 0, dp(10), 0],
-                    md_bg_color=[0, 0, 0, 0]
+                    padding=[dp(10), 0, dp(10), 0]
                 )
                 inner_separator = MDSeparator(
                     color=DetailColors.get_divider(settings_manager.theme)
@@ -511,52 +512,87 @@ class FloatingPanel(MDCard):
         theme_id = settings_manager.theme
         accent = DetailColors.get_accent(theme_id)
 
+        # 1. Верхний блок: стрелочки пагинации (укладываем ровно в dp(48))
         pag_box = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, None), height=dp(44),
-            spacing=dp(2), padding=[dp(2), 0, dp(2), 0]
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(48),
+            spacing=0,
+            padding=[dp(4), 0, dp(4), 0]
         )
         prev_btn = MDIconButton(
             icon="chevron-left", size_hint=(1, 1),
             theme_icon_color="Custom", icon_color=accent,
-            md_bg_color=[0, 0, 0, 0], ripple_scale=0,
+            ripple_scale=0,
             on_release=lambda *a: self._switch_chord(-1)
         )
         next_btn = MDIconButton(
             icon="chevron-right", size_hint=(1, 1),
             theme_icon_color="Custom", icon_color=accent,
-            md_bg_color=[0, 0, 0, 0], ripple_scale=0,
+            ripple_scale=0,
             on_release=lambda *a: self._switch_chord(1)
         )
         pag_box.add_widget(prev_btn)
         pag_box.add_widget(next_btn)
         self.content.add_widget(pag_box)
 
-        div = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1),
-                          md_bg_color=DetailColors.get_divider(theme_id))
-        self.content.add_widget(div)
+        # Функция создания прерывистого разделителя — ОДИН В ОДИН как в _build_menu
+        def add_menu_divider():
+            div = MDBoxLayout(
+                orientation='horizontal', size_hint=(1, None), height=dp(1),
+                padding=[dp(10), 0, dp(10), 0]
+            )
+            inner_separator = MDSeparator(
+                color=DetailColors.get_divider(settings_manager.theme)
+            )
+            div.add_widget(inner_separator)
+            div._inner_line = inner_separator
+            self.content.add_widget(div)
 
-        self.variant_item = PanelIcon(icon="format-list-bulleted-square", on_click=lambda: self._on_menu_item('variant'))
-        self.mode_item = PanelIcon(icon="music-note", on_click=lambda: self._on_menu_item('mode'))
-        self.eye_item = PanelIcon(icon="eye", on_click=lambda: self._on_menu_item('eye'))
-        self.griff_zoom_item = PanelIcon(icon="magnify", on_click=lambda: self._on_menu_item('zoom'))
+        add_menu_divider()
 
+        # 2. Основные иконки действий (каждая по dp(48) с прерывистыми разделителями)
+        self.variant_item = PanelIcon(icon="format-list-bulleted-square",
+                                      on_click=lambda: self._on_menu_item('variant'))
         self.content.add_widget(self.variant_item)
+        add_menu_divider()
+
+        self.mode_item = PanelIcon(icon="music-note", on_click=lambda: self._on_menu_item('mode'))
         self.content.add_widget(self.mode_item)
+        add_menu_divider()
+
+        self.eye_item = PanelIcon(icon="eye", on_click=lambda: self._on_menu_item('eye'))
         self.content.add_widget(self.eye_item)
+        add_menu_divider()
+
+        self.griff_zoom_item = PanelIcon(icon="magnify", on_click=lambda: self._on_menu_item('zoom'))
         self.content.add_widget(self.griff_zoom_item)
+        add_menu_divider()
 
-        div_bottom = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1),
-                                 md_bg_color=DetailColors.get_divider(theme_id))
-        self.content.add_widget(div_bottom)
-
+        # 3. Нижний блок: Изящная кнопка "Назад" (укладываем в dp(48))
+        back_box = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(48))
         back_btn = MDIconButton(
-            icon="arrow-left", size_hint=(1, None), height=dp(48),
-            theme_icon_color="Custom", icon_color=accent,
-            md_bg_color=[0, 0, 0, 0], ripple_scale=0,
+            icon="arrow-left-thin",
+            size_hint=(1, 1),
+            theme_icon_color="Custom",
+            icon_color=accent,
+            ripple_scale=0,
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
             on_release=lambda *a: self._build_menu()
         )
-        self.content.add_widget(back_btn)
+        back_box.add_widget(back_btn)
+        self.content.add_widget(back_box)
+
         self.update_theme_colors()
+
+        # Принудительно сохраняем высоту, чтобы сайдбар не прыгал по размеру экрана
+        def _lock_height(dt):
+            # 6 элементов по dp(48) + 5 разделителей по dp(1) + padding контента = идеально совпадает со стандартным меню
+            if hasattr(self, 'content'):
+                self.height = max(self.content.height, dp(310))
+            self._recenter()
+
+        Clock.schedule_once(_lock_height, 0.01)
 
         def _set_height(dt):
             self.height = dp(350)
@@ -576,6 +612,7 @@ class FloatingPanel(MDCard):
         if parent.chords_carousel and parent.chord_slides:
             if new_idx < len(parent.chord_slides):
                 parent.chords_carousel.load_slide(parent.chord_slides[new_idx])
+
     def _on_menu_item(self, action):
         if action == 'chords':
             if self.parent_screen:
@@ -611,7 +648,8 @@ class FloatingPanel(MDCard):
         elif action == 'unfavorite':
             if self.parent_screen: self.parent_screen.toggle_favorite()
 
-    # ============ ПОД-ПАНЕЛИ (ШРИФТ/ПРОКРУТКА/ТОНАЛЬНОСТЬ) ============
+        # ============ ПОД-ПАНЕЛИ (ШРИФТ/ПРОКРУТКА/ТОНАЛЬНОСТЬ) ============
+
     def _build_slider_panel(self, type_str):
         self.content.clear_widgets()
         self.mode = type_str
@@ -623,59 +661,69 @@ class FloatingPanel(MDCard):
         text_p = DetailColors.get_text_primary(theme_id)
         div_color = DetailColors.get_divider(theme_id)
 
-        # Общая высота панели остается фиксированной (360dp), как в главном меню
+        # Четко фиксируем высоту всей шторки
         self.height = dp(360)
         self._recenter()
 
-        # Главный контейнер подпанели без лишних внутренних отступов (padding)
+        # Главный BoxLayout панели
         panel = MDBoxLayout(
             orientation='vertical',
-            size_hint=(1, 1),
+            size_hint=(1, None),
+            height=dp(340),
             spacing=0,
-            padding=[0, 0, 0, 0]
+            padding=[0, dp(4), 0, dp(4)]
         )
 
-        # 1. ВЕРХНЯЯ ЯЧЕЙКА (Заголовок + Значение) — строго dp(56), как верхняя иконка
+        # --- 1. ВЕРХНИЙ БЛОК (Заголовок + Значение) ---
+        # Ограничиваем по высоте (dp(48)), как обычную ячейку иконки меню
         header_box = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(56),
-            padding=[0, dp(6), 0, dp(6)],
-            spacing=0
+            height=dp(48),
+            spacing=0,
+            padding=[0, dp(2), 0, dp(2)]
         )
+
         title_text = "Тон" if type_str == 'tonality' else ("Шрифт" if type_str == 'font' else "Скорость")
         title_lbl = MDLabel(
             text=title_text, halign="center", valign="middle",
             theme_text_color="Custom", text_color=text_p, bold=True,
-            font_size=sp(14), size_hint_y=0.5
+            size_hint_y=None, height=dp(18), font_size=sp(12)
         )
+        header_box.add_widget(title_lbl)
+
         self._sub_val_label = MDLabel(
             text="0", halign="center", valign="middle",
             theme_text_color="Custom", text_color=accent, bold=True,
-            font_size=sp(15), size_hint_y=0.5
+            size_hint_y=None, height=dp(22), font_size=sp(15)
         )
-        header_box.add_widget(title_lbl)
         header_box.add_widget(self._sub_val_label)
         panel.add_widget(header_box)
 
-        # Тонкий разделитель под заголовком с боковыми отступами
-        div_top = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1),
-                              padding=[dp(10), 0, dp(10), 0])
-        div_top.add_widget(MDSeparator(color=div_color))
-        panel.add_widget(div_top)
+        # ПЕРВЫЙ РАЗДЕЛИТЕЛЬ (Точно такой же, как в основном меню)
+        div1 = MDBoxLayout(
+            orientation='horizontal', size_hint=(1, None), height=dp(1),
+            md_bg_color=div_color, padding=[dp(12), 0, dp(12), 0]
+        )
+        div1.add_widget(MDBoxLayout(size_hint=(1, 1), md_bg_color=[0.5, 0.5, 0.5, 0.2]))
+        panel.add_widget(div1)
 
-        # 2. ЦЕНТРАЛЬНАЯ ЯЧЕЙКА (Шкала и ползунок) — занимает все свободное место (size_hint_y: 1)
-        slider_container = MDBoxLayout(
+        # --- 2. СРЕДНИЙ БЛОК (Шкала слайдера) ---
+        # Теперь слайдер занимает максимум свободного места без лишних отступов
+        slider_card = MDBoxLayout(
             orientation='vertical',
-            size_hint=(1, 1),
-            padding=[0, dp(8), 0, dp(8)],
-            spacing=dp(2)
+            size_hint=(None, None),
+            size=(dp(50), dp(220)),
+            pos_hint={'center_x': 0.5},
+            padding=[0, dp(6), 0, dp(6)],
+            spacing=dp(2),
+            md_bg_color=[0, 0, 0, 0]
         )
 
-        slider_container.add_widget(MDLabel(
+        slider_card.add_widget(MDLabel(
             text="+", halign="center", valign="middle",
             theme_text_color="Custom", text_color=[0.3, 0.7, 0.3, 0.9],
-            size_hint_y=None, height=dp(14), bold=True, font_size=sp(13)
+            size_hint_y=None, height=dp(12), bold=True, font_size=sp(11)
         ))
 
         if type_str == 'tonality':
@@ -685,7 +733,8 @@ class FloatingPanel(MDCard):
             self.ton_slider = MDSlider(
                 min=-6.01, max=6.01, value=current_val, step=1,
                 orientation='vertical',
-                size_hint=(1, 1),  # Занимает всю доступную высоту контейнера шкалы
+                size_hint=(None, None),
+                size=(dp(36), dp(160)),
                 pos_hint={'center_x': 0.5},
                 hint=False
             )
@@ -697,34 +746,46 @@ class FloatingPanel(MDCard):
             self.ton_slider.track_color_inactive = [1, 1, 1, 0.3]
             self.ton_slider.color = accent
             try:
-                self.ton_slider.cursor_size = (dp(18), dp(18))
+                self.ton_slider.cursor_size = (dp(20), dp(20))
             except Exception:
                 pass
 
             def on_ton_change(instance, value):
-                int_val = -6 if value < -6 else (6 if value > 6 else int(round(value)))
-                if self.ton_slider.value != int_val: self.ton_slider.value = int_val
+                if value < -6:
+                    int_val = -6
+                elif value > 6:
+                    int_val = 6
+                else:
+                    int_val = int(round(value))
+
+                if self.ton_slider.value != int_val:
+                    self.ton_slider.value = int_val
                 val_half = int_val / 2
                 self._sub_val_label.text = "0" if val_half == 0 else f"{val_half:+g}"
                 if parent and val_half != getattr(parent, 'current_tonality', 0):
                     parent.current_tonality = val_half
-                    if hasattr(parent, 'apply_tonality'): parent.apply_tonality(val_half)
+                    if hasattr(parent, 'apply_tonality'):
+                        parent.apply_tonality(val_half)
 
             self.ton_slider.bind(value=on_ton_change)
-            slider_container.add_widget(self.ton_slider)
+            slider_card.add_widget(self.ton_slider)
 
         elif type_str == 'font':
-            font_sizes = [30, 34, 38, 42, 46, 50, 54, 58, 60] if platform == 'android' else [14, 16, 18, 20, 22, 24, 26,
-                                                                                             28, 30, 32]
+            if platform == 'android':
+                font_sizes = [30, 34, 38, 42, 46, 50, 54, 58, 60]
+            else:
+                font_sizes = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
             total_steps = len(font_sizes) - 1
             curr_size = getattr(parent, 'current_font_size', font_sizes[3])
             current_val = font_sizes.index(curr_size) if curr_size in font_sizes else 3
+
             self._sub_val_label.text = self._get_font_multiplier(curr_size)
 
             self.font_slider = MDSlider(
                 min=-0.01, max=float(total_steps + 0.01), value=current_val, step=1,
                 orientation='vertical',
-                size_hint=(1, 1),
+                size_hint=(None, None),
+                size=(dp(36), dp(160)),
                 pos_hint={'center_x': 0.5},
                 hint=False
             )
@@ -736,22 +797,25 @@ class FloatingPanel(MDCard):
             self.font_slider.track_color_inactive = [1, 1, 1, 0.3]
             self.font_slider.color = accent
             try:
-                self.font_slider.cursor_size = (dp(18), dp(18))
+                self.font_slider.cursor_size = (dp(20), dp(20))
             except Exception:
                 pass
 
             def on_font_change(instance, value):
                 int_val = max(0, min(total_steps, int(round(value))))
-                if self.font_slider.value != int_val: self.font_slider.value = int_val
+                if self.font_slider.value != int_val:
+                    self.font_slider.value = int_val
                 new_size = font_sizes[int_val]
                 self._sub_val_label.text = self._get_font_multiplier(new_size)
                 if parent and getattr(parent, 'current_font_size', 0) != new_size:
                     parent.current_font_size = new_size
-                    if hasattr(parent, 'content_label'): parent.content_label.font_size = new_size
-                    if hasattr(parent, '_update_content_height'): parent._update_content_height()
+                    if hasattr(parent, 'content_label'):
+                        parent.content_label.font_size = new_size
+                    if hasattr(parent, '_update_content_height'):
+                        parent._update_content_height()
 
             self.font_slider.bind(value=on_font_change)
-            slider_container.add_widget(self.font_slider)
+            slider_card.add_widget(self.font_slider)
 
         elif type_str == 'scroll':
             def speed_to_slider(s):
@@ -767,7 +831,8 @@ class FloatingPanel(MDCard):
             self.scroll_slider = MDSlider(
                 min=0.99, max=28.01, value=current_val, step=1,
                 orientation='vertical',
-                size_hint=(1, 1),
+                size_hint=(None, None),
+                size=(dp(36), dp(160)),
                 pos_hint={'center_x': 0.5},
                 hint=False
             )
@@ -779,57 +844,68 @@ class FloatingPanel(MDCard):
             self.scroll_slider.track_color_inactive = [1, 1, 1, 0.3]
             self.scroll_slider.color = accent
             try:
-                self.scroll_slider.cursor_size = (dp(18), dp(18))
+                self.scroll_slider.cursor_size = (dp(20), dp(20))
             except Exception:
                 pass
 
             def on_scroll_change(instance, value):
                 int_val = max(1, min(28, int(round(value))))
-                if self.scroll_slider.value != int_val: self.scroll_slider.value = int_val
+                if self.scroll_slider.value != int_val:
+                    self.scroll_slider.value = int_val
                 new_speed = slider_to_speed(int_val)
                 self._sub_val_label.text = f"{new_speed:.1f}x"
-                if parent: parent.scroll_speed = new_speed
+                if parent:
+                    parent.scroll_speed = new_speed
 
             self.scroll_slider.bind(value=on_scroll_change)
-            slider_container.add_widget(self.scroll_slider)
+            slider_card.add_widget(self.scroll_slider)
 
-        slider_container.add_widget(MDLabel(
+        slider_card.add_widget(MDLabel(
             text="-", halign="center", valign="middle",
             theme_text_color="Custom", text_color=[0.8, 0.3, 0.3, 0.9],
-            size_hint_y=None, height=dp(14), bold=True, font_size=sp(13)
+            size_hint_y=None, height=dp(12), bold=True, font_size=sp(12)
         ))
-        panel.add_widget(slider_container)
+        panel.add_widget(slider_card)
 
-        # Тонкий разделитель перед стрелкой назад
-        div_bottom = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1),
-                                 padding=[dp(10), 0, dp(10), 0])
-        div_bottom.add_widget(MDSeparator(color=div_color))
-        panel.add_widget(div_bottom)
-
-        # 3. НИЖНЯЯ ЯЧЕЙКА (Кнопка назад) — строго dp(56), центрированная через AnchorLayout
-        bottom_box = AnchorLayout(
-            anchor_x='center',
-            anchor_y='center',
-            size_hint=(1, None),
-            height=dp(56)
+        # ВТОРОЙ РАЗДЕЛИТЕЛЬ (Перед кнопкой "Назад")
+        div2 = MDBoxLayout(
+            orientation='horizontal', size_hint=(1, None), height=dp(1),
+            md_bg_color=div_color, padding=[dp(12), 0, dp(12), 0]
         )
+        div2.add_widget(MDBoxLayout(size_hint=(1, 1), md_bg_color=[0.5, 0.5, 0.5, 0.2]))
+        panel.add_widget(div2)
+
+        # --- 3. НИЖНИЙ БЛОК (Кнопка "Назад" в стиле ячеек меню) ---
+        # Выделяем ровно dp(48) высоты для идеальной симметрии с основным меню
+        bottom_box = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(48),
+            padding=0
+        )
+
+        # Красивая тонкая стрелочка 'arrow-left-thin' взамен старой жирной стрелки
         back_btn = MDIconButton(
-            icon="arrow-left",
-            theme_icon_color="Custom", icon_color=accent,
-            md_bg_color=[0, 0, 0, 0], ripple_scale=0,
+            icon="arrow-left-thin",
+            size_hint=(1, 1),
+            theme_icon_color="Custom",
+            icon_color=accent,
+            md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0,
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
             on_release=lambda *a: self._build_menu()
         )
         bottom_box.add_widget(back_btn)
         panel.add_widget(bottom_box)
-
         self.content.add_widget(panel)
         self.update_theme_colors()
 
         def _force_resize(dt):
             self.height = dp(360)
-            self._recenter()
 
+        self._recenter()
         Clock.schedule_once(_force_resize, 0.01)
+
 
     def _get_font_multiplier(self, font_size):
         parent = self.parent_screen

@@ -52,6 +52,21 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     print("FATAL ERROR:")
     print(error_msg)
     print("=" * 50)
+
+    # Принудительно сбрасываем буферы, чтобы лог успел уйти в logcat/файл
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+    # Kivy Logger тоже сбрасываем
+    try:
+        from kivy.logger import Logger
+        Logger.error(f"FATAL ERROR:\n{error_msg}")
+    except Exception:
+        pass
+
     if hasattr(sys, '__excepthook__'):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
@@ -732,14 +747,25 @@ class GuitarFunsApp(MDApp):
         """
         logger.debug('Приложение восстановлено')
 
-        # 🔑 Сброс мёртвых keep-alive сокетов
+        # 🔑 Сброс мёртвых keep-alive сокетов — сразу
         try:
             api.reset_session()
             logger.info("🔌 Пул соединений API сброшен после resume")
         except Exception as e:
             logger.error(f"reset_session on_resume: {e}")
 
+        # Повторный сброс через 1с — на случай, если сеть поднялась позже
+        Clock.schedule_once(self._delayed_session_reset, 1.0)
+
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
+
+    def _delayed_session_reset(self, dt):
+        """Повторный сброс пула соединений после resume."""
+        try:
+            api.reset_session()
+            logger.debug("🔌 Пул соединений API сброшен повторно (delayed)")
+        except Exception as e:
+            logger.error(f"reset_session delayed: {e}")
 
     def on_stop(self):
         logger.info('Приложение закрыто')

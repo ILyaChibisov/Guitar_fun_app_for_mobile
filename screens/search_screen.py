@@ -297,22 +297,36 @@ class ResultCard(MDCard):
             self._icon_widget = icon
             self._name_label = label
 
+
         else:  # song
             icon = Image(size_hint=(None, 1), width=dp(24), allow_stretch=True, keep_ratio=True)
             self._load_asset_icon(icon, 'song_png')
+            text_layout = MDBoxLayout(
+                orientation='vertical',
+                size_hint_x=1,
+                size_hint_y=None,
+                height=dp(37),  # 20 (высота артиста) + 16 (высота песни) + 1 (spacing)
+                spacing=dp(1),
+                pos_hint={'center_y': 0.5}  # Центрируем блок по вертикали
+            )
+            artist_label = MDLabel(
+                font_size=sp(15), size_hint_y=None, height=dp(20),
+                theme_text_color="Custom", bold=True,
+                shorten=True, valign="middle", halign="center"  # Центрируем текст внутри
+            )
+            title_label = MDLabel(
+                font_size=sp(12), size_hint_y=None, height=dp(16),
+                theme_text_color="Custom",
+                shorten=True, valign="middle", halign="center"  # Центрируем текст внутри
+            )
 
-            text_layout = MDBoxLayout(orientation='vertical', size_hint_x=1,
-                                      spacing=dp(1), pos_hint={'center_y': 0.5})
-            artist_label = MDLabel(font_size=sp(15), size_hint_y=None, height=dp(20),
-                                   theme_text_color="Custom", bold=True, shorten=True)
-            title_label = MDLabel(font_size=sp(12), size_hint_y=None, height=dp(16),
-                                  theme_text_color="Custom", shorten=True)
+            # Привязка ширины для корректной работы halign="center"
+            artist_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
+            title_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
             artist_label.text = self.title
             title_label.text = self.subtitle
-
             text_layout.add_widget(artist_label)
             text_layout.add_widget(title_label)
-
             self.content.add_widget(icon)
             self.content.add_widget(text_layout)
             self._icon_widget = icon

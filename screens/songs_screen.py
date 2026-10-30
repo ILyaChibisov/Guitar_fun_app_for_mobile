@@ -731,20 +731,34 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
             self.icon.texture = _shared_song_icon_texture
         else:
             self.icon.text = "🎵"
+
+        # --- ИЗМЕНЕНИЯ ТУТ ---
         text_layout = MDBoxLayout(
-            orientation='vertical', size_hint_x=1,
-            spacing=dp(1), pos_hint={'center_y': 0.5}
+            orientation='vertical',
+            size_hint_x=1,
+            size_hint_y=None,
+            height=dp(36),  # Фиксируем высоту блока под два лейбла (20 + 16)
+            spacing=dp(1),
+            pos_hint={'center_y': 0.5}  # Центрируем весь блок по вертикали
         )
         self.artist_label = MDLabel(
             font_size=sp(15), size_hint_y=None, height=dp(20),
             theme_text_color="Custom", bold=True,
-            shorten=True, shorten_from="right", valign="middle"
+            shorten=True, shorten_from="right",
+            valign="middle", halign="center"  # Выравниваем текст по центру
         )
         self.title_label = MDLabel(
             font_size=sp(12), size_hint_y=None, height=dp(16),
-            theme_text_color="Custom", valign="middle",
+            theme_text_color="Custom",
+            valign="middle", halign="center",  # Выравниваем текст по центру
             shorten=True, shorten_from="right"
         )
+
+        # Привязываем ширину для корректной работы центрирования
+        self.artist_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
+        self.title_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
+        # --------------------
+
         text_layout.add_widget(self.artist_label)
         text_layout.add_widget(self.title_label)
         self.arrow = MDLabel(
