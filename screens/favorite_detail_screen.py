@@ -223,13 +223,14 @@ class CustomHandle(ButtonBehavior, Widget):
     """
     Увеличенный, полностью скругленный клювик (язычок) в стиле Material Design 3.
     Контур идеально закруглен через кривые Безье, внутри анимированная стрелочка.
+    Реагирует на нажатия без пропуска лишних жестов свайпа.
     """
     angle = NumericProperty(0)
 
     def __init__(self, color, bg_color, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, None)
-        # Увеличенный эргономичный размер язычка
+        # Увеличено до оптимального MD3 размера для удобного тапа пальцем
         self.size = (dp(30), dp(80))
         self.bg_color = bg_color
         self.arrow_color = color
@@ -265,7 +266,7 @@ class CustomHandle(ButtonBehavior, Widget):
         self.canvas.clear()
 
         # Позиционируем стрелочку строго по центру язычка
-        self.icon_arrow.pos = (self.x + dp(3), self.center_y - self.icon_arrow.height / 2)
+        self.icon_arrow.pos = (self.x + dp(2), self.center_y - self.icon_arrow.height / 2)
         self.rot.origin = self.icon_arrow.center
 
         theme_id = settings_manager.theme
@@ -285,7 +286,7 @@ class CustomHandle(ButtonBehavior, Widget):
                 radius=[dp(20), 0, 0, dp(20)]
             )
 
-            # 2. Тонкая бесшовная обводка без внутренних линий через кривые Безье
+            # 2. Тонкая обводка через кривые Безье
             Color(*line_color)
 
             # Верхний плавный изгиб
@@ -326,12 +327,11 @@ class CustomHandle(ButtonBehavior, Widget):
     def set_state(self, is_open):
         """Плавный поворот стрелочки при открытии/закрытии панели"""
         self.panel_is_open = is_open
-        # Ротация на 180 градусов в зависимости от состояния панели
         target_angle = 180 if is_open else 0
         Animation(angle=target_angle, duration=0.2, t='out_quad').start(self)
 
     def set_color(self, color, bg_color=None):
-        """Динамическое обновление цветов стрелочки и фонда"""
+        """Динамическое обновление цветов стрелочки и фона"""
         self.arrow_color = color
         self.icon_arrow.text_color = color
         if bg_color:
@@ -341,12 +341,14 @@ class CustomHandle(ButtonBehavior, Widget):
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
             self.icon_arrow.opacity = 0.6
-            return super().on_touch_down(touch)
-        return super().on_touch_down(touch)
+            return True  # Перехватываем касание
+        return False
 
     def on_touch_up(self, touch):
         self.icon_arrow.opacity = 1.0
-        return super().on_touch_up(touch)
+        if self.collide_point(*touch.pos):
+            return True
+        return False
 
 
 class FloatingPanel(MDCard):
@@ -400,9 +402,6 @@ class FloatingPanel(MDCard):
         self._hidden_x = None
         self._is_visible = False
         self._anim = None
-        self._touch_start_x = 0
-        self._start_panel_x = 0
-        self._dragging = False
 
         self.mode = 'menu'
         self.items = []
@@ -454,6 +453,8 @@ class FloatingPanel(MDCard):
     def _on_content_height_changed(self, instance, value):
         if self.mode == 'chords':
             self.height = max(value, dp(350))
+        elif self.mode in ['font', 'scroll', 'tonality']:
+            self.height = dp(360)
         else:
             self.height = max(value, dp(100))
         self._recenter()
@@ -471,7 +472,54 @@ class FloatingPanel(MDCard):
         if self._hidden_x is None: return
         self.y = (Window.height - self.height) / 2
 
-    # ============ МЕНЮ ============
+    # ============ КЛИКИ И ИЗОЛЯЦИЯ СВАЙПОВ ============
+
+    def on_touch_down(self, touch):
+        if self._visible_x is None or self._hidden_x is None:
+            self._init_position()
+
+        if self.collide_point(*touch.pos):
+            # Если тап пришелся по области клювика — переключаем видимость
+            if hasattr(self, 'handle_widget') and self.handle_widget.collide_point(*touch.pos):
+                self.toggle_panel()
+                return True
+            # Касания слайдеров и кнопок внутри шторки спокойно пропускаем к ним
+            return super().on_touch_down(touch)
+        return False
+
+    def on_touch_move(self, touch):
+        # Полностью глушим горизонтальные свайпы, чтобы слайдеры не дергали панель
+        if self.collide_point(*touch.pos):
+            return super().on_touch_move(touch)
+        return False
+
+    def on_touch_up(self, touch):
+        return super().on_touch_up(touch)
+
+    def toggle_panel(self):
+        """Переключает состояние шторки по клику"""
+        if self._is_visible:
+            self.hide()
+        else:
+            self.show()
+
+    def show(self):
+        if self._is_visible: return
+        self._is_visible = True
+        self.handle_widget.set_state(True)
+        if self._anim: self._anim.cancel(self)
+        self._anim = Animation(x=self._visible_x, duration=0.25, t='out_quad')
+        self._anim.start(self)
+
+    def hide(self):
+        if not self._is_visible: return
+        self._is_visible = False
+        self.handle_widget.set_state(False)
+        if self._anim: self._anim.cancel(self)
+        self._anim = Animation(x=self._hidden_x, duration=0.25, t='in_quad')
+        self._anim.start(self)
+
+        # ============ МЕНЮ ============
 
     def _build_menu(self):
         self.content.clear_widgets()
@@ -507,7 +555,7 @@ class FloatingPanel(MDCard):
 
         self.update_theme_colors()
 
-    # ============ ВЕРТИКАЛЬНОЕ МЕНЮ АККОРДОВ ============
+        # ============ ВЕРТИКАЛЬНОЕ МЕНЮ АККОРДОВ ============
 
     def _build_chords_panel(self):
         self.content.clear_widgets()
@@ -517,7 +565,6 @@ class FloatingPanel(MDCard):
         theme_id = settings_manager.theme
         accent = DetailColors.get_accent(theme_id)
 
-        # 1. Стрелки пагинации
         pag_box = MDBoxLayout(
             orientation='horizontal', size_hint=(1, None), height=dp(44),
             spacing=dp(2), padding=[dp(2), 0, dp(2), 0]
@@ -542,7 +589,6 @@ class FloatingPanel(MDCard):
                           md_bg_color=DetailColors.get_divider(theme_id))
         self.content.add_widget(div)
 
-        # 2. Иконки действий
         self.variant_item = PanelIcon(
             icon="format-list-bulleted-square",
             on_click=lambda: self._on_menu_item('variant')
@@ -569,7 +615,6 @@ class FloatingPanel(MDCard):
                                  md_bg_color=DetailColors.get_divider(theme_id))
         self.content.add_widget(div_bottom)
 
-        # 3. Кнопка "Назад"
         back_btn = MDIconButton(
             icon="arrow-left", size_hint=(1, None), height=dp(48),
             theme_icon_color="Custom", icon_color=accent,
@@ -643,7 +688,7 @@ class FloatingPanel(MDCard):
         elif action == 'unfavorite':
             if self.parent_screen: self.parent_screen.toggle_favorite()
 
-    # ============ ПОД-ПАНЕЛИ (ШРИФТ/ПРОКРУТКА/ТОНАЛЬНОСТЬ) ============
+        # ============ ПОД-ПАНЕЛИ (ШРИФТ/ПРОКРУТКА/ТОНАЛЬНОСТЬ) ============
 
     def _build_slider_panel(self, type_str):
         self.content.clear_widgets()
@@ -656,20 +701,17 @@ class FloatingPanel(MDCard):
         text_p = DetailColors.get_text_primary(theme_id)
         div_color = DetailColors.get_divider(theme_id)
 
-        # ✅ Фиксированная высота панели, строго контролируем элементы
         self.height = dp(360)
         self._recenter()
 
-        # Главный контейнер панели
         panel = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(340),  # Ограничиваем контент внутри 360dp общей высоты
+            height=dp(340),
             spacing=dp(2),
             padding=[dp(2), dp(4), dp(2), dp(4)]
         )
 
-        # 1. Заголовок
         title_text = "Тон" if type_str == 'tonality' else ("Шрифт" if type_str == 'font' else "Скорость")
         title_lbl = MDLabel(
             text=title_text, halign="center", valign="middle",
@@ -678,7 +720,6 @@ class FloatingPanel(MDCard):
         )
         panel.add_widget(title_lbl)
 
-        # 2. Значение
         self._sub_val_label = MDLabel(
             text="0", halign="center", valign="middle",
             theme_text_color="Custom", text_color=accent, bold=True,
@@ -686,22 +727,19 @@ class FloatingPanel(MDCard):
         )
         panel.add_widget(self._sub_val_label)
 
-        # 3. Разделитель
         panel.add_widget(
             MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1), md_bg_color=div_color))
 
-        # 4. КОНТЕЙНЕР ДЛЯ СЛАЙДЕРА (оптимизированные размеры для исключения выхода за границы)
         slider_card = MDBoxLayout(
             orientation='vertical',
             size_hint=(None, None),
-            size=(dp(50), dp(200)),  # Компактная высота для размещения в контейнере
+            size=(dp(50), dp(200)),
             pos_hint={'center_x': 0.5},
             padding=[0, dp(4), 0, dp(4)],
             spacing=dp(2),
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Плюс
         slider_card.add_widget(MDLabel(
             text="+", halign="center", valign="middle",
             theme_text_color="Custom", text_color=[0.3, 0.7, 0.3, 0.9],
@@ -716,7 +754,7 @@ class FloatingPanel(MDCard):
                 min=-6.01, max=6.01, value=current_val, step=1,
                 orientation='vertical',
                 size_hint=(None, None),
-                size=(dp(36), dp(140)),  # Строгий фиксированный размер самого слайдера
+                size=(dp(36), dp(140)),
                 pos_hint={'center_x': 0.5},
                 hint=False
             )
@@ -728,7 +766,7 @@ class FloatingPanel(MDCard):
             self.ton_slider.track_color_inactive = [1, 1, 1, 0.3]
             self.ton_slider.color = accent
             try:
-                self.ton_slider.cursor_size = (dp(20), dp(20))  # Уменьшаем размер ползунка под контейнер
+                self.ton_slider.cursor_size = (dp(20), dp(20))
             except Exception:
                 pass
 
@@ -842,17 +880,14 @@ class FloatingPanel(MDCard):
             self.scroll_slider.bind(value=on_scroll_change)
             slider_card.add_widget(self.scroll_slider)
 
-        # Минус
         slider_card.add_widget(MDLabel(
             text="-", halign="center", valign="middle",
             theme_text_color="Custom", text_color=[0.8, 0.3, 0.3, 0.9],
             size_hint_y=None, height=dp(14), bold=True, font_size=sp(12)
         ))
 
-        # Добавляем карточку в панель
         panel.add_widget(slider_card)
 
-        # 5. Кнопка "Назад"
         bottom_box = MDBoxLayout(
             orientation='horizontal', size_hint=(1, None), height=dp(36),
             padding=[dp(2), dp(2), dp(2), dp(2)]
@@ -871,7 +906,6 @@ class FloatingPanel(MDCard):
         self.content.add_widget(panel)
         self.update_theme_colors()
 
-        # Принудительно обновляем размеры после добавления
         def _force_resize(dt):
             self.height = dp(360)
             self._recenter()
@@ -905,7 +939,8 @@ class FloatingPanel(MDCard):
             )
 
         if self.mode == 'menu':
-            for item in self.items: item.set_color(DetailColors.get_accent(theme_id))
+            for item in self.items:
+                item.set_color(DetailColors.get_accent(theme_id))
             for child in self.content.children:
                 if hasattr(child, '_inner_line'):
                     child._inner_line.md_bg_color = DetailColors.get_divider(theme_id)
@@ -939,74 +974,7 @@ class FloatingPanel(MDCard):
                             sub.track_color_active = accent[:3] + [0.6]
                             sub.color = accent
 
-    # ============ СВАЙП ============
 
-    def on_touch_down(self, touch):
-        if self._visible_x is None or self._hidden_x is None:
-            self._init_position()
-
-        if self.collide_point(*touch.pos):
-            if self._is_child_interactive(touch):
-                return super().on_touch_down(touch)
-            self._touch_start_x = touch.x
-            self._start_panel_x = self.x
-            self._dragging = False
-            touch.grab(self)
-            return True
-        return super().on_touch_down(touch)
-
-    def _is_child_interactive(self, touch):
-        for child in self.walk():
-            if child is self: continue
-            if hasattr(child, 'collide_point') and child.collide_point(*touch.pos):
-                # Добавляем строгую проверку: если класс виджета или его родителя является слайдером
-                if isinstance(child, (MDIconButton, PanelIcon, CompactVerticalSlider, MDSlider, MDRaisedButton)):
-                    return True
-                # Дополнительная защита для внутренних компонентов MDSlider (трек, thumb)
-                if hasattr(child, 'parent') and isinstance(child.parent, MDSlider):
-                    return True
-                if hasattr(child, 'children') and isinstance(child, MDScrollView):
-                    return True
-        return False
-
-    def on_touch_move(self, touch):
-        if touch.grab_current is self:
-            dx = touch.x - self._touch_start_x
-            if abs(dx) > dp(10): self._dragging = True
-            new_x = self._start_panel_x + dx
-            new_x = max(self._visible_x, min(self._hidden_x, new_x))
-            self.x = new_x
-            return True
-        return super().on_touch_move(touch)
-
-    def on_touch_up(self, touch):
-        if touch.grab_current is self:
-            touch.ungrab(self)
-            if self._dragging:
-                midpoint = (self._visible_x + self._hidden_x) / 2
-                if self.x < midpoint:
-                    self.show()
-                else:
-                    self.hide()
-            self._dragging = False
-            return True
-        return super().on_touch_up(touch)
-
-    def show(self):
-        if self._is_visible: return
-        self._is_visible = True
-        self.handle_widget.set_state(True)
-        if self._anim: self._anim.cancel(self)
-        self._anim = Animation(x=self._visible_x, duration=0.25, t='out_quad')
-        self._anim.start(self)
-
-    def hide(self):
-        if not self._is_visible: return
-        self._is_visible = False
-        self.handle_widget.set_state(False)
-        if self._anim: self._anim.cancel(self)
-        self._anim = Animation(x=self._hidden_x, duration=0.25, t='in_quad')
-        self._anim.start(self)
 
 
 # ============================================================

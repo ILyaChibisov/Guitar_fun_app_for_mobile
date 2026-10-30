@@ -24,33 +24,35 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildozer
-          key: ${{ runner.os }}-buildozer-global-${{ env.date }}
+          # ОБНОВЛЕННЫЙ КЛЮЧ (v2) для сброса старого кеша
+          key: ${{ runner.os }}-buildozer-global-v2-${{ env.date }}
           restore-keys: |
-            ${{ runner.os }}-buildozer-global-
+            ${{ runner.os }}-buildozer-global-v2-
 
       - name: Cache Buildozer directory in app
         uses: actions/cache@v4
         with:
           path: .buildozer
-          key: ${{ runner.os }}-buildozer-app-${{ env.date }}
+          # ОБНОВЛЕННЫЙ КЛЮЧ (v2) для сброса старого кеша
+          key: ${{ runner.os }}-buildozer-app-v2-${{ env.date }}
           restore-keys: |
-            ${{ runner.os }}-buildozer-app-
+            ${{ runner.os }}-buildozer-app-v2-
 
       - name: Cache Android SDK
         uses: actions/cache@v4
         with:
           path: ~/.buildozer/android/platform/android-sdk
-          key: ${{ runner.os }}-android-sdk-${{ env.date }}
+          key: ${{ runner.os }}-android-sdk-v2-${{ env.date }}
           restore-keys: |
-            ${{ runner.os }}-android-sdk-
+            ${{ runner.os }}-android-sdk-v2-
 
       - name: Cache Android NDK
         uses: actions/cache@v4
         with:
           path: ~/.buildozer/android/platform/android-ndk
-          key: ${{ runner.os }}-android-ndk-${{ env.date }}
+          key: ${{ runner.os }}-android-ndk-v2-${{ env.date }}
           restore-keys: |
-            ${{ runner.os }}-android-ndk-
+            ${{ runner.os }}-android-ndk-v2-
 
       - name: Install dependencies
         run: |
@@ -84,8 +86,6 @@ jobs:
 
       - name: Quarantine long-path files
         run: |
-          # Исключаем файлы, чей путь внутри .aab превышает лимит tarfile USTAR.
-          # Файлы перемещаются в chords_quarantine/ и не попадают в сборку.
           python utils/quarantine_long_paths.py --limit 90
 
       - name: Create keystore directory
@@ -96,11 +96,9 @@ jobs:
         run: |
           KEYSTORE_PATH="./.buildozer/android/platform/guitarfuns_keystore.jks"
 
-          # Проверяем, есть ли keystore в корне проекта
           if [ -f "guitarfuns_keystore.jks" ]; then
             echo "✅ Keystore найден в корне проекта, копируем..."
             cp guitarfuns_keystore.jks $KEYSTORE_PATH
-          # Проверяем, есть ли keystore в папке .buildozer
           elif [ -f "$KEYSTORE_PATH" ]; then
             echo "✅ Keystore уже существует в .buildozer"
           else
@@ -117,23 +115,7 @@ jobs:
             echo "✅ Новый keystore создан"
           fi
 
-      # --- ПАТЧ GRADLE WRAPPER (ЗЕРКАЛО) ---
-      - name: Patch Gradle Wrapper to use a mirror
-        run: |
-          # Ищем файл gradle-wrapper.properties в папке .buildozer
-          WRAPPER_FILE=$(find .buildozer -name "gradle-wrapper.properties" | head -n 1)
-          
-          if [ -n "$WRAPPER_FILE" ]; then
-            echo "Патчим: $WRAPPER_FILE"
-            # Заменяем официальный URL на зеркало (Tencent Cloud)
-            sed -i 's|https\\://services.gradle.org/distributions/|https://mirrors.cloud.tencent.com/gradle/|g' "$WRAPPER_FILE"
-            echo "✅ Ссылка на Gradle заменена на зеркало."
-            grep distributionUrl "$WRAPPER_FILE"
-          else
-            echo "⚠️ Файл gradle-wrapper.properties не найден. Это нормально для первой сборки."
-          fi
-
-      # --- ПАТЧ ANDROIDMANIFEST (NETWORK SECURITY) ---
+      # --- ПАТЧ ANDROIDMANIFEST ---
       - name: Patch AndroidManifest template for Network Security Config
         run: |
           # Ищем путь к шаблону манифеста
@@ -141,13 +123,22 @@ jobs:
           
           if [ -n "$MANIFEST_PATH" ]; then
             echo "Патчим: $MANIFEST_PATH"
-            # Добавляем атрибут в тег <application>, если его там ещё нет
+            
+            # Выводим строку до патча для отладки
+            grep '<application' "$MANIFEST_PATH" || true
+            
+            # Проверяем, нет ли уже нашего атрибута (чтобы не дублировать)
             if ! grep -q 'networkSecurityConfig' "$MANIFEST_PATH"; then
-              sed -i 's/<application /<application android:networkSecurityConfig="@xml\/network_security_config" /' "$MANIFEST_PATH"
-              echo "✅ Атрибут networkSecurityConfig добавлен."
+              # Внимательно с кавычками! В sed используем одинарные кавычки для самого выражения
+              # и экранируем слеши в пути @xml/network_security_config
+              sed -i 's|<application |<application android:networkSecurityConfig="@xml/network_security_config" |' "$MANIFEST_PATH"
+              echo "✅ Атрибут добавлен."
             else
-              echo "ℹ️ Атрибут networkSecurityConfig уже присутствует."
+              echo "ℹ️ Атрибут уже присутствует."
             fi
+            
+            # Выводим результат для проверки
+            grep '<application' "$MANIFEST_PATH" || true
           else
             echo "⚠️ Шаблон не найден. Возможно, это первая сборка и папка .buildozer ещё не создана."
           fi
@@ -176,14 +167,12 @@ jobs:
           api_upload = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
           api_mkdir  = 'https://cloud-api.yandex.net/v1/disk/resources'
 
-          # Создаём подпапку под конкретный запуск, чтобы ничего не перезаписывалось
           run_dir = f'{remote_dir}/run-{run_number}'
           r = requests.put(api_mkdir, headers=headers, params={'path': run_dir})
           if r.status_code not in (200, 201, 409):
               print('Ошибка создания папки:', r.status_code, r.text)
               sys.exit(1)
 
-          # Ищем все APK
           apks = glob.glob(os.path.join(local_dir, '*.apk'))
           if not apks:
               print('❌ APK-файлы не найдены в', local_dir)
@@ -193,7 +182,6 @@ jobs:
               name = os.path.basename(apk)
               remote_path = f'{run_dir}/{name}'
 
-              # Получаем ссылку на загрузку
               r = requests.get(api_upload, headers=headers,
                                params={'path': remote_path, 'overwrite': 'true'})
               if r.status_code != 200:
@@ -201,7 +189,6 @@ jobs:
                   sys.exit(1)
               upload_url = r.json()['href']
 
-              # Загружаем
               with open(apk, 'rb') as f:
                   up = requests.put(upload_url, data=f)
               if up.status_code not in (200, 201, 202):
