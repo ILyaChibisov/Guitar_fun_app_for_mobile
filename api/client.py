@@ -1,8 +1,10 @@
 # api/client.py
 """
-HTTP клиент для работы с сервером - БЕЗ ФАЙЛОВОГО КЭША
-С автоматическим обновлением access_token через refresh_token
-С поддержкой stale-while-revalidate для избранного
+HTTP клиент для работы с сервером.
+- Без файлового кэша.
+- Автоматическое обновление access_token через refresh_token.
+- Stale-while-revalidate для избранного.
+- Ретрай при обрыве keep-alive соединения.
 """
 import json
 import os
@@ -19,7 +21,7 @@ from kivy.logger import Logger
 from kivy.storage.jsonstore import JsonStore
 from kivy.clock import Clock
 from config.app_config import config
-from api.ssl_config import get_requests_session
+from api.ssl_config import get_requests_session, reset_requests_session
 
 # Отключаем предупреждения SSL
 warnings.filterwarnings("ignore", category=Warning)
@@ -140,20 +142,29 @@ class APIClient:
         # ============ КЭШ ИЗБРАННОГО ТОЛЬКО В ПАМЯТИ ============
         self._favorites_cache = None
         self._favorites_cache_timestamp = 0
-        self._favorites_stale = True            # пока данных нет — считаем устаревшими
-        self._favorites_listeners = []          # подписчики на изменения
-        self._favorites_load_in_progress = False  # защита от дублирующих запросов
+        self._favorites_stale = True
+        self._favorites_listeners = []
+        self._favorites_load_in_progress = False
 
-        # Создаем сессию
+        # Создаём сессию (заголовки User-Agent/Accept/Connection
+        # уже выставлены в ssl_config.py)
         self.session = get_requests_session()
-        self.session.headers.update({
-            'User-Agent': 'GuitarFuns/1.0',
-            'Accept': 'application/json',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive'
-        })
 
         self._load_tokens()
+
+    # ============ СБРОС СЕССИИ (для on_resume) ============
+
+    def reset_session(self):
+        """
+        Сбрасывает пул соединений сессии.
+        Вызывать при возврате приложения из фона (on_resume),
+        чтобы избежать использования "мёртвых" keep-alive сокетов.
+        """
+        try:
+            reset_requests_session(self.session)
+            Logger.info("API: сессия сброшена (on_resume)")
+        except Exception as e:
+            Logger.error(f"API: ошибка сброса сессии — {e}")
 
     # ============ AUTH TOKENS ============
 
@@ -204,6 +215,8 @@ class APIClient:
         """
         Пытается обновить access_token через refresh_token.
         Возвращает True, если удалось, False — если нет.
+
+        ВАЖНО: сервер теперь принимает refresh_token в JSON-теле.
         """
         if not self.refresh_token:
             Logger.warning("API: Нет refresh_token, обновление невозможно")
@@ -213,7 +226,7 @@ class APIClient:
             Logger.info("🔄 Обновление access_token через refresh_token...")
             response = self.session.post(
                 f"{self.config.API_BASE_URL}/auth/refresh",
-                params={'refresh_token': self.refresh_token},
+                json={"refresh_token": self.refresh_token},  # ← JSON-тело
                 timeout=config.CONNECTION_TIMEOUT
             )
 
@@ -235,6 +248,28 @@ class APIClient:
 
     # ============ ЗАПРОСЫ ============
 
+    def _do_request(self, method, url, headers, data, verify=True):
+        """Выполняет один HTTP-запрос."""
+        kwargs = {
+            'headers': headers,
+            'timeout': config.CONNECTION_TIMEOUT,
+        }
+        if not verify:
+            kwargs['verify'] = False
+
+        if method == 'GET':
+            return self.session.get(url, **kwargs)
+        elif method == 'POST':
+            return self.session.post(url, json=data, **kwargs)
+        elif method == 'PUT':
+            return self.session.put(url, json=data, **kwargs)
+        elif method == 'DELETE':
+            return self.session.delete(url, **kwargs)
+        elif method == 'PATCH':
+            return self.session.patch(url, json=data, **kwargs)
+        else:
+            return self.session.request(method, url, json=data, **kwargs)
+
     def _request_sync(self, url, method='GET', data=None, include_auth=True, _retry=True):
         """
         Синхронный запрос с обработкой SSL ошибок и автообновлением токена.
@@ -242,31 +277,16 @@ class APIClient:
         """
         headers = self._get_headers(include_auth)
         try:
-            # Выполняем запрос
-            if method == 'GET':
-                response = self.session.get(url, headers=headers, timeout=config.CONNECTION_TIMEOUT)
-            elif method == 'POST':
-                response = self.session.post(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
-            elif method == 'PUT':
-                response = self.session.put(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
-            elif method == 'DELETE':
-                response = self.session.delete(url, headers=headers, timeout=config.CONNECTION_TIMEOUT)
-            elif method == 'PATCH':
-                response = self.session.patch(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT)
-            else:
-                response = self.session.request(method, url, json=data, headers=headers,
-                                                timeout=config.CONNECTION_TIMEOUT)
+            response = self._do_request(method, url, headers, data)
 
             # ============ АВТООБНОВЛЕНИЕ ТОКЕНА ПРИ 401 ============
             if response.status_code == 401 and include_auth and _retry:
                 Logger.warning("⚠️ Получен 401, пробуем обновить токен...")
 
                 if self._refresh_access_token():
-                    # Токен обновился — повторяем запрос с новым токеном
                     Logger.info("🔄 Повторяем исходный запрос с новым токеном...")
                     return self._request_sync(url, method, data, include_auth, _retry=False)
                 else:
-                    # Не удалось обновить — чистим токены
                     Logger.warning("❌ Не удалось обновить токен, очищаем данные авторизации")
                     self._clear_tokens()
                     return {"error": "unauthorized"}
@@ -281,55 +301,58 @@ class APIClient:
 
         except requests.exceptions.SSLError as e:
             Logger.error(f"❌ SSL Error: {e}")
-            Logger.warning("⚠️ Пробуем запрос без проверки SSL...")
+            Logger.warning("⚠️ Пробуем запрос без проверки SSL (fallback)...")
 
             try:
-                # Повторяем запрос с отключенной проверкой SSL
-                if method == 'GET':
-                    response = self.session.get(url, headers=headers, timeout=config.CONNECTION_TIMEOUT, verify=False)
-                elif method == 'POST':
-                    response = self.session.post(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT,
-                                                 verify=False)
-                elif method == 'PUT':
-                    response = self.session.put(url, json=data, headers=headers, timeout=config.CONNECTION_TIMEOUT,
-                                                verify=False)
-                elif method == 'DELETE':
-                    response = self.session.delete(url, headers=headers, timeout=config.CONNECTION_TIMEOUT,
-                                                   verify=False)
-                else:
-                    response = self.session.request(method, url, json=data, headers=headers,
-                                                    timeout=config.CONNECTION_TIMEOUT, verify=False)
-
+                response = self._do_request(method, url, headers, data, verify=False)
                 response.raise_for_status()
                 Logger.warning("⚠️ Запрос выполнен без проверки SSL")
                 return response.json() if response.content else {"artists": [], "total": 0}
-
             except Exception as e2:
                 Logger.error(f'❌ Ошибка запроса (без SSL): {e2}')
                 return {"artists": [], "total": 0}
 
+        except (requests.exceptions.ConnectionError,
+                requests.exceptions.ChunkedEncodingError) as e:
+            # Это типичные симптомы "мёртвого" keep-alive сокета.
+            # Делаем ОДИН ретрай с новой сессией — это спасает после resume.
+            err_text = str(e)
+            is_dead_socket = any(s in err_text for s in (
+                "RemoteDisconnected", "Connection aborted",
+                "Connection reset", "Read timed out",
+                "Connection broken",
+            ))
+
+            if is_dead_socket and _retry:
+                Logger.warning(f"🔌 Обрыв соединения ({err_text[:80]}), ретрай с новой сессией...")
+                try:
+                    self.reset_session()
+                except Exception:
+                    pass
+                # _retry=False — чтобы не зациклиться
+                return self._request_sync(url, method, data, include_auth, _retry=False)
+
+            Logger.error(f"🔌 Ошибка соединения: {e}")
+            return {"error": "connection", "artists": [], "songs": [],
+                    "favorites": [], "results": [], "total": 0}
 
         except requests.exceptions.Timeout as e:
             Logger.error(f"⏱️ Таймаут: {e}")
-            return {"error": "timeout", "artists": [], "songs": [], "favorites": [], "results": [], "total": 0}
-
-
-        except requests.exceptions.ConnectionError as e:
-            Logger.error(f"🔌 Ошибка соединения: {e}")
-            return {"error": "connection", "artists": [], "songs": [], "favorites": [], "results": [], "total": 0}
+            return {"error": "timeout", "artists": [], "songs": [],
+                    "favorites": [], "results": [], "total": 0}
 
         except Exception as e:
             Logger.error(f'❌ Ошибка запроса: {e}')
-            return {"error": "unknown", "artists": [], "songs": [], "favorites": [], "results": [], "total": 0}
+            return {"error": "unknown", "artists": [], "songs": [],
+                    "favorites": [], "results": [], "total": 0}
 
     def _request_async(self, url, method='GET', data=None, on_success=None, on_failure=None, include_auth=True):
-        """Асинхронный запрос"""
+        """Асинхронный запрос (в отдельном потоке)"""
 
         def worker():
             try:
                 result = self._request_sync(url, method, data, include_auth)
 
-                # Если токен не удалось обновить — сообщаем об ошибке авторизации
                 if isinstance(result, dict) and result.get('error') == 'unauthorized':
                     error_msg = "unauthorized"
                     if on_failure:
@@ -357,41 +380,26 @@ class APIClient:
     # ============ КЭШ ИЗБРАННОГО (ТОЛЬКО В ПАМЯТИ) ============
 
     def _load_favorites_cache(self, allow_stale=False):
-        """
-        Возвращает кэш избранного из памяти.
-        allow_stale=True — вернёт даже устаревший кэш (для мгновенного показа).
-        allow_stale=False — вернёт только свежий кэш.
-        """
         if self._favorites_cache is None:
             return None
-
-        # Если разрешено отдавать устаревший — отдаём что есть
         if allow_stale:
             return self._favorites_cache
-
-        # Иначе проверяем TTL
         if time.time() - self._favorites_cache_timestamp < config.FAVORITES_CACHE_TTL:
             return self._favorites_cache
-
         return None
 
     def _save_favorites_cache(self, favorites, stale=False):
-        """Сохраняет кэш избранного в память"""
         self._favorites_cache = favorites
         self._favorites_cache_timestamp = time.time()
         self._favorites_stale = stale
-        Logger.info(
-            f"💾 Кэш избранного сохранён: {len(favorites)} песен, stale={stale}"
-        )
+        Logger.info(f"💾 Кэш избранного сохранён: {len(favorites)} песен, stale={stale}")
 
     def _mark_favorites_stale(self):
-        """Помечает кэш как устаревший, НЕ очищая данные"""
         if self._favorites_cache is not None:
             self._favorites_stale = True
             Logger.info("⚠️ Кэш избранного помечен как устаревший (данные сохранены)")
 
     def _clear_favorites_cache(self):
-        """Полностью очищает кэш избранного (при logout)"""
         self._favorites_cache = None
         self._favorites_cache_timestamp = 0
         self._favorites_stale = True
@@ -400,10 +408,6 @@ class APIClient:
     # ============ ЛОКАЛЬНЫЕ ИЗМЕНЕНИЯ КЭША ============
 
     def _add_to_favorites_cache_local(self, song: dict):
-        """
-        Оптимистично добавляет песню в локальный кэш избранного.
-        song — словарь с полями id/song_id, artist, title.
-        """
         if self._favorites_cache is None:
             self._favorites_cache = []
 
@@ -411,12 +415,10 @@ class APIClient:
         if not song_id:
             return
 
-        # Проверяем, нет ли уже
         for s in self._favorites_cache:
             if s.get('id') == song_id or s.get('song_id') == song_id:
-                return  # уже есть
+                return
 
-        # Нормализуем поля
         entry = {
             'id': song_id,
             'song_id': song_id,
@@ -430,7 +432,6 @@ class APIClient:
         Logger.info(f"➕ Локально добавлено в избранное: {entry['artist']} - {entry['title']}")
 
     def _remove_from_favorites_cache_local(self, song_id):
-        """Оптимистично удаляет песню из локального кэша"""
         if self._favorites_cache is None:
             return
 
@@ -448,19 +449,16 @@ class APIClient:
     # ============ ПОДПИСКА НА ИЗМЕНЕНИЯ ============
 
     def add_favorites_listener(self, callback):
-        """Добавляет слушателя изменений избранного"""
         if callback not in self._favorites_listeners:
             self._favorites_listeners.append(callback)
             Logger.debug(f"👂 Добавлен слушатель избранного: {callback}")
 
     def remove_favorites_listener(self, callback):
-        """Удаляет слушателя"""
         if callback in self._favorites_listeners:
             self._favorites_listeners.remove(callback)
             Logger.debug(f"👂 Удалён слушатель избранного: {callback}")
 
     def _notify_favorites_changed(self):
-        """Уведомляет всех слушателей об изменении избранного"""
         favorites = self._favorites_cache or []
         Logger.info(f"📢 Уведомляем {len(self._favorites_listeners)} слушателей об изменении избранного")
         for cb in self._favorites_listeners:
@@ -473,49 +471,26 @@ class APIClient:
 
     def get_favorites(self, on_success=None, on_failure=None,
                       force_refresh=False, silent_refresh=False):
-        """
-        Получить избранное с поддержкой stale-while-revalidate.
-
-        Args:
-            on_success: колбэк при успехе (может вызваться ДВАЖДЫ:
-                        сначала из кэша, потом после сети)
-            on_failure: колбэк при ошибке
-            force_refresh: True — игнорировать кэш, сразу запрос
-            silent_refresh: True — не показывать спиннер, обновлять в фоне
-        """
-        # ============ 1. Проверяем кэш ============
         if not force_refresh:
             cached_stale = self._load_favorites_cache(allow_stale=True)
-
             if cached_stale is not None:
-                # Есть кэш — отдаём СРАЗУ (0 мс)
                 Logger.info(f"⚡ Избранное из кэша (stale={self._favorites_stale}): {len(cached_stale)} песен")
                 if on_success:
                     Clock.schedule_once(lambda dt: on_success(cached_stale), 0)
-
-                # Если кэш свежий — сеть не нужна
                 if not self._favorites_stale:
                     return
-
-                # Если stale — запускаем фоновое обновление
                 Logger.info("🔄 Кэш устарел — фоновое обновление...")
                 self._fetch_favorites_from_server(
-                    on_success=on_success,
-                    on_failure=on_failure,
-                    silent=True
+                    on_success=on_success, on_failure=on_failure, silent=True
                 )
                 return
 
-        # ============ 2. Кэша нет — обычная загрузка ============
         Logger.info("🔄 Загрузка избранного с сервера (кэш пуст)...")
         self._fetch_favorites_from_server(
-            on_success=on_success,
-            on_failure=on_failure,
-            silent=silent_refresh
+            on_success=on_success, on_failure=on_failure, silent=silent_refresh
         )
 
     def _fetch_favorites_from_server(self, on_success=None, on_failure=None, silent=False):
-        """Внутренний метод — реальный запрос к серверу"""
         if self._favorites_load_in_progress:
             Logger.info("⏳ Загрузка избранного уже идёт — пропускаем")
             return
@@ -533,15 +508,10 @@ class APIClient:
                 favorites = []
 
             formatted = self._format_favorites(favorites)
-
-            # ✅ Сохраняем в кэш как свежий
             self._save_favorites_cache(formatted, stale=False)
-
-            # ✅ Уведомляем слушателей (для мгновенного обновления UI)
             self._notify_favorites_changed()
 
             Logger.info(f"✅ Избранное получено с сервера: {len(formatted)} песен")
-
             if on_success:
                 on_success(formatted)
 
@@ -549,11 +519,9 @@ class APIClient:
             self._favorites_load_in_progress = False
             Logger.warning(f"⚠️ Ошибка загрузки избранного: {error}")
 
-            # Если есть кэш — оставляем его, не падаем
             if self._favorites_cache is not None:
                 Logger.info("ℹ️ Используем старый кэш после ошибки")
                 if silent:
-                    # Тихо игнорируем — данные уже показаны
                     return
                 if on_failure:
                     on_failure(req, error)
@@ -571,7 +539,6 @@ class APIClient:
         )
 
     def _format_favorites(self, favorites):
-        """Форматирует список избранного в единый вид"""
         formatted = []
         for item in favorites:
             if isinstance(item, str):
@@ -596,15 +563,6 @@ class APIClient:
 
     def add_to_favorites(self, song_id: int, song_data: dict = None,
                          on_success=None, on_failure=None):
-        """
-        Добавить в избранное с оптимистичным обновлением.
-
-        Args:
-            song_id: ID песни
-            song_data: опционально {'artist': ..., 'title': ...} для локального кэша
-            on_success, on_failure: колбэки
-        """
-        # ✅ 1. ОПТИМИСТИЧНО обновляем локальный кэш
         if song_data:
             song_data = dict(song_data)
             song_data['id'] = song_id
@@ -613,11 +571,8 @@ class APIClient:
             song_data = {'id': song_id, 'song_id': song_id, 'artist': '', 'title': ''}
 
         self._add_to_favorites_cache_local(song_data)
-
-        # ✅ 2. Уведомляем UI мгновенно
         self._notify_favorites_changed()
 
-        # ✅ 3. В фоне отправляем на сервер
         def _on_success(result):
             Logger.info(f"⭐ Песня {song_id} добавлена на сервере")
             if on_success:
@@ -625,7 +580,6 @@ class APIClient:
 
         def _on_failure(req, error):
             Logger.error(f"❌ Ошибка добавления в избранное: {error}")
-            # ❌ ОТКАТ локального кэша
             self._remove_from_favorites_cache_local(song_id)
             self._notify_favorites_changed()
             if on_failure:
@@ -641,9 +595,6 @@ class APIClient:
 
     def remove_from_favorites(self, song_id: int,
                               on_success=None, on_failure=None):
-        """Удалить из избранного с оптимистичным обновлением"""
-
-        # ✅ 1. Запоминаем удалённый элемент (для отката)
         removed_song = None
         if self._favorites_cache:
             for s in self._favorites_cache:
@@ -651,13 +602,9 @@ class APIClient:
                     removed_song = dict(s)
                     break
 
-        # ✅ 2. Оптимистично удаляем
         self._remove_from_favorites_cache_local(song_id)
-
-        # ✅ 3. Уведомляем UI
         self._notify_favorites_changed()
 
-        # ✅ 4. В фоне отправляем на сервер
         def _on_success(result):
             Logger.info(f"⭐ Песня {song_id} удалена на сервере")
             if on_success:
@@ -665,7 +612,6 @@ class APIClient:
 
         def _on_failure(req, error):
             Logger.error(f"❌ Ошибка удаления из избранного: {error}")
-            # ❌ ОТКАТ
             if removed_song:
                 self._add_to_favorites_cache_local(removed_song)
                 self._notify_favorites_changed()
@@ -681,9 +627,6 @@ class APIClient:
         )
 
     def is_song_favorited(self, song_id: int) -> bool:
-        """
-        Проверяет, находится ли песня в избранном (из кэша в памяти)
-        """
         cached = self._load_favorites_cache(allow_stale=True)
         if cached is None:
             return False
@@ -696,11 +639,7 @@ class APIClient:
         return False
 
     def get_tab(self, song_id: int, on_success=None, on_failure=None, force_refresh=False):
-        """
-        Получить текст песни - ВСЕГДА С СЕРВЕРА (без кэша)
-        """
         Logger.info(f"🔄 Загрузка песни {song_id} с сервера...")
-
         return self._request(
             url=f"{self.config.API_BASE_URL}/songs/tab/{song_id}",
             method='GET',
@@ -766,7 +705,6 @@ class APIClient:
     # ============ API СЛОВАРЯ ============
 
     def get_dictionary_alphabet(self, on_success=None, on_failure=None):
-        """Получить доступные буквы по языкам"""
         return self._request(
             url=f"{self.config.API_BASE_URL}/dictionary/alphabet",
             method='GET',
@@ -777,8 +715,6 @@ class APIClient:
 
     def get_terms_by_letter(self, letter: str, lang: str = 'ru', limit: int = 200, offset: int = 0,
                             on_success=None, on_failure=None):
-        """Получить термины по букве с пагинацией"""
-        import urllib.parse
         encoded_letter = urllib.parse.quote(letter, safe='')
         url = f"{self.config.API_BASE_URL}/dictionary/terms/{encoded_letter}?lang={lang}&limit={limit}&offset={offset}"
         return self._request(
@@ -789,8 +725,6 @@ class APIClient:
 
     def search_terms(self, query: str, lang: str = None, limit: int = 100, offset: int = 0,
                      on_success=None, on_failure=None):
-        """Поиск по терминам"""
-        import urllib.parse
         encoded_query = urllib.parse.quote(query, safe='')
         url = f"{self.config.API_BASE_URL}/dictionary/search?q={encoded_query}&limit={limit}&offset={offset}"
         if lang:
@@ -802,8 +736,6 @@ class APIClient:
         )
 
     def search_terms_sync(self, query: str, lang: str = 'ru', limit: int = 20) -> dict:
-        """Синхронный поиск терминов (для фоновых потоков)"""
-        import urllib.parse
         try:
             q_enc = urllib.parse.quote(query, safe='')
             url = f"{self.config.API_BASE_URL}/dictionary/search?q={q_enc}&lang={lang}&limit={limit}"
@@ -815,7 +747,6 @@ class APIClient:
             return {"results": [], "total": 0}
 
     def get_term(self, term_id: int, on_success=None, on_failure=None):
-        """Получить полное описание термина по ID"""
         return self._request(
             url=f"{self.config.API_BASE_URL}/dictionary/term/{term_id}",
             method='GET',
@@ -827,92 +758,58 @@ class APIClient:
     # ============ МЕТОДЫ ДЛЯ РАБОТЫ С ЗАДАЧАМИ ============
 
     def get_tasks(self, on_success=None, on_failure=None, force_refresh=False, status=None):
-        """Получить список задач - ВСЕГДА С СЕРВЕРА"""
         Logger.info("🔄 Загрузка задач с сервера...")
-
         url = f"{self.config.API_BASE_URL}/tasks/"
         if status:
             url += f"?status={status}"
-
         return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
+            url=url, method='GET',
+            on_success=on_success, on_failure=on_failure,
             include_auth=True
         )
 
     def get_task(self, task_id, on_success=None, on_failure=None, force_refresh=False):
-        """Получить задачу по ID - ВСЕГДА С СЕРВЕРА"""
         Logger.info(f"🔄 Загрузка задачи {task_id} с сервера...")
-
         url = f"{self.config.API_BASE_URL}/tasks/{task_id}"
-
         return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
+            url=url, method='GET',
+            on_success=on_success, on_failure=on_failure,
             include_auth=True
         )
 
     def create_task(self, task_data, on_success=None, on_failure=None):
-        """Создать новую задачу"""
         Logger.info(f"📝 Создание задачи: {task_data.get('title')}")
-
         url = f"{self.config.API_BASE_URL}/tasks/"
-
         return self._request(
-            url=url,
-            method='POST',
-            data=task_data,
-            on_success=on_success,
-            on_failure=on_failure,
+            url=url, method='POST', data=task_data,
+            on_success=on_success, on_failure=on_failure,
             include_auth=True
         )
 
     def update_task(self, task_id, task_data, on_success=None, on_failure=None):
-        """Обновить задачу"""
         Logger.info(f"📝 Обновление задачи {task_id}")
-
         url = f"{self.config.API_BASE_URL}/tasks/{task_id}"
-
         return self._request(
-            url=url,
-            method='PUT',
-            data=task_data,
-            on_success=on_success,
-            on_failure=on_failure,
+            url=url, method='PUT', data=task_data,
+            on_success=on_success, on_failure=on_failure,
             include_auth=True
         )
 
     def delete_task(self, task_id, hard=False, on_success=None, on_failure=None):
-        """Удалить задачу"""
         Logger.info(f"🗑️ Удаление задачи {task_id}")
-
         url = f"{self.config.API_BASE_URL}/tasks/{task_id}?hard={str(hard).lower()}"
-
         return self._request(
-            url=url,
-            method='DELETE',
-            on_success=on_success,
-            on_failure=on_failure,
+            url=url, method='DELETE',
+            on_success=on_success, on_failure=on_failure,
             include_auth=True
         )
 
     def add_task_comment(self, task_id, comment, on_success=None, on_failure=None):
-        """Добавить комментарий к задаче"""
         Logger.info(f"💬 Добавление комментария к задаче {task_id}")
-
         url = f"{self.config.API_BASE_URL}/tasks/{task_id}/comment"
-        data = {'comment': comment}
-
         return self._request(
-            url=url,
-            method='POST',
-            data=data,
-            on_success=on_success,
-            on_failure=on_failure,
+            url=url, method='POST', data={'comment': comment},
+            on_success=on_success, on_failure=on_failure,
             include_auth=True
         )
 

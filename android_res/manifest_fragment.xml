@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Фрагмент манифеста для buildozer.
+  Через android.extra_manifest_application_arguments добавляется
+  атрибут android:networkSecurityConfig="@xml/network_security_config"
+  в тег <application>.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Пустой фрагмент: атрибут добавляется через extra_manifest_application_arguments -->
+</manifest>

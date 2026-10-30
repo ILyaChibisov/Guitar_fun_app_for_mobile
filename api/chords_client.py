@@ -6,9 +6,14 @@
 - Все варианты одного аккорда грузятся ОДНИМ запросом → свайп мгновенный.
 - Индекс (список доступных аккордов для тональности/типа) грузится один раз при первом запросе.
 - Использует api.client.api для JWT/SSL/refresh.
+
+Потоки: используется единый ThreadPoolExecutor(max_workers=4),
+чтобы при быстром свайпе не плодить десятки потоков, конкурирующих
+за GIL и пул requests.Session().
 """
 import threading
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 
 from kivy.logger import Logger
@@ -23,6 +28,10 @@ class ChordsClient:
 
     _instance = None
 
+    # Ограничиваем число одновременных фоновых потоков.
+    # 4 — достаточно для плавного свайпа и не перегружает GIL.
+    _MAX_WORKERS = 4
+
     def __init__(self):
         # (main_name, chord_type) -> list[variant_dict]
         self._cache: Dict[tuple, List[dict]] = {}
@@ -30,6 +39,13 @@ class ChordsClient:
         self._index: Optional[Dict[str, Dict[str, List[str]]]] = None
         self._index_loading = False
         self._lock = threading.Lock()
+
+        # Единый пул потоков на весь клиент.
+        # daemon-потоки завершатся вместе с процессом.
+        self._executor = ThreadPoolExecutor(
+            max_workers=self._MAX_WORKERS,
+            thread_name_prefix="chords_",
+        )
 
     @classmethod
     def get(cls) -> "ChordsClient":
@@ -77,10 +93,9 @@ class ChordsClient:
                 if on_error:
                     Clock.schedule_once(lambda dt: on_error(str(e)), 0)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        self._executor.submit(_worker)
 
     def _fetch_chord(self, main_name: str, chord_type: str) -> Optional[List[dict]]:
-        import urllib.parse
         main_enc = urllib.parse.quote(main_name, safe="")
         type_enc = urllib.parse.quote(chord_type, safe="")
         url = f"{config.API_BASE_URL}/chords/{main_enc}/{type_enc}"
@@ -128,7 +143,7 @@ class ChordsClient:
                 if on_error:
                     Clock.schedule_once(lambda dt: on_error(str(e)), 0)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        self._executor.submit(_worker)
 
     def _fetch_index(self) -> Dict[str, Dict[str, List[str]]]:
         with self._lock:
@@ -157,9 +172,9 @@ class ChordsClient:
         Поиск по main_name и synonyms через GET /api/chords/search?query=...
         Возвращает список [{main_name, synonyms, tonality, chord_type, ...}].
         """
+
         def _worker():
             try:
-                import urllib.parse
                 q_enc = urllib.parse.quote(query, safe="")
                 url = f"{config.API_BASE_URL}/chords/search?query={q_enc}"
 
@@ -180,7 +195,7 @@ class ChordsClient:
                 if on_error:
                     Clock.schedule_once(lambda dt: on_error(str(e)), 0)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        self._executor.submit(_worker)
 
     # ============ ИНВАЛИДАЦИЯ ============
 
@@ -189,6 +204,14 @@ class ChordsClient:
             self._cache.clear()
             self._index = None
         Logger.info("ChordsClient: кеш очищен")
+
+    def shutdown(self):
+        """Корректно завершает пул потоков (вызывать в on_stop, если нужно)."""
+        try:
+            self._executor.shutdown(wait=False)
+            Logger.info("ChordsClient: пул потоков остановлен")
+        except Exception as e:
+            Logger.error(f"ChordsClient.shutdown: {e}")
 
 
 def get_chords_client() -> ChordsClient:

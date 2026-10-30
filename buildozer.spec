@@ -7,10 +7,10 @@ title = GuitarFuns
 package.name = guitarfuns
 package.domain = com.guitarfuns
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json
+source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json,xml
 
-# Включаем все файлы аккордов рекурсивно
-source.include_patterns = chords/**, data/**, **/*.py
+# Включаем все файлы аккордов рекурсивно + android_res
+source.include_patterns = chords/**, data/**, android_res/**, **/*.py
 
 # Исключаем ненужные файлы
 source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, create_icons.py, prepare_icons.py
@@ -23,6 +23,9 @@ orientation = portrait
 icon.filename = android_res/drawable/icon.png
 
 # --- ЗАВИСИМОСТИ ---
+# ВНИМАНИЕ: openssl/pyopenssl на Android часто конфликтуют с системным SSL.
+# Если сборка/работа SSL стабильна — можно попробовать убрать их и оставить
+# только certifi + urllib3. Пока оставлено как есть, чтобы не ломать текущую сборку.
 requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,certifi,urllib3
 
 # --- ПРАВА ---
@@ -32,6 +35,13 @@ android.minapi = 24
 android.enable_androidx = True
 android.accept_sdk_license = True
 
+# --- NETWORK SECURITY CONFIG ---
+# Фрагмент манифеста, который добавит android:networkSecurityConfig="@xml/network_security_config"
+# в тег <application>. Сам файл network_security_config.xml лежит в android_res/xml/
+# и попадёт в APK как res/xml/network_security_config.xml благодаря include_patterns.
+android.extra_manifest_xml = android_res/manifest_fragment.xml
+android.extra_manifest_application_arguments = android:networkSecurityConfig="@xml/network_security_config"
+
 # ВАЖНО: собираем только под одну архитектуру для ускорения.
 # Когда сборка стабильно заработает — можно добавить armeabi-v7a.
 android.archs = arm64-v8a
@@ -39,7 +49,6 @@ android.archs = arm64-v8a
 # --- ОТЛАДКА ---
 fullscreen = 0
 log_level = 2
-# p4a.branch = develop  <-- убрано, используем стабильный master по умолчанию
 
 # --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
 android.gradle_repository_threads = 4

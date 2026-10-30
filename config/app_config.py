@@ -21,9 +21,12 @@ class AppConfig:
     API_USER_ME = f"{API_BASE_URL}/users/me"
     API_HEALTH = f"{API_BASE_URL}/health"
 
-    # Таймауты
-    CONNECTION_TIMEOUT = (5, 30)
-    READ_TIMEOUT = 30
+    # ============ ТАЙМАУТЫ ============
+    # ВАЖНО: для мобильной сети первый коннект (DNS + TCP + TLS)
+    # может занимать 5–10 секунд. 5 секунд — слишком мало.
+    CONNECT_TIMEOUT = 15
+    READ_TIMEOUT = 60
+    CONNECTION_TIMEOUT = (CONNECT_TIMEOUT, READ_TIMEOUT)
 
     # ============ НАСТРОЙКИ КЭША ============
     # Время жизни кэша избранного (в секундах)

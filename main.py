@@ -1,7 +1,6 @@
 # main.py
 import os
 import sys
-import ssl
 import warnings
 import traceback
 from kivy.core.window import Window
@@ -59,19 +58,20 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = handle_exception
 
-# ============ ОТКЛЮЧАЕМ SSL ПРОВЕРКУ ============
+# ============ ПРЕДУПРЕЖДЕНИЯ ============
+# ВАЖНО: мы НЕ отключаем SSL глобально.
+# ssl._create_default_https_context = ssl._create_unverified_context — УДАЛЕНО.
+# os.environ['SSL_CERT_FILE'] = '' / REQUESTS_CA_BUNDLE = '' — УДАЛЕНО.
+# Проверка сертификатов настраивается в api/ssl_config.py:
+#   Android → системные сертификаты (verify=True)
+#   Windows → certifi
+# Здесь только глушим шумные предупреждения, ничего не ломая.
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
-try:
-    ssl._create_default_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
-os.environ['SSL_CERT_FILE'] = ''
-os.environ['REQUESTS_CA_BUNDLE'] = ''
 
 # ============ НАСТРОЙКА ОКНА ============
 if platform == 'android':
@@ -313,8 +313,6 @@ class GuitarFunsApp(MDApp):
         self._components_created = False
 
         # ============ ЗАГРУЗКА НАСТРОЕК ============
-        # Единый источник правды — settings_state.
-        # Путь берём из config.CACHE_DIR (как раньше делал settings_manager).
         settings_file = os.path.join(config.CACHE_DIR, 'user_settings.json')
         settings_state.load(settings_file)
 
@@ -328,17 +326,6 @@ class GuitarFunsApp(MDApp):
     # ============ ПРИМЕНЕНИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ============
 
     def apply_theme(self, theme_id):
-        """
-        Быстрое применение темы.
-
-        Мгновенно (синхронно, < 100 мс) обновляются:
-          - RootWidget (фон)
-          - TopNav, BottomNav (горячие панели)
-          - ТЕКУЩИЙ экран
-
-        Остальные экраны обновятся сами в on_enter
-        через BaseScreen._sync_settings_if_needed.
-        """
         logger.info(f"🎨 apply_theme({theme_id})")
 
         # 1) Фон
@@ -360,7 +347,7 @@ class GuitarFunsApp(MDApp):
             except Exception as e:
                 logger.debug(f"bottom_nav theme: {e}")
 
-        # 3) Текущий экран — сразу, чтобы пользователь не видел рассинхрона
+        # 3) Текущий экран — сразу
         if self.screen_manager:
             current = self.screen_manager.current_screen
             if current and hasattr(current, 'update_theme_colors'):
@@ -373,13 +360,7 @@ class GuitarFunsApp(MDApp):
                         f"current.update_theme_colors ({getattr(current, 'name', '?')}): {e}"
                     )
 
-        # ❌ Остальные экраны НЕ обходим.
-
     def apply_language(self, lang_code):
-        """
-        Быстрое применение языка: только горячие панели + текущий экран.
-        Остальные экраны — в on_enter.
-        """
         logger.info(f"🌐 apply_language({lang_code})")
 
         if self.top_nav and self.screen_manager:
@@ -619,8 +600,6 @@ class GuitarFunsApp(MDApp):
         self.root.add_widget(self.blocking_layer)
 
         # Подписываем «горячие» панели на изменения настроек.
-        # Это гарантия: даже если кто-то забудет вызвать apply_theme,
-        # панели всё равно перекрасятся.
         settings_state.add_theme_listener(self._on_theme_changed_hot)
         settings_state.add_language_listener(self._on_language_changed_hot)
 
@@ -745,7 +724,21 @@ class GuitarFunsApp(MDApp):
         return True
 
     def on_resume(self):
+        """
+        Приложение вернулось из фона (Doze / переключение приложений).
+        ВАЖНО: keep-alive сокеты в пуле requests.Session() за это время
+        могли умереть. Сбрасываем пул, чтобы первый же запрос пошёл
+        в свежее соединение, а не в мёртвый сокет.
+        """
         logger.debug('Приложение восстановлено')
+
+        # 🔑 Сброс мёртвых keep-alive сокетов
+        try:
+            api.reset_session()
+            logger.info("🔌 Пул соединений API сброшен после resume")
+        except Exception as e:
+            logger.error(f"reset_session on_resume: {e}")
+
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
     def on_stop(self):
