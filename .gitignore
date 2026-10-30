@@ -3,6 +3,4 @@
 /assets/
 /certs/
 
-# Добавлено utils/quarantine_long_paths.py
-chords_quarantine/
-# chords_quarantine — файлы, исключённые из сборки из-за длины пути
+

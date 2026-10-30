@@ -31,7 +31,7 @@ android.accept_sdk_license = True
 # --- NETWORK SECURITY CONFIG ---
 # ВНИМАНИЕ: Строка с extra_manifest_application_arguments удалена, так как она вызывает баг
 # FileNotFoundError в текущей версии Buildozer.
-# Атрибут android:networkSecurityConfig нужно добавить ВРУЧНУЮ в шаблон манифеста (см. инструкцию ниже).
+# Атрибут android:networkSecurityConfig добавляется автоматически через шаг в build.yml (Patch AndroidManifest).
 android.extra_manifest_xml = android_res/manifest_fragment.xml
 
 # ВАЖНО: собираем только под одну архитектуру для ускорения.
