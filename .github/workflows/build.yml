@@ -117,7 +117,23 @@ jobs:
             echo "✅ Новый keystore создан"
           fi
 
-      # --- НОВЫЙ ШАГ: ПАТЧ ШАБЛОНА МАНИФЕСТА ---
+      # --- ПАТЧ GRADLE WRAPPER (ЗЕРКАЛО) ---
+      - name: Patch Gradle Wrapper to use a mirror
+        run: |
+          # Ищем файл gradle-wrapper.properties в папке .buildozer
+          WRAPPER_FILE=$(find .buildozer -name "gradle-wrapper.properties" | head -n 1)
+          
+          if [ -n "$WRAPPER_FILE" ]; then
+            echo "Патчим: $WRAPPER_FILE"
+            # Заменяем официальный URL на зеркало (Tencent Cloud)
+            sed -i 's|https\\://services.gradle.org/distributions/|https://mirrors.cloud.tencent.com/gradle/|g' "$WRAPPER_FILE"
+            echo "✅ Ссылка на Gradle заменена на зеркало."
+            grep distributionUrl "$WRAPPER_FILE"
+          else
+            echo "⚠️ Файл gradle-wrapper.properties не найден. Это нормально для первой сборки."
+          fi
+
+      # --- ПАТЧ ANDROIDMANIFEST (NETWORK SECURITY) ---
       - name: Patch AndroidManifest template for Network Security Config
         run: |
           # Ищем путь к шаблону манифеста
@@ -128,12 +144,12 @@ jobs:
             # Добавляем атрибут в тег <application>, если его там ещё нет
             if ! grep -q 'networkSecurityConfig' "$MANIFEST_PATH"; then
               sed -i 's/<application /<application android:networkSecurityConfig="@xml\/network_security_config" /' "$MANIFEST_PATH"
-              echo "✅ Атрибут добавлен."
+              echo "✅ Атрибут networkSecurityConfig добавлен."
             else
-              echo "ℹ️ Атрибут уже присутствует."
+              echo "ℹ️ Атрибут networkSecurityConfig уже присутствует."
             fi
           else
-            echo "⚠️ Шаблон не найден. Возможно, это первая сборка и папка .buildozer ещё не создана. Атрибут будет добавлен при следующем запуске."
+            echo "⚠️ Шаблон не найден. Возможно, это первая сборка и папка .buildozer ещё не создана."
           fi
 
       - name: Build with Buildozer

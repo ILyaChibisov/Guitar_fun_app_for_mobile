@@ -15,7 +15,7 @@ from kivymd.uix.slider import MDSlider
 from kivymd.uix.gridlayout import MDGridLayout
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse, Triangle, Line
+from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse, Triangle, Line, Bezier
 from kivy.core.image import Image as CoreImage
 from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
@@ -222,14 +222,14 @@ class PanelIcon(ButtonBehavior, MDBoxLayout):
 class CustomHandle(ButtonBehavior, Widget):
     """
     Увеличенный, полностью скругленный клювик (язычок) в стиле Material Design 3.
-    Контур идеально закруглен, внутри находится анимированный шеврон-стрелочка.
+    Контур идеально закруглен через кривые Безье, внутри анимированная стрелочка.
     """
     angle = NumericProperty(0)
 
     def __init__(self, color, bg_color, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, None)
-        # Увеличиваем высоту (длину) язычка для лучшей эргономики
+        # Увеличенный эргономичный размер язычка
         self.size = (dp(30), dp(80))
         self.bg_color = bg_color
         self.arrow_color = color
@@ -264,53 +264,74 @@ class CustomHandle(ButtonBehavior, Widget):
     def redraw(self, *args):
         self.canvas.clear()
 
-        # Центрируем стрелочку внутри увеличенного язычка
+        # Позиционируем стрелочку строго по центру язычка
         self.icon_arrow.pos = (self.x + dp(3), self.center_y - self.icon_arrow.height / 2)
         self.rot.origin = self.icon_arrow.center
 
         theme_id = settings_manager.theme
         line_color = DetailColors.get_panel_line(theme_id)
-        r = dp(16)  # Радиус скругления
+
+        w = self.width
+        h = self.height
+        x = self.x
+        y = self.y
 
         with self.canvas:
-            # 1. Плавный закругленный фон ушка (заходит чуть под саму панель справа)
+            # 1. Плавный закругленный фон ушка (заходит под панель)
             Color(*self.bg_color)
             self.bg_rect = RoundedRectangle(
-                pos=(self.x, self.y),
-                size=(self.width + dp(12), self.height),
-                radius=[r, 0, 0, r]
+                pos=(x, y),
+                size=(w + dp(12), h),
+                radius=[dp(20), 0, 0, dp(20)]
             )
 
-            # 2. Незамкнутая обводка: рисуем только верх, лево и низ с идеальными скруглениями
+            # 2. Тонкая бесшовная обводка без внутренних линий через кривые Безье
             Color(*line_color)
-            self.outline = Line(
+
+            # Верхний плавный изгиб
+            Bezier(
                 points=[
-                    # Стартуем сверху справа (стык с панелью)
-                    self.x + self.width, self.top,
-                    self.x + r, self.top,
-                    # Верхний левый угол (дуга Безье для идеального закругления)
-                    self.x + r * 0.3, self.top - r * 0.1,
-                    self.x, self.top - r,
-                    # Левая вертикальная грань
-                    self.x, self.y + r,
-                    # Нижний левый угол (дуга Безье)
-                    self.x + r * 0.3, self.y + r * 0.1,
-                    self.x + r, self.y,
-                    # Финишируем снизу справа (стык с панелью)
-                    self.x + self.width, self.y
+                    x + w, y + h,
+                    x + w * 0.4, y + h,
+                    x, y + h * 0.85,
+                    x, y + h * 0.7
                 ],
-                width=1.2,
-                joint='round',
-                cap='round'
+                segments=30, width=1.3
             )
+
+            # Левая ровная вертикальная грань
+            Line(
+                points=[
+                    x, y + h * 0.7,
+                    x, y + h * 0.3
+                ],
+                width=1.3, cap='square'
+            )
+
+            # Нижний плавный изгиб
+            Bezier(
+                points=[
+                    x, y + h * 0.3,
+                    x, y + h * 0.15,
+                       x + w * 0.4, y,
+                       x + w, y
+                ],
+                segments=30, width=1.3
+            )
+
+        # Выносим иконку на самый верхний слой отрисовки
+        self.canvas.remove(self.icon_arrow.canvas)
+        self.canvas.add(self.icon_arrow.canvas)
 
     def set_state(self, is_open):
         """Плавный поворот стрелочки при открытии/закрытии панели"""
         self.panel_is_open = is_open
+        # Ротация на 180 градусов в зависимости от состояния панели
         target_angle = 180 if is_open else 0
         Animation(angle=target_angle, duration=0.2, t='out_quad').start(self)
 
     def set_color(self, color, bg_color=None):
+        """Динамическое обновление цветов стрелочки и фонда"""
         self.arrow_color = color
         self.icon_arrow.text_color = color
         if bg_color:
@@ -635,15 +656,16 @@ class FloatingPanel(MDCard):
         text_p = DetailColors.get_text_primary(theme_id)
         div_color = DetailColors.get_divider(theme_id)
 
-        # ✅ Фиксированная высота панели
+        # ✅ Фиксированная высота панели, строго контролируем элементы
         self.height = dp(360)
         self._recenter()
 
         # Главный контейнер панели
         panel = MDBoxLayout(
             orientation='vertical',
-            size_hint=(1, 1),
-            spacing=dp(4),
+            size_hint=(1, None),
+            height=dp(340),  # Ограничиваем контент внутри 360dp общей высоты
+            spacing=dp(2),
             padding=[dp(2), dp(4), dp(2), dp(4)]
         )
 
@@ -652,7 +674,7 @@ class FloatingPanel(MDCard):
         title_lbl = MDLabel(
             text=title_text, halign="center", valign="middle",
             theme_text_color="Custom", text_color=text_p, bold=True,
-            size_hint_y=None, height=dp(24), font_size=sp(13)
+            size_hint_y=None, height=dp(20), font_size=sp(13)
         )
         panel.add_widget(title_lbl)
 
@@ -660,7 +682,7 @@ class FloatingPanel(MDCard):
         self._sub_val_label = MDLabel(
             text="0", halign="center", valign="middle",
             theme_text_color="Custom", text_color=accent, bold=True,
-            size_hint_y=None, height=dp(28), font_size=sp(16)
+            size_hint_y=None, height=dp(24), font_size=sp(16)
         )
         panel.add_widget(self._sub_val_label)
 
@@ -668,13 +690,14 @@ class FloatingPanel(MDCard):
         panel.add_widget(
             MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(1), md_bg_color=div_color))
 
-        # 4. КАРТОЧКА ДЛЯ ШКАЛЫ (жесткий контейнер)
+        # 4. КОНТЕЙНЕР ДЛЯ СЛАЙДЕРА (оптимизированные размеры для исключения выхода за границы)
         slider_card = MDBoxLayout(
             orientation='vertical',
             size_hint=(None, None),
-            size=(dp(50), dp(180)),  # Жесткий размер карточки для слайдера
+            size=(dp(50), dp(200)),  # Компактная высота для размещения в контейнере
             pos_hint={'center_x': 0.5},
-            padding=[dp(4), dp(8), dp(4), dp(8)],
+            padding=[0, dp(4), 0, dp(4)],
+            spacing=dp(2),
             md_bg_color=[0, 0, 0, 0]
         )
 
@@ -682,7 +705,7 @@ class FloatingPanel(MDCard):
         slider_card.add_widget(MDLabel(
             text="+", halign="center", valign="middle",
             theme_text_color="Custom", text_color=[0.3, 0.7, 0.3, 0.9],
-            size_hint_y=None, height=dp(16), bold=True, font_size=sp(12)
+            size_hint_y=None, height=dp(14), bold=True, font_size=sp(12)
         ))
 
         if type_str == 'tonality':
@@ -693,7 +716,7 @@ class FloatingPanel(MDCard):
                 min=-6.01, max=6.01, value=current_val, step=1,
                 orientation='vertical',
                 size_hint=(None, None),
-                size=(dp(36), dp(140)),  # Жесткий размер самого слайдера
+                size=(dp(36), dp(140)),  # Строгий фиксированный размер самого слайдера
                 pos_hint={'center_x': 0.5},
                 hint=False
             )
@@ -705,7 +728,7 @@ class FloatingPanel(MDCard):
             self.ton_slider.track_color_inactive = [1, 1, 1, 0.3]
             self.ton_slider.color = accent
             try:
-                self.ton_slider.cursor_size = (dp(24), dp(24))
+                self.ton_slider.cursor_size = (dp(20), dp(20))  # Уменьшаем размер ползунка под контейнер
             except Exception:
                 pass
 
@@ -716,6 +739,7 @@ class FloatingPanel(MDCard):
                     int_val = 6
                 else:
                     int_val = int(round(value))
+
                 if self.ton_slider.value != int_val:
                     self.ton_slider.value = int_val
                 val_half = int_val / 2
@@ -755,7 +779,7 @@ class FloatingPanel(MDCard):
             self.font_slider.track_color_inactive = [1, 1, 1, 0.3]
             self.font_slider.color = accent
             try:
-                self.font_slider.cursor_size = (dp(24), dp(24))
+                self.font_slider.cursor_size = (dp(20), dp(20))
             except Exception:
                 pass
 
@@ -802,7 +826,7 @@ class FloatingPanel(MDCard):
             self.scroll_slider.track_color_inactive = [1, 1, 1, 0.3]
             self.scroll_slider.color = accent
             try:
-                self.scroll_slider.cursor_size = (dp(24), dp(24))
+                self.scroll_slider.cursor_size = (dp(20), dp(20))
             except Exception:
                 pass
 
@@ -822,7 +846,7 @@ class FloatingPanel(MDCard):
         slider_card.add_widget(MDLabel(
             text="-", halign="center", valign="middle",
             theme_text_color="Custom", text_color=[0.8, 0.3, 0.3, 0.9],
-            size_hint_y=None, height=dp(16), bold=True, font_size=sp(12)
+            size_hint_y=None, height=dp(14), bold=True, font_size=sp(12)
         ))
 
         # Добавляем карточку в панель
@@ -830,11 +854,11 @@ class FloatingPanel(MDCard):
 
         # 5. Кнопка "Назад"
         bottom_box = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, None), height=dp(44),
+            orientation='horizontal', size_hint=(1, None), height=dp(36),
             padding=[dp(2), dp(2), dp(2), dp(2)]
         )
         back_btn = MDIconButton(
-            icon="arrow-left", size_hint=(None, None), size=(dp(36), dp(36)),
+            icon="arrow-left", size_hint=(None, None), size=(dp(32), dp(32)),
             theme_icon_color="Custom", icon_color=accent,
             md_bg_color=[0, 0, 0, 0], ripple_scale=0,
             on_release=lambda *a: self._build_menu()
@@ -852,8 +876,7 @@ class FloatingPanel(MDCard):
             self.height = dp(360)
             self._recenter()
 
-        Clock.schedule_once(_force_resize, 0.05)
-        Clock.schedule_once(_force_resize, 0.2)
+        Clock.schedule_once(_force_resize, 0.01)
 
     def _get_font_multiplier(self, font_size):
         parent = self.parent_screen
@@ -936,7 +959,11 @@ class FloatingPanel(MDCard):
         for child in self.walk():
             if child is self: continue
             if hasattr(child, 'collide_point') and child.collide_point(*touch.pos):
+                # Добавляем строгую проверку: если класс виджета или его родителя является слайдером
                 if isinstance(child, (MDIconButton, PanelIcon, CompactVerticalSlider, MDSlider, MDRaisedButton)):
+                    return True
+                # Дополнительная защита для внутренних компонентов MDSlider (трек, thumb)
+                if hasattr(child, 'parent') and isinstance(child.parent, MDSlider):
                     return True
                 if hasattr(child, 'children') and isinstance(child, MDScrollView):
                     return True
