@@ -26,6 +26,9 @@ from kivy.utils import platform
 from io import BytesIO
 import re
 
+from kivy.properties import NumericProperty
+from kivy.graphics import Rotate, PushMatrix, PopMatrix
+
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
@@ -216,56 +219,118 @@ class PanelIcon(ButtonBehavior, MDBoxLayout):
         self.icon_widget.icon = icon_name
 
 
-class CustomHandle(Widget):
-    """Пухлый полукруглый клювик со стрелкой."""
+class CustomHandle(ButtonBehavior, Widget):
+    """
+    Увеличенный, полностью скругленный клювик (язычок) в стиле Material Design 3.
+    Контур идеально закруглен, внутри находится анимированный шеврон-стрелочка.
+    """
+    angle = NumericProperty(0)
 
     def __init__(self, color, bg_color, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, None)
-        self.size = (dp(22), dp(70))
+        # Увеличиваем высоту (длину) язычка для лучшей эргономики
+        self.size = (dp(30), dp(80))
         self.bg_color = bg_color
         self.arrow_color = color
         self.panel_is_open = False
 
-        self.bind(pos=self.redraw, size=self.redraw)
+        # Создаем иконку-стрелочку
+        self.icon_arrow = MDIcon(
+            icon="chevron-left",
+            font_size=sp(22),
+            theme_text_color="Custom",
+            text_color=self.arrow_color,
+            size_hint=(None, None),
+            size=(dp(24), dp(24))
+        )
+
+        # Настраиваем изолированную матрицу поворота для стрелочки
+        with self.icon_arrow.canvas.before:
+            PushMatrix()
+            self.rot = Rotate(angle=self.angle, axis=(0, 0, 1))
+
+        with self.icon_arrow.canvas.after:
+            PopMatrix()
+
+        self.add_widget(self.icon_arrow)
+
+        self.bind(pos=self.redraw, size=self.redraw, angle=self._update_rotation)
         self.redraw()
+
+    def _update_rotation(self, instance, value):
+        self.rot.angle = value
 
     def redraw(self, *args):
         self.canvas.clear()
-        cy = self.center_y
+
+        # Центрируем стрелочку внутри увеличенного язычка
+        self.icon_arrow.pos = (self.x + dp(3), self.center_y - self.icon_arrow.height / 2)
+        self.rot.origin = self.icon_arrow.center
+
+        theme_id = settings_manager.theme
+        line_color = DetailColors.get_panel_line(theme_id)
+        r = dp(16)  # Радиус скругления
 
         with self.canvas:
+            # 1. Плавный закругленный фон ушка (заходит чуть под саму панель справа)
             Color(*self.bg_color)
             self.bg_rect = RoundedRectangle(
                 pos=(self.x, self.y),
-                size=(self.width + dp(10), self.height),
-                radius=[dp(14)] * 4
+                size=(self.width + dp(12), self.height),
+                radius=[r, 0, 0, r]
             )
 
-            Color(*self.arrow_color)
-            cx = self.x + dp(8)
-            size = dp(6)
-            if self.panel_is_open:
-                points = [cx - size, cy + size, cx - size, cy - size, cx + size, cy]
-            else:
-                points = [cx + size, cy + size, cx + size, cy - size, cx - size, cy]
-
-            Triangle(points=points)
+            # 2. Незамкнутая обводка: рисуем только верх, лево и низ с идеальными скруглениями
+            Color(*line_color)
+            self.outline = Line(
+                points=[
+                    # Стартуем сверху справа (стык с панелью)
+                    self.x + self.width, self.top,
+                    self.x + r, self.top,
+                    # Верхний левый угол (дуга Безье для идеального закругления)
+                    self.x + r * 0.3, self.top - r * 0.1,
+                    self.x, self.top - r,
+                    # Левая вертикальная грань
+                    self.x, self.y + r,
+                    # Нижний левый угол (дуга Безье)
+                    self.x + r * 0.3, self.y + r * 0.1,
+                    self.x + r, self.y,
+                    # Финишируем снизу справа (стык с панелью)
+                    self.x + self.width, self.y
+                ],
+                width=1.2,
+                joint='round',
+                cap='round'
+            )
 
     def set_state(self, is_open):
+        """Плавный поворот стрелочки при открытии/закрытии панели"""
         self.panel_is_open = is_open
-        self.redraw()
+        target_angle = 180 if is_open else 0
+        Animation(angle=target_angle, duration=0.2, t='out_quad').start(self)
 
     def set_color(self, color, bg_color=None):
         self.arrow_color = color
+        self.icon_arrow.text_color = color
         if bg_color:
             self.bg_color = bg_color
         self.redraw()
 
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            self.icon_arrow.opacity = 0.6
+            return super().on_touch_down(touch)
+        return super().on_touch_down(touch)
+
+    def on_touch_up(self, touch):
+        self.icon_arrow.opacity = 1.0
+        return super().on_touch_up(touch)
+
 
 class FloatingPanel(MDCard):
     PANEL_WIDTH = dp(64)
-    HANDLE_WIDTH = dp(22)
+    HANDLE_WIDTH = dp(30)
     TOTAL_WIDTH = PANEL_WIDTH + HANDLE_WIDTH
     VISIBLE_MARGIN = dp(4)
 
