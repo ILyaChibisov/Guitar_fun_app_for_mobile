@@ -736,6 +736,59 @@ class APIClient:
             Logger.error(f"❌ Ошибка синхронного поиска: {e}")
             return {"results": [], "total": 0}
 
+    def check_subscription(self, on_success=None, on_failure=None):
+        """Проверяет статус подписки (активна/истекла/лимит)"""
+        url = f"{self.config.API_BASE_URL}/users/me/subscription"
+
+        def worker():
+            try:
+                response = self.session.get(url, headers=self._get_headers(include_auth=True),
+                                            timeout=config.CONNECTION_TIMEOUT)
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: on_success(result), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def track_usage_time(self, seconds: int):
+        """Отправляет на сервер потраченное время (для мягкой блокировки)"""
+        url = f"{self.config.API_BASE_URL}/users/me/track-time"
+        data = {"seconds": seconds}
+
+        def worker():
+            try:
+                self.session.post(url, json=data, headers=self._get_headers(include_auth=True), timeout=5)
+            except:
+                pass
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def activate_promo(self, code: str, on_success=None, on_failure=None):
+        """Активирует промокод"""
+        url = f"{self.config.API_BASE_URL}/promo/activate"
+        data = {"code": code}
+
+        def worker():
+            try:
+                response = self.session.post(url, json=data, headers=self._get_headers(include_auth=True),
+                                             timeout=config.CONNECTION_TIMEOUT)
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                err = "Ошибка активации"
+                try:
+                    err = e.response.json().get("detail", err)
+                except:
+                    pass
+                Clock.schedule_once(lambda dt: on_failure(None, err), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
     # ============ API СЛОВАРЯ ============
 
     def get_dictionary_alphabet(self, on_success=None, on_failure=None):
@@ -902,32 +955,108 @@ class APIClient:
             Logger.error(f"Ошибка кодирования буквы {letter}: {e}")
             return letter
 
+
     # ============ AUTH METHODS ============
 
-    def register(self, username, email, password, full_name=None,
-                 on_success=None, on_failure=None):
-        data = {'username': username, 'email': email, 'password': password}
-        if full_name:
-            data['full_name'] = full_name
+    def send_verification_code(self, email: str, on_success=None, on_failure=None):
+        """Отправляет 4-значный код на почту."""
+        url = f"{self.config.API_BASE_URL}/auth/send-code"
+        data = {"email": email}
 
         def worker():
             try:
                 response = self.session.post(
-                    config.API_AUTH_REGISTER, json=data,
+                    url, json=data,
                     headers=self._get_headers(include_auth=False),
                     timeout=config.CONNECTION_TIMEOUT
                 )
                 response.raise_for_status()
-                result = response.json() if response.content else None
+                result = response.json()
                 if on_success:
-                    Clock.schedule_once(lambda dt, res=result: on_success(res), 0)
-            except Exception as e:
-                msg = str(e)
-                Logger.error(f"API register: {msg}")
+                    Clock.schedule_once(lambda dt: on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                # Извлекаем сообщение об ошибке от сервера (например, "Email already exists")
+                error_detail = "Ошибка отправки кода"
+                try:
+                    error_detail = e.response.json().get("detail", error_detail)
+                except:
+                    pass
                 if on_failure:
-                    Clock.schedule_once(
-                        lambda dt, m=msg: on_failure(None, m), 0
-                    )
+                    Clock.schedule_once(lambda dt: on_failure(None, error_detail), 0)
+            except Exception as e:
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def check_user_exists(self, identifier, on_success=None, on_failure=None):
+        """Проверяет, есть ли пользователь с таким email или логином"""
+        url = f"{self.config.API_BASE_URL}/auth/check-user"
+        data = {"identifier": identifier}
+
+        def worker():
+            try:
+                response = self.session.post(
+                    url, json=data,
+                    headers=self._get_headers(include_auth=False),
+                    timeout=config.CONNECTION_TIMEOUT
+                )
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                err = "Пользователь не найден"
+                if e.response.status_code == 404:
+                    err = "Аккаунт с таким Email или логином не найден"
+                Clock.schedule_once(lambda dt: on_failure(None, err), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def register_with_code(self, username, email, password, code, full_name=None, on_success=None, on_failure=None):
+        """Регистрирует пользователя с проверкой кода из письма."""
+        url = f"{self.config.API_BASE_URL}/auth/register"
+        data = {
+            "username": username,
+            "email": email,
+            "password": password,
+            "code": code
+        }
+        if full_name:
+            data["full_name"] = full_name
+
+        def _on_success(result):
+            # Если сервер вернул токены при регистрации — сохраняем их!
+            if result and "access_token" in result:
+                self.access_token = result["access_token"]
+                self.refresh_token = result.get("refresh_token")
+                self._save_tokens()
+                self._clear_favorites_cache()
+            if on_success:
+                on_success(result)
+
+        def worker():
+            try:
+                response = self.session.post(
+                    url, json=data,
+                    headers=self._get_headers(include_auth=False),
+                    timeout=config.CONNECTION_TIMEOUT
+                )
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: _on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                error_detail = "Ошибка регистрации"
+                try:
+                    error_detail = e.response.json().get("detail", error_detail)
+                except:
+                    pass
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, error_detail), 0)
+            except Exception as e:
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -965,6 +1094,94 @@ class APIClient:
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def change_username(self, new_username, on_success=None, on_failure=None):
+        """Смена логина"""
+        url = f"{self.config.API_BASE_URL}/users/me/username?new_username={new_username}"
+        headers = self._get_headers(include_auth=True)
+
+        def worker():
+            try:
+                response = self.session.put(url, headers=headers, timeout=config.CONNECTION_TIMEOUT)
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                err = "Ошибка смены логина"
+                try:
+                    err = e.response.json().get("detail", err)
+                except:
+                    pass
+                Clock.schedule_once(lambda dt: on_failure(None, err), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def change_password(self, old_password, new_password, on_success=None, on_failure=None):
+        """Смена пароля"""
+        url = f"{self.config.API_BASE_URL}/users/me/password"
+        data = {"old_password": old_password, "new_password": new_password}
+
+        def worker():
+            try:
+                response = self.session.put(url, json=data, headers=self._get_headers(include_auth=True),
+                                            timeout=config.CONNECTION_TIMEOUT)
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                err = "Ошибка смены пароля"
+                try:
+                    err = e.response.json().get("detail", err)
+                except:
+                    pass
+                Clock.schedule_once(lambda dt: on_failure(None, err), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def delete_account(self, on_success=None, on_failure=None):
+        """Удаление аккаунта"""
+        url = f"{self.config.API_BASE_URL}/users/me"
+
+        def worker():
+            try:
+                response = self.session.delete(url, headers=self._get_headers(include_auth=True),
+                                               timeout=config.CONNECTION_TIMEOUT)
+                response.raise_for_status()
+                # После удаления чистим токены локально
+                self._clear_tokens()
+                Clock.schedule_once(lambda dt: on_success({"status": "success"}), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def reset_password(self, email, code, new_password, on_success=None, on_failure=None):
+        """Сброс пароля по коду"""
+        url = f"{self.config.API_BASE_URL}/auth/reset-password"
+        data = {"email": email, "code": code, "new_password": new_password}
+
+        def worker():
+            try:
+                response = self.session.post(url, json=data, headers=self._get_headers(include_auth=False),
+                                             timeout=config.CONNECTION_TIMEOUT)
+                response.raise_for_status()
+                result = response.json()
+                Clock.schedule_once(lambda dt: on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                err = "Ошибка сброса пароля"
+                try:
+                    err = e.response.json().get("detail", err)
+                except:
+                    pass
+                Clock.schedule_once(lambda dt: on_failure(None, err), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def google_login(self, on_success=None, on_failure=None):
         self.waiting_for_callback = True
         oauth_server.start()
@@ -991,18 +1208,29 @@ class APIClient:
         return True
 
     def logout(self, on_success=None, on_failure=None):
-        def _on_success(result):
-            self._clear_tokens()
-            if on_success:
-                on_success(result)
-
+        """Выход из аккаунта (refresh_token в JSON-теле)"""
         if not self.refresh_token:
             self._clear_tokens()
             if on_success:
                 on_success({})
             return
-        url = f"{self.config.API_AUTH_LOGOUT}?refresh_token={self.refresh_token}"
-        return self._request(url=url, method='POST', on_success=_on_success, on_failure=on_failure, include_auth=False)
+
+        url = f"{self.config.API_AUTH_LOGOUT}"
+        data = {"refresh_token": self.refresh_token}  # <--- Отправляем в теле!
+
+        def _on_success(result):
+            self._clear_tokens()
+            if on_success:
+                on_success(result)
+
+        return self._request(
+            url=url,
+            method='POST',
+            data=data,  # <--- Передаем data
+            on_success=_on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
 
     def get_current_user(self, on_success=None, on_failure=None):
         def worker():

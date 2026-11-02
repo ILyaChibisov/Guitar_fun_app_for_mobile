@@ -3,10 +3,6 @@
 Выдвижная боковая панель (Navigation Drawer).
 ПОЛНАЯ ВЫСОТА: от верхней до нижней системной панели.
 Прозрачные области для статус-бара и навигации.
-
-ВАЖНО: при ЗАКРЫТОЙ панели on_touch_down возвращает False сразу
-(без свайп-перехвата у левого края), чтобы не съедать касания
-по левым кнопкам пагинации и другим элементам у края экрана.
 """
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
@@ -14,26 +10,21 @@ from kivy.animation import Animation
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.uix.image import Image
-from kivy.uix.behaviors import ButtonBehavior
-from kivy.uix.boxlayout import BoxLayout
-from io import BytesIO
-from kivy.utils import platform
-from kivy.core.window import Window
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty
 from kivy.uix.scrollview import ScrollView
+from kivy.core.window import Window
+from io import BytesIO
 
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDIconButton, MDRaisedButton
+from kivymd.uix.button import MDIconButton
 from kivymd.uix.behaviors import CircularRippleBehavior
 from kivymd.app import MDApp
 
-from config.theme import theme
 from config.logger_config import get_logger
-from config.layout_config import layout_config
 from config.system_bars import get_status_bar_height, get_navigation_bar_height
 from api.client import api
 
@@ -41,16 +32,13 @@ logger = get_logger('Sidebar')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
 
-
     def load_asset_as_bytes(name):
         return None
 
-# Константа для логотипа
 ASSET_LOGO_NAME_PNG = "logo_name_png"
 
 
@@ -75,7 +63,6 @@ class SidebarItem(CircularRippleBehavior, MDCard):
         self.ripple_scale = 0.95
         self.md_bg_color = [0, 0, 0, 0]
 
-        # Иконка
         self.icon = MDIconButton(
             icon=icon_name,
             size_hint=(None, None),
@@ -87,7 +74,6 @@ class SidebarItem(CircularRippleBehavior, MDCard):
             ripple_scale=0
         )
 
-        # Название
         self.title_label = MDLabel(
             text=title,
             font_size=sp(15),
@@ -99,7 +85,6 @@ class SidebarItem(CircularRippleBehavior, MDCard):
             shorten_from="right"
         )
 
-        # Стрелка (для админки)
         if is_admin:
             self.arrow = MDIconButton(
                 icon="chevron-right",
@@ -124,7 +109,6 @@ class SidebarItem(CircularRippleBehavior, MDCard):
             self.on_click_callback(self.screen_name)
 
     def set_active(self, active):
-        """Устанавливает активное состояние пункта меню"""
         if active:
             self.icon.icon_color = [0.46, 0.70, 0.71, 1]
             self.title_label.text_color = [0.46, 0.70, 0.71, 1]
@@ -149,7 +133,6 @@ class SidebarHeader(MDBoxLayout):
 
         self.on_profile_click_callback = on_profile_click
 
-        # Контейнер для логотипа (центрирование)
         logo_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -157,7 +140,6 @@ class SidebarHeader(MDBoxLayout):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Логотип
         self.logo_image = Image(
             size_hint=(None, None),
             size=(dp(120), dp(80)),
@@ -167,10 +149,8 @@ class SidebarHeader(MDBoxLayout):
         )
 
         self._load_logo()
-
         logo_container.add_widget(self.logo_image)
 
-        # Имя пользователя
         self.username_label = MDLabel(
             text=self._get_username(),
             font_size=sp(16),
@@ -182,7 +162,6 @@ class SidebarHeader(MDBoxLayout):
             bold=True
         )
 
-        # Статус
         self.status_label = MDLabel(
             text=self._get_status_text(),
             font_size=sp(12),
@@ -201,7 +180,6 @@ class SidebarHeader(MDBoxLayout):
         self.add_widget(self.status_label)
 
     def _load_logo(self):
-        """Загружает логотип из ассета"""
         if HAS_ASSETS:
             try:
                 logo_data = load_asset_as_bytes(ASSET_LOGO_NAME_PNG)
@@ -296,17 +274,14 @@ class Sidebar(FloatLayout):
         self._is_dragging = False
         self._swipe_threshold = dp(30)
 
-        # ============ НАСТРОЙКИ КОНТЕЙНЕРА ============
         self.size_hint = (1, 1)
         self.pos = (0, 0)
         self.md_bg_color = [0, 0, 0, 0]
         self.disabled = True
 
-        # ============ ОВЕРЛЕЙ ============
         self.overlay = SidebarOverlay(self)
         self.add_widget(self.overlay)
 
-        # ============ ВЫЧИСЛЯЕМ ОТСТУПЫ ============
         status_h = get_status_bar_height()
         nav_h = get_navigation_bar_height()
 
@@ -315,7 +290,6 @@ class Sidebar(FloatLayout):
 
         logger.info(f"📐 Системные отступы: сверху={self._top_system_offset}dp, снизу={self._bottom_system_offset}dp")
 
-        # ============ ОСНОВНАЯ ПАНЕЛЬ ============
         self.panel = MDCard(
             orientation='vertical',
             size_hint=(None, 1),
@@ -329,7 +303,6 @@ class Sidebar(FloatLayout):
         self.panel.pos = (-self.panel_width, 0)
         self.panel_x = -self.panel_width
 
-        # ============ ВНУТРЕННИЙ КОНТЕЙНЕР ============
         self.main_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -338,13 +311,11 @@ class Sidebar(FloatLayout):
             padding=[0, self._top_system_offset, 0, self._bottom_system_offset]
         )
 
-        # ============ ШАПКА ============
         self.header = SidebarHeader(
             on_profile_click=self._on_profile_click
         )
         self.main_container.add_widget(self.header)
 
-        # ============ СКРОЛЛ С ПУНКТАМИ МЕНЮ ============
         self.scroll = ScrollView(
             size_hint=(1, 1),
             do_scroll_x=False,
@@ -364,11 +335,7 @@ class Sidebar(FloatLayout):
         )
         self.menu_container.bind(minimum_height=self.menu_container.setter('height'))
 
-        # ============ ПУНКТЫ МЕНЮ ============
         self.menu_item_refs = {}
-
-        self.auth_item = self.add_menu_item('login', 'Войти', 'auth')
-        self.menu_item_refs['auth'] = self.auth_item
 
         item = self.add_menu_item('account', 'Аккаунт', 'profile')
         self.menu_item_refs['profile'] = item
@@ -416,7 +383,6 @@ class Sidebar(FloatLayout):
         self.panel.add_widget(self.main_container)
         self.add_widget(self.panel)
 
-        # ============ ПРИНУДИТЕЛЬНО СКРЫВАЕМ ============
         self.is_open = False
         self.panel.pos = (-self.panel_width, 0)
         self.panel_x = -self.panel_width
@@ -445,18 +411,6 @@ class Sidebar(FloatLayout):
             if hasattr(item, 'set_active'):
                 is_active = (screen_name == current_screen)
                 item.set_active(is_active)
-
-        self._update_auth_state()
-
-    def _update_auth_state(self):
-        is_auth = api.is_authenticated()
-
-        if is_auth:
-            self.auth_item.title_label.text = "Выйти из аккаунта"
-            self.auth_item.icon.icon = "logout"
-        else:
-            self.auth_item.title_label.text = "Авторизоваться"
-            self.auth_item.icon.icon = "login"
 
     def _on_panel_x_changed(self, instance, value):
         self.panel.pos = (value, 0)
@@ -502,13 +456,8 @@ class Sidebar(FloatLayout):
         self.close()
 
         if screen_name == 'settings':
-            # Запоминаем, откуда пришли, прямо в экран настроек
             settings_screen = self.sm.get_screen('settings')
             settings_screen._return_screen = self.sm.current
-
-        if screen_name == 'auth':
-            Clock.schedule_once(lambda dt: self._handle_auth(), 0.1)
-            return
 
         if not self.sm:
             logger.error("❌ ScreenManager не найден!")
@@ -522,7 +471,6 @@ class Sidebar(FloatLayout):
             logger.info(f"ℹ️ Уже на экране {screen_name}")
             return
 
-        # 👇 СОХРАНЯЕМ ПРЕДЫДУЩИЙ ЭКРАН ДО ПЕРЕХОДА
         from utils.screen_state import screen_state
         prev = self.sm.current
         screen_state.set_previous_screen(prev)
@@ -540,38 +488,6 @@ class Sidebar(FloatLayout):
 
         Clock.schedule_once(do_navigation, 0.15)
 
-        def do_navigation(dt):
-            try:
-                logger.info(f"🚀 Переход на экран: {screen_name}")
-                self.sm.current = screen_name
-                logger.info(f"✅ Переход выполнен на: {screen_name}")
-            except Exception as e:
-                logger.error(f"❌ Ошибка перехода: {e}")
-                import traceback
-                traceback.print_exc()
-
-        Clock.schedule_once(do_navigation, 0.15)
-
-    def _handle_auth(self):
-        """Обрабатывает клик по пункту авторизации"""
-        if api.is_authenticated():
-            def on_logout_success(result):
-                logger.info("✅ Выход выполнен")
-                self._update_auth_state()
-                if hasattr(self, 'header'):
-                    self.header.update_user_info()
-                self._update_menu_state()
-
-            def on_logout_failure(req, error):
-                logger.error(f"❌ Ошибка выхода: {error}")
-
-            api.logout(
-                on_success=on_logout_success,
-                on_failure=on_logout_failure
-            )
-        else:
-            self._show_auth()
-
     def _on_profile_click(self):
         logger.info("👤 Клик по шапке -> переход в профиль")
         self.close()
@@ -586,16 +502,6 @@ class Sidebar(FloatLayout):
             Clock.schedule_once(do_navigation, 0.15)
         else:
             logger.error("❌ Экран 'profile' не найден!")
-
-    def _show_auth(self):
-        """Показывает экран авторизации"""
-        if self.sm and self.sm.has_screen('auth_screen'):
-            self.close()
-            Clock.schedule_once(lambda dt: setattr(self.sm, 'current', 'auth_screen'), 0.15)
-        else:
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'open_profile'):
-                app.open_profile()
 
     def open(self):
         if self.is_open:
@@ -630,8 +536,6 @@ class Sidebar(FloatLayout):
         if hasattr(self, 'header') and self.header:
             self.header.update_user_info()
 
-        self._update_auth_state()
-
         if hasattr(self, 'admin_item'):
             is_admin = api.is_admin()
             self.admin_item.opacity = 1 if is_admin else 0
@@ -639,12 +543,7 @@ class Sidebar(FloatLayout):
 
         self._update_menu_state()
 
-    # ============ ОБРАБОТКА СВАЙПА ============
-
     def on_touch_down(self, touch):
-        # ФИКС: при закрытой панели НЕ перехватываем касания,
-        # иначе левые кнопки пагинации и другие элементы у края
-        # экрана становятся «некликабельными».
         if not self.is_open and not self._is_dragging:
             return False
 

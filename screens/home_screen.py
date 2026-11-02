@@ -9,6 +9,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.utils import platform
+from kivy.graphics import Color, RoundedRectangle
 
 from kivymd.app import MDApp
 from kivymd.uix.behaviors import CircularRippleBehavior
@@ -79,12 +80,12 @@ class GridCard(CircularRippleBehavior, MDCard):
 
     # Цвета для ТЁМНОЙ темы (более глубокие, но цветные)
     DARK_SECTION_COLORS = {
-        'songs': '#B71C1C',  # Тёмно-красный
-        'chords': '#1B5E20',  # Тёмно-зелёный
-        'tuner': '#0D47A1',  # Тёмно-синий
-        'metronome': '#E65100',  # Тёмно-оранжевый
-        'dictionary': '#4A148C',  # Тёмно-фиолетовый
-        'favorites': '#880E4F',  # Тёмно-розовый
+        'songs': '#B71C1C',
+        'chords': '#1B5E20',
+        'tuner': '#0D47A1',
+        'metronome': '#E65100',
+        'dictionary': '#4A148C',
+        'favorites': '#880E4F',
     }
 
     def __init__(self, section_id, title, icon_asset, on_click=None, **kwargs):
@@ -163,19 +164,16 @@ class GridCard(CircularRippleBehavior, MDCard):
             self.hover_color = [min(1.0, c + 0.1) for c in self.base_color[:3]] + [1.0]
             self.md_bg_color = self.base_color
             self.title_label.text_color = [1, 1, 1, 1]
-            self.icon_color = [1, 1, 1, 1]  # Белая иконка
+            self.icon_color = [1, 1, 1, 1]
         elif theme_id == 'light':
             self.base_color_hex = self.LIGHT_SECTION_COLORS.get(self.section_id, '#E0E0E0')
             self.base_color = hex_to_rgba(self.base_color_hex, 1.0)
             self.hover_color = [min(1.0, c + 0.05) for c in self.base_color[:3]] + [1.0]
             self.md_bg_color = self.base_color
-            self.title_label.text_color = [0.15, 0.15, 0.15, 1]  # Тёмный текст
+            self.title_label.text_color = [0.15, 0.15, 0.15, 1]
 
-            # ИКОНКА: берём насыщенный цвет (как в зелёной теме) для контраста
-            # Но чуть приглушаем, чтобы не резало глаз на пастельном фоне
             rich_hex = self.GREEN_SECTION_COLORS.get(self.section_id, '#546E7A')
             rich_rgb = hex_to_rgb(rich_hex)
-            # Смешиваем насыщенный цвет с белым в пропорции 70/30 (чтобы был ярким, но не "кислотным")
             self.icon_color = [
                 min(1.0, rich_rgb[0] * 0.7 + 0.3),
                 min(1.0, rich_rgb[1] * 0.7 + 0.3),
@@ -194,15 +192,12 @@ class GridCard(CircularRippleBehavior, MDCard):
             self.icon_image.color = self.icon_color
 
     def update_theme(self, theme_id):
-        """Вызывается при смене темы"""
         self._current_theme = theme_id
         self._setup_colors()
 
     def update_language(self, new_title):
-        """Вызывается при смене языка"""
         self.title_text = new_title
         self.title_label.text = new_title
-        # Пересчитываем шрифт на случай, если слово стало длиннее
         font_size = sp(14) if len(new_title) > 8 else (sp(15) if len(new_title) > 6 else sp(16))
         self.title_label.font_size = font_size
 
@@ -255,6 +250,8 @@ class HomeScreen(BaseScreen):
         self._grid = None
         self._cards = {}
         self._top_nav_reset_done = False
+        self.sub_label = None
+        self._sub_hide_event = None
 
         self.init_ui()
 
@@ -281,14 +278,10 @@ class HomeScreen(BaseScreen):
             card.update_theme(current_theme)
 
     def update_theme_colors(self):
-        """Вызывается из app.apply_theme. Делегируем в существующий _apply_current_theme."""
         self._apply_current_theme(0)
 
     def update_language(self):
-        """Обновляет тексты на карточках при смене языка"""
         logger.info("🌐 Обновление языка на HomeScreen")
-
-        # Обновляем карточки
         for section_id, card in self._cards.items():
             new_title = get_text(section_id, section_id.capitalize())
             card.update_language(new_title)
@@ -306,6 +299,8 @@ class HomeScreen(BaseScreen):
             logger.debug(f"TopNav ещё не готов: {e}")
 
     def init_ui(self):
+        from config.system_bars import get_navigation_bar_height
+
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
 
         top_padding = layout_config.get_top_padding()
@@ -350,7 +345,6 @@ class HomeScreen(BaseScreen):
 
         self._cards = {}
         for section_id, icon_asset in sections:
-            # Заголовок берем из перевода
             title = get_text(section_id, section_id.capitalize())
 
             card = GridCard(
@@ -374,14 +368,101 @@ class HomeScreen(BaseScreen):
         content_wrapper.add_widget(self._user_info_container)
 
         content_wrapper.add_widget(Widget(size_hint_y=1))
-
         main_layout.add_widget(content_wrapper)
 
+        # ============ ПЛАШКА СТАТУСА ПОДПИСКИ ============
+        # Рассчитываем, насколько поднять плашку, чтобы она была над BottomNav
+        nav_bar_height = get_navigation_bar_height()
+        bottom_nav_height = dp(52)  # Стандартная высота BottomNav
+        # Отступ снизу = высота BottomNav + системная панель + небольшой зазор
+        padding_bottom = bottom_nav_height + nav_bar_height + dp(8)
+
+        self.sub_label_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(40),  # Уменьшили высоту контейнера
+            padding=[dp(16), 0, dp(16), padding_bottom],  # Применяем отступ
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        # Сама плашка (тоньше и без смайликов)
+        self.sub_label = MDLabel(
+            text="",
+            font_size=sp(12),  # Уменьшили шрифт
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=dp(30),  # Уменьшили высоту плашки
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            opacity=0,
+            bold=True
+        )
+
+        with self.sub_label.canvas.before:
+            self.sub_bg_color = Color(0, 0, 0, 0)
+            self.sub_bg_rect = RoundedRectangle(pos=self.sub_label.pos, size=self.sub_label.size,
+                                                radius=[dp(8)])  # Меньше скругление
+
+        self.sub_label.bind(
+            pos=lambda inst, val: setattr(self.sub_bg_rect, 'pos', val),
+            size=lambda inst, val: setattr(self.sub_bg_rect, 'size', val)
+        )
+
+        self.sub_label_container.add_widget(self.sub_label)
+        main_layout.add_widget(self.sub_label_container)
+        # ================================================
+
         if platform != 'android':
-            main_layout.add_widget(Widget(size_hint_y=None, height=dp(20)))
+            main_layout.add_widget(Widget(size_hint_y=None, height=dp(10)))  # Уменьшили нижний отступ
 
         self.add_widget(main_layout)
         logger.info(f"HomeScreen: top_padding = {top_padding}dp")
+
+    def show_subscription_status(self, status_data):
+        """Показывает статус подписки на 4 секунды (без смайликов)"""
+        if not self.sub_label:
+            return
+
+        status = status_data.get("status")
+
+        if status == "active":
+            days_left = status_data.get("days_left", 0)
+            if days_left <= 3:
+                self.sub_label.text = f"[!] Подписка заканчивается. Осталось {days_left} дн."
+                self.sub_bg_color.rgba = [0.8, 0.4, 0.1, 0.95]  # Оранжевый
+            else:
+                self.sub_label.text = f"Подписка активна. Осталось {days_left} дн."
+                self.sub_bg_color.rgba = [0.1, 0.4, 0.3, 0.95]  # Темно-зеленый
+
+        elif status == "limited":
+            seconds_left = status_data.get("seconds_left", 0)
+            mins = seconds_left // 60
+            if seconds_left <= 0:
+                self.sub_label.text = "Бесплатный доступ на сегодня закончился"
+                self.sub_bg_color.rgba = [0.7, 0.1, 0.1, 0.95]  # Красный
+            else:
+                self.sub_label.text = f"Осталось {mins} мин. бесплатного доступа"
+                self.sub_bg_color.rgba = [0.15, 0.15, 0.15, 0.95]  # Темный
+                self.sub_label.text_color = [1, 0.8, 0.2, 1]  # Желтый текст
+
+        elif status == "unlimited":
+            self.sub_label.text = "Безлимитный доступ (Админ)"
+            self.sub_bg_color.rgba = [0.2, 0.2, 0.2, 0.95]  # Темный
+            self.sub_label.text_color = [0.9, 0.7, 0.2, 1]  # Золотой текст
+        else:
+            return
+
+        # Анимация появления
+        Animation(opacity=1, duration=0.3).start(self.sub_label)
+
+        def hide_label(dt):
+            Animation(opacity=0, duration=0.5).start(self.sub_label)
+
+        if self._sub_hide_event:
+            self._sub_hide_event.cancel()
+
+        self._sub_hide_event = Clock.schedule_once(hide_label, 4.0)
 
     def _update_user_info(self, username=None):
         pass
@@ -439,6 +520,12 @@ class HomeScreen(BaseScreen):
         self._reset_top_nav_to_home()
         self._refresh_favorites_if_needed()
 
+        # ПРОВЕРКА ПОДПИСКИ И ПОКАЗ СТАТУСА (только при первом запуске/логине)
+        api.check_subscription(
+            on_success=lambda res: Clock.schedule_once(lambda dt: self.show_subscription_status(res), 0.5),
+            on_failure=lambda req, err: logger.warning(f"Ошибка проверки подписки: {err}")
+        )
+
     def _on_auth_failure(self, req, error):
         logger.warning(f'Авторизация не пройдена: {error}')
         self._update_user_info()
@@ -469,6 +556,12 @@ class HomeScreen(BaseScreen):
         if api.is_authenticated() and api.user_data:
             username = api.user_data.get('username', 'Гость')
             self._update_user_info(username)
+
+            # ПРОВЕРКА ПОДПИСКИ ПОСЛЕ ЛОГИНА
+            api.check_subscription(
+                on_success=lambda res: Clock.schedule_once(lambda dt: self.show_subscription_status(res), 0.5),
+                on_failure=lambda req, err: logger.warning(f"Ошибка проверки подписки: {err}")
+            )
         else:
             self._check_auth(0)
 
@@ -499,6 +592,7 @@ class HomeScreen(BaseScreen):
         except Exception as e:
             logger.debug(f"TopNav ещё не готов: {e}")
 
+        # В on_enter мы НЕ вызываем проверку подписки, чтобы надпись не появлялась при каждом переходе
         if api.is_authenticated() and api.user_data:
             username = api.user_data.get('username', 'Гость')
             self._update_user_info(username)

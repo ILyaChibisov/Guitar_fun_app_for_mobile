@@ -53,14 +53,12 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     print(error_msg)
     print("=" * 50)
 
-    # Принудительно сбрасываем буферы, чтобы лог успел уйти в logcat/файл
     try:
         sys.stdout.flush()
         sys.stderr.flush()
     except Exception:
         pass
 
-    # Kivy Logger тоже сбрасываем
     try:
         from kivy.logger import Logger
         Logger.error(f"FATAL ERROR:\n{error_msg}")
@@ -74,16 +72,10 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = handle_exception
 
 # ============ ПРЕДУПРЕЖДЕНИЯ ============
-# ВАЖНО: мы НЕ отключаем SSL глобально.
-# ssl._create_default_https_context = ssl._create_unverified_context — УДАЛЕНО.
-# os.environ['SSL_CERT_FILE'] = '' / REQUESTS_CA_BUNDLE = '' — УДАЛЕНО.
-# Проверка сертификатов настраивается в api/ssl_config.py:
-#   Android → системные сертификаты (verify=True)
-#   Windows → certifi
-# Здесь только глушим шумные предупреждения, ничего не ломая.
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -244,7 +236,6 @@ class RootWidget(MDFloatLayout):
         self._init_canvas()
         self.load_background()
 
-        # Применяем сохранённую тему (из settings_state)
         self.apply_theme(settings_state.theme)
 
         logger.info("RootWidget создан")
@@ -288,7 +279,6 @@ class RootWidget(MDFloatLayout):
     def apply_theme(self, theme_id):
         logger.info(f"🖼️ Применение фона для темы: {theme_id}")
 
-        # Полностью очищаем canvas.before — убираем накопленные инструкции
         self.canvas.before.clear()
         self.bg_image = None
         self.img_color = None
@@ -327,7 +317,6 @@ class GuitarFunsApp(MDApp):
         self.splash_screen = None
         self._components_created = False
 
-        # ============ ЗАГРУЗКА НАСТРОЕК ============
         settings_file = os.path.join(config.CACHE_DIR, 'user_settings.json')
         settings_state.load(settings_file)
 
@@ -343,14 +332,12 @@ class GuitarFunsApp(MDApp):
     def apply_theme(self, theme_id):
         logger.info(f"🎨 apply_theme({theme_id})")
 
-        # 1) Фон
         if self.root:
             try:
                 self.root.apply_theme(theme_id)
             except Exception as e:
                 logger.error(f"root.apply_theme: {e}")
 
-        # 2) Горячие панели
         if self.top_nav:
             try:
                 self.top_nav.update_theme_colors()
@@ -362,7 +349,6 @@ class GuitarFunsApp(MDApp):
             except Exception as e:
                 logger.debug(f"bottom_nav theme: {e}")
 
-        # 3) Текущий экран — сразу
         if self.screen_manager:
             current = self.screen_manager.current_screen
             if current and hasattr(current, 'update_theme_colors'):
@@ -421,15 +407,17 @@ class GuitarFunsApp(MDApp):
 
     def _show_auth_modal_on_screen(self, screen):
         from screens.components.auth_modal import AuthModal
-        self.set_blocking(True)
+
+        if self.current_auth_modal:
+            return
+
         self.current_auth_modal = AuthModal(
             parent_screen=screen,
             on_close=self._on_auth_modal_close,
             on_login_success=self._on_auth_success
         )
-        if self.blocking_layer:
-            self.blocking_layer.set_modal_widget(self.current_auth_modal)
-        screen.add_widget(self.current_auth_modal)
+
+        self.current_auth_modal.open()
 
     def _on_auth_modal_close(self):
         logger.info("Модальное окно закрыто")
@@ -451,6 +439,12 @@ class GuitarFunsApp(MDApp):
             api.get_current_user(
                 on_success=self._on_user_data_loaded,
                 on_failure=lambda req, err: None
+            )
+
+            # Проверяем подписку сразу после входа
+            api.check_subscription(
+                on_success=self._on_subscription_checked,
+                on_failure=lambda req, err: logger.warning(f"Ошибка проверки подписки: {err}")
             )
 
         Clock.schedule_once(self._refresh_current_screen, 0.3)
@@ -505,6 +499,78 @@ class GuitarFunsApp(MDApp):
         self._favorites_preloaded = True
         logger.info(f"✅ Избранное предзагружено: {len(favorites)} песен")
 
+    # ============ ПРОВЕРКА ПОДПИСКИ ============
+
+    def _on_subscription_checked(self, status_data):
+        """Вызывается при проверке подписки"""
+        status = status_data.get("status")
+
+        from utils.notifications import notify  # Импортируем здесь, чтобы не было циклической зависимости
+
+        if status == "unlimited":
+            logger.info("👑 Админ: безлимитный доступ")
+            # Админу можно вообще ничего не показывать, или показать "Безлимит"
+            # notify.info("👑 У вас безлимитный доступ (Админ)")
+
+        elif status == "active":
+            days_left = status_data.get('days_left', 0)
+            logger.info(f"✅ Подписка активна: {days_left} дней")
+
+            if days_left <= 3:
+                # Если осталось мало дней, показываем предупреждение
+                notify.warning(f"⏳ Подписка заканчивается! Осталось {days_left} дн.")
+            else:
+                # Если все хорошо, просто информируем
+                notify.success(f"✅ Подписка активна. Осталось {days_left} дн.")
+
+        elif status == "limited":
+            seconds_left = status_data.get("seconds_left", 0)
+            logger.info(f"⏳ Мягкая блокировка: осталось {seconds_left} сек.")
+
+            if seconds_left <= 0:
+                Clock.schedule_once(lambda dt: self._show_paywall(), 0.5)
+            else:
+                # Можно показать, сколько минут осталось на сегодня
+                mins = seconds_left // 60
+                notify.info(f"⏳ Осталось {mins} мин. бесплатного доступа на сегодня.")
+
+    def _show_paywall(self):
+        """Показывает окно с предложением купить подписку или ввести промокод"""
+        from kivymd.uix.dialog import MDDialog
+        from kivymd.uix.label import MDLabel
+        from kivymd.uix.button import MDRaisedButton, MDFlatButton
+
+        label = MDLabel(
+            text="Ваш бесплатный период на сегодня закончился.\n\nКупите подписку или активируйте промокод, чтобы продолжить!",
+            halign="center",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 0.9],
+            size_hint_y=None,
+            height=dp(80)
+        )
+
+        dialog = MDDialog(
+            title="Доступ ограничен ⏳",
+            type="custom",
+            content_cls=label,
+            buttons=[
+                MDFlatButton(
+                    text="Промокод",
+                    on_release=lambda x: (dialog.dismiss(), self._go_to_promo())
+                ),
+                MDRaisedButton(
+                    text="Оплатить",
+                    md_bg_color=[0.46, 0.70, 0.71, 1],
+                    on_release=lambda x: dialog.dismiss()
+                ),
+            ]
+        )
+        dialog.open()
+
+    def _go_to_promo(self):
+        if self.screen_manager and self.screen_manager.has_screen('promo'):
+            self.screen_manager.current = 'promo'
+
     # ============ BUILD ============
 
     def build(self):
@@ -521,7 +587,6 @@ class GuitarFunsApp(MDApp):
             except Exception as e:
                 logger.error(f"Ошибка настройки клавиатуры: {e}")
 
-        # ============ ПРИМЕНЕНИЕ СОХРАНЁННЫХ НАСТРОЕК ============
         self.theme_cls.primary_palette = "Teal"
         self.theme_cls.primary_hue = "300"
         self.theme_cls.material_style = "M3"
@@ -614,7 +679,6 @@ class GuitarFunsApp(MDApp):
         self.root.add_widget(self.sidebar)
         self.root.add_widget(self.blocking_layer)
 
-        # Подписываем «горячие» панели на изменения настроек.
         settings_state.add_theme_listener(self._on_theme_changed_hot)
         settings_state.add_language_listener(self._on_language_changed_hot)
 
@@ -630,7 +694,6 @@ class GuitarFunsApp(MDApp):
         logger.info("✅ Компоненты приложения показаны")
 
     def _on_theme_changed_hot(self, theme_id):
-        """Реакция горячих панелей на смену темы."""
         if self.root:
             try:
                 self.root.apply_theme(theme_id)
@@ -648,7 +711,6 @@ class GuitarFunsApp(MDApp):
                 logger.debug(f"bottom_nav theme: {e}")
 
     def _on_language_changed_hot(self, lang_code):
-        """Реакция горячих панелей на смену языка."""
         if self.top_nav and self.screen_manager:
             try:
                 self.top_nav.update_title(self.screen_manager.current)
@@ -719,6 +781,13 @@ class GuitarFunsApp(MDApp):
         logger.info('Приложение GuitarFuns запущено')
         check_audio_support()
 
+        # ПРОВЕРКА ПОДПИСКИ ПРИ СТАРТЕ
+        if api.access_token:
+            api.check_subscription(
+                on_success=self._on_subscription_checked,
+                on_failure=lambda req, err: logger.warning(f"Ошибка проверки подписки: {err}")
+            )
+
         Clock.schedule_once(lambda dt: self._preload_favorites(), 1.0)
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
 
@@ -739,28 +808,25 @@ class GuitarFunsApp(MDApp):
         return True
 
     def on_resume(self):
-        """
-        Приложение вернулось из фона (Doze / переключение приложений).
-        ВАЖНО: keep-alive сокеты в пуле requests.Session() за это время
-        могли умереть. Сбрасываем пул, чтобы первый же запрос пошёл
-        в свежее соединение, а не в мёртвый сокет.
-        """
         logger.debug('Приложение восстановлено')
-
-        # 🔑 Сброс мёртвых keep-alive сокетов — сразу
         try:
             api.reset_session()
             logger.info("🔌 Пул соединений API сброшен после resume")
         except Exception as e:
             logger.error(f"reset_session on_resume: {e}")
 
-        # Повторный сброс через 1с — на случай, если сеть поднялась позже
         Clock.schedule_once(self._delayed_session_reset, 1.0)
+
+        # Проверка подписки после возврата в приложение
+        if api.access_token:
+            api.check_subscription(
+                on_success=self._on_subscription_checked,
+                on_failure=lambda req, err: logger.warning(f"Ошибка проверки подписки: {err}")
+            )
 
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
     def _delayed_session_reset(self, dt):
-        """Повторный сброс пула соединений после resume."""
         try:
             api.reset_session()
             logger.debug("🔌 Пул соединений API сброшен повторно (delayed)")

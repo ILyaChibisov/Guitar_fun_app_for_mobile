@@ -15,8 +15,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.selectioncontrol import MDCheckbox
-from kivymd.uix.dialog import MDDialog
+from kivymd.uix.button import MDRaisedButton, MDFlatButton
 from kivymd.app import MDApp
 
 from config.theme import theme
@@ -360,17 +359,81 @@ class AuthScreen(BaseScreen):
         logger.error(f"❌ Ошибка входа: {error}")
 
     def _do_register(self, username, password):
-        """Выполняет регистрацию"""
+        """Шаг 1: Отправка кода на почту"""
+        email = self.email_field.text.strip()
+
+        self.action_btn.text = "Отправка кода..."
+        self.action_btn.disabled = True
+
+        # Вызываем новый метод API
+        api.send_verification_code(
+            email=email,
+            on_success=lambda res: self._on_code_sent(username, email, password),
+            on_failure=self._on_code_send_failure
+        )
+
+    def _on_code_sent(self, username, email, password):
+        """Шаг 2: Показываем окно для ввода кода"""
+        self.action_btn.text = "Зарегистрироваться"
+        self.action_btn.disabled = False
+
+        # Создаем поле для кода
+        self.code_field = MDTextField(
+            hint_text="Введите 4-значный код",
+            mode="fill",
+            size_hint_y=None,
+            height=dp(56),
+            font_size=sp(20),
+            halign="center",
+            input_filter="int",  # Только цифры
+            max_text_length=4
+        )
+
+        # Создаем диалоговое окно
+        self.code_dialog = MDDialog(
+            title="Код отправлен!",
+            text=f"Мы отправили код на {email}. Проверьте почту и папку «Спам».",
+            type="custom",
+            content_cls=self.code_field,
+            buttons=[
+                MDFlatButton(
+                    text="Отмена",
+                    on_release=lambda x: self.code_dialog.dismiss()
+                ),
+                MDRaisedButton(
+                    text="Подтвердить",
+                    md_bg_color=theme.PRIMARY,
+                    on_release=lambda x: self._verify_and_register(username, email, password)
+                ),
+            ],
+        )
+        self.code_dialog.open()
+
+    def _verify_and_register(self, username, email, password):
+        """Шаг 3: Отправляем код на сервер для завершения регистрации"""
+        code = self.code_field.text.strip()
+        if len(code) != 4:
+            notify.warning("Введите 4-значный код")
+            return
+
+        self.code_dialog.dismiss()
         self.action_btn.text = "Регистрация..."
         self.action_btn.disabled = True
 
-        api.register(
+        api.register_with_code(
             username=username,
+            email=email,
             password=password,
-            full_name=None,
+            code=code,
             on_success=self._on_register_success,
             on_failure=self._on_register_failure
         )
+
+    def _on_code_send_failure(self, req, error):
+        self.action_btn.text = "Зарегистрироваться"
+        self.action_btn.disabled = False
+        notify.error(f"Ошибка: {error}")
+
 
     def _on_register_success(self, result):
         """Обработчик успешной регистрации"""
