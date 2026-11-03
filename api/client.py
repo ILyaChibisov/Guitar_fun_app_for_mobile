@@ -501,6 +501,151 @@ class APIClient:
             except Exception as e:
                 Logger.error(f"Ошибка в слушателе избранного: {e}")
 
+    # ============ АДМИН: ПРОМОКОДЫ ============
+
+    def create_promo(self, code: str, days_to_add: int, max_uses: int,
+                     valid_days: int, on_success=None, on_failure=None):
+        """Создание промокода (только админ)."""
+        url = f"{self.config.API_BASE_URL}/promo/admin/create"
+        payload = {
+            "code": code.strip().upper(),
+            "days_to_add": int(days_to_add),
+            "max_uses": int(max_uses),
+            "valid_days": int(valid_days),
+        }
+
+        def worker():
+            try:
+                response = self.session.post(
+                    url, json=payload,
+                    headers=self._get_headers(include_auth=True),
+                    timeout=config.CONNECTION_TIMEOUT,
+                )
+                response.raise_for_status()
+                result = response.json()
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                err = "Ошибка создания промокода"
+                try:
+                    err = e.response.json().get("detail", err)
+                except Exception:
+                    pass
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, err), 0)
+            except Exception as e:
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def list_promocodes(self, limit: int = 100, offset: int = 0,
+                        active_only: bool = False,
+                        on_success=None, on_failure=None):
+        """Список промокодов (только админ)."""
+        url = (
+            f"{self.config.API_BASE_URL}/promo/admin/list"
+            f"?limit={limit}&offset={offset}"
+            f"&active_only={'true' if active_only else 'false'}"
+        )
+        return self._request(
+            url=url, method='GET',
+            on_success=on_success, on_failure=on_failure,
+            include_auth=True,
+        )
+
+    def list_promocodes_sync(self, limit: int = 100, offset: int = 0,
+                             active_only: bool = False):
+        """Синхронная версия (вызывать только из фонового потока!)."""
+        url = (
+            f"{self.config.API_BASE_URL}/promo/admin/list"
+            f"?limit={limit}&offset={offset}"
+            f"&active_only={'true' if active_only else 'false'}"
+        )
+        try:
+            response = self.session.get(
+                url,
+                headers=self._get_headers(include_auth=True),
+                timeout=config.CONNECTION_TIMEOUT,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"❌ list_promocodes_sync: {e}")
+            return {"promocodes": [], "total": 0, "has_more": False}
+
+    def delete_promo(self, promo_id: int, on_success=None, on_failure=None):
+        """Удалить промокод (только админ)."""
+        url = f"{self.config.API_BASE_URL}/promo/admin/{int(promo_id)}"
+        return self._request(
+            url=url, method='DELETE',
+            on_success=on_success, on_failure=on_failure,
+            include_auth=True,
+        )
+
+    def get_my_active_promos(self, on_success=None, on_failure=None):
+        """
+        Активные промокоды текущего пользователя.
+        GET /promo/my-active
+        """
+        url = f"{self.config.API_BASE_URL}/promo/my-active"
+        return self._request(
+            url=url, method='GET',
+            on_success=on_success, on_failure=on_failure,
+            include_auth=True,
+        )
+
+    # ============ ПОДПИСКА (ТАРИФЫ) ============
+
+    def get_subscription_plans(self, on_success=None, on_failure=None):
+        """GET /subscription/plans — список тарифов (без авторизации)."""
+        url = f"{self.config.API_BASE_URL}/subscription/plans"
+        return self._request(
+            url=url, method='GET',
+            on_success=on_success, on_failure=on_failure,
+            include_auth=False,
+        )
+
+    def get_subscription_plans_sync(self):
+        """Синхронная версия (только из фонового потока!)."""
+        url = f"{self.config.API_BASE_URL}/subscription/plans"
+        try:
+            response = self.session.get(url, timeout=config.CONNECTION_TIMEOUT)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            Logger.error(f"❌ get_subscription_plans_sync: {e}")
+            return {"plans": [], "currency": "RUB"}
+
+    def purchase_subscription(self, plan_id: str, on_success=None, on_failure=None):
+        """POST /subscription/purchase — покупка тарифа."""
+        url = f"{self.config.API_BASE_URL}/subscription/purchase"
+        data = {"plan_id": plan_id}
+
+        def worker():
+            try:
+                response = self.session.post(
+                    url, json=data,
+                    headers=self._get_headers(include_auth=True),
+                    timeout=config.CONNECTION_TIMEOUT,
+                )
+                response.raise_for_status()
+                result = response.json()
+                if on_success:
+                    Clock.schedule_once(lambda dt: on_success(result), 0)
+            except requests.exceptions.HTTPError as e:
+                err = "Ошибка покупки"
+                try:
+                    err = e.response.json().get("detail", err)
+                except Exception:
+                    pass
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, err), 0)
+            except Exception as e:
+                if on_failure:
+                    Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
+
+        threading.Thread(target=worker, daemon=True).start()
     # ============ API МЕТОДЫ ============
 
     def get_favorites(self, on_success=None, on_failure=None,

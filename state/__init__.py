@@ -8,6 +8,7 @@ from state.dictionary_state import dictionary_state, DictionaryStateManager
 from state.settings_state import settings_state, SettingsState
 from state.favorites_state import favorites_state, FavoritesStateManager
 from state.search_state import search_state, SearchStateManager
+from state.subscription_state import subscription_state, SubscriptionState
 
 __all__ = [
     'songs_state', 'SongsStateManager',
@@ -15,5 +16,5 @@ __all__ = [
     'dictionary_state', 'DictionaryStateManager',
     'settings_state', 'SettingsState',
     'favorites_state', 'FavoritesStateManager',
-    'SearchStateManager',
+    'SearchStateManager','subscription_state', 'SubscriptionState'
 ]

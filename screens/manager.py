@@ -16,7 +16,7 @@ from .favorites_screen import FavoritesScreen
 from .profile_screen import ProfileScreen
 from .admin_screen import AdminScreen
 from .search_screen import SearchScreen
-
+from .admin_promo_screen import AdminPromoScreen
 # === ЭКРАНЫ ДЕТАЛЬНОГО ПРОСМОТРА ===
 from .song_detail_screen import SongDetailScreen
 from .term_detail_screen import TermDetailScreen
@@ -39,6 +39,7 @@ from .settings_screen import SettingsScreen
 from .help_screen import HelpScreen
 from .promo_screen import PromoScreen
 from .feedback_screen import FeedbackScreen
+from .paywall_screen import PaywallScreen
 
 # === ПАРСЕРЫ ===
 from .parsers_screens.amdm_parser_screen import AMDMParserScreen
@@ -103,6 +104,8 @@ def setup_screen_manager():
     sm.add_widget(HelpScreen(name='help'))
     sm.add_widget(PromoScreen(name='promo'))
     sm.add_widget(FeedbackScreen(name='feedback'))
+    sm.add_widget(AdminPromoScreen(name='admin_promo'))
+    sm.add_widget(PaywallScreen(name='paywall'))
 
     # ============================================================
     # 6. ЭКРАНЫ ПАРСЕРОВ

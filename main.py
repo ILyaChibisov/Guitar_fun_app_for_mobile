@@ -316,6 +316,10 @@ class GuitarFunsApp(MDApp):
         self._favorites_preloaded = False
         self.splash_screen = None
         self._components_created = False
+        self._subscription_listener = None
+        self._paywall_modal = None
+        self._paywall_modal_shown_for_exhausted = False
+        self._subscription_poll_event = None
 
         settings_file = os.path.join(config.CACHE_DIR, 'user_settings.json')
         settings_state.load(settings_file)
@@ -441,11 +445,8 @@ class GuitarFunsApp(MDApp):
                 on_failure=lambda req, err: None
             )
 
-            # Проверяем подписку сразу после входа
-            api.check_subscription(
-                on_success=self._on_subscription_checked,
-                on_failure=lambda req, err: logger.warning(f"Ошибка проверки подписки: {err}")
-            )
+            # Первичная проверка подписки через subscription_state
+            Clock.schedule_once(lambda dt: self._poll_subscription(0), 0.5)
 
         Clock.schedule_once(self._refresh_current_screen, 0.3)
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
@@ -499,77 +500,178 @@ class GuitarFunsApp(MDApp):
         self._favorites_preloaded = True
         logger.info(f"✅ Избранное предзагружено: {len(favorites)} песен")
 
-    # ============ ПРОВЕРКА ПОДПИСКИ ============
+    # ============ ПОДПИСКА ============
 
-    def _on_subscription_checked(self, status_data):
-        """Вызывается при проверке подписки"""
-        status = status_data.get("status")
+    def _poll_subscription(self, dt):
+        """Запрос /users/me/subscription → subscription_state."""
+        from state.subscription_state import subscription_state
 
-        from utils.notifications import notify  # Импортируем здесь, чтобы не было циклической зависимости
+        if not api.access_token:
+            logger.debug("📊 poll: нет токена, пропуск")
+            return
+        if subscription_state.is_admin:
+            logger.debug("📊 poll: админ, пропуск")
+            return
 
-        if status == "unlimited":
-            logger.info("👑 Админ: безлимитный доступ")
-            # Админу можно вообще ничего не показывать, или показать "Безлимит"
-            # notify.info("👑 У вас безлимитный доступ (Админ)")
+        def _on_status(status_data):
+            logger.info(f"📊 poll: получен статус {status_data}")
+            subscription_state.update_from_response(status_data, api.user_data)
 
-        elif status == "active":
-            days_left = status_data.get('days_left', 0)
-            logger.info(f"✅ Подписка активна: {days_left} дней")
+        def _on_fail(req, err):
+            logger.warning(f"📊 poll: ошибка {err}")
 
-            if days_left <= 3:
-                # Если осталось мало дней, показываем предупреждение
-                notify.warning(f"⏳ Подписка заканчивается! Осталось {days_left} дн.")
-            else:
-                # Если все хорошо, просто информируем
-                notify.success(f"✅ Подписка активна. Осталось {days_left} дн.")
+        api.check_subscription(on_success=_on_status, on_failure=_on_fail)
 
-        elif status == "limited":
-            seconds_left = status_data.get("seconds_left", 0)
-            logger.info(f"⏳ Мягкая блокировка: осталось {seconds_left} сек.")
+    def _start_subscription_poller(self):
+        if self._subscription_poll_event:
+            return
+        self._subscription_poll_event = Clock.schedule_interval(self._poll_subscription, 30)
+        logger.info("🔄 Запущен периодический опрос подписки (30 сек)")
 
-            if seconds_left <= 0:
-                Clock.schedule_once(lambda dt: self._show_paywall(), 0.5)
-            else:
-                # Можно показать, сколько минут осталось на сегодня
-                mins = seconds_left // 60
-                notify.info(f"⏳ Осталось {mins} мин. бесплатного доступа на сегодня.")
+    def _on_subscription_snapshot(self, snapshot: dict):
+        """
+        Реакция на изменение статуса подписки.
+        - status='exhausted' → блокирующая модалка сразу (Вариант B).
+        - status='active'    → закрыть модалку + warning при <=3 дней.
+        - admin/unlimited    → ничего.
+        """
+        logger.info(f"🔔 _on_subscription_snapshot: {snapshot}")
+
+        status = snapshot.get("status")
+        days_left = snapshot.get("days_left", 0)
+        is_admin = snapshot.get("is_admin", False)
+
+        from utils.subscription_warnings import subscription_warnings
+
+        # Админ / безлимит
+        if is_admin or status == "unlimited":
+            self._close_paywall_modal()
+            return
+
+        # Плашка на Home
+        try:
+            if self.screen_manager and self.screen_manager.has_screen('home'):
+                home = self.screen_manager.get_screen('home')
+                if hasattr(home, 'show_subscription_status'):
+                    Clock.schedule_once(
+                        lambda dt, s=snapshot: home.show_subscription_status(s), 0
+                    )
+        except Exception as e:
+            logger.debug(f"home.show_subscription_status: {e}")
+
+        # --- ЖЁСТКАЯ БЛОКИРОВКА ---
+        if status == "exhausted":
+            logger.info("🔔 status=exhausted → показываем paywall-modal")
+            self._show_paywall_modal(can_dismiss=False)
+            return
+
+        # --- Активная ---
+        if status == "active":
+            self._close_paywall_modal()
+            if 0 < days_left <= 3:
+                subscription_warnings.maybe_show_days_warning(days_left)
+
+    def _show_paywall_modal(self, can_dismiss=False):
+        """Глобальная блокирующая модалка «Подписка закончилась»."""
+        logger.info(f"🚧 _show_paywall_modal(can_dismiss={can_dismiss}) вызван")
+
+        if self._paywall_modal:
+            logger.info("🚧 Модалка уже открыта — пропускаем")
+            return
+
+        if not self.screen_manager:
+            logger.warning("🚧 screen_manager ещё не готов — откладываем")
+            Clock.schedule_once(lambda dt: self._show_paywall_modal(can_dismiss), 0.5)
+            return
+
+        try:
+            from screens.components.subscription_paywall_modal import SubscriptionPaywallModal
+            logger.info("🚧 Импорт SubscriptionPaywallModal OK")
+        except Exception as e:
+            logger.error(f"🚧 Ошибка импорта SubscriptionPaywallModal: {e}", exc_info=True)
+            return
+
+        def _go_paywall():
+            self._close_paywall_modal()
+            if self.screen_manager and self.screen_manager.has_screen('paywall'):
+                self.screen_manager.current = 'paywall'
+
+        def _go_promo():
+            self._close_paywall_modal()
+            if self.screen_manager and self.screen_manager.has_screen('promo'):
+                self.screen_manager.current = 'promo'
+
+        def _go_logout():
+            self._close_paywall_modal()
+            self._logout_and_open_auth()
+
+        try:
+            self._paywall_modal = SubscriptionPaywallModal(
+                can_dismiss=can_dismiss,
+                on_paywall=_go_paywall,
+                on_promo=_go_promo,
+                on_logout=_go_logout,
+                on_dismiss=lambda: setattr(self, '_paywall_modal', None),
+            )
+            self._paywall_modal.open()
+            logger.info(f"🚧 Paywall-modal показан (can_dismiss={can_dismiss})")
+        except Exception as e:
+            logger.error(f"🚧 Ошибка при показе модалки: {e}", exc_info=True)
+            self._paywall_modal = None
+
+    def _close_paywall_modal(self):
+        if self._paywall_modal:
+            try:
+                self._paywall_modal.dismiss()
+            except Exception:
+                pass
+            self._paywall_modal = None
 
     def _show_paywall(self):
-        """Показывает окно с предложением купить подписку или ввести промокод"""
-        from kivymd.uix.dialog import MDDialog
-        from kivymd.uix.label import MDLabel
-        from kivymd.uix.button import MDRaisedButton, MDFlatButton
+        """Fallback-переход на экран paywall."""
+        if self.screen_manager and self.screen_manager.has_screen('paywall'):
+            self.screen_manager.current = 'paywall'
+        else:
+            from utils.notifications import notify
+            notify.warning("Экран оплаты временно недоступен")
 
-        label = MDLabel(
-            text="Ваш бесплатный период на сегодня закончился.\n\nКупите подписку или активируйте промокод, чтобы продолжить!",
-            halign="center",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 0.9],
-            size_hint_y=None,
-            height=dp(80)
-        )
+    def _on_logout_done(self):
+        """Вызывать при успешном logout: сброс состояния подписки."""
+        from state.subscription_state import subscription_state
+        try:
+            subscription_state.reset()
+        except Exception as e:
+            logger.error(f"subscription_state.reset: {e}")
+        self._close_paywall_modal()
 
-        dialog = MDDialog(
-            title="Доступ ограничен ⏳",
-            type="custom",
-            content_cls=label,
-            buttons=[
-                MDFlatButton(
-                    text="Промокод",
-                    on_release=lambda x: (dialog.dismiss(), self._go_to_promo())
-                ),
-                MDRaisedButton(
-                    text="Оплатить",
-                    md_bg_color=[0.46, 0.70, 0.71, 1],
-                    on_release=lambda x: dialog.dismiss()
-                ),
-            ]
-        )
-        dialog.open()
+    def _logout_and_open_auth(self):
+        """
+        Выход из аккаунта + открытие AuthModal.
+        Используется из paywall-модалки «Выйти из аккаунта».
+        """
+        logger.info("🚪 Выход из аккаунта через paywall-модалку")
 
-    def _go_to_promo(self):
-        if self.screen_manager and self.screen_manager.has_screen('promo'):
-            self.screen_manager.current = 'promo'
+        # 1) Сбросить токены и данные
+        try:
+            api._clear_tokens()
+        except Exception as e:
+            logger.error(f"_clear_tokens: {e}")
+
+        api.user_data = None
+        settings_state.set_authenticated(False)
+
+        # 2) Сбросить состояние подписки (снимает всех слушателей из памяти)
+        self._on_logout_done()
+
+        # 3) Вернуться на home
+        if self.screen_manager and self.screen_manager.has_screen('home'):
+            self.screen_manager.current = 'home'
+
+        # 4) Обновить сайдбар и экраны
+        Clock.schedule_once(lambda dt: self._update_sidebar(), 0.2)
+
+        # 5) Открыть AuthModal
+        Clock.schedule_once(lambda dt: self.open_profile(), 0.4)
 
     # ============ BUILD ============
 
@@ -682,6 +784,30 @@ class GuitarFunsApp(MDApp):
         settings_state.add_theme_listener(self._on_theme_changed_hot)
         settings_state.add_language_listener(self._on_language_changed_hot)
 
+        # ============ ПОДПИСКА ============
+        from state.subscription_state import subscription_state
+        self._subscription_listener = self._on_subscription_snapshot
+        subscription_state.add_listener(self._subscription_listener)
+        logger.info("✅ Подписка: слушатель subscription_state подключён")
+
+        # Если статус уже был получен ДО подписки (например, в on_start) —
+        # продублируем его вручную, иначе модалка не появится.
+        if subscription_state.status:
+            snapshot = {
+                "status": subscription_state.status,
+                "days_left": subscription_state.days_left,
+                "seconds_left": subscription_state.seconds_left,
+                "is_admin": subscription_state.is_admin,
+                "subscription_end_date": subscription_state.subscription_end_date,
+            }
+            logger.info(f"📊 Продублируем известный снапшот: {snapshot}")
+            Clock.schedule_once(
+                lambda dt, s=snapshot: self._on_subscription_snapshot(s), 0.3
+            )
+
+        # Форсированная проверка после подключения слушателя
+        Clock.schedule_once(lambda dt: self._poll_subscription(0), 0.5)
+
         network_manager.start_monitoring()
         Window.bind(on_resize=self.on_window_resize)
 
@@ -781,12 +907,11 @@ class GuitarFunsApp(MDApp):
         logger.info('Приложение GuitarFuns запущено')
         check_audio_support()
 
-        # ПРОВЕРКА ПОДПИСКИ ПРИ СТАРТЕ
+        # Подписка: первая проверка СРАЗУ + периодический опрос
         if api.access_token:
-            api.check_subscription(
-                on_success=self._on_subscription_checked,
-                on_failure=lambda req, err: logger.warning(f"Ошибка проверки подписки: {err}")
-            )
+            logger.info("📊 on_start: форсированная проверка подписки")
+            self._poll_subscription(0)
+            self._start_subscription_poller()
 
         Clock.schedule_once(lambda dt: self._preload_favorites(), 1.0)
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
@@ -817,12 +942,9 @@ class GuitarFunsApp(MDApp):
 
         Clock.schedule_once(self._delayed_session_reset, 1.0)
 
-        # Проверка подписки после возврата в приложение
+        # Проверка подписки после возврата
         if api.access_token:
-            api.check_subscription(
-                on_success=self._on_subscription_checked,
-                on_failure=lambda req, err: logger.warning(f"Ошибка проверки подписки: {err}")
-            )
+            Clock.schedule_once(lambda dt: self._poll_subscription(0), 0.5)
 
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
@@ -836,6 +958,7 @@ class GuitarFunsApp(MDApp):
     def on_stop(self):
         logger.info('Приложение закрыто')
         network_manager.stop_monitoring()
+
         try:
             settings_state.flush()
         except Exception as e:

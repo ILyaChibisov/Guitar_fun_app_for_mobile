@@ -159,7 +159,7 @@ class ParserCard(CircularRippleBehavior, MDCard):
 
 class ActionCard(CircularRippleBehavior, MDCard):
     """
-    Карточка действия (очистка кэша, статистика, задачи) - цветные иконки
+    Карточка действия (очистка кэша, статистика, задачи, промокоды) - цветные иконки
     """
 
     # Цвета для действий
@@ -167,6 +167,7 @@ class ActionCard(CircularRippleBehavior, MDCard):
         'clear_cache': ('#FF6B35', '#E55A2B'),  # Оранжевый
         'statistics': ('#4CAF50', '#388E3C'),   # Зелёный
         'tasks': ('#2196F3', '#1976D2'),        # Синий
+        'promocodes': ('#9C27B0', '#7B1FA2'),   # Фиолетовый
     }
 
     def __init__(self, action_id, title, icon, on_click=None, **kwargs):
@@ -294,8 +295,6 @@ class AdminScreen(BaseScreen):
             padding=[dp(12), dp(8), dp(12), dp(16)]
         )
 
-        # ============ ЗАГОЛОВОК УБРАН (будет в TopNav) ============
-
         # ============ ВСЕ ПАРСЕРЫ ============
         section_title = MDLabel(
             text="Парсеры",
@@ -414,6 +413,15 @@ class AdminScreen(BaseScreen):
         )
         actions_layout.add_widget(tasks_card)
 
+        # Промокоды (фиолетовый)
+        promocodes_card = ActionCard(
+            action_id='promocodes',
+            title='Промокоды',
+            icon='ticket-percent',
+            on_click=self.on_action_selected
+        )
+        actions_layout.add_widget(promocodes_card)
+
         scroll_actions.add_widget(actions_layout)
         content.add_widget(scroll_actions)
 
@@ -458,6 +466,8 @@ class AdminScreen(BaseScreen):
             self.show_statistics()
         elif action_id == 'tasks':
             self.open_tasks()
+        elif action_id == 'promocodes':
+            self.open_promocodes()
 
     def clear_cache(self):
         """Очищает кэш API"""
@@ -483,6 +493,17 @@ class AdminScreen(BaseScreen):
                 self.manager.current = 'tasks'
             else:
                 logger.error("Экран tasks не найден")
+                notify.error("Ошибка навигации")
+
+    def open_promocodes(self):
+        """Открывает экран управления промокодами"""
+        logger.info("🎫 Открытие экрана промокодов")
+
+        if hasattr(self, 'manager') and self.manager:
+            if self.manager.has_screen('admin_promo'):
+                self.manager.current = 'admin_promo'
+            else:
+                logger.error("Экран admin_promo не найден")
                 notify.error("Ошибка навигации")
 
     def on_enter(self):

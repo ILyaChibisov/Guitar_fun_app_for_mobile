@@ -276,6 +276,26 @@ class TopNavConfig:
             'custom_title_widget': None,
         },
 
+        'admin_promo': {
+            'title': 'Промокоды',
+            'title_type': TITLE_TYPE_STATIC,
+            'left_button': LEFT_BUTTON_BACK,
+            'right_button': RIGHT_BUTTON_HOME,
+            'show_back_button': True,
+            'custom_back_callback': 'go_back',
+            'custom_title_widget': None,
+        },
+
+        'paywall': {
+            'title': 'Подписка',
+            'title_type': TITLE_TYPE_STATIC,
+            'left_button': LEFT_BUTTON_BACK,
+            'right_button': RIGHT_BUTTON_HOME,
+            'show_back_button': True,
+            'custom_back_callback': 'go_back',
+            'custom_title_widget': None,
+        },
+
         # ============ ЭКРАНЫ ПАРСЕРОВ ============
         'amdm_parser': {
             'title': 'AMDM Парсер',
