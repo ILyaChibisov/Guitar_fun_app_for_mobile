@@ -21,7 +21,7 @@ from config.system_bars import get_status_bar_height, get_screen_density
 from config.top_nav_config import top_nav_config
 from utils.screen_state import screen_state
 from utils.settings_manager import settings_manager
-from utils.localization import get_text  # <--- ИМПОРТ ПЕРЕВОДОВ
+from utils.localization import get_text
 
 logger = get_logger('TopNav')
 
@@ -85,11 +85,11 @@ class TopNav(MDCard):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # Левая часть
+        # ============ ЛЕВАЯ ЧАСТЬ (АДАПТИВНАЯ) ============
         self.left_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, 1),
-            width=dp(48),
+            adaptive_width=True,  # <-- ИЗМЕНЕНО: теперь ширина подстраивается под кол-во кнопок
             spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'x': 0, 'center_y': 0.5}
@@ -123,7 +123,7 @@ class TopNav(MDCard):
 
         # ============ ЗАГОЛОВОК ============
         self.screen_title = MDLabel(
-            text=get_text('home'),  # Используем перевод для стартового экрана
+            text=get_text('home'),
             font_size=sp(20),
             halign="center",
             valign="middle",
@@ -137,11 +137,11 @@ class TopNav(MDCard):
             shorten_from="right"
         )
 
-        # Правая часть
+        # ============ ПРАВАЯ ЧАСТЬ (АДАПТИВНАЯ) ============
         self.right_container = MDBoxLayout(
             orientation='horizontal',
             size_hint=(None, 1),
-            width=dp(48),
+            adaptive_width=True,  # <-- ИЗМЕНЕНО: теперь ширина подстраивается под кол-во кнопок
             spacing=dp(4),
             md_bg_color=[0, 0, 0, 0],
             pos_hint={'right': 1, 'center_y': 0.5}
@@ -169,6 +169,29 @@ class TopNav(MDCard):
         )
         self.search_btn.bind(on_release=self._on_search_press)
 
+        # ============ НОВЫЕ КНОПКИ ДЛЯ ИЗБРАННОГО ============
+        self.favorite_btn = MDIconButton(
+            icon="star-outline",
+            size_hint=(None, None),
+            size=(dp(44), dp(44)),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 1],
+            md_bg_color=[0, 0, 0, 0],
+            pos_hint={'center_y': 0.5}
+        )
+        self.favorite_btn.bind(on_release=self._on_favorite_press)
+
+        self.actions_btn = MDIconButton(
+            icon="cog",
+            size_hint=(None, None),
+            size=(dp(44), dp(44)),
+            theme_icon_color="Custom",
+            icon_color=[1, 1, 1, 1],
+            md_bg_color=[0, 0, 0, 0],
+            pos_hint={'center_y': 0.5}
+        )
+        self.actions_btn.bind(on_release=self._on_actions_press)
+
         self.right_container.add_widget(self.search_btn)
 
         # Добавляем всё во FloatLayout
@@ -194,13 +217,10 @@ class TopNav(MDCard):
         logger.info(f"🎨 TopNav: обновление цветов для темы {theme_id}")
 
         if theme_id == 'light':
-            # Насыщенный яркий изумрудный для светлой темы
-            color = [0.1, 0.55, 0.3, 1]  # #1A8C4C
+            color = [0.1, 0.55, 0.3, 1]
             self.line_color_inst.rgba = [0.1, 0.55, 0.3, 0.5]
         elif theme_id == 'dark':
-            # БЕЛЫЙ для тёмной темы (как в зелёной)
             color = [1, 1, 1, 1]
-            # Полоску снизу оставляем оранжевой для акцента
             self.line_color_inst.rgba = [1.0, 0.5, 0.0, 0.5]
         else:  # green
             color = [1, 1, 1, 1]
@@ -211,6 +231,8 @@ class TopNav(MDCard):
         self.home_btn.icon_color = color
         self.search_btn.icon_color = color
         self.screen_title.text_color = color
+        self.favorite_btn.icon_color = color
+        self.actions_btn.icon_color = color
 
     def _update_bottom_line(self, *args):
         if hasattr(self, 'bottom_line'):
@@ -218,9 +240,8 @@ class TopNav(MDCard):
             self.bottom_line.size = (self.width, dp(1.5))
 
     def _get_screen_title(self, screen_name: str) -> str:
-        """Возвращает заголовок из конфига с переводом"""
         if screen_name not in top_nav_config.SCREENS:
-             return get_text(screen_name, screen_name)
+            return get_text(screen_name, screen_name)
         return get_text(screen_name, top_nav_config.get_title(screen_name))
 
     def update_title(self, screen_name: str):
@@ -248,9 +269,15 @@ class TopNav(MDCard):
             return
 
         window_width = Window.width
-        left_width = dp(48)
-        right_width = dp(48)
+        left_width = dp(48)  # Примерная ширина под 1 кнопку
+        right_width = dp(48)  # Примерная ширина под 1 кнопку
         padding = dp(32)
+
+        # Если на экране 2 кнопки, отнимаем больше места
+        current = self.sm.current if self.sm else 'home'
+        if current in ['favorite_detail', 'song_detail']:
+            right_width = dp(96)  # Под 2 кнопки
+
         max_width = window_width - left_width - right_width - padding
 
         if max_width < dp(100):
@@ -282,6 +309,12 @@ class TopNav(MDCard):
         left_width = dp(48)
         right_width = dp(48)
         padding = dp(32)
+
+        # Если на экране 2 кнопки, отнимаем больше места
+        current = self.sm.current if self.sm else 'home'
+        if current in ['favorite_detail', 'song_detail']:
+            right_width = dp(96)
+
         max_width = window_width - left_width - right_width - padding
 
         if max_width < dp(100):
@@ -335,8 +368,14 @@ class TopNav(MDCard):
     def _update_right_buttons(self, screen_name: str):
         self.right_container.clear_widgets()
 
-        nav_screens_with_home = ['songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary']
+        # Специальные экраны, где нужны звезда и шестеренка
+        if screen_name in ['favorite_detail', 'song_detail']:
+            self._update_favorite_icon()
+            self.right_container.add_widget(self.favorite_btn)
+            self.right_container.add_widget(self.actions_btn)
+            return
 
+        nav_screens_with_home = ['songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary']
         if screen_name in nav_screens_with_home:
             self.right_container.add_widget(self.home_btn)
         else:
@@ -345,6 +384,36 @@ class TopNav(MDCard):
                 self.right_container.add_widget(self.search_btn)
             elif right_type == top_nav_config.RIGHT_BUTTON_HOME:
                 self.right_container.add_widget(self.home_btn)
+
+    def _update_favorite_icon(self):
+        """Обновляет иконку звезды в зависимости от статуса избранного."""
+        app = MDApp.get_running_app()
+        if not app or not self.sm: return
+
+        screen = self.sm.current_screen
+        if hasattr(screen, 'song_id') and hasattr(screen, 'is_favorite'):
+            if screen.is_favorite:
+                self.favorite_btn.icon = "star"
+            else:
+                self.favorite_btn.icon = "star-outline"
+
+    def _on_favorite_press(self, *args):
+        app = MDApp.get_running_app()
+        if hasattr(app, 'toggle_favorite_from_top_nav'):
+            app.toggle_favorite_from_top_nav()
+
+    def _on_actions_press(self, *args):
+        app = MDApp.get_running_app()
+        if not app or not self.sm:
+            return
+
+        screen = self.sm.current_screen
+        if hasattr(screen, 'show_settings_panel'):
+            screen.show_settings_panel()
+        else:
+            # Фолбэк, если экран не поддерживает панель (например, song_detail)
+            if hasattr(app, 'sidebar') and app.sidebar:
+                app.sidebar.toggle()
 
     def _set_artist_songs_mode(self):
         self.left_container.clear_widgets()
@@ -523,7 +592,6 @@ class TopNav(MDCard):
         if self.sm and self.sm.has_screen('search'):
             if self.sm.current == 'search':
                 search_screen = self.sm.get_screen('search')
-                # Если мы уже на экране поиска, просто фокусируем поле ввода
                 if hasattr(search_screen, 'search_bar') and search_screen.search_bar:
                     search_screen.search_bar.search_field.focus = True
             else:

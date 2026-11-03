@@ -1,21 +1,21 @@
 # screens/favorite_detail_screen.py
 """
 Экран просмотра песни ИЗ ИЗБРАННОГО.
-Панель справа (FloatingPanel) с клювиком.
-Вертикальное меню аккордов и тональности.
+Управление избранным — через TopNav.
+Панель настроек открывается через шестеренку в TopNav.
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.slider import MDSlider
-from kivymd.uix.gridlayout import MDGridLayout
+from kivymd.uix.card import MDSeparator
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse, Triangle, Line, Bezier
+from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
 from kivy.core.image import Image as CoreImage
 from kivy.uix.widget import Widget
 from kivy.uix.behaviors import ButtonBehavior
@@ -23,19 +23,14 @@ from kivy.animation import Animation
 from kivy.core.window import Window
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
-from kivymd.uix.card import MDSeparator
 from kivy.utils import platform
 from io import BytesIO
 import re
-
-from kivy.properties import NumericProperty
-from kivy.graphics import Rotate, PushMatrix, PopMatrix
 
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
-from screens.components.compact_vertical_slider import CompactVerticalSlider
 from api.client import api
 from utils.notifications import notify
 from utils.settings_manager import settings_manager
@@ -138,46 +133,6 @@ def clean_text(text):
     return result
 
 # ============================================================
-# ЛОВУШКА СВАЙПА
-# ============================================================
-class EdgeSwipeCatcher(Widget):
-    def __init__(self, on_swipe_open=None, **kwargs):
-        super().__init__(**kwargs)
-        self.on_swipe_open = on_swipe_open
-        self.size_hint = (None, 1)
-        self.width = dp(24)
-        self.pos_hint = {'right': 1, 'center_y': 0.5}
-        self._touch_start_x = 0
-        self._dragging = False
-
-    def on_touch_down(self, touch):
-        if self.collide_point(*touch.pos):
-            self._touch_start_x = touch.x
-            self._dragging = False
-            touch.grab(self)
-            return True
-        return super().on_touch_down(touch)
-
-    def on_touch_move(self, touch):
-        if touch.grab_current is self:
-            dx = touch.x - self._touch_start_x
-            if dx < -dp(10) and not self._dragging:
-                self._dragging = True
-                if self.on_swipe_open: self.on_swipe_open()
-            return True
-        return super().on_touch_move(touch)
-
-    def on_touch_up(self, touch):
-        if touch.grab_current is self:
-            touch.ungrab(self)
-            if not self._dragging and self.on_swipe_open:
-                self.on_swipe_open()
-            self._dragging = False
-            return True
-        return super().on_touch_up(touch)
-
-
-# ============================================================
 # КОМПОНЕНТЫ ПАНЕЛИ
 # ============================================================
 class PanelIcon(ButtonBehavior, AnchorLayout):
@@ -188,11 +143,11 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
         self.anchor_x = 'center'
         self.anchor_y = 'center'
         self.size_hint = (1, None)
-        # Изменено: приводим высоту ячейки к единому стандарту меню аккордов
         self.height = dp(48)
         self.on_click_callback = on_click
         self.icon_name = icon
 
+        # ✅ ИСПОЛЬЗУЕМ MDIcon, А НЕ MDLabel!
         self.icon_widget = MDIcon(
             icon=icon,
             size_hint=(None, None),
@@ -215,106 +170,8 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
         self.icon_widget.icon = icon_name
 
 
-class CustomHandle(ButtonBehavior, Widget):
-    """
-    Увеличенный, полностью скругленный клювик (язычок) в стиле Material Design 3.
-    Контур идеально закруглен через кривые Безье, внутри анимированная стрелочка.
-    """
-    angle = NumericProperty(0)
-
-    def __init__(self, color, bg_color, **kwargs):
-        super().__init__(**kwargs)
-        self.size_hint = (None, None)
-        self.size = (dp(30), dp(80))
-        self.bg_color = bg_color
-        self.arrow_color = color
-        self.panel_is_open = False
-
-        self.icon_arrow = MDIcon(
-            icon="chevron-left",
-            font_size=sp(22),
-            theme_text_color="Custom",
-            text_color=self.arrow_color,
-            size_hint=(None, None),
-            size=(dp(24), dp(24))
-        )
-
-        with self.icon_arrow.canvas.before:
-            PushMatrix()
-            self.rot = Rotate(angle=self.angle, axis=(0, 0, 1))
-
-        with self.icon_arrow.canvas.after:
-            PopMatrix()
-
-        self.add_widget(self.icon_arrow)
-        self.bind(pos=self.redraw, size=self.redraw, angle=self._update_rotation)
-        self.redraw()
-
-    def _update_rotation(self, instance, value):
-        self.rot.angle = value
-
-    def redraw(self, *args):
-        self.canvas.clear()
-        self.icon_arrow.pos = (self.x + dp(2), self.center_y - self.icon_arrow.height / 2)
-        self.rot.origin = self.icon_arrow.center
-
-        theme_id = settings_manager.theme
-        line_color = DetailColors.get_panel_line(theme_id)
-
-        w = self.width
-        h = self.height
-        x = self.x
-        y = self.y
-
-        with self.canvas:
-            Color(*self.bg_color)
-            self.bg_rect = RoundedRectangle(
-                pos=(x, y),
-                size=(w + dp(12), h),
-                radius=[dp(20), 0, 0, dp(20)]
-            )
-            Color(*line_color)
-            Bezier(
-                points=[x + w, y + h, x + w * 0.4, y + h, x, y + h * 0.85, x, y + h * 0.7],
-                segments=30, width=1.3
-            )
-            Line(points=[x, y + h * 0.7, x, y + h * 0.3], width=1.3, cap='square')
-            Bezier(
-                points=[x, y + h * 0.3, x, y + h * 0.15, x + w * 0.4, y, x + w, y],
-                segments=30, width=1.3
-            )
-
-        self.canvas.remove(self.icon_arrow.canvas)
-        self.canvas.add(self.icon_arrow.canvas)
-
-    def set_state(self, is_open):
-        self.panel_is_open = is_open
-        target_angle = 180 if is_open else 0
-        Animation(angle=target_angle, duration=0.2, t='out_quad').start(self)
-
-    def set_color(self, color, bg_color=None):
-        self.arrow_color = color
-        self.icon_arrow.text_color = color
-        if bg_color:
-            self.bg_color = bg_color
-        self.redraw()
-
-    def on_touch_down(self, touch):
-        if self.collide_point(*touch.pos):
-            self.icon_arrow.opacity = 0.6
-            return True
-        return False
-
-    def on_touch_up(self, touch):
-        self.icon_arrow.opacity = 1.0
-        if self.collide_point(*touch.pos):
-            return True
-        return False
-
 class FloatingPanel(MDCard):
     PANEL_WIDTH = dp(64)
-    HANDLE_WIDTH = dp(30)
-    TOTAL_WIDTH = PANEL_WIDTH + HANDLE_WIDTH
     VISIBLE_MARGIN = dp(4)
 
     def __init__(self, parent_screen=None, on_action=None, **kwargs):
@@ -326,7 +183,7 @@ class FloatingPanel(MDCard):
         panel_bg = DetailColors.get_panel_bg(theme_id)
 
         self.size_hint = (None, None)
-        self.width = self.TOTAL_WIDTH
+        self.width = self.PANEL_WIDTH
         self.height = dp(100)
 
         self.md_bg_color = [0, 0, 0, 0]
@@ -337,13 +194,13 @@ class FloatingPanel(MDCard):
         with self.canvas.before:
             Color(0, 0, 0, 0.3)
             self.shadow_rect = RoundedRectangle(
-                pos=(self.x + self.HANDLE_WIDTH + dp(2), self.y - dp(2)),
+                pos=(self.x + dp(2), self.y - dp(2)),
                 size=(self.PANEL_WIDTH, self.height),
                 radius=[dp(16)] * 4
             )
             self.bg_color_inst = Color(*panel_bg)
             self.bg_rect = RoundedRectangle(
-                pos=(self.x + self.HANDLE_WIDTH, self.y),
+                pos=(self.x, self.y),
                 size=(self.PANEL_WIDTH, self.height),
                 radius=[dp(16)] * 4
             )
@@ -352,7 +209,7 @@ class FloatingPanel(MDCard):
         with self.canvas.after:
             self.line_color_inst = Color(*DetailColors.get_panel_line(theme_id))
             self.outline_rect = Line(
-                rounded_rectangle=(self.x + self.HANDLE_WIDTH, self.y, self.PANEL_WIDTH, self.height, dp(16)),
+                rounded_rectangle=(self.x, self.y, self.PANEL_WIDTH, self.height, dp(16)),
                 width=1.2
             )
 
@@ -363,20 +220,6 @@ class FloatingPanel(MDCard):
         self.mode = 'menu'
         self.items = []
         self._active_slider = None
-
-        self.handle_widget = CustomHandle(
-            color=DetailColors.get_accent(theme_id),
-            bg_color=panel_bg,
-            pos_hint={'center_y': 0.5, 'right': 1}
-        )
-
-        self.handle_container = FloatLayout(
-            size_hint=(None, 1),
-            width=self.HANDLE_WIDTH,
-            pos_hint={'x': 0}
-        )
-        self.handle_container.add_widget(self.handle_widget)
-        self.add_widget(self.handle_container)
 
         self.content = MDBoxLayout(
             orientation='vertical',
@@ -395,12 +238,12 @@ class FloatingPanel(MDCard):
         Clock.schedule_once(lambda dt: self._init_position(), 0.5)
 
     def _update_bg(self, *args):
-        self.bg_rect.pos = (self.x + self.HANDLE_WIDTH, self.y)
+        self.bg_rect.pos = (self.x, self.y)
         self.bg_rect.size = (self.PANEL_WIDTH, self.height)
-        self.shadow_rect.pos = (self.x + self.HANDLE_WIDTH + dp(2), self.y - dp(2))
+        self.shadow_rect.pos = (self.x + dp(2), self.y - dp(2))
         self.shadow_rect.size = (self.PANEL_WIDTH, self.height)
         self.outline_rect.rounded_rectangle = (
-            self.x + self.HANDLE_WIDTH, self.y,
+            self.x, self.y,
             self.PANEL_WIDTH, self.height, dp(16)
         )
 
@@ -414,34 +257,15 @@ class FloatingPanel(MDCard):
         self._recenter()
 
     def _init_position(self):
-        self._hidden_x = Window.width - self.HANDLE_WIDTH + dp(4)
-        self._visible_x = Window.width - self.TOTAL_WIDTH - self.VISIBLE_MARGIN
+        self._hidden_x = Window.width + dp(10)
+        self._visible_x = Window.width - self.PANEL_WIDTH - self.VISIBLE_MARGIN
         self.x = self._hidden_x
         self._recenter()
         self._is_visible = False
-        self.handle_widget.set_state(False)
 
     def _recenter(self):
         if self._hidden_x is None: return
         self.y = (Window.height - self.height) / 2
-
-    def on_touch_down(self, touch):
-        if self._visible_x is None or self._hidden_x is None:
-            self._init_position()
-        if self.collide_point(*touch.pos):
-            if hasattr(self, 'handle_widget') and self.handle_widget.collide_point(*touch.pos):
-                self.toggle_panel()
-                return True
-            return super().on_touch_down(touch)
-        return False
-
-    def on_touch_move(self, touch):
-        if self.collide_point(*touch.pos):
-            return super().on_touch_move(touch)
-        return False
-
-    def on_touch_up(self, touch):
-        return super().on_touch_up(touch)
 
     def toggle_panel(self):
         if self._is_visible:
@@ -452,7 +276,6 @@ class FloatingPanel(MDCard):
     def show(self):
         if self._is_visible: return
         self._is_visible = True
-        self.handle_widget.set_state(True)
         if self._anim: self._anim.cancel(self)
         self._anim = Animation(x=self._visible_x, duration=0.25, t='out_quad')
         self._anim.start(self)
@@ -460,7 +283,6 @@ class FloatingPanel(MDCard):
     def hide(self):
         if not self._is_visible: return
         self._is_visible = False
-        self.handle_widget.set_state(False)
         if self._anim: self._anim.cancel(self)
         self._anim = Animation(x=self._hidden_x, duration=0.25, t='in_quad')
         self._anim.start(self)
@@ -479,7 +301,7 @@ class FloatingPanel(MDCard):
             ('play-circle', 'scroll'),
             ('folder-music', 'tabs'),
             ('magnify', 'font'),
-            ('star-off', 'unfavorite')
+            ('arrow-left-thin', 'back')  # Кнопка назад вместо "убрать из избранного"
         ]
 
         for i, (icon, action) in enumerate(items):
@@ -512,7 +334,6 @@ class FloatingPanel(MDCard):
         theme_id = settings_manager.theme
         accent = DetailColors.get_accent(theme_id)
 
-        # 1. Верхний блок: стрелочки пагинации (укладываем ровно в dp(48))
         pag_box = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -536,7 +357,6 @@ class FloatingPanel(MDCard):
         pag_box.add_widget(next_btn)
         self.content.add_widget(pag_box)
 
-        # Функция создания прерывистого разделителя — ОДИН В ОДИН как в _build_menu
         def add_menu_divider():
             div = MDBoxLayout(
                 orientation='horizontal', size_hint=(1, None), height=dp(1),
@@ -551,7 +371,6 @@ class FloatingPanel(MDCard):
 
         add_menu_divider()
 
-        # 2. Основные иконки действий (каждая по dp(48) с прерывистыми разделителями)
         self.variant_item = PanelIcon(icon="format-list-bulleted-square",
                                       on_click=lambda: self._on_menu_item('variant'))
         self.content.add_widget(self.variant_item)
@@ -569,7 +388,6 @@ class FloatingPanel(MDCard):
         self.content.add_widget(self.griff_zoom_item)
         add_menu_divider()
 
-        # 3. Нижний блок: Изящная кнопка "Назад" (укладываем в dp(48))
         back_box = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(48))
         back_btn = MDIconButton(
             icon="arrow-left-thin",
@@ -585,9 +403,7 @@ class FloatingPanel(MDCard):
 
         self.update_theme_colors()
 
-        # Принудительно сохраняем высоту, чтобы сайдбар не прыгал по размеру экрана
         def _lock_height(dt):
-            # 6 элементов по dp(48) + 5 разделителей по dp(1) + padding контента = идеально совпадает со стандартным меню
             if hasattr(self, 'content'):
                 self.height = max(self.content.height, dp(310))
             self._recenter()
@@ -614,7 +430,9 @@ class FloatingPanel(MDCard):
                 parent.chords_carousel.load_slide(parent.chord_slides[new_idx])
 
     def _on_menu_item(self, action):
-        if action == 'chords':
+        if action == 'back':
+            self.hide()
+        elif action == 'chords':
             if self.parent_screen:
                 self.parent_screen.show_chords_section()
                 self._build_chords_panel()
@@ -645,10 +463,8 @@ class FloatingPanel(MDCard):
         elif action == 'tabs':
             self._build_menu()
             if self.parent_screen: self.parent_screen.show_tabs_picker()
-        elif action == 'unfavorite':
-            if self.parent_screen: self.parent_screen.toggle_favorite()
 
-        # ============ ПОД-ПАНЕЛИ (ШРИФТ/ПРОКРУТКА/ТОНАЛЬНОСТЬ) ============
+    # ============ ПОД-ПАНЕЛИ (ШРИФТ/ПРОКРУТКА/ТОНАЛЬНОСТЬ) ============
 
     def _build_slider_panel(self, type_str):
         self.content.clear_widgets()
@@ -661,11 +477,9 @@ class FloatingPanel(MDCard):
         text_p = DetailColors.get_text_primary(theme_id)
         div_color = DetailColors.get_divider(theme_id)
 
-        # Четко фиксируем высоту всей шторки
         self.height = dp(360)
         self._recenter()
 
-        # Главный BoxLayout панели
         panel = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -674,8 +488,6 @@ class FloatingPanel(MDCard):
             padding=[0, dp(4), 0, dp(4)]
         )
 
-        # --- 1. ВЕРХНИЙ БЛОК (Заголовок + Значение) ---
-        # Ограничиваем по высоте (dp(48)), как обычную ячейку иконки меню
         header_box = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -700,7 +512,6 @@ class FloatingPanel(MDCard):
         header_box.add_widget(self._sub_val_label)
         panel.add_widget(header_box)
 
-        # ПЕРВЫЙ РАЗДЕЛИТЕЛЬ (Точно такой же, как в основном меню)
         div1 = MDBoxLayout(
             orientation='horizontal', size_hint=(1, None), height=dp(1),
             md_bg_color=div_color, padding=[dp(12), 0, dp(12), 0]
@@ -708,8 +519,6 @@ class FloatingPanel(MDCard):
         div1.add_widget(MDBoxLayout(size_hint=(1, 1), md_bg_color=[0.5, 0.5, 0.5, 0.2]))
         panel.add_widget(div1)
 
-        # --- 2. СРЕДНИЙ БЛОК (Шкала слайдера) ---
-        # Теперь слайдер занимает максимум свободного места без лишних отступов
         slider_card = MDBoxLayout(
             orientation='vertical',
             size_hint=(None, None),
@@ -867,7 +676,6 @@ class FloatingPanel(MDCard):
         ))
         panel.add_widget(slider_card)
 
-        # ВТОРОЙ РАЗДЕЛИТЕЛЬ (Перед кнопкой "Назад")
         div2 = MDBoxLayout(
             orientation='horizontal', size_hint=(1, None), height=dp(1),
             md_bg_color=div_color, padding=[dp(12), 0, dp(12), 0]
@@ -875,8 +683,6 @@ class FloatingPanel(MDCard):
         div2.add_widget(MDBoxLayout(size_hint=(1, 1), md_bg_color=[0.5, 0.5, 0.5, 0.2]))
         panel.add_widget(div2)
 
-        # --- 3. НИЖНИЙ БЛОК (Кнопка "Назад" в стиле ячеек меню) ---
-        # Выделяем ровно dp(48) высоты для идеальной симметрии с основным меню
         bottom_box = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
@@ -884,7 +690,6 @@ class FloatingPanel(MDCard):
             padding=0
         )
 
-        # Красивая тонкая стрелочка 'arrow-left-thin' взамен старой жирной стрелки
         back_btn = MDIconButton(
             icon="arrow-left-thin",
             size_hint=(1, 1),
@@ -922,9 +727,6 @@ class FloatingPanel(MDCard):
 
         self.bg_color_inst.rgba = panel_bg
         self.line_color_inst.rgba = panel_line
-
-        if hasattr(self, 'handle_widget'):
-            self.handle_widget.set_color(color=DetailColors.get_accent(theme_id), bg_color=panel_bg)
 
         if self.mode == 'menu':
             for item in self.items: item.set_color(DetailColors.get_accent(theme_id))
@@ -1013,7 +815,6 @@ class FavoriteDetailScreen(BaseScreen):
         self.is_scrolling = False
 
         self._floating_panel = None
-        self._edge_catcher = None
 
         self.load_background()
         self.init_ui()
@@ -1079,7 +880,6 @@ class FavoriteDetailScreen(BaseScreen):
 
         card_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, top_offset, 0, 0])
 
-        # Исправлено: добавлены корректные значения по умолчанию для карточки
         self.song_card = MDCard(
             orientation='vertical',
             size_hint=(1, 1),
@@ -1096,7 +896,6 @@ class FavoriteDetailScreen(BaseScreen):
         self.content_scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False, bar_width=3,
                                            bar_color=[0.5, 0.5, 0.5, 0.3], bar_inactive_color=[0.5, 0.5, 0.5, 0.1])
 
-        # Исправлено: добавлен прозрачный фон для текстового контейнера
         self._text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
@@ -1124,9 +923,6 @@ class FavoriteDetailScreen(BaseScreen):
         self._floating_panel = FloatingPanel(parent_screen=self)
         self.add_widget(self._floating_panel)
 
-        self._edge_catcher = EdgeSwipeCatcher(on_swipe_open=self._floating_panel.show)
-        self.add_widget(self._edge_catcher)
-
         Clock.schedule_once(lambda dt: self.update_theme_colors(), 0.2)
         Clock.schedule_once(lambda dt: self._floating_panel._init_position(), 0.5)
 
@@ -1135,13 +931,17 @@ class FavoriteDetailScreen(BaseScreen):
             Clock.schedule_once(lambda dt: self._update_content_height(), 0.05)
             return
 
-        # Исправлено: берем индекс, чтобы вытащить высоту из списка [ширина, высота]
         text_height = self.content_label.texture_size[1]
 
         self.content_label.height = max(dp(50), text_height + dp(8))
         if self.content_label.parent:
             self.content_label.parent.height = text_height + dp(16)
         self.content_scroll.scroll_y = 1.0
+
+    def show_settings_panel(self):
+        """Вызывается из TopNav при нажатии на шестеренку."""
+        if self._floating_panel:
+            self._floating_panel.show()
 
     def show_chords_section(self):
         if not self._song_chords:
@@ -1203,11 +1003,9 @@ class FavoriteDetailScreen(BaseScreen):
 
         self._current_chord_index = 0
         if self._song_chords:
-            # Исправлено: передаем имя ПЕРВОГО аккорда из списка, а не весь список целиком
             self._load_chord_variants(self._song_chords[0])
             self._update_chords_display()
 
-            # Исправлено: загружаем в карусель ПЕРВЫЙ слайд [0]
             if self.chords_carousel and self.chord_slides:
                 self.chords_carousel.load_slide(self.chord_slides[0])
 
@@ -1245,7 +1043,6 @@ class FavoriteDetailScreen(BaseScreen):
         self.chord_variants = []
         self.chord_variant_index = 0
 
-        # Исправлено: если случайно прилетел список/кортеж, берем из него первый элемент
         if isinstance(chord_name, (list, tuple)) and chord_name:
             chord_name = chord_name[0]
 
@@ -1319,9 +1116,9 @@ class FavoriteDetailScreen(BaseScreen):
 
     def precompute_transpositions(self, cleaned_text):
         self.original_cleaned_text = cleaned_text
-        self.transposed_text_cache = {}  # Исправлено: инициализируем как пустой словарь
+        self.transposed_text_cache = {}
         self.transposed_text_cache[0] = highlight_chords_in_text(cleaned_text)
-        self.transposed_chords_cache = {}  # Исправлено: инициализируем как пустой словарь
+        self.transposed_chords_cache = {}
         self.transposed_chords_cache[0] = self._song_chords.copy()
 
         for step in [-3, -2.5, -2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3]:
@@ -1376,7 +1173,6 @@ class FavoriteDetailScreen(BaseScreen):
         content = MDBoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16), size_hint_y=None,
                               adaptive_height=True)
         for i in range(len(self.tabs)):
-            # Исправлено: добавлен белый цвет текста для кнопок вариантов
             btn = MDRaisedButton(
                 text=f"{get_text('variant')} {i + 1}",
                 size_hint=(1, None), height=dp(48),
@@ -1399,8 +1195,8 @@ class FavoriteDetailScreen(BaseScreen):
             cleaned = clean_text(self.tabs[self.current_tab_index].get('content', ''))
             if cleaned:
                 self.current_tonality = 0
-                self.transposed_text_cache = {}  # Исправлено: сбрасываем в словарь
-                self.transposed_chords_cache = {}  # Исправлено: сбрасываем в словарь
+                self.transposed_text_cache = {}
+                self.transposed_chords_cache = {}
                 self._extract_and_cache_chords()
                 self.precompute_transpositions(cleaned)
                 self.content_label.text = self.transposed_text_cache.get(0, cleaned)
@@ -1541,9 +1337,8 @@ class FavoriteDetailScreen(BaseScreen):
                 app.top_nav.left_container.clear_widgets()
                 app.top_nav.left_container.add_widget(app.top_nav.back_btn)
                 app.top_nav.back_btn.on_release = self.go_back
-            if hasattr(app.top_nav, 'right_container') and hasattr(app.top_nav, 'home_btn'):
-                app.top_nav.right_container.clear_widgets()
-                app.top_nav.right_container.add_widget(app.top_nav.home_btn)
+            if hasattr(app.top_nav, '_update_right_buttons'):
+                app.top_nav._update_right_buttons('favorite_detail')
         if self.song_title: self.update_top_nav_title()
         self.update_theme_colors()
         if self._floating_panel:
@@ -1554,7 +1349,3 @@ class FavoriteDetailScreen(BaseScreen):
 
     def on_leave(self):
         logger.info("Выход из FavoriteDetailScreen")
-
-
-
-

@@ -352,6 +352,8 @@ class Sidebar(FloatLayout):
         item = self.add_menu_item('chat', 'Обратная связь', 'feedback')
         self.menu_item_refs['feedback'] = item
 
+        # ❌ Пункт "Избранное" удалён из Sidebar — теперь доступен через звезду в TopNav
+
         self.admin_item = self.add_menu_item('shield-account', 'Админка', 'admin', is_admin=True)
         self.admin_item.opacity = 1 if api.is_admin() else 0
         self.admin_item.disabled = not api.is_admin()

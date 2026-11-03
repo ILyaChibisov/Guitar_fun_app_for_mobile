@@ -192,6 +192,7 @@ from screens.components.top_nav import TopNav
 from screens.components.sidebar import Sidebar
 from screens.components.blocking_layer import BlockingLayer
 from config.system_bars import get_navigation_bar_height, get_status_bar_height, get_screen_density, get_all_system_info
+from utils.notifications import notify
 
 # ============ НАСТРОЙКИ (единый источник правды) ============
 from state.settings_state import settings_state
@@ -500,6 +501,53 @@ class GuitarFunsApp(MDApp):
         self._favorites_preloaded = True
         logger.info(f"✅ Избранное предзагружено: {len(favorites)} песен")
 
+    # ============ УПРАВЛЕНИЕ ИЗБРАННЫМ ИЗ TOPNAV ============
+
+    def toggle_favorite_from_top_nav(self):
+        """Добавляет/удаляет текущую песню из избранного по нажатию на звезду в TopNav."""
+        if not self.screen_manager:
+            return
+
+        current_screen = self.screen_manager.current_screen
+        if not hasattr(current_screen, 'song_id') or not current_screen.song_id:
+            return
+
+        song_id = current_screen.song_id
+        is_fav = current_screen.is_favorite
+
+        if is_fav:
+            # Удаляем из избранного
+            api.remove_from_favorites(
+                song_id=song_id,
+                on_success=lambda _: self._on_favorite_toggled(current_screen, False),
+                on_failure=lambda _, err: notify.error(f"Ошибка удаления: {err}")
+            )
+        else:
+            # Добавляем в избранное
+            song_data = {
+                'id': song_id,
+                'artist': getattr(current_screen, 'song_artist', ''),
+                'title': getattr(current_screen, 'song_title', ''),
+            }
+            api.add_to_favorites(
+                song_id=song_id,
+                song_data=song_data,
+                on_success=lambda _: self._on_favorite_toggled(current_screen, True),
+                on_failure=lambda _, err: notify.error(f"Ошибка добавления: {err}")
+            )
+
+    def _on_favorite_toggled(self, screen, new_state):
+        """Вызывается после успешного изменения статуса избранного."""
+        screen.is_favorite = new_state
+        if new_state:
+            notify.success("Добавлено в избранное")
+        else:
+            notify.info("Удалено из избранного")
+
+        # Обновляем иконку в TopNav
+        if self.top_nav:
+            self.top_nav._update_favorite_icon()
+
     # ============ ПОДПИСКА ============
 
     def _poll_subscription(self, dt):
@@ -632,7 +680,6 @@ class GuitarFunsApp(MDApp):
         if self.screen_manager and self.screen_manager.has_screen('paywall'):
             self.screen_manager.current = 'paywall'
         else:
-            from utils.notifications import notify
             notify.warning("Экран оплаты временно недоступен")
 
     def _on_logout_done(self):
@@ -895,7 +942,6 @@ class GuitarFunsApp(MDApp):
                 current_screen.on_orientation_changed()
 
     def open_support(self, instance=None):
-        from utils.notifications import notify
         notify.info("Поддержка будет доступна в следующей версии")
 
     def change_language(self, lang_code):
