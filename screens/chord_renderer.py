@@ -152,7 +152,8 @@ class ChordRenderer(RelativeLayout):
         if not symbol:
             return
 
-        new_x, new_y, scale = self._transform_coords(x, y, offset_x=0, offset_y=790, invert_y=False)
+        # ✅ БЫЛО offset_y=790, СТАЛО 760 (сдвигает цифры ниже, ближе к грифу)
+        new_x, new_y, scale = self._transform_coords(x, y, offset_x=0, offset_y=770, invert_y=False)
         new_size = size * scale
 
         # Загружаем спрайт с нужным цветом

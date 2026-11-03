@@ -7,8 +7,8 @@ title = GuitarFuns
 package.name = guitarfuns
 package.domain = com.guitarfuns
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,ttf,txt,json,xml
-source.include_patterns = chords/**, data/**, android_res/**, **/*.py
+source.include_exts = py,png,jpg,kv,atlas,ttf,otf,txt,json,xml
+source.include_patterns = chords/**, data/**, android_res/**, fonts/**, **/*.py
 source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, create_icons.py, prepare_icons.py
 
 version = 1.0.3

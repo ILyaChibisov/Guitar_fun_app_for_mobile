@@ -14,6 +14,56 @@ from kivy.core.image import Image as CoreImage
 from kivy.clock import Clock
 from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
+from kivy.core.text import LabelBase
+
+# Путь к папке с проектом
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FONTS_DIR = os.path.join(BASE_DIR, 'fonts')
+
+# --- ОТЛАДКА ШРИФТОВ ---
+print("=" * 60)
+print(f"DEBUG: BASE_DIR = {BASE_DIR}")
+print(f"DEBUG: FONTS_DIR = {FONTS_DIR}")
+print(f"DEBUG: Папка fonts существует? {os.path.exists(FONTS_DIR)}")
+
+if os.path.exists(FONTS_DIR):
+    files_in_fonts = os.listdir(FONTS_DIR)
+    print(f"DEBUG: Файлы в папке fonts: {files_in_fonts}")
+    for f in files_in_fonts:
+        if f.endswith('.ttf') or f.endswith('.otf'):
+            print(f"DEBUG:   Найден шрифт: {f}")
+
+font_symbols_path = os.path.join(FONTS_DIR, 'NotoSansSymbols2-Regular.ttf')
+font_emoji_path = os.path.join(FONTS_DIR, 'NotoColorEmoji-Regular.ttf')
+
+print(f"DEBUG: NotoSansSymbols2 существует? {os.path.exists(font_symbols_path)}")
+print(f"DEBUG: NotoColorEmoji существует? {os.path.exists(font_emoji_path)}")
+# -------------------------
+
+# Регистрируем шрифты
+try:
+    if os.path.exists(font_symbols_path):
+        LabelBase.register(
+            name='NotoSansSymbols2',
+            fn_regular=font_symbols_path
+        )
+        print("DEBUG: ✅ Шрифт NotoSansSymbols2 успешно зарегистрирован")
+    else:
+        print("DEBUG: ❌ Не удалось зарегистрировать NotoSansSymbols2 (файл не найден)")
+
+    if os.path.exists(font_emoji_path):
+        LabelBase.register(
+            name='NotoColorEmoji',
+            fn_regular=font_emoji_path
+        )
+        print("DEBUG: ✅ Шрифт NotoColorEmoji успешно зарегистрирован")
+    else:
+        print("DEBUG: ❌ Не удалось зарегистрировать NotoColorEmoji (файл не найден)")
+except Exception as e:
+    print(f"DEBUG: ❌ ОШИБКА при регистрации шрифтов: {e}")
+
+print("=" * 60)
+
 
 import kivy
 

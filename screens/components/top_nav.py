@@ -408,10 +408,11 @@ class TopNav(MDCard):
             return
 
         screen = self.sm.current_screen
-        if hasattr(screen, 'show_settings_panel'):
-            screen.show_settings_panel()
+        # ✅ Теперь вызываем метод-переключатель
+        if hasattr(screen, 'toggle_settings_panel'):
+            screen.toggle_settings_panel()
         else:
-            # Фолбэк, если экран не поддерживает панель (например, song_detail)
+            # Фолбэк для других экранов (например, song_detail)
             if hasattr(app, 'sidebar') and app.sidebar:
                 app.sidebar.toggle()
 
