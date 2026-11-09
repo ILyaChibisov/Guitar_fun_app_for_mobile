@@ -2,6 +2,7 @@
 """
 Экран гитарного тюнера — горизонтальная шкала в стиле tuner7 + эталонные ноты.
 Адаптирован под 3 темы (green, dark, light) и 6 языков.
+Оптимизированный layout с тогл-меню и динамическими центами.
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Triangle, RoundedRectangle
@@ -31,6 +32,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.dialog import MDDialog
 from kivymd.app import MDApp
+from kivy.uix.behaviors import ButtonBehavior
 
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
@@ -111,7 +113,7 @@ class TunerColors:
         if theme_id == 'light':
             return [0.4, 0.4, 0.4, 1]
         else:
-            return [1, 1, 1, 0.5]
+            return [1, 1, 1, 0.6]
 
     @staticmethod
     def get_card_bg(theme_id):
@@ -129,7 +131,7 @@ class TunerColors:
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 0.5]
         else:
-            return [1, 1, 1, 0.08]
+            return [1, 1, 1, 0.8]  # Белая для green
 
     @staticmethod
     def get_hint_color(theme_id):
@@ -138,7 +140,16 @@ class TunerColors:
         elif theme_id == 'light':
             return [0.1, 0.55, 0.3, 1]
         else:
-            return [1, 1, 1, 0.5]
+            return [1, 1, 1, 0.5]  # Полупрозрачный белый
+
+    @staticmethod
+    def get_divider_color(theme_id):
+        if theme_id == 'light':
+            return [0, 0, 0, 0.12]
+        elif theme_id == 'dark':
+            return [1.0, 0.5, 0.0, 0.5]
+        else:
+            return [1, 1, 1, 0.8]
 
 
 # ============ СТРОИ ГИТАР ============
@@ -353,13 +364,7 @@ class ModernHorizontalTuner(Widget):
         self.bind(animated_deviation=self.update_gauge)
 
     def _build_tick_textures(self):
-        ticks = [
-            (-50, "-50"),
-            (-25, "-25"),
-            (0, "0"),
-            (25, "+25"),
-            (50, "+50"),
-        ]
+        ticks = [(-50, "-50"), (-25, "-25"), (0, "0"), (25, "+25"), (50, "+50")]
         for val, text in ticks:
             is_zero = (val == 0)
             r, g, b = self._get_segment_color(val, 50)
@@ -410,26 +415,22 @@ class ModernHorizontalTuner(Widget):
         self.canvas.clear()
         if self.width <= 0 or self.height <= 0:
             return
-
         scale_w = self.width * 0.94
         scale_x = self.x + (self.width - scale_w) / 2
         scale_y = self.center_y - dp(2)
-
         num_segments = 21
         segment_width = scale_w / num_segments
         gap = dp(2.4)
-        max_h = dp(28)
-        min_h = dp(10)
+        max_h = dp(38)  # Увеличенная высота
+        min_h = dp(14)
 
         dev = max(-50.0, min(50.0, self.animated_deviation))
         is_tuned = abs(dev) <= 3.0
-
         if is_tuned:
             active_rgb = (0.2, 0.95, 0.65)
         else:
             sr, sg, sb = self._get_segment_color(dev, 50)
             active_rgb = (min(1.0, sr * 0.9 + 0.1), min(1.0, sg * 0.9 + 0.1), min(1.0, sb * 0.9 + 0.1))
-
         self.indicator_color = [active_rgb[0], active_rgb[1], active_rgb[2], 1.0]
 
         with self.canvas:
@@ -455,23 +456,21 @@ class ModernHorizontalTuner(Widget):
                 x = scale_x + i * segment_width + gap / 2
                 norm_dist = abs(value) / 50.0
                 height_factor = (math.cos(norm_dist * math.pi) + 1.0) / 2.0
-                curr_height = min_h + (max_h - min_h) * height_factor
+                curr_height = max(min_h, min_h + (max_h - min_h) * height_factor)
                 r, g, b = self._get_segment_color(value, 50)
                 dist = abs(dev - value)
+                seg_w = max(dp(1), segment_width - gap)
 
                 with self.canvas:
                     Color(*outline_color)
-                    Line(rounded_rectangle=(x, scale_y - curr_height / 2, segment_width - gap, curr_height, dp(3.5)),
-                         width=1.2)
+                    if seg_w > 0:
+                        Line(rounded_rectangle=(x, scale_y - curr_height / 2, seg_w, curr_height, dp(4)), width=1.5)
 
                 if dist < 4.5:
                     glow_alpha = 0.35 * (1.0 - dist / 4.5)
                     Color(r, g, b, glow_alpha)
-                    RoundedRectangle(
-                        pos=(x - dp(2), scale_y - curr_height / 2 - dp(3)),
-                        size=(segment_width - gap + dp(4), curr_height + dp(6)),
-                        radius=[dp(5)]
-                    )
+                    RoundedRectangle(pos=(x - dp(2), scale_y - curr_height / 2 - dp(3)),
+                                     size=(seg_w + dp(4), curr_height + dp(6)), radius=[dp(6)])
                     brightness = 1.0
                     alpha = 1.0
                 else:
@@ -479,8 +478,8 @@ class ModernHorizontalTuner(Widget):
                     alpha = 0.78
 
                 Color(r * brightness, g * brightness, b * brightness, alpha)
-                RoundedRectangle(pos=(x, scale_y - curr_height / 2), size=(segment_width - gap, curr_height),
-                                 radius=[dp(3.5)])
+                if seg_w > 0:
+                    RoundedRectangle(pos=(x, scale_y - curr_height / 2), size=(seg_w, curr_height), radius=[dp(4)])
 
             ix = scale_x + ((dev + 50.0) / 100.0) * scale_w
             bar_bottom = scale_y - max_h / 2
@@ -493,8 +492,8 @@ class ModernHorizontalTuner(Widget):
                 points=[ix, tip_y + dp(3), ix - half_w - dp(4), base_y - dp(2), ix + half_w + dp(4), base_y - dp(2)])
 
             Color(*outline_color)
-            Line(points=[ix, tip_y, ix - half_w, base_y, ix, base_y + dp(4)], width=1.2)
-            Line(points=[ix, tip_y, ix + half_w, base_y, ix, base_y + dp(4)], width=1.2)
+            Line(points=[ix, tip_y, ix - half_w, base_y, ix, base_y + dp(4)], width=1.5)
+            Line(points=[ix, tip_y, ix + half_w, base_y, ix, base_y + dp(4)], width=1.5)
 
             Color(active_rgb[0], active_rgb[1], active_rgb[2], 1.0)
             Triangle(points=[ix, tip_y, ix - half_w, base_y, ix, base_y + dp(4)])
@@ -524,29 +523,27 @@ class NoteButton(MDCard):
 
         self.orientation = 'vertical'
         self.size_hint = (None, None)
-        self.size = (dp(40), dp(40))
-        self.radius = [dp(20)] * 4
-        self.elevation = 2
+        self.size = (dp(44), dp(44))
+        self.radius = [dp(22)] * 4
+        self.elevation = 0
         self.ripple_behavior = True
 
         self.label = MDLabel(
-            text=display_name, font_size=sp(13), halign="center", valign="middle",
+            text=display_name, font_size=sp(15), halign="center", valign="middle",
             theme_text_color="Custom", bold=True, size_hint=(1, 1)
         )
         self.add_widget(self.label)
 
         self.bind(on_release=self._on_press)
-        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
         self.update_theme_colors()
         Clock.schedule_once(self._load_sound_from_assets, 0.1)
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        accent = TunerColors.get_accent(theme_id)
         text = TunerColors.get_text_primary(theme_id)
         self.md_bg_color = TunerColors.get_card_bg(theme_id)
-        self.line_color = accent[:3] + [0.5]
-        self.line_width = 1.0 if theme_id in ('dark', 'light') else 0.5
+        self.line_color = TunerColors.get_card_line(theme_id)
+        self.line_width = 2.0
         self.label.text_color = text
 
     def _load_sound_from_assets(self, dt):
@@ -594,22 +591,13 @@ class NoteButton(MDCard):
         except Exception:
             pass
 
-    def _on_enter(self, *args):
-        self.elevation = 4
-        self.md_bg_color = TunerColors.get_card_bg(settings_manager.theme)
-
-    def _on_leave(self, *args):
-        self.elevation = 2
-        if not self.is_active:
-            self.md_bg_color = TunerColors.get_card_bg(settings_manager.theme)
-
     def _on_press(self, instance):
         if self.is_playing:
             return
         if self.on_press_callback:
             self.on_press_callback(self.note_name, self.frequency)
-        anim = Animation(size=(dp(44), dp(44)), duration=0.05)
-        anim += Animation(size=(dp(40), dp(40)), duration=0.05)
+        anim = Animation(size=(dp(48), dp(48)), duration=0.05)
+        anim += Animation(size=(dp(44), dp(44)), duration=0.05)
         anim.start(self)
         self._play_sound()
 
@@ -635,10 +623,135 @@ class NoteButton(MDCard):
             accent = TunerColors.get_accent(settings_manager.theme)
             self.md_bg_color = accent[:3] + [0.8]
             self.line_color = accent
-            self.elevation = 6
-        else:
-            self.update_theme_colors()
             self.elevation = 2
+            self.label.text_color = [1, 1, 1, 1]
+        else:
+            self.elevation = 0
+            self.update_theme_colors()
+
+
+# ============ КНОПКИ МЕНЮ (ЦВЕТНЫЕ) ============
+
+class IconMenuItem(ButtonBehavior, MDBoxLayout):
+    def __init__(self, icon_name, on_press=None, is_active=True, icon_color=None, **kwargs):
+        super().__init__(**kwargs)
+        self.icon_name = icon_name
+        self.on_press_callback = on_press
+        self.is_active = is_active
+        self.icon_color = icon_color if icon_color else [1, 1, 1, 0.7]
+
+        self.orientation = 'vertical'
+        self.size_hint = (1, 1)
+        self.padding = [0, dp(4), 0, dp(4)]
+        self.spacing = dp(0)
+        self.md_bg_color = [0, 0, 0, 0]
+
+        self.icon_btn = MDIconButton(
+            icon=icon_name, size_hint=(None, None), size=(dp(28), dp(28)),
+            pos_hint={'center_x': 0.5}, theme_icon_color="Custom",
+            icon_color=self.icon_color, md_bg_color=[0, 0, 0, 0],
+            ripple_scale=0, ripple_alpha=0
+        )
+        self.icon_btn.bind(on_release=self._on_press)
+        self.add_widget(self.icon_btn)
+
+    def _on_press(self, instance):
+        if self.on_press_callback and self.is_active:
+            self.on_press_callback()
+
+    def set_icon(self, icon_name):
+        self.icon_name = icon_name
+        self.icon_btn.icon = icon_name
+
+    def set_color(self, color):
+        self.icon_color = color
+        self.icon_btn.icon_color = color
+
+
+# ============ МЕНЮ УПРАВЛЕНИЯ ============
+
+class UnifiedTunerMenu(MDCard):
+    def __init__(self, on_play=None, on_tune=None, on_reset=None, on_instrument=None, current_instrument='guitar',
+                 is_listening=False, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint = (1, None)
+        self.height = dp(60)
+        self.radius = [dp(16)]
+        self.elevation = 0
+        self.padding = [dp(2), dp(2), dp(2), dp(2)]
+        self.spacing = dp(0)
+
+        self.play_item = IconMenuItem(
+            "stop" if is_listening else "play",
+            on_press=on_play,
+            icon_color=[0.8, 0.3, 0.3, 1] if is_listening else [0.0, 0.74, 0.83, 1]  # Cyan
+        )
+        self.tune_item = IconMenuItem(
+            "tune",
+            on_press=on_tune,
+            icon_color=[0.61, 0.15, 0.69, 1]  # Purple
+        )
+        self.instrument_item = IconMenuItem(
+            self._get_instrument_icon(current_instrument),
+            on_press=on_instrument,
+            icon_color=self._get_instrument_color(current_instrument)
+        )
+        self.reset_item = IconMenuItem(
+            "refresh",
+            on_press=on_reset,
+            icon_color=[0.9, 0.4, 0.2, 1]  # Orange
+        )
+
+        self.add_widget(self.play_item)
+        self.add_widget(self._create_divider())
+        self.add_widget(self.tune_item)
+        self.add_widget(self._create_divider())
+        self.add_widget(self.instrument_item)
+        self.add_widget(self._create_divider())
+        self.add_widget(self.reset_item)
+        self.update_theme_colors()
+
+    def _get_instrument_icon(self, instrument):
+        if instrument == 'guitar':
+            return "guitar-acoustic"
+        elif instrument == 'bass':
+            return "guitar-electric"
+        else:
+            return "guitar-acoustic"  # Иконка как у гитары
+
+    def _get_instrument_color(self, instrument):
+        if instrument == 'guitar':
+            return [1.0, 0.7, 0.0, 1]  # Yellow
+        elif instrument == 'bass':
+            return [0.0, 0.8, 0.6, 1]  # Teal
+        else:
+            return [0.6, 0.2, 0.8, 1]  # Purple (для укулеле)
+
+    def _create_divider(self):
+        return MDBoxLayout(size_hint_x=None, width=dp(2))  # Толщина 2.0
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        self.md_bg_color = TunerColors.get_card_bg(theme_id)
+        self.line_color = TunerColors.get_card_line(theme_id)
+        self.line_width = 2.0
+
+        for child in self.children:
+            if isinstance(child, MDBoxLayout) and child.width == dp(2):
+                child.md_bg_color = TunerColors.get_divider_color(theme_id)
+
+    def update_state(self, is_listening):
+        if is_listening:
+            self.play_item.set_icon("stop")
+            self.play_item.set_color([0.8, 0.3, 0.3, 1])
+        else:
+            self.play_item.set_icon("play")
+            self.play_item.set_color([0.0, 0.74, 0.83, 1])
+
+    def update_instrument(self, instrument):
+        self.instrument_item.set_icon(self._get_instrument_icon(instrument))
+        self.instrument_item.set_color(self._get_instrument_color(instrument))
 
 
 # ============ ОСНОВНОЙ ЭКРАН ============
@@ -651,14 +764,11 @@ class TunerScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'tuner'
-        self.bg_image = None
         self.bg_color_inst = None
         self.bg_rect = None
         self.is_listening = False
         self.current_frequency = 0
         self.current_deviation = 0
-        self.detected_note = None
-        self.detected_freq = 0
         self._audio_thread = None
         self._running = False
         self._audio_backend = 'none'
@@ -667,15 +777,13 @@ class TunerScreen(BaseScreen):
         self._pyaudio_stream = None
         self._pyaudio = None
         self._error_message = ""
-        self._attempts = []
-        self._working_params = None
         self._note_buttons = []
 
         self.current_tuning = 'standard_6'
+        self.current_instrument = 'guitar'
         self.tuning_notes = TUNINGS[self.current_tuning]['notes']
         self.tuning_freqs = TUNINGS[self.current_tuning]['freqs']
         self.tuning_note_names = TUNINGS[self.current_tuning]['note_names']
-        self.strings_count = TUNINGS[self.current_tuning]['strings']
 
         self.selected_string_index = 3
         self.target_note = self.tuning_note_names[self.selected_string_index]
@@ -729,44 +837,35 @@ class TunerScreen(BaseScreen):
     def update_theme_colors(self):
         self.update_screen_background()
         theme_id = settings_manager.theme
-        accent = TunerColors.get_accent(theme_id)
         text_p = TunerColors.get_text_primary(theme_id)
         text_s = TunerColors.get_text_secondary(theme_id)
 
         if hasattr(self, 'main_tuner_card'):
             self.main_tuner_card.md_bg_color = TunerColors.get_card_bg(theme_id)
             self.main_tuner_card.line_color = TunerColors.get_card_line(theme_id)
+            self.main_tuner_card.line_width = 2.0
+
+        if hasattr(self, 'tuning_name_label'):
+            self.tuning_name_label.text_color = text_s
 
         if hasattr(self, 'note_label'):
             is_tuned = abs(self.current_deviation) <= 3.0 and self.is_listening
             self.note_label.text_color = [0.2, 0.95, 0.65, 1.0] if is_tuned else text_p
-            self.note_label.font_size = sp(100)  # Принудительный фикс размера
+            self.note_label.font_size = sp(90)
 
         if hasattr(self, 'freq_label'):
-            self.freq_label.text_color = accent
-
-        if hasattr(self, 'tuning_name_label'):
-            self.tuning_name_label.text_color = text_s
-            self.tuning_name_label.text = get_text(TUNINGS[self.current_tuning]['name_key'])
+            self.freq_label.text_color = TunerColors.get_accent(theme_id)
 
         if hasattr(self, 'label_low'):
             self.label_low.text_color = text_s
             self.label_high.text_color = text_s
 
-        if hasattr(self, 'status_label'):
-            self.update_status_ui()
+        if hasattr(self, 'cents_label'):
+            self.update_cents_ui()
 
-        if hasattr(self, 'menu_card'):
-            self.menu_card.md_bg_color = TunerColors.get_card_bg(theme_id)
-            self.menu_card.line_color = TunerColors.get_card_line(theme_id)
-            self.menu_card.line_width = 1.0 if theme_id in ('dark', 'light') else 0.5
+        if hasattr(self, 'menu_stack'):
+            self.menu_stack.update_theme_colors()
 
-        if hasattr(self, 'play_btn'):
-            self.play_btn.icon_color = accent if not self.is_listening else [0.8, 0.3, 0.3, 1]
-        if hasattr(self, 'tuning_btn'):
-            self.tuning_btn.icon_color = accent
-        if hasattr(self, 'reset_btn'):
-            self.reset_btn.icon_color = [0.7, 0.3, 0.3, 0.7]
         if hasattr(self, '_hint_label'):
             self._hint_label.text_color = TunerColors.get_hint_color(theme_id)
 
@@ -786,9 +885,10 @@ class TunerScreen(BaseScreen):
                 self.note_label.outline_width = 1
 
     def update_language(self):
-        if hasattr(self, 'tuning_name_label'):
-            self.tuning_name_label.text = get_text(TUNINGS[self.current_tuning]['name_key'])
-        self.update_status_ui()
+        if hasattr(self, 'menu_stack'):
+            self.menu_stack.update_instrument(self.current_instrument)
+        self.update_cents_ui()
+        self._update_hint()
 
     def _set_debug_callback(self):
         try:
@@ -802,15 +902,15 @@ class TunerScreen(BaseScreen):
 
     def _update_hint_ui(self, message, level="INFO"):
         if hasattr(self, '_hint_label') and not self._error_message:
-            prefix = {"INFO": "ℹ️", "SUCCESS": "✅", "WARNING": "⚠️", "ERROR": "❌", "DEBUG": "🔍"}.get(level, "🔍")
-            self._hint_label.text = f"{prefix} {message}"
+            self._hint_label.text = message
             self._hint_label.opacity = 1
+            self._hint_label.text_color = TunerColors.get_hint_color(settings_manager.theme)
 
     def _show_error(self, message):
         def _update():
             self._error_message = message
             if hasattr(self, '_hint_label'):
-                self._hint_label.text = f"❌ {message}"
+                self._hint_label.text = message
                 self._hint_label.opacity = 1
                 self._hint_label.text_color = [0.8, 0.2, 0.2, 1]
 
@@ -819,9 +919,9 @@ class TunerScreen(BaseScreen):
     def _show_success(self, message):
         def _update():
             if hasattr(self, '_hint_label'):
-                self._hint_label.text = f"✅ {message}"
+                self._hint_label.text = message
                 self._hint_label.opacity = 1
-                self._hint_label.text_color = [0.3, 0.8, 0.3, 1]
+                self._hint_label.text_color = TunerColors.get_hint_color(settings_manager.theme)
                 if hasattr(self, '_hint_timer') and self._hint_timer:
                     Clock.unschedule(self._hint_timer)
                 self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), 3.0)
@@ -845,29 +945,31 @@ class TunerScreen(BaseScreen):
 
         Clock.schedule_once(lambda dt: _update(), 0)
 
-    def update_status_ui(self):
-        if not hasattr(self, 'status_label'):
+    def update_cents_ui(self):
+        if not hasattr(self, 'cents_label'):
             return
 
         dev = self.current_deviation
         if not self.is_listening:
-            self.status_label.text = ""
-            self.status_label.opacity = 0
+            self.cents_label.text = get_text("in_tune").replace("!", "").upper()
+            self.cents_label.font_size = sp(10)
+            self.cents_label.bold = False
+            self.cents_label.text_color = TunerColors.get_text_secondary(settings_manager.theme)
         else:
-            self.status_label.opacity = 1
             if abs(dev) <= 3.0:
-                self.status_label.text = get_text("in_tune")
-                self.status_label.text_color = [0.2, 0.95, 0.65, 1]
-            elif dev < -3.0:
-                self.status_label.text = get_text("low", "LOW")
-                self.status_label.text_color = [0.95, 0.5, 0.1, 1]
+                self.cents_label.text = get_text("in_tune").replace("!", "").upper()
+                self.cents_label.font_size = sp(10)
+                self.cents_label.bold = False
+                self.cents_label.text_color = [0.2, 0.95, 0.65, 1]
             else:
-                self.status_label.text = get_text("high", "HIGH")
-                self.status_label.text_color = [0.85, 0.15, 0.15, 1]
+                sign = "+" if dev > 0 else ""
+                self.cents_label.text = f"{sign}{dev:.0f} {get_text('cents')}"
+                self.cents_label.font_size = sp(14)
+                self.cents_label.bold = True
+                self.cents_label.text_color = TunerColors.get_accent(settings_manager.theme)
 
     # ============ АУДИО ============
     def _init_audio(self, dt):
-        self._attempts = []
         if IS_ANDROID:
             try:
                 from android.permissions import request_permissions, Permission
@@ -1052,25 +1154,20 @@ class TunerScreen(BaseScreen):
         if not self.is_listening:
             return
         self.current_frequency = freq
-
         note, note_freq, _ = freq_to_note(freq, self.tuning_note_names, self.tuning_freqs)
         if note:
             cents = cents_deviation(freq, note_freq)
             self.current_deviation = cents
-
             if hasattr(self, 'tuner_gauge'):
                 self.tuner_gauge.set_value(cents)
-
             if hasattr(self, 'note_label'):
                 self.note_label.text = note
                 is_tuned = abs(cents) <= 3.0
                 self.note_label.text_color = [0.2, 0.95, 0.65, 1.0] if is_tuned else TunerColors.get_text_primary(
                     settings_manager.theme)
-
             if hasattr(self, 'freq_label'):
                 self.freq_label.text = f"{freq:.2f} Hz"
-
-            self.update_status_ui()
+            self.update_cents_ui()
 
     def on_reference_note_pressed(self, note_name, frequency):
         for btn in self._note_buttons:
@@ -1098,77 +1195,51 @@ class TunerScreen(BaseScreen):
             else:
                 self.note_label.text = self.target_note
             self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
-            self.update_status_ui()
+            self.update_cents_ui()
 
     def _reset_note_buttons(self):
         for btn in self._note_buttons:
             btn.set_active(False)
 
-    def _update_note_buttons(self):
-        if not self._note_buttons:
-            return
-        for i, btn in enumerate(self._note_buttons):
-            if i < len(self.tuning_note_names):
-                btn.note_name = self.tuning_notes[i]
-                btn.display_name = self.tuning_note_names[i]
-                btn.frequency = self.tuning_freqs[i]
-                btn.label.text = self.tuning_note_names[i]
-                btn.opacity = 1
-                btn.disabled = False
-            else:
-                btn.opacity = 0
-                btn.disabled = True
+    def _rebuild_note_buttons(self):
+        self.notes_row.clear_widgets()
+        self._note_buttons = []
+        self.notes_row.add_widget(Widget(size_hint_x=1))
+        for display_name, full_name, freq in zip(self.tuning_note_names, self.tuning_notes, self.tuning_freqs):
+            btn = NoteButton(note_name=full_name, display_name=display_name,
+                             frequency=freq, tuning_id=self.current_tuning,
+                             on_press=self.on_reference_note_pressed)
+            self._note_buttons.append(btn)
+            self.notes_row.add_widget(btn)
+        self.notes_row.add_widget(Widget(size_hint_x=1))
 
-    def _show_tuning_dialog(self):
-        content = MDBoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16),
-                              size_hint_y=None, adaptive_height=True)
-        categories = [
-            ('guitar', ['standard_6', 'drop_d', 'open_g', 'open_d', 'dadgad', 'half_step_down']),
-            ('bass', ['bass_4', 'bass_5']),
-            ('ukulele', ['ukulele']),
-        ]
-        theme_id = settings_manager.theme
-        accent = TunerColors.get_accent(theme_id)
-        for cat_key, tuning_ids in categories:
-            cat_label = MDLabel(text=get_text(cat_key), font_size=sp(14), bold=True,
-                                size_hint_y=None, height=dp(32),
-                                theme_text_color="Custom", text_color=accent)
-            content.add_widget(cat_label)
-            for tid in tuning_ids:
-                if tid in TUNINGS:
-                    t = TUNINGS[tid]
-                    is_active = tid == self.current_tuning
-                    btn = MDRaisedButton(
-                        text=get_text(t['name_key']),
-                        size_hint=(1, None), height=dp(44),
-                        md_bg_color=accent if is_active else TunerColors.get_card_bg(theme_id),
-                        text_color=[1, 1, 1, 1],
-                        on_release=lambda x, tid2=tid: self._select_tuning(tid2))
-                    content.add_widget(btn)
-        self.tuning_dialog = MDDialog(
-            title=get_text('choose_tuning'), type="custom", content_cls=content,
-            buttons=[MDRaisedButton(text=get_text('close'),
-                                    on_release=lambda x: self.tuning_dialog.dismiss())])
-        self.tuning_dialog.open()
+    def _cycle_tuning(self):
+        categories = {
+            'guitar': ['standard_6', 'drop_d', 'open_g', 'open_d', 'dadgad', 'half_step_down'],
+            'bass': ['bass_4', 'bass_5'],
+            'ukulele': ['ukulele']
+        }
+        available = categories.get(self.current_instrument, [])
 
-    def _select_tuning(self, tuning_id):
-        if self.tuning_dialog:
-            self.tuning_dialog.dismiss()
-        if tuning_id == self.current_tuning:
+        if not available:
             return
-        self.current_tuning = tuning_id
-        t = TUNINGS[tuning_id]
+
+        try:
+            current_idx = available.index(self.current_tuning)
+            next_idx = (current_idx + 1) % len(available)
+        except ValueError:
+            next_idx = 0
+
+        self.current_tuning = available[next_idx]
+        t = TUNINGS[self.current_tuning]
         self.tuning_notes = t['notes']
         self.tuning_freqs = t['freqs']
         self.tuning_note_names = t['note_names']
-        self.strings_count = t['strings']
 
         self.selected_string_index = 0
         self.target_note = self.tuning_note_names[0]
         self.target_freq = self.tuning_freqs[0]
 
-        if hasattr(self, 'tuning_name_label'):
-            self.tuning_name_label.text = get_text(t['name_key'])
         if hasattr(self, 'tuner_gauge'):
             self.tuner_gauge.set_value(0)
         if hasattr(self, 'freq_label'):
@@ -1176,177 +1247,179 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'note_label'):
             self.note_label.text = self.target_note
         self.current_deviation = 0
-        self._update_note_buttons()
+
+        self._rebuild_note_buttons()
         self._reset_note_buttons()
-        self.update_status_ui()
-        notify.success(f"{get_text('tuning')}: {get_text(t['name_key'])}")
+        self.update_cents_ui()
+
+        if hasattr(self, 'tuning_name_label'):
+            self.tuning_name_label.text = get_text(t['name_key'])
+
+        self._show_success(f"Строй: {get_text(t['name_key'])}")
+
+    def _on_instrument_selected(self):
+        if self.current_instrument == 'guitar':
+            self.current_instrument = 'bass'
+        elif self.current_instrument == 'bass':
+            self.current_instrument = 'ukulele'
+        else:
+            self.current_instrument = 'guitar'
+
+        self.menu_stack.update_instrument(self.current_instrument)
+
+        categories = {
+            'guitar': ['standard_6', 'drop_d', 'open_g', 'open_d', 'dadgad', 'half_step_down'],
+            'bass': ['bass_4', 'bass_5'],
+            'ukulele': ['ukulele']
+        }
+        available = categories.get(self.current_instrument, [])
+
+        if self.current_tuning not in available:
+            self.current_tuning = available[0]
+            t = TUNINGS[self.current_tuning]
+            self.tuning_notes = t['notes']
+            self.tuning_freqs = t['freqs']
+            self.tuning_note_names = t['note_names']
+            self.target_note = self.tuning_note_names[0]
+            self.target_freq = self.tuning_freqs[0]
+            if hasattr(self, 'tuner_gauge'): self.tuner_gauge.set_value(0)
+            if hasattr(self, 'freq_label'): self.freq_label.text = "-- Hz"
+            if hasattr(self, 'note_label'): self.note_label.text = self.target_note
+            self._rebuild_note_buttons()
+            self._reset_note_buttons()
+            self.update_cents_ui()
+            if hasattr(self, 'tuning_name_label'):
+                self.tuning_name_label.text = get_text(t['name_key'])
+
+        instr_name = {'guitar': 'Гитара', 'bass': 'Бас', 'ukulele': 'Укулеле'}[self.current_instrument]
+        self._show_success(f"Инструмент: {instr_name}")
 
     def init_ui(self):
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
         main_layout.add_widget(Widget(size_hint_y=None, height=layout_config.get_top_padding()))
 
-        total_bottom = dp(60) + get_navigation_bar_height() + dp(16)
+        nav_bottom = layout_config.get_bottom_nav_total_height()
+        padding_bottom = nav_bottom
+
         content_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1),
-                                        padding=[dp(16), dp(4), dp(16), total_bottom])
+                                        padding=[dp(16), dp(4), dp(16), padding_bottom])
         content = MDBoxLayout(orientation='vertical', spacing=dp(12),
                               size_hint=(1, None), adaptive_height=True)
 
-        # 1. Карточка тюнера
+        # 1. КАРТОЧКА ТЮНЕРА (Название -> Буква -> Частота -> Шкала -> Подписи)
         self.main_tuner_card = MDCard(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(340),
+            height=dp(330),
             radius=[dp(24)],
             md_bg_color=TunerColors.get_card_bg(settings_manager.theme),
             line_color=TunerColors.get_card_line(settings_manager.theme),
-            line_width=dp(1),
+            line_width=2.0,
             elevation=0,
-            padding=[dp(16), dp(8), dp(16), dp(12)],
-            spacing=dp(4),
+            padding=[dp(16), dp(6), dp(16), dp(10)],  # Минимальный верхний отступ
+            spacing=dp(0),  # Без лишних зазоров
         )
 
-        # 1.1 Название строя (Перенесено сверху)
+        # 1.1 Название строя (СРАЗУ ПОД РАМКОЙ)
         self.tuning_name_label = MDLabel(
             text=get_text(TUNINGS[self.current_tuning]['name_key']),
-            font_size=sp(15),
-            halign="center",
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
-            bold=True,
+            font_size=sp(13), halign="center", size_hint_y=None, height=dp(18),
+            theme_text_color="Custom", bold=False,
             text_color=TunerColors.get_text_secondary(settings_manager.theme)
         )
         self.main_tuner_card.add_widget(self.tuning_name_label)
 
-        # 1.2 Крупная нота
-        note_anchor = AnchorLayout(size_hint_y=None, height=dp(110))
+        # 1.2 Буква ноты
+        note_anchor = AnchorLayout(size_hint_y=None, height=dp(90))
         self.note_label = MDLabel(
-            text=self.target_note,
-            font_size=sp(100),
-            bold=True,
-            halign="center",
-            valign="middle",
-            size_hint=(1, None),
-            height=dp(110),
-            text_size=(None, None),
-            theme_text_color="Custom",
+            text=self.target_note, font_size=sp(90), bold=True,
+            halign="center", valign="middle", size_hint=(1, None), height=dp(90),
+            text_size=(None, None), theme_text_color="Custom",
             text_color=TunerColors.get_text_primary(settings_manager.theme)
         )
-        self.note_label.bind(on_size=lambda *args: setattr(self.note_label, 'font_size', sp(100)))
+        self.note_label.bind(on_size=lambda *args: setattr(self.note_label, 'font_size', sp(90)))
         note_anchor.add_widget(self.note_label)
         self.main_tuner_card.add_widget(note_anchor)
 
-        # 1.3 Текущая частота
+        # 1.3 Частота
         self.freq_label = MDLabel(
-            text="-- Hz",
-            font_size=sp(15),
-            bold=True,
-            halign="center",
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
+            text="-- Hz", font_size=sp(14), bold=True, halign="center",
+            size_hint_y=None, height=dp(18), theme_text_color="Custom",
             text_color=TunerColors.get_accent(settings_manager.theme)
         )
         self.main_tuner_card.add_widget(self.freq_label)
 
         # 1.4 Шкала
-        gauge_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint_y=None,
-            height=dp(100)
-        )
-        self.tuner_gauge = ModernHorizontalTuner(
-            size_hint_y=None,
-            height=dp(100)
-        )
+        gauge_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(90))
+        self.tuner_gauge = ModernHorizontalTuner(size_hint_y=None, height=dp(90))
         self.tuner_gauge.bind(indicator_color=self._update_indicator_color)
         gauge_container.add_widget(self.tuner_gauge)
         self.main_tuner_card.add_widget(gauge_container)
 
-        # 1.5 Подписи LOW / IN TUNE / HIGH
-        labels_box = MDBoxLayout(
-            size_hint_y=None,
-            height=dp(18),
-            padding=[dp(12), 0]
-        )
+        # 1.5 Подписи под шкалой (LOW / Cents / HIGH)
+        labels_box = MDBoxLayout(size_hint_y=None, height=dp(22), padding=[dp(12), 0])
+
         self.label_low = MDLabel(
-            text=get_text("low", "LOW").upper(), font_size=sp(11), bold=True, halign="left",
-            theme_text_color="Custom", text_color=TunerColors.get_text_secondary(settings_manager.theme)
+            text=get_text("low", "LOW").upper(),
+            font_size=sp(9),
+            bold=False,
+            halign="left",
+            theme_text_color="Custom",
+            text_color=TunerColors.get_text_secondary(settings_manager.theme)
         )
-        self.label_in_tune = MDLabel(
-            text=get_text("in_tune").replace("!", ""), font_size=sp(11), bold=True, halign="center",
-            theme_text_color="Custom", text_color=[0.2, 0.95, 0.65, 1]
+        self.cents_label = MDLabel(
+            text=get_text("in_tune").replace("!", "").upper(),
+            font_size=sp(10),
+            bold=False,
+            halign="center",
+            theme_text_color="Custom",
+            text_color=[0.2, 0.95, 0.65, 1]
         )
         self.label_high = MDLabel(
-            text=get_text("high", "HIGH").upper(), font_size=sp(11), bold=True, halign="right",
-            theme_text_color="Custom", text_color=TunerColors.get_text_secondary(settings_manager.theme)
+            text=get_text("high", "HIGH").upper(),
+            font_size=sp(9),
+            bold=False,
+            halign="right",
+            theme_text_color="Custom",
+            text_color=TunerColors.get_text_secondary(settings_manager.theme)
         )
+
         labels_box.add_widget(self.label_low)
-        labels_box.add_widget(self.label_in_tune)
+        labels_box.add_widget(self.cents_label)
         labels_box.add_widget(self.label_high)
         self.main_tuner_card.add_widget(labels_box)
 
-        # 1.6 Статус (Listening / LOW / HIGH / IN TUNE) - скрыт по умолчанию
-        self.status_label = MDLabel(
-            text="",
-            font_size=sp(14),
-            bold=True,
-            halign="center",
-            size_hint_y=None,
-            height=dp(20),
-            theme_text_color="Custom",
-            opacity=0,
-            text_color=TunerColors.get_text_primary(settings_manager.theme)
-        )
-        self.main_tuner_card.add_widget(self.status_label)
-
         content.add_widget(self.main_tuner_card)
 
-        # 2. Кнопки струн
-        notes_row = MDBoxLayout(orientation='horizontal', size_hint=(1, None),
-                                height=dp(44), spacing=dp(8),
-                                padding=[dp(16), dp(4), dp(16), dp(8)])
-        for display_name, full_name, freq in zip(self.tuning_note_names, self.tuning_notes, self.tuning_freqs):
-            btn = NoteButton(note_name=full_name, display_name=display_name,
-                             frequency=freq, tuning_id=self.current_tuning,
-                             on_press=self.on_reference_note_pressed)
-            self._note_buttons.append(btn)
-            notes_row.add_widget(btn)
-        if len(self.tuning_note_names) < 6:
-            notes_row.add_widget(Widget(size_hint_x=1))
-            notes_row.add_widget(Widget(size_hint_x=1))
-        content.add_widget(notes_row)
+        # 2. КНОПКИ НОТ (НАД МЕНЮ)
+        self.notes_row = MDBoxLayout(orientation='horizontal', size_hint=(1, None),
+                                     height=dp(52), spacing=dp(12),
+                                     padding=[dp(16), dp(8), dp(16), dp(8)])
 
-        # 3. Нижнее меню
-        self.menu_card = MDCard(orientation='horizontal', size_hint=(1, None),
-                                height=dp(48), padding=[dp(4), dp(4), dp(4), dp(4)],
-                                radius=[dp(12)], elevation=0, spacing=0,
-                                md_bg_color=TunerColors.get_card_bg(settings_manager.theme),
-                                line_color=TunerColors.get_card_line(settings_manager.theme),
-                                line_width=dp(1))
-        self.play_btn = MDIconButton(icon="play", size_hint=(1, 1),
-                                     theme_icon_color="Custom",
-                                     md_bg_color=[0, 0, 0, 0], on_release=self.toggle_tuner)
-        divider1 = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[1, 1, 1, 0.08])
-        self.tuning_btn = MDIconButton(icon="tune", size_hint=(1, 1),
-                                       theme_icon_color="Custom",
-                                       md_bg_color=[0, 0, 0, 0],
-                                       on_release=lambda x: self._show_tuning_dialog())
-        divider2 = MDBoxLayout(size_hint_x=None, width=dp(1), md_bg_color=[1, 1, 1, 0.08])
-        self.reset_btn = MDIconButton(icon="refresh", size_hint=(1, 1),
-                                      theme_icon_color="Custom",
-                                      md_bg_color=[0, 0, 0, 0], on_release=self.reset_tuner)
-        self.menu_card.add_widget(self.play_btn)
-        self.menu_card.add_widget(divider1)
-        self.menu_card.add_widget(self.tuning_btn)
-        self.menu_card.add_widget(divider2)
-        self.menu_card.add_widget(self.reset_btn)
-        content.add_widget(self.menu_card)
+        self._rebuild_note_buttons()
+        content.add_widget(self.notes_row)
 
-        # 4. Подсказка
-        self._hint_label = MDLabel(text="", font_size=sp(10), halign="center",
-                                   size_hint_y=None, height=dp(22),
-                                   theme_text_color="Custom", opacity=0)
+        # 3. МЕНЮ (ПОД НОТАМИ)
+        self.menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60))
+
+        self.menu_stack = UnifiedTunerMenu(
+            on_play=self.toggle_tuner,
+            on_tune=self._cycle_tuning,
+            on_instrument=self._on_instrument_selected,
+            on_reset=self.reset_tuner,
+            current_instrument=self.current_instrument,
+            is_listening=self.is_listening
+        )
+        self.menu_container.add_widget(self.menu_stack)
+
+        content.add_widget(self.menu_container)
+
+        # 4. Подсказка под меню без иконок
+        self._hint_label = MDLabel(
+            text="", font_size=sp(12), halign="center",
+            size_hint_y=None, height=dp(24),
+            theme_text_color="Custom", opacity=0
+        )
         content.add_widget(self._hint_label)
 
         content_container.add_widget(content)
@@ -1360,22 +1433,18 @@ class TunerScreen(BaseScreen):
     def _update_indicator_color(self, instance, value):
         self.indicator_color = value
 
-    def toggle_tuner(self, instance):
+    def toggle_tuner(self, *args):
         if not self.is_listening:
             if self._audio_backend == 'none':
                 self._show_error(get_text('audio_not_init'))
                 return
             self.is_listening = True
-            self.play_btn.icon = "stop"
-            self.play_btn.icon_color = [0.8, 0.3, 0.3, 1]
-            self.status_label.text = get_text("listening", "Listening...")
-            self.status_label.opacity = 1
-            self.status_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
+            self.menu_stack.update_state(True)
             self._start_audio_thread()
+            self.update_cents_ui()
         else:
             self.is_listening = False
-            self.play_btn.icon = "play"
-            self.play_btn.icon_color = TunerColors.get_accent(settings_manager.theme)
+            self.menu_stack.update_state(False)
             self._stop_audio_thread()
             if hasattr(self, 'tuner_gauge'):
                 self.tuner_gauge.set_value(0)
@@ -1384,12 +1453,12 @@ class TunerScreen(BaseScreen):
             if hasattr(self, 'note_label'):
                 self.note_label.text = self.target_note
             self.current_deviation = 0
-            self.update_status_ui()
+            self.update_cents_ui()
             self._reset_note_buttons()
 
-    def reset_tuner(self, instance):
+    def reset_tuner(self, *args):
         if self.is_listening:
-            self.toggle_tuner(None)
+            self.toggle_tuner()
         if hasattr(self, 'tuner_gauge'):
             self.tuner_gauge.set_value(0)
         if hasattr(self, 'freq_label'):
@@ -1397,9 +1466,13 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'note_label'):
             self.note_label.text = self.target_note
         self.current_deviation = 0
-        self.update_status_ui()
+        self.update_cents_ui()
         self._reset_note_buttons()
         self._clear_error()
+        self._show_success("Сброшено")
+
+    def _update_hint(self):
+        pass
 
     def on_enter(self):
         super().on_enter()
@@ -1410,7 +1483,7 @@ class TunerScreen(BaseScreen):
 
     def go_back(self, instance=None):
         if self.is_listening:
-            self.toggle_tuner(None)
+            self.toggle_tuner()
         self._stop_audio_thread()
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
@@ -1420,7 +1493,7 @@ class TunerScreen(BaseScreen):
 
     def on_leave(self):
         if self.is_listening:
-            self.toggle_tuner(None)
+            self.toggle_tuner()
         self._stop_audio_thread()
         self._hide_hint()
         app = MDApp.get_running_app()
