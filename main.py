@@ -64,6 +64,18 @@ except Exception as e:
 
 print("=" * 60)
 
+from kivymd.font_definitions import theme_font_styles
+
+# --- ПРИНУДИТЕЛЬНАЯ ПОДМЕНА ШРИФТА В KIVYMD 1.2.0 ---
+try:
+    # В KivyMD 1.2.0 theme_font_styles — это СПИСОК словарей
+    for style_dict in theme_font_styles:
+        if "font-name" in style_dict and style_dict["font-name"] == "Roboto":
+            style_dict["font-name"] = "NotoSansSymbols2"
+    print("DEBUG: ✅ Шрифт NotoSansSymbols2 применён ко всем стилям KivyMD")
+except Exception as e:
+    print(f"DEBUG: ⚠️ Не удалось применить шрифт глобально: {e}")
+# ---------------------------------------------------
 
 import kivy
 

@@ -2,7 +2,7 @@
 """
 Экран гитарного тюнера — горизонтальная шкала в стиле tuner7 + эталонные ноты.
 Адаптирован под 3 темы (green, dark, light) и 6 языков.
-Оптимизированный layout с тогл-меню и динамическими центами.
+Оптимизированный layout с увеличенной шкалой, динамическими центами и тогл-меню.
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Triangle, RoundedRectangle
@@ -88,7 +88,7 @@ CHUNK_SIZE = 1024
 
 
 # ============================================================
-# ЦВЕТА ДЛЯ ТЮНЕРА (адаптация под темы)
+# ЦВЕТА
 # ============================================================
 
 class TunerColors:
@@ -113,7 +113,7 @@ class TunerColors:
         if theme_id == 'light':
             return [0.4, 0.4, 0.4, 1]
         else:
-            return [1, 1, 1, 0.6]
+            return [1, 1, 1, 0.5]
 
     @staticmethod
     def get_card_bg(theme_id):
@@ -131,7 +131,7 @@ class TunerColors:
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 0.5]
         else:
-            return [1, 1, 1, 0.8]  # Белая для green
+            return [1, 1, 1, 0.08]
 
     @staticmethod
     def get_hint_color(theme_id):
@@ -140,7 +140,7 @@ class TunerColors:
         elif theme_id == 'light':
             return [0.1, 0.55, 0.3, 1]
         else:
-            return [1, 1, 1, 0.5]  # Полупрозрачный белый
+            return [1, 1, 1, 0.5]
 
     @staticmethod
     def get_divider_color(theme_id):
@@ -149,7 +149,7 @@ class TunerColors:
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 0.5]
         else:
-            return [1, 1, 1, 0.8]
+            return [1, 1, 1, 0.15]
 
 
 # ============ СТРОИ ГИТАР ============
@@ -349,7 +349,7 @@ def cents_deviation(freq, target_freq):
     return max(-50, min(50, 1200 * math.log2(freq / target_freq)))
 
 
-# ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР В СТИЛЕ TUNER7 ============
+# ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР (ШКАЛА) ============
 
 class ModernHorizontalTuner(Widget):
     deviation = NumericProperty(0.0)
@@ -502,7 +502,7 @@ class ModernHorizontalTuner(Widget):
             Triangle(points=[ix, tip_y, ix + half_w, base_y, ix, base_y + dp(4)])
 
 
-# ============ КНОПКА ЭТАЛОННОЙ НОТЫ ============
+# ============ КНОПКА НОТЫ ============
 
 class NoteButton(MDCard):
     note_name = StringProperty('')
@@ -685,12 +685,12 @@ class UnifiedTunerMenu(MDCard):
         self.play_item = IconMenuItem(
             "stop" if is_listening else "play",
             on_press=on_play,
-            icon_color=[0.8, 0.3, 0.3, 1] if is_listening else [0.0, 0.74, 0.83, 1]  # Cyan
+            icon_color=[0.8, 0.3, 0.3, 1] if is_listening else [0.0, 0.74, 0.83, 1]
         )
         self.tune_item = IconMenuItem(
             "tune",
             on_press=on_tune,
-            icon_color=[0.61, 0.15, 0.69, 1]  # Purple
+            icon_color=[0.61, 0.15, 0.69, 1]
         )
         self.instrument_item = IconMenuItem(
             self._get_instrument_icon(current_instrument),
@@ -700,7 +700,7 @@ class UnifiedTunerMenu(MDCard):
         self.reset_item = IconMenuItem(
             "refresh",
             on_press=on_reset,
-            icon_color=[0.9, 0.4, 0.2, 1]  # Orange
+            icon_color=[0.9, 0.4, 0.2, 1]
         )
 
         self.add_widget(self.play_item)
@@ -718,18 +718,18 @@ class UnifiedTunerMenu(MDCard):
         elif instrument == 'bass':
             return "guitar-electric"
         else:
-            return "guitar-acoustic"  # Иконка как у гитары
+            return "guitar-acoustic"
 
     def _get_instrument_color(self, instrument):
         if instrument == 'guitar':
-            return [1.0, 0.7, 0.0, 1]  # Yellow
+            return [1.0, 0.7, 0.0, 1]
         elif instrument == 'bass':
-            return [0.0, 0.8, 0.6, 1]  # Teal
+            return [0.0, 0.8, 0.6, 1]
         else:
-            return [0.6, 0.2, 0.8, 1]  # Purple (для укулеле)
+            return [0.6, 0.2, 0.8, 1]
 
     def _create_divider(self):
-        return MDBoxLayout(size_hint_x=None, width=dp(2))  # Толщина 2.0
+        return MDBoxLayout(size_hint_x=None, width=dp(2))
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
@@ -851,7 +851,7 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'note_label'):
             is_tuned = abs(self.current_deviation) <= 3.0 and self.is_listening
             self.note_label.text_color = [0.2, 0.95, 0.65, 1.0] if is_tuned else text_p
-            self.note_label.font_size = sp(90)
+            self.note_label.font_size = sp(100)
 
         if hasattr(self, 'freq_label'):
             self.freq_label.text_color = TunerColors.get_accent(theme_id)
@@ -1303,10 +1303,10 @@ class TunerScreen(BaseScreen):
 
         content_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1),
                                         padding=[dp(16), dp(4), dp(16), padding_bottom])
-        content = MDBoxLayout(orientation='vertical', spacing=dp(12),
+        content = MDBoxLayout(orientation='vertical', spacing=dp(10),
                               size_hint=(1, None), adaptive_height=True)
 
-        # 1. КАРТОЧКА ТЮНЕРА (Название -> Буква -> Частота -> Шкала -> Подписи)
+        # 1. КАРТОЧКА ТЮНЕРА
         self.main_tuner_card = MDCard(
             orientation='vertical',
             size_hint_y=None,
@@ -1316,24 +1316,28 @@ class TunerScreen(BaseScreen):
             line_color=TunerColors.get_card_line(settings_manager.theme),
             line_width=2.0,
             elevation=0,
-            padding=[dp(16), dp(6), dp(16), dp(10)],  # Минимальный верхний отступ
-            spacing=dp(0),  # Без лишних зазоров
+            padding=[dp(16), dp(14), dp(16), dp(14)],
+            spacing=dp(0),
         )
 
-        # 1.1 Название строя (СРАЗУ ПОД РАМКОЙ)
+        # Верхний элемент — название строя (прижато к верху карточки)
         self.tuning_name_label = MDLabel(
             text=get_text(TUNINGS[self.current_tuning]['name_key']),
-            font_size=sp(13), halign="center", size_hint_y=None, height=dp(18),
+            font_size=sp(13), halign="center", valign="top",
+            size_hint_y=None, height=dp(20),
             theme_text_color="Custom", bold=False,
             text_color=TunerColors.get_text_secondary(settings_manager.theme)
         )
         self.main_tuner_card.add_widget(self.tuning_name_label)
 
-        # 1.2 Буква ноты
-        note_anchor = AnchorLayout(size_hint_y=None, height=dp(90))
+        # Распорка 1: большой отступ от названия строя до буквы ноты
+        self.main_tuner_card.add_widget(Widget(size_hint_y=1))
+
+        # Буква ноты
+        note_anchor = AnchorLayout(size_hint_y=None, height=dp(80))
         self.note_label = MDLabel(
             text=self.target_note, font_size=sp(90), bold=True,
-            halign="center", valign="middle", size_hint=(1, None), height=dp(90),
+            halign="center", valign="middle", size_hint=(1, None), height=dp(80),
             text_size=(None, None), theme_text_color="Custom",
             text_color=TunerColors.get_text_primary(settings_manager.theme)
         )
@@ -1341,22 +1345,28 @@ class TunerScreen(BaseScreen):
         note_anchor.add_widget(self.note_label)
         self.main_tuner_card.add_widget(note_anchor)
 
-        # 1.3 Частота
+        # Распорка 2: большой отступ от буквы ноты до герц
+        self.main_tuner_card.add_widget(Widget(size_hint_y=1))
+
+        # Частота в герцах
         self.freq_label = MDLabel(
             text="-- Hz", font_size=sp(14), bold=True, halign="center",
-            size_hint_y=None, height=dp(18), theme_text_color="Custom",
+            size_hint_y=None, height=dp(20), theme_text_color="Custom",
             text_color=TunerColors.get_accent(settings_manager.theme)
         )
         self.main_tuner_card.add_widget(self.freq_label)
 
-        # 1.4 Шкала
+        # Распорка 3: большой отступ от герц до шкалы
+        self.main_tuner_card.add_widget(Widget(size_hint_y=1))
+
+        # Шкала тюнера
         gauge_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(90))
         self.tuner_gauge = ModernHorizontalTuner(size_hint_y=None, height=dp(90))
         self.tuner_gauge.bind(indicator_color=self._update_indicator_color)
         gauge_container.add_widget(self.tuner_gauge)
         self.main_tuner_card.add_widget(gauge_container)
 
-        # 1.5 Подписи под шкалой (LOW / Cents / HIGH)
+        # Нижние подписи (прижаты к низу карточки)
         labels_box = MDBoxLayout(size_hint_y=None, height=dp(22), padding=[dp(12), 0])
 
         self.label_low = MDLabel(
@@ -1391,15 +1401,7 @@ class TunerScreen(BaseScreen):
 
         content.add_widget(self.main_tuner_card)
 
-        # 2. КНОПКИ НОТ (НАД МЕНЮ)
-        self.notes_row = MDBoxLayout(orientation='horizontal', size_hint=(1, None),
-                                     height=dp(52), spacing=dp(12),
-                                     padding=[dp(16), dp(8), dp(16), dp(8)])
-
-        self._rebuild_note_buttons()
-        content.add_widget(self.notes_row)
-
-        # 3. МЕНЮ (ПОД НОТАМИ)
+        # 2. МЕНЮ (ПОД КАРТОЧКОЙ)
         self.menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60))
 
         self.menu_stack = UnifiedTunerMenu(
@@ -1414,7 +1416,15 @@ class TunerScreen(BaseScreen):
 
         content.add_widget(self.menu_container)
 
-        # 4. Подсказка под меню без иконок
+        # 3. КНОПКИ НОТ (ПОД МЕНЮ)
+        self.notes_row = MDBoxLayout(orientation='horizontal', size_hint=(1, None),
+                                     height=dp(52), spacing=dp(12),
+                                     padding=[dp(16), dp(8), dp(16), dp(8)])
+
+        self._rebuild_note_buttons()
+        content.add_widget(self.notes_row)
+
+        # 4. Подсказка
         self._hint_label = MDLabel(
             text="", font_size=sp(12), halign="center",
             size_hint_y=None, height=dp(24),
