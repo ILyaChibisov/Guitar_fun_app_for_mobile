@@ -15,7 +15,7 @@ from kivymd.uix.dialog import MDDialog
 from kivy.uix.textinput import TextInput
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
@@ -23,6 +23,7 @@ from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.uix.carousel import Carousel
+from kivy.graphics import Color, Rectangle, Line
 from io import BytesIO
 import pkgutil
 import importlib
@@ -111,7 +112,8 @@ class ChordsColors:
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 0.5]
         else:
-            return [1, 1, 1, 0.15]
+            # green — мятный, как у меню песен (TopNav/BottomNav)
+            return [0.46, 0.70, 0.71, 0.4]
 
     @staticmethod
     def get_menu_bg(theme_id):
@@ -227,7 +229,7 @@ class SwipeContainer(MDBoxLayout):
         theme_id = settings_manager.theme
         self.chord_name_card.md_bg_color = ChordsColors.get_card_bg(theme_id)
         self.chord_name_card.line_color = ChordsColors.get_card_line(theme_id)
-        self.chord_name_card.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
+        self.chord_name_card.line_width = 1.5          # ← толщина для всех тем
         self.chord_name_label.text_color = ChordsColors.get_chord_name_color(theme_id)
         self.chord_alt_label.text_color = ChordsColors.get_text_secondary(theme_id)
 
@@ -409,7 +411,7 @@ class SwipeContainer(MDBoxLayout):
 
 
 # ============ ПОИСКОВАЯ СТРОКА ============
-class SearchBar(MDCard):
+class SearchBar(MDBoxLayout):
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
@@ -419,10 +421,22 @@ class SearchBar(MDCard):
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(48)
-        self.radius = [dp(16)] * 4
-        self.elevation = 0
         self.padding = [dp(12), dp(4), dp(6), dp(4)]
         self.spacing = dp(6)
+        self.md_bg_color = [0, 0, 0, 0]
+
+        # Рисуем фон и обводку вручную
+        with self.canvas.before:
+            self.bg_color_inst = Color(1, 1, 1, 1)
+            self.bg_rect = RoundedRectangle(
+                pos=self.pos, size=self.size, radius=[dp(16)]
+            )
+            self.border_color_inst = Color(1, 1, 1, 1)
+            self.border_line = Line(
+                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(16)),
+                width=2
+            )
+        self.bind(pos=self._update_bg, size=self._update_bg)
 
         self.search_field = TextInput(
             multiline=False, size_hint_x=1, height=dp(40), font_size=sp(16),
@@ -432,10 +446,9 @@ class SearchBar(MDCard):
         self.search_field.bind(text=self._on_text_change)
         self.search_field.bind(focus=self._on_focus)
 
-        self.clear_wrapper = MDCard(
-            size_hint=(None, None), size=(dp(30), dp(30)), radius=[dp(15)] * 4,
-            md_bg_color=[0, 0, 0, 0], elevation=0, pos_hint={'center_y': 0.5},
-            opacity=0, disabled=True,
+        self.clear_wrapper = MDBoxLayout(
+            size_hint=(None, None), size=(dp(30), dp(30)),
+            pos_hint={'center_y': 0.5}, opacity=0, disabled=True,
         )
         self.clear_btn = MDIconButton(
             icon="close-circle-outline", size_hint=(1, 1), theme_icon_color="Custom",
@@ -463,6 +476,15 @@ class SearchBar(MDCard):
         self.update_language()
         self.update_theme_colors()
 
+    def _update_bg(self, *args):
+        if not hasattr(self, 'bg_rect') or self.width <= 0 or self.height <= 0:
+            return
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+        self.border_line.rounded_rectangle = (
+            self.x, self.y, self.width, self.height, dp(16)
+        )
+
     def update_language(self):
         self.search_field.hint_text = get_text('search', 'Поиск')
         self.search_btn.text = get_text('find', 'Найти')
@@ -475,9 +497,8 @@ class SearchBar(MDCard):
         line = ChordsColors.get_card_line(theme_id)
 
         if theme_id == 'light':
-            self.md_bg_color = [1, 1, 1, 1]
-            self.line_color = line
-            self.line_width = 4.0
+            self.bg_color_inst.rgba = [1, 1, 1, 1]
+            self.border_color_inst.rgba = line
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
@@ -485,19 +506,17 @@ class SearchBar(MDCard):
             self.search_btn.md_bg_color = accent
             self.search_btn.text_color = [0, 0, 0, 1]
         elif theme_id == 'dark':
-            self.md_bg_color = [0.15, 0.15, 0.15, 1]
-            self.line_color = line
-            self.line_width = 4.0
+            self.bg_color_inst.rgba = [0.15, 0.15, 0.15, 1]
+            self.border_color_inst.rgba = line
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
             self.clear_btn.icon_color = accent
             self.search_btn.md_bg_color = accent
             self.search_btn.text_color = [1, 1, 1, 1]
-        else:  # green — как в songs_screen
-            self.md_bg_color = [1, 1, 1, 1]
-            self.line_color = line
-            self.line_width = 4.0
+        else:  # green
+            self.bg_color_inst.rgba = [1, 1, 1, 1]
+            self.border_color_inst.rgba = [0.46, 0.70, 0.71, 0.4]
             self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
             self.search_field.hint_text_color = [0.55, 0.55, 0.55, 1]
             self.search_field.cursor_color = [0.1, 0.1, 0.1, 1]
@@ -529,7 +548,8 @@ class SearchBar(MDCard):
         self.search_field.focus = False
 
     def _on_focus(self, instance, value):
-        self.line_width = 5.0 if value else 4.0
+        if hasattr(self, 'border_line') and self.width > 0 and self.height > 0:
+            self.border_line.width = 3 if value else 2
 
     def clear(self):
         self.search_field.text = ""
@@ -638,7 +658,7 @@ class BaseSelectorMenu(MDCard):
         theme_id = settings_manager.theme
         self.md_bg_color = ChordsColors.get_menu_bg(theme_id)
         self.line_color = ChordsColors.get_card_line(theme_id)
-        self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
+        self.line_width = 1.5                          # ← толщина для всех тем
 
         idle_bg = ChordsColors.get_button_bg(theme_id)
         idle_text = ChordsColors.get_button_text(theme_id)
@@ -825,11 +845,12 @@ class UnifiedMenu(MDCard):
         theme_id = settings_manager.theme
         self.md_bg_color = ChordsColors.get_menu_bg(theme_id)
         self.line_color = ChordsColors.get_card_line(theme_id)
-        self.line_width = 1.5 if theme_id in ('dark', 'light') else 0.8
+        self.line_width = 1.5                          # ← толщина для всех тем
 
+        divider_color = ChordsColors.get_card_line(theme_id)   # мята в green
         for child in self.children:
             if isinstance(child, MDBoxLayout) and child.width == dp(1):
-                child.md_bg_color = ChordsColors.get_card_line(theme_id)
+                child.md_bg_color = divider_color
 
     def update_chord(self, chord_count):
         has_chords = chord_count > 1
