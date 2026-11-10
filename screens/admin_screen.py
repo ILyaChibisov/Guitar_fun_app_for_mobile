@@ -159,14 +159,13 @@ class ParserCard(CircularRippleBehavior, MDCard):
 
 class ActionCard(CircularRippleBehavior, MDCard):
     """
-    Карточка действия (очистка кэша, статистика, задачи, промокоды) - цветные иконки
+    Карточка действия (очистка кэша, статистика, промокоды) - цветные иконки
     """
 
     # Цвета для действий
     ACTION_COLORS = {
         'clear_cache': ('#FF6B35', '#E55A2B'),  # Оранжевый
         'statistics': ('#4CAF50', '#388E3C'),   # Зелёный
-        'tasks': ('#2196F3', '#1976D2'),        # Синий
         'promocodes': ('#9C27B0', '#7B1FA2'),   # Фиолетовый
     }
 
@@ -404,15 +403,6 @@ class AdminScreen(BaseScreen):
         )
         actions_layout.add_widget(stats_card)
 
-        # Задачи (синий)
-        tasks_card = ActionCard(
-            action_id='tasks',
-            title='Задачи',
-            icon='format-list-checks',
-            on_click=self.on_action_selected
-        )
-        actions_layout.add_widget(tasks_card)
-
         # Промокоды (фиолетовый)
         promocodes_card = ActionCard(
             action_id='promocodes',
@@ -464,8 +454,6 @@ class AdminScreen(BaseScreen):
             self.clear_cache()
         elif action_id == 'statistics':
             self.show_statistics()
-        elif action_id == 'tasks':
-            self.open_tasks()
         elif action_id == 'promocodes':
             self.open_promocodes()
 
@@ -483,17 +471,6 @@ class AdminScreen(BaseScreen):
     def show_statistics(self):
         """Показывает статистику (заглушка)"""
         notify.info("Статистика будет доступна в следующей версии")
-
-    def open_tasks(self):
-        """Открывает экран задач"""
-        logger.info("📋 Открытие экрана задач")
-
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('tasks'):
-                self.manager.current = 'tasks'
-            else:
-                logger.error("Экран tasks не найден")
-                notify.error("Ошибка навигации")
 
     def open_promocodes(self):
         """Открывает экран управления промокодами"""

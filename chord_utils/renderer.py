@@ -1,11 +1,11 @@
-# screens/chord_renderer.py
+# screens/renderer.py
 """
 Рендерер аккордов - с поддержкой цветных ладов
 """
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.image import Image
 from kivy.logger import Logger
-from chord_sprites import sprite_loader
+from chord_utils.sprites import sprite_loader
 
 
 class ChordRenderer(RelativeLayout):

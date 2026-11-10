@@ -214,27 +214,6 @@ class TopNavConfig:
             'custom_title_widget': 'vertical',
         },
 
-        # ============ ЭКРАНЫ ЗАДАЧ ============
-        'tasks': {
-            'title': 'Задачи',
-            'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
-            'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': True,
-            'custom_back_callback': 'go_back',
-            'custom_title_widget': None,
-        },
-
-        'task_detail': {
-            'title': 'Задача',
-            'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_BACK,
-            'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': True,
-            'custom_back_callback': 'go_back',
-            'custom_title_widget': None,
-        },
-
         # ============ НОВЫЕ ЭКРАНЫ ============
         'settings': {
             'title': 'Настройки',
@@ -242,16 +221,16 @@ class TopNavConfig:
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
             'show_back_button': True,
-            'custom_back_callback': None,  # <-- Убрали 'go_back'
+            'custom_back_callback': None,
             'custom_title_widget': None,
         },
 
         'help': {
             'title': 'Помощь',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_HAMBURGER,  # ← БЫЛО BACK, СТАЛО HAMBURGER
+            'left_button': LEFT_BUTTON_HAMBURGER,
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': False,  # ← БЫЛО True, СТАЛО False
+            'show_back_button': False,
             'custom_back_callback': None,
             'custom_title_widget': None,
         },
@@ -259,9 +238,9 @@ class TopNavConfig:
         'promo': {
             'title': 'Промокод',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_HAMBURGER,  # ← БЫЛО BACK, СТАЛО HAMBURGER
+            'left_button': LEFT_BUTTON_HAMBURGER,
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': False,  # ← БЫЛО True, СТАЛО False
+            'show_back_button': False,
             'custom_back_callback': None,
             'custom_title_widget': None,
         },
@@ -269,9 +248,9 @@ class TopNavConfig:
         'feedback': {
             'title': 'Обратная связь',
             'title_type': TITLE_TYPE_STATIC,
-            'left_button': LEFT_BUTTON_HAMBURGER,  # ← БЫЛО BACK, СТАЛО HAMBURGER
+            'left_button': LEFT_BUTTON_HAMBURGER,
             'right_button': RIGHT_BUTTON_HOME,
-            'show_back_button': False,  # ← БЫЛО True, СТАЛО False
+            'show_back_button': False,
             'custom_back_callback': None,
             'custom_title_widget': None,
         },

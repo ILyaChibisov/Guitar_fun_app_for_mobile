@@ -9,31 +9,25 @@ from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.card import MDCard
-from kivymd.uix.textfield import MDTextField
-from kivymd.uix.dialog import MDDialog
 from kivy.uix.textinput import TextInput
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle, RoundedRectangle
-from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
 from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.uix.carousel import Carousel
-from kivy.graphics import Color, Rectangle, Line
+from kivy.graphics import Color, Rectangle
 from io import BytesIO
 import pkgutil
 import importlib
 import re
-import traceback
 
-from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
-from screens.chord_renderer import ChordRenderer
+from chord_utils.renderer import ChordRenderer
 from utils.notifications import notify
 from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 from api.chords_client import get_chords_client

@@ -15,7 +15,6 @@ from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
-from kivy.uix.widget import Widget
 from io import BytesIO
 import re
 from kivy.utils import platform
@@ -23,17 +22,17 @@ from kivy.utils import platform
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
-from screens.chord_renderer import ChordRenderer
+from chord_utils.renderer import ChordRenderer
 from api.client import api
 from utils.notifications import notify
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
-from utils.chord_highlighter import (
+from chord_utils.chord_highlighter import (
     ChordTextLabel,
     highlight_chords_in_text,
     extract_chords_from_text_wrapper as extract_chords_from_text,
 )
-from utils.transposer import transpose_text, transpose_chord_list
+from chord_utils.transposer import transpose_text, transpose_chord_list
 
 logger = screen_logger('SearchDetail')
 

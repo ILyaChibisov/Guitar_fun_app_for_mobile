@@ -1,4 +1,4 @@
-# chord_sprites.py
+# sprites.py
 """
 Централизованное хранилище спрайтов для аккордов
 """
@@ -10,7 +10,7 @@ import traceback
 
 # Импортируем спрайты
 try:
-    from sprite_images import SPRITE_IMAGES
+    from .sprite_images import SPRITE_IMAGES
 
     Logger.info(f"SpriteLoader: Загружено {len(SPRITE_IMAGES)} спрайтов из sprite_images.py")
 except ImportError as e:

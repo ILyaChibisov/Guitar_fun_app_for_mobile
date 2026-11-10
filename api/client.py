@@ -646,6 +646,7 @@ class APIClient:
                     Clock.schedule_once(lambda dt: on_failure(None, str(e)), 0)
 
         threading.Thread(target=worker, daemon=True).start()
+
     # ============ API МЕТОДЫ ============
 
     def get_favorites(self, on_success=None, on_failure=None,
@@ -987,95 +988,6 @@ class APIClient:
             include_auth=False
         )
 
-    # ============ МЕТОДЫ ДЛЯ РАБОТЫ С ЗАДАЧАМИ ============
-
-    def get_tasks(self, on_success=None, on_failure=None, force_refresh=False, status=None):
-        Logger.info("🔄 Загрузка задач с сервера...")
-        url = f"{self.config.API_BASE_URL}/tasks/"
-        if status:
-            url += f"?status={status}"
-        return self._request(
-            url=url, method='GET',
-            on_success=on_success, on_failure=on_failure,
-            include_auth=True
-        )
-
-    def get_task(self, task_id, on_success=None, on_failure=None, force_refresh=False):
-        Logger.info(f"🔄 Загрузка задачи {task_id} с сервера...")
-        url = f"{self.config.API_BASE_URL}/tasks/{task_id}"
-        return self._request(
-            url=url, method='GET',
-            on_success=on_success, on_failure=on_failure,
-            include_auth=True
-        )
-
-    def create_task(self, task_data, on_success=None, on_failure=None):
-        Logger.info(f"📝 Создание задачи: {task_data.get('title')}")
-        url = f"{self.config.API_BASE_URL}/tasks/"
-        return self._request(
-            url=url, method='POST', data=task_data,
-            on_success=on_success, on_failure=on_failure,
-            include_auth=True
-        )
-
-    def update_task(self, task_id, task_data, on_success=None, on_failure=None):
-        Logger.info(f"📝 Обновление задачи {task_id}")
-        url = f"{self.config.API_BASE_URL}/tasks/{task_id}"
-        return self._request(
-            url=url, method='PUT', data=task_data,
-            on_success=on_success, on_failure=on_failure,
-            include_auth=True
-        )
-
-    def delete_task(self, task_id, hard=False, on_success=None, on_failure=None):
-        Logger.info(f"🗑️ Удаление задачи {task_id}")
-        url = f"{self.config.API_BASE_URL}/tasks/{task_id}?hard={str(hard).lower()}"
-        return self._request(
-            url=url, method='DELETE',
-            on_success=on_success, on_failure=on_failure,
-            include_auth=True
-        )
-
-    def add_task_comment(self, task_id, comment, on_success=None, on_failure=None):
-        Logger.info(f"💬 Добавление комментария к задаче {task_id}")
-        url = f"{self.config.API_BASE_URL}/tasks/{task_id}/comment"
-        return self._request(
-            url=url, method='POST', data={'comment': comment},
-            on_success=on_success, on_failure=on_failure,
-            include_auth=True
-        )
-
-    def change_task_status(self, task_id, status, completed_at=None, on_success=None, on_failure=None):
-        """Изменить статус задачи"""
-        Logger.info(f"🔄 Изменение статуса задачи {task_id} на {status}")
-
-        url = f"{self.config.API_BASE_URL}/tasks/{task_id}/status"
-        data = {'status': status}
-        if completed_at:
-            data['completed_at'] = completed_at
-            Logger.info(f"   с completed_at={completed_at}")
-
-        return self._request(
-            url=url,
-            method='PATCH',
-            data=data,
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
-    def get_task_statuses(self, on_success=None, on_failure=None):
-        """Получить список статусов задач - ВСЕГДА С СЕРВЕРА"""
-        url = f"{self.config.API_BASE_URL}/tasks/statuses/list"
-
-        return self._request(
-            url=url,
-            method='GET',
-            on_success=on_success,
-            on_failure=on_failure,
-            include_auth=True
-        )
-
     # ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
 
     def _encode_letter(self, letter: str) -> str:
@@ -1099,7 +1011,6 @@ class APIClient:
         except Exception as e:
             Logger.error(f"Ошибка кодирования буквы {letter}: {e}")
             return letter
-
 
     # ============ AUTH METHODS ============
 

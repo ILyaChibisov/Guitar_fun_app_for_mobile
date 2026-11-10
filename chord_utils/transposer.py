@@ -3,7 +3,7 @@
 Модуль для транспонирования аккордов
 """
 import re
-from utils.chord_parser import transpose_chord, normalize_chord_case
+from chord_utils.chord_parser import transpose_chord, normalize_chord_case
 
 # Паттерн для поиска аккордов (без \b)
 CHORD_PATTERN = re.compile(

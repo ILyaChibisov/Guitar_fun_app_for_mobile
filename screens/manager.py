@@ -29,10 +29,8 @@ from .chord_detail_screen import ChordDetailScreen
 # === ЭКРАНЫ СПИСКОВ ===
 from .artist_songs_screen import ArtistSongsScreen
 
-# === ЭКРАНЫ АВТОРИЗАЦИИ И ЗАДАЧ ===
+# === ЭКРАНЫ АВТОРИЗАЦИИ ===
 from .auth_screen import AuthScreen
-from .tasks_screen import TasksScreen
-from .task_detail_screen import TaskDetailScreen
 
 # === НОВЫЕ ЭКРАНЫ ===
 from .settings_screen import SettingsScreen
@@ -91,11 +89,9 @@ def setup_screen_manager():
     sm.add_widget(ArtistSongsScreen(name='artist_songs'))
 
     # ============================================================
-    # 4. ЭКРАНЫ АВТОРИЗАЦИИ И ЗАДАЧ
+    # 4. ЭКРАН АВТОРИЗАЦИИ
     # ============================================================
     sm.add_widget(AuthScreen(name='auth_screen'))
-    sm.add_widget(TasksScreen(name='tasks'))
-    sm.add_widget(TaskDetailScreen(name='task_detail'))
 
     # ============================================================
     # 5. НОВЫЕ ЭКРАНЫ (настройки, помощь, промокод, обратная связь)

@@ -13,7 +13,6 @@ from kivymd.uix.card import MDCard
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
-from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
 from kivy.core.image import Image as CoreImage
@@ -26,11 +25,10 @@ import importlib
 import re
 import traceback
 
-from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
-from screens.chord_renderer import ChordRenderer
+from chord_utils.renderer import ChordRenderer
 from utils.notifications import notify
 from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 from api.chords_client import get_chords_client

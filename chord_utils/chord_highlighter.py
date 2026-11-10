@@ -4,7 +4,7 @@
 """
 import re
 from kivymd.uix.label import MDLabel
-from utils.chord_parser import extract_chords_from_text, normalize_chord_case
+from chord_utils.chord_parser import extract_chords_from_text, normalize_chord_case
 
 # Паттерн для поиска аккордов (без \b)
 CHORD_PATTERN = re.compile(
