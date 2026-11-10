@@ -2,11 +2,10 @@
 """
 Экран гитарных аккордов - с единым меню 5 в 1 под грифом.
 Адаптирован под 3 темы (green, light, dark) и 6 языков.
-Тёмная тема: оранжевые акценты. Светлая тема: изумрудные акценты.
 """
 from kivy.uix.behaviors import ButtonBehavior
 from kivymd.app import MDApp
-from kivymd.uix.label import MDLabel
+from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDIconButton, MDRaisedButton
 from kivymd.uix.card import MDCard
@@ -68,10 +67,6 @@ CHORD_TYPES = [
 CORE_TYPES = {"Major", "Minor", "7", "m7"}
 
 
-# ============================================================
-# ЦВЕТА ДЛЯ АККОРДОВ (адаптация под темы)
-# ============================================================
-
 class ChordsColors:
     @staticmethod
     def get_accent(theme_id):
@@ -112,7 +107,6 @@ class ChordsColors:
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 0.5]
         else:
-            # green — мятный, как у меню песен (TopNav/BottomNav)
             return [0.46, 0.70, 0.71, 0.4]
 
     @staticmethod
@@ -161,7 +155,6 @@ class ChordsColors:
             return [1.0, 0.95, 0.85, 0.95]
 
 
-# ============ КОНТЕЙНЕР С КАРУСЕЛЬЮ ============
 class SwipeContainer(MDBoxLayout):
     def __init__(self, on_swipe_horizontal=None, **kwargs):
         super().__init__(**kwargs)
@@ -178,10 +171,9 @@ class SwipeContainer(MDBoxLayout):
         self.md_bg_color = [0, 0, 0, 0]
         self.spacing = 0
 
-        # === Отступ сверху увеличен (≈ ×3), снизу уменьшен ===
         self.name_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, None), height=dp(100),
-            padding=[dp(8), dp(22), dp(8), dp(2)],   # top: 6→22, bottom: 16→2
+            padding=[dp(8), dp(22), dp(8), dp(2)],
             spacing=dp(6),
             md_bg_color=[0, 0, 0, 0]
         )
@@ -229,9 +221,21 @@ class SwipeContainer(MDBoxLayout):
         theme_id = settings_manager.theme
         self.chord_name_card.md_bg_color = ChordsColors.get_card_bg(theme_id)
         self.chord_name_card.line_color = ChordsColors.get_card_line(theme_id)
-        self.chord_name_card.line_width = 1.5          # ← толщина для всех тем
+        self.chord_name_card.line_width = 1.5
         self.chord_name_label.text_color = ChordsColors.get_chord_name_color(theme_id)
         self.chord_alt_label.text_color = ChordsColors.get_text_secondary(theme_id)
+
+        if theme_id == 'light':
+            arrow_color = [0.2, 0.2, 0.2, 1]  # Ярко-черные
+        else:
+            arrow_color = [1, 1, 1, 1]        # Ярко-белые
+
+        if hasattr(self, 'left_arrow') and self.left_arrow:
+            self.left_arrow.text_color = arrow_color
+            self.left_arrow.canvas.ask_update()
+        if hasattr(self, 'right_arrow') and self.right_arrow:
+            self.right_arrow.text_color = arrow_color
+            self.right_arrow.canvas.ask_update()
 
     def update_fret_color(self, theme_id):
         color = "black" if theme_id == "light" else "white"
@@ -239,12 +243,53 @@ class SwipeContainer(MDBoxLayout):
             renderer.set_fret_color(color)
 
     def _build_griff_wrapper(self):
-        return MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[dp(8), dp(4), dp(8), dp(4)],
-                           md_bg_color=[0, 0, 0, 0])
+        theme_id = settings_manager.theme
+        if theme_id == 'light':
+            arrow_color = [0.2, 0.2, 0.2, 1]
+        else:
+            arrow_color = [1, 1, 1, 1]
+
+        wrapper = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, 1),
+            padding=[dp(4), dp(4), dp(4), dp(4)],
+            spacing=dp(4),
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        self.left_arrow = MDIcon(
+            icon="chevron-left",
+            size_hint=(None, 1),
+            width=dp(24),
+            theme_text_color="Custom",
+            text_color=arrow_color,
+            font_size=sp(28)
+        )
+
+        self.right_arrow = MDIcon(
+            icon="chevron-right",
+            size_hint=(None, 1),
+            width=dp(24),
+            theme_text_color="Custom",
+            text_color=arrow_color,
+            font_size=sp(28)
+        )
+
+        renderer_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            md_bg_color=[0, 0, 0, 0]
+        )
+
+        wrapper.add_widget(self.left_arrow)
+        wrapper.add_widget(renderer_container)
+        wrapper.add_widget(self.right_arrow)
+
+        return wrapper, renderer_container
 
     def add_slide(self, chord_module):
         slide = MDBoxLayout(orientation='vertical', size_hint=(1, 1), md_bg_color=[0, 0, 0, 0])
-        wrapper = self._build_griff_wrapper()
+        wrapper, renderer_container = self._build_griff_wrapper()
         renderer = ChordRenderer()
 
         theme_id = settings_manager.theme
@@ -263,7 +308,8 @@ class SwipeContainer(MDBoxLayout):
             renderer.load_chord(chord_module)
             renderer.set_mode("finger")
 
-        wrapper.add_widget(renderer)
+        renderer_container.add_widget(renderer)
+
         slide.add_widget(wrapper)
         self.carousel.add_widget(slide)
         self.slides.append(slide)
@@ -410,8 +456,8 @@ class SwipeContainer(MDBoxLayout):
             renderer.set_mode(mode)
 
 
-# ============ ПОИСКОВАЯ СТРОКА ============
-class SearchBar(MDBoxLayout):
+class SearchBar(MDCard):
+    # (код поисковой строки остается без изменений)
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
@@ -421,22 +467,10 @@ class SearchBar(MDBoxLayout):
         self.orientation = 'horizontal'
         self.size_hint = (1, None)
         self.height = dp(48)
+        self.radius = [dp(16)] * 4
+        self.elevation = 0
         self.padding = [dp(12), dp(4), dp(6), dp(4)]
         self.spacing = dp(6)
-        self.md_bg_color = [0, 0, 0, 0]
-
-        # Рисуем фон и обводку вручную
-        with self.canvas.before:
-            self.bg_color_inst = Color(1, 1, 1, 1)
-            self.bg_rect = RoundedRectangle(
-                pos=self.pos, size=self.size, radius=[dp(16)]
-            )
-            self.border_color_inst = Color(1, 1, 1, 1)
-            self.border_line = Line(
-                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(16)),
-                width=2
-            )
-        self.bind(pos=self._update_bg, size=self._update_bg)
 
         self.search_field = TextInput(
             multiline=False, size_hint_x=1, height=dp(40), font_size=sp(16),
@@ -446,9 +480,10 @@ class SearchBar(MDBoxLayout):
         self.search_field.bind(text=self._on_text_change)
         self.search_field.bind(focus=self._on_focus)
 
-        self.clear_wrapper = MDBoxLayout(
-            size_hint=(None, None), size=(dp(30), dp(30)),
-            pos_hint={'center_y': 0.5}, opacity=0, disabled=True,
+        self.clear_wrapper = MDCard(
+            size_hint=(None, None), size=(dp(30), dp(30)), radius=[dp(15)] * 4,
+            md_bg_color=[0, 0, 0, 0], elevation=0, pos_hint={'center_y': 0.5},
+            opacity=0, disabled=True,
         )
         self.clear_btn = MDIconButton(
             icon="close-circle-outline", size_hint=(1, 1), theme_icon_color="Custom",
@@ -476,15 +511,6 @@ class SearchBar(MDBoxLayout):
         self.update_language()
         self.update_theme_colors()
 
-    def _update_bg(self, *args):
-        if not hasattr(self, 'bg_rect') or self.width <= 0 or self.height <= 0:
-            return
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
-        self.border_line.rounded_rectangle = (
-            self.x, self.y, self.width, self.height, dp(16)
-        )
-
     def update_language(self):
         self.search_field.hint_text = get_text('search', 'Поиск')
         self.search_btn.text = get_text('find', 'Найти')
@@ -497,8 +523,9 @@ class SearchBar(MDBoxLayout):
         line = ChordsColors.get_card_line(theme_id)
 
         if theme_id == 'light':
-            self.bg_color_inst.rgba = [1, 1, 1, 1]
-            self.border_color_inst.rgba = line
+            self.md_bg_color = [1, 1, 1, 1]
+            self.line_color = line
+            self.line_width = 4.0
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
@@ -506,8 +533,9 @@ class SearchBar(MDBoxLayout):
             self.search_btn.md_bg_color = accent
             self.search_btn.text_color = [0, 0, 0, 1]
         elif theme_id == 'dark':
-            self.bg_color_inst.rgba = [0.15, 0.15, 0.15, 1]
-            self.border_color_inst.rgba = line
+            self.md_bg_color = [0.15, 0.15, 0.15, 1]
+            self.line_color = line
+            self.line_width = 4.0
             self.search_field.foreground_color = text_p
             self.search_field.hint_text_color = text_s
             self.search_field.cursor_color = accent
@@ -515,8 +543,9 @@ class SearchBar(MDBoxLayout):
             self.search_btn.md_bg_color = accent
             self.search_btn.text_color = [1, 1, 1, 1]
         else:  # green
-            self.bg_color_inst.rgba = [1, 1, 1, 1]
-            self.border_color_inst.rgba = [0.46, 0.70, 0.71, 0.4]
+            self.md_bg_color = [1, 1, 1, 1]
+            self.line_color = [1, 1, 1, 0.25]
+            self.line_width = 4.0
             self.search_field.foreground_color = [0.1, 0.1, 0.1, 1]
             self.search_field.hint_text_color = [0.55, 0.55, 0.55, 1]
             self.search_field.cursor_color = [0.1, 0.1, 0.1, 1]
@@ -548,8 +577,7 @@ class SearchBar(MDBoxLayout):
         self.search_field.focus = False
 
     def _on_focus(self, instance, value):
-        if hasattr(self, 'border_line') and self.width > 0 and self.height > 0:
-            self.border_line.width = 3 if value else 2
+        self.line_width = 5.0 if value else 4.0
 
     def clear(self):
         self.search_field.text = ""
@@ -560,6 +588,8 @@ class SearchBar(MDBoxLayout):
     def focus(self):
         self.search_field.focus = True
 
+# Классы IconMenuItem, BaseSelectorMenu, TonalitySelectorMenu, TypeSelectorMenu, ChordSelectorMenu, UnifiedMenu
+# Остаются без изменений, копируем из вашего исходника
 
 class IconMenuItem(ButtonBehavior, MDBoxLayout):
     def __init__(self, icon_name, on_press=None, is_active=False, icon_color=None, fixed_color=False, **kwargs):
@@ -658,7 +688,7 @@ class BaseSelectorMenu(MDCard):
         theme_id = settings_manager.theme
         self.md_bg_color = ChordsColors.get_menu_bg(theme_id)
         self.line_color = ChordsColors.get_card_line(theme_id)
-        self.line_width = 1.5                          # ← толщина для всех тем
+        self.line_width = 1.5
 
         idle_bg = ChordsColors.get_button_bg(theme_id)
         idle_text = ChordsColors.get_button_text(theme_id)
@@ -845,9 +875,9 @@ class UnifiedMenu(MDCard):
         theme_id = settings_manager.theme
         self.md_bg_color = ChordsColors.get_menu_bg(theme_id)
         self.line_color = ChordsColors.get_card_line(theme_id)
-        self.line_width = 1.5                          # ← толщина для всех тем
+        self.line_width = 1.5
 
-        divider_color = ChordsColors.get_card_line(theme_id)   # мята в green
+        divider_color = ChordsColors.get_card_line(theme_id)
         for child in self.children:
             if isinstance(child, MDBoxLayout) and child.width == dp(1):
                 child.md_bg_color = divider_color
@@ -1121,11 +1151,8 @@ class ChordsScreen(BaseScreen):
 
         content = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
 
-        # === Отступ сверху: BaseScreen уже добавляет top_padding,
-        #     поэтому здесь только «фантом» под алфавит (48dp) ===
         content.add_widget(Widget(size_hint_y=None, height=dp(48)))
 
-        # === Поиск: как в songs_screen ===
         search_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, None), height=dp(48),
             padding=[padding[0], 0, padding[2], 0],
@@ -1143,7 +1170,7 @@ class ChordsScreen(BaseScreen):
         self.search_status_label.text_size = (None, None)
         content.add_widget(self.search_status_label)
 
-        content.add_widget(Widget(size_hint_y=None, height=dp(4)))
+        content.add_widget(Widget(size_hint_y=None, height=dp(32)))
 
         self.swipe_container = SwipeContainer(on_swipe_horizontal=self._on_swipe_horizontal)
         self.swipe_container.size_hint = (1, None)
@@ -1184,7 +1211,7 @@ class ChordsScreen(BaseScreen):
         self.build_ui(
             content_widget=content,
             use_scroll=False,
-            custom_padding=[0, 0, 0, 0],   # ← убираем padding BaseScreen, чтобы поиск ровно как в songs
+            custom_padding=[0, 0, 0, 0],
         )
 
         Clock.schedule_once(self._update_griff_size, 0.1)
@@ -1229,7 +1256,9 @@ class ChordsScreen(BaseScreen):
         self.current_variant_index = (self.current_variant_index + step) % total
         self.current_position = self.current_variant_index + 1
         self._update_display()
-        self._show_temporary_hint(f"{get_text('variant', 'Вариант')} {self.current_position}/{total}", 1.0)
+
+        # ✅ Убрали /{total}
+        self._show_temporary_hint(f"{get_text('variant', 'Вариант')} {self.current_position}", 1.0)
 
     def _show_selector(self, selector):
         if self.unified_menu:
@@ -1424,6 +1453,8 @@ class ChordsScreen(BaseScreen):
         if self.swipe_container:
             self.swipe_container.carousel.load_next()
         self._update_display()
+
+        # ✅ Убрали /{total}
         msg = f"{get_text('variant', 'Вариант')} {self.current_position}"
         self._show_temporary_hint(msg, 1.2)
 
@@ -1783,6 +1814,11 @@ class ChordsScreen(BaseScreen):
         super().on_enter()
 
         self.update_theme_colors()
+
+        # ✅ ПРИНУДИТЕЛЬНО ПЕРЕСОЗДАЁМ СЛАЙДЫ ПРИ ВХОДЕ, ЧТОБЫ ОБНОВИТЬ ЦВЕТА СТРЕЛОК
+        if self.swipe_container and self.current_variants:
+            Clock.schedule_once(lambda dt: self._rebuild_slides_for_current_chord(), 0.05)
+
         Clock.schedule_once(self._update_griff_size, 0.1)
         Clock.schedule_once(self._update_griff_size, 0.3)
         pending_chord = screen_state.get_pending_chord()
