@@ -20,7 +20,7 @@ from config.logger_config import get_logger
 from config.system_bars import get_status_bar_height, get_screen_density
 from config.top_nav_config import top_nav_config
 from utils.screen_state import screen_state
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 
 logger = get_logger('TopNav')

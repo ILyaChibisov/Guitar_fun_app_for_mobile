@@ -27,6 +27,7 @@ from kivymd.app import MDApp
 from config.logger_config import get_logger
 from config.system_bars import get_status_bar_height, get_navigation_bar_height
 from api.client import api
+from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 
 logger = get_logger('Sidebar')
 
@@ -473,9 +474,9 @@ class Sidebar(FloatLayout):
             logger.info(f"ℹ️ Уже на экране {screen_name}")
             return
 
-        from utils.screen_state import screen_state
+        # ✅ Прямой вызов previous_screen_state вместо screen_state
         prev = self.sm.current
-        screen_state.set_previous_screen(prev)
+        previous_screen_state.set_previous(prev)
         logger.info(f"📌 Запомнили предыдущий экран: {prev}")
 
         def do_navigation(dt):

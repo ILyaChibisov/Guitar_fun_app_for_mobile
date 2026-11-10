@@ -39,7 +39,7 @@ from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from utils.notifications import notify
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 
 logger = screen_logger('Tuner')

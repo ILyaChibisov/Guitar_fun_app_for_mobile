@@ -4,7 +4,7 @@
 Ключи сгруппированы по экранам/модулям.
 """
 from config.logger_config import get_logger
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state as settings_manager
 
 logger = get_logger('Localization')
 

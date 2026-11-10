@@ -24,7 +24,7 @@ from kivymd.app import MDApp
 from config.theme import theme
 from config.logger_config import get_logger
 from config.system_bars import get_navigation_bar_height
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 
 logger = get_logger('BottomNav')

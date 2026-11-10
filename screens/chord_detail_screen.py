@@ -34,7 +34,7 @@ from screens.chord_renderer import ChordRenderer
 from utils.notifications import notify
 from utils.screen_state import screen_state
 from api.chords_client import get_chords_client
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 
 logger = screen_logger('ChordDetail')

@@ -37,8 +37,9 @@ from screens.chord_renderer import ChordRenderer
 from utils.notifications import notify
 from utils.screen_state import screen_state
 from api.chords_client import get_chords_client
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
+from state.chords_state import chords_state  # ✅ НОВЫЙ ИМПОРТ
 
 logger = screen_logger('Chords')
 
@@ -48,7 +49,6 @@ try:
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
 
     def load_asset_as_bytes(name):
         return None
@@ -226,9 +226,9 @@ class SwipeContainer(MDBoxLayout):
         self.chord_alt_label.text_color = ChordsColors.get_text_secondary(theme_id)
 
         if theme_id == 'light':
-            arrow_color = [0.2, 0.2, 0.2, 1]  # Ярко-черные
+            arrow_color = [0.2, 0.2, 0.2, 1]
         else:
-            arrow_color = [1, 1, 1, 1]        # Ярко-белые
+            arrow_color = [1, 1, 1, 1]
 
         if hasattr(self, 'left_arrow') and self.left_arrow:
             self.left_arrow.text_color = arrow_color
@@ -457,7 +457,6 @@ class SwipeContainer(MDBoxLayout):
 
 
 class SearchBar(MDCard):
-    # (код поисковой строки остается без изменений)
     def __init__(self, on_search=None, on_clear=None, **kwargs):
         super().__init__(**kwargs)
         self.on_search = on_search
@@ -588,8 +587,6 @@ class SearchBar(MDCard):
     def focus(self):
         self.search_field.focus = True
 
-# Классы IconMenuItem, BaseSelectorMenu, TonalitySelectorMenu, TypeSelectorMenu, ChordSelectorMenu, UnifiedMenu
-# Остаются без изменений, копируем из вашего исходника
 
 class IconMenuItem(ButtonBehavior, MDBoxLayout):
     def __init__(self, icon_name, on_press=None, is_active=False, icon_color=None, fixed_color=False, **kwargs):
@@ -962,6 +959,23 @@ class ChordsScreen(BaseScreen):
         self._request_id = 0
         self._pending_chord_list = None
 
+        # ✅ Восстанавливаем состояние из кэша
+        saved = chords_state.get(allow_stale=True)
+        if saved:
+            self.current_tonality = saved.get('current_tonality', 'A')
+            self.current_type = saved.get('current_type', 'Major')
+            self.current_chord_name = saved.get('current_chord_name', 'A')
+            self.current_variant_index = saved.get('current_variant_index', 0)
+            self.current_mode = saved.get('current_mode', 'finger')
+            try:
+                self.current_tonality_index = TONALITIES.index(self.current_tonality)
+                self.current_type_index = CHORD_TYPES.index(self.current_type)
+            except ValueError:
+                pass
+            logger.info(f"♻️ Chords: восстановлено из state: ton={self.current_tonality}, "
+                        f"type={self.current_type}, chord={self.current_chord_name}, "
+                        f"mode={self.current_mode}")
+
         self.init_ui()
         self.load_background()
 
@@ -1084,6 +1098,13 @@ class ChordsScreen(BaseScreen):
         self.swipe_container.update_renderer_mode(self.current_mode)
         if self.current_variants: self.swipe_container.set_current_slide(self.current_variant_index)
 
+        # ✅ Помечаем слайды как построенные для этой темы
+        chords_state.mark_slides_built(
+            settings_manager.theme,
+            self.current_chord_name,
+            self.current_variants,
+        )
+
     def _dict_to_module(self, data: dict):
         class _FakeModule: pass
 
@@ -1112,6 +1133,13 @@ class ChordsScreen(BaseScreen):
             self.swipe_container.add_slide(module)
         self.swipe_container.update_renderer_mode(self.current_mode)
         if self.current_variants: self.swipe_container.set_current_slide(self.current_variant_index)
+
+        # ✅ Помечаем слайды как построенные для этой темы
+        chords_state.mark_slides_built(
+            settings_manager.theme,
+            self.current_chord_name,
+            self.current_variants,
+        )
 
     def _update_display(self):
         if not self.current_variants: return
@@ -1256,8 +1284,6 @@ class ChordsScreen(BaseScreen):
         self.current_variant_index = (self.current_variant_index + step) % total
         self.current_position = self.current_variant_index + 1
         self._update_display()
-
-        # ✅ Убрали /{total}
         self._show_temporary_hint(f"{get_text('variant', 'Вариант')} {self.current_position}", 1.0)
 
     def _show_selector(self, selector):
@@ -1453,8 +1479,6 @@ class ChordsScreen(BaseScreen):
         if self.swipe_container:
             self.swipe_container.carousel.load_next()
         self._update_display()
-
-        # ✅ Убрали /{total}
         msg = f"{get_text('variant', 'Вариант')} {self.current_position}"
         self._show_temporary_hint(msg, 1.2)
 
@@ -1591,12 +1615,23 @@ class ChordsScreen(BaseScreen):
             self.update_available_chords()
 
     def scan_chords(self):
+        # ✅ Если уже сканировали — берём из кэша
+        if chords_state.is_scan_done():
+            self.all_chords = chords_state.get_all_chords()
+            self.update_available_chords()
+            self._data_loaded = True
+            logger.info(f"♻️ Chords: восстановлено {len(self.all_chords)} аккордов из кэша")
+            return
+
         self.all_chords = []
         try:
             import chords
             self._scan_module_recursive(chords, 'chords')
         except Exception:
             pass
+
+        # ✅ Сохраняем в кэш
+        chords_state.set_all_chords(self.all_chords)
         self.update_available_chords()
         self._data_loaded = True
 
@@ -1810,14 +1845,31 @@ class ChordsScreen(BaseScreen):
             Clock.unschedule(self._update_griff_timer)
         self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.15)
 
+    def _save_state(self):
+        """✅ Сохраняет текущее состояние в chords_state."""
+        chords_state.save({
+            'current_tonality': self.current_tonality,
+            'current_type': self.current_type,
+            'current_chord_name': self.current_chord_name,
+            'current_variant_index': self.current_variant_index,
+            'current_mode': self.current_mode,
+        })
+
     def on_enter(self):
         super().on_enter()
 
         self.update_theme_colors()
 
-        # ✅ ПРИНУДИТЕЛЬНО ПЕРЕСОЗДАЁМ СЛАЙДЫ ПРИ ВХОДЕ, ЧТОБЫ ОБНОВИТЬ ЦВЕТА СТРЕЛОК
-        if self.swipe_container and self.current_variants:
+        # ✅ Пересоздаём слайды ТОЛЬКО если тема/аккорд/варианты изменились
+        theme_id = settings_manager.theme
+        can_reuse = chords_state.can_reuse_slides(
+            theme_id, self.current_chord_name, self.current_variants
+        )
+        if self.swipe_container and self.current_variants and not can_reuse:
             Clock.schedule_once(lambda dt: self._rebuild_slides_for_current_chord(), 0.05)
+            logger.info(f"🔄 Chords: пересоздание слайдов (theme={theme_id}, chord={self.current_chord_name})")
+        else:
+            logger.debug(f"♻️ Chords: слайды переиспользованы (theme={theme_id}, chord={self.current_chord_name})")
 
         Clock.schedule_once(self._update_griff_size, 0.1)
         Clock.schedule_once(self._update_griff_size, 0.3)
@@ -1833,6 +1885,8 @@ class ChordsScreen(BaseScreen):
         self._close_chord_selector()
         if self.swipe_container and self._current_alt_names:
             self.swipe_container.update_chord_name(self._current_main_name, self._current_alt_names)
+
+        self._save_state()
 
     def _show_back_button(self):
         try:
@@ -1852,6 +1906,9 @@ class ChordsScreen(BaseScreen):
             self._hint_timer = None
         if self.swipe_container:
             self.swipe_container._stop_alt_cycle()
+
+        # ✅ Сохраняем состояние при выходе
+        self._save_state()
 
     def go_back(self, instance=None):
         if self.manager and self.manager.has_screen('home'):

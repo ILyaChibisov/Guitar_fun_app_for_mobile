@@ -24,7 +24,7 @@ from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
 from utils.screen_state import screen_state
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 from state.search_state import search_state
 from screens.components.loading_spinner import LoadingSpinner

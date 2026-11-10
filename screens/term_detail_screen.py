@@ -21,7 +21,7 @@ from kivymd.uix.scrollview import MDScrollView
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
-from utils.settings_manager import settings_manager
+from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 from api.client import api
 from utils.notifications import notify
