@@ -1386,13 +1386,21 @@ class ChordsScreen(BaseScreen):
         if not selected_chord or selected_chord == self.current_chord_name:
             self._restore_unified()
             return
+
+        # 1) Мгновенно обновляем имя
         self.current_chord_name = selected_chord
         if selected_chord in self.available_chords:
             self.current_chord_index = self.available_chords.index(selected_chord)
-        self._load_variants_for_chord(self.current_chord_name)
         if self.unified_menu:
             self.unified_menu.update_chord(len(self.available_chords))
-        self._restore_unified()
+
+        # 2) Задержка, чтобы увидеть выделение
+        def _after_delay(dt):
+            self._restore_unified()
+            self._show_hint(get_text('loading', 'Загрузка...'))
+            Clock.schedule_once(lambda dt2: self._load_variants_for_chord(self.current_chord_name), 0.05)
+
+        Clock.schedule_once(_after_delay, 0.25)
 
     def _close_chord_selector(self):
         self._restore_unified()
@@ -1454,6 +1462,7 @@ class ChordsScreen(BaseScreen):
         self._show_hint(get_text('choose_tonality', "Выберите тональность"))
 
     def _on_tonality_confirmed(self, selected_tonality):
+        # 1) Мгновенно обновляем состояние (квадратик уже выделился)
         self.current_tonality = selected_tonality
         self.current_tonality_index = TONALITIES.index(selected_tonality)
         self.is_search_mode = False
@@ -1463,8 +1472,14 @@ class ChordsScreen(BaseScreen):
         self.current_variants = []
         self.current_variant_index = 0
         self.current_position = 1
-        self.update_available_chords()
-        self._restore_unified()
+
+        # 2) Небольшая задержка, чтобы пользователь увидел выделение
+        def _after_delay(dt):
+            self._restore_unified()
+            self._show_hint(get_text('loading', 'Загрузка...'))
+            Clock.schedule_once(lambda dt2: self.update_available_chords(), 0.05)
+
+        Clock.schedule_once(_after_delay, 0.25)
 
     def _close_tonality_selector(self):
         self._restore_unified()
@@ -1478,6 +1493,7 @@ class ChordsScreen(BaseScreen):
         self._show_hint(get_text('choose_type', "Выберите тип аккорда"))
 
     def _on_type_confirmed(self, selected_type):
+        # 1) Мгновенно обновляем состояние
         self.current_type = selected_type
         self.current_type_index = CHORD_TYPES.index(selected_type)
         self.is_search_mode = False
@@ -1487,8 +1503,14 @@ class ChordsScreen(BaseScreen):
         self.current_variants = []
         self.current_variant_index = 0
         self.current_position = 1
-        self.update_available_chords()
-        self._restore_unified()
+
+        # 2) Задержка, чтобы увидеть выделение
+        def _after_delay(dt):
+            self._restore_unified()
+            self._show_hint(get_text('loading', 'Загрузка...'))
+            Clock.schedule_once(lambda dt2: self.update_available_chords(), 0.05)
+
+        Clock.schedule_once(_after_delay, 0.25)
 
     def _close_type_selector(self):
         self._restore_unified()
@@ -1749,6 +1771,7 @@ class ChordsScreen(BaseScreen):
             self.available_chords = []
             self._pending_chord_list = []
             if self.unified_menu: self.unified_menu.update_chord(0)
+            self._show_temporary_hint(get_text('loading_error', 'Ошибка загрузки'), 2.0)
 
         self._chords_client.get_available_chords(self.current_tonality, self.current_type, on_success=_on_list,
                                                  on_error=_on_err)
@@ -1821,6 +1844,7 @@ class ChordsScreen(BaseScreen):
             self.current_variant_index = 0
             self.current_position = 1
             if self.unified_menu: self.unified_menu.update_variants(0)
+            self._show_temporary_hint(get_text('loading_error', 'Ошибка загрузки'), 2.0)
 
         self._chords_client.get_chord(chord_name, self.current_type, on_success=_on_success, on_error=_on_error)
 
