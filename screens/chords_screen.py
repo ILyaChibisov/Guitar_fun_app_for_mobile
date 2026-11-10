@@ -35,11 +35,11 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
 from utils.notifications import notify
-from utils.screen_state import screen_state
+from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 from api.chords_client import get_chords_client
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
-from state.chords_state import chords_state  # ✅ НОВЫЙ ИМПОРТ
+from state.chords_state import chords_state  # ✅ Импорт стейта
 
 logger = screen_logger('Chords')
 
@@ -1873,11 +1873,13 @@ class ChordsScreen(BaseScreen):
 
         Clock.schedule_once(self._update_griff_size, 0.1)
         Clock.schedule_once(self._update_griff_size, 0.3)
-        pending_chord = screen_state.get_pending_chord()
+
+        # ✅ Прямой вызов previous_screen_state
+        pending_chord = previous_screen_state.get_pending_chord()
         if pending_chord:
             Clock.schedule_once(lambda dt: self.select_chord_by_name(pending_chord), 0.1)
-            screen_state.clear_pending_chord()
-        previous_screen = screen_state.get_previous_screen()
+            previous_screen_state.clear_pending_chord()
+        previous_screen = previous_screen_state.get_previous()
         if previous_screen:
             Clock.schedule_once(lambda dt: self._show_back_button(), 0.3)
         self._close_tonality_selector()

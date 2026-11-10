@@ -25,7 +25,7 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
-from utils.screen_state import screen_state
+from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 from state.dictionary_state import dictionary_state
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
@@ -1340,7 +1340,8 @@ class DictionaryScreen(BaseScreen):
 
     def on_term_selected(self, term_id, term_name):
         self.save_current_state()
-        screen_state.set_previous_screen('dictionary')
+        # ✅ Прямой вызов previous_screen_state
+        previous_screen_state.set_previous('dictionary')
         if self.manager and self.manager.has_screen('term_detail'):
             scr = self.manager.get_screen('term_detail')
             scr.set_term(term_id, previous_screen='dictionary')

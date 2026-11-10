@@ -29,7 +29,8 @@ from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
 from api.client import api
 from utils.notifications import notify
-from utils.screen_state import screen_state
+from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
+from state.artist_songs_state import artist_songs_state    # ✅ Прямой импорт
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 from utils.chord_highlighter import (
@@ -1493,7 +1494,8 @@ class SongDetailScreen(BaseScreen):
         if self.manager:
             if self.previous_screen == 'artist_songs':
                 if self.manager.has_screen('artist_songs'):
-                    artist_data = screen_state.get_artist_songs_data()
+                    # ✅ Прямой вызов artist_songs_state
+                    artist_data = artist_songs_state.get_artist_songs_data()
                     artist_name = artist_data.get('artist_name', '')
                     scroll_pos = artist_data.get('scroll_position', 1.0)
                     artist_screen = self.manager.get_screen('artist_songs')
@@ -1511,7 +1513,8 @@ class SongDetailScreen(BaseScreen):
                             lambda dt: songs_screen.restore_search_state(), 0.1
                         )
 
-            screen_state.clear_pending_chord()
+            # ✅ Прямой вызов previous_screen_state
+            previous_screen_state.clear_pending_chord()
 
             if self.previous_screen and self.manager.has_screen(self.previous_screen):
                 self.manager.current = self.previous_screen

@@ -37,7 +37,7 @@ from screens.base_screen import BaseScreen
 from screens.components.loading_spinner import LoadingSpinner
 from api.client import api
 from utils.notifications import notify
-from utils.screen_state import screen_state
+from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 from state.artist_songs_state import artist_songs_state
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
@@ -346,7 +346,6 @@ class PageCardsContainer(MDBoxLayout):
 
     def _ensure_pool(self, count):
         if len(self._card_pool) > count:
-            # лишние карточки надо удалить
             while len(self._card_pool) > count:
                 card = self._card_pool.pop()
                 if card.parent:
@@ -368,7 +367,6 @@ class PageCardsContainer(MDBoxLayout):
         ) if self.max_cards > 0 else 0
 
     def _apply_pool(self, items, on_click):
-        # ✅ Синхронизируем пул
         self.sync_max_cards(self.max_cards)
 
         for i in range(self.max_cards):
@@ -388,7 +386,6 @@ class PageCardsContainer(MDBoxLayout):
                 card.height = StaticSongCard.CARD_HEIGHT
                 card.opacity = 0
                 card.disabled = True
-            # ✅ Принудительно обновить цвета — вдруг тема сменилась
             card.update_theme_colors()
 
         self.cards = self._card_pool[:len(items)]
@@ -856,7 +853,6 @@ class ArtistSongsScreen(BaseScreen):
             self._cards_right_pad = padding[2]
 
             self.cards_container = PageCardsContainer()
-            # ✅ при инициализации явно синхронизируем
             self.cards_container.sync_max_cards(self._page_size)
             self._cards_wrapper.add_widget(self.cards_container)
 
@@ -905,7 +901,6 @@ class ArtistSongsScreen(BaseScreen):
         if self._cards_wrapper.height <= 1:
             return
 
-        # ✅ Гарантируем, что max_cards совпадает с page_size
         if self.cards_container.max_cards != self._page_size:
             self.cards_container.sync_max_cards(self._page_size)
 
@@ -990,7 +985,6 @@ class ArtistSongsScreen(BaseScreen):
             self._page_size_locked = True
             logger.info(f"📐 PAGE_SIZE(artist_songs) определён: {new_size}")
 
-            # ✅ Сразу синхронизируем пул
             if self.cards_container:
                 self.cards_container.sync_max_cards(new_size)
 
@@ -1272,7 +1266,6 @@ class ArtistSongsScreen(BaseScreen):
             display_key = (self.artist_name, self._page, len(songs_slice), first_song)
             if self._last_display_key != display_key:
                 if self.cards_container:
-                    # ✅ перед set_songs синхронизируем пул
                     self.cards_container.sync_max_cards(self._page_size)
                     self.cards_container.set_songs(songs_slice, self.on_song_selected)
                 self._last_display_key = display_key
@@ -1437,8 +1430,10 @@ class ArtistSongsScreen(BaseScreen):
                 return
             self._saved_scroll_position = 1.0
             self._save_state()
-            screen_state.set_previous_screen('artist_songs')
-            screen_state.set_artist_songs_data(self.artist_name, self._saved_scroll_position)
+            # ✅ Прямой вызов previous_screen_state
+            previous_screen_state.set_previous('artist_songs')
+            # ✅ artist_songs_state уже импортирован напрямую
+            artist_songs_state.set(self.artist_name, self._saved_scroll_position)
             if hasattr(self, 'manager') and self.manager:
                 if self.manager.has_screen('song_detail'):
                     screen = self.manager.get_screen('song_detail')

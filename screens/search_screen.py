@@ -23,7 +23,7 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
-from utils.screen_state import screen_state
+from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 from state.search_state import search_state
@@ -1181,8 +1181,9 @@ class SearchScreen(BaseScreen):
 
     def select_chord(self, chord_name):
         self.save_current_state()
-        screen_state.set_previous_screen('search')
-        screen_state.set_pending_chord(chord_name)
+        # ✅ Прямые вызовы previous_screen_state
+        previous_screen_state.set_previous('search')
+        previous_screen_state.set_pending_chord(chord_name)
         if self.manager and self.manager.has_screen('chord_detail'):
             self.manager.current = 'chord_detail'
 
@@ -1194,7 +1195,7 @@ class SearchScreen(BaseScreen):
                 artist = getattr(child, 'title', '')
                 title = getattr(child, 'subtitle', '')
                 break
-        screen_state.set_previous_screen('search')
+        previous_screen_state.set_previous('search')
         if self.manager and self.manager.has_screen('search_screen_detail'):
             scr = self.manager.get_screen('search_screen_detail')
             scr.set_song(song_id, artist, title)
@@ -1202,7 +1203,7 @@ class SearchScreen(BaseScreen):
 
     def select_term(self, term_id):
         self.save_current_state()
-        screen_state.set_previous_screen('search')
+        previous_screen_state.set_previous('search')
         if self.manager and self.manager.has_screen('search_term_detail'):
             scr = self.manager.get_screen('search_term_detail')
             scr.set_term(term_id, previous_screen='search')

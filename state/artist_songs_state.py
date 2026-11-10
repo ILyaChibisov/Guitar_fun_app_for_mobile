@@ -5,9 +5,7 @@
 Хранит только метаданные (имя исполнителя, страница, total, скролл).
 Списки песен живут в _songs_cache на самом экране.
 
-Есть методы-совместимости с предыдущей версией API (set, clear,
-get_artist_songs_data, has_artist_songs_data) — чтобы старый compat.py
-продолжал работать.
+
 """
 import time
 import threading
@@ -80,7 +78,7 @@ class ArtistSongsStateManager:
                 return None
             return time.time() - self._timestamp
 
-    # ============ Совместимость со старым API (compat.py) ============
+    # ============ Совместимость со старым API () ============
 
     def set(self, artist_name: str, scroll_position: float = 1.0):
         """Совместимость. Вызывает save()."""

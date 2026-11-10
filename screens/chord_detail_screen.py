@@ -32,7 +32,7 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from screens.chord_renderer import ChordRenderer
 from utils.notifications import notify
-from utils.screen_state import screen_state
+from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 from api.chords_client import get_chords_client
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
@@ -643,7 +643,6 @@ class UnifiedMenu(MDCard):
                  on_chord_press=None, on_variants_press=None, on_mode_toggle=None,
                  variants_count=1, current_mode="finger", chord_count=0, **kwargs):
         super().__init__(**kwargs)
-        # ✅ Сохраняем колбэк, чтобы update_chord мог его восстановить
         self._on_chord_press_restore = on_chord_press
 
         self.orientation = 'horizontal'
@@ -697,7 +696,6 @@ class UnifiedMenu(MDCard):
                 child.md_bg_color = ChordsColors.get_card_line(theme_id)
 
     def update_chord(self, chord_count):
-        # ✅ Всегда восстанавливаем колбэк, если аккордов больше 1
         has_chords = chord_count > 1
         self.chord_item.is_active = has_chords
         if has_chords:
@@ -1471,7 +1469,6 @@ class ChordDetailScreen(BaseScreen):
                 return True
             return self._find_and_load_chord_variant(target_chord)
 
-        # Если локально не нашли, идем на сервер (и показываем "Загрузку")
         if self.swipe_container:
             self.swipe_container.update_chord_name(chord_name, [])
         if self._info_label:
@@ -1569,7 +1566,8 @@ class ChordDetailScreen(BaseScreen):
         self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.15)
 
     def go_back(self, instance=None):
-        screen_state.clear_pending_chord()
+        # ✅ Прямой вызов previous_screen_state
+        previous_screen_state.clear_pending_chord()
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.clear_custom_title_widget()
@@ -1584,10 +1582,11 @@ class ChordDetailScreen(BaseScreen):
 
         self.update_theme_colors()
         self._update_griff_size()
-        pending_chord = screen_state.get_pending_chord()
+        # ✅ Прямой вызов previous_screen_state
+        pending_chord = previous_screen_state.get_pending_chord()
         if pending_chord:
             self.select_chord_by_name(pending_chord)
-            screen_state.clear_pending_chord()
+            previous_screen_state.clear_pending_chord()
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.set_custom_title(get_text('chords'))

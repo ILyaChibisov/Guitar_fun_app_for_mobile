@@ -30,7 +30,8 @@ from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from api.client import api
 from utils.notifications import notify
-from utils.screen_state import screen_state
+from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
+from state.artist_songs_state import artist_songs_state    # ✅ Прямой импорт
 from state.songs_state import songs_state
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
@@ -492,7 +493,7 @@ class SongsMenu(MDBoxLayout):
         self.alphabet_menu.set_current(letter)
 
 
-# ============ LONG PRESS MIXIN (С ПОДДЕРЖКОЙ DISABLED) ============
+# ============ LONG PRESS MIXIN ============
 
 class LongPressCardMixin:
     TAP_THRESHOLD = dp(15)
@@ -506,13 +507,10 @@ class LongPressCardMixin:
         self._long_press_triggered = False
 
     def on_touch_down(self, touch):
-        # ✅ невидимые (disabled) не перехватывают касание
         if getattr(self, 'disabled', False) or self.opacity < 0.1:
             return False
-
         if not self.collide_point(*touch.pos):
             return super().on_touch_down(touch)
-
         self._touch_down_pos = touch.pos
         self._long_press_triggered = False
         self._long_press_event = Clock.schedule_once(
@@ -524,19 +522,15 @@ class LongPressCardMixin:
     def on_touch_move(self, touch):
         if touch.grab_current is not self:
             return False
-
         if getattr(self, 'disabled', False) or self.opacity < 0.1:
             return False
-
         if self._touch_down_pos is None:
             return False
-
         dx = touch.x - self._touch_down_pos[0]
         dy = touch.y - self._touch_down_pos[1]
         if (abs(dx) > self.LONG_PRESS_MOVE_TOLERANCE
                 or abs(dy) > self.LONG_PRESS_MOVE_TOLERANCE):
             self._cancel_long_press()
-            # ✅ отдаём касание родителю (wrapper'у) для свайпа
             touch.ungrab(self)
             return False
         return False
@@ -544,29 +538,21 @@ class LongPressCardMixin:
     def on_touch_up(self, touch):
         if touch.grab_current is not self:
             return False
-
         touch.ungrab(self)
-
         if getattr(self, 'disabled', False) or self.opacity < 0.1:
             return False
-
         if self._touch_down_pos is None:
             return False
-
         self._cancel_long_press()
-
         dx = touch.x - self._touch_down_pos[0]
         dy = touch.y - self._touch_down_pos[1]
         was_long = self._long_press_triggered
         self._touch_down_pos = None
         self._long_press_triggered = False
-
         if was_long:
             return True
-
         if abs(dx) < self.TAP_THRESHOLD and abs(dy) < self.TAP_THRESHOLD:
             self._handle_normal_click()
-
         return True
 
     def _trigger_long_press(self, dt):
@@ -732,32 +718,29 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
         else:
             self.icon.text = "🎵"
 
-        # --- ИЗМЕНЕНИЯ ТУТ ---
         text_layout = MDBoxLayout(
             orientation='vertical',
             size_hint_x=1,
             size_hint_y=None,
-            height=dp(36),  # Фиксируем высоту блока под два лейбла (20 + 16)
+            height=dp(36),
             spacing=dp(1),
-            pos_hint={'center_y': 0.5}  # Центрируем весь блок по вертикали
+            pos_hint={'center_y': 0.5}
         )
         self.artist_label = MDLabel(
             font_size=sp(15), size_hint_y=None, height=dp(20),
             theme_text_color="Custom", bold=True,
             shorten=True, shorten_from="right",
-            valign="middle", halign="center"  # Выравниваем текст по центру
+            valign="middle", halign="center"
         )
         self.title_label = MDLabel(
             font_size=sp(12), size_hint_y=None, height=dp(16),
             theme_text_color="Custom",
-            valign="middle", halign="center",  # Выравниваем текст по центру
+            valign="middle", halign="center",
             shorten=True, shorten_from="right"
         )
 
-        # Привязываем ширину для корректной работы центрирования
         self.artist_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
         self.title_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
-        # --------------------
 
         text_layout.add_widget(self.artist_label)
         text_layout.add_widget(self.title_label)
@@ -806,10 +789,6 @@ class StaticSearchSongCard(LongPressCardMixin, MDCard):
 
 
 class PageCardsContainer(MDBoxLayout):
-    """
-    Контейнер карточек с пулом на max_cards.
-    Невидимые карточки-заполнители прозрачны и не перехватывают касания.
-    """
     CARD_TYPE_ARTISTS = 'artists'
     CARD_TYPE_SONGS = 'songs'
 
@@ -930,15 +909,12 @@ class SwipeableCardsWrapper(FloatLayout):
         if not self.collide_point(*touch.pos):
             return super().on_touch_down(touch)
 
-        # ✅ запоминаем старт, но не перехватываем — пусть карточки
-        #    обработают клик первыми
         self._touch_start = touch.pos
         self._touch_start_time = time.perf_counter()
         self._swipe_handled = False
         return super().on_touch_down(touch)
 
     def on_touch_move(self, touch):
-        # ✅ если это свайп — выполняем и поглощаем
         if self._touch_start is not None and not self._swipe_handled:
             dx = touch.x - self._touch_start[0]
             dy = touch.y - self._touch_start[1]
@@ -1446,9 +1422,6 @@ class SongsScreen(BaseScreen):
             Clock.schedule_once(lambda dt: self._recalc_page_size(force=True), 0.3)
 
     def _update_cards_layout(self, count):
-        """
-        Layout фиксирован: max_cards по page_size, top = label_bottom - offset.
-        """
         if not getattr(self, 'cards_container', None):
             return
         if not getattr(self, '_cards_wrapper', None):
@@ -1950,7 +1923,8 @@ class SongsScreen(BaseScreen):
                 return
             self.save_search_state()
             self.save_current_state()
-            screen_state.set_previous_screen('songs')
+            # ✅ Прямой вызов
+            previous_screen_state.set_previous('songs')
             if self.manager:
                 if self.manager.has_screen('search_detail'):
                     self.manager.get_screen('search_detail').set_song(song_id)
@@ -1980,8 +1954,9 @@ class SongsScreen(BaseScreen):
     def on_artist_selected(self, artist, songs_count):
         with perf('songs.action.on_artist_selected', log_every=False):
             self.save_current_state()
-            screen_state.set_previous_screen('songs')
-            screen_state.set_artist_songs_data(artist, 1.0)
+            # ✅ Прямые вызовы
+            previous_screen_state.set_previous('songs')
+            artist_songs_state.set(artist, 1.0)
             if self.manager and self.manager.has_screen('artist_songs'):
                 scr = self.manager.get_screen('artist_songs')
                 scr.artist_name = artist
