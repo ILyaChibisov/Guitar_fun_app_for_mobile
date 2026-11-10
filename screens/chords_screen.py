@@ -1078,7 +1078,7 @@ class ChordsScreen(BaseScreen):
             min_height = dp(200)
             max_height = window_width * 0.6
             griff_height = max(min_height, min(griff_height, max_height))
-            new_height = int(griff_height) + dp(136)
+            new_height = int(griff_height) + dp(100)  # <-- Должно быть 100
             self._griff_height = int(griff_height)
             if abs(self.swipe_container.height - new_height) > 0.5:
                 self.swipe_container.height = new_height
@@ -1201,10 +1201,14 @@ class ChordsScreen(BaseScreen):
 
         Window.bind(on_resize=self._on_window_resize)
 
+        # ✅ Отступ между грифом и меню (увеличен для визуального баланса)
         content.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
+        # ✅ Меню сужено до точной ширины самого рисунка грифа.
+        # dp(36) компенсирует центрирование иконок-стрелок внутри своих контейнеров.
+        menu_padding_side = dp(42)
         menu_wrapper = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60),
-                                   padding=horizontal_padding)
+                                   padding=[menu_padding_side, 0, menu_padding_side, 0])
         self._menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), md_bg_color=[0, 0, 0, 0])
         menu_wrapper.add_widget(self._menu_container)
         content.add_widget(menu_wrapper)
@@ -1866,7 +1870,7 @@ class ChordsScreen(BaseScreen):
             logger.debug(f"♻️ Chords: слайды переиспользованы (theme={theme_id}, chord={self.current_chord_name})")
 
         Clock.schedule_once(self._update_griff_size, 0.1)
-        Clock.schedule_once(self._update_griff_size, 0.3)
+
 
         # ✅ Прямой вызов previous_screen_state
         pending_chord = previous_screen_state.get_pending_chord()
