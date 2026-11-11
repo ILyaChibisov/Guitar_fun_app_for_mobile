@@ -158,6 +158,17 @@ class ChordsColors:
         return [1, 1, 1, 1]
 
 
+class ClickableRendererContainer(ButtonBehavior, MDBoxLayout):
+    """Контейнер для грифа, который умеет реагировать на тап (для увеличения)."""
+    def __init__(self, on_click=None, **kwargs):
+        super().__init__(**kwargs)
+        self.on_click_callback = on_click
+
+    def on_release(self):
+        if self.on_click_callback:
+            self.on_click_callback()
+
+
 class SwipeContainer(MDBoxLayout):
     def __init__(self, on_swipe_horizontal=None, **kwargs):
         super().__init__(**kwargs)
@@ -167,6 +178,7 @@ class SwipeContainer(MDBoxLayout):
         self._touch_moved = False
         self._is_dragging = False
         self._drag_threshold = 20
+        self._fullscreen_overlay = None
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
@@ -278,10 +290,12 @@ class SwipeContainer(MDBoxLayout):
             font_size=sp(28)
         )
 
-        renderer_container = MDBoxLayout(
+        # ✅ Кликабельный контейнер (для увеличения по тапу)
+        renderer_container = ClickableRendererContainer(
             orientation='vertical',
             size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0]
+            md_bg_color=[0, 0, 0, 0],
+            on_click=self._on_griff_click
         )
 
         wrapper.add_widget(self.left_arrow)
@@ -310,6 +324,7 @@ class SwipeContainer(MDBoxLayout):
         if chord_module:
             renderer.load_chord(chord_module)
             renderer.set_mode("finger")
+            renderer.chord_module = chord_module
 
         renderer_container.add_widget(renderer)
 
@@ -458,6 +473,89 @@ class SwipeContainer(MDBoxLayout):
         for renderer in self.renderers:
             renderer.set_mode(mode)
 
+    # ---------- УВЕЛИЧЕНИЕ ГРИФА (оверлей) ----------
+
+    def _on_griff_click(self):
+        """Обработчик тапа по грифу — открывает увеличенную копию."""
+        if not self.slides or not self.renderers:
+            return
+        idx = self.current_index
+        if idx >= len(self.renderers):
+            return
+        current_renderer = self.renderers[idx]
+        chord_module = getattr(current_renderer, 'chord_module', None)
+        self._open_fullscreen_griff(chord_module)
+
+    def _open_fullscreen_griff(self, chord_module):
+        if self._fullscreen_overlay is not None:
+            return
+
+        overlay = FloatLayout(size_hint=(1, 1))
+
+        with overlay.canvas.before:
+            Color(0, 0, 0, 0.85)
+            overlay._bg_rect = Rectangle(pos=overlay.pos, size=overlay.size)
+        overlay.bind(
+            pos=lambda inst, val: setattr(overlay._bg_rect, 'pos', val),
+            size=lambda inst, val: setattr(overlay._bg_rect, 'size', val),
+        )
+
+        big_renderer = ChordRenderer(size_hint=(1, 1))
+        theme_id = settings_manager.theme
+        big_renderer.set_fret_color("black" if theme_id == "light" else "white")
+
+        try:
+            bg_data = load_asset_as_bytes("griff_png")
+            if bg_data:
+                img = CoreImage(BytesIO(bg_data), ext="png")
+                if img and img.texture:
+                    big_renderer.set_background(img.texture)
+        except Exception as e:
+            logger.error(f"Ошибка загрузки фона грифа в оверлее: {e}")
+
+        if chord_module:
+            big_renderer.load_chord(chord_module)
+            big_renderer.set_mode("finger")
+
+        renderer_wrapper = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(0.95, 0.7),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            padding=[dp(10), dp(10), dp(10), dp(10)],
+        )
+        renderer_wrapper.add_widget(big_renderer)
+        overlay.add_widget(renderer_wrapper)
+
+        overlay.bind(on_touch_down=self._on_overlay_touch)
+
+        overlay.opacity = 0
+        Animation(opacity=1, duration=0.2).start(overlay)
+
+        self._fullscreen_overlay = overlay
+        app = MDApp.get_running_app()
+        if app and app.root:
+            app.root.add_widget(overlay)
+
+    def _on_overlay_touch(self, instance, touch):
+        if self._fullscreen_overlay is None:
+            return False
+        self._close_fullscreen_griff()
+        return True
+
+    def _close_fullscreen_griff(self):
+        overlay = self._fullscreen_overlay
+        if overlay is None:
+            return
+
+        def _remove(dt):
+            if overlay.parent:
+                overlay.parent.remove_widget(overlay)
+            self._fullscreen_overlay = None
+
+        anim = Animation(opacity=0, duration=0.15)
+        anim.bind(on_complete=_remove)
+        anim.start(overlay)
+
 
 class SearchBar(MDCard):
     def __init__(self, on_search=None, on_clear=None, **kwargs):
@@ -602,7 +700,7 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-        self.padding = [0, 0, 0, 0]  # Убрали отступы, чтобы центрировать точно
+        self.padding = [0, 0, 0, 0]
         self.spacing = dp(0)
         self.md_bg_color = [0, 0, 0, 0]
 
@@ -1127,7 +1225,7 @@ class ChordsScreen(BaseScreen):
             min_height = dp(200)
             max_height = window_width * 0.6
             griff_height = max(min_height, min(griff_height, max_height))
-            new_height = int(griff_height) + dp(100)  # Уменьшен резерв под грифом
+            new_height = int(griff_height) + dp(100)
             self._griff_height = int(griff_height)
             if abs(self.swipe_container.height - new_height) > 0.5:
                 self.swipe_container.height = new_height
