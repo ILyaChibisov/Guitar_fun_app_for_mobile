@@ -433,13 +433,16 @@ class SwipeContainer(MDBoxLayout):
         anim_in.start(self.chord_alt_label)
 
     def on_touch_down(self, touch):
+        # Сначала даём шанс дочерним виджетам (кнопке-грифу) обработать тач
+        if super().on_touch_down(touch):
+            return True
         if self.collide_point(*touch.pos):
             self._touch_start_x, self._touch_start_y = touch.x, touch.y
             self._touch_moved = False
             self._is_dragging = False
             touch.grab(self)
             return True
-        return super().on_touch_down(touch)
+        return False
 
     def on_touch_move(self, touch):
         if touch.grab_current is self:
@@ -547,7 +550,7 @@ class SwipeContainer(MDBoxLayout):
         if overlay is None:
             return
 
-        def _remove(dt):
+        def _remove(animation, widget):
             if overlay.parent:
                 overlay.parent.remove_widget(overlay)
             self._fullscreen_overlay = None
