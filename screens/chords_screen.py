@@ -602,12 +602,12 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
-        self.padding = [dp(4), dp(6), dp(4), dp(6)]
+        self.padding = [0, 0, 0, 0]  # Убрали отступы, чтобы центрировать точно
         self.spacing = dp(0)
         self.md_bg_color = [0, 0, 0, 0]
 
         self.icon_btn = MDIconButton(
-            icon=icon_name, size_hint=(None, None), size=(dp(32), dp(32)),
+            icon=icon_name, size_hint=(1, 1), size_hint_min=(None, None),
             pos_hint={'center_x': 0.5, 'center_y': 0.5}, theme_icon_color="Custom",
             icon_color=self.icon_color, md_bg_color=[0, 0, 0, 0], ripple_scale=0
         )
@@ -1250,7 +1250,7 @@ class ChordsScreen(BaseScreen):
 
         content.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
-        menu_padding_side = dp(42)
+        menu_padding_side = dp(38)
         menu_wrapper = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(64),
                                    padding=[menu_padding_side, 0, menu_padding_side, 0])
 
