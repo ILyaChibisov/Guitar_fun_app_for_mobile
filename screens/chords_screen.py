@@ -20,10 +20,12 @@ from kivy.animation import Animation
 from kivy.uix.carousel import Carousel
 from kivy.graphics import Color, Rectangle
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.label import Label
 from io import BytesIO
 import pkgutil
 import importlib
 import re
+import time
 
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
@@ -44,7 +46,6 @@ try:
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
 
     def load_asset_as_bytes(name):
         return None
@@ -170,15 +171,25 @@ class ClickableRendererContainer(ButtonBehavior, MDBoxLayout):
 
 
 class SwipeContainer(MDBoxLayout):
-    def __init__(self, on_swipe_horizontal=None, **kwargs):
+    def __init__(self, on_swipe_horizontal=None, show_arrows=True, show_name=True, screen=None, **kwargs):
         super().__init__(**kwargs)
         self.on_swipe_horizontal = on_swipe_horizontal
+        self.show_arrows = show_arrows
+        self.show_name = show_name
+        self.screen = screen
         self._touch_start_x = 0
         self._touch_start_y = 0
+        self._touch_start_time = 0
         self._touch_moved = False
         self._is_dragging = False
         self._drag_threshold = 20
         self._fullscreen_overlay = None
+        self._big_swipe = None
+        # Ссылки на элементы оверлея
+        self._overlay_name_label = None
+        self._overlay_left_btn = None
+        self._overlay_right_btn = None
+        self._overlay_mode_btn = None
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
@@ -187,10 +198,11 @@ class SwipeContainer(MDBoxLayout):
         self.spacing = 0
 
         self.name_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None), height=dp(110),
-            padding=[dp(8), dp(22), dp(8), dp(12)],
+            orientation='vertical', size_hint=(1, None), height=dp(110) if show_name else 0,
+            padding=[dp(8), dp(22), dp(8), dp(12)] if show_name else [0, 0, 0, 0],
             spacing=dp(6),
-            md_bg_color=[0, 0, 0, 0]
+            md_bg_color=[0, 0, 0, 0],
+            opacity=1 if show_name else 0,
         )
 
         self.chord_name_card = MDCard(
@@ -272,35 +284,35 @@ class SwipeContainer(MDBoxLayout):
             md_bg_color=[0, 0, 0, 0]
         )
 
-        self.left_arrow = MDIcon(
-            icon="chevron-left",
-            size_hint=(None, 1),
-            width=dp(24),
-            theme_text_color="Custom",
-            text_color=arrow_color,
-            font_size=sp(28)
-        )
+        if self.show_arrows:
+            self.left_arrow = MDIcon(
+                icon="chevron-left",
+                size_hint=(None, 1),
+                width=dp(24),
+                theme_text_color="Custom",
+                text_color=arrow_color,
+                font_size=sp(28)
+            )
+            self.right_arrow = MDIcon(
+                icon="chevron-right",
+                size_hint=(None, 1),
+                width=dp(24),
+                theme_text_color="Custom",
+                text_color=arrow_color,
+                font_size=sp(28)
+            )
+            wrapper.add_widget(self.left_arrow)
 
-        self.right_arrow = MDIcon(
-            icon="chevron-right",
-            size_hint=(None, 1),
-            width=dp(24),
-            theme_text_color="Custom",
-            text_color=arrow_color,
-            font_size=sp(28)
-        )
-
-        # ✅ Кликабельный контейнер (для увеличения по тапу)
         renderer_container = ClickableRendererContainer(
             orientation='vertical',
             size_hint=(1, 1),
             md_bg_color=[0, 0, 0, 0],
             on_click=self._on_griff_click
         )
-
-        wrapper.add_widget(self.left_arrow)
         wrapper.add_widget(renderer_container)
-        wrapper.add_widget(self.right_arrow)
+
+        if self.show_arrows:
+            wrapper.add_widget(self.right_arrow)
 
         return wrapper, renderer_container
 
@@ -340,19 +352,32 @@ class SwipeContainer(MDBoxLayout):
         self.renderers = []
         self.current_index = 0
 
-    def set_current_slide(self, index):
+    def set_current_slide(self, index, animate=True):
         if 0 <= index < len(self.slides):
             self._programmatic_slide = True
-            self.carousel.load_slide(self.slides[index])
+            if animate:
+                self.carousel.load_slide(self.slides[index])
+                Clock.schedule_once(lambda dt: setattr(self, '_programmatic_slide', False), 0.35)
+            else:
+                old_duration = self.carousel.anim_move_duration
+                self.carousel.anim_move_duration = 0
+                self.carousel.load_slide(self.slides[index])
+                self.carousel.anim_move_duration = old_duration
+                self._programmatic_slide = False
             self.current_index = index
-            Clock.schedule_once(lambda dt: setattr(self, '_programmatic_slide', False), 0.35)
 
     def _on_carousel_slide(self, instance, slide):
-        if not self.slides: return
+        if not self.slides:
+            return
         try:
             index = self.slides.index(slide)
             if index != self.current_index:
                 self.current_index = index
+                if not self._programmatic_slide and self.screen:
+                    if self is self.screen.swipe_container:
+                        self.screen._on_carousel_index_changed(index)
+                    elif self is self.screen.swipe_container._big_swipe:
+                        self.screen._on_carousel_index_changed(index, from_overlay=True)
         except ValueError:
             pass
 
@@ -433,11 +458,11 @@ class SwipeContainer(MDBoxLayout):
         anim_in.start(self.chord_alt_label)
 
     def on_touch_down(self, touch):
-        # Сначала даём шанс дочерним виджетам (кнопке-грифу) обработать тач
         if super().on_touch_down(touch):
             return True
         if self.collide_point(*touch.pos):
             self._touch_start_x, self._touch_start_y = touch.x, touch.y
+            self._touch_start_time = time.time()
             self._touch_moved = False
             self._is_dragging = False
             touch.grab(self)
@@ -461,11 +486,11 @@ class SwipeContainer(MDBoxLayout):
                 dy = touch.y - self._touch_start_y
                 if abs(dx) > 50 and abs(dx) > abs(dy):
                     if dx < 0:
-                        if self.on_swipe_horizontal: self.on_swipe_horizontal(1)
-                        self.carousel.load_next()
+                        if self.on_swipe_horizontal:
+                            self.on_swipe_horizontal(1)
                     else:
-                        if self.on_swipe_horizontal: self.on_swipe_horizontal(-1)
-                        self.carousel.load_previous()
+                        if self.on_swipe_horizontal:
+                            self.on_swipe_horizontal(-1)
             touch.ungrab(self)
             self._touch_moved = False
             self._is_dragging = False
@@ -479,7 +504,6 @@ class SwipeContainer(MDBoxLayout):
     # ---------- УВЕЛИЧЕНИЕ ГРИФА (оверлей) ----------
 
     def _on_griff_click(self):
-        """Обработчик тапа по грифу — открывает увеличенную копию."""
         if not self.slides or not self.renderers:
             return
         idx = self.current_index
@@ -489,6 +513,58 @@ class SwipeContainer(MDBoxLayout):
         chord_module = getattr(current_renderer, 'chord_module', None)
         self._open_fullscreen_griff(chord_module)
 
+    def _update_overlay_name(self):
+        if not self.screen or not self._fullscreen_overlay:
+            return
+        if self._overlay_name_label is not None:
+            name_text = self.screen._current_main_name or "?"
+            self._overlay_name_label.text = name_text
+            base_font_sp = 76 if len(name_text) <= 4 else (56 if len(name_text) <= 8 else 42)
+            self._overlay_name_label.font_size = sp(base_font_sp)
+
+    def _on_name_label_touch(self, instance, touch):
+        if instance.collide_point(*touch.pos):
+            self._close_fullscreen_griff()
+            return True
+        return False
+
+    def _on_swipe_horizontal_from_overlay(self, step):
+        if not self.screen:
+            return
+        scr = self.screen
+        if not scr.current_variants or len(scr.current_variants) <= 1:
+            return
+        total = len(scr.current_variants)
+        scr.current_variant_index = (scr.current_variant_index + step) % total
+        scr.current_position = scr.current_variant_index + 1
+
+        if scr.swipe_container:
+            scr.swipe_container.set_current_slide(scr.current_variant_index)
+
+        if self._big_swipe:
+            self._big_swipe.set_current_slide(scr.current_variant_index)
+
+        scr._update_display()
+        self._update_overlay_name()
+        self._update_overlay_menu()
+
+    def _next_variant_in_overlay(self):
+        self._on_swipe_horizontal_from_overlay(1)
+
+    def _toggle_mode_in_overlay(self):
+        if not self.screen:
+            return
+        scr = self.screen
+        if scr.current_mode == "finger":
+            scr.current_mode = "notes"
+        else:
+            scr.current_mode = "finger"
+        if scr.swipe_container:
+            scr.swipe_container.update_renderer_mode(scr.current_mode)
+        if self._big_swipe:
+            self._big_swipe.update_renderer_mode(scr.current_mode)
+        self._update_overlay_menu()
+
     def _open_fullscreen_griff(self, chord_module):
         if self._fullscreen_overlay is not None:
             return
@@ -496,42 +572,156 @@ class SwipeContainer(MDBoxLayout):
         overlay = FloatLayout(size_hint=(1, 1))
 
         with overlay.canvas.before:
-            Color(0, 0, 0, 0.85)
+            Color(0, 0, 0, 0.92)
             overlay._bg_rect = Rectangle(pos=overlay.pos, size=overlay.size)
         overlay.bind(
             pos=lambda inst, val: setattr(overlay._bg_rect, 'pos', val),
             size=lambda inst, val: setattr(overlay._bg_rect, 'size', val),
         )
 
-        big_renderer = ChordRenderer(size_hint=(1, 1))
-        theme_id = settings_manager.theme
-        big_renderer.set_fret_color("black" if theme_id == "light" else "white")
+        # Максимально крупный размер грифа (как в исходном варианте)
+        griff_height = max(dp(300), Window.width * 0.65)
 
-        try:
-            bg_data = load_asset_as_bytes("griff_png")
-            if bg_data:
-                img = CoreImage(BytesIO(bg_data), ext="png")
-                if img and img.texture:
-                    big_renderer.set_background(img.texture)
-        except Exception as e:
-            logger.error(f"Ошибка загрузки фона грифа в оверлее: {e}")
-
-        if chord_module:
-            big_renderer.load_chord(chord_module)
-            big_renderer.set_mode("finger")
-
-        renderer_wrapper = MDBoxLayout(
+        main_box = MDBoxLayout(
             orientation='vertical',
-            size_hint=(0.95, 0.7),
+            size_hint=(1, None),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            padding=[dp(10), dp(10), dp(10), dp(10)],
+            padding=[dp(4), 0, dp(4), 0],
+            spacing=0,
         )
-        renderer_wrapper.add_widget(big_renderer)
-        overlay.add_widget(renderer_wrapper)
+        main_box.bind(minimum_height=main_box.setter('height'))
 
+        # 1) Крупное ЖИРНОЕ название аккорда на базе стандартного Kivy Label
+        name_text = self.screen._current_main_name if self.screen else "?"
+        base_font_sp = 76 if len(name_text) <= 4 else (56 if len(name_text) <= 8 else 42)
+
+        name_label = Label(
+            text=name_text,
+            font_size=sp(base_font_sp),
+            bold=True,
+            halign="center",
+            valign="middle",
+            size_hint=(1, None),
+            height=dp(88),
+            color=ChordsColors.get_chord_name_color(settings_manager.theme),
+        )
+        name_label.text_size = (Window.width - dp(16), dp(88))
+        name_label.bind(on_touch_down=self._on_name_label_touch)
+        self._overlay_name_label = name_label
+        main_box.add_widget(name_label)
+
+        # Небольшой отступ между названием и грифом (поднимает название выше)
+        main_box.add_widget(Widget(size_hint_y=None, height=dp(16)))
+
+        # 2) Карусель с максимально крупным грифом
+        big_swipe = SwipeContainer(
+            on_swipe_horizontal=self._on_swipe_horizontal_from_overlay,
+            show_arrows=False,
+            show_name=False,
+            screen=self.screen,
+        )
+        big_swipe.size_hint = (1, None)
+        big_swipe.height = griff_height
+        big_swipe.md_bg_color = [0, 0, 0, 0]
+        big_swipe._on_griff_click = self._close_fullscreen_griff
+        big_swipe.padding = [0, 0, 0, 0]
+        big_swipe.spacing = 0
+
+        self._big_swipe = big_swipe
+
+        variants = self.screen.current_variants if self.screen else []
+        for v in variants:
+            module = v.get('module')
+            if module is None and v.get('server_data') and self.screen:
+                module = self.screen._dict_to_module(v['server_data'])
+            if module:
+                big_swipe.add_slide(module)
+
+        if variants and self.screen:
+            big_swipe.set_current_slide(self.screen.current_variant_index, animate=False)
+
+        main_box.add_widget(big_swipe)
+
+        # Отступ между грифом и меню (опускает меню ниже)
+        main_box.add_widget(Widget(size_hint_y=None, height=dp(24)))
+
+        # 3) Компактное центрированное меню под грифом
+        menu_card = MDCard(
+            orientation='horizontal',
+            size_hint=(None, None),
+            size=(dp(210), dp(46)),
+            pos_hint={'center_x': 0.5},
+            radius=[dp(14)],
+            elevation=0,
+            padding=[dp(2), dp(2), dp(2), dp(2)],
+            md_bg_color=ChordsColors.get_menu_bg(settings_manager.theme),
+            line_color=ChordsColors.get_card_line(settings_manager.theme),
+            line_width=1.5,
+        )
+
+        menu_inner = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, 1),
+            spacing=0,
+            padding=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],
+        )
+
+        theme_id = settings_manager.theme
+        divider_color = ChordsColors.get_card_line(theme_id)
+
+        def _create_divider():
+            d = MDBoxLayout(size_hint_x=None, width=dp(1))
+            d.md_bg_color = divider_color
+            return d
+
+        # Левая стрелка
+        self._overlay_left_btn = MDIconButton(
+            icon="chevron-left",
+            theme_icon_color="Custom",
+            icon_color=ChordsColors.get_arrow_color(theme_id),
+            icon_size=sp(24),
+            size_hint=(1, 1),
+            md_bg_color=[0, 0, 0, 0],
+            on_release=lambda *a: self._on_swipe_horizontal_from_overlay(-1),
+        )
+        # Тогл режима
+        current_icon = "gesture-tap" if (self.screen and self.screen.current_mode == "finger") else "music-note"
+        mode_color = [0.9, 0.55, 0.0, 1] if (self.screen and self.screen.current_mode == "finger") else [0.8, 0.3, 0.3,
+                                                                                                         1]
+        self._overlay_mode_btn = MDIconButton(
+            icon=current_icon,
+            theme_icon_color="Custom",
+            icon_color=mode_color,
+            icon_size=sp(24),
+            size_hint=(1, 1),
+            md_bg_color=[0, 0, 0, 0],
+            on_release=lambda *a: self._toggle_mode_in_overlay(),
+        )
+        # Правая стрелка
+        self._overlay_right_btn = MDIconButton(
+            icon="chevron-right",
+            theme_icon_color="Custom",
+            icon_color=ChordsColors.get_arrow_color(theme_id),
+            icon_size=sp(24),
+            size_hint=(1, 1),
+            md_bg_color=[0, 0, 0, 0],
+            on_release=lambda *a: self._on_swipe_horizontal_from_overlay(1),
+        )
+
+        menu_inner.add_widget(self._overlay_left_btn)
+        menu_inner.add_widget(_create_divider())
+        menu_inner.add_widget(self._overlay_mode_btn)
+        menu_inner.add_widget(_create_divider())
+        menu_inner.add_widget(self._overlay_right_btn)
+
+        menu_card.add_widget(menu_inner)
+        main_box.add_widget(menu_card)
+
+        overlay.add_widget(main_box)
         overlay.bind(on_touch_down=self._on_overlay_touch)
 
-        overlay.opacity = 0
+        overlay.opacity = 1
         Animation(opacity=1, duration=0.2).start(overlay)
 
         self._fullscreen_overlay = overlay
@@ -539,9 +729,36 @@ class SwipeContainer(MDBoxLayout):
         if app and app.root:
             app.root.add_widget(overlay)
 
+        self._update_overlay_name()
+        Clock.schedule_once(lambda dt: self._update_overlay_name(), 0)
+        Clock.schedule_once(lambda dt: self._update_overlay_menu(), 0)
+
+    def _update_overlay_menu(self):
+        if not self.screen or not self._fullscreen_overlay:
+            return
+        try:
+            if self._overlay_mode_btn is not None:
+                if self.screen.current_mode == "finger":
+                    self._overlay_mode_btn.icon = "gesture-tap"
+                    self._overlay_mode_btn.icon_color = [0.9, 0.55, 0.0, 1]
+                else:
+                    self._overlay_mode_btn.icon = "music-note"
+                    self._overlay_mode_btn.icon_color = [0.8, 0.3, 0.3, 1]
+
+            has_variants = bool(self.screen.current_variants) and len(self.screen.current_variants) > 1
+            for btn in (self._overlay_left_btn, self._overlay_right_btn):
+                if btn is not None:
+                    btn.disabled = not has_variants
+                    btn.opacity = 1 if has_variants else 0.3
+        except Exception as e:
+            logger.error(f"Error updating overlay menu: {e}")
+
     def _on_overlay_touch(self, instance, touch):
         if self._fullscreen_overlay is None:
             return False
+        for child in instance.children:
+            if child.collide_point(*touch.pos):
+                return False
         self._close_fullscreen_griff()
         return True
 
@@ -554,6 +771,11 @@ class SwipeContainer(MDBoxLayout):
             if overlay.parent:
                 overlay.parent.remove_widget(overlay)
             self._fullscreen_overlay = None
+            self._big_swipe = None
+            self._overlay_name_label = None
+            self._overlay_left_btn = None
+            self._overlay_right_btn = None
+            self._overlay_mode_btn = None
 
         anim = Animation(opacity=0, duration=0.15)
         anim.bind(on_complete=_remove)
@@ -752,8 +974,6 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
 # ============ СЕЛЕКТОРЫ В СТИЛЕ АЛФАВИТА ============
 
 class TextSelectorButton(MDBoxLayout):
-    """Кнопка-текст с выделением квадратиком (как буквы в Songs)."""
-
     def __init__(self, text, on_press=None, **kwargs):
         super().__init__(**kwargs)
         self.btn_text = text
@@ -817,7 +1037,6 @@ class BaseSelectorMenu(MDBoxLayout):
         self._build_ui()
 
     def _build_ui(self):
-        # Левая стрелка
         self.left_arrow = MDIconButton(
             icon="chevron-left", size_hint=(None, 1), width=dp(32),
             theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
@@ -825,7 +1044,6 @@ class BaseSelectorMenu(MDBoxLayout):
         )
         self.add_widget(self.left_arrow)
 
-        # Скролл
         self.scroll = ScrollView(
             size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
             bar_width=0, bar_color=[0, 0, 0, 0], bar_inactive_color=[0, 0, 0, 0], bar_margin=0
@@ -839,7 +1057,6 @@ class BaseSelectorMenu(MDBoxLayout):
         self.scroll.add_widget(self.container)
         self.add_widget(self.scroll)
 
-        # Правая стрелка
         self.right_arrow = MDIconButton(
             icon="chevron-right", size_hint=(None, 1), width=dp(32),
             theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
@@ -1110,7 +1327,6 @@ class ChordsScreen(BaseScreen):
         self._request_id = 0
         self._pending_chord_list = None
 
-        # ✅ Восстанавливаем состояние из кэша
         saved = chords_state.get(allow_stale=True)
         if saved:
             self.current_tonality = saved.get('current_tonality', 'A')
@@ -1312,7 +1528,8 @@ class ChordsScreen(BaseScreen):
         if self.swipe_container:
             self.swipe_container.update_chord_name(main_name, alt_names)
 
-        self._show_description()
+        if not (hasattr(self, '_hint_timer') and self._hint_timer):
+            self._show_description()
         self._data_loaded = True
 
     def init_ui(self):
@@ -1342,7 +1559,10 @@ class ChordsScreen(BaseScreen):
 
         content.add_widget(Widget(size_hint_y=None, height=dp(32)))
 
-        self.swipe_container = SwipeContainer(on_swipe_horizontal=self._on_swipe_horizontal)
+        self.swipe_container = SwipeContainer(
+            on_swipe_horizontal=self._on_swipe_horizontal,
+            screen=self,
+        )
         self.swipe_container.size_hint = (1, None)
         self.swipe_container.height = self._griff_height + dp(136)
         content.add_widget(self.swipe_container)
@@ -1440,8 +1660,35 @@ class ChordsScreen(BaseScreen):
         total = len(self.current_variants)
         self.current_variant_index = (self.current_variant_index + step) % total
         self.current_position = self.current_variant_index + 1
+
+        if self.swipe_container:
+            self.swipe_container.set_current_slide(self.current_variant_index)
+
         self._update_display()
         self._show_temporary_hint(f"{get_text('variant', 'Вариант')} {self.current_position}", 1.0)
+
+    def _on_carousel_index_changed(self, index, from_overlay=False):
+        if not self.current_variants or not (0 <= index < len(self.current_variants)):
+            return
+        if self.current_variant_index == index:
+            return
+
+        self.current_variant_index = index
+        self.current_position = index + 1
+
+        if from_overlay:
+            if self.swipe_container:
+                self.swipe_container.set_current_slide(index)
+        else:
+            if self.swipe_container and self.swipe_container._big_swipe:
+                self.swipe_container._big_swipe.set_current_slide(index)
+
+        self._update_display()
+        if self.swipe_container:
+            self.swipe_container._update_overlay_name()
+            self.swipe_container._update_overlay_menu()
+        self._show_temporary_hint(f"{get_text('variant', 'Вариант')} {self.current_position}", 1.2)
+
 
     def _show_selector(self, selector):
         self._menu_container.clear_widgets()
@@ -1488,14 +1735,12 @@ class ChordsScreen(BaseScreen):
             self._restore_unified()
             return
 
-        # 1) Мгновенно обновляем имя
         self.current_chord_name = selected_chord
         if selected_chord in self.available_chords:
             self.current_chord_index = self.available_chords.index(selected_chord)
         if self.unified_menu:
             self.unified_menu.update_chord(len(self.available_chords))
 
-        # 2) Задержка, чтобы увидеть выделение
         def _after_delay(dt):
             self._restore_unified()
             self._show_hint(get_text('loading', 'Загрузка...'))
@@ -1507,6 +1752,9 @@ class ChordsScreen(BaseScreen):
         self._restore_unified()
 
     def _show_description(self):
+        if hasattr(self, '_hint_timer') and self._hint_timer:
+            return
+
         if settings_manager.language != 'ru':
             self._info_label.text = ""
             return
@@ -1563,7 +1811,6 @@ class ChordsScreen(BaseScreen):
         self._show_hint(get_text('choose_tonality', "Выберите тональность"))
 
     def _on_tonality_confirmed(self, selected_tonality):
-        # 1) Мгновенно обновляем состояние (квадратик уже выделился)
         self.current_tonality = selected_tonality
         self.current_tonality_index = TONALITIES.index(selected_tonality)
         self.is_search_mode = False
@@ -1574,7 +1821,6 @@ class ChordsScreen(BaseScreen):
         self.current_variant_index = 0
         self.current_position = 1
 
-        # 2) Небольшая задержка, чтобы пользователь увидел выделение
         def _after_delay(dt):
             self._restore_unified()
             self._show_hint(get_text('loading', 'Загрузка...'))
@@ -1594,7 +1840,6 @@ class ChordsScreen(BaseScreen):
         self._show_hint(get_text('choose_type', "Выберите тип аккорда"))
 
     def _on_type_confirmed(self, selected_type):
-        # 1) Мгновенно обновляем состояние
         self.current_type = selected_type
         self.current_type_index = CHORD_TYPES.index(selected_type)
         self.is_search_mode = False
@@ -1605,7 +1850,6 @@ class ChordsScreen(BaseScreen):
         self.current_variant_index = 0
         self.current_position = 1
 
-        # 2) Задержка, чтобы увидеть выделение
         def _after_delay(dt):
             self._restore_unified()
             self._show_hint(get_text('loading', 'Загрузка...'))
@@ -1635,7 +1879,7 @@ class ChordsScreen(BaseScreen):
         self.current_variant_index = (self.current_variant_index + 1) % total
         self.current_position = self.current_variant_index + 1
         if self.swipe_container:
-            self.swipe_container.carousel.load_next()
+            self.swipe_container.set_current_slide(self.current_variant_index)
         self._update_display()
         msg = f"{get_text('variant', 'Вариант')} {self.current_position}"
         self._show_temporary_hint(msg, 1.2)
