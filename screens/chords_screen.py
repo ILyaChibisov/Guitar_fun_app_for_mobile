@@ -175,8 +175,8 @@ class SwipeContainer(MDBoxLayout):
         self.spacing = 0
 
         self.name_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None), height=dp(100),
-            padding=[dp(8), dp(22), dp(8), dp(2)],
+            orientation='vertical', size_hint=(1, None), height=dp(110),
+            padding=[dp(8), dp(22), dp(8), dp(12)],
             spacing=dp(6),
             md_bg_color=[0, 0, 0, 0]
         )
