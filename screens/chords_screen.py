@@ -571,15 +571,20 @@ class SwipeContainer(MDBoxLayout):
 
         overlay = FloatLayout(size_hint=(1, 1))
 
+        theme_id = settings_manager.theme
         with overlay.canvas.before:
-            Color(0, 0, 0, 0.92)
+            overlay._bg_color = Color(1, 1, 1, 1)
             overlay._bg_rect = Rectangle(pos=overlay.pos, size=overlay.size)
         overlay.bind(
             pos=lambda inst, val: setattr(overlay._bg_rect, 'pos', val),
             size=lambda inst, val: setattr(overlay._bg_rect, 'size', val),
         )
 
-        # Максимально крупный размер грифа (как в исходном варианте)
+        # Ссылки для динамического обновления темы
+        self._overlay_menu_card = None
+        self._overlay_dividers = []
+
+        # Оставляем гриф максимально крупным
         griff_height = max(dp(300), Window.width * 0.65)
 
         main_box = MDBoxLayout(
@@ -587,11 +592,11 @@ class SwipeContainer(MDBoxLayout):
             size_hint=(1, None),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             padding=[dp(4), 0, dp(4), 0],
-            spacing=0,
+            spacing=dp(-22),  # Подтягивает меню ближе к нижней границе грифа
         )
         main_box.bind(minimum_height=main_box.setter('height'))
 
-        # 1) Крупное ЖИРНОЕ название аккорда на базе стандартного Kivy Label
+        # 1) Крупное ЖИРНОЕ название аккорда
         name_text = self.screen._current_main_name if self.screen else "?"
         base_font_sp = 76 if len(name_text) <= 4 else (56 if len(name_text) <= 8 else 42)
 
@@ -603,15 +608,15 @@ class SwipeContainer(MDBoxLayout):
             valign="middle",
             size_hint=(1, None),
             height=dp(88),
-            color=ChordsColors.get_chord_name_color(settings_manager.theme),
+            color=ChordsColors.get_chord_name_color(theme_id),
         )
         name_label.text_size = (Window.width - dp(16), dp(88))
         name_label.bind(on_touch_down=self._on_name_label_touch)
         self._overlay_name_label = name_label
         main_box.add_widget(name_label)
 
-        # Небольшой отступ между названием и грифом (поднимает название выше)
-        main_box.add_widget(Widget(size_hint_y=None, height=dp(16)))
+        # Отступ под названием (увеличен с учётом spacing=-22, чтобы название осталось высоко)
+        main_box.add_widget(Widget(size_hint_y=None, height=dp(88)))
 
         # 2) Карусель с максимально крупным грифом
         big_swipe = SwipeContainer(
@@ -642,10 +647,7 @@ class SwipeContainer(MDBoxLayout):
 
         main_box.add_widget(big_swipe)
 
-        # Отступ между грифом и меню (опускает меню ниже)
-        main_box.add_widget(Widget(size_hint_y=None, height=dp(24)))
-
-        # 3) Компактное центрированное меню под грифом
+        # 3) Компактное центрированное меню вплотную под грифом (без лишнего разделителя)
         menu_card = MDCard(
             orientation='horizontal',
             size_hint=(None, None),
@@ -654,10 +656,11 @@ class SwipeContainer(MDBoxLayout):
             radius=[dp(14)],
             elevation=0,
             padding=[dp(2), dp(2), dp(2), dp(2)],
-            md_bg_color=ChordsColors.get_menu_bg(settings_manager.theme),
-            line_color=ChordsColors.get_card_line(settings_manager.theme),
+            md_bg_color=ChordsColors.get_menu_bg(theme_id),
+            line_color=ChordsColors.get_card_line(theme_id),
             line_width=1.5,
         )
+        self._overlay_menu_card = menu_card
 
         menu_inner = MDBoxLayout(
             orientation='horizontal',
@@ -667,12 +670,12 @@ class SwipeContainer(MDBoxLayout):
             md_bg_color=[0, 0, 0, 0],
         )
 
-        theme_id = settings_manager.theme
         divider_color = ChordsColors.get_card_line(theme_id)
 
         def _create_divider():
             d = MDBoxLayout(size_hint_x=None, width=dp(1))
             d.md_bg_color = divider_color
+            self._overlay_dividers.append(d)
             return d
 
         # Левая стрелка
@@ -721,10 +724,10 @@ class SwipeContainer(MDBoxLayout):
         overlay.add_widget(main_box)
         overlay.bind(on_touch_down=self._on_overlay_touch)
 
-        overlay.opacity = 1
-        Animation(opacity=1, duration=0.2).start(overlay)
-
         self._fullscreen_overlay = overlay
+        self.update_overlay_theme()
+
+        overlay.opacity = 1
         app = MDApp.get_running_app()
         if app and app.root:
             app.root.add_widget(overlay)
@@ -732,6 +735,51 @@ class SwipeContainer(MDBoxLayout):
         self._update_overlay_name()
         Clock.schedule_once(lambda dt: self._update_overlay_name(), 0)
         Clock.schedule_once(lambda dt: self._update_overlay_menu(), 0)
+
+    def update_overlay_theme(self):
+        if self._fullscreen_overlay is None:
+            return
+        theme_id = settings_manager.theme
+        overlay = self._fullscreen_overlay
+
+        # 1. Фон оверлея аналогично стандартному экрану
+        if hasattr(overlay, '_bg_rect') and hasattr(overlay, '_bg_color'):
+            if theme_id == 'green':
+                tex = getattr(self.screen, 'texture', None) if self.screen else None
+                if tex:
+                    overlay._bg_rect.texture = tex
+                    overlay._bg_color.rgba = (1, 1, 1, 1)
+                else:
+                    overlay._bg_rect.texture = None
+                    overlay._bg_color.rgba = (0.1, 0.3, 0.2, 0.98)
+            elif theme_id == 'dark':
+                overlay._bg_rect.texture = None
+                overlay._bg_color.rgba = (0.07, 0.07, 0.07, 0.97)
+            elif theme_id == 'light':
+                overlay._bg_rect.texture = None
+                overlay._bg_color.rgba = (0.969, 0.976, 0.969, 0.98)
+
+        # 2. Цвет заголовка аккорда
+        if self._overlay_name_label is not None:
+            self._overlay_name_label.color = ChordsColors.get_chord_name_color(theme_id)
+
+        # 3. Цвет ладов на грифе в увеличенном режиме
+        if self._big_swipe is not None:
+            self._big_swipe.update_fret_color(theme_id)
+
+        # 4. Фон и обводка карточки меню + разделители + стрелки
+        if getattr(self, '_overlay_menu_card', None) is not None:
+            self._overlay_menu_card.md_bg_color = ChordsColors.get_menu_bg(theme_id)
+            self._overlay_menu_card.line_color = ChordsColors.get_card_line(theme_id)
+
+        divider_color = ChordsColors.get_card_line(theme_id)
+        for div in getattr(self, '_overlay_dividers', []):
+            div.md_bg_color = divider_color
+
+        arrow_color = ChordsColors.get_arrow_color(theme_id)
+        for btn in (self._overlay_left_btn, self._overlay_right_btn):
+            if btn is not None:
+                btn.icon_color = arrow_color
 
     def _update_overlay_menu(self):
         if not self.screen or not self._fullscreen_overlay:
@@ -767,6 +815,7 @@ class SwipeContainer(MDBoxLayout):
         if overlay is None:
             return
 
+
         def _remove(animation, widget):
             if overlay.parent:
                 overlay.parent.remove_widget(overlay)
@@ -776,6 +825,8 @@ class SwipeContainer(MDBoxLayout):
             self._overlay_left_btn = None
             self._overlay_right_btn = None
             self._overlay_mode_btn = None
+            self._overlay_menu_card = None
+            self._overlay_dividers = []
 
         anim = Animation(opacity=0, duration=0.15)
         anim.bind(on_complete=_remove)
@@ -1397,6 +1448,7 @@ class ChordsScreen(BaseScreen):
         if self.swipe_container:
             self.swipe_container.update_theme_colors()
             self.swipe_container.update_fret_color(settings_manager.theme)
+            self.swipe_container.update_overlay_theme()
         if self.tonality_selector: self.tonality_selector.update_theme_colors()
         if self.type_selector: self.type_selector.update_theme_colors()
         if self.chord_selector: self.chord_selector.update_theme_colors()
