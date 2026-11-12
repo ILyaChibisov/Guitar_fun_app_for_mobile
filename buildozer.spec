@@ -28,9 +28,14 @@ android.minapi = 24
 android.enable_androidx = True
 android.accept_sdk_license = True
 
+# --- СТАБИЛЬНЫЕ ВЕРСИИ GRADLE И AGP ---
+# Фиксируем, чтобы GitHub Actions не тянул нестабильные зависимости
+android.gradle_plugin_version = 8.2.2
+android.gradle_version = 8.2.2
+android.gradle_repository_threads = 4
+
 # --- NETWORK SECURITY CONFIG ---
-# ВСЁ УДАЛЕНО. Мы не даем Buildozer трогать манифест.
-# Атрибут добавляется скриптом напрямую в файл AndroidManifest.xml (см. build.yml)
+# Манифест мы правим скриптом в build.yml, тут ничего не указываем
 
 # --- АРХИТЕКТУРА ---
 android.archs = arm64-v8a
@@ -39,13 +44,12 @@ android.archs = arm64-v8a
 fullscreen = 0
 log_level = 2
 
-# --- УВЕЛИЧИВАЕМ ВРЕМЯ СБОРКИ ---
-android.gradle_repository_threads = 4
-
 # --- ПОДПИСЬ ---
 android.keystore = guitarfuns_keystore.jks
 android.keystore_alias = guitarfuns
 android.keystore_key_password = lexx311285
+# Пароль самого хранилища (добавлено, чтобы не было рассинхрона)
+android.keystore_store_password = lexx311285
 
 [buildozer]
 log_level = 2
