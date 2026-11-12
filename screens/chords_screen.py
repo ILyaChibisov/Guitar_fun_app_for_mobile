@@ -32,17 +32,17 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from chord_utils.renderer import ChordRenderer
 from utils.notifications import notify
-from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
+from state.previous_screen import previous_screen_state
 from api.chords_client import get_chords_client
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
-from state.chords_state import chords_state  # ✅ Импорт стейта
+from state.chords_state import chords_state
+from kivy.uix.scatter import Scatter
 
 logger = screen_logger('Chords')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -153,7 +153,6 @@ class ChordsColors:
 
     @staticmethod
     def get_arrow_color(theme_id):
-        """Цвет стрелок для селекторов (как в Songs)"""
         if theme_id == 'light':
             return [0, 0, 0, 1]
         return [1, 1, 1, 1]
@@ -161,6 +160,7 @@ class ChordsColors:
 
 class ClickableRendererContainer(ButtonBehavior, MDBoxLayout):
     """Контейнер для грифа, который умеет реагировать на тап (для увеличения)."""
+
     def __init__(self, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.on_click_callback = on_click
@@ -190,6 +190,15 @@ class SwipeContainer(MDBoxLayout):
         self._overlay_left_btn = None
         self._overlay_right_btn = None
         self._overlay_mode_btn = None
+        self._overlay_menu_card = None
+        self._overlay_dividers = []
+        self._overlay_menu_container = None
+        self._overlay_unified_menu = None
+        self._overlay_scatter = None
+        self._overlay_name_card = None
+        self._overlay_name_scatter = None
+        self._is_overlay_rotated = False
+        self._wait_ticks = 0
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
@@ -376,7 +385,7 @@ class SwipeContainer(MDBoxLayout):
                 if not self._programmatic_slide and self.screen:
                     if self is self.screen.swipe_container:
                         self.screen._on_carousel_index_changed(index)
-                    elif self is self.screen.swipe_container._big_swipe:
+                    elif self.screen.swipe_container and self is self.screen.swipe_container._big_swipe:
                         self.screen._on_carousel_index_changed(index, from_overlay=True)
         except ValueError:
             pass
@@ -429,7 +438,8 @@ class SwipeContainer(MDBoxLayout):
 
     def _start_alt_cycle(self):
         self._stop_alt_cycle()
-        if not self._alt_names or len(self._alt_names) <= 1: return
+        if not self._alt_names or len(self._alt_names) <= 1:
+            return
         self._alt_timer = Clock.schedule_interval(self._next_alt_name, 2.0)
 
     def _stop_alt_cycle(self):
@@ -444,14 +454,16 @@ class SwipeContainer(MDBoxLayout):
         if not self._alt_names or not self.chord_alt_label.parent:
             self._stop_alt_cycle()
             return
-        if len(self._alt_names) <= 1: return
+        if len(self._alt_names) <= 1:
+            return
         anim_out = Animation(opacity=0, duration=0.2, t='out_quad')
         anim_out.bind(on_complete=lambda *a: self._apply_next_alt())
         self._alt_fade_anim = anim_out
         anim_out.start(self.chord_alt_label)
 
     def _apply_next_alt(self):
-        if not self._alt_names or not self.chord_alt_label.parent: return
+        if not self._alt_names or not self.chord_alt_label.parent:
+            return
         self._alt_index = (self._alt_index + 1) % len(self._alt_names)
         self.chord_alt_label.text = self._alt_names[self._alt_index]
         anim_in = Animation(opacity=1, duration=0.2, t='in_quad')
@@ -519,7 +531,7 @@ class SwipeContainer(MDBoxLayout):
         if self._overlay_name_label is not None:
             name_text = self.screen._current_main_name or "?"
             self._overlay_name_label.text = name_text
-            base_font_sp = 76 if len(name_text) <= 4 else (56 if len(name_text) <= 8 else 42)
+            base_font_sp = 72 if len(name_text) <= 4 else (54 if len(name_text) <= 8 else 40)
             self._overlay_name_label.font_size = sp(base_font_sp)
 
     def _on_name_label_touch(self, instance, touch):
@@ -565,11 +577,252 @@ class SwipeContainer(MDBoxLayout):
             self._big_swipe.update_renderer_mode(scr.current_mode)
         self._update_overlay_menu()
 
+    def _toggle_overlay_rotation(self):
+        self._is_overlay_rotated = not getattr(self, '_is_overlay_rotated', False)
+        self._apply_overlay_layout()
+        self.update_overlay_theme()
+        self._update_overlay_name()
+
+    def _apply_overlay_layout(self, *args):
+        if not self._fullscreen_overlay or not self._big_swipe:
+            return
+        w, h = Window.width, Window.height
+        is_rot = getattr(self, '_is_overlay_rotated', False)
+        rot_angle = 90 if is_rot else 0
+
+        # 1. Меню в самом низу экрана с аккуратными отступами
+        menu_wrapper = getattr(self, '_overlay_menu_wrapper', None)
+        menu_top = dp(84)
+        if menu_wrapper is not None:
+            side_margin = dp(24)
+            bottom_margin = dp(20)
+            menu_wrapper.size = (w - side_margin * 2, dp(60))
+            menu_wrapper.pos = (side_margin, bottom_margin)
+            menu_top = menu_wrapper.top
+
+        # Поворот иконок в меню и элементов всех селекторов
+        if self._overlay_unified_menu is not None:
+            self._overlay_unified_menu.set_icons_rotation(rot_angle)
+            if self._overlay_unified_menu.rotate_item is not None:
+                self._overlay_unified_menu.rotate_item.set_icon(
+                    "phone-rotate-portrait" if is_rot else "phone-rotate-landscape"
+                )
+        if self.screen:
+            for sel in (self.screen.tonality_selector, self.screen.type_selector, self.screen.chord_selector):
+                if sel is not None:
+                    sel.set_items_rotation(rot_angle)
+
+        scatter = getattr(self, '_overlay_scatter', None)
+        name_scatter = getattr(self, '_overlay_name_scatter', None)
+        name_card = getattr(self, '_overlay_name_card', None)
+
+        # 2. Единое положение и размер названия аккорда (как на вертикальном скрине)
+        box_w = w - dp(16)
+        box_h = dp(74)
+        top_margin = dp(14)
+        if name_scatter is not None and name_card is not None and self._overlay_name_label is not None:
+            name_card.size = (box_w, box_h)
+            name_card.pos = (0, 0)
+            self._overlay_name_label.text_size = (box_w, box_h)
+
+            name_scatter.size = (box_w, box_h)
+            name_scatter.rotation = 0
+            name_scatter.center_x = w / 2.0
+            name_scatter.top = h - top_margin
+
+        # 3. Позиция и размеры грифа
+        if is_rot:
+            top_limit = h - top_margin - box_h - dp(8)
+            bottom_limit = menu_top + dp(12)
+            avail_h = max(dp(220), (top_limit - bottom_limit) * 0.90)
+            avail_w = max(dp(190), (w - dp(24)) * 0.88)
+
+            self._big_swipe.size = (avail_h, avail_w)
+            self._big_swipe.pos = (0, 0)
+            if scatter is not None:
+                scatter.size = (avail_h, avail_w)
+                scatter.rotation = 90
+                scatter.center = (w / 2.0, (bottom_limit + top_limit) / 2.0)
+        else:
+            griff_height = min(max(dp(300), w * 0.65), max(dp(220), h - dp(230)))
+            self._big_swipe.size = (w, griff_height)
+            self._big_swipe.pos = (0, 0)
+            if scatter is not None:
+                scatter.size = (w, griff_height)
+                scatter.rotation = 0
+                scatter.center = (w / 2.0, h / 2.0 + dp(12))
+
+    # ---------- Селекторы внутри оверлея (с безопасной перепривязкой parent) ----------
+
+    def _attach_overlay_selector(self, selector, on_confirm_cb):
+        if selector is None or self._overlay_menu_container is None:
+            return
+        if selector.parent is not None:
+            selector.parent.remove_widget(selector)
+        self._overlay_menu_container.clear_widgets()
+
+        rot_angle = 90 if getattr(self, '_is_overlay_rotated', False) else 0
+        selector.set_items_rotation(rot_angle)
+        selector.disabled = False
+        selector.opacity = 1
+        selector.size_hint = (1, 1)
+        selector.pos_hint = {'x': 0, 'y': 0}
+        selector.on_confirm = on_confirm_cb
+        selector.on_cancel = self._restore_overlay_unified
+        self._overlay_menu_container.add_widget(selector)
+
+    def _open_overlay_tonality_selector(self):
+        if not self.screen or self.screen.tonality_selector is None:
+            return
+        selector = self.screen.tonality_selector
+        selector.set_current(self.screen.current_tonality)
+        self._attach_overlay_selector(selector, self._on_overlay_tonality_confirmed)
+
+    def _on_overlay_tonality_confirmed(self, selected_tonality):
+        self.screen._on_tonality_confirmed(selected_tonality)
+        Clock.schedule_once(lambda dt: self._after_overlay_selection(), 0.35)
+
+    def _open_overlay_type_selector(self):
+        if not self.screen or self.screen.type_selector is None:
+            return
+        selector = self.screen.type_selector
+        selector.set_current(self.screen.current_type)
+        self._attach_overlay_selector(selector, self._on_overlay_type_confirmed)
+
+    def _on_overlay_type_confirmed(self, selected_type):
+        self.screen._on_type_confirmed(selected_type)
+        Clock.schedule_once(lambda dt: self._after_overlay_selection(), 0.35)
+
+    def _open_overlay_chord_selector(self):
+        if not self.screen or self.screen.chord_selector is None:
+            return
+        selector = self.screen.chord_selector
+        target_list = self.screen._pending_chord_list if self.screen._pending_chord_list is not None else self.screen.available_chords
+        selector.set_chords(target_list, current_chord=self.screen.current_chord_name)
+        selector.set_current(self.screen.current_chord_name)
+        self._attach_overlay_selector(selector, self._on_overlay_chord_confirmed)
+
+    def _on_overlay_chord_confirmed(self, selected_chord):
+        self.screen._on_chord_confirmed(selected_chord)
+        Clock.schedule_once(lambda dt: self._after_overlay_selection(), 0.35)
+
+    def _after_overlay_selection(self):
+        self._restore_overlay_unified()
+        if not self.screen or not self._fullscreen_overlay:
+            return
+
+        # Запоминаем текущий request_id, чтобы дождаться завершения всех сетевых запросов
+        target_req_id = getattr(self.screen, '_request_id', 0)
+
+        def _wait_and_rebuild(dt):
+            if not self.screen or not self._fullscreen_overlay:
+                return False
+            # Если идут запросы к серверу (список аккордов или варианты) — ждём
+            if getattr(self.screen, '_server_loading', False) or not self.screen.current_variants:
+                # Защита от бесконечного ожидания, если аккордов в категории действительно нет (5 сек)
+                self._wait_ticks = getattr(self, '_wait_ticks', 0) + 1
+                if self._wait_ticks > 100:
+                    self._wait_ticks = 0
+                    self._rebuild_overlay_slides()
+                    return False
+                return True
+
+            self._wait_ticks = 0
+            self._rebuild_overlay_slides()
+            return False
+
+        self._wait_ticks = 0
+        if getattr(self.screen, '_server_loading', False) or not self.screen.current_variants:
+            Clock.schedule_interval(_wait_and_rebuild, 0.05)
+        else:
+            self._rebuild_overlay_slides()
+
+    def _rebuild_overlay_slides(self):
+        if not self.screen or not self._big_swipe:
+            return
+        self._big_swipe.clear_slides()
+        variants = self.screen.current_variants or []
+        for v in variants:
+            module = v.get('module')
+            if module is None and v.get('server_data'):
+                module = self.screen._dict_to_module(v['server_data'])
+            if module:
+                self._big_swipe.add_slide(module)
+        if variants:
+            self._big_swipe.set_current_slide(self.screen.current_variant_index, animate=False)
+        self._big_swipe.update_renderer_mode(self.screen.current_mode)
+        self._big_swipe.update_fret_color(settings_manager.theme)
+        self._update_overlay_name()
+        self._update_overlay_menu()
+
+    def _restore_overlay_unified(self):
+        if self._overlay_menu_container is None:
+            return
+        self._overlay_menu_container.clear_widgets()
+        if self._overlay_unified_menu:
+            rot_angle = 90 if getattr(self, '_is_overlay_rotated', False) else 0
+            self._overlay_unified_menu.set_icons_rotation(rot_angle)
+            self._overlay_unified_menu.disabled = False
+            self._overlay_unified_menu.opacity = 1
+            self._overlay_unified_menu.size_hint = (1, 1)
+            self._overlay_unified_menu.pos_hint = {'x': 0, 'y': 0}
+            self._overlay_menu_container.add_widget(self._overlay_unified_menu)
+
+    def _close_fullscreen_griff(self):
+        overlay = self._fullscreen_overlay
+        if overlay is None:
+            return
+
+        # Возвращаем селекторам стандартные обработчики и нулевой угол для основного экрана
+        if self.screen:
+            if self.screen.tonality_selector:
+                if self.screen.tonality_selector.parent:
+                    self.screen.tonality_selector.parent.remove_widget(self.screen.tonality_selector)
+                self.screen.tonality_selector.set_items_rotation(0)
+                self.screen.tonality_selector.on_confirm = self.screen._on_tonality_confirmed
+                self.screen.tonality_selector.on_cancel = self.screen._close_tonality_selector
+            if self.screen.type_selector:
+                if self.screen.type_selector.parent:
+                    self.screen.type_selector.parent.remove_widget(self.screen.type_selector)
+                self.screen.type_selector.set_items_rotation(0)
+                self.screen.type_selector.on_confirm = self.screen._on_type_confirmed
+                self.screen.type_selector.on_cancel = self.screen._close_type_selector
+            if self.screen.chord_selector:
+                if self.screen.chord_selector.parent:
+                    self.screen.chord_selector.parent.remove_widget(self.screen.chord_selector)
+                self.screen.chord_selector.set_items_rotation(0)
+                self.screen.chord_selector.on_confirm = self.screen._on_chord_confirmed
+                self.screen.chord_selector.on_cancel = self.screen._close_chord_selector
+
+        def _remove(animation, widget):
+            if overlay.parent:
+                overlay.parent.remove_widget(overlay)
+            self._fullscreen_overlay = None
+            self._big_swipe = None
+            self._overlay_scatter = None
+            self._overlay_name_card = None
+            self._overlay_name_label = None
+            self._overlay_name_scatter = None
+            self._overlay_left_btn = None
+            self._overlay_right_btn = None
+            self._overlay_mode_btn = None
+            self._overlay_menu_card = None
+            self._overlay_menu_wrapper = None
+            self._overlay_dividers = []
+            self._overlay_menu_container = None
+            self._overlay_unified_menu = None
+            self._is_overlay_rotated = False
+
+        anim = Animation(opacity=0, duration=0.15)
+        anim.bind(on_complete=_remove)
+        anim.start(overlay)
+
     def _open_fullscreen_griff(self, chord_module):
         if self._fullscreen_overlay is not None:
             return
 
         overlay = FloatLayout(size_hint=(1, 1))
+        self._is_overlay_rotated = False
 
         theme_id = settings_manager.theme
         with overlay.canvas.before:
@@ -580,53 +833,28 @@ class SwipeContainer(MDBoxLayout):
             size=lambda inst, val: setattr(overlay._bg_rect, 'size', val),
         )
 
-        # Ссылки для динамического обновления темы
         self._overlay_menu_card = None
         self._overlay_dividers = []
+        self._overlay_menu_container = None
+        self._overlay_unified_menu = None
 
-        # Оставляем гриф максимально крупным
-        griff_height = max(dp(300), Window.width * 0.65)
-
-        main_box = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, None),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            padding=[dp(4), 0, dp(4), 0],
-            spacing=dp(-22),  # Подтягивает меню ближе к нижней границе грифа
+        # 1) Карусель с грифом внутри Scatter
+        scatter = Scatter(
+            do_rotation=False,
+            do_scale=False,
+            do_translation=False,
+            auto_bring_to_front=False,
+            size_hint=(None, None),
         )
-        main_box.bind(minimum_height=main_box.setter('height'))
+        self._overlay_scatter = scatter
 
-        # 1) Крупное ЖИРНОЕ название аккорда
-        name_text = self.screen._current_main_name if self.screen else "?"
-        base_font_sp = 76 if len(name_text) <= 4 else (56 if len(name_text) <= 8 else 42)
-
-        name_label = Label(
-            text=name_text,
-            font_size=sp(base_font_sp),
-            bold=True,
-            halign="center",
-            valign="middle",
-            size_hint=(1, None),
-            height=dp(88),
-            color=ChordsColors.get_chord_name_color(theme_id),
-        )
-        name_label.text_size = (Window.width - dp(16), dp(88))
-        name_label.bind(on_touch_down=self._on_name_label_touch)
-        self._overlay_name_label = name_label
-        main_box.add_widget(name_label)
-
-        # Отступ под названием (увеличен с учётом spacing=-22, чтобы название осталось высоко)
-        main_box.add_widget(Widget(size_hint_y=None, height=dp(88)))
-
-        # 2) Карусель с максимально крупным грифом
         big_swipe = SwipeContainer(
             on_swipe_horizontal=self._on_swipe_horizontal_from_overlay,
             show_arrows=False,
             show_name=False,
             screen=self.screen,
         )
-        big_swipe.size_hint = (1, None)
-        big_swipe.height = griff_height
+        big_swipe.size_hint = (None, None)
         big_swipe.md_bg_color = [0, 0, 0, 0]
         big_swipe._on_griff_click = self._close_fullscreen_griff
         big_swipe.padding = [0, 0, 0, 0]
@@ -645,94 +873,111 @@ class SwipeContainer(MDBoxLayout):
         if variants and self.screen:
             big_swipe.set_current_slide(self.screen.current_variant_index, animate=False)
 
-        main_box.add_widget(big_swipe)
+        if self.screen:
+            big_swipe.update_renderer_mode(self.screen.current_mode)
 
-        # 3) Компактное центрированное меню вплотную под грифом (без лишнего разделителя)
-        menu_card = MDCard(
-            orientation='horizontal',
+        scatter.add_widget(big_swipe)
+        overlay.add_widget(scatter)
+
+        # 2) Заголовок аккорда над грифом (внутри Scatter для безопасного поворота на 90°)
+        name_text = self.screen._current_main_name if self.screen else "?"
+        name_scatter = Scatter(
+            do_rotation=False,
+            do_scale=False,
+            do_translation=False,
+            auto_bring_to_front=False,
             size_hint=(None, None),
-            size=(dp(210), dp(46)),
-            pos_hint={'center_x': 0.5},
-            radius=[dp(14)],
+            size=(Window.width - dp(16), dp(88)),
+        )
+        self._overlay_name_scatter = name_scatter
+
+        name_card = MDCard(
+            orientation='vertical',
+            size_hint=(None, None),
+            size=(Window.width - dp(16), dp(88)),
+            pos=(0, 0),
+            radius=[dp(18)],
             elevation=0,
-            padding=[dp(2), dp(2), dp(2), dp(2)],
+            padding=[dp(4), dp(4), dp(4), dp(4)],
+            md_bg_color=[0, 0, 0, 0],
+            line_color=[0, 0, 0, 0],
+            line_width=1,
+        )
+        self._overlay_name_card = name_card
+
+        name_label = Label(
+            text=name_text,
+            font_size=sp(72),
+            bold=True,
+            halign="center",
+            valign="middle",
+            size_hint=(1, 1),
+            color=ChordsColors.get_chord_name_color(theme_id),
+        )
+        name_label.bind(on_touch_down=self._on_name_label_touch)
+        self._overlay_name_label = name_label
+        name_card.add_widget(name_label)
+        name_scatter.add_widget(name_card)
+        overlay.add_widget(name_scatter)
+
+        # 3) Меню в самом низу экрана с отступами от краёв и кнопкой разворота
+        menu_wrapper = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(None, None),
+            height=dp(60),
+        )
+        self._overlay_menu_wrapper = menu_wrapper
+
+        menu_inner_card = MDCard(
+            orientation='horizontal',
+            size_hint=(1, 1),
+            radius=[dp(16)],
+            elevation=0,
+            padding=[dp(4), dp(4), dp(4), dp(4)],
+            spacing=dp(0),
             md_bg_color=ChordsColors.get_menu_bg(theme_id),
             line_color=ChordsColors.get_card_line(theme_id),
             line_width=1.5,
         )
-        self._overlay_menu_card = menu_card
+        self._overlay_menu_card = menu_inner_card
 
-        menu_inner = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(1, 1),
-            spacing=0,
-            padding=[0, 0, 0, 0],
-            md_bg_color=[0, 0, 0, 0],
+        self._overlay_menu_container = FloatLayout(size_hint=(1, 1))
+
+        self._overlay_unified_menu = UnifiedMenu(
+            tonality_value=self.screen.current_tonality if self.screen else "A",
+            type_value=self.screen.current_type if self.screen else "Major",
+            chord_value=self.screen._current_main_name if self.screen else "A",
+            on_tonality_press=self._open_overlay_tonality_selector,
+            on_type_press=self._open_overlay_type_selector,
+            on_chord_press=self._open_overlay_chord_selector,
+            on_variants_press=self._next_variant_in_overlay,
+            on_mode_toggle=self._toggle_mode_in_overlay,
+            on_rotate_press=self._toggle_overlay_rotation,
+            variants_count=len(self.screen.current_variants) if self.screen else 1,
+            current_mode=self.screen.current_mode if self.screen else "finger",
+            chord_count=len(self.screen.available_chords) if self.screen else 0,
         )
+        self._overlay_unified_menu.size_hint = (1, 1)
+        self._overlay_unified_menu.pos_hint = {'x': 0, 'y': 0}
+        self._overlay_menu_container.add_widget(self._overlay_unified_menu)
 
-        divider_color = ChordsColors.get_card_line(theme_id)
+        menu_inner_card.add_widget(self._overlay_menu_container)
+        menu_wrapper.add_widget(menu_inner_card)
+        overlay.add_widget(menu_wrapper)
 
-        def _create_divider():
-            d = MDBoxLayout(size_hint_x=None, width=dp(1))
-            d.md_bg_color = divider_color
-            self._overlay_dividers.append(d)
-            return d
-
-        # Левая стрелка
-        self._overlay_left_btn = MDIconButton(
-            icon="chevron-left",
-            theme_icon_color="Custom",
-            icon_color=ChordsColors.get_arrow_color(theme_id),
-            icon_size=sp(24),
-            size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0],
-            on_release=lambda *a: self._on_swipe_horizontal_from_overlay(-1),
-        )
-        # Тогл режима
-        current_icon = "gesture-tap" if (self.screen and self.screen.current_mode == "finger") else "music-note"
-        mode_color = [0.9, 0.55, 0.0, 1] if (self.screen and self.screen.current_mode == "finger") else [0.8, 0.3, 0.3,
-                                                                                                         1]
-        self._overlay_mode_btn = MDIconButton(
-            icon=current_icon,
-            theme_icon_color="Custom",
-            icon_color=mode_color,
-            icon_size=sp(24),
-            size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0],
-            on_release=lambda *a: self._toggle_mode_in_overlay(),
-        )
-        # Правая стрелка
-        self._overlay_right_btn = MDIconButton(
-            icon="chevron-right",
-            theme_icon_color="Custom",
-            icon_color=ChordsColors.get_arrow_color(theme_id),
-            icon_size=sp(24),
-            size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0],
-            on_release=lambda *a: self._on_swipe_horizontal_from_overlay(1),
-        )
-
-        menu_inner.add_widget(self._overlay_left_btn)
-        menu_inner.add_widget(_create_divider())
-        menu_inner.add_widget(self._overlay_mode_btn)
-        menu_inner.add_widget(_create_divider())
-        menu_inner.add_widget(self._overlay_right_btn)
-
-        menu_card.add_widget(menu_inner)
-        main_box.add_widget(menu_card)
-
-        overlay.add_widget(main_box)
+        overlay.bind(size=self._apply_overlay_layout)
         overlay.bind(on_touch_down=self._on_overlay_touch)
 
         self._fullscreen_overlay = overlay
+        self._apply_overlay_layout()
         self.update_overlay_theme()
 
         overlay.opacity = 1
         app = MDApp.get_running_app()
         if app and app.root:
             app.root.add_widget(overlay)
-
         self._update_overlay_name()
+        Clock.schedule_once(self._apply_overlay_layout, 0)
         Clock.schedule_once(lambda dt: self._update_overlay_name(), 0)
         Clock.schedule_once(lambda dt: self._update_overlay_menu(), 0)
 
@@ -742,7 +987,6 @@ class SwipeContainer(MDBoxLayout):
         theme_id = settings_manager.theme
         overlay = self._fullscreen_overlay
 
-        # 1. Фон оверлея аналогично стандартному экрану
         if hasattr(overlay, '_bg_rect') and hasattr(overlay, '_bg_color'):
             if theme_id == 'green':
                 tex = getattr(self.screen, 'texture', None) if self.screen else None
@@ -759,45 +1003,27 @@ class SwipeContainer(MDBoxLayout):
                 overlay._bg_rect.texture = None
                 overlay._bg_color.rgba = (0.969, 0.976, 0.969, 0.98)
 
-        # 2. Цвет заголовка аккорда
         if self._overlay_name_label is not None:
             self._overlay_name_label.color = ChordsColors.get_chord_name_color(theme_id)
 
-        # 3. Цвет ладов на грифе в увеличенном режиме
         if self._big_swipe is not None:
             self._big_swipe.update_fret_color(theme_id)
 
-        # 4. Фон и обводка карточки меню + разделители + стрелки
         if getattr(self, '_overlay_menu_card', None) is not None:
             self._overlay_menu_card.md_bg_color = ChordsColors.get_menu_bg(theme_id)
             self._overlay_menu_card.line_color = ChordsColors.get_card_line(theme_id)
 
-        divider_color = ChordsColors.get_card_line(theme_id)
-        for div in getattr(self, '_overlay_dividers', []):
-            div.md_bg_color = divider_color
-
-        arrow_color = ChordsColors.get_arrow_color(theme_id)
-        for btn in (self._overlay_left_btn, self._overlay_right_btn):
-            if btn is not None:
-                btn.icon_color = arrow_color
+        if self._overlay_unified_menu is not None:
+            self._overlay_unified_menu.update_theme_colors()
 
     def _update_overlay_menu(self):
         if not self.screen or not self._fullscreen_overlay:
             return
         try:
-            if self._overlay_mode_btn is not None:
-                if self.screen.current_mode == "finger":
-                    self._overlay_mode_btn.icon = "gesture-tap"
-                    self._overlay_mode_btn.icon_color = [0.9, 0.55, 0.0, 1]
-                else:
-                    self._overlay_mode_btn.icon = "music-note"
-                    self._overlay_mode_btn.icon_color = [0.8, 0.3, 0.3, 1]
-
-            has_variants = bool(self.screen.current_variants) and len(self.screen.current_variants) > 1
-            for btn in (self._overlay_left_btn, self._overlay_right_btn):
-                if btn is not None:
-                    btn.disabled = not has_variants
-                    btn.opacity = 1 if has_variants else 0.3
+            if self._overlay_unified_menu is not None:
+                self._overlay_unified_menu.update_mode(self.screen.current_mode)
+                self._overlay_unified_menu.update_variants(len(self.screen.current_variants))
+                self._overlay_unified_menu.update_chord(len(self.screen.available_chords))
         except Exception as e:
             logger.error(f"Error updating overlay menu: {e}")
 
@@ -809,28 +1035,6 @@ class SwipeContainer(MDBoxLayout):
                 return False
         self._close_fullscreen_griff()
         return True
-
-    def _close_fullscreen_griff(self):
-        overlay = self._fullscreen_overlay
-        if overlay is None:
-            return
-
-
-        def _remove(animation, widget):
-            if overlay.parent:
-                overlay.parent.remove_widget(overlay)
-            self._fullscreen_overlay = None
-            self._big_swipe = None
-            self._overlay_name_label = None
-            self._overlay_left_btn = None
-            self._overlay_right_btn = None
-            self._overlay_mode_btn = None
-            self._overlay_menu_card = None
-            self._overlay_dividers = []
-
-        anim = Animation(opacity=0, duration=0.15)
-        anim.bind(on_complete=_remove)
-        anim.start(overlay)
 
 
 class SearchBar(MDCard):
@@ -918,7 +1122,7 @@ class SearchBar(MDCard):
             self.clear_btn.icon_color = accent
             self.search_btn.md_bg_color = accent
             self.search_btn.text_color = [1, 1, 1, 1]
-        else:  # green
+        else:
             self.md_bg_color = [1, 1, 1, 1]
             self.line_color = [1, 1, 1, 0.25]
             self.line_width = 4.0
@@ -949,7 +1153,8 @@ class SearchBar(MDCard):
         self.clear_wrapper.opacity = 0
         self.clear_wrapper.disabled = True
         self.current_query = ""
-        if self.on_clear: self.on_clear()
+        if self.on_clear:
+            self.on_clear()
         self.search_field.focus = False
 
     def _on_focus(self, instance, value):
@@ -965,7 +1170,7 @@ class SearchBar(MDCard):
         self.search_field.focus = True
 
 
-class IconMenuItem(ButtonBehavior, MDBoxLayout):
+class IconMenuItem(ButtonBehavior, FloatLayout):
     def __init__(self, icon_name, on_press=None, is_active=False, icon_color=None, fixed_color=False, **kwargs):
         super().__init__(**kwargs)
         self.icon_name = icon_name
@@ -974,30 +1179,46 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.fixed_color = fixed_color
         self.icon_color = icon_color if icon_color else [1, 1, 1, 0.7]
 
-        self.orientation = 'vertical'
         self.size_hint = (1, 1)
-        self.padding = [0, 0, 0, 0]
-        self.spacing = dp(0)
         self.md_bg_color = [0, 0, 0, 0]
 
-        self.icon_btn = MDIconButton(
-            icon=icon_name, size_hint=(1, 1), size_hint_min=(None, None),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}, theme_icon_color="Custom",
-            icon_color=self.icon_color, md_bg_color=[0, 0, 0, 0], ripple_scale=0
+        self._icon_scatter = Scatter(
+            do_rotation=False,
+            do_scale=False,
+            do_translation=False,
+            auto_bring_to_front=False,
+            size_hint=(None, None),
+            size=(dp(28), dp(28)),
         )
-        self.icon_btn.bind(on_release=self._on_press)
-        self.add_widget(self.icon_btn)
-        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
+
+        self.icon_widget = MDIcon(
+            icon=icon_name,
+            halign="center",
+            valign="middle",
+            size_hint=(None, None),
+            size=(dp(28), dp(28)),
+            pos=(0, 0),
+            theme_text_color="Custom",
+            text_color=self.icon_color,
+            font_size=sp(24),
+        )
+        self._icon_scatter.add_widget(self.icon_widget)
+        self.add_widget(self._icon_scatter)
+
+        self.bind(pos=self._center_scatter, size=self._center_scatter)
         self.update_state()
 
-    def _on_enter(self, *args):
-        self.md_bg_color = [1, 1, 1, 0.05]
+    def _center_scatter(self, *args):
+        self._icon_scatter.center = self.center
 
-    def _on_leave(self, *args):
-        self.md_bg_color = [0, 0, 0, 0]
+    def set_rotation(self, angle):
+        if hasattr(self, '_icon_scatter') and self._icon_scatter:
+            self._icon_scatter.rotation = angle
+            self._icon_scatter.center = self.center
 
-    def _on_press(self, instance):
-        if self.on_press_callback and self.is_active: self.on_press_callback()
+    def on_release(self):
+        if self.on_press_callback and self.is_active:
+            self.on_press_callback()
 
     def set_active(self, active):
         self.is_active = active
@@ -1007,19 +1228,19 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         if self.fixed_color:
             return
         if self.is_active:
-            self.icon_btn.icon_color = self.icon_color
-            self.icon_btn.opacity = 1
+            self.icon_widget.text_color = self.icon_color
+            self.icon_widget.opacity = 1
         else:
-            self.icon_btn.icon_color = [1, 1, 1, 0.3]
-            self.icon_btn.opacity = 0.6
+            self.icon_widget.text_color = [1, 1, 1, 0.3]
+            self.icon_widget.opacity = 0.6
 
     def set_icon(self, icon_name):
         self.icon_name = icon_name
-        self.icon_btn.icon = icon_name
+        self.icon_widget.icon = icon_name
 
     def set_color(self, color):
         self.icon_color = color
-        self.icon_btn.icon_color = color
+        self.icon_widget.text_color = color
 
 
 # ============ СЕЛЕКТОРЫ В СТИЛЕ АЛФАВИТА ============
@@ -1034,14 +1255,46 @@ class TextSelectorButton(MDBoxLayout):
         self.width = dp(40)
         self.padding = [dp(2)] * 4
         self.md_bg_color = [0, 0, 0, 0]
+
+        self._label_scatter = Scatter(
+            do_rotation=False,
+            do_scale=False,
+            do_translation=False,
+            auto_bring_to_front=False,
+            size_hint=(None, None),
+        )
         self.label = MDLabel(
             text=text, font_size=sp(15), halign="center", valign="middle",
             theme_text_color="Custom", text_color=[1, 1, 1, 0.7], bold=True,
-            size_hint=(1, 1)
+            size_hint=(None, None)
         )
-        self.add_widget(self.label)
+        self._label_scatter.add_widget(self.label)
+
+        holder = FloatLayout(size_hint=(1, 1))
+        holder.add_widget(self._label_scatter)
+        self.add_widget(holder)
+
+        def _sync_label_box(*args):
+            angle = self._label_scatter.rotation
+            if abs(angle % 180) == 90:
+                self._label_scatter.size = (holder.height, holder.width)
+                self.label.size = (holder.height, holder.width)
+            else:
+                self._label_scatter.size = (holder.width, holder.height)
+                self.label.size = (holder.width, holder.height)
+            self._label_scatter.center = holder.center
+
+        self._sync_label_box = _sync_label_box
+        holder.bind(pos=_sync_label_box, size=_sync_label_box)
+
         self.bind(on_touch_down=self._on_touch_down)
         self._update_style()
+
+    def set_rotation(self, angle):
+        if hasattr(self, '_label_scatter') and self._label_scatter:
+            self._label_scatter.rotation = angle
+            if hasattr(self, '_sync_label_box'):
+                self._sync_label_box()
 
     def _on_touch_down(self, instance, touch):
         if self.collide_point(*touch.pos):
@@ -1068,6 +1321,53 @@ class TextSelectorButton(MDBoxLayout):
             self.radius = [0]
 
 
+class _SelectorArrowBtn(ButtonBehavior, FloatLayout):
+    def __init__(self, icon_name, on_release_cb, is_left=True, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, 1)
+        self.width = dp(32)
+        self.on_release_cb = on_release_cb
+        self.base_icon = icon_name
+        self.is_left = is_left
+
+        self._scatter = Scatter(
+            do_rotation=False,
+            do_scale=False,
+            do_translation=False,
+            auto_bring_to_front=False,
+            size_hint=(None, None),
+            size=(dp(26), dp(26)),
+        )
+        self.icon = MDIcon(
+            icon=icon_name,
+            halign="center",
+            valign="middle",
+            size_hint=(None, None),
+            size=(dp(26), dp(26)),
+            text_size=(dp(26), dp(26)),
+            pos=(0, 0),
+            theme_text_color="Custom",
+            font_size=sp(24),
+        )
+        self._scatter.add_widget(self.icon)
+        self.add_widget(self._scatter)
+
+        self.bind(pos=self._sync_center, size=self._sync_center)
+
+    def _sync_center(self, *args):
+        self._scatter.center = self.center
+
+    def set_rotation(self, angle):
+        self._scatter.rotation = 0
+        self._scatter.center = self.center
+        Clock.schedule_once(self._sync_center, 0)
+
+    def on_release(self):
+        if self.on_release_cb:
+            self.on_release_cb()
+
+
+
 class BaseSelectorMenu(MDBoxLayout):
     def __init__(self, on_confirm, on_cancel, **kwargs):
         super().__init__(**kwargs)
@@ -1085,15 +1385,12 @@ class BaseSelectorMenu(MDBoxLayout):
         self.container = None
         self.buttons = []
         self.current_selection = None
+        self._current_rotation = 0
         self._build_ui()
 
     def _build_ui(self):
-        self.left_arrow = MDIconButton(
-            icon="chevron-left", size_hint=(None, 1), width=dp(32),
-            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.scroll_by(-1), ripple_scale=0, ripple_alpha=0
-        )
-        self.add_widget(self.left_arrow)
+        self.left_arrow_btn = _SelectorArrowBtn("chevron-left", lambda: self.scroll_by(-1), is_left=True)
+        self.add_widget(self.left_arrow_btn)
 
         self.scroll = ScrollView(
             size_hint=(1, 1), do_scroll_x=True, do_scroll_y=False,
@@ -1101,21 +1398,26 @@ class BaseSelectorMenu(MDBoxLayout):
         )
         self.container = MDBoxLayout(
             orientation='horizontal', size_hint_x=None, spacing=dp(2),
-            padding=[dp(4), dp(4), dp(4), dp(4)]
+            padding=[dp(4), 0, dp(4), 0]
         )
         self.container.bind(minimum_width=self.container.setter('width'))
         self._populate_items()
         self.scroll.add_widget(self.container)
         self.add_widget(self.scroll)
 
-        self.right_arrow = MDIconButton(
-            icon="chevron-right", size_hint=(None, 1), width=dp(32),
-            theme_icon_color="Custom", md_bg_color=[0, 0, 0, 0],
-            on_release=lambda x: self.scroll_by(1), ripple_scale=0, ripple_alpha=0
-        )
-        self.add_widget(self.right_arrow)
+        self.right_arrow_btn = _SelectorArrowBtn("chevron-right", lambda: self.scroll_by(1), is_left=False)
+        self.add_widget(self.right_arrow_btn)
 
         self.update_theme_colors()
+
+    def set_items_rotation(self, angle):
+        self._current_rotation = angle
+        if hasattr(self, 'left_arrow_btn'):
+            self.left_arrow_btn.set_rotation(angle)
+        if hasattr(self, 'right_arrow_btn'):
+            self.right_arrow_btn.set_rotation(angle)
+        for btn in self.buttons:
+            btn.set_rotation(angle)
 
     def scroll_by(self, direction):
         new_scroll = max(0, min(1, self.scroll.scroll_x + direction * 0.2))
@@ -1124,10 +1426,10 @@ class BaseSelectorMenu(MDBoxLayout):
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         arrow_color = ChordsColors.get_arrow_color(theme_id)
-        if hasattr(self, 'left_arrow'):
-            self.left_arrow.icon_color = arrow_color
-        if hasattr(self, 'right_arrow'):
-            self.right_arrow.icon_color = arrow_color
+        if hasattr(self, 'left_arrow_btn'):
+            self.left_arrow_btn.icon.text_color = arrow_color
+        if hasattr(self, 'right_arrow_btn'):
+            self.right_arrow_btn.icon.text_color = arrow_color
         for btn in self.buttons:
             btn._update_style()
 
@@ -1144,7 +1446,8 @@ class BaseSelectorMenu(MDBoxLayout):
     def _on_item_press(self, value):
         self.current_selection = value
         self._highlight_current()
-        if self.on_confirm: self.on_confirm(value)
+        if self.on_confirm:
+            self.on_confirm(value)
 
     def show(self):
         self.is_visible = True
@@ -1230,6 +1533,8 @@ class ChordSelectorMenu(BaseSelectorMenu):
         self.container.clear_widgets()
         self.buttons = []
         self._populate_items()
+        if getattr(self, '_current_rotation', 0):
+            self.set_items_rotation(self._current_rotation)
         self._highlight_current()
 
     def set_current(self, chord_name):
@@ -1243,7 +1548,7 @@ class ChordSelectorMenu(BaseSelectorMenu):
 class UnifiedMenu(MDBoxLayout):
     def __init__(self, tonality_value, type_value, chord_value,
                  on_tonality_press=None, on_type_press=None, on_chord_press=None,
-                 on_variants_press=None, on_mode_toggle=None,
+                 on_variants_press=None, on_mode_toggle=None, on_rotate_press=None,
                  variants_count=1, current_mode="finger", chord_count=0, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
@@ -1286,10 +1591,24 @@ class UnifiedMenu(MDBoxLayout):
         self.add_widget(self._create_divider())
         self.add_widget(self.mode_item)
 
+        self.rotate_item = None
+        if on_rotate_press is not None:
+            self.rotate_item = IconMenuItem(
+                "phone-rotate-landscape", on_rotate_press, True,
+                icon_color=[0.25, 0.78, 0.55, 1], fixed_color=True
+            )
+            self.add_widget(self._create_divider())
+            self.add_widget(self.rotate_item)
+
         self.update_theme_colors()
 
     def _create_divider(self):
         return MDBoxLayout(size_hint_x=None, width=dp(1))
+
+    def set_icons_rotation(self, angle):
+        for child in self.children:
+            if isinstance(child, IconMenuItem):
+                child.set_rotation(angle)
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
@@ -1303,10 +1622,10 @@ class UnifiedMenu(MDBoxLayout):
         self.chord_item.is_active = True
         if has_chords:
             self.chord_item.set_color([1.0, 0.7, 0.0, 1])
-            self.chord_item.icon_btn.opacity = 1
+            self.chord_item.icon_widget.opacity = 1
         else:
             self.chord_item.set_color([1, 1, 1, 0.35])
-            self.chord_item.icon_btn.opacity = 0.7
+            self.chord_item.icon_widget.opacity = 0.7
         self.chord_item.update_state()
 
     def update_variants(self, count):
@@ -1314,10 +1633,10 @@ class UnifiedMenu(MDBoxLayout):
         self.variants_item.is_active = has_variants
         if has_variants:
             self.variants_item.set_color([0.13, 0.59, 0.95, 1])
-            self.variants_item.icon_btn.opacity = 1
+            self.variants_item.icon_widget.opacity = 1
         else:
             self.variants_item.set_color([1, 1, 1, 0.3])
-            self.variants_item.icon_btn.opacity = 0.6
+            self.variants_item.icon_widget.opacity = 0.6
         self.variants_item.update_state()
 
     def update_mode(self, mode):
@@ -1424,7 +1743,8 @@ class ChordsScreen(BaseScreen):
             self.bg_rect.size = self.size
 
     def update_screen_background(self):
-        if not self.bg_color_inst: return
+        if not self.bg_color_inst:
+            return
         theme_id = settings_manager.theme
 
         if theme_id == 'green':
@@ -1443,15 +1763,20 @@ class ChordsScreen(BaseScreen):
 
     def update_theme_colors(self):
         self.update_screen_background()
-        if self.search_bar: self.search_bar.update_theme_colors()
-        if self.unified_menu: self.unified_menu.update_theme_colors()
+        if self.search_bar:
+            self.search_bar.update_theme_colors()
+        if self.unified_menu:
+            self.unified_menu.update_theme_colors()
         if self.swipe_container:
             self.swipe_container.update_theme_colors()
             self.swipe_container.update_fret_color(settings_manager.theme)
             self.swipe_container.update_overlay_theme()
-        if self.tonality_selector: self.tonality_selector.update_theme_colors()
-        if self.type_selector: self.type_selector.update_theme_colors()
-        if self.chord_selector: self.chord_selector.update_theme_colors()
+        if self.tonality_selector:
+            self.tonality_selector.update_theme_colors()
+        if self.type_selector:
+            self.type_selector.update_theme_colors()
+        if self.chord_selector:
+            self.chord_selector.update_theme_colors()
 
         if hasattr(self, 'menu_card'):
             theme_id = settings_manager.theme
@@ -1467,12 +1792,14 @@ class ChordsScreen(BaseScreen):
             self.search_status_label.text_color = hint_color
 
     def update_language(self):
-        if self.search_bar: self.search_bar.update_language()
+        if self.search_bar:
+            self.search_bar.update_language()
         self._set_search_status(None)
         self._show_description()
 
     def _create_cached_menus(self, dt=None):
-        if self._menu_cache_initialized: return
+        if self._menu_cache_initialized:
+            return
 
         self.tonality_selector = TonalitySelectorMenu(self.current_tonality, self._on_tonality_confirmed,
                                                       self._close_tonality_selector)
@@ -1502,13 +1829,16 @@ class ChordsScreen(BaseScreen):
                 self.swipe_container.height = new_height
 
     def _rebuild_slides_for_current_chord(self):
-        if not self.swipe_container: return
+        if not self.swipe_container:
+            return
         self.swipe_container.clear_slides()
         for variant in self.current_variants:
             module = variant.get('module')
-            if module: self.swipe_container.add_slide(module)
+            if module:
+                self.swipe_container.add_slide(module)
         self.swipe_container.update_renderer_mode(self.current_mode)
-        if self.current_variants: self.swipe_container.set_current_slide(self.current_variant_index)
+        if self.current_variants:
+            self.swipe_container.set_current_slide(self.current_variant_index)
 
         chords_state.mark_slides_built(
             settings_manager.theme,
@@ -1517,7 +1847,8 @@ class ChordsScreen(BaseScreen):
         )
 
     def _dict_to_module(self, data: dict):
-        class _FakeModule: pass
+        class _FakeModule:
+            pass
 
         m = _FakeModule()
         m.__name__ = f"server_chord_{data.get('main_name', '?')}_{data.get('variant', 1)}"
@@ -1535,15 +1866,18 @@ class ChordsScreen(BaseScreen):
         return m
 
     def _rebuild_server_slides(self):
-        if not self.swipe_container: return
+        if not self.swipe_container:
+            return
         self.swipe_container.clear_slides()
         for variant in self.current_variants:
             server_data = variant.get("server_data")
-            if not server_data: continue
+            if not server_data:
+                continue
             module = self._dict_to_module(server_data)
             self.swipe_container.add_slide(module)
         self.swipe_container.update_renderer_mode(self.current_mode)
-        if self.current_variants: self.swipe_container.set_current_slide(self.current_variant_index)
+        if self.current_variants:
+            self.swipe_container.set_current_slide(self.current_variant_index)
 
         chords_state.mark_slides_built(
             settings_manager.theme,
@@ -1552,7 +1886,8 @@ class ChordsScreen(BaseScreen):
         )
 
     def _update_display(self):
-        if not self.current_variants: return
+        if not self.current_variants:
+            return
         variant = self.current_variants[self.current_variant_index]
 
         if variant.get("module") is not None:
@@ -1567,8 +1902,10 @@ class ChordsScreen(BaseScreen):
 
         unique_names = []
         for n in name_parts:
-            if n not in unique_names: unique_names.append(n)
-        if not unique_names: unique_names = ["?"]
+            if n not in unique_names:
+                unique_names.append(n)
+        if not unique_names:
+            unique_names = ["?"]
 
         main_name = unique_names[0]
         alt_names = unique_names[1:] if len(unique_names) > 1 else []
@@ -1678,7 +2015,8 @@ class ChordsScreen(BaseScreen):
         Clock.schedule_once(lambda dt: self.update_theme_colors(), 0.3)
 
     def _set_search_status(self, status):
-        if not self.search_status_label: return
+        if not self.search_status_label:
+            return
         theme_id = settings_manager.theme
         if status == 'found':
             self.search_status_label.text = get_text('search_found', "Мы нашли ваш аккорд")
@@ -1740,7 +2078,6 @@ class ChordsScreen(BaseScreen):
             self.swipe_container._update_overlay_name()
             self.swipe_container._update_overlay_menu()
         self._show_temporary_hint(f"{get_text('variant', 'Вариант')} {self.current_position}", 1.2)
-
 
     def _show_selector(self, selector):
         self._menu_container.clear_widgets()
@@ -1822,7 +2159,8 @@ class ChordsScreen(BaseScreen):
             desc_parts = [p.strip() for p in description.replace('!', '|').split('|') if p.strip()]
             unique_desc = []
             for part in desc_parts:
-                if part not in unique_desc: unique_desc.append(part)
+                if part not in unique_desc:
+                    unique_desc.append(part)
             if unique_desc:
                 formatted_desc = unique_desc[0]
                 main_name = self._current_main_name
@@ -1830,7 +2168,8 @@ class ChordsScreen(BaseScreen):
                     formatted_desc = formatted_desc.replace(main_name, '').strip(' |,')
                 formatted_desc = re.sub(r'\s*\|\s*', ', ', formatted_desc).strip(' ,')
                 formatted_desc = re.sub(r'\s+', ' ', formatted_desc)
-                if formatted_desc: parts.append(formatted_desc)
+                if formatted_desc:
+                    parts.append(formatted_desc)
 
         if parts:
             self._info_label.text = ", ".join(parts)
@@ -1851,7 +2190,8 @@ class ChordsScreen(BaseScreen):
             self._hint_timer = Clock.schedule_once(lambda dt: self._restore_description(), duration)
 
     def _restore_description(self):
-        if hasattr(self, '_hint_timer'): self._hint_timer = None
+        if hasattr(self, '_hint_timer'):
+            self._hint_timer = None
         self._show_description()
 
     def _open_tonality_selector(self):
@@ -1940,13 +2280,15 @@ class ChordsScreen(BaseScreen):
         query_original = query.strip()
         query_lower = query_original.lower()
         if not query_lower:
-            if self.is_search_mode: self.clear_search()
+            if self.is_search_mode:
+                self.clear_search()
             return
         self.is_search_mode = True
         self.search_results = []
         import string
         query_for_desc = query_lower
-        for punct in string.punctuation: query_for_desc = query_for_desc.replace(punct, ' ')
+        for punct in string.punctuation:
+            query_for_desc = query_for_desc.replace(punct, ' ')
         query_for_desc = ' '.join(query_for_desc.split())
         alt_map = {'bb': 'a#', 'a#': 'bb', 'db': 'c#', 'c#': 'db', 'eb': 'd#', 'd#': 'eb', 'gb': 'f#', 'f#': 'gb',
                    'ab': 'g#', 'g#': 'ab'}
@@ -1954,16 +2296,19 @@ class ChordsScreen(BaseScreen):
         for chord in self.all_chords:
             short_name_lower = chord['short_name'].lower()
             if short_name_lower == query_lower or (alt_query and short_name_lower == alt_query):
-                if chord not in self.search_results: self.search_results.append(chord)
+                if chord not in self.search_results:
+                    self.search_results.append(chord)
         if not self.search_results:
             for chord in self.all_chords:
                 description = chord.get('description', '')
                 if description:
                     desc_clean = description.lower()
-                    for punct in string.punctuation: desc_clean = desc_clean.replace(punct, ' ')
+                    for punct in string.punctuation:
+                        desc_clean = desc_clean.replace(punct, ' ')
                     desc_clean = ' '.join(desc_clean.split())
                     if desc_clean == query_for_desc:
-                        if chord not in self.search_results: self.search_results.append(chord)
+                        if chord not in self.search_results:
+                            self.search_results.append(chord)
         unique_results = []
         seen_names = set()
         for chord in self.search_results:
@@ -2032,7 +2377,8 @@ class ChordsScreen(BaseScreen):
             if target_chord_name not in self.available_chords:
                 self.available_chords.append(target_chord_name)
                 self.available_chords.sort()
-            if self.unified_menu: self.unified_menu.update_chord(len(self.available_chords))
+            if self.unified_menu:
+                self.unified_menu.update_chord(len(self.available_chords))
             self._pending_chord_list = list(self.available_chords)
             self.current_chord_name = target_chord_name
             self.current_chord_index = self.available_chords.index(target_chord_name)
@@ -2042,7 +2388,8 @@ class ChordsScreen(BaseScreen):
             self.available_chords = [target_chord_name]
             self.current_chord_name = target_chord_name
             self.current_chord_index = 0
-            if self.unified_menu: self.unified_menu.update_chord(1)
+            if self.unified_menu:
+                self.unified_menu.update_chord(1)
             self._pending_chord_list = [target_chord_name]
             self._load_variants_for_chord(target_chord_name)
 
@@ -2063,7 +2410,8 @@ class ChordsScreen(BaseScreen):
         elif self.available_chords:
             self.current_chord_name = self.available_chords[0]
             self.current_chord_index = 0
-            if self.unified_menu: self.unified_menu.update_chord(len(self.available_chords))
+            if self.unified_menu:
+                self.unified_menu.update_chord(len(self.available_chords))
             self._load_variants_for_chord(self.current_chord_name)
         else:
             self.update_available_chords()
@@ -2105,8 +2453,10 @@ class ChordsScreen(BaseScreen):
             chord_name = metadata.get('name', module_name.split('.')[-1]).replace('!', '|').replace('$', '/')
             path_parts = module_name.split('.')
             chord_type = metadata.get('type', '')
-            if not chord_type and len(path_parts) >= 2: chord_type = path_parts[-2]
-            if chord_type not in self._core_types: return
+            if not chord_type and len(path_parts) >= 2:
+                chord_type = path_parts[-2]
+            if chord_type not in self._core_types:
+                return
             variant_match = re.search(r'_(\d+)$', path_parts[-1])
             variant_num = int(variant_match.group(1)) if variant_match else metadata.get('variant', 1)
             short_name = chord_name.split('|')[0].replace('$', '/')
@@ -2119,27 +2469,32 @@ class ChordsScreen(BaseScreen):
             pass
 
     def update_available_chords(self):
-        if self.is_search_mode: return
+        if self.is_search_mode:
+            return
         if self.current_type in self._core_types:
             filtered = []
             for chord in self.all_chords:
-                if self.extract_tonality(chord['name']) != self.current_tonality: continue
+                if self.extract_tonality(chord['name']) != self.current_tonality:
+                    continue
                 chord_types = chord['type'].split('|') if chord['type'] else []
-                if self.current_type not in chord_types and self.current_type != chord.get('type', ''): continue
+                if self.current_type not in chord_types and self.current_type != chord.get('type', ''):
+                    continue
                 filtered.append(chord)
             chords_by_name = {}
             for chord in filtered:
-                if chord['short_name'] not in chords_by_name: chords_by_name[chord['short_name']] = []
+                if chord['short_name'] not in chords_by_name:
+                    chords_by_name[chord['short_name']] = []
                 chords_by_name[chord['short_name']].append(chord)
             self.available_chords = sorted(chords_by_name.keys())
-            if self.unified_menu: self.unified_menu.update_chord(len(self.available_chords))
+            if self.unified_menu:
+                self.unified_menu.update_chord(len(self.available_chords))
             self._pending_chord_list = list(self.available_chords)
             if self.available_chords:
                 if self.current_chord_name not in self.available_chords:
                     self.current_chord_index = 0
                     self.current_chord_name = self.available_chords[0]
-                if chords_by_name.get(self.current_chord_name): self.load_chord_variants(
-                    chords_by_name.get(self.current_chord_name))
+                if chords_by_name.get(self.current_chord_name):
+                    self.load_chord_variants(chords_by_name.get(self.current_chord_name))
             else:
                 self.current_variants = []
                 self.current_chord_data = None
@@ -2149,14 +2504,17 @@ class ChordsScreen(BaseScreen):
         my_id = self._request_id
 
         def _on_list(chords):
-            if my_id != self._request_id: return
+            if my_id != self._request_id:
+                return
             self.available_chords = list(chords or [])
-            if self.unified_menu: self.unified_menu.update_chord(len(self.available_chords))
+            if self.unified_menu:
+                self.unified_menu.update_chord(len(self.available_chords))
             self._pending_chord_list = list(self.available_chords)
             if not self.available_chords:
                 self._show_temporary_hint("None", 2.0)
                 self.current_variants = []
-                if self.unified_menu: self.unified_menu.update_variants(0)
+                if self.unified_menu:
+                    self.unified_menu.update_variants(0)
                 return
             if self.current_chord_name not in self.available_chords:
                 self.current_chord_index = 0
@@ -2164,27 +2522,32 @@ class ChordsScreen(BaseScreen):
             self._load_variants_for_chord(self.current_chord_name)
 
         def _on_err(msg):
-            if my_id != self._request_id: return
+            if my_id != self._request_id:
+                return
             self.available_chords = []
             self._pending_chord_list = []
-            if self.unified_menu: self.unified_menu.update_chord(0)
+            if self.unified_menu:
+                self.unified_menu.update_chord(0)
             self._show_temporary_hint(get_text('loading_error', 'Ошибка загрузки'), 2.0)
 
         self._chords_client.get_available_chords(self.current_tonality, self.current_type, on_success=_on_list,
                                                  on_error=_on_err)
 
     def extract_tonality(self, chord_name):
-        if not chord_name: return ""
+        if not chord_name:
+            return ""
         match = re.match(r'^([A-H][#b]?)', chord_name)
         return match.group(1) if match else (chord_name[0] if chord_name else "")
 
     def load_chord_variants(self, variants):
-        if not variants: return
+        if not variants:
+            return
         variants.sort(key=lambda x: x['variant'])
         self.current_variants = variants
         self.current_variant_index = 0
         self.current_position = 1
-        if self.unified_menu: self.unified_menu.update_variants(len(variants))
+        if self.unified_menu:
+            self.unified_menu.update_variants(len(variants))
         self._rebuild_slides_for_current_chord()
         self._update_display()
 
@@ -2194,21 +2557,23 @@ class ChordsScreen(BaseScreen):
             for chord in self.all_chords:
                 if chord['short_name'] == chord_name and self.extract_tonality(chord['name']) == self.current_tonality:
                     chord_types = chord['type'].split('|') if chord['type'] else []
-                    if self.current_type in chord_types or self.current_type == chord.get('type', ''): variants.append(
-                        chord)
+                    if self.current_type in chord_types or self.current_type == chord.get('type', ''):
+                        variants.append(chord)
             if variants:
                 variants.sort(key=lambda x: x['variant'])
                 self.current_variants = variants
                 self.current_variant_index = 0
                 self.current_position = 1
-                if self.unified_menu: self.unified_menu.update_variants(len(variants))
+                if self.unified_menu:
+                    self.unified_menu.update_variants(len(variants))
                 self._rebuild_slides_for_current_chord()
                 self._update_display()
             else:
                 self.current_variants = []
                 self.current_variant_index = 0
                 self.current_position = 1
-                if self.unified_menu: self.unified_menu.update_variants(0)
+                if self.unified_menu:
+                    self.unified_menu.update_variants(0)
             return
 
         self._server_loading = True
@@ -2216,7 +2581,8 @@ class ChordsScreen(BaseScreen):
         my_id = self._request_id
 
         def _on_success(variants):
-            if my_id != self._request_id: return
+            if my_id != self._request_id:
+                return
             self._server_loading = False
             normalized = []
             for v in variants:
@@ -2230,17 +2596,20 @@ class ChordsScreen(BaseScreen):
             self.current_variants = normalized
             self.current_variant_index = 0
             self.current_position = 1
-            if self.unified_menu: self.unified_menu.update_variants(len(normalized))
+            if self.unified_menu:
+                self.unified_menu.update_variants(len(normalized))
             self._rebuild_server_slides()
             self._update_display()
 
         def _on_error(msg):
-            if my_id != self._request_id: return
+            if my_id != self._request_id:
+                return
             self._server_loading = False
             self.current_variants = []
             self.current_variant_index = 0
             self.current_position = 1
-            if self.unified_menu: self.unified_menu.update_variants(0)
+            if self.unified_menu:
+                self.unified_menu.update_variants(0)
             self._show_temporary_hint(get_text('loading_error', 'Ошибка загрузки'), 2.0)
 
         self._chords_client.get_chord(chord_name, self.current_type, on_success=_on_success, on_error=_on_error)
@@ -2248,12 +2617,17 @@ class ChordsScreen(BaseScreen):
     def select_chord_by_name(self, chord_name):
         target_chord = None
         for chord in self.all_chords:
-            if chord['short_name'] == chord_name: target_chord = chord; break
+            if chord['short_name'] == chord_name:
+                target_chord = chord
+                break
         if not target_chord:
             for chord in self.all_chords:
                 for variant in chord['name'].split('|'):
-                    if variant.strip().replace('$', '/') == chord_name: target_chord = chord; break
-                if target_chord: break
+                    if variant.strip().replace('$', '/') == chord_name:
+                        target_chord = chord
+                        break
+                if target_chord:
+                    break
         if target_chord:
             tonality = self._extract_tonality_from_name(target_chord['name'])
             chord_type = target_chord.get('type', 'Major')
@@ -2275,7 +2649,8 @@ class ChordsScreen(BaseScreen):
         return True
 
     def _extract_tonality_from_name(self, chord_name):
-        if not chord_name: return "A"
+        if not chord_name:
+            return "A"
         match = re.match(r'^([A-H][#b]?)', chord_name)
         return match.group(1) if match else (chord_name[0] if chord_name else "A")
 
@@ -2287,7 +2662,8 @@ class ChordsScreen(BaseScreen):
             self.current_variants = variants
             self.current_variant_index = 0
             self.current_position = 1
-            if self.unified_menu: self.unified_menu.update_variants(len(variants))
+            if self.unified_menu:
+                self.unified_menu.update_variants(len(variants))
             self.current_chord_name = short
             self._rebuild_slides_for_current_chord()
             self._update_display()
