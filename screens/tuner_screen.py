@@ -1,12 +1,13 @@
 # screens/tuner_screen.py
 """
-Экран гитарного тюнера — горизонтальная шкала в стиле tuner7 + эталонные ноты.
+Экран гитарного тюнера — горизонтальная шкала + эталонные ноты.
 Адаптирован под 3 темы (green, dark, light) и 6 языков.
 
-ДИЗАЙН:
-  - Карточка тюнера и меню — те же фон/обводка, что у меню аккордов.
-  - Разделители в меню — «рваные» короткие линии по центру (не на всю высоту).
-  - Кнопки нот — те же фон/обводка, что у меню аккордов.
+ОБНОВЛЕНИЯ:
+  - Профессиональный алгоритм YIN для точного определения частоты (без скачков октав).
+  - Ручной режим фиксации выбранной струны (Manual Mode).
+  - Плавное сглаживание частоты (EMA-фильтр).
+  - Увеличенный буфер (2048) для уверенного захвата басов.
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Triangle, RoundedRectangle
@@ -53,18 +54,13 @@ IS_ANDROID = platform == 'android'
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
-    def load_asset_as_bytes(name):
-        return None
+    def load_asset_as_bytes(name): return None
 
 try:
     from utils.android_audio import get_audio_recorder, set_debug_callback
-
     HAS_AUDIO_RECORDER = True
 except ImportError:
     HAS_AUDIO_RECORDER = False
@@ -74,7 +70,6 @@ HAS_SOUNDDEVICE = False
 
 try:
     import pyaudio
-
     HAS_PYAUDIO = True
 except ImportError:
     pass
@@ -82,13 +77,13 @@ except ImportError:
 try:
     import sounddevice as sd
     import numpy as np
-
     HAS_SOUNDDEVICE = True
 except ImportError:
     pass
 
+# Увеличенный буфер для лучшего захвата низких частот
 SAMPLE_RATE = 44100
-CHUNK_SIZE = 1024
+CHUNK_SIZE = 2048
 
 
 # ============================================================
@@ -98,93 +93,61 @@ CHUNK_SIZE = 1024
 class TunerColors:
     @staticmethod
     def get_accent(theme_id):
-        if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 1]
-        elif theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 1]
-        else:
-            return [0.46, 0.70, 0.71, 1]
+        if theme_id == 'light': return [0.1, 0.55, 0.3, 1]
+        elif theme_id == 'dark': return [1.0, 0.5, 0.0, 1]
+        else: return [0.46, 0.70, 0.71, 1]
 
     @staticmethod
     def get_text_primary(theme_id):
-        if theme_id == 'light':
-            return [0.1, 0.1, 0.1, 1]
-        else:
-            return [1, 1, 1, 0.95]
+        if theme_id == 'light': return [0.1, 0.1, 0.1, 1]
+        else: return [1, 1, 1, 0.95]
 
     @staticmethod
     def get_text_secondary(theme_id):
-        if theme_id == 'light':
-            return [0.4, 0.4, 0.4, 1]
-        else:
-            return [1, 1, 1, 0.5]
+        if theme_id == 'light': return [0.4, 0.4, 0.4, 1]
+        else: return [1, 1, 1, 0.5]
 
     @staticmethod
     def get_card_bg(theme_id):
-        """Фон карточки тюнера — как menu_bg в ChordsColors."""
-        if theme_id == 'light':
-            return [0.95, 0.95, 0.95, 1]
-        elif theme_id == 'dark':
-            return [0.15, 0.15, 0.15, 1]
-        else:
-            return [0, 0, 0, 0.15]
+        if theme_id == 'light': return [0.95, 0.95, 0.95, 1]
+        elif theme_id == 'dark': return [0.15, 0.15, 0.15, 1]
+        else: return [0, 0, 0, 0.15]
 
     @staticmethod
     def get_card_line(theme_id):
-        """Обводка карточки — как card_line в ChordsColors."""
-        if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 0.5]
-        elif theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 0.5]
-        else:
-            return [0.46, 0.70, 0.71, 0.4]
+        if theme_id == 'light': return [0.1, 0.55, 0.3, 0.5]
+        elif theme_id == 'dark': return [1.0, 0.5, 0.0, 0.5]
+        else: return [0.46, 0.70, 0.71, 0.4]
 
     @staticmethod
-    def get_card_line_width(theme_id):
-        return 1.5
+    def get_card_line_width(theme_id): return 1.5
 
     @staticmethod
     def get_hint_color(theme_id):
-        if theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 1]
-        elif theme_id == 'light':
-            return [0.1, 0.55, 0.3, 1]
-        else:
-            return [1, 1, 1, 0.5]
+        if theme_id == 'dark': return [1.0, 0.5, 0.0, 1]
+        elif theme_id == 'light': return [0.1, 0.55, 0.3, 1]
+        else: return [1, 1, 1, 0.5]
 
     @staticmethod
     def get_divider_color(theme_id):
-        """Цвет «рваного» разделителя."""
-        if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 0.6]
-        elif theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 0.6]
-        else:
-            return [0.46, 0.70, 0.71, 0.55]
+        if theme_id == 'light': return [0.1, 0.55, 0.3, 0.6]
+        elif theme_id == 'dark': return [1.0, 0.5, 0.0, 0.6]
+        else: return [0.46, 0.70, 0.71, 0.55]
 
     @staticmethod
     def get_note_bg(theme_id):
-        """Фон кнопки ноты — как у menu_card."""
-        if theme_id == 'light':
-            return [1, 1, 1, 1]
-        elif theme_id == 'dark':
-            return [0.15, 0.15, 0.15, 1]
-        else:
-            return [0, 0, 0, 0.15]
+        if theme_id == 'light': return [1, 1, 1, 1]
+        elif theme_id == 'dark': return [0.15, 0.15, 0.15, 1]
+        else: return [0, 0, 0, 0.15]
 
     @staticmethod
     def get_note_line(theme_id):
-        """Обводка кнопки ноты — как у card_line."""
-        if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 0.5]
-        elif theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 0.5]
-        else:
-            return [0.46, 0.70, 0.71, 0.4]
+        if theme_id == 'light': return [0.1, 0.55, 0.3, 0.5]
+        elif theme_id == 'dark': return [1.0, 0.5, 0.0, 0.5]
+        else: return [0.46, 0.70, 0.71, 0.4]
 
     @staticmethod
-    def get_note_line_width(theme_id):
-        return 1.5
+    def get_note_line_width(theme_id): return 1.5
 
 
 # ============ СТРОИ ГИТАР ============
@@ -274,10 +237,6 @@ def get_temp_path():
     return tempfile.gettempdir()
 
 
-def clamp_value(value, min_val=-1.0, max_val=1.0):
-    return max(min_val, min(max_val, value))
-
-
 def generate_reference_note(frequency, duration=2.0, volume=0.6, string_type='mid'):
     try:
         from utils.generate_sounds import generate_realistic_string_sound
@@ -300,53 +259,100 @@ def clean_temp_file(path):
         pass
 
 
-def detect_pitch(audio_data, sample_rate=SAMPLE_RATE):
-    if not audio_data or len(audio_data) < 200:
-        return 0
+# ============ ПРОФЕССИОНАЛЬНЫЙ ДЕТЕКТОР YIN ============
+
+def detect_pitch(audio_data, sample_rate=SAMPLE_RATE, min_freq=28.0, max_freq=850.0):
+    """
+    Определение основной частоты методом YIN (разностная функция с кумулятивной нормализацией).
+    Исключает ошибки на октаву вверх и стабильно работает на низких частотах (от 28 Гц).
+    """
+    if not audio_data or len(audio_data) < 512:
+        return 0.0
+
     try:
         if isinstance(audio_data, bytes):
-            if len(audio_data) % 2 == 0:
-                samples = struct.unpack(f'{len(audio_data) // 2}h', audio_data)
-            else:
-                return 0
+            if len(audio_data) % 2 != 0:
+                return 0.0
+            samples = struct.unpack(f'{len(audio_data) // 2}h', audio_data)
         else:
             samples = audio_data
     except Exception:
-        return 0
-    mean = sum(samples) / len(samples) if samples else 0
-    samples = [s - mean for s in samples]
-    max_amp = max(abs(s) for s in samples) if samples else 0
-    if max_amp < 50:
-        return 0
-    max_corr = 0
-    max_lag = 0
-    corr_values = []
-    min_lag = int(sample_rate / 800)
-    max_lag_limit = int(sample_rate / 80)
-    if max_lag_limit > len(samples) // 2:
-        max_lag_limit = len(samples) // 2
-    if min_lag >= max_lag_limit:
-        return 0
-    for lag in range(min_lag, max_lag_limit):
-        corr = sum(samples[i] * samples[i + lag] for i in range(len(samples) - lag))
-        corr_values.append((lag, corr))
-        if corr > max_corr:
-            max_corr = corr
-            max_lag = lag
-    if max_lag == 0:
-        return 0
-    if max_lag > min_lag and max_lag < max_lag_limit - 1:
-        prev_corr = next((c for l, c in corr_values if l == max_lag - 1), 0)
-        next_corr = next((c for l, c in corr_values if l == max_lag + 1), 0)
-        if prev_corr > 0 and next_corr > 0:
-            denom = prev_corr - 2 * max_corr + next_corr
-            if denom != 0:
-                max_lag += (prev_corr - next_corr) / (2 * denom)
-    if max_lag > 0:
-        freq = sample_rate / max_lag
-        if 80 < freq < 800:
-            return freq
-    return 0
+        return 0.0
+
+    n = len(samples)
+    if n < 512:
+        return 0.0
+
+    # Проверка уровня сигнала (Noise Gate)
+    mean_val = sum(samples) / n
+    centered = [s - mean_val for s in samples]
+    rms = math.sqrt(sum(s * s for s in centered) / n)
+    if rms < 80.0:  # Отсекаем тишину и слабый фоновый шум
+        return 0.0
+
+    min_tau = max(2, int(sample_rate / max_freq))
+    max_tau = min(n // 2, int(sample_rate / min_freq))
+    if min_tau >= max_tau:
+        return 0.0
+
+    # Шаг 1 и 2: Разностная функция d(tau) и кумулятивная нормализация CMNDF
+    yin_buffer = [0.0] * (max_tau + 1)
+    yin_buffer[0] = 1.0
+    running_sum = 0.0
+
+    for tau in range(1, max_tau + 1):
+        diff_sum = 0.0
+        # Шаг 2 для ускорения на длинных окнах без потери точности на басах
+        step = 2 if tau > 200 else 1
+        limit = n - max_tau
+        for j in range(0, limit, step):
+            delta = centered[j] - centered[j + tau]
+            diff_sum += delta * delta
+        if step == 2:
+            diff_sum *= 2.0
+
+        yin_buffer[tau] = diff_sum
+        running_sum += diff_sum
+        if running_sum > 0:
+            yin_buffer[tau] *= tau / running_sum
+        else:
+            yin_buffer[tau] = 1.0
+
+    # Шаг 3: Поиск первого локального минимума ниже порога уверенности (0.15)
+    threshold = 0.15
+    tau_estimate = -1
+    for tau in range(min_tau, max_tau):
+        if yin_buffer[tau] < threshold:
+            while tau + 1 < max_tau and yin_buffer[tau + 1] < yin_buffer[tau]:
+                tau += 1
+            tau_estimate = tau
+            break
+
+    # Если строгий порог не пройден, берем глобальный минимум, если сигнал достаточно периодичен
+    if tau_estimate == -1:
+        min_val = min(yin_buffer[min_tau:max_tau])
+        if min_val < 0.35:
+            tau_estimate = yin_buffer.index(min_val, min_tau, max_tau)
+        else:
+            return 0.0
+
+    # Шаг 4: Параболическая интерполяция для точности до долей герца
+    better_tau = float(tau_estimate)
+    if min_tau < tau_estimate < max_tau - 1:
+        s0 = yin_buffer[tau_estimate - 1]
+        s1 = yin_buffer[tau_estimate]
+        s2 = yin_buffer[tau_estimate + 1]
+        denom = 2.0 * (2.0 * s1 - s2 - s0)
+        if denom != 0:
+            better_tau += (s2 - s0) / denom
+
+    if better_tau <= 0:
+        return 0.0
+
+    freq = sample_rate / better_tau
+    if min_freq <= freq <= max_freq:
+        return freq
+    return 0.0
 
 
 def freq_to_note(freq, tuning_note_names=None, tuning_freqs=None):
@@ -537,10 +543,6 @@ class ModernHorizontalTuner(Widget):
 # ============ «РВАНЫЙ» РАЗДЕЛИТЕЛЬ ============
 
 class DashedDivider(Widget):
-    """
-    Короткая вертикальная линия по центру, не доходит до краёв —
-    как в меню аккордов.
-    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, 1)
@@ -696,7 +698,7 @@ class NoteButton(MDCard):
             self.update_theme_colors()
 
 
-# ============ КНОПКИ МЕНЮ (ЦВЕТНЫЕ) ============
+# ============ КНОПКИ МЕНЮ ============
 
 class IconMenuItem(ButtonBehavior, MDBoxLayout):
     def __init__(self, icon_name, on_press=None, is_active=True, icon_color=None, **kwargs):
@@ -753,7 +755,6 @@ class UnifiedTunerMenu(MDCard):
             on_press=on_play,
             icon_color=[0.8, 0.3, 0.3, 1] if is_listening else [0.13, 0.59, 0.95, 1]
         )
-
         self.tune_item = IconMenuItem(
             "tune",
             on_press=on_tune,
@@ -780,23 +781,16 @@ class UnifiedTunerMenu(MDCard):
         self.update_theme_colors()
 
     def _get_instrument_icon(self, instrument):
-        if instrument == 'guitar':
-            return "guitar-acoustic"
-        elif instrument == 'bass':
-            return "guitar-electric"
-        else:
-            return "guitar-acoustic"
+        if instrument == 'guitar': return "guitar-acoustic"
+        elif instrument == 'bass': return "guitar-electric"
+        else: return "guitar-acoustic"
 
     def _get_instrument_color(self, instrument):
-        if instrument == 'guitar':
-            return [1.0, 0.7, 0.0, 1]
-        elif instrument == 'bass':
-            return [0.0, 0.8, 0.6, 1]
-        else:
-            return [0.6, 0.2, 0.8, 1]
+        if instrument == 'guitar': return [1.0, 0.7, 0.0, 1]
+        elif instrument == 'bass': return [0.0, 0.8, 0.6, 1]
+        else: return [0.6, 0.2, 0.8, 1]
 
     def _create_divider(self):
-        """Рваный разделитель — короткая линия по центру."""
         return DashedDivider()
 
     def update_theme_colors(self):
@@ -853,7 +847,10 @@ class TunerScreen(BaseScreen):
         self.tuning_freqs = TUNINGS[self.current_tuning]['freqs']
         self.tuning_note_names = TUNINGS[self.current_tuning]['note_names']
 
-        self.selected_string_index = 3
+        # Переменные для ручного режима и сглаживания
+        self.selected_string_index = 0
+        self.is_manual_mode = False
+        self._smoothed_freq = 0.0
         self.target_note = self.tuning_note_names[self.selected_string_index]
         self.target_freq = self.tuning_freqs[self.selected_string_index]
 
@@ -959,7 +956,6 @@ class TunerScreen(BaseScreen):
             self.tuning_name_label.text = get_text(TUNINGS[self.current_tuning]['name_key'])
         if hasattr(self, 'label_low'):
             self.label_low.text = get_text("low", "LOW").upper()
-        if hasattr(self, 'label_high'):
             self.label_high.text = get_text("high", "HIGH").upper()
         self.update_cents_ui()
         self._update_hint()
@@ -987,7 +983,6 @@ class TunerScreen(BaseScreen):
                 self._hint_label.text = message
                 self._hint_label.opacity = 1
                 self._hint_label.text_color = [0.8, 0.2, 0.2, 1]
-
         Clock.schedule_once(lambda dt: _update(), 0)
 
     def _show_success(self, message):
@@ -999,7 +994,6 @@ class TunerScreen(BaseScreen):
                 if hasattr(self, '_hint_timer') and self._hint_timer:
                     Clock.unschedule(self._hint_timer)
                 self._hint_timer = Clock.schedule_once(lambda dt: self._hide_hint(), 3.0)
-
         Clock.schedule_once(lambda dt: _update(), 0)
 
     def _hide_hint(self):
@@ -1007,7 +1001,6 @@ class TunerScreen(BaseScreen):
             if hasattr(self, '_hint_label') and not self._error_message:
                 self._hint_label.text = ""
                 self._hint_label.opacity = 0
-
         Clock.schedule_once(lambda dt: _update(), 0)
 
     def _clear_error(self):
@@ -1016,7 +1009,6 @@ class TunerScreen(BaseScreen):
             if hasattr(self, '_hint_label'):
                 self._hint_label.text = ""
                 self._hint_label.opacity = 0
-
         Clock.schedule_once(lambda dt: _update(), 0)
 
     def update_cents_ui(self):
@@ -1112,6 +1104,9 @@ class TunerScreen(BaseScreen):
                         continue
         self._audio_backend = 'none'
 
+    def _get_min_freq(self):
+        return 27.0 if self.current_instrument == 'bass' else 60.0
+
     def _start_audio_thread(self):
         if self._running or self._audio_backend == 'none':
             return
@@ -1133,7 +1128,7 @@ class TunerScreen(BaseScreen):
         if not self.is_listening or not self._running:
             return
         if data:
-            freq = detect_pitch(data, SAMPLE_RATE)
+            freq = detect_pitch(data, SAMPLE_RATE, min_freq=self._get_min_freq())
             if freq > 0:
                 Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
 
@@ -1146,7 +1141,7 @@ class TunerScreen(BaseScreen):
                     return
                 try:
                     audio_int16 = (indata[:, 0] * 32767).astype(np.int16)
-                    freq = detect_pitch(audio_int16.tobytes(), rate)
+                    freq = detect_pitch(audio_int16.tobytes(), rate, min_freq=self._get_min_freq())
                     if freq > 0:
                         Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
                 except Exception:
@@ -1178,7 +1173,7 @@ class TunerScreen(BaseScreen):
                 try:
                     data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
                     if data:
-                        freq = detect_pitch(data, self._working_params['rate'])
+                        freq = detect_pitch(data, self._working_params['rate'], min_freq=self._get_min_freq())
                         if freq > 0:
                             Clock.schedule_once(lambda dt, f=freq: self._process_frequency(f))
                 except Exception:
@@ -1225,39 +1220,100 @@ class TunerScreen(BaseScreen):
     def _process_frequency(self, freq):
         if not self.is_listening:
             return
-        self.current_frequency = freq
-        note, note_freq, _ = freq_to_note(freq, self.tuning_note_names, self.tuning_freqs)
-        if note:
-            cents = cents_deviation(freq, note_freq)
-            self.current_deviation = cents
-            if hasattr(self, 'tuner_gauge'):
-                self.tuner_gauge.set_value(cents)
-            if hasattr(self, 'note_label'):
-                self.note_label.text = note
-                is_tuned = abs(cents) <= 3.0
-                self.note_label.text_color = [0.2, 0.95, 0.65, 1.0] if is_tuned else TunerColors.get_text_primary(
-                    settings_manager.theme)
-            if hasattr(self, 'freq_label'):
-                self.freq_label.text = f"{freq:.2f} Hz"
-            self.update_cents_ui()
+
+        # Экспоненциальное сглаживание частоты (убирает скачки стрелки)
+        if self._smoothed_freq <= 0 or abs(freq - self._smoothed_freq) > self._smoothed_freq * 0.15:
+            self._smoothed_freq = freq
+        else:
+            self._smoothed_freq = 0.65 * self._smoothed_freq + 0.35 * freq
+
+        smooth_f = self._smoothed_freq
+        self.current_frequency = smooth_f
+
+        if self.is_manual_mode and self.target_freq > 0:
+            # Ручной режим: сравниваем строго с зафиксированной нотой
+            note = self.target_note
+            note_freq = self.target_freq
+            raw_cents = 1200.0 * math.log2(smooth_f / note_freq)
+            cents = max(-50.0, min(50.0, raw_cents))
+        else:
+            # Автоматический режим: сам определяет ближайшую струну текущего строя
+            note, note_freq, _ = freq_to_note(smooth_f, self.tuning_note_names, self.tuning_freqs)
+            if not note:
+                return
+            cents = cents_deviation(smooth_f, note_freq)
+            self.target_note = note
+            self.target_freq = note_freq
+
+        self.current_deviation = cents
+
+        if hasattr(self, 'tuner_gauge'):
+            self.tuner_gauge.set_value(cents)
+
+        if hasattr(self, 'note_label'):
+            self.note_label.text = note
+            is_tuned = abs(cents) <= 3.0
+            self.note_label.text_color = (
+                [0.2, 0.95, 0.65, 1.0]
+                if is_tuned
+                else TunerColors.get_text_primary(settings_manager.theme)
+            )
+
+        if hasattr(self, 'freq_label'):
+            self.freq_label.text = f"{smooth_f:.2f} Hz"
+
+        self.update_cents_ui()
 
     def on_reference_note_pressed(self, note_name, frequency):
+        already_active = any(
+            btn.note_name == note_name and btn.is_active
+            for btn in self._note_buttons
+        )
+
         for btn in self._note_buttons:
             btn.set_active(False)
+
+        if already_active:
+            # Повторное нажатие на активную кнопку — возврат в автоматический режим
+            self.is_manual_mode = False
+            self._smoothed_freq = 0.0
+            self.current_deviation = 0
+            if hasattr(self, 'tuner_gauge'):
+                self.tuner_gauge.set_value(0)
+            if hasattr(self, 'freq_label'):
+                self.freq_label.text = "-- Hz"
+            if hasattr(self, 'note_label'):
+                self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
+            self.update_cents_ui()
+            self._show_success("Автоматический режим")
+            return
+
+        # Фиксируем выбранную ноту
         for btn in self._note_buttons:
             if btn.note_name == note_name:
                 btn.set_active(True)
                 break
 
         display_name = ''.join(c for c in note_name if not c.isdigit())
+        self.is_manual_mode = True
+        self._smoothed_freq = 0.0
         self.target_note = display_name
         self.target_freq = frequency
+        self.current_deviation = 0
 
+        if hasattr(self, 'tuner_gauge'):
+            self.tuner_gauge.set_value(0)
+        if hasattr(self, 'freq_label'):
+            self.freq_label.text = f"{frequency:.2f} Hz"
         if hasattr(self, 'note_label'):
             self.note_label.text = display_name
-            self.note_label.text_color = TunerColors.get_accent(settings_manager.theme)
-            Clock.schedule_once(lambda dt: self._reset_note_display(), 2.0)
-        Clock.schedule_once(lambda dt: self._reset_note_buttons(), 2.5)
+            self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
+
+        self.update_cents_ui()
+
+        # Автоматически запускаем прослушивание, если тюнер был остановлен
+        if not self.is_listening and self._audio_backend != 'none':
+            self.toggle_tuner()
 
     def _reset_note_display(self):
         if hasattr(self, 'note_label'):
@@ -1292,7 +1348,6 @@ class TunerScreen(BaseScreen):
             'ukulele': ['ukulele']
         }
         available = categories.get(self.current_instrument, [])
-
         if not available:
             return
 
@@ -1308,9 +1363,12 @@ class TunerScreen(BaseScreen):
         self.tuning_freqs = t['freqs']
         self.tuning_note_names = t['note_names']
 
+        self.is_manual_mode = False
+        self._smoothed_freq = 0.0
         self.selected_string_index = 0
         self.target_note = self.tuning_note_names[0]
         self.target_freq = self.tuning_freqs[0]
+        self.current_deviation = 0
 
         if hasattr(self, 'tuner_gauge'):
             self.tuner_gauge.set_value(0)
@@ -1318,7 +1376,7 @@ class TunerScreen(BaseScreen):
             self.freq_label.text = "-- Hz"
         if hasattr(self, 'note_label'):
             self.note_label.text = self.target_note
-        self.current_deviation = 0
+            self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
 
         self._rebuild_note_buttons()
         self._reset_note_buttons()
@@ -1352,11 +1410,18 @@ class TunerScreen(BaseScreen):
             self.tuning_notes = t['notes']
             self.tuning_freqs = t['freqs']
             self.tuning_note_names = t['note_names']
+            self.is_manual_mode = False
+            self._smoothed_freq = 0.0
             self.target_note = self.tuning_note_names[0]
             self.target_freq = self.tuning_freqs[0]
-            if hasattr(self, 'tuner_gauge'): self.tuner_gauge.set_value(0)
-            if hasattr(self, 'freq_label'): self.freq_label.text = "-- Hz"
-            if hasattr(self, 'note_label'): self.note_label.text = self.target_note
+            self.current_deviation = 0
+            if hasattr(self, 'tuner_gauge'):
+                self.tuner_gauge.set_value(0)
+            if hasattr(self, 'freq_label'):
+                self.freq_label.text = "-- Hz"
+            if hasattr(self, 'note_label'):
+                self.note_label.text = self.target_note
+                self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
             self._rebuild_note_buttons()
             self._reset_note_buttons()
             self.update_cents_ui()
@@ -1378,7 +1443,7 @@ class TunerScreen(BaseScreen):
         content = MDBoxLayout(orientation='vertical', spacing=dp(10),
                               size_hint=(1, None), adaptive_height=True)
 
-        # 1. КАРТОЧКА ТЮНЕРА — те же фон/обводка, что у меню аккордов
+        # 1. КАРТОЧКА ТЮНЕРА
         self.main_tuner_card = MDCard(
             orientation='vertical',
             size_hint_y=None,
@@ -1400,7 +1465,6 @@ class TunerScreen(BaseScreen):
             text_color=TunerColors.get_text_secondary(settings_manager.theme)
         )
         self.main_tuner_card.add_widget(self.tuning_name_label)
-
         self.main_tuner_card.add_widget(Widget(size_hint_y=1))
 
         note_anchor = AnchorLayout(size_hint_y=None, height=dp(80))
@@ -1413,7 +1477,6 @@ class TunerScreen(BaseScreen):
         self.note_label.bind(on_size=lambda *args: setattr(self.note_label, 'font_size', sp(90)))
         note_anchor.add_widget(self.note_label)
         self.main_tuner_card.add_widget(note_anchor)
-
         self.main_tuner_card.add_widget(Widget(size_hint_y=1))
 
         self.freq_label = MDLabel(
@@ -1422,7 +1485,6 @@ class TunerScreen(BaseScreen):
             text_color=TunerColors.get_accent(settings_manager.theme)
         )
         self.main_tuner_card.add_widget(self.freq_label)
-
         self.main_tuner_card.add_widget(Widget(size_hint_y=1))
 
         gauge_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(90))
@@ -1432,42 +1494,29 @@ class TunerScreen(BaseScreen):
         self.main_tuner_card.add_widget(gauge_container)
 
         labels_box = MDBoxLayout(size_hint_y=None, height=dp(22), padding=[dp(12), 0])
-
         self.label_low = MDLabel(
-            text=get_text("low", "LOW").upper(),
-            font_size=sp(7.5),
-            bold=False,
-            halign="left",
-            theme_text_color="Custom",
+            text=get_text("low", "LOW").upper(), font_size=sp(7.5), bold=False,
+            halign="left", theme_text_color="Custom",
             text_color=TunerColors.get_text_secondary(settings_manager.theme)
         )
         self.cents_label = MDLabel(
-            text=f"0 {get_text('cents')}",
-            font_size=sp(14),
-            bold=True,
-            halign="center",
-            theme_text_color="Custom",
+            text=f"0 {get_text('cents')}", font_size=sp(14), bold=True,
+            halign="center", theme_text_color="Custom",
             text_color=TunerColors.get_text_secondary(settings_manager.theme)
         )
         self.label_high = MDLabel(
-            text=get_text("high", "HIGH").upper(),
-            font_size=sp(7.5),
-            bold=False,
-            halign="right",
-            theme_text_color="Custom",
+            text=get_text("high", "HIGH").upper(), font_size=sp(7.5), bold=False,
+            halign="right", theme_text_color="Custom",
             text_color=TunerColors.get_text_secondary(settings_manager.theme)
         )
-
         labels_box.add_widget(self.label_low)
         labels_box.add_widget(self.cents_label)
         labels_box.add_widget(self.label_high)
         self.main_tuner_card.add_widget(labels_box)
-
         content.add_widget(self.main_tuner_card)
 
-        # 2. МЕНЮ (ПОД КАРТОЧКОЙ) — те же фон/обводка + рваные разделители
+        # 2. МЕНЮ
         self.menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60))
-
         self.menu_stack = UnifiedTunerMenu(
             on_play=self.toggle_tuner,
             on_tune=self._cycle_tuning,
@@ -1477,22 +1526,19 @@ class TunerScreen(BaseScreen):
             is_listening=self.is_listening
         )
         self.menu_container.add_widget(self.menu_stack)
-
         content.add_widget(self.menu_container)
 
-        # 3. КНОПКИ НОТ (ПОД МЕНЮ)
+        # 3. КНОПКИ НОТ
         self.notes_row = MDBoxLayout(orientation='horizontal', size_hint=(1, None),
                                      height=dp(52), spacing=dp(12),
                                      padding=[dp(16), dp(8), dp(16), dp(8)])
-
         self._rebuild_note_buttons()
         content.add_widget(self.notes_row)
 
         # 4. Подсказка
         self._hint_label = MDLabel(
             text="", font_size=sp(12), halign="center",
-            size_hint_y=None, height=dp(24),
-            theme_text_color="Custom", opacity=0
+            size_hint_y=None, height=dp(24), theme_text_color="Custom", opacity=0
         )
         content.add_widget(self._hint_label)
 
@@ -1512,12 +1558,14 @@ class TunerScreen(BaseScreen):
             if self._audio_backend == 'none':
                 self._show_error(get_text('audio_not_init'))
                 return
+            self._smoothed_freq = 0.0
             self.is_listening = True
             self.menu_stack.update_state(True)
             self._start_audio_thread()
             self.update_cents_ui()
         else:
             self.is_listening = False
+            self._smoothed_freq = 0.0
             self.menu_stack.update_state(False)
             self._stop_audio_thread()
             if hasattr(self, 'tuner_gauge'):
@@ -1526,19 +1574,27 @@ class TunerScreen(BaseScreen):
                 self.freq_label.text = "-- Hz"
             if hasattr(self, 'note_label'):
                 self.note_label.text = self.target_note
+                self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
             self.current_deviation = 0
             self.update_cents_ui()
-            self._reset_note_buttons()
+            if not self.is_manual_mode:
+                self._reset_note_buttons()
 
     def reset_tuner(self, *args):
         if self.is_listening:
             self.toggle_tuner()
+        self.is_manual_mode = False
+        self._smoothed_freq = 0.0
+        self.selected_string_index = 0
+        self.target_note = self.tuning_note_names[0]
+        self.target_freq = self.tuning_freqs[0]
         if hasattr(self, 'tuner_gauge'):
             self.tuner_gauge.set_value(0)
         if hasattr(self, 'freq_label'):
             self.freq_label.text = "-- Hz"
         if hasattr(self, 'note_label'):
             self.note_label.text = self.target_note
+            self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
         self.current_deviation = 0
         self.update_cents_ui()
         self._reset_note_buttons()
