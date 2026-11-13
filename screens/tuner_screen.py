@@ -278,21 +278,18 @@ def clamp_value(value, min_val=-1.0, max_val=1.0):
     return max(min_val, min(max_val, value))
 
 
-def generate_reference_note(frequency, duration=2.0, volume=0.6):
-    sample_rate = 44100
-    num_samples = int(sample_rate * duration)
-    harmonics = [(1, 1.0), (2, 0.60), (3, 0.35), (4, 0.20), (5, 0.10)]
-    audio_data = array.array('h')
-    for i in range(num_samples):
-        t = i / sample_rate
-        value = 0.0
-        for harmonic, amp in harmonics:
-            value += amp * math.sin(2 * math.pi * frequency * harmonic * t + harmonic * 0.2)
-        envelope = math.exp(-t * 2.0)
-        attack = t / 0.01 if t < 0.01 else 1.0
-        value = clamp_value(value * envelope * attack * volume, -1.0, 1.0)
-        audio_data.append(int(32767 * value))
-    return audio_data
+def generate_reference_note(frequency, duration=2.0, volume=0.6, string_type='mid'):
+    try:
+        from utils.generate_sounds import generate_realistic_string_sound
+        return generate_realistic_string_sound(
+            frequency=frequency,
+            duration=duration,
+            volume=volume,
+            string_type=string_type
+        )
+    except Exception as e:
+        logger.error(f"Не удалось вызвать generate_realistic_string_sound: {e}")
+        return array.array('h')
 
 
 def clean_temp_file(path):
@@ -622,12 +619,15 @@ class NoteButton(MDCard):
             }
             module_name = tuning_map.get(self.tuning_id, self.tuning_id)
             module = importlib.import_module(f"data.sounds.{module_name}")
-            sound_class = getattr(module, module_name.title().replace('_', '') + 'Sounds')
+            class_name = module_name.title().replace('_', '') + 'Sounds'
+            sound_class = getattr(module, class_name)
             self._sound = sound_class.get_sound(self.note_name)
             self._sound_data = sound_class.get_sound_data(self.note_name)
             if not self._sound:
+                logger.warning(f"Звук {self.note_name} ({self.tuning_id}) не загружен из ассетов, запуск fallback")
                 self._generate_fallback_sound()
-        except Exception:
+        except Exception as e:
+            logger.error(f"Ошибка загрузки звука {self.note_name} ({self.tuning_id}): {e}")
             self._generate_fallback_sound()
 
     def _generate_fallback_sound(self):

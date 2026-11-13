@@ -1,56 +1,38 @@
-# utils/generate_sounds.py (исправленный)
-"""
-Генератор реалистичных звуков гитарных струн для ассетов
-Создает WAV и OGG файлы с высоким качеством и натуральным звучанием
-"""
+# utils/generate_sounds.py
 import os
 import sys
 import math
 import array
-import struct
 import time
+import random
+import base64  # <--- ДОБАВЛЕНА ЭТА СТРОКА
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List
 
-# ============ НАСТРОЙКИ ============
-SAMPLE_RATE = 44100
-BITS_PER_SAMPLE = 16
-MAX_AMPLITUDE = 32767
-
-# Пробуем импортировать PySoundFile для OGG
+# Пробуем импортировать soundfile
 try:
     import soundfile as sf
-
-    HAS_SOUNDFILE = True
+    import numpy as np
+    HAS_SOUNDFILE = False
 except ImportError:
     HAS_SOUNDFILE = False
-    print("⚠️ soundfile не установлен, OGG сжатие недоступно")
-    print("   Установите: pip install soundfile")
+    print("⚠️ soundfile не установлен! OGG не будет работать. Установите: pip install soundfile numpy")
+    print("   Звуки будут сохранены в WAV (файлы будут большими).")
+
+SAMPLE_RATE = 44100
+MAX_AMPLITUDE = 32767
 
 
-# ============ НАХОДИМ КОРЕНЬ ПРОЕКТА ============
+
 def get_project_root() -> Path:
-    """Находит корень проекта (где находится main.py)"""
-    current = Path(__file__).resolve().parent  # это /путь/к/проекту/utils
-
-    # Проверяем родительскую папку (корень проекта)
+    current = Path(__file__).resolve().parent
     parent = current.parent
     if (parent / "main.py").exists() or (parent / "assets").exists():
         return parent
-
-    # Если нет, поднимаемся выше
-    for candidate in [current] + list(current.parents):
-        if (candidate / "main.py").exists():
-            return candidate
-        if (candidate / "assets").exists():
-            return candidate
-
-    # Если не нашли, возвращаем текущую директорию
     return Path.cwd()
 
 
 PROJECT_ROOT = get_project_root()
-print(f"📁 Корень проекта: {PROJECT_ROOT}")
 
 # ============ СТРОИ ============
 TUNINGS = {
@@ -74,6 +56,17 @@ TUNINGS = {
             {'string': 3, 'note': 'G3', 'freq': 196.00, 'type': 'mid', 'volume': 0.60},
             {'string': 2, 'note': 'B3', 'freq': 246.94, 'type': 'treble', 'volume': 0.55},
             {'string': 1, 'note': 'E4', 'freq': 329.63, 'type': 'treble', 'volume': 0.50},
+        ]
+    },
+    'half_step_down': {
+        'name': 'Half Step Down',
+        'notes': [
+            {'string': 6, 'note': 'Eb2', 'freq': 77.78, 'type': 'bass', 'volume': 0.75},
+            {'string': 5, 'note': 'Ab2', 'freq': 103.83, 'type': 'bass', 'volume': 0.70},
+            {'string': 4, 'note': 'Db3', 'freq': 138.59, 'type': 'mid', 'volume': 0.65},
+            {'string': 3, 'note': 'Gb3', 'freq': 185.00, 'type': 'mid', 'volume': 0.60},
+            {'string': 2, 'note': 'Bb3', 'freq': 233.08, 'type': 'treble', 'volume': 0.55},
+            {'string': 1, 'note': 'Eb4', 'freq': 311.13, 'type': 'treble', 'volume': 0.50},
         ]
     },
     'bass_4': {
@@ -140,394 +133,290 @@ TUNINGS = {
 }
 
 
-def clamp_value(value, min_val=-1.0, max_val=1.0):
-    """Ограничивает значение в диапазоне"""
-    return max(min_val, min(max_val, value))
-
-
 def generate_realistic_string_sound(
         frequency: float,
         duration: float = 2.5,
         volume: float = 0.7,
-        string_type: str = 'mid',
-        add_harmonics: bool = True,
-        add_modulation: bool = True,
-        add_attack_noise: bool = True,
-        add_reverb: bool = True
+        string_type: str = 'mid'
 ) -> array.array:
     """
-    Генерирует РЕАЛИСТИЧНЫЙ звук гитарной струны
-
-    Особенности:
-    - Богатый спектр с гармониками
-    - Естественная модуляция (вибрато)
-    - Реалистичная атака со щипком
-    - Плавное затухание
-    - Легкая реверберация
+    Физическое моделирование щипка струны (алгоритм Карплуса — Стронга).
     """
     num_samples = int(SAMPLE_RATE * duration)
+    rng = random.Random(42)
 
-    # ===== 1. НАСТРОЙКИ ДЛЯ РАЗНЫХ ТИПОВ СТРУН =====
     if string_type == 'bass':
-        harmonics = [
-            (1, 1.0), (2, 0.85), (3, 0.65), (4, 0.45),
-            (5, 0.30), (6, 0.20), (7, 0.12), (8, 0.07),
-        ]
-        decay_rate = 1.5
-        attack_time = 0.020
-        modulation_depth = 0.003
-        noise_volume = 0.04
-        reverb_amount = 0.10
-
+        decay = 0.9965
+        brightness = 0.50     # Чуть выше, чтобы бас читался на динамиках ПК и телефона
+        pluck_pos = 0.18
+        body_resonance = 0.15
     elif string_type == 'treble':
-        harmonics = [
-            (1, 1.0), (2, 0.55), (3, 0.35), (4, 0.20),
-            (5, 0.10), (6, 0.05),
-        ]
-        decay_rate = 2.8
-        attack_time = 0.008
-        modulation_depth = 0.004
-        noise_volume = 0.02
-        reverb_amount = 0.15
-
+        decay = 0.9920
+        brightness = 0.65
+        pluck_pos = 0.12
+        body_resonance = 0.08
     else:  # mid
-        harmonics = [
-            (1, 1.0), (2, 0.70), (3, 0.45), (4, 0.30),
-            (5, 0.18), (6, 0.10), (7, 0.05),
-        ]
-        decay_rate = 2.2
-        attack_time = 0.012
-        modulation_depth = 0.003
-        noise_volume = 0.03
-        reverb_amount = 0.12
+        decay = 0.9945
+        brightness = 0.52
+        pluck_pos = 0.15
+        body_resonance = 0.12
+
+    period = SAMPLE_RATE / frequency
+    buf_len = max(2, int(round(period)))
+
+    # Начальный импульс (щипок)
+    ring_buffer = [0.0] * buf_len
+    last_val = 0.0
+    for i in range(buf_len):
+        raw_noise = rng.uniform(-1.0, 1.0)
+        filtered_noise = brightness * raw_noise + (1.0 - brightness) * last_val
+        last_val = filtered_noise
+        ring_buffer[i] = filtered_noise
+
+    # Гребенчатый фильтр позиции щипка
+    pluck_samples = max(1, int(buf_len * pluck_pos))
+    temp_buf = list(ring_buffer)
+    for i in range(buf_len):
+        ring_buffer[i] = temp_buf[i] - temp_buf[(i - pluck_samples) % buf_len]
+
+    # Убираем постоянное смещение (DC offset) и нормализуем
+    mean_val = sum(ring_buffer) / buf_len
+    ring_buffer = [x - mean_val for x in ring_buffer]
+    max_init = max(abs(x) for x in ring_buffer) or 1.0
+    ring_buffer = [x / max_init for x in ring_buffer]
 
     audio_data = array.array('h')
-    reverb_buffer = [0.0] * int(SAMPLE_RATE * 0.05)
+    idx = 0
 
-    # Генерируем шум для атаки
-    attack_noise = []
-    if add_attack_noise:
-        import random
-        for i in range(int(SAMPLE_RATE * attack_time * 3)):
-            noise = (random.random() - 0.5) * 2
-            if string_type == 'bass':
-                if len(attack_noise) > 0:
-                    noise = noise * 0.3 + attack_noise[-1] * 0.7
-            attack_noise.append(noise)
+    # Резонанс деревянной деки
+    body_freq = 140.0
+    body_phase = 0.0
+    body_step = 2.0 * math.pi * body_freq / SAMPLE_RATE
+    attack_samples = int(SAMPLE_RATE * 0.005)
+    fade_out_samples = int(SAMPLE_RATE * 0.1)
 
     for i in range(num_samples):
-        t = i / SAMPLE_RATE
+        current_sample = ring_buffer[idx]
+        next_idx = (idx + 1) % buf_len
+        next_sample = ring_buffer[next_idx]
 
-        # ===== 2. ОСНОВНОЙ ТОН С ГАРМОНИКАМИ =====
-        value = 0.0
+        # Фильтр нижних частот в петле обратной связи
+        averaged = 0.5 * (current_sample + next_sample) * decay
+        ring_buffer[idx] = averaged
+        idx = next_idx
 
-        if add_harmonics:
-            for harmonic, amp in harmonics:
-                freq = frequency * harmonic
-                phase = harmonic * 0.3 + t * harmonic * 0.2
-                harmonic_value = amp * math.sin(2 * math.pi * freq * t + phase)
-                value += harmonic_value
-        else:
-            value = math.sin(2 * math.pi * frequency * t)
+        out_val = current_sample
+        if i < SAMPLE_RATE * 0.12:
+            body_env = math.exp(-i / (SAMPLE_RATE * 0.025))
+            out_val += math.sin(body_phase) * body_resonance * body_env
+            body_phase += body_step
 
-        # ===== 3. МОДУЛЯЦИЯ ЧАСТОТЫ =====
-        if add_modulation and frequency > 40:
-            mod_freq = 3.5 + 0.5 * math.sin(t * 0.2)
-            mod_amount = modulation_depth * frequency * (0.5 + 0.5 * (1 - math.exp(-t * 0.5)))
-            mod_wave = math.sin(2 * math.pi * mod_freq * t)
+        if i < attack_samples:
+            out_val *= (i / attack_samples)
 
-            freq_mod = frequency + mod_amount * mod_wave
-            value = math.sin(2 * math.pi * freq_mod * t)
+        if i > num_samples - fade_out_samples:
+            rem = (num_samples - i) / fade_out_samples
+            out_val *= max(0.0, rem)
 
-            if add_harmonics:
-                value = 0.0
-                for harmonic, amp in harmonics:
-                    freq_harm = freq_mod * harmonic
-                    phase = harmonic * 0.3 + t * harmonic * 0.2
-                    harmonic_value = amp * math.sin(2 * math.pi * freq_harm * t + phase)
-                    value += harmonic_value
-
-        # ===== 4. ШУМ АТАКИ =====
-        if add_attack_noise and i < len(attack_noise):
-            noise_env = math.exp(-t * (20 if string_type != 'bass' else 15))
-            noise = attack_noise[i] * noise_volume * noise_env
-            value += noise
-
-        # ===== 5. ОГИБАЮЩАЯ =====
-        if t < attack_time:
-            attack = t / attack_time
-            attack = 1 - math.exp(-attack * 8)
-        else:
-            attack = 1.0
-
-        decay_rate_adj = decay_rate * (1.0 + (frequency / 1000) * 0.15)
-        envelope = math.exp(-t * decay_rate_adj)
-
-        if t > duration * 0.6:
-            breathe = 1.0 + 0.03 * math.sin(t * 5.0 + 1.0)
-            envelope *= breathe
-
-        value = value * envelope * attack * volume
-
-        # ===== 6. РЕВЕРБЕРАЦИЯ =====
-        if add_reverb and reverb_amount > 0:
-            reverb_buffer.append(value * reverb_amount * 0.3)
-            if len(reverb_buffer) > len(reverb_buffer):
-                reverb_buffer.pop(0)
-            reverb_signal = sum(reverb_buffer[-100:]) / 100
-            value += reverb_signal * 0.1
-
-        # ===== 7. КЛИППИНГ И НОРМАЛИЗАЦИЯ =====
-        value = math.tanh(value * 0.9)
-        value = clamp_value(value, -1.0, 1.0)
-
-        int_value = int(MAX_AMPLITUDE * value)
-        int_value = max(-32768, min(32767, int_value))
-        audio_data.append(int_value)
+        out_val *= volume
+        out_val = max(-0.98, min(0.98, out_val))
+        audio_data.append(int(MAX_AMPLITUDE * out_val))
 
     return audio_data
 
 
-def save_wav(audio_data: array.array, filename: str) -> bool:
-    """Сохраняет WAV файл"""
+
+def save_wav(audio_data, filename):
     try:
         with open(filename, 'wb') as f:
             f.write(b'RIFF')
-            f.write(struct.pack('<I', 36 + len(audio_data) * 2))
-            f.write(b'WAVE')
-            f.write(b'fmt ')
-            f.write(struct.pack('<I', 16))
-            f.write(struct.pack('<H', 1))
-            f.write(struct.pack('<H', 1))
-            f.write(struct.pack('<I', SAMPLE_RATE))
-            f.write(struct.pack('<I', SAMPLE_RATE * 2))
-            f.write(struct.pack('<H', 2))
-            f.write(struct.pack('<H', BITS_PER_SAMPLE))
+            f.write((36 + len(audio_data) * 2).to_bytes(4, 'little'))
+            f.write(b'WAVEfmt ')
+            f.write((16).to_bytes(4, 'little'))
+            f.write((1).to_bytes(2, 'little'))
+            f.write((1).to_bytes(2, 'little'))
+            f.write(SAMPLE_RATE.to_bytes(4, 'little'))
+            f.write((SAMPLE_RATE * 2).to_bytes(4, 'little'))
+            f.write((2).to_bytes(2, 'little'))
+            f.write((16).to_bytes(2, 'little'))
             f.write(b'data')
-            f.write(struct.pack('<I', len(audio_data) * 2))
+            f.write((len(audio_data) * 2).to_bytes(4, 'little'))
             audio_data.tofile(f)
         return True
     except Exception as e:
-        print(f"❌ Ошибка сохранения {filename}: {e}")
+        print(f"❌ Ошибка WAV: {e}")
         return False
 
 
-# utils/generate_sounds.py (альтернативная функция save_ogg)
+# 3. Замена функции generate_python_module (исправлено имя класса и безопасное удаление файла)
+def generate_python_module(tuning_id, tuning_name, notes_data, output_path):
+    """Генерирует Python-модуль с base64 данными звуков."""
+    lines = [
+        "# -*- coding: utf-8 -*-",
+        '"""',
+        f"Звуковые ассеты для строя: {tuning_name}",
+        f"Количество нот: {len(notes_data)}",
+        '"""',
+        "",
+        "import base64",
+        "from typing import Optional",
+        "import tempfile",
+        "import os",
+        "",
+        "try:",
+        "    from kivy.core.audio import SoundLoader",
+        "    from kivy.clock import Clock",
+        "    KIVY_AVAILABLE = True",
+        "except ImportError:",
+        "    KIVY_AVAILABLE = False",
+        "",
+    ]
 
-def save_ogg(audio_data: array.array, filename: str) -> bool:
-    """Сохраняет OGG файл (сжатый) через soundfile с правильным форматом"""
-    if not HAS_SOUNDFILE:
-        return False
+    metadata_lines = []
+    note_map = {}
 
-    try:
-        import numpy as np
-        # Конвертируем в float64 для лучшей точности
-        audio_np = np.array(audio_data, dtype=np.float64) / MAX_AMPLITUDE
+    for note_info in notes_data:
+        note_name = note_info['note']
+        safe_name = note_name.replace('#', '_SHARP_').replace(' ', '_')
+        note_map[note_name] = safe_name
 
-        # Пробуем разные варианты сохранения
-        try:
-            # Вариант 1: без указания subtype
-            sf.write(filename, audio_np, SAMPLE_RATE, format='ogg')
-        except:
-            try:
-                # Вариант 2: с явным subtype
-                sf.write(filename, audio_np, SAMPLE_RATE, format='ogg', subtype='PCM_16')
-            except:
-                # Вариант 3: конвертируем в int16 и сохраняем
-                audio_int16 = (audio_np * MAX_AMPLITUDE).astype(np.int16)
-                sf.write(filename, audio_int16, SAMPLE_RATE, format='ogg', subtype='PCM_16')
-        return True
-    except Exception as e:
-        print(f"❌ Ошибка сохранения OGG {filename}: {e}")
-        return False
+        filename = f"{safe_name}.wav"
+        filepath = output_path / filename
+
+        audio = generate_realistic_string_sound(
+            frequency=note_info['freq'],
+            duration=2.5,
+            volume=note_info['volume'],
+            string_type=note_info['type']
+        )
+
+        save_wav(audio, str(filepath))
+        file_size = os.path.getsize(filepath)
+
+        with open(filepath, 'rb') as f:
+            b64_data = base64.b64encode(f.read()).decode('utf-8')
+
+        os.remove(filepath)
+
+        lines.append(f"# {note_name} -> {filename}")
+        lines.append(f'_{safe_name}_BASE64 = """{b64_data}"""')
+        lines.append("")
+
+        metadata_lines.append(f'    "{note_name}": {{')
+        metadata_lines.append(f'        "filename": "{filename}",')
+        metadata_lines.append(f'        "size": {file_size},')
+        metadata_lines.append(f'        "duration": 2.500,')
+        metadata_lines.append(f'        "sample_rate": 44100,')
+        metadata_lines.append(f'        "channels": 1,')
+        metadata_lines.append(f'        "compressed": False,')
+        metadata_lines.append(f'    }},')
+        metadata_lines.append("")
+
+        print(f"   ✅ {note_name} ({note_info['freq']} Hz) - {file_size / 1024:.1f} KB")
+
+    lines.append("NOTES_METADATA = {")
+    lines.extend(metadata_lines)
+    lines.append("}")
+    lines.append("")
+
+    # Формируем строго английское имя класса из tuning_id (например, bass_4 -> Bass4Sounds)
+    class_name = tuning_id.title().replace('_', '') + 'Sounds'
+
+    lines.extend([
+        f"class {class_name}:",
+        f'    """Звуки для строя: {tuning_name}"""',
+        "",
+        "    _NOTE_NAME_MAP = {",
+    ])
+    for orig, safe in note_map.items():
+        lines.append(f'        "{orig}": "{safe}",')
+    lines.extend([
+        "    }",
+        "",
+        "    @staticmethod",
+        "    def get_sound_data(note_name: str) -> Optional[bytes]:",
+        f"        safe_name = {class_name}._NOTE_NAME_MAP.get(note_name)",
+        "        if safe_name:",
+        '            var_name = f"_{safe_name}_BASE64"',
+        "            if var_name in globals():",
+        "                return base64.b64decode(globals()[var_name])",
+        "        return None",
+        "",
+        "    @staticmethod",
+        "    def get_sound(note_name: str):",
+        "        if not KIVY_AVAILABLE:",
+        "            return None",
+        f"        data = {class_name}.get_sound_data(note_name)",
+        "        if data:",
+        "            try:",
+        '                fd, path = tempfile.mkstemp(suffix=".wav")',
+        "                os.close(fd)",
+        '                with open(path, "wb") as f:',
+        "                    f.write(data)",
+        "                sound = SoundLoader.load(path)",
+        "                # Отложенное удаление, чтобы Windows и Android успели прочитать файл",
+        "                def _cleanup(dt):",
+        "                    try:",
+        "                        if os.path.exists(path):",
+        "                            os.unlink(path)",
+        "                    except Exception:",
+        "                        pass",
+        "                Clock.schedule_once(_cleanup, 5.0)",
+        "                return sound",
+        "            except Exception:",
+        "                return None",
+        "        return None",
+        "",
+        "    @staticmethod",
+        "    def get_all_notes() -> list:",
+        "        return list(NOTES_METADATA.keys())",
+        "",
+        f'TUNING_NAME = "{tuning_name}"',
+        f'TUNING_ID = "{tuning_id}"',
+        f'__all__ = ["{class_name}", "NOTES_METADATA"]',
+    ])
+
+    with open(output_path / f"{tuning_id}.py", "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
 
 
-def generate_all_sounds(output_dir: str = "assets/sounds", format: str = 'ogg'):
-    """Генерирует все звуки для всех строев в папку assets/sounds/"""
-    # Используем абсолютный путь от корня проекта
-    base_dir = PROJECT_ROOT / output_dir
+
+def generate_all_sounds():
+    base_dir = PROJECT_ROOT / "data" / "sounds"
     base_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
     print("🎸 ГЕНЕРАЦИЯ РЕАЛИСТИЧНЫХ ЗВУКОВ")
+    print(f"📁 Папка: {base_dir}")
+    if HAS_SOUNDFILE:
+        print("✅ OGG (сжатие включено)")
+    else:
+        print("⚠️ WAV (сжатие ВЫКЛЮЧЕНО)")
     print("=" * 60)
-    print(f"📁 Корень проекта: {PROJECT_ROOT}")
-    print(f"📁 Формат: {format.upper()}")
-    print(f"📁 Папка сохранения: {base_dir}")
-    print("=" * 60)
 
-    total_files = 0
-    total_size = 0
+    # Генерируем __init__.py
+    init_lines = ['"""Пакет звуковых ассетов"""', ""]
+    init_lines.append("from .standard import StandardSounds")
+    init_lines.append("from .drop_d import DropDSounds")
+    init_lines.append("from .half_step_down import HalfStepDownSounds")
+    init_lines.append("from .bass_4 import Bass4Sounds")
+    init_lines.append("from .bass_5 import Bass5Sounds")
+    init_lines.append("from .ukulele import UkuleleSounds")
+    init_lines.append("from .open_g import OpenGSounds")
+    init_lines.append("from .open_d import OpenDSounds")
+    init_lines.append("from .dadgad import DadgadSounds")
+    with open(base_dir / "__init__.py", "w", encoding="utf-8") as f:
+        f.write("\n".join(init_lines))
 
-    for tuning_name, tuning_data in TUNINGS.items():
-        tuning_dir = base_dir / tuning_name
-        tuning_dir.mkdir(exist_ok=True)
-
-        print(f"\n📁 {tuning_data['name']} ({tuning_name})")
+    for tuning_id, tuning_data in TUNINGS.items():
+        print(f"\n📁 {tuning_data['name']} ({tuning_id})")
         print("-" * 40)
-
-        for note_data in tuning_data['notes']:
-            note = note_data['note']
-            freq = note_data['freq']
-            string_type = note_data['type']
-            volume = note_data.get('volume', 0.7)
-
-            filename = tuning_dir / f"{note}.{format}"
-
-            audio_data = generate_realistic_string_sound(
-                frequency=freq,
-                duration=2.5,
-                volume=volume,
-                string_type=string_type,
-                add_harmonics=True,
-                add_modulation=True,
-                add_attack_noise=True,
-                add_reverb=True
-            )
-
-            # Сохраняем в нужном формате
-            if format == 'ogg':
-                if HAS_SOUNDFILE:
-                    success = save_ogg(audio_data, str(filename))
-                else:
-                    # Если нет soundfile, сохраняем WAV
-                    filename = tuning_dir / f"{note}.wav"
-                    success = save_wav(audio_data, str(filename))
-                    format = 'wav'
-            else:
-                success = save_wav(audio_data, str(filename))
-
-            if success:
-                size = os.path.getsize(str(filename))
-                size_kb = size / 1024
-                total_size += size
-                total_files += 1
-                print(f"   ✅ {note} ({freq:.2f} Hz) - {size_kb:.1f} KB")
-            else:
-                print(f"   ❌ {note} - Ошибка сохранения")
+        generate_python_module(tuning_id, tuning_data['name'], tuning_data['notes'], base_dir)
 
     print("\n" + "=" * 60)
-    print(f"✅ Сгенерировано {total_files} файлов")
-    print(f"📦 Общий размер: {total_size / 1024:.1f} KB")
-    print(f"📁 Папка: {base_dir.absolute()}")
+    print("✅ ВСЁ ГОТОВО! Перезапустите приложение.")
     print("=" * 60)
-
-    return total_files > 0
-
-
-def interactive_generation():
-    """Интерактивный режим генерации"""
-    print("\n" + "=" * 60)
-    print("🎸 ГЕНЕРАТОР РЕАЛИСТИЧНЫХ ЗВУКОВ")
-    print("   С поддержкой OGG сжатия")
-    print("=" * 60)
-    print(f"📁 Звуки будут сохранены в: {PROJECT_ROOT / 'assets/sounds/'}")
-    print("=" * 60)
-
-    while True:
-        print("\nВыберите действие:")
-        print("1. Сгенерировать все звуки (OGG - рекомендуется)")
-        print("2. Сгенерировать все звуки (WAV - максимальное качество)")
-        print("3. Сгенерировать один строй")
-        print("4. Тест одной ноты")
-        print("5. Выход")
-
-        choice = input("\nВаш выбор (1-5): ").strip()
-
-        if choice == '1':
-            generate_all_sounds("assets/sounds", format='ogg')
-
-        elif choice == '2':
-            generate_all_sounds("assets/sounds", format='wav')
-
-        elif choice == '3':
-            print("\nДоступные строи:")
-            for i, (name, data) in enumerate(TUNINGS.items(), 1):
-                print(f"   {i}. {data['name']} ({name})")
-
-            try:
-                choice_num = int(input("Выберите строй (номер): ").strip())
-                tuning_names = list(TUNINGS.keys())
-                if 1 <= choice_num <= len(tuning_names):
-                    tuning_name = tuning_names[choice_num - 1]
-
-                    format_choice = input("Формат (ogg/wav, по умолчанию ogg): ").strip().lower()
-                    if format_choice not in ['ogg', 'wav']:
-                        format_choice = 'ogg'
-
-                    base_dir = PROJECT_ROOT / "assets/sounds" / tuning_name
-                    base_dir.mkdir(parents=True, exist_ok=True)
-
-                    print(f"\n📁 {TUNINGS[tuning_name]['name']}")
-                    for note_data in TUNINGS[tuning_name]['notes']:
-                        note = note_data['note']
-                        freq = note_data['freq']
-                        filename = base_dir / f"{note}.{format_choice}"
-
-                        audio_data = generate_realistic_string_sound(
-                            frequency=freq,
-                            duration=2.5,
-                            volume=note_data.get('volume', 0.7),
-                            string_type=note_data['type']
-                        )
-
-                        if format_choice == 'ogg' and HAS_SOUNDFILE:
-                            success = save_ogg(audio_data, str(filename))
-                        else:
-                            success = save_wav(audio_data, str(filename))
-
-                        if success:
-                            size = os.path.getsize(str(filename)) / 1024
-                            print(f"   ✅ {note} ({freq:.2f} Hz) - {size:.1f} KB")
-                else:
-                    print("❌ Неверный номер")
-            except ValueError:
-                print("❌ Введите число")
-
-        elif choice == '4':
-            try:
-                freq = float(input("Введите частоту (Гц): ").strip())
-                note = input("Введите название ноты (например, E2): ").strip()
-
-                base_dir = PROJECT_ROOT / "assets/sounds/test"
-                base_dir.mkdir(parents=True, exist_ok=True)
-                filename = base_dir / f"{note}_{freq:.0f}Hz.wav"
-
-                audio_data = generate_realistic_string_sound(
-                    frequency=freq,
-                    duration=3.0,
-                    volume=0.7,
-                    string_type='mid'
-                )
-
-                if save_wav(audio_data, str(filename)):
-                    size_kb = len(audio_data) * 2 / 1024
-                    print(f"✅ Сохранено: {filename} ({size_kb:.1f} KB)")
-            except ValueError:
-                print("❌ Введите корректное число")
-
-        elif choice == '5':
-            print("👋 До свидания!")
-            break
-        else:
-            print("❌ Неверный выбор")
-
-
-def quick_generate():
-    """Быстрая генерация для разработки"""
-    print("\n⚡ БЫСТРАЯ ГЕНЕРАЦИЯ (OGG)")
-    generate_all_sounds("assets/sounds", format='ogg')
 
 
 if __name__ == '__main__':
-    try:
-        interactive_generation()
-    except KeyboardInterrupt:
-        print("\n👋 Прервано")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\n❌ Ошибка: {e}")
-        import traceback
-
-        traceback.print_exc()
-        sys.exit(1)
+    generate_all_sounds()
