@@ -37,7 +37,8 @@ import pkgutil
 import importlib
 import re
 import time
-
+from kivy.uix.anchorlayout import AnchorLayout
+from kivy.graphics import Color, Rectangle, Line
 from kivy.uix.scatter import Scatter
 from kivy.logger import Logger
 
@@ -175,6 +176,17 @@ class ChordsColors:
             return [0, 0, 0, 1]
         return [1, 1, 1, 1]
 
+    @staticmethod
+    def get_divider_color(theme_id):
+        """Цвет «рваного» разделителя — как в TunerColors."""
+        if theme_id == 'light':
+            return [0.1, 0.55, 0.3, 0.6]
+        elif theme_id == 'dark':
+            return [1.0, 0.5, 0.0, 0.6]
+        else:
+            return [0.46, 0.70, 0.71, 0.55]
+
+
 
 class ClickableRendererContainer(ButtonBehavior, MDBoxLayout):
     """Контейнер для грифа, который умеет реагировать на тап (для увеличения)."""
@@ -208,6 +220,7 @@ class SwipeContainer(MDBoxLayout):
         self._overlay_right_btn = None
         self._overlay_mode_btn = None
         self._overlay_menu_card = None
+        self._overlay_menu_scatter = None
         self._overlay_dividers = []
         self._overlay_menu_container = None
         self._overlay_unified_menu = None
@@ -302,16 +315,12 @@ class SwipeContainer(MDBoxLayout):
             self.right_arrow.canvas.ask_update()
 
     def update_fret_color(self, theme_id):
-        """Пересобирает лады у всех рендереров. set_fret_color — no-op, если не менялся.
-        Пропускает placeholder-слайды (renderer is None)."""
         color = "black" if theme_id == "light" else "white"
         for renderer in self.renderers:
             if renderer is not None:
                 renderer.set_fret_color(color)
 
     def update_renderer_mode(self, mode):
-        """set_mode — no-op для рендереров, у которых mode уже тот же.
-        Пропускает placeholder-слайды (renderer is None)."""
         for renderer in self.renderers:
             if renderer is not None:
                 renderer.set_mode(mode)
@@ -364,11 +373,6 @@ class SwipeContainer(MDBoxLayout):
         return wrapper, renderer_container
 
     def add_slide(self, chord_module):
-        """
-        Создаёт слайд.
-        Оптимизация: цвет и режим выставляются ДО load_chord,
-        чтобы _create_sprites вызвался ровно ОДИН раз.
-        """
         with perf('chords.swipe.add_slide', log_every=False):
             with perf('chords.swipe.add_slide.build_wrapper', log_every=False):
                 slide = MDBoxLayout(orientation='vertical', size_hint=(1, 1), md_bg_color=[0, 0, 0, 0])
@@ -377,12 +381,10 @@ class SwipeContainer(MDBoxLayout):
             with perf('chords.swipe.add_slide.create_renderer', log_every=False):
                 renderer = ChordRenderer()
 
-            # 1) Сначала цвет и режим — БЕЗ current_module.
             theme_id = settings_manager.theme
             renderer.FRET_COLOR = "black" if theme_id == "light" else "white"
             renderer.current_mode = "finger"
 
-            # 2) Фон
             with perf('chords.swipe.add_slide.load_griff_png', log_every=False):
                 try:
                     bg_data = load_asset_as_bytes("griff_png")
@@ -393,7 +395,6 @@ class SwipeContainer(MDBoxLayout):
                 except Exception as e:
                     logger.error(f"Ошибка загрузки фона грифа: {e}")
 
-            # 3) Единственный _create_sprites — через load_chord
             if chord_module:
                 with perf('chords.swipe.add_slide.load_chord', log_every=False):
                     renderer.load_chord(chord_module)
@@ -574,11 +575,16 @@ class SwipeContainer(MDBoxLayout):
     def _update_overlay_name(self):
         if not self.screen or not self._fullscreen_overlay:
             return
+        name_text = self.screen._current_main_name or "?"
+        is_rot = getattr(self, '_is_overlay_rotated', False)
+
         if self._overlay_name_label is not None:
-            name_text = self.screen._current_main_name or "?"
             self._overlay_name_label.text = name_text
             base_font_sp = 72 if len(name_text) <= 4 else (54 if len(name_text) <= 8 else 40)
             self._overlay_name_label.font_size = sp(base_font_sp)
+
+        if self._overlay_unified_menu is not None:
+            self._overlay_unified_menu.set_center_chord_name(is_rot, name_text)
 
     def _on_name_label_touch(self, instance, touch):
         if instance.collide_point(*touch.pos):
@@ -635,20 +641,11 @@ class SwipeContainer(MDBoxLayout):
                 return
             w, h = Window.width, Window.height
             is_rot = getattr(self, '_is_overlay_rotated', False)
-            rot_angle = -90 if is_rot else 0
-
-            menu_wrapper = getattr(self, '_overlay_menu_wrapper', None)
-            side_margin = dp(24)
-            bottom_margin = dp(20)
-            menu_h = dp(60)
-            menu_top = bottom_margin + menu_h
-            if menu_wrapper is not None:
-                menu_wrapper.size = (w - side_margin * 2, menu_h)
-                menu_wrapper.pos = (side_margin, bottom_margin)
-                menu_top = menu_wrapper.top
+            name_text = self.screen._current_main_name if self.screen else "?"
 
             if self._overlay_unified_menu is not None:
-                self._overlay_unified_menu.set_icons_rotation(rot_angle)
+                self._overlay_unified_menu.set_icons_rotation(0)
+                self._overlay_unified_menu.set_center_chord_name(is_rot, name_text)
                 if self._overlay_unified_menu.rotate_item is not None:
                     self._overlay_unified_menu.rotate_item.set_icon(
                         "phone-rotate-portrait" if is_rot else "phone-rotate-landscape"
@@ -656,62 +653,101 @@ class SwipeContainer(MDBoxLayout):
             if self.screen:
                 for sel in (self.screen.tonality_selector, self.screen.type_selector, self.screen.chord_selector):
                     if sel is not None:
-                        sel.set_items_rotation(rot_angle)
+                        sel.set_items_rotation(0)
 
             scatter = getattr(self, '_overlay_scatter', None)
             name_scatter = getattr(self, '_overlay_name_scatter', None)
             name_card = getattr(self, '_overlay_name_card', None)
-
-            box_w = w - dp(16)
-            box_h = dp(74)
-            top_margin = dp(14)
-            if name_scatter is not None and name_card is not None and self._overlay_name_label is not None:
-                name_card.size = (box_w, box_h)
-                name_card.pos = (0, 0)
-                self._overlay_name_label.text_size = (box_w, box_h)
-
-                name_scatter.size = (box_w, box_h)
-                name_scatter.rotation = 0
-                name_scatter.center_x = w / 2.0
-                name_scatter.top = h - top_margin
-
+            menu_scatter = getattr(self, '_overlay_menu_scatter', None)
+            menu_wrapper = getattr(self, '_overlay_menu_wrapper', None)
             has_variants = bool(self.screen and self.screen.current_variants and len(self.screen.current_variants) > 1)
 
             if is_rot:
-                top_limit = h - top_margin - box_h - dp(8)
-                bottom_limit = menu_top + dp(12)
-                avail_h = max(dp(220), (top_limit - bottom_limit) * 0.84)
-                avail_w = max(dp(190), (w - dp(24)) * 0.90)
-                center_y = (bottom_limit + top_limit) / 2.0
+                # 1. Меню вдоль ЛЕВОГО края с названием аккорда ровно по середине (3 + Название + 3)
+                menu_thickness = dp(52)
+                left_pad = dp(10)
+                v_margin = dp(20)
+                menu_len = max(dp(340), h - v_margin * 2)
+
+                if menu_wrapper is not None and menu_scatter is not None:
+                    menu_wrapper.size = (menu_len, menu_thickness)
+                    menu_wrapper.pos = (0, 0)
+                    menu_scatter.size = (menu_len, menu_thickness)
+                    menu_scatter.rotation = -90
+                    menu_scatter.center = (left_pad + menu_thickness / 2.0, h / 2.0)
+
+                # 2. Скрываем отдельный заголовок справа (теперь он в центральной ячейке меню)
+                if name_scatter is not None:
+                    name_scatter.opacity = 0
+                    name_scatter.disabled = True
+
+                # 3. Максимально крупный гриф занимает всю правую область от меню до края экрана
+                griff_left_limit = left_pad + menu_thickness + dp(8)
+                griff_right_limit = w - dp(8)
+                avail_w = max(dp(220), griff_right_limit - griff_left_limit)
+
+                arrow_space = dp(24) if has_variants else dp(10)
+                avail_h = max(dp(260), h - arrow_space * 2 - dp(12))
+
+                center_x = griff_left_limit + avail_w / 2.0
+                center_y = h / 2.0
 
                 self._big_swipe.size = (avail_h, avail_w)
                 self._big_swipe.pos = (0, 0)
                 if scatter is not None:
                     scatter.size = (avail_h, avail_w)
                     scatter.rotation = -90
-                    scatter.center = (w / 2.0, center_y)
+                    scatter.center = (center_x, center_y)
 
+                # 4. Стрелки пагинации вплотную к верхнему и нижнему торцам грифа
                 griff_top = center_y + avail_h / 2.0
                 griff_bottom = center_y - avail_h / 2.0
-
                 if self._overlay_side_left is not None and self._overlay_side_right is not None:
-                    arrow_w, arrow_h = dp(72), dp(28)
-                    arrow_x = (w - arrow_w) / 2.0
+                    arrow_w, arrow_h = dp(64), dp(22)
+                    arrow_x = center_x - arrow_w / 2.0
 
                     self._overlay_side_left.icon.icon = "chevron-up"
-                    top_arrow_y = min(top_limit - arrow_h, griff_top + dp(4))
                     self._overlay_side_left.size = (arrow_w, arrow_h)
-                    self._overlay_side_left.pos = (arrow_x, top_arrow_y)
+                    self._overlay_side_left.pos = (arrow_x, min(h - arrow_h - dp(2), griff_top - dp(4)))
                     self._overlay_side_left.opacity = 1 if has_variants else 0
                     self._overlay_side_left.disabled = not has_variants
 
                     self._overlay_side_right.icon.icon = "chevron-down"
-                    bottom_arrow_y = max(bottom_limit, griff_bottom - arrow_h - dp(4))
                     self._overlay_side_right.size = (arrow_w, arrow_h)
-                    self._overlay_side_right.pos = (arrow_x, bottom_arrow_y)
+                    self._overlay_side_right.pos = (arrow_x, max(dp(2), griff_bottom - arrow_h + dp(4)))
                     self._overlay_side_right.opacity = 1 if has_variants else 0
                     self._overlay_side_right.disabled = not has_variants
             else:
+                # Стандартный горизонтальный оверлей (название вверху, меню из 6 кнопок без центральной ячейки)
+                if name_scatter is not None:
+                    name_scatter.opacity = 1
+                    name_scatter.disabled = False
+
+                side_margin = dp(24)
+                bottom_margin = dp(20)
+                menu_h = dp(60)
+                menu_w = w - side_margin * 2
+
+                if menu_wrapper is not None and menu_scatter is not None:
+                    menu_wrapper.size = (menu_w, menu_h)
+                    menu_wrapper.pos = (0, 0)
+                    menu_scatter.size = (menu_w, menu_h)
+                    menu_scatter.rotation = 0
+                    menu_scatter.pos = (side_margin, bottom_margin)
+
+                box_w = w - dp(16)
+                box_h = dp(74)
+                top_margin = dp(14)
+                if name_scatter is not None and name_card is not None and self._overlay_name_label is not None:
+                    name_card.size = (box_w, box_h)
+                    name_card.pos = (0, 0)
+                    self._overlay_name_label.text_size = (box_w, box_h)
+
+                    name_scatter.size = (box_w, box_h)
+                    name_scatter.rotation = 0
+                    name_scatter.center_x = w / 2.0
+                    name_scatter.top = h - top_margin
+
                 side_arrow_space = dp(24)
                 griff_width = max(dp(240), w - side_arrow_space * 2)
                 griff_height = min(max(dp(290), griff_width * 0.65), max(dp(220), h - dp(230)))
@@ -745,8 +781,7 @@ class SwipeContainer(MDBoxLayout):
             selector.parent.remove_widget(selector)
         self._overlay_menu_container.clear_widgets()
 
-        rot_angle = -90 if getattr(self, '_is_overlay_rotated', False) else 0
-        selector.set_items_rotation(rot_angle)
+        selector.set_items_rotation(0)
         selector.disabled = False
         selector.opacity = 1
         selector.size_hint = (1, 1)
@@ -756,7 +791,10 @@ class SwipeContainer(MDBoxLayout):
         self._overlay_menu_container.add_widget(selector)
 
     def _open_overlay_tonality_selector(self):
-        if not self.screen or self.screen.tonality_selector is None:
+        if not self.screen:
+            return
+        self.screen._ensure_menus()
+        if self.screen.tonality_selector is None:
             return
         selector = self.screen.tonality_selector
         selector.set_current(self.screen.current_tonality)
@@ -767,7 +805,10 @@ class SwipeContainer(MDBoxLayout):
         Clock.schedule_once(lambda dt: self._after_overlay_selection(), 0.35)
 
     def _open_overlay_type_selector(self):
-        if not self.screen or self.screen.type_selector is None:
+        if not self.screen:
+            return
+        self.screen._ensure_menus()
+        if self.screen.type_selector is None:
             return
         selector = self.screen.type_selector
         selector.set_current(self.screen.current_type)
@@ -778,7 +819,10 @@ class SwipeContainer(MDBoxLayout):
         Clock.schedule_once(lambda dt: self._after_overlay_selection(), 0.35)
 
     def _open_overlay_chord_selector(self):
-        if not self.screen or self.screen.chord_selector is None:
+        if not self.screen:
+            return
+        self.screen._ensure_menus()
+        if self.screen.chord_selector is None:
             return
         selector = self.screen.chord_selector
         target_list = self.screen._pending_chord_list if self.screen._pending_chord_list is not None else self.screen.available_chords
@@ -845,8 +889,7 @@ class SwipeContainer(MDBoxLayout):
             return
         self._overlay_menu_container.clear_widgets()
         if self._overlay_unified_menu:
-            rot_angle = -90 if getattr(self, '_is_overlay_rotated', False) else 0
-            self._overlay_unified_menu.set_icons_rotation(rot_angle)
+            self._overlay_unified_menu.set_icons_rotation(0)
             self._overlay_unified_menu.disabled = False
             self._overlay_unified_menu.opacity = 1
             self._overlay_unified_menu.size_hint = (1, 1)
@@ -858,7 +901,6 @@ class SwipeContainer(MDBoxLayout):
         if overlay is None:
             return
 
-        # Останавливаем async-построение слайдов, если ещё идёт
         if getattr(self, '_overlay_build_event', None):
             try:
                 Clock.unschedule(self._overlay_build_event)
@@ -900,6 +942,7 @@ class SwipeContainer(MDBoxLayout):
             self._overlay_mode_btn = None
             self._overlay_menu_card = None
             self._overlay_menu_wrapper = None
+            self._overlay_menu_scatter = None
             self._overlay_dividers = []
             self._overlay_menu_container = None
             self._overlay_unified_menu = None
@@ -912,38 +955,7 @@ class SwipeContainer(MDBoxLayout):
         anim.bind(on_complete=_remove)
         anim.start(overlay)
 
-        def _remove(animation, widget):
-            if overlay.parent:
-                overlay.parent.remove_widget(overlay)
-            self._fullscreen_overlay = None
-            self._big_swipe = None
-            self._overlay_scatter = None
-            self._overlay_name_card = None
-            self._overlay_name_label = None
-            self._overlay_name_scatter = None
-            self._overlay_left_btn = None
-            self._overlay_right_btn = None
-            self._overlay_mode_btn = None
-            self._overlay_menu_card = None
-            self._overlay_menu_wrapper = None
-            self._overlay_dividers = []
-            self._overlay_menu_container = None
-            self._overlay_unified_menu = None
-            self._is_overlay_rotated = False
-            self._overlay_side_left = None
-            self._overlay_side_right = None
-
-        anim = Animation(opacity=0, duration=0.15)
-        anim.bind(on_complete=_remove)
-        anim.start(overlay)
-
     def _open_fullscreen_griff(self, chord_module):
-        """
-        Открывает оверлей.
-        Каркас строится мгновенно, слайды — асинхронно по 1 за кадр.
-        Никаких placeholder'ов (None в renderers), поэтому поворот
-        экрана и смена темы не падают.
-        """
         if self._fullscreen_overlay is not None:
             return
 
@@ -961,10 +973,11 @@ class SwipeContainer(MDBoxLayout):
             )
 
             self._overlay_menu_card = None
+            self._overlay_menu_scatter = None
             self._overlay_dividers = []
             self._overlay_menu_container = None
             self._overlay_unified_menu = None
-            self._overlay_build_event = None  # для async-построения слайдов
+            self._overlay_build_event = None
 
             with perf('chords.overlay.open.create_scatter+big_swipe', log_every=False):
                 scatter = Scatter(
@@ -1050,6 +1063,12 @@ class SwipeContainer(MDBoxLayout):
                 overlay.add_widget(name_scatter)
 
             with perf('chords.overlay.open.menu', log_every=False):
+                menu_scatter = Scatter(
+                    do_rotation=False, do_scale=False, do_translation=False,
+                    auto_bring_to_front=False, size_hint=(None, None),
+                )
+                self._overlay_menu_scatter = menu_scatter
+
                 menu_wrapper = MDBoxLayout(
                     orientation='vertical', size_hint=(None, None), height=dp(60),
                 )
@@ -1057,7 +1076,7 @@ class SwipeContainer(MDBoxLayout):
 
                 menu_inner_card = MDCard(
                     orientation='horizontal', size_hint=(1, 1), radius=[dp(16)],
-                    elevation=0, padding=[dp(4), dp(4), dp(4), dp(4)], spacing=dp(0),
+                    elevation=0, padding=[dp(2), dp(2), dp(2), dp(2)], spacing=dp(0),
                     md_bg_color=ChordsColors.get_menu_bg(theme_id),
                     line_color=ChordsColors.get_card_line(theme_id),
                     line_width=1.5,
@@ -1085,7 +1104,8 @@ class SwipeContainer(MDBoxLayout):
 
                 menu_inner_card.add_widget(self._overlay_menu_container)
                 menu_wrapper.add_widget(menu_inner_card)
-                overlay.add_widget(menu_wrapper)
+                menu_scatter.add_widget(menu_wrapper)
+                overlay.add_widget(menu_scatter)
 
             overlay.bind(size=self._apply_overlay_layout)
             overlay.bind(on_touch_down=self._on_overlay_touch)
@@ -1107,15 +1127,9 @@ class SwipeContainer(MDBoxLayout):
                 Clock.schedule_once(lambda dt: self._update_overlay_name(), 0)
                 Clock.schedule_once(lambda dt: self._update_overlay_menu(), 0)
 
-            # --- Асинхронно строим слайды (без placeholder'ов) ---
             self._build_overlay_slides_async()
 
     def _build_overlay_slides_async(self):
-        """
-        Строит слайды оверлея по 1 за кадр.
-        Не использует placeholder'ы: пока слайд не построен — его просто нет в carousel.
-        После постройки всех — выставляет текущий вариант.
-        """
         if not self.screen or not self._big_swipe:
             return
         variants = list(self.screen.current_variants or [])
@@ -1129,7 +1143,6 @@ class SwipeContainer(MDBoxLayout):
             if not self.screen or not self._big_swipe or self._big_swipe is not big_swipe:
                 return False
             if not pending:
-                # Все построены — выставляем текущий и останавливаем тик
                 try:
                     big_swipe.set_current_slide(
                         self.screen.current_variant_index, animate=False
@@ -1153,7 +1166,6 @@ class SwipeContainer(MDBoxLayout):
                 logger.error(f"overlay add_slide #{idx}: {e}")
                 return bool(pending)
 
-            # Если это первый добавленный слайд — сразу на него
             if len(big_swipe.slides) == 1:
                 try:
                     big_swipe.set_current_slide(0, animate=False)
@@ -1162,9 +1174,6 @@ class SwipeContainer(MDBoxLayout):
 
             return bool(pending)
 
-        # 1 слайд — сразу синхронно (каркас уже показан, но гриф должен появиться
-        # как можно быстрее; первый add_slide ~30–80 ms, это не критично).
-        # Остальные — по 1 за кадр.
         try:
             first_ok = _tick(0)
         except Exception as e:
@@ -1175,7 +1184,6 @@ class SwipeContainer(MDBoxLayout):
             self._overlay_build_event = Clock.schedule_interval(_tick, 0.016)
         else:
             self._overlay_build_event = None
-
 
     def update_overlay_theme(self):
         if self._fullscreen_overlay is None:
@@ -1377,9 +1385,11 @@ class SearchBar(MDCard):
         self.search_field.focus = True
 
 
-class IconMenuItem(ButtonBehavior, FloatLayout):
+class IconMenuItem(ButtonBehavior, AnchorLayout):
     def __init__(self, icon_name, on_press=None, is_active=False, icon_color=None, fixed_color=False, **kwargs):
         super().__init__(**kwargs)
+        self.anchor_x = 'center'
+        self.anchor_y = 'center'
         self.icon_name = icon_name
         self.on_press_callback = on_press
         self.is_active = is_active
@@ -1389,31 +1399,21 @@ class IconMenuItem(ButtonBehavior, FloatLayout):
         self.size_hint = (1, 1)
         self.md_bg_color = [0, 0, 0, 0]
 
-        self._icon_scatter = Scatter(
-            do_rotation=False, do_scale=False, do_translation=False,
-            auto_bring_to_front=False, size_hint=(None, None),
-            size=(dp(28), dp(28)),
-        )
-
         self.icon_widget = MDIcon(
-            icon=icon_name, halign="center", valign="middle",
-            size_hint=(None, None), size=(dp(28), dp(28)),
-            pos=(0, 0), theme_text_color="Custom",
-            text_color=self.icon_color, font_size=sp(24),
+            icon=icon_name,
+            halign="center",
+            valign="center",
+            size_hint=(None, None),
+            size=(dp(26), dp(26)),
+            theme_text_color="Custom",
+            text_color=self.icon_color,
+            font_size=sp(24),
         )
-        self._icon_scatter.add_widget(self.icon_widget)
-        self.add_widget(self._icon_scatter)
-
-        self.bind(pos=self._center_scatter, size=self._center_scatter)
+        self.add_widget(self.icon_widget)
         self.update_state()
 
-    def _center_scatter(self, *args):
-        self._icon_scatter.center = self.center
-
     def set_rotation(self, angle):
-        if hasattr(self, '_icon_scatter') and self._icon_scatter:
-            self._icon_scatter.rotation = angle
-            self._icon_scatter.center = self.center
+        pass
 
     def on_release(self):
         if self.on_press_callback and self.is_active:
@@ -1440,6 +1440,7 @@ class IconMenuItem(ButtonBehavior, FloatLayout):
     def set_color(self, color):
         self.icon_color = color
         self.icon_widget.text_color = color
+
 
 
 # ============ СЕЛЕКТОРЫ В СТИЛЕ АЛФАВИТА ============
@@ -1517,38 +1518,30 @@ class TextSelectorButton(MDBoxLayout):
             self.radius = [0]
 
 
-class _SelectorArrowBtn(ButtonBehavior, FloatLayout):
+class _SelectorArrowBtn(ButtonBehavior, AnchorLayout):
     def __init__(self, icon_name, on_release_cb, is_left=True, **kwargs):
         super().__init__(**kwargs)
+        self.anchor_x = 'center'
+        self.anchor_y = 'center'
         self.size_hint = (None, 1)
         self.width = dp(32)
         self.on_release_cb = on_release_cb
         self.base_icon = icon_name
         self.is_left = is_left
 
-        self._scatter = Scatter(
-            do_rotation=False, do_scale=False, do_translation=False,
-            auto_bring_to_front=False, size_hint=(None, None),
-            size=(dp(26), dp(26)),
-        )
         self.icon = MDIcon(
-            icon=icon_name, halign="center", valign="middle",
-            size_hint=(None, None), size=(dp(26), dp(26)),
-            text_size=(dp(26), dp(26)), pos=(0, 0),
-            theme_text_color="Custom", font_size=sp(24),
+            icon=icon_name,
+            halign="center",
+            valign="center",
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            theme_text_color="Custom",
+            font_size=sp(24),
         )
-        self._scatter.add_widget(self.icon)
-        self.add_widget(self._scatter)
-
-        self.bind(pos=self._sync_center, size=self._sync_center)
-
-    def _sync_center(self, *args):
-        self._scatter.center = self.center
+        self.add_widget(self.icon)
 
     def set_rotation(self, angle):
-        self._scatter.rotation = 0
-        self._scatter.center = self.center
-        Clock.schedule_once(self._sync_center, 0)
+        pass
 
     def on_release(self):
         if self.on_release_cb:
@@ -1584,8 +1577,8 @@ class BaseSelectorMenu(MDBoxLayout):
             bar_width=0, bar_color=[0, 0, 0, 0], bar_inactive_color=[0, 0, 0, 0], bar_margin=0
         )
         self.container = MDBoxLayout(
-            orientation='horizontal', size_hint_x=None, spacing=dp(2),
-            padding=[dp(4), 0, dp(4), 0]
+            orientation='horizontal', size_hint_x=None, spacing=dp(8),
+            padding=[dp(6), 0, dp(6), 0]
         )
         self.container.bind(minimum_width=self.container.setter('width'))
         self._populate_items()
@@ -1606,6 +1599,13 @@ class BaseSelectorMenu(MDBoxLayout):
         for btn in self.buttons:
             btn.set_rotation(angle)
 
+    def reset_scroll_if_needed(self):
+        if self.scroll and self.container:
+            if self.container.width <= self.scroll.width:
+                self.scroll.scroll_x = 0
+            else:
+                self.scroll.scroll_x = max(0.0, min(1.0, self.scroll.scroll_x))
+
     def scroll_by(self, direction):
         new_scroll = max(0, min(1, self.scroll.scroll_x + direction * 0.2))
         Animation(scroll_x=new_scroll, duration=0.2, t='out_quad').start(self.scroll)
@@ -1624,7 +1624,7 @@ class BaseSelectorMenu(MDBoxLayout):
         pass
 
     def _get_button_width(self, text):
-        return max(dp(36), min(dp(30) + len(text) * dp(7) + dp(12), dp(80)))
+        return max(dp(42), len(text) * dp(10.5) + dp(20))
 
     def _highlight_current(self):
         for btn in self.buttons:
@@ -1640,6 +1640,7 @@ class BaseSelectorMenu(MDBoxLayout):
         self.is_visible = True
         self.opacity = 1
         self.disabled = False
+        Clock.schedule_once(lambda dt: self.reset_scroll_if_needed(), 0)
 
     def hide(self):
         self.is_visible = False
@@ -1706,11 +1707,12 @@ class ChordSelectorMenu(BaseSelectorMenu):
     def set_chords(self, chords, current_chord=None):
         new_chords = list(chords) if chords else []
 
-        if new_chords == self.chords:
+        if new_chords == self.chords and len(self.container.children) == len(new_chords):
             if current_chord is not None and current_chord != self.current_chord:
                 self.current_chord = current_chord
                 self.current_selection = current_chord
                 self._highlight_current()
+            Clock.schedule_once(lambda dt: self.reset_scroll_if_needed(), 0)
             return
 
         self.chords = new_chords
@@ -1720,9 +1722,11 @@ class ChordSelectorMenu(BaseSelectorMenu):
         self.container.clear_widgets()
         self.buttons = []
         self._populate_items()
-        if getattr(self, '_current_rotation', 0):
-            self.set_items_rotation(self._current_rotation)
+        self.set_items_rotation(getattr(self, '_current_rotation', 0))
         self._highlight_current()
+        if self.scroll:
+            self.scroll.scroll_x = 0
+        Clock.schedule_once(lambda dt: self.reset_scroll_if_needed(), 0)
 
     def set_current(self, chord_name):
         if chord_name == self.current_chord:
@@ -1730,6 +1734,31 @@ class ChordSelectorMenu(BaseSelectorMenu):
         self.current_chord = chord_name
         self.current_selection = chord_name
         self._highlight_current()
+
+class DashedDivider(Widget):
+    """Короткая вертикальная линия строго внутри границ меню, как в тюнере."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, 1)
+        self.width = dp(2)
+        self._line_color = ChordsColors.get_divider_color(settings_manager.theme)
+        with self.canvas:
+            self._color = Color(*self._line_color)
+            self._line = Line(points=[], width=dp(1.2))
+        self.bind(pos=self._update_line, size=self._update_line)
+
+    def _update_line(self, *args):
+        if self.height <= dp(12) or self.width <= 0:
+            self._line.points = []
+            return
+        pad = dp(5)
+        cx = self.x + self.width / 2.0
+        self._line.points = [cx, self.y + pad, cx, self.y + self.height - pad]
+
+    def update_theme_colors(self):
+        self._line_color = ChordsColors.get_divider_color(settings_manager.theme)
+        self._color.rgba = self._line_color
+        self._update_line()
 
 
 class UnifiedMenu(MDBoxLayout):
@@ -1741,7 +1770,7 @@ class UnifiedMenu(MDBoxLayout):
         self.orientation = 'horizontal'
         self.size_hint = (1, 1)
         self.md_bg_color = [0, 0, 0, 0]
-        self.padding = [dp(4), dp(4), dp(4), dp(4)]
+        self.padding = [dp(2), dp(2), dp(2), dp(2)]
         self.spacing = dp(0)
 
         self.tonality_item = IconMenuItem(
@@ -1768,41 +1797,86 @@ class UnifiedMenu(MDBoxLayout):
             fixed_color=True
         )
 
-        self.add_widget(self.tonality_item)
-        self.add_widget(self._create_divider())
-        self.add_widget(self.type_item)
-        self.add_widget(self._create_divider())
-        self.add_widget(self.chord_item)
-        self.add_widget(self._create_divider())
-        self.add_widget(self.variants_item)
-        self.add_widget(self._create_divider())
-        self.add_widget(self.mode_item)
-
         self.rotate_item = None
         if on_rotate_press is not None:
             self.rotate_item = IconMenuItem(
                 "phone-rotate-landscape", on_rotate_press, True,
                 icon_color=[0.25, 0.78, 0.55, 1], fixed_color=True
             )
-            self.add_widget(self._create_divider())
-            self.add_widget(self.rotate_item)
 
+        # Центральная ячейка под название аккорда (только для вертикального оверлея)
+        self.center_name_box = AnchorLayout(
+            anchor_x='center', anchor_y='center',
+            size_hint=(1.8, 1), padding=[dp(4), 0, dp(4), 0]
+        )
+        self.center_name_label = MDLabel(
+            text=chord_value or "A",
+            font_size=sp(24),
+            bold=True,
+            halign="center",
+            valign="middle",
+            size_hint=(1, 1),
+            theme_text_color="Custom",
+            text_color=ChordsColors.get_chord_name_color(settings_manager.theme),
+        )
+        self.center_name_label.bind(size=lambda inst, val: setattr(inst, 'text_size', val))
+        self.center_name_box.add_widget(self.center_name_label)
+
+        self._center_visible = False
+        self._rebuild_slots()
         self.update_theme_colors()
 
     def _create_divider(self):
-        return MDBoxLayout(size_hint_x=None, width=dp(1))
+        return DashedDivider()
+
+    def _rebuild_slots(self):
+        """Собирает строго симметричные слоты без лишних скрытых виджетов."""
+        self.clear_widgets()
+        items_left = [self.tonality_item, self.type_item, self.chord_item]
+        items_right = [self.variants_item, self.mode_item]
+        if self.rotate_item is not None:
+            items_right.append(self.rotate_item)
+
+        for idx, item in enumerate(items_left):
+            self.add_widget(item)
+            if idx < len(items_left) - 1:
+                self.add_widget(self._create_divider())
+
+        if self._center_visible:
+            self.add_widget(self._create_divider())
+            self.add_widget(self.center_name_box)
+            self.add_widget(self._create_divider())
+        else:
+            self.add_widget(self._create_divider())
+
+        for idx, item in enumerate(items_right):
+            self.add_widget(item)
+            if idx < len(items_right) - 1:
+                self.add_widget(self._create_divider())
+
+        self.update_theme_colors()
+
+    def set_center_chord_name(self, visible, chord_text=""):
+        if visible:
+            text = (chord_text or "?").strip()
+            self.center_name_label.text = text
+            fs = 24 if len(text) <= 4 else (20 if len(text) <= 7 else (16 if len(text) <= 10 else 13))
+            self.center_name_label.font_size = sp(fs)
+
+        if self._center_visible != visible:
+            self._center_visible = visible
+            self._rebuild_slots()
 
     def set_icons_rotation(self, angle):
-        for child in self.children:
-            if isinstance(child, IconMenuItem):
-                child.set_rotation(angle)
+        pass
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        divider_color = ChordsColors.get_card_line(theme_id)
         for child in self.children:
-            if isinstance(child, MDBoxLayout) and child.width == dp(1):
-                child.md_bg_color = divider_color
+            if isinstance(child, DashedDivider):
+                child.update_theme_colors()
+        if hasattr(self, 'center_name_label'):
+            self.center_name_label.text_color = ChordsColors.get_chord_name_color(theme_id)
 
     def update_chord(self, chord_count):
         has_chords = chord_count > 1
@@ -1834,6 +1908,7 @@ class UnifiedMenu(MDBoxLayout):
         else:
             self.mode_item.set_icon("music-note")
             self.mode_item.set_color([0.8, 0.3, 0.3, 1])
+
 
 
 class ChordsScreen(BaseScreen):
@@ -2001,7 +2076,6 @@ class ChordsScreen(BaseScreen):
         self._show_description()
 
     def _ensure_menus(self):
-        """Ленивая инициализация селекторов. Вызывать перед первым открытием."""
         if self._menu_cache_initialized:
             return
         with perf('chords.create_menus.total'):
@@ -2196,7 +2270,7 @@ class ChordsScreen(BaseScreen):
 
             self.menu_card = MDCard(
                 orientation='horizontal', size_hint=(1, 1), radius=[dp(16)],
-                elevation=0, padding=[dp(4), dp(4), dp(4), dp(4)], spacing=dp(0)
+                elevation=0, padding=[dp(2), dp(2), dp(2), dp(2)], spacing=dp(0)
             )
 
             self._menu_container = FloatLayout(size_hint=(1, 1))
@@ -2317,12 +2391,16 @@ class ChordsScreen(BaseScreen):
         self._menu_container.clear_widgets()
 
         if selector is not None:
+            if selector.parent is not None:
+                selector.parent.remove_widget(selector)
+            selector.set_items_rotation(0)
             selector.disabled = False
             selector.opacity = 1
             selector.size_hint = (1, 1)
             selector.pos_hint = {'x': 0, 'y': 0}
             self._menu_container.add_widget(selector)
             selector.is_visible = True
+            Clock.schedule_once(lambda dt: selector.reset_scroll_if_needed(), 0)
 
     def _restore_unified(self):
         self._menu_container.clear_widgets()
