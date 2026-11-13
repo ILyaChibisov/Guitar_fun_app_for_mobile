@@ -3,11 +3,14 @@
 Экран гитарного тюнера — горизонтальная шкала + эталонные ноты.
 Адаптирован под 3 темы (green, dark, light) и 6 языков.
 
-ОБНОВЛЕНИЯ:
-  - Профессиональный алгоритм YIN для точного определения частоты (без скачков октав).
-  - Ручной режим фиксации выбранной струны (Manual Mode).
-  - Плавное сглаживание частоты (EMA-фильтр).
-  - Увеличенный буфер (2048) для уверенного захвата басов.
+ЛОГИКА:
+  - Кнопка Play включает/выключает микрофон (прослушивание).
+  - Нажатие на кнопку ноты:
+      1) Играет эталонный звук.
+      2) Фиксирует ноту (is_manual_mode = True) и подсвечивает кнопку.
+      3) Микрофон НЕ включается автоматически.
+  - Если микрофон включен (Play нажат) и выбрана нота — тюнер показывает отклонение строго от неё.
+  - Повторное нажатие на выбранную ноту снимает фиксацию (возврат к авто-режиму).
 """
 from kivy.metrics import dp, sp
 from kivy.graphics import Color, Rectangle, Line, Triangle, RoundedRectangle
@@ -81,13 +84,12 @@ try:
 except ImportError:
     pass
 
-# Увеличенный буфер для лучшего захвата низких частот
 SAMPLE_RATE = 44100
 CHUNK_SIZE = 2048
 
 
 # ============================================================
-# ЦВЕТА (палитра согласована с ChordsColors для меню аккордов)
+# ЦВЕТА
 # ============================================================
 
 class TunerColors:
@@ -150,7 +152,7 @@ class TunerColors:
     def get_note_line_width(theme_id): return 1.5
 
 
-# ============ СТРОИ ГИТАР ============
+# ============ СТРОИ ============
 TUNINGS = {
     'standard_6': {
         'name_key': 'tuning_standard_6', 'strings': 6,
@@ -259,16 +261,11 @@ def clean_temp_file(path):
         pass
 
 
-# ============ ПРОФЕССИОНАЛЬНЫЙ ДЕТЕКТОР YIN ============
+# ============ ДЕТЕКТОР YIN ============
 
 def detect_pitch(audio_data, sample_rate=SAMPLE_RATE, min_freq=28.0, max_freq=850.0):
-    """
-    Определение основной частоты методом YIN (разностная функция с кумулятивной нормализацией).
-    Исключает ошибки на октаву вверх и стабильно работает на низких частотах (от 28 Гц).
-    """
     if not audio_data or len(audio_data) < 512:
         return 0.0
-
     try:
         if isinstance(audio_data, bytes):
             if len(audio_data) % 2 != 0:
@@ -283,11 +280,10 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE, min_freq=28.0, max_freq=85
     if n < 512:
         return 0.0
 
-    # Проверка уровня сигнала (Noise Gate)
     mean_val = sum(samples) / n
     centered = [s - mean_val for s in samples]
     rms = math.sqrt(sum(s * s for s in centered) / n)
-    if rms < 80.0:  # Отсекаем тишину и слабый фоновый шум
+    if rms < 80.0:
         return 0.0
 
     min_tau = max(2, int(sample_rate / max_freq))
@@ -295,14 +291,12 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE, min_freq=28.0, max_freq=85
     if min_tau >= max_tau:
         return 0.0
 
-    # Шаг 1 и 2: Разностная функция d(tau) и кумулятивная нормализация CMNDF
     yin_buffer = [0.0] * (max_tau + 1)
     yin_buffer[0] = 1.0
     running_sum = 0.0
 
     for tau in range(1, max_tau + 1):
         diff_sum = 0.0
-        # Шаг 2 для ускорения на длинных окнах без потери точности на басах
         step = 2 if tau > 200 else 1
         limit = n - max_tau
         for j in range(0, limit, step):
@@ -318,7 +312,6 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE, min_freq=28.0, max_freq=85
         else:
             yin_buffer[tau] = 1.0
 
-    # Шаг 3: Поиск первого локального минимума ниже порога уверенности (0.15)
     threshold = 0.15
     tau_estimate = -1
     for tau in range(min_tau, max_tau):
@@ -328,7 +321,6 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE, min_freq=28.0, max_freq=85
             tau_estimate = tau
             break
 
-    # Если строгий порог не пройден, берем глобальный минимум, если сигнал достаточно периодичен
     if tau_estimate == -1:
         min_val = min(yin_buffer[min_tau:max_tau])
         if min_val < 0.35:
@@ -336,7 +328,6 @@ def detect_pitch(audio_data, sample_rate=SAMPLE_RATE, min_freq=28.0, max_freq=85
         else:
             return 0.0
 
-    # Шаг 4: Параболическая интерполяция для точности до долей герца
     better_tau = float(tau_estimate)
     if min_tau < tau_estimate < max_tau - 1:
         s0 = yin_buffer[tau_estimate - 1]
@@ -387,7 +378,7 @@ def cents_deviation(freq, target_freq):
     return max(-50, min(50, 1200 * math.log2(freq / target_freq)))
 
 
-# ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР (ШКАЛА) ============
+# ============ ГОРИЗОНТАЛЬНЫЙ ТЮНЕР ============
 
 class ModernHorizontalTuner(Widget):
     deviation = NumericProperty(0.0)
@@ -540,7 +531,7 @@ class ModernHorizontalTuner(Widget):
             Triangle(points=[ix, tip_y, ix + half_w, base_y, ix, base_y + dp(4)])
 
 
-# ============ «РВАНЫЙ» РАЗДЕЛИТЕЛЬ ============
+# ============ РАЗДЕЛИТЕЛЬ ============
 
 class DashedDivider(Widget):
     def __init__(self, **kwargs):
@@ -698,7 +689,7 @@ class NoteButton(MDCard):
             self.update_theme_colors()
 
 
-# ============ КНОПКИ МЕНЮ ============
+# ============ МЕНЮ ============
 
 class IconMenuItem(ButtonBehavior, MDBoxLayout):
     def __init__(self, icon_name, on_press=None, is_active=True, icon_color=None, **kwargs):
@@ -735,8 +726,6 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.icon_color = color
         self.icon_btn.icon_color = color
 
-
-# ============ МЕНЮ УПРАВЛЕНИЯ ============
 
 class UnifiedTunerMenu(MDCard):
     def __init__(self, on_play=None, on_tune=None, on_reset=None, on_instrument=None, current_instrument='guitar',
@@ -1221,7 +1210,6 @@ class TunerScreen(BaseScreen):
         if not self.is_listening:
             return
 
-        # Экспоненциальное сглаживание частоты (убирает скачки стрелки)
         if self._smoothed_freq <= 0 or abs(freq - self._smoothed_freq) > self._smoothed_freq * 0.15:
             self._smoothed_freq = freq
         else:
@@ -1231,13 +1219,11 @@ class TunerScreen(BaseScreen):
         self.current_frequency = smooth_f
 
         if self.is_manual_mode and self.target_freq > 0:
-            # Ручной режим: сравниваем строго с зафиксированной нотой
             note = self.target_note
             note_freq = self.target_freq
             raw_cents = 1200.0 * math.log2(smooth_f / note_freq)
             cents = max(-50.0, min(50.0, raw_cents))
         else:
-            # Автоматический режим: сам определяет ближайшую струну текущего строя
             note, note_freq, _ = freq_to_note(smooth_f, self.tuning_note_names, self.tuning_freqs)
             if not note:
                 return
@@ -1274,21 +1260,23 @@ class TunerScreen(BaseScreen):
             btn.set_active(False)
 
         if already_active:
-            # Повторное нажатие на активную кнопку — возврат в автоматический режим
+            # Возврат в авто-режим
             self.is_manual_mode = False
             self._smoothed_freq = 0.0
             self.current_deviation = 0
             if hasattr(self, 'tuner_gauge'):
                 self.tuner_gauge.set_value(0)
             if hasattr(self, 'freq_label'):
-                self.freq_label.text = "-- Hz"
+                self.freq_label.text = "-- Hz" if not self.is_listening else self.freq_label.text
             if hasattr(self, 'note_label'):
+                if not self.is_listening:
+                    self.note_label.text = self.target_note
                 self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
             self.update_cents_ui()
             self._show_success("Автоматический режим")
             return
 
-        # Фиксируем выбранную ноту
+        # Фиксация выбранной ноты
         for btn in self._note_buttons:
             if btn.note_name == note_name:
                 btn.set_active(True)
@@ -1310,10 +1298,6 @@ class TunerScreen(BaseScreen):
             self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
 
         self.update_cents_ui()
-
-        # Автоматически запускаем прослушивание, если тюнер был остановлен
-        if not self.is_listening and self._audio_backend != 'none':
-            self.toggle_tuner()
 
     def _reset_note_display(self):
         if hasattr(self, 'note_label'):
@@ -1443,7 +1427,6 @@ class TunerScreen(BaseScreen):
         content = MDBoxLayout(orientation='vertical', spacing=dp(10),
                               size_hint=(1, None), adaptive_height=True)
 
-        # 1. КАРТОЧКА ТЮНЕРА
         self.main_tuner_card = MDCard(
             orientation='vertical',
             size_hint_y=None,
@@ -1515,7 +1498,6 @@ class TunerScreen(BaseScreen):
         self.main_tuner_card.add_widget(labels_box)
         content.add_widget(self.main_tuner_card)
 
-        # 2. МЕНЮ
         self.menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60))
         self.menu_stack = UnifiedTunerMenu(
             on_play=self.toggle_tuner,
@@ -1528,14 +1510,12 @@ class TunerScreen(BaseScreen):
         self.menu_container.add_widget(self.menu_stack)
         content.add_widget(self.menu_container)
 
-        # 3. КНОПКИ НОТ
         self.notes_row = MDBoxLayout(orientation='horizontal', size_hint=(1, None),
                                      height=dp(52), spacing=dp(12),
                                      padding=[dp(16), dp(8), dp(16), dp(8)])
         self._rebuild_note_buttons()
         content.add_widget(self.notes_row)
 
-        # 4. Подсказка
         self._hint_label = MDLabel(
             text="", font_size=sp(12), halign="center",
             size_hint_y=None, height=dp(24), theme_text_color="Custom", opacity=0
@@ -1577,6 +1557,8 @@ class TunerScreen(BaseScreen):
                 self.note_label.text_color = TunerColors.get_text_primary(settings_manager.theme)
             self.current_deviation = 0
             self.update_cents_ui()
+            # Сбрасываем кнопки только если мы не в ручном режиме.
+            # В ручном режиме оставляем кнопку подсвеченной, чтобы было видно, какая нота выбрана.
             if not self.is_manual_mode:
                 self._reset_note_buttons()
 
