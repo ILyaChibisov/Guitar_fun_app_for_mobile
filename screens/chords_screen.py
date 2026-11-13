@@ -198,6 +198,8 @@ class SwipeContainer(MDBoxLayout):
         self._overlay_name_card = None
         self._overlay_name_scatter = None
         self._is_overlay_rotated = False
+        self._overlay_side_left = None
+        self._overlay_side_right = None
         self._wait_ticks = 0
 
         self.orientation = 'vertical'
@@ -588,15 +590,16 @@ class SwipeContainer(MDBoxLayout):
             return
         w, h = Window.width, Window.height
         is_rot = getattr(self, '_is_overlay_rotated', False)
-        rot_angle = 90 if is_rot else 0
+        rot_angle = -90 if is_rot else 0
 
         # 1. Меню в самом низу экрана с аккуратными отступами
         menu_wrapper = getattr(self, '_overlay_menu_wrapper', None)
-        menu_top = dp(84)
+        side_margin = dp(24)
+        bottom_margin = dp(20)
+        menu_h = dp(60)
+        menu_top = bottom_margin + menu_h
         if menu_wrapper is not None:
-            side_margin = dp(24)
-            bottom_margin = dp(20)
-            menu_wrapper.size = (w - side_margin * 2, dp(60))
+            menu_wrapper.size = (w - side_margin * 2, menu_h)
             menu_wrapper.pos = (side_margin, bottom_margin)
             menu_top = menu_wrapper.top
 
@@ -634,15 +637,40 @@ class SwipeContainer(MDBoxLayout):
         if is_rot:
             top_limit = h - top_margin - box_h - dp(8)
             bottom_limit = menu_top + dp(12)
-            avail_h = max(dp(220), (top_limit - bottom_limit) * 0.90)
-            avail_w = max(dp(190), (w - dp(24)) * 0.88)
+            avail_h = max(dp(220), (top_limit - bottom_limit) * 0.84)
+            avail_w = max(dp(190), (w - dp(24)) * 0.90)
+            center_y = (bottom_limit + top_limit) / 2.0
 
             self._big_swipe.size = (avail_h, avail_w)
             self._big_swipe.pos = (0, 0)
             if scatter is not None:
                 scatter.size = (avail_h, avail_w)
-                scatter.rotation = 90
-                scatter.center = (w / 2.0, (bottom_limit + top_limit) / 2.0)
+                scatter.rotation = -90
+                scatter.center = (w / 2.0, center_y)
+
+            # Явный расчёт координат верхней (над грифом) и нижней (под грифом) стрелок
+            griff_top = center_y + avail_h / 2.0
+            griff_bottom = center_y - avail_h / 2.0
+            has_variants = bool(self.screen and self.screen.current_variants and len(self.screen.current_variants) > 1)
+
+            if self._overlay_side_left is not None and self._overlay_side_right is not None:
+                arrow_w, arrow_h = dp(72), dp(28)
+                arrow_x = (w - arrow_w) / 2.0
+
+                # Верхняя стрелка (между заголовком и верхней кромкой грифа)
+                top_arrow_y = min(top_limit - arrow_h, griff_top + dp(4))
+                self._overlay_side_left.size = (arrow_w, arrow_h)
+                self._overlay_side_left.pos = (arrow_x, top_arrow_y)
+                self._overlay_side_left.opacity = 1 if has_variants else 0
+                self._overlay_side_left.disabled = not has_variants
+
+                # Нижняя стрелка (между нижней кромкой грифа и меню)
+                bottom_arrow_y = max(bottom_limit, griff_bottom - arrow_h - dp(4))
+                self._overlay_side_right.size = (arrow_w, arrow_h)
+                self._overlay_side_right.pos = (arrow_x, bottom_arrow_y)
+                self._overlay_side_right.opacity = 1 if has_variants else 0
+                self._overlay_side_right.disabled = not has_variants
+
         else:
             griff_height = min(max(dp(300), w * 0.65), max(dp(220), h - dp(230)))
             self._big_swipe.size = (w, griff_height)
@@ -651,6 +679,12 @@ class SwipeContainer(MDBoxLayout):
                 scatter.size = (w, griff_height)
                 scatter.rotation = 0
                 scatter.center = (w / 2.0, h / 2.0 + dp(12))
+
+            if self._overlay_side_left is not None and self._overlay_side_right is not None:
+                self._overlay_side_left.opacity = 0
+                self._overlay_side_left.disabled = True
+                self._overlay_side_right.opacity = 0
+                self._overlay_side_right.disabled = True
 
     # ---------- Селекторы внутри оверлея (с безопасной перепривязкой parent) ----------
 
@@ -661,7 +695,7 @@ class SwipeContainer(MDBoxLayout):
             selector.parent.remove_widget(selector)
         self._overlay_menu_container.clear_widgets()
 
-        rot_angle = 90 if getattr(self, '_is_overlay_rotated', False) else 0
+        rot_angle = -90 if getattr(self, '_is_overlay_rotated', False) else 0
         selector.set_items_rotation(rot_angle)
         selector.disabled = False
         selector.opacity = 1
@@ -760,7 +794,7 @@ class SwipeContainer(MDBoxLayout):
             return
         self._overlay_menu_container.clear_widgets()
         if self._overlay_unified_menu:
-            rot_angle = 90 if getattr(self, '_is_overlay_rotated', False) else 0
+            rot_angle = -90 if getattr(self, '_is_overlay_rotated', False) else 0
             self._overlay_unified_menu.set_icons_rotation(rot_angle)
             self._overlay_unified_menu.disabled = False
             self._overlay_unified_menu.opacity = 1
@@ -812,6 +846,8 @@ class SwipeContainer(MDBoxLayout):
             self._overlay_menu_container = None
             self._overlay_unified_menu = None
             self._is_overlay_rotated = False
+            self._overlay_side_left = None
+            self._overlay_side_right = None
 
         anim = Animation(opacity=0, duration=0.15)
         anim.bind(on_complete=_remove)
@@ -878,6 +914,44 @@ class SwipeContainer(MDBoxLayout):
 
         scatter.add_widget(big_swipe)
         overlay.add_widget(scatter)
+
+        # Боковые стрелки пагинации для вертикального режима (как в обычном режиме)
+        arrow_color = [0.2, 0.2, 0.2, 1] if theme_id == 'light' else [1, 1, 1, 1]
+
+        class _OverlaySideArrow(ButtonBehavior, FloatLayout):
+            def __init__(self, icon_name, cb, **kw):
+                super().__init__(**kw)
+                self.size_hint = (None, None)
+                self.cb = cb
+                self.icon = MDIcon(
+                    icon=icon_name,
+                    halign="center",
+                    valign="middle",
+                    size_hint=(None, None),
+                    size=(dp(28), dp(28)),
+                    text_size=(dp(28), dp(28)),
+                    theme_text_color="Custom",
+                    text_color=arrow_color,
+                    font_size=sp(28),
+                )
+                self.add_widget(self.icon)
+                self.bind(
+                    pos=lambda inst, val: setattr(self.icon, 'center', inst.center),
+                    size=lambda inst, val: setattr(self.icon, 'center', inst.center),
+                )
+
+            def on_release(self):
+                if self.cb and not self.disabled:
+                    self.cb()
+
+        self._overlay_side_left = _OverlaySideArrow(
+            "chevron-up", lambda: self._on_swipe_horizontal_from_overlay(-1)
+        )
+        self._overlay_side_right = _OverlaySideArrow(
+            "chevron-down", lambda: self._on_swipe_horizontal_from_overlay(1)
+        )
+        overlay.add_widget(self._overlay_side_left)
+        overlay.add_widget(self._overlay_side_right)
 
         # 2) Заголовок аккорда над грифом (внутри Scatter для безопасного поворота на 90°)
         name_text = self.screen._current_main_name if self.screen else "?"
@@ -1016,6 +1090,11 @@ class SwipeContainer(MDBoxLayout):
         if self._overlay_unified_menu is not None:
             self._overlay_unified_menu.update_theme_colors()
 
+        arrow_color = [0.2, 0.2, 0.2, 1] if theme_id == 'light' else [1, 1, 1, 1]
+        for side_arrow in (getattr(self, '_overlay_side_left', None), getattr(self, '_overlay_side_right', None)):
+            if side_arrow is not None:
+                side_arrow.icon.text_color = arrow_color
+
     def _update_overlay_menu(self):
         if not self.screen or not self._fullscreen_overlay:
             return
@@ -1026,6 +1105,13 @@ class SwipeContainer(MDBoxLayout):
                 self._overlay_unified_menu.update_chord(len(self.screen.available_chords))
         except Exception as e:
             logger.error(f"Error updating overlay menu: {e}")
+
+        is_rot = getattr(self, '_is_overlay_rotated', False)
+        has_variants = bool(self.screen.current_variants) and len(self.screen.current_variants) > 1
+        for side_arrow in (getattr(self, '_overlay_side_left', None), getattr(self, '_overlay_side_right', None)):
+            if side_arrow is not None:
+                side_arrow.opacity = 1 if (is_rot and has_variants) else 0
+                side_arrow.disabled = not (is_rot and has_variants)
 
     def _on_overlay_touch(self, instance, touch):
         if self._fullscreen_overlay is None:
@@ -1365,7 +1451,6 @@ class _SelectorArrowBtn(ButtonBehavior, FloatLayout):
     def on_release(self):
         if self.on_release_cb:
             self.on_release_cb()
-
 
 
 class BaseSelectorMenu(MDBoxLayout):
