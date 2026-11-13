@@ -208,18 +208,22 @@ class SwipeContainer(MDBoxLayout):
         self.md_bg_color = [0, 0, 0, 0]
         self.spacing = 0
 
+        # 1. Верхний блок: только основное название аккорда без рамки и фона
         self.name_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None), height=dp(110) if show_name else 0,
-            padding=[dp(8), dp(22), dp(8), dp(12)] if show_name else [0, 0, 0, 0],
-            spacing=dp(6),
+            orientation='vertical', size_hint=(1, None), height=dp(58) if show_name else 0,
+            padding=[dp(8), dp(6), dp(8), dp(4)] if show_name else [0, 0, 0, 0],
+            spacing=0,
             md_bg_color=[0, 0, 0, 0],
             opacity=1 if show_name else 0,
         )
 
         self.chord_name_card = MDCard(
-            orientation='vertical', size_hint=(None, None), size=(dp(140), dp(52)),
-            pos_hint={'center_x': 0.5}, radius=[dp(16)], elevation=0,
-            padding=[dp(4), dp(4), dp(4), dp(4)], spacing=dp(0)
+            orientation='vertical', size_hint=(None, None), size=(dp(140), dp(46)),
+            pos_hint={'center_x': 0.5}, radius=[0], elevation=0,
+            padding=[dp(4), dp(2), dp(4), dp(2)], spacing=dp(0),
+            md_bg_color=[0, 0, 0, 0],
+            line_color=[0, 0, 0, 0],
+            line_width= 1,
         )
 
         self.chord_name_label = MDLabel(
@@ -228,14 +232,6 @@ class SwipeContainer(MDBoxLayout):
         )
         self.chord_name_card.add_widget(self.chord_name_label)
         self.name_container.add_widget(self.chord_name_card)
-
-        self.chord_alt_label = MDLabel(
-            text="", font_size=sp(11), halign="center", valign="middle",
-            size_hint_y=None, height=dp(16), opacity=0, theme_text_color="Custom",
-        )
-        self.chord_alt_label.text_size = (Window.width - dp(32), None)
-        self.name_container.add_widget(self.chord_alt_label)
-
         self.add_widget(self.name_container)
 
         self._current_main_name = ""
@@ -244,9 +240,26 @@ class SwipeContainer(MDBoxLayout):
         self._alt_timer = None
         self._alt_fade_anim = None
 
+        # 2. Карусель с грифом
         self.carousel = Carousel(direction='right', loop=True, size_hint=(1, 1), anim_move_duration=0.3)
         self.carousel.bind(current_slide=self._on_carousel_slide)
         self.add_widget(self.carousel)
+
+        # 3. Фиксированный слот под грифом для альтернативных названий
+        # Всегда сохраняет высоту dp(32), чтобы меню ниже не прыгало, если синонимов нет
+        self.alt_container = MDBoxLayout(
+            orientation='vertical', size_hint=(1, None), height=dp(32) if show_name else 0,
+            padding=[dp(16), dp(6), dp(16), dp(2)] if show_name else [0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],
+            opacity=1 if show_name else 0,
+        )
+        self.chord_alt_label = MDLabel(
+            text="", font_size=sp(13), halign="center", valign="middle",
+            size_hint=(1, 1), opacity=0, theme_text_color="Custom",
+        )
+        self.chord_alt_label.text_size = (Window.width - dp(32), None)
+        self.alt_container.add_widget(self.chord_alt_label)
+        self.add_widget(self.alt_container)
 
         self.slides = []
         self.renderers = []
@@ -257,9 +270,9 @@ class SwipeContainer(MDBoxLayout):
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        self.chord_name_card.md_bg_color = ChordsColors.get_card_bg(theme_id)
-        self.chord_name_card.line_color = ChordsColors.get_card_line(theme_id)
-        self.chord_name_card.line_width = 1.5
+        self.chord_name_card.md_bg_color = [0, 0, 0, 0]
+        self.chord_name_card.line_color = [0, 0, 0, 0]
+        self.chord_name_card.line_width = 1
         self.chord_name_label.text_color = ChordsColors.get_chord_name_color(theme_id)
         self.chord_alt_label.text_color = ChordsColors.get_text_secondary(theme_id)
 
@@ -428,8 +441,8 @@ class SwipeContainer(MDBoxLayout):
 
         if alt_names:
             self.chord_alt_label.text = alt_names[0]
-            self.chord_alt_label.opacity = 1
             self._alt_index = 0
+            Animation(opacity=1, duration=0.15, t='in_quad').start(self.chord_alt_label)
         else:
             self.chord_alt_label.text = ""
             self.chord_alt_label.opacity = 0
@@ -1908,7 +1921,8 @@ class ChordsScreen(BaseScreen):
             min_height = dp(200)
             max_height = window_width * 0.6
             griff_height = max(min_height, min(griff_height, max_height))
-            new_height = int(griff_height) + dp(100)
+            # dp(58) верхнее название + dp(32) нижний слот альтернативного названия = dp(90)
+            new_height = int(griff_height) + dp(90)
             self._griff_height = int(griff_height)
             if abs(self.swipe_container.height - new_height) > 0.5:
                 self.swipe_container.height = new_height
@@ -2031,19 +2045,20 @@ class ChordsScreen(BaseScreen):
         self.search_status_label.text_size = (None, None)
         content.add_widget(self.search_status_label)
 
-        content.add_widget(Widget(size_hint_y=None, height=dp(32)))
+        content.add_widget(Widget(size_hint_y=None, height=dp(24)))
 
         self.swipe_container = SwipeContainer(
             on_swipe_horizontal=self._on_swipe_horizontal,
             screen=self,
         )
         self.swipe_container.size_hint = (1, None)
-        self.swipe_container.height = self._griff_height + dp(136)
+        self.swipe_container.height = self._griff_height + dp(90)
         content.add_widget(self.swipe_container)
 
         Window.bind(on_resize=self._on_window_resize)
 
-        content.add_widget(Widget(size_hint_y=None, height=dp(8)))
+        # Увеличенный отступ опускает меню пониже под альтернативное название аккорда
+        content.add_widget(Widget(size_hint_y=None, height=dp(18)))
 
         menu_padding_side = dp(38)
         menu_wrapper = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(64),
