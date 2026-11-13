@@ -3,25 +3,28 @@ import os
 import sys
 import math
 import array
-import time
 import random
-import base64  # <--- ДОБАВЛЕНА ЭТА СТРОКА
+import base64
 from pathlib import Path
 from typing import Dict, List
 
-# Пробуем импортировать soundfile
+# ============ ЗАВИСИМОСТИ ============
 try:
     import soundfile as sf
     import numpy as np
-    HAS_SOUNDFILE = False
+    HAS_SOUNDFILE = True
+    print("✅ soundfile установлен — OGG сжатие включено")
 except ImportError:
     HAS_SOUNDFILE = False
-    print("⚠️ soundfile не установлен! OGG не будет работать. Установите: pip install soundfile numpy")
-    print("   Звуки будут сохранены в WAV (файлы будут большими).")
+    print("⚠️ soundfile не установлен — файлы будут в WAV (большие)")
+    print("   Установите: pip install soundfile numpy")
 
 SAMPLE_RATE = 44100
 MAX_AMPLITUDE = 32767
 
+# Для WAV fallback — уменьшенная длительность и частота, чтобы не раздувать файлы
+WAV_DURATION = 1.5
+WAV_SAMPLE_RATE = 22050
 
 
 def get_project_root() -> Path:
@@ -133,87 +136,73 @@ TUNINGS = {
 }
 
 
-def generate_realistic_string_sound(
+def generate_karplus_strong(
         frequency: float,
         duration: float = 2.5,
         volume: float = 0.7,
-        string_type: str = 'mid'
+        string_type: str = 'mid',
+        sample_rate: int = SAMPLE_RATE
 ) -> array.array:
     """
-    Чистый алгоритм Карплуса — Стронга (классическая модель струны без перегруза).
+    Чистый алгоритм Карплуса — Стронга (классическая модель струны).
     """
-    num_samples = int(SAMPLE_RATE * duration)
+    num_samples = int(sample_rate * duration)
     rng = random.Random(123)
 
-    # Коэффициент затухания (чем ближе к 1.0, тем дольше тянется нота)
-    # Высокие частоты затухают быстрее низких естественным образом за счет усреднения 0.5*(a+b)
     if string_type == 'bass':
         decay = 0.9985
-        smooth_passes = 3   # Мягкий щипок для толстых струн
+        smooth_passes = 3
     elif string_type == 'treble':
         decay = 0.9965
-        smooth_passes = 1   # Звонкий щипок для тонких струн
-    else:  # mid
+        smooth_passes = 1
+    else:
         decay = 0.9978
         smooth_passes = 2
 
-    # Длина буфера равна периоду основной частоты
-    period = SAMPLE_RATE / frequency
+    period = sample_rate / frequency
     buf_len = max(2, int(round(period)))
 
-    # 1. Генерируем начальный импульс (треугольный шум — звучит намного мягче белого)
     ring_buffer = [(rng.random() + rng.random() - 1.0) for _ in range(buf_len)]
 
-    # Мягкое сглаживание начального импульса (имитация подушечки пальца/медиатора)
     for _ in range(smooth_passes):
         new_buf = [0.0] * buf_len
         for i in range(buf_len):
             new_buf[i] = 0.25 * ring_buffer[(i - 1) % buf_len] + 0.5 * ring_buffer[i] + 0.25 * ring_buffer[(i + 1) % buf_len]
         ring_buffer = new_buf
 
-    # Убираем постоянную составляющую (DC offset)
     mean_val = sum(ring_buffer) / buf_len
     ring_buffer = [x - mean_val for x in ring_buffer]
 
-    # Нормализуем строго в диапазон [-1.0, 1.0]
     max_val = max(abs(x) for x in ring_buffer) or 1.0
     ring_buffer = [x / max_val for x in ring_buffer]
 
-    # 2. Основной цикл волновода (строго по классической формуле Карплуса — Стронга)
     audio_data = array.array('h')
     idx = 0
-    attack_samples = int(SAMPLE_RATE * 0.008)      # 8 мс плавный вход
-    fade_out_samples = int(SAMPLE_RATE * 0.3)      # 300 мс плавное затухание в конце
+    attack_samples = int(sample_rate * 0.008)
+    fade_out_samples = int(sample_rate * 0.3)
 
     for i in range(num_samples):
         curr_s = ring_buffer[idx]
         next_idx = (idx + 1) % buf_len
         next_s = ring_buffer[next_idx]
 
-        # Классический фильтр усреднения (0.5 * (curr + next)) * decay
-        # Именно он дает естественный тембр гитарной струны без синтетики
         new_sample = 0.5 * (curr_s + next_s) * decay
         ring_buffer[idx] = new_sample
         idx = next_idx
 
         out_val = curr_s
 
-        # Плавная атака, чтобы убрать щелчок в самом начале
         if i < attack_samples:
             out_val *= (i / attack_samples)
 
-        # Плавное затухание в конце файла
         if i > num_samples - fade_out_samples:
             out_val *= max(0.0, (num_samples - i) / fade_out_samples)
 
-        # Чистое масштабирование громкости без клиппинга
         int_value = int(MAX_AMPLITUDE * out_val * volume)
         int_value = max(-32768, min(32767, int_value))
         audio_data.append(int_value)
 
     return audio_data
-
-
 
 
 def save_wav(audio_data, filename):
@@ -238,7 +227,22 @@ def save_wav(audio_data, filename):
         return False
 
 
-# 3. Замена функции generate_python_module (исправлено имя класса и безопасное удаление файла)
+def save_ogg(audio_data, filename):
+    """Сохраняет в OGG через soundfile"""
+    if not HAS_SOUNDFILE:
+        return False
+    try:
+        audio_np = np.array(audio_data, dtype=np.float64) / MAX_AMPLITUDE
+        try:
+            sf.write(filename, audio_np, SAMPLE_RATE, format='ogg')
+        except Exception:
+            sf.write(filename, audio_np, SAMPLE_RATE, format='ogg', subtype='VORBIS')
+        return True
+    except Exception as e:
+        print(f"❌ OGG ошибка: {e}")
+        return False
+
+
 def generate_python_module(tuning_id, tuning_name, notes_data, output_path):
     """Генерирует Python-модуль с base64 данными звуков."""
     lines = [
@@ -270,17 +274,28 @@ def generate_python_module(tuning_id, tuning_name, notes_data, output_path):
         safe_name = note_name.replace('#', '_SHARP_').replace(' ', '_')
         note_map[note_name] = safe_name
 
-        filename = f"{safe_name}.wav"
+        # Используем OGG, если доступен
+        ext = "ogg" if HAS_SOUNDFILE else "wav"
+        filename = f"{safe_name}.{ext}"
         filepath = output_path / filename
 
-        audio = generate_realistic_string_sound(
+        audio = generate_karplus_strong(
             frequency=note_info['freq'],
             duration=2.5,
             volume=note_info['volume'],
             string_type=note_info['type']
         )
 
-        save_wav(audio, str(filepath))
+        if HAS_SOUNDFILE:
+            if not save_ogg(audio, str(filepath)):
+                # Fallback на WAV
+                ext = "wav"
+                filename = f"{safe_name}.{ext}"
+                filepath = output_path / filename
+                save_wav(audio, str(filepath))
+        else:
+            save_wav(audio, str(filepath))
+
         file_size = os.path.getsize(filepath)
 
         with open(filepath, 'rb') as f:
@@ -298,7 +313,7 @@ def generate_python_module(tuning_id, tuning_name, notes_data, output_path):
         metadata_lines.append(f'        "duration": 2.500,')
         metadata_lines.append(f'        "sample_rate": 44100,')
         metadata_lines.append(f'        "channels": 1,')
-        metadata_lines.append(f'        "compressed": False,')
+        metadata_lines.append(f'        "compressed": {HAS_SOUNDFILE},')
         metadata_lines.append(f'    }},')
         metadata_lines.append("")
 
@@ -309,8 +324,10 @@ def generate_python_module(tuning_id, tuning_name, notes_data, output_path):
     lines.append("}")
     lines.append("")
 
-    # Формируем строго английское имя класса из tuning_id (например, bass_4 -> Bass4Sounds)
     class_name = tuning_id.title().replace('_', '') + 'Sounds'
+    # Добавляем флаг сжатия для get_sound
+    lines.append(f"_HAS_SOUNDFILE = {HAS_SOUNDFILE}")
+    lines.append("")
 
     lines.extend([
         f"class {class_name}:",
@@ -339,12 +356,12 @@ def generate_python_module(tuning_id, tuning_name, notes_data, output_path):
         f"        data = {class_name}.get_sound_data(note_name)",
         "        if data:",
         "            try:",
-        '                fd, path = tempfile.mkstemp(suffix=".wav")',
+        '                ext = ".ogg" if _HAS_SOUNDFILE else ".wav"',
+        "                fd, path = tempfile.mkstemp(suffix=ext)",
         "                os.close(fd)",
         '                with open(path, "wb") as f:',
         "                    f.write(data)",
         "                sound = SoundLoader.load(path)",
-        "                # Отложенное удаление, чтобы Windows и Android успели прочитать файл",
         "                def _cleanup(dt):",
         "                    try:",
         "                        if os.path.exists(path):",
@@ -370,21 +387,17 @@ def generate_python_module(tuning_id, tuning_name, notes_data, output_path):
         f.write("\n".join(lines))
 
 
-
 def generate_all_sounds():
     base_dir = PROJECT_ROOT / "data" / "sounds"
     base_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("🎸 ГЕНЕРАЦИЯ РЕАЛИСТИЧНЫХ ЗВУКОВ")
+    print("🎸 ГЕНЕРАЦИЯ ЗВУКОВ")
     print(f"📁 Папка: {base_dir}")
-    if HAS_SOUNDFILE:
-        print("✅ OGG (сжатие включено)")
-    else:
-        print("⚠️ WAV (сжатие ВЫКЛЮЧЕНО)")
+    print(f"{'✅ OGG (сжатие)' if HAS_SOUNDFILE else '⚠️ WAV (без сжатия)'}")
     print("=" * 60)
 
-    # Генерируем __init__.py
+    # __init__.py
     init_lines = ['"""Пакет звуковых ассетов"""', ""]
     init_lines.append("from .standard import StandardSounds")
     init_lines.append("from .drop_d import DropDSounds")
