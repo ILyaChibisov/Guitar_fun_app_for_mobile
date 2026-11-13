@@ -1,7 +1,15 @@
 # state/chords_state.py
 """
 Состояние экрана «Аккорды».
-Хранит текущий выбор, кэш просканированных модулей и флаг готовности UI.
+
+Хранит:
+  - текущий выбор (тональность, тип, аккорд, вариант, режим);
+  - кэш просканированных ЛОКАЛЬНЫХ модулей (в пакете chords/);
+  - кэш UI-слайдов (чтобы не пересобирать при возврате на экран).
+
+Локально в пакете chords/ оставлен ТОЛЬКО A Major (все варианты).
+Всё остальное (другие тональности, другие типы) грузится с сервера
+и в этом менеджере НЕ кэшируется — им управляет сам экран.
 """
 import time
 import threading
@@ -36,18 +44,19 @@ class ChordsStateManager:
         self._timestamp = 0
         self._ttl = 3600  # 1 час
 
-        # --- Кэш просканированных модулей ---
-        # Список словарей (module, name, short_name, variant, type, description, path)
+        # --- Кэш просканированных ЛОКАЛЬНЫХ модулей ---
         self._all_chords = []
         self._scan_done = False
 
         # --- Кэш UI ---
-        self._slides_built = False       # слайды уже созданы
-        self._slides_theme = None        # для какой темы созданы
-        self._slides_chord = None        # для какого аккорда созданы
-        self._slides_variants = None     # список вариантов
+        self._slides_built = False
+        self._slides_theme = None
+        self._slides_chord = None
+        self._slides_variants = None
 
-    # ---------- Состояние выбора ----------
+    # ============================================================
+    # Состояние выбора
+    # ============================================================
 
     def save(self, data: dict):
         with self._lock:
@@ -70,13 +79,16 @@ class ChordsStateManager:
             return dict(self._data)
 
     def invalidate(self):
+        """Сбрасывает текущий выбор и кэш слайдов (но НЕ кэш сканирования)."""
         with self._lock:
             self._data = {}
             self._timestamp = 0
-            self._slides_built = False
-        logger.debug("🗑️ Chords инвалидирован")
+            self._reset_slides_locked()
+        logger.debug("🗑️ Chords: выбор и слайды инвалидированы")
 
-    # ---------- Кэш сканирования ----------
+    # ============================================================
+    # Кэш сканирования (локальные модули)
+    # ============================================================
 
     def get_all_chords(self):
         with self._lock:
@@ -86,20 +98,31 @@ class ChordsStateManager:
         with self._lock:
             self._all_chords = list(chords_list)
             self._scan_done = True
-        logger.info(f"📦 Chords: закэшировано {len(self._all_chords)} модулей")
+            self._reset_slides_locked()
+        logger.info(f"📦 Chords: закэшировано {len(self._all_chords)} локальных модулей")
 
     def is_scan_done(self):
         with self._lock:
             return self._scan_done
 
-    # ---------- Кэш UI (слайды) ----------
+    def invalidate_scan(self):
+        """Сбрасывает кэш сканирования (после удаления части модулей)."""
+        with self._lock:
+            self._all_chords = []
+            self._scan_done = False
+            self._reset_slides_locked()
+        logger.debug("🗑️ Chords: кэш сканирования сброшен")
+
+    # ============================================================
+    # Кэш UI (слайды)
+    # ============================================================
 
     def mark_slides_built(self, theme_id, chord_name, variants):
         with self._lock:
             self._slides_built = True
             self._slides_theme = theme_id
             self._slides_chord = chord_name
-            self._slides_variants = variants  # список dict (с module/server_data)
+            self._slides_variants = variants
 
     def can_reuse_slides(self, theme_id, chord_name, variants):
         """Можно ли переиспользовать уже построенные слайды?"""
@@ -120,10 +143,39 @@ class ChordsStateManager:
 
     def invalidate_slides(self):
         with self._lock:
-            self._slides_built = False
-            self._slides_theme = None
-            self._slides_chord = None
-            self._slides_variants = None
+            self._reset_slides_locked()
+        logger.debug("🗑️ Chords: кэш слайдов сброшен")
+
+    # ============================================================
+    # Полный сброс (logout / смена пользователя / отладка)
+    # ============================================================
+
+    def clear_all(self):
+        """Полный сброс: выбор + сканирование + слайды."""
+        with self._lock:
+            self._data = {
+                'current_tonality': 'A',
+                'current_type': 'Major',
+                'current_chord_name': 'A',
+                'current_variant_index': 0,
+                'current_mode': 'finger',
+            }
+            self._timestamp = 0
+            self._all_chords = []
+            self._scan_done = False
+            self._reset_slides_locked()
+        logger.info("🗑️ Chords: полный сброс состояния")
+
+    # ============================================================
+    # Внутренние хелперы
+    # ============================================================
+
+    def _reset_slides_locked(self):
+        """Сброс кэша слайдов. Вызывать только под self._lock."""
+        self._slides_built = False
+        self._slides_theme = None
+        self._slides_chord = None
+        self._slides_variants = None
 
 
 chords_state = ChordsStateManager()
