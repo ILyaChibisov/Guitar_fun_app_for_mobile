@@ -140,89 +140,79 @@ def generate_realistic_string_sound(
         string_type: str = 'mid'
 ) -> array.array:
     """
-    Физическое моделирование щипка струны (алгоритм Карплуса — Стронга).
+    Чистый алгоритм Карплуса — Стронга (классическая модель струны без перегруза).
     """
     num_samples = int(SAMPLE_RATE * duration)
-    rng = random.Random(42)
+    rng = random.Random(123)
 
+    # Коэффициент затухания (чем ближе к 1.0, тем дольше тянется нота)
+    # Высокие частоты затухают быстрее низких естественным образом за счет усреднения 0.5*(a+b)
     if string_type == 'bass':
-        decay = 0.9965
-        brightness = 0.50     # Чуть выше, чтобы бас читался на динамиках ПК и телефона
-        pluck_pos = 0.18
-        body_resonance = 0.15
+        decay = 0.9985
+        smooth_passes = 3   # Мягкий щипок для толстых струн
     elif string_type == 'treble':
-        decay = 0.9920
-        brightness = 0.65
-        pluck_pos = 0.12
-        body_resonance = 0.08
+        decay = 0.9965
+        smooth_passes = 1   # Звонкий щипок для тонких струн
     else:  # mid
-        decay = 0.9945
-        brightness = 0.52
-        pluck_pos = 0.15
-        body_resonance = 0.12
+        decay = 0.9978
+        smooth_passes = 2
 
+    # Длина буфера равна периоду основной частоты
     period = SAMPLE_RATE / frequency
     buf_len = max(2, int(round(period)))
 
-    # Начальный импульс (щипок)
-    ring_buffer = [0.0] * buf_len
-    last_val = 0.0
-    for i in range(buf_len):
-        raw_noise = rng.uniform(-1.0, 1.0)
-        filtered_noise = brightness * raw_noise + (1.0 - brightness) * last_val
-        last_val = filtered_noise
-        ring_buffer[i] = filtered_noise
+    # 1. Генерируем начальный импульс (треугольный шум — звучит намного мягче белого)
+    ring_buffer = [(rng.random() + rng.random() - 1.0) for _ in range(buf_len)]
 
-    # Гребенчатый фильтр позиции щипка
-    pluck_samples = max(1, int(buf_len * pluck_pos))
-    temp_buf = list(ring_buffer)
-    for i in range(buf_len):
-        ring_buffer[i] = temp_buf[i] - temp_buf[(i - pluck_samples) % buf_len]
+    # Мягкое сглаживание начального импульса (имитация подушечки пальца/медиатора)
+    for _ in range(smooth_passes):
+        new_buf = [0.0] * buf_len
+        for i in range(buf_len):
+            new_buf[i] = 0.25 * ring_buffer[(i - 1) % buf_len] + 0.5 * ring_buffer[i] + 0.25 * ring_buffer[(i + 1) % buf_len]
+        ring_buffer = new_buf
 
-    # Убираем постоянное смещение (DC offset) и нормализуем
+    # Убираем постоянную составляющую (DC offset)
     mean_val = sum(ring_buffer) / buf_len
     ring_buffer = [x - mean_val for x in ring_buffer]
-    max_init = max(abs(x) for x in ring_buffer) or 1.0
-    ring_buffer = [x / max_init for x in ring_buffer]
 
+    # Нормализуем строго в диапазон [-1.0, 1.0]
+    max_val = max(abs(x) for x in ring_buffer) or 1.0
+    ring_buffer = [x / max_val for x in ring_buffer]
+
+    # 2. Основной цикл волновода (строго по классической формуле Карплуса — Стронга)
     audio_data = array.array('h')
     idx = 0
-
-    # Резонанс деревянной деки
-    body_freq = 140.0
-    body_phase = 0.0
-    body_step = 2.0 * math.pi * body_freq / SAMPLE_RATE
-    attack_samples = int(SAMPLE_RATE * 0.005)
-    fade_out_samples = int(SAMPLE_RATE * 0.1)
+    attack_samples = int(SAMPLE_RATE * 0.008)      # 8 мс плавный вход
+    fade_out_samples = int(SAMPLE_RATE * 0.3)      # 300 мс плавное затухание в конце
 
     for i in range(num_samples):
-        current_sample = ring_buffer[idx]
+        curr_s = ring_buffer[idx]
         next_idx = (idx + 1) % buf_len
-        next_sample = ring_buffer[next_idx]
+        next_s = ring_buffer[next_idx]
 
-        # Фильтр нижних частот в петле обратной связи
-        averaged = 0.5 * (current_sample + next_sample) * decay
-        ring_buffer[idx] = averaged
+        # Классический фильтр усреднения (0.5 * (curr + next)) * decay
+        # Именно он дает естественный тембр гитарной струны без синтетики
+        new_sample = 0.5 * (curr_s + next_s) * decay
+        ring_buffer[idx] = new_sample
         idx = next_idx
 
-        out_val = current_sample
-        if i < SAMPLE_RATE * 0.12:
-            body_env = math.exp(-i / (SAMPLE_RATE * 0.025))
-            out_val += math.sin(body_phase) * body_resonance * body_env
-            body_phase += body_step
+        out_val = curr_s
 
+        # Плавная атака, чтобы убрать щелчок в самом начале
         if i < attack_samples:
             out_val *= (i / attack_samples)
 
+        # Плавное затухание в конце файла
         if i > num_samples - fade_out_samples:
-            rem = (num_samples - i) / fade_out_samples
-            out_val *= max(0.0, rem)
+            out_val *= max(0.0, (num_samples - i) / fade_out_samples)
 
-        out_val *= volume
-        out_val = max(-0.98, min(0.98, out_val))
-        audio_data.append(int(MAX_AMPLITUDE * out_val))
+        # Чистое масштабирование громкости без клиппинга
+        int_value = int(MAX_AMPLITUDE * out_val * volume)
+        int_value = max(-32768, min(32767, int_value))
+        audio_data.append(int_value)
 
     return audio_data
+
 
 
 
