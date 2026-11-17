@@ -405,9 +405,12 @@ class ModernHorizontalTuner(Widget):
     def on_deviation(self, instance, value):
         clamped = max(-50.0, min(50.0, float(value)))
         Animation.cancel_all(self, 'animated_deviation')
-        # Ускорено: 0.18 -> 0.12, чтобы стрелка и подсветка успевали за быстрой игрой
-        anim = Animation(animated_deviation=clamped, duration=0.12, transition='out_cubic')
-        anim.start(self)
+        # В зоне точной настройки (±3) ставим мгновенно, без анимации,
+        # чтобы стрелка не «доезжала» и не рассинхронивалась с текстом «0 цент».
+        if abs(clamped) <= 3.0:
+            self.animated_deviation = clamped
+        else:
+            Animation(animated_deviation=clamped, duration=0.12, transition='out_cubic').start(self)
 
     def set_value(self, value):
         self.deviation = max(-50.0, min(50.0, float(value)))
@@ -456,15 +459,21 @@ class ModernHorizontalTuner(Widget):
 
         dev = max(-50.0, min(50.0, self.animated_deviation))
 
+        # МАГНИТ: в зоне точной настройки стрелка ровно в центре,
+        # чтобы совпадала с текстом «0 цент» и центральным сегментом.
+        if abs(dev) <= 3.0:
+            dev = 0.0
+
         # Шаг сегментов = 100 / (num_segments - 1) = 5 центов
         step = 100.0 / (num_segments - 1)
 
-        # Ближайший сегмент считается явно — подсветка строго одного
+        # Ближайший сегмент считается уже после магнита — подсветка строго одного
         nearest_idx = int(round((dev + 50.0) / step))
         nearest_idx = max(0, min(num_segments - 1, nearest_idx))
 
         # Точная настройка: центральный сегмент И отклонение в пределах ±3
         is_tuned = (nearest_idx == num_segments // 2) and abs(dev) <= 3.0
+
 
         if is_tuned:
             active_rgb = (0.2, 0.95, 0.65)
