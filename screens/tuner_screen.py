@@ -49,6 +49,7 @@ from screens.base_screen import BaseScreen
 from utils.notifications import notify
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
+from tuner_utils.headstock_widget import HeadstockWidget
 
 logger = screen_logger('Tuner')
 
@@ -931,7 +932,7 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'note_label'):
             is_tuned = abs(self.current_deviation) <= 3.0 and self.is_listening
             self.note_label.text_color = [0.2, 0.95, 0.65, 1.0] if is_tuned else text_p
-            self.note_label.font_size = sp(100)
+            self.note_label.font_size = sp(68)
 
         if hasattr(self, 'freq_label'):
             self.freq_label.text_color = TunerColors.get_accent(theme_id)
@@ -949,8 +950,8 @@ class TunerScreen(BaseScreen):
         if hasattr(self, '_hint_label'):
             self._hint_label.text_color = TunerColors.get_hint_color(theme_id)
 
-        for btn in self._note_buttons:
-            btn.update_theme_colors()
+        if hasattr(self, 'headstock_widget'):
+            self.headstock_widget.set_theme(theme_id)
 
         self.update_text_outlines()
 
@@ -1274,16 +1275,22 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'freq_label'):
             self.freq_label.text = f"{smooth_f:.2f} Hz"
 
+        if not self.is_manual_mode and hasattr(self, 'headstock_widget'):
+            if note in self.tuning_note_names:
+                idx = self.tuning_note_names.index(note)
+                full_note = self.tuning_notes[idx]
+                self.headstock_widget.set_active_note(full_note, pluck=(abs(cents) <= 3.0))
+
         self.update_cents_ui()
 
     def on_reference_note_pressed(self, note_name, frequency):
-        already_active = any(
-            btn.note_name == note_name and btn.is_active
-            for btn in self._note_buttons
+        already_active = (
+            hasattr(self, 'headstock_widget')
+            and any(b.note_name == note_name and b.is_active for b in self.headstock_widget.note_buttons.values())
         )
 
-        for btn in self._note_buttons:
-            btn.set_active(False)
+        if hasattr(self, 'headstock_widget'):
+            self.headstock_widget.reset_active()
 
         if already_active:
             # Возврат в авто-режим
@@ -1303,10 +1310,8 @@ class TunerScreen(BaseScreen):
             return
 
         # Фиксация выбранной ноты
-        for btn in self._note_buttons:
-            if btn.note_name == note_name:
-                btn.set_active(True)
-                break
+        if hasattr(self, 'headstock_widget'):
+            self.headstock_widget.set_active_note(note_name, pluck=False)
 
         display_name = ''.join(c for c in note_name if not c.isdigit())
         self.is_manual_mode = True
@@ -1336,20 +1341,26 @@ class TunerScreen(BaseScreen):
             self.update_cents_ui()
 
     def _reset_note_buttons(self):
-        for btn in self._note_buttons:
-            btn.set_active(False)
+        if hasattr(self, 'headstock_widget'):
+            self.headstock_widget.reset_active()
+
+    def _get_grif_asset_key(self):
+        if self.current_instrument == 'bass':
+            return 'bass_5' if len(self.tuning_notes) == 5 else 'bass_4'
+        if self.current_instrument == 'ukulele':
+            return 'ukulele_4'
+        return 'guitar_6'
 
     def _rebuild_note_buttons(self):
-        self.notes_row.clear_widgets()
-        self._note_buttons = []
-        self.notes_row.add_widget(Widget(size_hint_x=1))
-        for display_name, full_name, freq in zip(self.tuning_note_names, self.tuning_notes, self.tuning_freqs):
-            btn = NoteButton(note_name=full_name, display_name=display_name,
-                             frequency=freq, tuning_id=self.current_tuning,
-                             on_press=self.on_reference_note_pressed)
-            self._note_buttons.append(btn)
-            self.notes_row.add_widget(btn)
-        self.notes_row.add_widget(Widget(size_hint_x=1))
+        if hasattr(self, 'headstock_widget'):
+            self.headstock_widget.set_theme(settings_manager.theme)
+            self.headstock_widget.set_tuning(
+                full_notes=self.tuning_notes,
+                display_names=self.tuning_note_names,
+                freqs=self.tuning_freqs,
+                tuning_id=self.current_tuning,
+                asset_key=self._get_grif_asset_key(),
+            )
 
     def _cycle_tuning(self):
         categories = {
@@ -1451,12 +1462,12 @@ class TunerScreen(BaseScreen):
         content_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1),
                                         padding=[dp(16), dp(4), dp(16), padding_bottom])
         content = MDBoxLayout(orientation='vertical', spacing=dp(10),
-                              size_hint=(1, None), adaptive_height=True)
+                              size_hint=(1, 1))
 
         self.main_tuner_card = MDCard(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(330),
+            height=dp(245),
             radius=[dp(16)],
             md_bg_color=TunerColors.get_card_bg(settings_manager.theme),
             line_color=TunerColors.get_card_line(settings_manager.theme),
@@ -1476,14 +1487,14 @@ class TunerScreen(BaseScreen):
         self.main_tuner_card.add_widget(self.tuning_name_label)
         self.main_tuner_card.add_widget(Widget(size_hint_y=1))
 
-        note_anchor = AnchorLayout(size_hint_y=None, height=dp(80))
+        note_anchor = AnchorLayout(size_hint_y=None, height=dp(62))
         self.note_label = MDLabel(
-            text=self.target_note, font_size=sp(90), bold=True,
-            halign="center", valign="middle", size_hint=(1, None), height=dp(80),
+            text=self.target_note, font_size=sp(68), bold=True,
+            halign="center", valign="middle", size_hint=(1, None), height=dp(62),
             text_size=(None, None), theme_text_color="Custom",
             text_color=TunerColors.get_text_primary(settings_manager.theme)
         )
-        self.note_label.bind(on_size=lambda *args: setattr(self.note_label, 'font_size', sp(90)))
+        self.note_label.bind(on_size=lambda *args: setattr(self.note_label, 'font_size', sp(68)))
         note_anchor.add_widget(self.note_label)
         self.main_tuner_card.add_widget(note_anchor)
         self.main_tuner_card.add_widget(Widget(size_hint_y=1))
@@ -1536,11 +1547,13 @@ class TunerScreen(BaseScreen):
         self.menu_container.add_widget(self.menu_stack)
         content.add_widget(self.menu_container)
 
-        self.notes_row = MDBoxLayout(orientation='horizontal', size_hint=(1, None),
-                                     height=dp(52), spacing=dp(12),
-                                     padding=[dp(16), dp(8), dp(16), dp(8)])
+        self.headstock_widget = HeadstockWidget(
+            on_note_press=self.on_reference_note_pressed,
+            theme_name=settings_manager.theme,
+            size_hint=(1, 1),
+        )
         self._rebuild_note_buttons()
-        content.add_widget(self.notes_row)
+        content.add_widget(self.headstock_widget)
 
         self._hint_label = MDLabel(
             text="", font_size=sp(12), halign="center",
@@ -1549,7 +1562,6 @@ class TunerScreen(BaseScreen):
         content.add_widget(self._hint_label)
 
         content_container.add_widget(content)
-        content_container.add_widget(Widget(size_hint_y=1))
         main_layout.add_widget(content_container)
         self.add_widget(main_layout)
 
