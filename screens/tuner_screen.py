@@ -405,7 +405,8 @@ class ModernHorizontalTuner(Widget):
     def on_deviation(self, instance, value):
         clamped = max(-50.0, min(50.0, float(value)))
         Animation.cancel_all(self, 'animated_deviation')
-        anim = Animation(animated_deviation=clamped, duration=0.18, transition='out_cubic')
+        # Ускорено: 0.18 -> 0.12, чтобы стрелка и подсветка успевали за быстрой игрой
+        anim = Animation(animated_deviation=clamped, duration=0.12, transition='out_cubic')
         anim.start(self)
 
     def set_value(self, value):
@@ -454,7 +455,17 @@ class ModernHorizontalTuner(Widget):
         min_h = dp(14)
 
         dev = max(-50.0, min(50.0, self.animated_deviation))
-        is_tuned = abs(dev) <= 3.0
+
+        # Шаг сегментов = 100 / (num_segments - 1) = 5 центов
+        step = 100.0 / (num_segments - 1)
+
+        # Ближайший сегмент считается явно — подсветка строго одного
+        nearest_idx = int(round((dev + 50.0) / step))
+        nearest_idx = max(0, min(num_segments - 1, nearest_idx))
+
+        # Точная настройка: центральный сегмент И отклонение в пределах ±3
+        is_tuned = (nearest_idx == num_segments // 2) and abs(dev) <= 3.0
+
         if is_tuned:
             active_rgb = (0.2, 0.95, 0.65)
         else:
@@ -481,13 +492,12 @@ class ModernHorizontalTuner(Widget):
                 outline_color = (0.0, 0.2, 0.1, 0.8)
 
             for i in range(num_segments):
-                value = -50 + i * 5
+                value = -50 + i * step
                 x = scale_x + i * segment_width + gap / 2
                 norm_dist = abs(value) / 50.0
                 height_factor = (math.cos(norm_dist * math.pi) + 1.0) / 2.0
                 curr_height = max(min_h, min_h + (max_h - min_h) * height_factor)
                 r, g, b = self._get_segment_color(value, 50)
-                dist = abs(dev - value)
                 seg_w = max(dp(1), segment_width - gap)
 
                 with self.canvas:
@@ -495,13 +505,20 @@ class ModernHorizontalTuner(Widget):
                     if seg_w > 0:
                         Line(rounded_rectangle=(x, scale_y - curr_height / 2, seg_w, curr_height, dp(4)), width=1.5)
 
-                if dist < 4.5:
-                    glow_alpha = 0.35 * (1.0 - dist / 4.5)
-                    Color(r, g, b, glow_alpha)
+                # Мягкое затухание соседних сегментов:
+                # главный (nearest) — яркий, соседний (±1) — слабый glow, остальные — обычные
+                if i == nearest_idx:
+                    Color(r, g, b, 0.35)
                     RoundedRectangle(pos=(x - dp(2), scale_y - curr_height / 2 - dp(3)),
                                      size=(seg_w + dp(4), curr_height + dp(6)), radius=[dp(6)])
                     brightness = 1.0
                     alpha = 1.0
+                elif abs(i - nearest_idx) == 1:
+                    Color(r, g, b, 0.08)
+                    RoundedRectangle(pos=(x - dp(1), scale_y - curr_height / 2 - dp(1)),
+                                     size=(seg_w + dp(2), curr_height + dp(2)), radius=[dp(5)])
+                    brightness = 0.78 + 0.10 * (1.0 - norm_dist)
+                    alpha = 0.88
                 else:
                     brightness = 0.62 + 0.25 * (1.0 - norm_dist)
                     alpha = 0.78
