@@ -389,3 +389,12 @@ class ChordRenderer(RelativeLayout):
         new_y = (y + offset_y) * scale + offset_y_img
 
         return new_x, new_y, scale
+
+    def clear_sprites(self):
+        """Очищает все слои (гриф остаётся, но ноты, лады и баре исчезают)."""
+        self.fret_layer.clear_widgets()
+        self.barre_layer.clear_widgets()
+        self.note_layer.clear_widgets()
+        self._sprites_meta.clear()
+        self.current_module = None
+        self._last_module_id = None

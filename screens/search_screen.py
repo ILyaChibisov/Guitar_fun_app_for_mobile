@@ -976,7 +976,7 @@ class SearchScreen(BaseScreen):
                     'song_id': item.get('song_id'),
                 })
             elif self._active_tab == 'chords':
-                chord_title = item.get('main_name', '')
+                chord_title = item.get('main_name', '').replace('\\', '/')
                 cards_data.append({
                     'title': chord_title,
                     'result_type': 'chord',
@@ -1123,13 +1123,17 @@ class SearchScreen(BaseScreen):
             import urllib.parse
             from api.client import api
             from config.app_config import config
-            q_enc = urllib.parse.quote(query, safe="")
+
+            # Принудительно приводим слеш к формату базы (обратный)
+            norm_query = query.replace('/', '\\')
+
+            q_enc = urllib.parse.quote(norm_query, safe="")
             url = f"{config.API_BASE_URL}/chords/search?query={q_enc}"
             res = api._request_sync(url, method="GET", include_auth=False)
             if isinstance(res, dict):
                 return res.get('results', [])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Ошибка поиска аккордов: {e}")
         return []
 
     def _search_songs(self, query):

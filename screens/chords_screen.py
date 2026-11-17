@@ -386,14 +386,10 @@ class SwipeContainer(MDBoxLayout):
             renderer.current_mode = "finger"
 
             with perf('chords.swipe.add_slide.load_griff_png', log_every=False):
-                try:
-                    bg_data = load_asset_as_bytes("griff_png")
-                    if bg_data:
-                        img = CoreImage(BytesIO(bg_data), ext="png")
-                        if img and img.texture:
-                            renderer.set_background(img.texture)
-                except Exception as e:
-                    logger.error(f"Ошибка загрузки фона грифа: {e}")
+                from chord_utils.assets import get_griff_texture
+                texture = get_griff_texture()
+                if texture:
+                    renderer.set_background(texture)
 
             if chord_module:
                 with perf('chords.swipe.add_slide.load_chord', log_every=False):
@@ -2615,9 +2611,13 @@ class ChordsScreen(BaseScreen):
             alt_query = alt_map.get(query_lower, None)
 
             with perf('chords.action.do_search.local_lookup', log_every=False):
+                # Приводим запрос к формату базы
+                query_norm = query_lower.replace('/', '\\')
+
                 for chord in self.all_chords:
-                    short_name_lower = chord['short_name'].lower()
-                    if short_name_lower == query_lower or (alt_query and short_name_lower == alt_query):
+                    short_name_lower = chord['short_name'].lower().replace('/', '\\')
+                    if short_name_lower == query_norm or (
+                            alt_query and short_name_lower == alt_query.replace('/', '\\')):
                         if chord not in self.search_results:
                             self.search_results.append(chord)
                 if not self.search_results:

@@ -3,6 +3,12 @@
 Экран просмотра песни ИЗ ИЗБРАННОГО.
 Управление избранным — через TopNav.
 Панель настроек открывается через шестеренку в TopNav.
+
+ОПТИМИЗАЦИЯ (v2):
+  - Аппликатуры аккордов грузятся с сервера batch-запросом (POST /chords/batch).
+  - Больше нет зависимости от ChordsScreen (all_chords).
+  - Используется дисковый кеш для batch-запросов (через ChordsClient).
+  - Поддержка requested_main_name (если сервер отдал D# вместо Eb).
 """
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel, MDIcon
@@ -23,6 +29,7 @@ from kivy.animation import Animation
 from kivy.core.window import Window
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.utils import platform
+from kivy.logger import Logger
 from io import BytesIO
 import re
 
@@ -31,6 +38,7 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from chord_utils.renderer import ChordRenderer
 from api.client import api
+from api.chords_client import get_chords_client  # <-- NEW
 from utils.notifications import notify
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
@@ -45,9 +53,12 @@ logger = screen_logger('FavoriteDetail')
 
 try:
     from data import load_asset_as_bytes
+
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
+
+
     def load_asset_as_bytes(name):
         return None
 
@@ -106,7 +117,6 @@ class DetailColors:
 
     @staticmethod
     def get_icon_color(theme_id, action_name):
-        """Возвращает уникальный цвет для каждой иконки во всех темах."""
         if theme_id == 'light':
             colors = {
                 'chords': [0.61, 0.15, 0.69, 1],
@@ -389,7 +399,6 @@ class FloatingPanel(MDCard):
                                       action_name='variant')
         self.content.add_widget(self.variant_item)
 
-        # ✅ Функция для создания разделителя (как в главном меню)
         def add_divider():
             div = MDBoxLayout(
                 orientation='horizontal', size_hint=(1, None), height=dp(1),
@@ -408,7 +417,6 @@ class FloatingPanel(MDCard):
         self.content.add_widget(self.mode_item)
         add_divider()
 
-        # ✅ Иконка глаза зависит от текущего состояния
         initial_icon = "eye" if getattr(self.parent_screen, 'eye_active', False) else "eye-off"
         self.eye_item = PanelIcon(icon=initial_icon,
                                   on_click=lambda: self._on_menu_item('eye'),
@@ -421,7 +429,6 @@ class FloatingPanel(MDCard):
                                          action_name='zoom')
         self.content.add_widget(self.griff_zoom_item)
 
-        # ✅ ДОБАВЛЯЕМ РАЗДЕЛИТЕЛЬ ПЕРЕД ГАЛОЧКОЙ
         add_divider()
 
         back_btn = PanelIcon(icon="check", on_click=lambda: self._build_menu(), action_name='back')
@@ -459,7 +466,6 @@ class FloatingPanel(MDCard):
             if self.parent_screen and hasattr(self.parent_screen, '_toggle_eye'):
                 self.parent_screen._toggle_eye()
                 is_active = getattr(self.parent_screen, 'eye_active', False)
-                # ✅ Меняем иконку, а не цвет
                 self.eye_item.set_icon("eye" if is_active else "eye-off")
                 if is_active and not self.parent_screen.is_chords_mode:
                     self.parent_screen.show_chords_section()
@@ -497,7 +503,6 @@ class FloatingPanel(MDCard):
 
         self.content.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
-        # ✅ Функция для создания разделителя (как в главном меню)
         def add_divider():
             div = MDBoxLayout(
                 orientation='horizontal', size_hint=(1, None), height=dp(1),
@@ -508,17 +513,15 @@ class FloatingPanel(MDCard):
             div._inner_line = inner
             self.content.add_widget(div)
 
-        # ✅ НОВЫЙ ЗАГОЛОВОК: Сверху слово "Тон", снизу значение
         header_box = MDBoxLayout(
-            orientation='vertical',  # <-- Вертикальное расположение
+            orientation='vertical',
             size_hint=(1, None),
-            height=dp(52),  # <-- Чуть увеличили высоту, чтобы влезло два элемента
+            height=dp(52),
             spacing=0,
             padding=[0, 2, 0, 2],
             pos_hint={'center_x': 0.5}
         )
 
-        # 1. Верхняя надпись (Тон / Шрифт / Скорость)
         if type_str == 'tonality':
             title_text = "Тон"
         elif type_str == 'font':
@@ -539,19 +542,16 @@ class FloatingPanel(MDCard):
         )
         header_box.add_widget(title_label)
 
-        # 2. Нижнее значение (без символов)
         if type_str == 'tonality':
             current_val = getattr(parent, 'current_tonality', 0)
             current_val_str = "0" if current_val == 0 else f"{current_val:+g}"
         elif type_str == 'font':
             curr_size = getattr(parent, 'current_font_size', 20)
             current_val_str = self._get_font_multiplier(curr_size)
-        else:  # scroll
+        else:
             curr_speed = getattr(parent, 'scroll_speed', 1.0)
             current_val_str = f"{curr_speed:.1f}x"
 
-        # ✅ Используем MDLabel (он подхватит глобальный шрифт и отобразит цифры)
-        # Убрали font_name='NotoSansSymbols2' и символы ♪, 🔍, ▶
         self._sub_val_label = MDLabel(
             text=current_val_str,
             halign="center",
@@ -566,11 +566,8 @@ class FloatingPanel(MDCard):
         header_box.add_widget(self._sub_val_label)
 
         self.content.add_widget(header_box)
-
-        # ✅ ИСПОЛЬЗУЕМ НОВЫЙ РАЗДЕЛИТЕЛЬ
         add_divider()
 
-        # Слайдер
         slider_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -585,7 +582,6 @@ class FloatingPanel(MDCard):
             pos_hint={'center_x': 0.5}
         )
 
-        # Плюс
         center_box.add_widget(MDLabel(
             text="+", halign="center", valign="middle",
             theme_text_color="Custom", text_color=[0.3, 0.7, 0.3, 0.9],
@@ -594,7 +590,6 @@ class FloatingPanel(MDCard):
             bold=True, font_size=sp(14)
         ))
 
-        # Слайдер
         if type_str == 'tonality':
             current_val_int = int(round(getattr(parent, 'current_tonality', 0) * 2))
             self.ton_slider = MDSlider(
@@ -624,7 +619,6 @@ class FloatingPanel(MDCard):
                 if self.ton_slider.value != int_val:
                     self.ton_slider.value = int_val
                 val_half = int_val / 2
-                # ✅ Убрали символ ♪
                 self._sub_val_label.text = "0" if val_half == 0 else f"{val_half:+g}"
                 if parent and val_half != getattr(parent, 'current_tonality', 0):
                     parent.current_tonality = val_half
@@ -664,7 +658,6 @@ class FloatingPanel(MDCard):
                 if self.font_slider.value != int_val:
                     self.font_slider.value = int_val
                 new_size = font_sizes[int_val]
-                # ✅ Убрали символ 🔍
                 self._sub_val_label.text = f"{self._get_font_multiplier(new_size)}"
                 if parent and getattr(parent, 'current_font_size', 0) != new_size:
                     parent.current_font_size = new_size
@@ -707,7 +700,6 @@ class FloatingPanel(MDCard):
                 if self.scroll_slider.value != int_val:
                     self.scroll_slider.value = int_val
                 new_speed = slider_to_speed(int_val)
-                # ✅ Убрали символ ▶
                 self._sub_val_label.text = f"{new_speed:.1f}x"
                 if parent:
                     parent.scroll_speed = new_speed
@@ -715,7 +707,6 @@ class FloatingPanel(MDCard):
             self.scroll_slider.bind(value=on_scroll_change)
             center_box.add_widget(self.scroll_slider)
 
-        # Минус
         center_box.add_widget(MDLabel(
             text="-", halign="center", valign="middle",
             theme_text_color="Custom", text_color=[0.8, 0.3, 0.3, 0.9],
@@ -727,10 +718,8 @@ class FloatingPanel(MDCard):
         slider_container.add_widget(center_box)
         self.content.add_widget(slider_container)
 
-        # ✅ ИСПОЛЬЗУЕМ НОВЫЙ РАЗДЕЛИТЕЛЬ
         add_divider()
 
-        # ✅ ГАЛОЧКА "НАЗАД" В ПОДМЕНЮ (теперь цветная, как в меню аккордов)
         back_btn = PanelIcon(icon="check", on_click=lambda: self._build_menu(), action_name='back')
         self.content.add_widget(back_btn)
 
@@ -763,7 +752,6 @@ class FloatingPanel(MDCard):
                 self.variant_item.set_color(DetailColors.get_icon_color(theme_id, 'variant'))
                 self.mode_item.set_color(DetailColors.get_icon_color(theme_id, 'mode'))
                 self.griff_zoom_item.set_color(DetailColors.get_icon_color(theme_id, 'zoom'))
-                # ✅ Глаз всегда использует свой цвет из палитры (не меняется на красный)
                 self.eye_item.set_color(DetailColors.get_icon_color(theme_id, 'eye'))
 
             for child in self.content.children:
@@ -844,6 +832,12 @@ class FavoriteDetailScreen(BaseScreen):
 
         self._floating_panel = None
 
+        # ===== НОВОЕ ДЛЯ BATCH-ЗАГРУЗКИ АККОРДОВ =====
+        self._chords_client = get_chords_client()
+        self._batch_loaded = False
+        self._batch_chords_data = {}
+        self._pending_batch_event = None
+
         self.load_background()
         self.init_ui()
         logger.info('Экран просмотра избранной песни создан')
@@ -902,12 +896,21 @@ class FavoriteDetailScreen(BaseScreen):
         if self.chord_name_label: self.chord_name_label.text_color = text_p
         if self._floating_panel: self._floating_panel.update_theme_colors()
 
+        # === Пересобрать текст с новым цветом аккордов ===
+        if self.original_cleaned_text:
+            self.precompute_transpositions(self.original_cleaned_text)
+            if isinstance(self.transposed_text_cache, dict):
+                new_text = self.transposed_text_cache.get(self.current_tonality)
+                if new_text:
+                    self.content_label.text = new_text
+                    self.content_label.markup = True
+                    self._update_content_height()
+
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1))
         top_offset = layout_config.get_top_padding(include_top_nav=True)
         bottom_nav_total = layout_config.get_bottom_nav_total_height()
 
-        # ✅ Возвращаем правильный отступ сверху
         card_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -927,17 +930,15 @@ class FavoriteDetailScreen(BaseScreen):
         self.content_scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False, bar_width=3,
                                            bar_color=[0.5, 0.5, 0.5, 0.3], bar_inactive_color=[0.5, 0.5, 0.5, 0.1])
 
-        # ✅ УМЕНЬШАЕМ ОТСТУП ВНУТРИ ТЕКСТА
         self._text_container = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=4,
-            padding=[dp(16), dp(4), dp(16), dp(4)],  # Верхний отступ dp(4)
+            padding=[dp(16), dp(4), dp(16), dp(4)],
             adaptive_height=True,
             md_bg_color=[0, 0, 0, 0]
         )
 
-        # ✅ ИСПОЛЬЗУЕМ НАШ ШРИФТ ДЛЯ ТЕКСТА ПЕСНИ
         self.content_label = ChordTextLabel(
             text="",
             font_size=self.current_font_size,
@@ -946,7 +947,7 @@ class FavoriteDetailScreen(BaseScreen):
             valign="top",
             line_height=1.5,
             markup=True,
-            font_name='NotoSansSymbols2'  # <-- Добавляем шрифт для нот и символов
+            font_name='NotoSansSymbols2'
         )
         self.content_label.bind(texture_size=self._update_content_height)
         self._text_container.add_widget(self.content_label)
@@ -970,7 +971,6 @@ class FavoriteDetailScreen(BaseScreen):
             return
 
         text_height = self.content_label.texture_size[1]
-
         self.content_label.height = max(dp(50), text_height + dp(8))
         if self.content_label.parent:
             self.content_label.parent.height = text_height + dp(16)
@@ -995,13 +995,8 @@ class FavoriteDetailScreen(BaseScreen):
         theme_id = settings_manager.theme
         text_p = DetailColors.get_text_primary(theme_id)
 
-        # Базовая высота контейнера (для стрелок и грифа)
         base_height = 135 * self.griff_scale
-
-        # ✅ Рассчитываем ширину грифа в зависимости от масштаба
         griff_width = dp(340) * self.griff_scale
-
-        # Ограничиваем ширину, чтобы не вылезти за экран
         max_griff_width = Window.width - dp(80)
         if griff_width > max_griff_width:
             griff_width = max_griff_width
@@ -1016,7 +1011,6 @@ class FavoriteDetailScreen(BaseScreen):
             spacing=dp(0)
         )
 
-        # Цвет стрелок (белый с прозрачностью для всех тем)
         arrow_color = [1, 1, 1, 0.6]
 
         self.left_arrow = MDIcon(
@@ -1052,13 +1046,10 @@ class FavoriteDetailScreen(BaseScreen):
             renderer.chord_name = chord_name
             renderer.index = i
             renderer.set_fret_color("black" if theme_id == "light" else "white")
-            try:
-                griff_data = load_asset_as_bytes("griff_png")
-                if griff_data:
-                    griff_img = CoreImage(BytesIO(griff_data), ext="png")
-                    if griff_img and griff_img.texture: renderer.set_background(griff_img.texture)
-            except Exception:
-                pass
+            from chord_utils.assets import get_griff_texture
+            texture = get_griff_texture()
+            if texture:
+                renderer.set_background(texture)
 
             slide.add_widget(renderer)
             self.chords_carousel.add_widget(slide)
@@ -1142,9 +1133,196 @@ class FavoriteDetailScreen(BaseScreen):
         self.is_chords_mode = False
         self._hide_chords_layer()
 
+    # ============ НОВАЯ ЛОГИКА ЗАГРУЗКИ АККОРДОВ ============
+
+    def _load_chords_batch(self):
+        """Загружает аппликатуры для всех аккордов песни одним batch-запросом."""
+        if not self._song_chords or self._batch_loaded:
+            return
+
+        # Собираем пары (main_name, chord_type) через резолвер
+        chord_pairs = []
+        for chord_name in self._song_chords:
+            main_name, chord_type = self._chords_client.resolve_chord(chord_name)
+            chord_pairs.append({"main_name": main_name, "chord_type": chord_type})
+
+        logger.info(f"FavoriteDetail: batch-загрузка {len(chord_pairs)} аккордов")
+
+        def _on_success(result):
+            self._batch_loaded = True
+            self._apply_batch_result(result)
+
+        def _on_error(err):
+            logger.warning(f"FavoriteDetail: batch failed: {err}")
+
+        self._chords_client.get_chords_batch(
+            chord_pairs, on_success=_on_success, on_error=_on_error
+        )
+
+    def _schedule_missing_chords_load(self):
+        """Дебаунс: если аккорды меняются быстро, не спамим сервер."""
+        if self._pending_batch_event:
+            Clock.unschedule(self._pending_batch_event)
+
+        self._pending_batch_event = Clock.schedule_once(
+            lambda dt: self._load_missing_chords(), 0.4  # ждём 0.4 сек
+        )
+
+    def _load_missing_chords(self):
+        """Загружает с сервера только те аккорды, которых нет в _batch_chords_data."""
+        self._pending_batch_event = None
+
+        if not self._song_chords or not self._chords_client:
+            return
+
+        # 1. Собираем пары и проверяем, что уже есть в кеше
+        missing_pairs = []
+        for chord_name in self._song_chords:
+            main_name, chord_type = self._chords_client.resolve_chord(chord_name)
+            key = f"{main_name}|{chord_type}"
+
+            if key not in self._batch_chords_data:
+                missing_pairs.append({"main_name": main_name, "chord_type": chord_type})
+
+        if not missing_pairs:
+            # Всё уже есть в кеше, просто обновляем отображение
+            self._update_current_chord_from_batch()
+            return
+
+        # 2. Загружаем недостающие
+        logger.info(f"FavoriteDetail: догрузка {len(missing_pairs)} аккордов")
+
+        def _on_success(result):
+            new_chords = result.get("chords", {})
+            if new_chords:
+                # Добавляем к существующим данным
+                self._batch_chords_data.update(new_chords)
+                # Обновляем текущий отображаемый аккорд
+                self._update_current_chord_from_batch()
+
+            not_found = result.get("not_found", [])
+            if not_found:
+                logger.warning(f"FavoriteDetail: не найдено {len(not_found)}: {not_found}")
+
+        def _on_error(err):
+            logger.warning(f"FavoriteDetail: batch failed: {err}")
+
+        self._chords_client.get_chords_batch(
+            missing_pairs, on_success=_on_success, on_error=_on_error
+        )
+
+    def _apply_batch_result(self, result):
+        """Применяет данные batch к карусели аккордов."""
+        chords_data = result.get("chords", {})
+        not_found = result.get("not_found", [])
+
+        if not_found:
+            logger.warning(f"FavoriteDetail: не найдено {len(not_found)} аккордов: {not_found}")
+
+        self._batch_chords_data = chords_data
+
+        # Обновляем текущий аккорд в карусели
+        self._update_current_chord_from_batch()
+
+    def _find_chord_group(self, main_name: str, chord_type: str):
+        """
+        Ищет группу аккордов в _batch_chords_data, игнорируя разницу
+        между прямым (/) и обратным (\\) слешем.
+        """
+        if not self._batch_chords_data:
+            return None
+
+        key_direct = f"{main_name}|{chord_type}"
+        if key_direct in self._batch_chords_data:
+            return self._batch_chords_data[key_direct]
+
+        # Пробуем с заменой слешей
+        key_alt1 = f"{main_name.replace('/', chr(92))}|{chord_type}"
+        if key_alt1 in self._batch_chords_data:
+            return self._batch_chords_data[key_alt1]
+
+        key_alt2 = f"{main_name.replace(chr(92), '/')}|{chord_type}"
+        if key_alt2 in self._batch_chords_data:
+            return self._batch_chords_data[key_alt2]
+
+        return None
+
+    def _update_current_chord_from_batch(self):
+        """Обновляет карусель для текущего аккорда из batch-данных."""
+        if not self._batch_chords_data or not self._song_chords:
+            return
+
+        current_chord = self._song_chords[self._current_chord_index]
+        main_name, chord_type = self._chords_client.resolve_chord(current_chord)
+
+        # Используем безопасный поиск с учётом слешей
+        group = self._find_chord_group(main_name, chord_type)
+        if not group:
+            if self._current_chord_index < len(self.chord_renderers):
+                renderer = self.chord_renderers[self._current_chord_index]
+                renderer.clear_sprites()
+            return
+
+        variants = []
+        for v in group.get("variants", []):
+            variants.append({
+                "server_data": {
+                    "main_name": v.get("main_name"),
+                    "synonyms": v.get("synonyms", []),
+                    "chord_type": v.get("chord_type"),
+                    "variant": v.get("variant", 1),
+                    "background_name": v.get("background_name", "griff"),
+                    "frets": v.get("frets", {}),
+                    "notes": v.get("notes", {}),
+                    "open_notes": v.get("open_notes", {}),
+                    "barres": v.get("barres", {}),
+                    "selected_finger": v.get("selected_finger", []),
+                    "selected_note": v.get("selected_note", []),
+                }
+            })
+
+        if variants and self._current_chord_index < len(self.chord_renderers):
+            renderer = self.chord_renderers[self._current_chord_index]
+            first_variant = variants[0]["server_data"]
+            module = self._dict_to_module(first_variant)
+            renderer.load_chord(module)
+            renderer.set_mode(self.display_mode)
+
+        self.chord_variants = variants
+        self.chord_variant_index = 0
+
+    def _dict_to_module(self, data: dict):
+        """Преобразует server_data в объект, понятный ChordRenderer."""
+
+        class _FakeModule:
+            pass
+
+        m = _FakeModule()
+        m.__name__ = f"server_chord_{data.get('main_name', '?')}_{data.get('variant', 1)}"
+        m.BACKGROUND_NAME = data.get("background_name", "griff")
+        m.FRETS = data.get("frets", {})
+        m.NOTES = data.get("notes", {})
+        m.OPEN_NOTES = data.get("open_notes", {})
+        m.BARRES = data.get("barres", {})
+        m.SELECTED_FINGER = data.get("selected_finger", [])
+        m.SELECTED_NOTE = data.get("selected_note", [])
+        m.METADATA = {
+            "name": data.get("main_name", ""),
+            "variant": data.get("variant", 1),
+            "type": data.get("chord_type", ""),
+            "description": data.get("description", ""),
+        }
+        return m
+
     def _load_chord_variants(self, chord_name):
+        """Загружает варианты для конкретного аккорда из batch-данных."""
         self.chord_variants = []
         self.chord_variant_index = 0
+
+        if not self._batch_chords_data:
+            if self._current_chord_index < len(self.chord_renderers):
+                self.chord_renderers[self._current_chord_index].clear_sprites()
+            return
 
         if isinstance(chord_name, (list, tuple)) and chord_name:
             chord_name = chord_name[0]
@@ -1152,18 +1330,46 @@ class FavoriteDetailScreen(BaseScreen):
         if not isinstance(chord_name, str):
             return
 
-        if self.manager and self.manager.has_screen('chords'):
-            chords_screen = self.manager.get_screen('chords')
-            variants = [c for c in chords_screen.all_chords if c['short_name'].lower() == chord_name.lower()]
-            variants.sort(key=lambda x: x['variant'])
-            self.chord_variants = variants
-            if variants:
-                self.load_current_variant()
+        main_name, chord_type = self._chords_client.resolve_chord(chord_name)
+
+        # Используем безопасный поиск с учётом слешей
+        group = self._find_chord_group(main_name, chord_type)
+        if not group:
+            # Данных нет (например, при транспонировании аккорд не найден)
+            if self._current_chord_index < len(self.chord_renderers):
+                self.chord_renderers[self._current_chord_index].clear_sprites()
+            return
+
+        variants = []
+        for v in group.get("variants", []):
+            variants.append({
+                "server_data": {
+                    "main_name": v.get("main_name"),
+                    "synonyms": v.get("synonyms", []),
+                    "chord_type": v.get("chord_type"),
+                    "variant": v.get("variant", 1),
+                    "background_name": v.get("background_name", "griff"),
+                    "frets": v.get("frets", {}),
+                    "notes": v.get("notes", {}),
+                    "open_notes": v.get("open_notes", {}),
+                    "barres": v.get("barres", {}),
+                    "selected_finger": v.get("selected_finger", []),
+                    "selected_note": v.get("selected_note", []),
+                }
+            })
+
+        self.chord_variants = variants
+        if variants:
+            self.load_current_variant()
 
     def load_current_variant(self):
         if not self.chord_variants: return
         variant = self.chord_variants[self.chord_variant_index]
         chord_module = variant.get('module') or variant.get('module_1')
+
+        if not chord_module and variant.get('server_data'):
+            chord_module = self._dict_to_module(variant['server_data'])
+
         if chord_module and self._current_chord_index < len(self.chord_renderers):
             renderer = self.chord_renderers[self._current_chord_index]
             renderer.load_chord(chord_module)
@@ -1191,10 +1397,7 @@ class FavoriteDetailScreen(BaseScreen):
         new_scale = zoom_levels[(zoom_levels.index(current) + 1) % len(zoom_levels)] if current in zoom_levels else 0.8
         self.griff_scale = new_scale
 
-        # Пересчитываем высоту
         self.griff_container.height = int(dp(135) * new_scale)
-
-        # ✅ Пересчитываем ширину контейнера и карусели
         griff_width = dp(340) * new_scale
         max_griff_width = Window.width - dp(80)
         if griff_width > max_griff_width:
@@ -1220,6 +1423,11 @@ class FavoriteDetailScreen(BaseScreen):
     def apply_tonality(self, step):
         if isinstance(self.transposed_text_cache, dict):
             transposed = self.transposed_text_cache.get(step)
+            if transposed is None and step == 0 and self.original_cleaned_text:
+                transposed = highlight_chords_in_text(
+                    self.original_cleaned_text,
+                    theme_id=settings_manager.theme
+                )
             if transposed:
                 self.content_label.text = transposed
                 self.content_label.markup = True
@@ -1230,17 +1438,25 @@ class FavoriteDetailScreen(BaseScreen):
                 if self.is_chords_mode and self.chord_name_label and self._song_chords:
                     if self._current_chord_index >= len(self._song_chords):
                         self._current_chord_index = 0
+
+                    # 1. Обновляем карусель (даже если данных ещё нет, она сбросится в плейсхолдер)
                     self._update_chords_display()
 
+                    # 2. Проверяем, нужны ли новые данные с сервера
+                    self._schedule_missing_chords_load()
+
     def precompute_transpositions(self, cleaned_text):
+        theme_id = settings_manager.theme
         self.original_cleaned_text = cleaned_text
+        self._extract_and_cache_chords()
+
         self.transposed_text_cache = {}
-        self.transposed_text_cache[0] = highlight_chords_in_text(cleaned_text)
+        self.transposed_text_cache[0] = highlight_chords_in_text(cleaned_text, theme_id=theme_id)
         self.transposed_chords_cache = {}
         self.transposed_chords_cache[0] = self._song_chords.copy()
 
         for step in [-3, -2.5, -2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3]:
-            self.transposed_text_cache[step] = transpose_text(cleaned_text, step)
+            self.transposed_text_cache[step] = transpose_text(cleaned_text, step, theme_id=theme_id)
             self.transposed_chords_cache[step] = transpose_chord_list(self._song_chords, step)
 
     def _get_font_multiplier(self, font_size):
@@ -1353,6 +1569,11 @@ class FavoriteDetailScreen(BaseScreen):
         self.scroll_speed = 1.0
         self.is_scrolling = False
         self.griff_scale = 0.8
+
+        # Сброс batch-кеша
+        self._batch_loaded = False
+        self._batch_chords_data = {}
+
         if self._floating_panel:
             self._floating_panel.hide()
 
@@ -1393,6 +1614,9 @@ class FavoriteDetailScreen(BaseScreen):
         self.update_top_nav_title()
         self.hide_loading()
         for delay in [0.3, 0.5, 0.8, 1.0]: Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
+
+        # === NEW: Загружаем аппликатуры для всех аккордов песни ===
+        self._load_chords_batch()
 
     def _wait_for_ready_and_scroll(self, dt):
         if hasattr(self, 'content_label') and self.content_label.text:
