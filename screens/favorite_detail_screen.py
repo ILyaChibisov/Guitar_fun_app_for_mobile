@@ -38,7 +38,7 @@ from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from chord_utils.renderer import ChordRenderer
 from api.client import api
-from api.chords_client import get_chords_client  # <-- NEW
+from api.chords_client import get_chords_client
 from utils.notifications import notify
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
@@ -53,7 +53,6 @@ logger = screen_logger('FavoriteDetail')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
@@ -1099,8 +1098,16 @@ class FavoriteDetailScreen(BaseScreen):
 
         self._current_chord_index = 0
         if self._song_chords:
-            self._load_chord_variants(self._song_chords[0])
-            self._update_chords_display()
+            # Если данные батча уже есть, загружаем; иначе ждём колбэка от _load_chords_batch
+            if self._batch_chords_data:
+                self._load_chord_variants(self._song_chords[0])
+                self._update_chords_display()
+            else:
+                if self.chord_name_label:
+                    self.chord_name_label.text = self._song_chords[0]
+                # Показываем пустой гриф (ожидание загрузки)
+                for renderer in self.chord_renderers:
+                    renderer.clear_sprites()
 
             if self.chords_carousel and self.chord_slides:
                 self.chords_carousel.load_slide(self.chord_slides[0])
@@ -1151,6 +1158,9 @@ class FavoriteDetailScreen(BaseScreen):
         def _on_success(result):
             self._batch_loaded = True
             self._apply_batch_result(result)
+            # Принудительно обновляем карусель, если она открыта
+            if self.is_chords_mode and self._griff_added:
+                self._update_chords_display()
 
         def _on_error(err):
             logger.warning(f"FavoriteDetail: batch failed: {err}")
@@ -1251,6 +1261,10 @@ class FavoriteDetailScreen(BaseScreen):
         """Обновляет карусель для текущего аккорда из batch-данных."""
         if not self._batch_chords_data or not self._song_chords:
             return
+
+        # Защита от выхода за границы
+        if self._current_chord_index >= len(self._song_chords):
+            self._current_chord_index = 0
 
         current_chord = self._song_chords[self._current_chord_index]
         main_name, chord_type = self._chords_client.resolve_chord(current_chord)
@@ -1408,9 +1422,16 @@ class FavoriteDetailScreen(BaseScreen):
             self.chords_carousel.width = griff_width
 
     def _update_chords_display(self):
-        if not self._song_chords: return
+        if not self._song_chords:
+            return
         chord_name = self._song_chords[self._current_chord_index]
-        if self.chord_name_label: self.chord_name_label.text = chord_name
+        if self.chord_name_label:
+            self.chord_name_label.text = chord_name
+
+        if not self._batch_chords_data:
+            # Данных ещё нет — не очищаем гриф, просто ждём
+            return
+
         self._load_chord_variants(chord_name)
 
     def _extract_and_cache_chords(self):
