@@ -203,7 +203,7 @@ class StringsOverlay(Widget):
                 peg_y = iy + py_norm * ih
                 nut_x = ix + nx_norm * iw
                 nut_y = iy + ny_norm * ih
-                bottom_y = iy + dp(2)
+                bottom_y = iy
 
                 ratio = s_idx / max(1, total_strings - 1)
                 thickness = dp(2.1 - 1.0 * ratio)
@@ -245,9 +245,10 @@ class HeadstockWidget(FloatLayout):
         self.head_image = Image(
             allow_stretch=True,
             keep_ratio=True,
-            size_hint=(0.64, 0.94),
-            pos_hint={"center_x": 0.5, "center_y": 0.48},
+            size_hint=(0.72, 1.0),
+            pos_hint={"center_x": 0.5, "y": 0.0},
         )
+
         self.add_widget(self.head_image)
 
         self.strings_overlay = StringsOverlay(size_hint=(1, 1), pos_hint={"x": 0, "y": 0})
@@ -321,7 +322,7 @@ class HeadstockWidget(FloatLayout):
         self.right_col.disabled = not has_right
 
         # Обновляем pos_hint ДО смены текстуры, чтобы Kivy сразу пересчитал геометрию
-        self.head_image.pos_hint = {"center_x": 0.50 if has_right else 0.56, "center_y": 0.48}
+        self.head_image.pos_hint = {"center_x": 0.50 if has_right else 0.56, "y": 0.0}
         self.head_image.texture = self._get_texture(asset_key)
 
         self._sync_layout()
