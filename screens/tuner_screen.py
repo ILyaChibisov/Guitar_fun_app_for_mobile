@@ -932,7 +932,7 @@ class TunerScreen(BaseScreen):
         if hasattr(self, 'note_label'):
             is_tuned = abs(self.current_deviation) <= 3.0 and self.is_listening
             self.note_label.text_color = [0.2, 0.95, 0.65, 1.0] if is_tuned else text_p
-            self.note_label.font_size = sp(76)
+            self.note_label.font_size = sp(88)
 
         if hasattr(self, 'freq_label'):
             self.freq_label.text_color = TunerColors.get_accent(theme_id)
@@ -1458,23 +1458,27 @@ class TunerScreen(BaseScreen):
         main_layout.add_widget(Widget(size_hint_y=None, height=layout_config.get_top_padding()))
 
         nav_bottom = layout_config.get_bottom_nav_total_height()
-        # Добавляем dp(12) снизу, чтобы гриф приподнялся над bottom_nav как в метрономе
         content_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(16), dp(4), dp(16), nav_bottom + dp(12)],
+            padding=[dp(16), dp(4), dp(16), nav_bottom],
+            spacing=dp(6),
         )
 
-        content = MDBoxLayout(
+        # Верхняя секция идентична по размерам MetronomeScreen:
+        # карточка dp(330) + отступ dp(10) + меню dp(60) + отступ dp(10) + подсказка dp(18) = dp(428)
+        top_section = MDBoxLayout(
             orientation='vertical',
-            spacing=dp(8),
-            size_hint=(1, 1),
+            size_hint=(1, None),
+            height=dp(428),
+            spacing=dp(10),
         )
 
-        # 1. КАРТОЧКА ТЮНЕРА — растягивается на всё свободное место сверху
+        # 1. КАРТОЧКА ТЮНЕРА — фиксированная высота dp(330), как у метронома
         self.main_tuner_card = MDCard(
             orientation='vertical',
-            size_hint_y=1,
+            size_hint=(1, None),
+            height=dp(330),
             radius=[dp(16)],
             md_bg_color=TunerColors.get_card_bg(settings_manager.theme),
             line_color=TunerColors.get_card_line(settings_manager.theme),
@@ -1494,14 +1498,14 @@ class TunerScreen(BaseScreen):
         self.main_tuner_card.add_widget(self.tuning_name_label)
         self.main_tuner_card.add_widget(Widget(size_hint_y=1))
 
-        note_anchor = AnchorLayout(size_hint_y=None, height=dp(72))
+        note_anchor = AnchorLayout(size_hint_y=None, height=dp(84))
         self.note_label = MDLabel(
-            text=self.target_note, font_size=sp(76), bold=True,
-            halign="center", valign="middle", size_hint=(1, None), height=dp(72),
+            text=self.target_note, font_size=sp(88), bold=True,
+            halign="center", valign="middle", size_hint=(1, None), height=dp(84),
             text_size=(None, None), theme_text_color="Custom",
             text_color=TunerColors.get_text_primary(settings_manager.theme)
         )
-        self.note_label.bind(on_size=lambda *args: setattr(self.note_label, 'font_size', sp(76)))
+        self.note_label.bind(on_size=lambda *args: setattr(self.note_label, 'font_size', sp(88)))
         note_anchor.add_widget(self.note_label)
         self.main_tuner_card.add_widget(note_anchor)
         self.main_tuner_card.add_widget(Widget(size_hint_y=1))
@@ -1514,8 +1518,8 @@ class TunerScreen(BaseScreen):
         self.main_tuner_card.add_widget(self.freq_label)
         self.main_tuner_card.add_widget(Widget(size_hint_y=1))
 
-        gauge_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(90))
-        self.tuner_gauge = ModernHorizontalTuner(size_hint_y=None, height=dp(90))
+        gauge_container = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(96))
+        self.tuner_gauge = ModernHorizontalTuner(size_hint_y=None, height=dp(96))
         self.tuner_gauge.bind(indicator_color=self._update_indicator_color)
         gauge_container.add_widget(self.tuner_gauge)
         self.main_tuner_card.add_widget(gauge_container)
@@ -1540,9 +1544,9 @@ class TunerScreen(BaseScreen):
         labels_box.add_widget(self.cents_label)
         labels_box.add_widget(self.label_high)
         self.main_tuner_card.add_widget(labels_box)
-        content.add_widget(self.main_tuner_card)
+        top_section.add_widget(self.main_tuner_card)
 
-        # 2. МЕНЮ ТЮНЕРА
+        # 2. МЕНЮ ТЮНЕРА — высота dp(60), позиция один в один как у метронома
         self.menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60))
         self.menu_stack = UnifiedTunerMenu(
             on_play=self.toggle_tuner,
@@ -1553,28 +1557,26 @@ class TunerScreen(BaseScreen):
             is_listening=self.is_listening
         )
         self.menu_container.add_widget(self.menu_stack)
-        content.add_widget(self.menu_container)
+        top_section.add_widget(self.menu_container)
 
-        # 3. СТРОКА ПОДСКАЗОК СРАЗУ ПОД МЕНЮ (как в метрономе)
+        # 3. СТРОКА ПОДСКАЗОК СРАЗУ ПОД МЕНЮ
         self._hint_label = MDLabel(
             text="", font_size=sp(11), halign="center",
             size_hint_y=None, height=dp(18),
             theme_text_color="Custom", opacity=0
         )
-        content.add_widget(self._hint_label)
+        top_section.add_widget(self._hint_label)
+        content_container.add_widget(top_section)
 
-        # 4. ГРИФ ГИТАРЫ — компактная высота, чтобы карточка тюнера стала длиннее
-        grif_h = dp(190) if platform == 'android' else dp(200)
+        # 4. ГРИФ ГИТАРЫ — занимает всё оставшееся пространство снизу до bottom_nav
         self.headstock_widget = HeadstockWidget(
             on_note_press=self.on_reference_note_pressed,
             theme_name=settings_manager.theme,
-            size_hint=(1, None),
-            height=grif_h,
+            size_hint=(1, 1),
         )
         self._rebuild_note_buttons()
-        content.add_widget(self.headstock_widget)
+        content_container.add_widget(self.headstock_widget)
 
-        content_container.add_widget(content)
         main_layout.add_widget(content_container)
         self.add_widget(main_layout)
 
