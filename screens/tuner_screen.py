@@ -50,6 +50,8 @@ from utils.notifications import notify
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 from tuner_utils.headstock_widget import HeadstockWidget
+from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.image import Image as KivyImage
 
 logger = screen_logger('Tuner')
 
@@ -62,6 +64,10 @@ try:
 except ImportError:
     HAS_ASSETS = False
     def load_asset_as_bytes(name): return None
+
+ASSET_ACOUSTIC_GUITAR_PNG = "acoustic_guitar_png"
+ASSET_BASS_GUITAR_PNG = "bass_guitar_png"
+ASSET_UKELELE_GUITAR_PNG = "ukelele_guitar_png"
 
 try:
     from utils.android_audio import get_audio_recorder, set_debug_callback
@@ -719,12 +725,14 @@ class NoteButton(MDCard):
 # ============ МЕНЮ ============
 
 class IconMenuItem(ButtonBehavior, MDBoxLayout):
-    def __init__(self, icon_name, on_press=None, is_active=True, icon_color=None, **kwargs):
+    def __init__(self, icon_name, on_press=None, is_active=True, icon_color=None, asset_name=None, **kwargs):
         super().__init__(**kwargs)
         self.icon_name = icon_name
         self.on_press_callback = on_press
         self.is_active = is_active
         self.icon_color = icon_color if icon_color else [1, 1, 1, 0.7]
+        self.asset_name = asset_name
+        self._texture_cache = {}
 
         self.orientation = 'vertical'
         self.size_hint = (1, 1)
@@ -732,26 +740,70 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.spacing = dp(0)
         self.md_bg_color = [0, 0, 0, 0]
 
-        self.icon_btn = MDIconButton(
-            icon=icon_name, size_hint=(None, None), size=(dp(28), dp(28)),
-            pos_hint={'center_x': 0.5}, theme_icon_color="Custom",
-            icon_color=self.icon_color, md_bg_color=[0, 0, 0, 0],
-            ripple_scale=0, ripple_alpha=0
-        )
-        self.icon_btn.bind(on_release=self._on_press)
-        self.add_widget(self.icon_btn)
+        self._build_visual()
 
-    def _on_press(self, instance):
+    def _get_asset_texture(self, asset_name):
+        if not asset_name:
+            return None
+        if asset_name in self._texture_cache:
+            return self._texture_cache[asset_name]
+        try:
+            img_bytes = load_asset_as_bytes(asset_name) if HAS_ASSETS else None
+            if not img_bytes:
+                from data.assets import Assets
+                img_bytes = Assets.get_image_data(asset_name)
+            if img_bytes:
+                tex = CoreImage(BytesIO(img_bytes), ext="png").texture
+                self._texture_cache[asset_name] = tex
+                return tex
+        except Exception as e:
+            logger.error(f"Ошибка загрузки ассета {asset_name}: {e}")
+        return None
+
+    def _build_visual(self):
+        self.clear_widgets()
+        texture = self._get_asset_texture(self.asset_name)
+
+        if texture is not None:
+            # Центрируем PNG-картинку по вертикали и горизонтали
+            anchor = AnchorLayout(anchor_x='center', anchor_y='center', size_hint=(1, 1))
+            self.img_widget = KivyImage(
+                texture=texture,
+                size_hint=(None, None),
+                size=(dp(30), dp(30)),
+                color=[1, 1, 1, 1],
+                allow_stretch=True,
+                keep_ratio=True
+            )
+            anchor.add_widget(self.img_widget)
+            self.add_widget(anchor)
+        else:
+            self.icon_btn = MDIconButton(
+                icon=self.icon_name, size_hint=(None, None), size=(dp(28), dp(28)),
+                pos_hint={'center_x': 0.5}, theme_icon_color="Custom",
+                icon_color=self.icon_color, md_bg_color=[0, 0, 0, 0],
+                ripple_scale=0, ripple_alpha=0
+            )
+            self.icon_btn.bind(on_release=self._on_press)
+            self.add_widget(self.icon_btn)
+
+    def _on_press(self, instance=None):
         if self.on_press_callback and self.is_active:
             self.on_press_callback()
 
-    def set_icon(self, icon_name):
+    def on_release(self):
+        self._on_press()
+
+    def set_icon(self, icon_name, asset_name=None):
         self.icon_name = icon_name
-        self.icon_btn.icon = icon_name
+        self.asset_name = asset_name
+        self._build_visual()
 
     def set_color(self, color):
         self.icon_color = color
-        self.icon_btn.icon_color = color
+        if hasattr(self, 'icon_btn') and self.icon_btn in self.children:
+            self.icon_btn.icon_color = color
+
 
 
 class UnifiedTunerMenu(MDCard):
@@ -779,7 +831,8 @@ class UnifiedTunerMenu(MDCard):
         self.instrument_item = IconMenuItem(
             self._get_instrument_icon(current_instrument),
             on_press=on_instrument,
-            icon_color=self._get_instrument_color(current_instrument)
+            icon_color=self._get_instrument_color(current_instrument),
+            asset_name=self._get_instrument_asset(current_instrument)
         )
         self.reset_item = IconMenuItem(
             "refresh",
@@ -795,6 +848,21 @@ class UnifiedTunerMenu(MDCard):
         self.add_widget(self._create_divider())
         self.add_widget(self.reset_item)
         self.update_theme_colors()
+
+    def _get_instrument_asset(self, instrument):
+        if instrument == 'guitar':
+            return ASSET_ACOUSTIC_GUITAR_PNG
+        elif instrument == 'bass':
+            return ASSET_BASS_GUITAR_PNG
+        else:
+            return ASSET_UKELELE_GUITAR_PNG
+
+    def update_instrument(self, instrument):
+        self.instrument_item.set_icon(
+            self._get_instrument_icon(instrument),
+            asset_name=self._get_instrument_asset(instrument)
+        )
+        self.instrument_item.set_color(self._get_instrument_color(instrument))
 
     def _get_instrument_icon(self, instrument):
         if instrument == 'guitar': return "guitar-acoustic"
@@ -827,9 +895,6 @@ class UnifiedTunerMenu(MDCard):
             self.play_item.set_icon("play")
             self.play_item.set_color([0.13, 0.59, 0.95, 1])
 
-    def update_instrument(self, instrument):
-        self.instrument_item.set_icon(self._get_instrument_icon(instrument))
-        self.instrument_item.set_color(self._get_instrument_color(instrument))
 
 
 # ============ ОСНОВНОЙ ЭКРАН ============
