@@ -193,11 +193,10 @@ def clean_text(text):
 # ============================================================
 class PanelIcon(ButtonBehavior, AnchorLayout):
     def __init__(self, icon, on_click=None, action_name=None, **kwargs):
+        kwargs.setdefault('size_hint', (1, 1))
         super().__init__(**kwargs)
         self.anchor_x = 'center'
         self.anchor_y = 'center'
-        self.size_hint = (1, None)
-        self.height = dp(48)
         self.on_click_callback = on_click
         self.icon_name = icon
         self.action_name = action_name
@@ -205,8 +204,8 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
         self.icon_widget = MDIcon(
             icon=icon,
             size_hint=(None, None),
-            size=(dp(24), dp(24)),
-            font_size=sp(24),
+            size=(dp(26), dp(26)),
+            font_size=sp(26),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1]
         )
@@ -226,7 +225,7 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
 
 
 class FloatingPanel(MDCard):
-    PANEL_WIDTH = dp(50)
+    PANEL_WIDTH = dp(55)
     VISIBLE_MARGIN = 0  # Прижимаем вплотную к правому краю экрана
     FIXED_HEIGHT = dp(280)
 
@@ -407,8 +406,6 @@ class FloatingPanel(MDCard):
             ('magnify', 'font'),
         ]
 
-        self.content.add_widget(Widget(size_hint_y=None, height=dp(12)))
-
         for i, (icon, action) in enumerate(items):
             item = PanelIcon(icon=icon, on_click=lambda a=action: self._on_menu_item(a), action_name=action)
             self.items.append(item)
@@ -417,8 +414,8 @@ class FloatingPanel(MDCard):
             if i < len(items) - 1:
                 self._add_divider()
 
-        self.content.add_widget(Widget(size_hint_y=None, height=dp(12)))
         self.update_theme_colors()
+
 
     # ============ ВЕРТИКАЛЬНОЕ МЕНЮ АККОРДОВ ============
 
@@ -429,8 +426,6 @@ class FloatingPanel(MDCard):
 
         if self.parent_screen and hasattr(self.parent_screen, 'show_chords_section'):
             self.parent_screen.show_chords_section()
-
-        self.content.add_widget(Widget(size_hint_y=None, height=dp(12)))
 
         self.variant_item = PanelIcon(
             icon="format-list-bulleted-square",
@@ -465,10 +460,17 @@ class FloatingPanel(MDCard):
         self.content.add_widget(self.griff_zoom_item)
         self._add_divider()
 
-        back_btn = PanelIcon(icon="check", on_click=lambda: self._build_menu(), action_name='back')
+        menu_slot_height = (self.FIXED_HEIGHT - dp(16) - dp(1.2) * 4) / 5
+
+        back_btn = PanelIcon(
+            icon="check",
+            on_click=lambda: self._build_menu(),
+            action_name='back',
+            size_hint=(1, None),
+            height=menu_slot_height
+        )
         self.content.add_widget(back_btn)
 
-        self.content.add_widget(Widget(size_hint_y=None, height=dp(12)))
         self.update_theme_colors()
 
     def _switch_chord(self, direction):
@@ -538,36 +540,16 @@ class FloatingPanel(MDCard):
         text_p = DetailColors.get_text_primary(theme_id)
         div_color = DetailColors.get_divider(theme_id)
 
-        self.content.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
+        # Компактный блок только для текущего значения (без подписи "Тон / Шрифт / Скорость")
         header_box = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(52),
+            height=dp(30),
             spacing=0,
-            padding=[0, 2, 0, 2],
+            padding=[0, 0, 0, 0],
             pos_hint={'center_x': 0.5}
         )
-
-        if type_str == 'tonality':
-            title_text = "Тон"
-        elif type_str == 'font':
-            title_text = "Шрифт"
-        else:
-            title_text = "Скорость"
-
-        title_label = MDLabel(
-            text=title_text,
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=text_p,
-            bold=True,
-            size_hint=(1, None),
-            height=dp(18),
-            font_size=sp(10)
-        )
-        header_box.add_widget(title_label)
 
         if type_str == 'tonality':
             current_val = getattr(parent, 'current_tonality', 0)
@@ -586,9 +568,8 @@ class FloatingPanel(MDCard):
             theme_text_color="Custom",
             text_color=accent,
             bold=True,
-            size_hint=(1, None),
-            height=dp(26),
-            font_size=sp(18)
+            size_hint=(1, 1),
+            font_size=sp(16)
         )
         header_box.add_widget(self._sub_val_label)
         self.content.add_widget(header_box)
@@ -727,7 +708,7 @@ class FloatingPanel(MDCard):
             text_color=[0.8, 0.3, 0.3, 0.9],
             size_hint=(1, None),
             height=dp(20),
-            padding=[0, 0, dp(1), 0],
+            padding=[0, 0, dp(2), 0],
             bold=True,
             font_size=sp(15)
         )
@@ -739,7 +720,13 @@ class FloatingPanel(MDCard):
         self.content.add_widget(slider_container)
         self._add_divider(div_color)
 
-        back_btn = PanelIcon(icon="check", on_click=lambda: self._build_menu(), action_name='back')
+        back_btn = PanelIcon(
+            icon="check",
+            on_click=lambda: self._build_menu(),
+            action_name='back',
+            size_hint=(1, None),
+            height=dp(36)
+        )
         self.content.add_widget(back_btn)
 
         self.update_theme_colors()
