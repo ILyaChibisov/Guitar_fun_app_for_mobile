@@ -28,6 +28,7 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.animation import Animation
 from kivy.core.window import Window
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.utils import platform
 from kivy.logger import Logger
 from io import BytesIO
@@ -94,9 +95,9 @@ class DetailColors:
         if theme_id == 'light':
             return [0.95, 0.95, 0.95, 1]
         elif theme_id == 'dark':
-            return [0.15, 0.15, 0.15, 1]
+            return [0.13, 0.13, 0.13, 1]
         else:
-            return [0, 0, 0, 0.15]
+            return [0.05, 0.17, 0.11, 1]
 
     @staticmethod
     def get_panel_line(theme_id):
@@ -204,7 +205,8 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
         self.icon_widget = MDIcon(
             icon=icon,
             size_hint=(None, None),
-            size=(dp(28), dp(28)),
+            size=(dp(24), dp(24)),
+            font_size=sp(24),
             theme_text_color="Custom",
             text_color=[1, 1, 1, 1]
         )
@@ -224,8 +226,8 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
 
 
 class FloatingPanel(MDCard):
-    PANEL_WIDTH = dp(64)
-    VISIBLE_MARGIN = dp(16)
+    PANEL_WIDTH = dp(50)
+    VISIBLE_MARGIN = 0  # Прижимаем вплотную к правому краю экрана
     FIXED_HEIGHT = dp(280)
 
     def __init__(self, parent_screen=None, on_action=None, **kwargs):
@@ -247,19 +249,24 @@ class FloatingPanel(MDCard):
 
         with self.canvas.before:
             self.bg_color_inst = Color(*panel_bg)
+            # Скругляем ТОЛЬКО левые углы: [top-left, top-right, bottom-right, bottom-left]
             self.bg_rect = RoundedRectangle(
                 pos=(self.x, self.y),
                 size=(self.PANEL_WIDTH, self.height),
-                radius=[dp(16)] * 4
+                radius=[dp(16), 0, 0, dp(16)]
             )
-        self.bind(pos=self._update_bg, size=self._update_bg)
 
         with self.canvas.after:
             self.line_color_inst = Color(*DetailColors.get_panel_line(theme_id))
-            self.outline_rect = Line(
-                rounded_rectangle=(self.x, self.y, self.PANEL_WIDTH, self.height, dp(16)),
-                width=1.5
+            # Открытая линия: рисуем рамку только сверху, слева и снизу (без правой грани)
+            self.outline_line = Line(
+                points=[],
+                width=1.5,
+                cap='round',
+                joint='round'
             )
+
+        self.bind(pos=self._update_bg, size=self._update_bg)
 
         self._visible_x = None
         self._hidden_x = None
@@ -283,26 +290,58 @@ class FloatingPanel(MDCard):
         self._build_menu()
         Clock.schedule_once(lambda dt: self._init_position(), 0.5)
 
+    def _build_open_border_points(self):
+        """Строит координаты открытой П-образной рамки со скруглёнными левыми углами."""
+        import math
+        x, y = self.x, self.y
+        w, h = self.PANEL_WIDTH, self.height
+        r = min(dp(16), w / 2, h / 2)
+        segments = 12  # плавность скругления углов
+
+        pts = []
+        # 1. Начинаем от правого верхнего края -> идём влево до начала скругления
+        pts.extend([x + w, y + h, x + r, y + h])
+
+        # 2. Верхний левый угол (дуга от 90° до 180°)
+        cx_tl, cy_tl = x + r, y + h - r
+        for i in range(1, segments + 1):
+            angle = math.pi / 2 + (math.pi / 2) * (i / segments)
+            pts.extend([cx_tl + r * math.cos(angle), cy_tl + r * math.sin(angle)])
+
+        # 3. Левая вертикальная грань вниз до нижнего левого скругления
+        pts.extend([x, y + r])
+
+        # 4. Нижний левый угол (дуга от 180° до 270°)
+        cx_bl, cy_bl = x + r, y + r
+        for i in range(1, segments + 1):
+            angle = math.pi + (math.pi / 2) * (i / segments)
+            pts.extend([cx_bl + r * math.cos(angle), cy_bl + r * math.sin(angle)])
+
+        # 5. Нижняя горизонтальная грань вправо до края экрана
+        pts.extend([x + w, y])
+        return pts
+
     def _update_bg(self, *args):
         self.bg_rect.pos = (self.x, self.y)
         self.bg_rect.size = (self.PANEL_WIDTH, self.height)
-        self.outline_rect.rounded_rectangle = (
-            self.x, self.y,
-            self.PANEL_WIDTH, self.height, dp(16)
-        )
+        self.outline_line.points = self._build_open_border_points()
 
     def _init_position(self):
-        self._hidden_x = Window.width + dp(10)
+        self._hidden_x = Window.width + dp(4)
         self._visible_x = Window.width - self.PANEL_WIDTH - self.VISIBLE_MARGIN
         self.x = self._hidden_x
         self._recenter()
         self.is_open = False
 
     def _recenter(self):
+        """Размещаем панель ровно по центру рабочей области экрана."""
         if self._hidden_x is None:
             return
+        top_offset = layout_config.get_top_padding(include_top_nav=True)
         nav_bottom = layout_config.get_bottom_nav_total_height()
-        self.y = nav_bottom + dp(24)
+        work_area_height = Window.height - top_offset - nav_bottom
+        self.y = nav_bottom + (work_area_height - self.height) / 2
+
 
     def toggle(self):
         if self.is_open:
@@ -525,8 +564,8 @@ class FloatingPanel(MDCard):
             text_color=text_p,
             bold=True,
             size_hint=(1, None),
-            height=dp(20),
-            font_size=sp(12)
+            height=dp(18),
+            font_size=sp(10)
         )
         header_box.add_widget(title_label)
 
@@ -558,49 +597,52 @@ class FloatingPanel(MDCard):
         slider_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=0,
+            padding=[0, 0, 0, 0],
             spacing=0
         )
+
         center_box = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            width=dp(48),
-            pos_hint={'center_x': 0.5}
+            padding=[0, 0, 0, 0],
+            spacing=0
         )
 
-        center_box.add_widget(MDLabel(
-            text="+", halign="center", valign="middle",
-            theme_text_color="Custom", text_color=[0.3, 0.7, 0.3, 0.9],
-            size_hint=(None, None), size=(dp(40), dp(20)),
-            pos_hint={'center_x': 0.5},
-            bold=True, font_size=sp(14)
-        ))
+        # Плюсик: компенсируем смещение трека MDSlider на 3dp влево
+        plus_label = MDLabel(
+            text="+",
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.3, 0.7, 0.3, 0.9],
+            size_hint=(1, None),
+            height=dp(20),
+            padding=[0, 0, dp(2), 0],
+            bold=True,
+            font_size=sp(15)
+        )
+
+        plus_label.bind(size=plus_label.setter('text_size'))
+        center_box.add_widget(plus_label)
+
+        # Оборачиваем слайдер в AnchorLayout, чтобы Kivy жестко держал его центр
+        slider_wrap = AnchorLayout(
+            anchor_x='center',
+            anchor_y='center',
+            size_hint=(1, 1)
+        )
 
         if type_str == 'tonality':
             current_val_int = int(round(getattr(parent, 'current_tonality', 0) * 2))
             self.ton_slider = MDSlider(
                 min=-6.01, max=6.01, value=current_val_int, step=1,
-                orientation='vertical', size_hint=(1, 1), hint=False
+                orientation='vertical', size_hint=(None, 1), width=dp(36),
+                hint=False, padding=0
             )
-            self.ton_slider.ripple_scale = 0
-            self.ton_slider.thumb_color_active = accent
-            self.ton_slider.thumb_color_inactive = accent
-            self.ton_slider.thumb_color_disabled = accent
-            self.ton_slider.track_color_active = accent[:3] + [0.5]
-            self.ton_slider.track_color_inactive = [1, 1, 1, 0.3]
-            self.ton_slider.color = accent
-            try:
-                self.ton_slider.cursor_size = (dp(20), dp(20))
-            except Exception:
-                pass
+            self._style_slider(self.ton_slider, accent)
 
             def on_ton_change(instance, value):
-                if value < -6:
-                    int_val = -6
-                elif value > 6:
-                    int_val = 6
-                else:
-                    int_val = int(round(value))
+                int_val = max(-6, min(6, int(round(value))))
                 if self.ton_slider.value != int_val:
                     self.ton_slider.value = int_val
                 val_half = int_val / 2
@@ -611,7 +653,7 @@ class FloatingPanel(MDCard):
                         parent.apply_tonality(val_half)
 
             self.ton_slider.bind(value=on_ton_change)
-            center_box.add_widget(self.ton_slider)
+            slider_wrap.add_widget(self.ton_slider)
 
         elif type_str == 'font':
             if platform == 'android':
@@ -624,19 +666,10 @@ class FloatingPanel(MDCard):
 
             self.font_slider = MDSlider(
                 min=-0.01, max=float(total_steps + 0.01), value=current_val, step=1,
-                orientation='vertical', size_hint=(1, 1), hint=False
+                orientation='vertical', size_hint=(None, 1), width=dp(36),
+                hint=False, padding=0
             )
-            self.font_slider.ripple_scale = 0
-            self.font_slider.thumb_color_active = accent
-            self.font_slider.thumb_color_inactive = accent
-            self.font_slider.thumb_color_disabled = accent
-            self.font_slider.track_color_active = accent[:3] + [0.5]
-            self.font_slider.track_color_inactive = [1, 1, 1, 0.3]
-            self.font_slider.color = accent
-            try:
-                self.font_slider.cursor_size = (dp(20), dp(20))
-            except Exception:
-                pass
+            self._style_slider(self.font_slider, accent)
 
             def on_font_change(instance, value):
                 int_val = max(0, min(total_steps, int(round(value))))
@@ -652,7 +685,7 @@ class FloatingPanel(MDCard):
                         parent._update_content_height()
 
             self.font_slider.bind(value=on_font_change)
-            center_box.add_widget(self.font_slider)
+            slider_wrap.add_widget(self.font_slider)
 
         elif type_str == 'scroll':
             def speed_to_slider(s):
@@ -666,19 +699,10 @@ class FloatingPanel(MDCard):
 
             self.scroll_slider = MDSlider(
                 min=0.99, max=28.01, value=current_val, step=1,
-                orientation='vertical', size_hint=(1, 1), hint=False
+                orientation='vertical', size_hint=(None, 1), width=dp(36),
+                hint=False, padding=0
             )
-            self.scroll_slider.ripple_scale = 0
-            self.scroll_slider.thumb_color_active = accent
-            self.scroll_slider.thumb_color_inactive = accent
-            self.scroll_slider.thumb_color_disabled = accent
-            self.scroll_slider.track_color_active = accent[:3] + [0.5]
-            self.scroll_slider.track_color_inactive = [1, 1, 1, 0.3]
-            self.scroll_slider.color = accent
-            try:
-                self.scroll_slider.cursor_size = (dp(20), dp(20))
-            except Exception:
-                pass
+            self._style_slider(self.scroll_slider, accent)
 
             def on_scroll_change(instance, value):
                 int_val = max(1, min(28, int(round(value))))
@@ -690,15 +714,26 @@ class FloatingPanel(MDCard):
                     parent.scroll_speed = new_speed
 
             self.scroll_slider.bind(value=on_scroll_change)
-            center_box.add_widget(self.scroll_slider)
+            slider_wrap.add_widget(self.scroll_slider)
 
-        center_box.add_widget(MDLabel(
-            text="-", halign="center", valign="middle",
-            theme_text_color="Custom", text_color=[0.8, 0.3, 0.3, 0.9],
-            size_hint=(None, None), size=(dp(40), dp(20)),
-            pos_hint={'center_x': 0.5},
-            bold=True, font_size=sp(14)
-        ))
+        center_box.add_widget(slider_wrap)
+
+        # Минусик: компенсируем смещение трека MDSlider на 3dp влево
+        minus_label = MDLabel(
+            text="−",
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.8, 0.3, 0.3, 0.9],
+            size_hint=(1, None),
+            height=dp(20),
+            padding=[0, 0, dp(1), 0],
+            bold=True,
+            font_size=sp(15)
+        )
+
+        minus_label.bind(size=minus_label.setter('text_size'))
+        center_box.add_widget(minus_label)
 
         slider_container.add_widget(center_box)
         self.content.add_widget(slider_container)
@@ -708,6 +743,19 @@ class FloatingPanel(MDCard):
         self.content.add_widget(back_btn)
 
         self.update_theme_colors()
+
+    def _style_slider(self, slider, accent):
+        slider.ripple_scale = 0
+        slider.thumb_color_active = accent
+        slider.thumb_color_inactive = accent
+        slider.thumb_color_disabled = accent
+        slider.track_color_active = accent[:3] + [0.5]
+        slider.track_color_inactive = [1, 1, 1, 0.3]
+        slider.color = accent
+        try:
+            slider.cursor_size = (dp(20), dp(20))
+        except Exception:
+            pass
 
     def _get_font_multiplier(self, font_size):
         parent = self.parent_screen
