@@ -82,9 +82,6 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.37 requests
 
-      - name: Quarantine long-path files
-        run: |
-          python utils/quarantine_long_paths.py --limit 90
 
       - name: Create keystore directory
         run: |
