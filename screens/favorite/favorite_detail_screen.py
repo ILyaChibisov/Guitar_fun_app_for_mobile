@@ -643,8 +643,8 @@ class FloatingPanel(MDCard):
             theme_text_color="Custom",
             text_color=[0.3, 0.7, 0.3, 0.9],
             size_hint=(1, None),
-            height=dp(18),
-            padding=[0, 0, dp(1), 0],
+            height=dp(22),
+            padding=[dp(1), 0, 0, dp(4)],
             bold=True,
             font_size=sp(15)
         )
@@ -654,7 +654,8 @@ class FloatingPanel(MDCard):
         slider_wrap = AnchorLayout(
             anchor_x='center',
             anchor_y='center',
-            size_hint=(1, 1)
+            size_hint=(1, 1),
+            padding=[dp(4), 0, 0, 0]
         )
 
         if type_str == 'tonality':
@@ -680,28 +681,28 @@ class FloatingPanel(MDCard):
             self.ton_slider.bind(value=on_ton_change)
             slider_wrap.add_widget(self.ton_slider)
 
+
         elif type_str == 'font':
-            if platform == 'android':
-                font_sizes = [12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-            else:
-                font_sizes = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
+            std_size = getattr(parent, 'STANDARD_FONT_SIZE', 42 if platform == 'android' else 20)
+            multipliers = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6]
+            font_sizes = [int(round(std_size * m)) for m in multipliers]
             total_steps = len(font_sizes) - 1
             curr_size = getattr(parent, 'current_font_size', font_sizes[3])
-            current_val = font_sizes.index(curr_size) if curr_size in font_sizes else 3
-
+            # Находим ближайший шаг (по умолчанию индекс 3 -> 1.0x)
+            current_val = min(range(len(font_sizes)), key=lambda i: abs(font_sizes[i] - curr_size))
             self.font_slider = MDSlider(
                 min=-0.01, max=float(total_steps + 0.01), value=current_val, step=1,
                 orientation='vertical', size_hint=(None, 1), width=dp(36),
                 hint=False, padding=0
             )
             self._style_slider(self.font_slider, accent)
-
             def on_font_change(instance, value):
                 int_val = max(0, min(total_steps, int(round(value))))
                 if self.font_slider.value != int_val:
                     self.font_slider.value = int_val
                 new_size = font_sizes[int_val]
-                self._sub_val_label.text = f"{self._get_font_multiplier(new_size)}"
+                mult = multipliers[int_val]
+                self._sub_val_label.text = f"{int(mult)}x" if mult == int(mult) else f"{mult:.1f}x"
                 if parent and getattr(parent, 'current_font_size', 0) != new_size:
                     parent.current_font_size = new_size
                     if hasattr(parent, 'content_label'):
@@ -751,10 +752,11 @@ class FloatingPanel(MDCard):
             text_color=[0.8, 0.3, 0.3, 0.9],
             size_hint=(1, None),
             height=dp(18),
-            padding=0,
+            padding=[dp(0.5), 0, 0, 0],
             bold=True,
             font_size=sp(15)
         )
+
         minus_label.bind(size=minus_label.setter('text_size'))
         center_box.add_widget(minus_label)
 
