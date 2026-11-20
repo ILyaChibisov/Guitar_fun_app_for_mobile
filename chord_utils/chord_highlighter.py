@@ -48,10 +48,13 @@ def highlight_chords_in_text(text, theme_id=None):
         return f'[b][color={color}]{chord}[/color][/b]'
 
     lines = text.splitlines()
-    highlighted_lines = [
-        CHORD_PATTERN.sub(replace_chord, line) if is_chord_line(line) else line
-        for line in lines
-    ]
+    highlighted_lines = []
+    for i, line in enumerate(lines):
+        next_line = lines[i + 1] if i + 1 < len(lines) else None
+        if is_chord_line(line, next_line=next_line):
+            highlighted_lines.append(CHORD_PATTERN.sub(replace_chord, line))
+        else:
+            highlighted_lines.append(line)
     return '\n'.join(highlighted_lines)
 
 

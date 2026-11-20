@@ -14,12 +14,15 @@ def set_transpose_system(chords_list):
 
 
 def _detect_use_h(text: str) -> bool:
-    for line in text.splitlines():
-        if not is_chord_line(line):
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        next_line = lines[i + 1] if i + 1 < len(lines) else None
+        if not is_chord_line(line, next_line=next_line):
             continue
-        if re.search(r'(?<![A-Za-z])H(?![a-z])', line):
+        if re.search(r'(?<![A-Za-zА-Яа-я])[HН](?![a-zа-я])', line):
             return True
     return False
+
 
 
 def transpose_text(text: str, step: float, theme_id=None) -> str:
@@ -37,9 +40,11 @@ def transpose_text(text: str, step: float, theme_id=None) -> str:
 
     try:
         clean_text = re.sub(r'\[/?[a-z]+.*?\]', '', text)
+        lines = clean_text.splitlines()
         result_lines = []
-        for line in clean_text.splitlines():
-            if is_chord_line(line):
+        for i, line in enumerate(lines):
+            next_line = lines[i + 1] if i + 1 < len(lines) else None
+            if is_chord_line(line, next_line=next_line):
                 result_lines.append(CHORD_PATTERN.sub(replace_chord, line))
             else:
                 result_lines.append(line)

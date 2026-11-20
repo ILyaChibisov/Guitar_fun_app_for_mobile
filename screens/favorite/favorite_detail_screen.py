@@ -1299,40 +1299,35 @@ class FavoriteDetailScreen(BaseScreen):
         )
 
     def _load_missing_chords(self):
-        """Загружает с сервера только те аккорды, которых нет в _batch_chords_data."""
+        """Загружает с сервера недостающие аккорды (с резервным поиском по синонимам)."""
         self._pending_batch_event = None
 
         if not self._song_chords or not self._chords_client:
             return
 
-        # 1. Собираем пары и проверяем, что уже есть в кеше
         missing_pairs = []
         for chord_name in self._song_chords:
             main_name, chord_type = self._chords_client.resolve_chord(chord_name)
-            key = f"{main_name}|{chord_type}"
-
-            if key not in self._batch_chords_data:
+            if not self._find_chord_group(main_name, chord_type):
                 missing_pairs.append({"main_name": main_name, "chord_type": chord_type})
 
         if not missing_pairs:
-            # Всё уже есть в кеше, просто обновляем отображение
             self._update_current_chord_from_batch()
             return
 
-        # 2. Загружаем недостающие
         logger.info(f"FavoriteDetail: догрузка {len(missing_pairs)} аккордов")
 
         def _on_success(result):
             new_chords = result.get("chords", {})
             if new_chords:
-                # Добавляем к существующим данным
                 self._batch_chords_data.update(new_chords)
-                # Обновляем текущий отображаемый аккорд
                 self._update_current_chord_from_batch()
 
             not_found = result.get("not_found", [])
-            if not_found:
-                logger.warning(f"FavoriteDetail: не найдено {len(not_found)}: {not_found}")
+            for nf in not_found:
+                nf_name = nf.get("main_name") if isinstance(nf, dict) else str(nf)
+                if nf_name:
+                    self._fetch_synonym_fallback(nf_name)
 
         def _on_error(err):
             logger.warning(f"FavoriteDetail: batch failed: {err}")
@@ -1340,6 +1335,70 @@ class FavoriteDetailScreen(BaseScreen):
         self._chords_client.get_chords_batch(
             missing_pairs, on_success=_on_success, on_error=_on_error
         )
+
+        def _on_error(err):
+            logger.warning(f"FavoriteDetail: batch failed: {err}")
+
+        self._chords_client.get_chords_batch(
+            missing_pairs, on_success=_on_success, on_error=_on_error
+        )
+
+    def _fetch_synonym_fallback(self, requested_name: str):
+        """Универсальный дозапрос аппликатуры по синониму (Eb -> D#, H7 -> B7, A5min7 -> Aadd7)."""
+
+        def _on_syn_results(items):
+            if not items:
+                return
+            first = items[0]
+            main_name = first.get("main_name")
+            chord_type = first.get("chord_type")
+            if not main_name or not chord_type:
+                return
+
+            def _on_variants(variants):
+                if not variants:
+                    return
+                key = f"{requested_name}|{chord_type}"
+                self._batch_chords_data[key] = {
+                    "requested_main_name": requested_name,
+                    "variants": variants,
+                }
+                self._update_current_chord_from_batch()
+
+            self._chords_client.get_chord(main_name, chord_type, on_success=_on_variants)
+
+        self._chords_client.search_by_synonym(requested_name, on_success=_on_syn_results)
+
+    def _find_chord_group(self, main_name: str, chord_type: str):
+        """
+        Универсально ищет группу аккордов в _batch_chords_data:
+        1) по прямому ключу (с учётом / и \\),
+        2) по requested_main_name или списку synonyms у вариантов (без жёсткой привязки к chord_type).
+        """
+        if not self._batch_chords_data:
+            return None
+
+        norm_req = main_name.replace('/', '\\').lower()
+
+        for alt_name in (main_name, main_name.replace('/', '\\'), main_name.replace('\\', '/')):
+            key = f"{alt_name}|{chord_type}"
+            if key in self._batch_chords_data:
+                return self._batch_chords_data[key]
+
+        for key, group in self._batch_chords_data.items():
+            if not isinstance(group, dict):
+                continue
+            req_name = (group.get("requested_main_name") or "").replace('/', '\\').lower()
+            if req_name == norm_req:
+                return group
+
+            for v in group.get("variants", []):
+                v_main = (v.get("main_name") or "").replace('/', '\\').lower()
+                syns = [s.replace('/', '\\').lower() for s in v.get("synonyms", [])]
+                if norm_req == v_main or norm_req in syns:
+                    return group
+
+        return None
 
     def _apply_batch_result(self, result):
         """Применяет данные batch к карусели аккордов."""
@@ -1354,28 +1413,6 @@ class FavoriteDetailScreen(BaseScreen):
         # Обновляем текущий аккорд в карусели
         self._update_current_chord_from_batch()
 
-    def _find_chord_group(self, main_name: str, chord_type: str):
-        """
-        Ищет группу аккордов в _batch_chords_data, игнорируя разницу
-        между прямым (/) и обратным (\\) слешем.
-        """
-        if not self._batch_chords_data:
-            return None
-
-        key_direct = f"{main_name}|{chord_type}"
-        if key_direct in self._batch_chords_data:
-            return self._batch_chords_data[key_direct]
-
-        # Пробуем с заменой слешей
-        key_alt1 = f"{main_name.replace('/', chr(92))}|{chord_type}"
-        if key_alt1 in self._batch_chords_data:
-            return self._batch_chords_data[key_alt1]
-
-        key_alt2 = f"{main_name.replace(chr(92), '/')}|{chord_type}"
-        if key_alt2 in self._batch_chords_data:
-            return self._batch_chords_data[key_alt2]
-
-        return None
 
     def _update_current_chord_from_batch(self):
         """Обновляет карусель для текущего аккорда из batch-данных."""

@@ -112,16 +112,21 @@ REPEAT_MARKERS = re.compile(
 
 # ============ ОПРЕДЕЛЕНИЕ АККОРДОВОЙ СТРОКИ ============
 
-def is_chord_line(line: str) -> bool:
+def _is_single_cyrillic_note_token(tokens: List[str]) -> bool:
+    """Проверяет, состоит ли строка ровно из одной заглавной кириллической ноты (А, В, С, Е, Н)."""
+    return len(tokens) == 1 and bool(re.fullmatch(r'[' + CYR_NOTES + r'][#b]?', tokens[0]))
+
+
+def is_chord_line(line: str, next_line: Optional[str] = None) -> bool:
     """
     Является ли строка аккордовой (а не текстом, табулатурой или строем).
+    next_line используется для распознавания одиночной кириллической ноты (например, 'С') над строкой текста.
     """
     stripped = line.strip()
     if not stripped:
         return False
 
     # Табулатура: E|--8--- или E |--0--- (после | идут цифры/дефисы).
-    # ВАЖНО: не отсекаем "B | C# | D#m", так как после | идёт буква, а не цифра/дефис.
     if re.match(r'^[A-H' + CYR_NOTES + r'][#b]?\s*\|\s*[-0-9]', stripped):
         return False
 
@@ -146,9 +151,20 @@ def is_chord_line(line: str) -> bool:
     if not tokens:
         return False
 
-    # Игнорируем токены, которые являются только римскими цифрами (V, VII, IV и т.д.)
-    tokens = [t for t in tokens if not re.fullmatch(r'[IVXLCDM]+', t, re.IGNORECASE)]
+    # Игнорируем токены, которые являются только римскими цифрами (II, III, IV, V, VI, VII, VIII, IX, X и т.д.),
+    # НЕ трогая одиночные аккорды C и D!
+    tokens = [
+        t for t in tokens
+        if t.upper() in ('C', 'D') or not re.fullmatch(r'[IVXLCDM]+', t, re.IGNORECASE)
+    ]
     if not tokens:
+        return False
+
+    # Одиночная кириллическая нота ('С', 'А', 'Е', 'В', 'Н'):
+    # считаем аккордом только если сразу под ней идёт непустая текстовая строка песни
+    if _is_single_cyrillic_note_token(tokens):
+        if next_line and next_line.strip() and not is_chord_line(next_line):
+            return True
         return False
 
     # Защита от смешанных строк с текстом: если есть длинные русские слова
@@ -159,6 +175,7 @@ def is_chord_line(line: str) -> bool:
 
     chord_tokens = sum(1 for t in tokens if CHORD_PATTERN.fullmatch(t))
     return (chord_tokens / len(tokens)) >= 0.5
+
 
 
 # ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
@@ -184,22 +201,29 @@ def clean_chord_name(chord: str) -> str:
 
 # ============ НОРМАЛИЗАЦИЯ НОТЫ ============
 
-def normalize_note(note: str, use_h: bool = False) -> str:
+def normalize_note(note: str, use_h: bool = False, preserve_original: bool = False) -> str:
     """
-    Приводит ноту к каноническому виду (C, C#, Db → C#).
-    Если use_h=True, Си отображается как H.
+    Приводит ноту к каноническому виду.
+    Если preserve_original=True, сохраняет бемоли (Eb, Bb...) и ноту H как в тексте песни.
     """
     if not note:
         return note
 
-    # Переводим кириллицу в латиницу (С# -> C#)
     note = _latinize_note(note)
-
-    # Канонизация для поиска индекса: первая заглавная, вторая строчная
     clean = note[0].upper() + (note[1:].lower() if len(note) > 1 else '')
     idx = NOTE_MAP.get(clean.upper(), -1)
     if idx == -1:
         return clean
+
+    if preserve_original:
+        if clean.startswith('H'):
+            return clean
+        if len(clean) == 2 and clean[1] == 'b':
+            if clean == 'Cb':
+                return 'H' if use_h else 'B'
+            if clean == 'Fb':
+                return 'E'
+            return clean
 
     res = NOTE_SEQUENCE[idx]
     if use_h and res == 'B':
@@ -211,9 +235,8 @@ def normalize_note(note: str, use_h: bool = False) -> str:
 
 def normalize_chord_case(chord: str) -> str:
     """
-    Приводит аккорд к аккуратному виду, СОХРАНЯЯ M (maj) и регистр суффикса.
-    Используется ТОЛЬКО для внутреннего списка аккордов и поиска в базе,
-    НЕ для отображения в тексте.
+    Приводит аккорд к аккуратному виду, сохраняя бемоли (Eb), ноту H (H7)
+    и суффикс (A5min7) для точного отображения над грифом.
     """
     if not chord:
         return chord
@@ -222,9 +245,9 @@ def normalize_chord_case(chord: str) -> str:
     if not match:
         return chord
 
-    root = normalize_note(match.group('root'))
+    root = normalize_note(match.group('root'), preserve_original=True)
     quality = match.group('quality') or ''
-    bass = normalize_note(match.group('bass')) if match.group('bass') else None
+    bass = normalize_note(match.group('bass'), preserve_original=True) if match.group('bass') else None
 
     return f"{root}{quality}/{bass}" if bass else f"{root}{quality}"
 
@@ -305,12 +328,13 @@ def extract_chords_from_text(text: str) -> List[str]:
         return []
 
     chords = set()
-    for line in text.splitlines():
-        if not is_chord_line(line):
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        next_line = lines[i + 1] if i + 1 < len(lines) else None
+        if not is_chord_line(line, next_line=next_line):
             continue
         for match in CHORD_PATTERN.finditer(line):
             chord = normalize_chord_case(match.group(0))
-            # ЖЕСТКАЯ ОЧИСТКА ОТ РИМСКИХ ЦИФР (страховка)
             chord = clean_chord_name(chord)
             chords.add(chord)
 
