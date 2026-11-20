@@ -828,6 +828,20 @@ class APIClient:
             include_auth=False
         )
 
+    def get_tabs_by_song(self, artist: str, title: str, on_success=None, on_failure=None):
+        encoded_artist = urllib.parse.quote(artist, safe='')
+        encoded_title = urllib.parse.quote(title, safe='')
+        url = f"{self.config.API_BASE_URL}/songs/tabs/{encoded_artist}/{encoded_title}"
+        Logger.info(f"🔄 Загрузка всех вариантов песни: {artist} - {title}")
+        return self._request(
+            url=url,
+            method='GET',
+            on_success=on_success,
+            on_failure=on_failure,
+            include_auth=False
+        )
+
+
     # ============ API МЕТОДЫ (без кэша) ============
 
     def get_alphabet(self, on_success=None, on_failure=None):

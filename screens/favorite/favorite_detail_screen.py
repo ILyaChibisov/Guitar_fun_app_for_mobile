@@ -127,7 +127,8 @@ class DetailColors:
             'chords': [1.0, 0.7, 0.0, 1],  # Янтарно-жёлтый (как chord_item в Chords)
             'tonality': [0.61, 0.15, 0.69, 1],  # Фиолетовый (как tune_item в Tuner и tonality_item в Chords)
             'scroll': [1.0, 0.55, 0.0, 1],       # Яркий оранжевый для play-circle
-            'tabs': [0.0, 0.74, 0.83, 1],  # Бирюзовый (как type_item в Chords)
+            'tabs': [0.0, 0.74, 0.83, 1],        # Бирюзовый (когда вариантов > 1)
+            'tabs_disabled': [0.55, 0.55, 0.55, 0.7] if theme_id == 'light' else [1, 1, 1, 0.35],
             'font': [0.95, 0.45, 0.25, 1],       # Тёплый кораллово-оранжевый для лупы (контрастен во всех 3 темах)
 
 
@@ -420,11 +421,13 @@ class FloatingPanel(MDCard):
             ('magnify', 'font', ASSET_LOUPE_PNG),
         ]
 
+        has_multiple_tabs = len(getattr(self.parent_screen, 'tabs', [])) > 1
         for i, (icon, action, asset) in enumerate(items):
+            actual_action = 'tabs_disabled' if (action == 'tabs' and not has_multiple_tabs) else action
             item = PanelIcon(
                 icon=icon,
                 on_click=lambda a=action: self._on_menu_item(a),
-                action_name=action,
+                action_name=actual_action,
                 asset_name=asset
             )
             self.items.append(item)
@@ -550,8 +553,9 @@ class FloatingPanel(MDCard):
         elif action == 'font':
             self._build_slider_panel('font')
         elif action == 'tabs':
-            self._build_menu()
             if self.parent_screen:
+                self.parent_screen._next_song_tab()
+            else:
                 self.parent_screen.show_tabs_picker()
 
     # ============ ПОД-ПАНЕЛИ (ШРИФТ / ПРОКРУТКА / ТОНАЛЬНОСТЬ) ============
@@ -836,7 +840,10 @@ class FloatingPanel(MDCard):
                 child._inner_line.color = div_color
 
         if self.mode == 'menu':
+            has_multiple_tabs = len(getattr(self.parent_screen, 'tabs', [])) > 1
             for item in self.items:
+                if item.action_name in ('tabs', 'tabs_disabled'):
+                    item.action_name = 'tabs' if has_multiple_tabs else 'tabs_disabled'
                 color = DetailColors.get_icon_color(theme_id, item.action_name)
                 item.set_color(color)
 
@@ -1549,9 +1556,10 @@ class FavoriteDetailScreen(BaseScreen):
 
     def _extract_and_cache_chords(self):
         chords = set()
-        for tab in self.tabs:
-            content = tab.get('content', '')
-            if content: chords.update(extract_chords_from_text(clean_text(content)))
+        if self.tabs and self.current_tab_index < len(self.tabs):
+            content = self.tabs[self.current_tab_index].get('content', '')
+            if content:
+                chords.update(extract_chords_from_text(clean_text(content)))
         self._song_chords = sorted(list(chords))
 
     def apply_tonality(self, step):
@@ -1669,20 +1677,45 @@ class FavoriteDetailScreen(BaseScreen):
         self.current_tab_index = index
         self._load_current_tab()
 
+    def _next_song_tab(self):
+        if not self.tabs or len(self.tabs) <= 1:
+            notify.info(get_text('no_variants'))
+            return
+        self.current_tab_index = (self.current_tab_index + 1) % len(self.tabs)
+        self._load_current_tab()
+        notify.info(f"{get_text('variant')} {self.current_tab_index + 1} / {len(self.tabs)}")
+
     def _load_current_tab(self):
         if self.tabs and self.current_tab_index < len(self.tabs):
             cleaned = clean_text(self.tabs[self.current_tab_index].get('content', ''))
             if cleaned:
+                # Сбрасываем тональность в 0 для нового варианта подбора
                 self.current_tonality = 0
                 self.transposed_text_cache = {}
                 self.transposed_chords_cache = {}
-                self._extract_and_cache_chords()
+
+                # Пересчитываем аккорды и кэш строго для нового варианта
                 self.precompute_transpositions(cleaned)
+
                 self.content_label.text = self.transposed_text_cache.get(0, cleaned)
+                self._song_chords = self.transposed_chords_cache.get(0, [])
                 self.content_label.markup = True
+                self._current_chord_index = 0
+
+                # Догружаем аппликатуры новых аккордов в batch-кеш
+                self._schedule_missing_chords_load()
+
+                # Если гриф открыт — перестраиваем карусель под исходные аккорды нового варианта
+                if self.is_chords_mode:
+                    self._hide_chords_layer()
+                    if self._song_chords:
+                        self._show_chords_layer()
+                    else:
+                        self.is_chords_mode = False
             else:
                 self.content_label.text = get_text('loading_error')
                 self.content_label.markup = False
+
             self._update_content_height()
             Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', 1), 0.1)
 
@@ -1738,7 +1771,8 @@ class FavoriteDetailScreen(BaseScreen):
         self.song_artist = data.get('artist') or self.song_artist or get_text('unknown_artist')
         self.song_title = data.get('title') or self.song_title or get_text('untitled')
         self.tabs = data.get('tabs', [])
-        if not self.tabs and data.get('content'): self.tabs = [{'content': data.get('content', '')}]
+        if not self.tabs and data.get('content'):
+            self.tabs = [{'id': self.song_id, 'content': data.get('content', '')}]
         self.current_tab_index = 0
 
         if self.tabs:
@@ -1750,13 +1784,65 @@ class FavoriteDetailScreen(BaseScreen):
             self._update_content_height()
 
         self.is_favorite = api.is_song_favorited(self.song_id)
-        if not self.is_favorite: self.is_favorite = data.get('is_favorite', True)
+        if not self.is_favorite:
+            self.is_favorite = data.get('is_favorite', True)
         self.update_top_nav_title()
         self.hide_loading()
-        for delay in [0.3, 0.5, 0.8, 1.0]: Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
+        for delay in [0.3, 0.5, 0.8, 1.0]:
+            Clock.schedule_once(self._wait_for_ready_and_scroll, delay)
 
-        # === NEW: Загружаем аппликатуры для всех аккордов песни ===
         self._load_chords_batch()
+
+        # Если сервер вернул только 1 вкладку, проверяем наличие других вариантов у артиста
+        if len(self.tabs) <= 1 and self.song_artist and self.song_title:
+            self._fetch_other_variants()
+        elif self._floating_panel:
+            self._floating_panel.update_theme_colors()
+
+    def _fetch_other_variants(self):
+        current_song_id = self.song_id
+
+        def _on_tabs_list(res):
+            if self.song_id != current_song_id or not isinstance(res, dict):
+                return
+            tabs_info = res.get('tabs', [])
+            other_ids = [
+                t['id'] for t in tabs_info
+                if t.get('id') and str(t['id']) != str(current_song_id)
+            ]
+            if not other_ids:
+                if self._floating_panel:
+                    self._floating_panel.update_theme_colors()
+                return
+
+            for vid in other_ids:
+                api.get_tab(
+                    song_id=vid,
+                    on_success=lambda tab_data, expected_id=current_song_id: self._append_variant_tab(tab_data,
+                                                                                                      expected_id),
+                    on_failure=lambda req, err: None
+                )
+
+        api.get_tabs_by_song(self.song_artist, self.song_title, on_success=_on_tabs_list)
+
+    def _append_variant_tab(self, tab_data, expected_song_id):
+        if self.song_id != expected_song_id or not isinstance(tab_data, dict):
+            return
+        new_tabs = tab_data.get('tabs', [])
+        if not new_tabs and tab_data.get('content'):
+            new_tabs = [{'id': tab_data.get('id'), 'content': tab_data.get('content', '')}]
+
+        existing_texts = {clean_text(t.get('content', '')) for t in self.tabs}
+        added = False
+        for t in new_tabs:
+            cleaned = clean_text(t.get('content', ''))
+            if cleaned and cleaned not in existing_texts:
+                self.tabs.append(t)
+                existing_texts.add(cleaned)
+                added = True
+
+        if added and self._floating_panel:
+            self._floating_panel.update_theme_colors()
 
     def _wait_for_ready_and_scroll(self, dt):
         if hasattr(self, 'content_label') and self.content_label.text:

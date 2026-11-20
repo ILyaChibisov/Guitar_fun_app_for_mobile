@@ -7,7 +7,7 @@ ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
 API = "https://guitarfans.ru/api"
-song_id = 617109
+song_id = 153371
 
 url = f"{API}/songs/tab/{song_id}"
 req = urllib.request.Request(url, headers={"User-Agent": "GuitarFuns/1.0"})

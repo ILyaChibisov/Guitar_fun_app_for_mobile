@@ -246,12 +246,14 @@ class LongPressCardMixin:
 class FavoriteSongCard(LongPressCardMixin, MDCard):
     CARD_HEIGHT = dp(58)
 
-    def __init__(self, song_id=0, artist='', title='', on_click=None, **kwargs):
+    def __init__(self, song_id=0, artist='', title='', tabs_count=0, on_click=None, **kwargs):
         super().__init__(**kwargs)
         self.song_id = song_id
         self.artist = artist
         self.title = title
+        self.tabs_count = tabs_count
         self.on_click_callback = on_click
+
 
         self.size_hint_y = None
         self.height = self.CARD_HEIGHT
@@ -311,6 +313,10 @@ class FavoriteSongCard(LongPressCardMixin, MDCard):
         text_layout.add_widget(self.artist_label)
         text_layout.add_widget(self.title_label)
 
+        self.count_label = MDLabel(
+            text="", font_size=sp(12), size_hint_x=None, width=dp(40),
+            halign="right", valign="middle", theme_text_color="Custom"
+        )
         self.arrow = MDLabel(
             text="›", font_size=sp(22), size_hint_x=None, width=dp(24),
             halign="center", valign="middle", theme_text_color="Custom"
@@ -318,11 +324,13 @@ class FavoriteSongCard(LongPressCardMixin, MDCard):
 
         content.add_widget(self.icon)
         content.add_widget(text_layout)
+        content.add_widget(self.count_label)
         content.add_widget(self.arrow)
         self.add_widget(content)
 
         self.artist_label.text = artist
         self.title_label.text = title
+        self.count_label.text = str(tabs_count) if tabs_count and tabs_count > 1 else ""
 
         self.update_theme_colors()
 
@@ -338,13 +346,15 @@ class FavoriteSongCard(LongPressCardMixin, MDCard):
                 0.15
             )
 
-    def update_data(self, song_id, artist, title, on_click):
+    def update_data(self, song_id, artist, title, tabs_count=1, on_click=None):
         self.song_id = song_id
         self.artist = artist
         self.title = title
+        self.tabs_count = tabs_count
         self.on_click_callback = on_click
         self.artist_label.text = artist
         self.title_label.text = title
+        self.count_label.text = str(tabs_count) if tabs_count and tabs_count > 1 else ""
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
@@ -354,6 +364,7 @@ class FavoriteSongCard(LongPressCardMixin, MDCard):
         self.line_width = FavoritesColors.get_card_line_width(theme_id)
         self.artist_label.text_color = FavoritesColors.get_text_primary(theme_id)
         self.title_label.text_color = FavoritesColors.get_text_secondary(theme_id)
+        self.count_label.text_color = FavoritesColors.get_text_secondary(theme_id)
         self.arrow.text_color = accent
 
 
@@ -407,6 +418,7 @@ class PageCardsContainer(MDBoxLayout):
                     song_id=s.get('song_id', 0),
                     artist=s.get('artist', ''),
                     title=s.get('title', ''),
+                    tabs_count=s.get('tabs_count', 1),
                     on_click=on_click,
                 )
                 card.height = FavoriteSongCard.CARD_HEIGHT
@@ -1152,7 +1164,8 @@ class FavoritesScreen(BaseScreen):
             page_slice = self._all_favorites[start:end]
 
             first_id = page_slice[0].get('song_id', 0) if page_slice else 0
-            display_key = (self._page, len(page_slice), first_id)
+            tabs_sig = tuple(s.get('tabs_count', 1) for s in page_slice)
+            display_key = (self._page, len(page_slice), first_id, tabs_sig)
             if self._last_display_key != display_key:
                 if self.cards_container:
                     self.cards_container.sync_max_cards(self._page_size)
@@ -1296,12 +1309,10 @@ class FavoritesScreen(BaseScreen):
 
             if cached is not None and not force_refresh:
                 self._render_favorites(cached)
-                if not api._favorites_stale:
-                    return
                 api.get_favorites(
                     on_success=self._on_background_update,
                     on_failure=lambda req, err: logger.warning(f"Фон: {err}"),
-                    force_refresh=False)
+                    force_refresh=True)
                 return
 
             if cached is None:
