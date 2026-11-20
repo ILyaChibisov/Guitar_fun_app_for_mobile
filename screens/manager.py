@@ -7,27 +7,27 @@ from config.logger_config import get_logger
 
 # === ОСНОВНЫЕ ЭКРАНЫ ===
 from .home_screen import HomeScreen
-from .songs_screen import SongsScreen
+from screens.songs.songs_screen import SongsScreen
 from .chords_screen import ChordsScreen
-from .dictionary_screen import DictionaryScreen
+from screens.dictionary.dictionary_screen import DictionaryScreen
 from .tuner_screen import TunerScreen
 from .metronome_screen import MetronomeScreen
-from .favorites_screen import FavoritesScreen
+from screens.favorite.favorites_screen import FavoritesScreen
 from .profile_screen import ProfileScreen
-from .admin_screen import AdminScreen
-from .search_screen import SearchScreen
+from screens.admin.admin_screen import AdminScreen
+from screens.search.search_screen import SearchScreen
 from .admin_promo_screen import AdminPromoScreen
 # === ЭКРАНЫ ДЕТАЛЬНОГО ПРОСМОТРА ===
-from .song_detail_screen import SongDetailScreen
-from .term_detail_screen import TermDetailScreen
-from .search_detail_screen import SearchDetailScreen
-from .favorite_detail_screen import FavoriteDetailScreen
-from .search_screen_detail import SearchScreenDetail
-from .search_term_detail_screen import SearchTermDetailScreen
-from .chord_detail_screen import ChordDetailScreen
+from screens.songs.song_detail_screen import SongDetailScreen
+from screens.dictionary.term_detail_screen import TermDetailScreen
+from screens.songs.search_song_detail_screen import SearchDetailScreen
+from screens.favorite.favorite_detail_screen import FavoriteDetailScreen
+from screens.search.find_song_detail_screen import SearchScreenDetail
+from screens.search.search_term_detail_screen import SearchTermDetailScreen
+from screens.search.chord_detail_screen import ChordDetailScreen
 
 # === ЭКРАНЫ СПИСКОВ ===
-from .artist_songs_screen import ArtistSongsScreen
+from screens.songs.artist_songs_screen import ArtistSongsScreen
 
 # === ЭКРАНЫ АВТОРИЗАЦИИ ===
 from .auth_screen import AuthScreen

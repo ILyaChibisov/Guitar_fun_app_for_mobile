@@ -1,4 +1,4 @@
-# screens/search_detail_screen.py
+# screens/search_song_detail_screen.py
 """
 Экран просмотра песни ИЗ ПОИСКА (songs_screen).
 Возврат только в SongsScreen с сохранением результатов поиска.

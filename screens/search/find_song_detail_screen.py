@@ -1,4 +1,4 @@
-# screens/search_screen_detail.py
+# screens/find_song_detail_screen.py
 """
 Экран просмотра песни ИЗ ОБЩЕГО ПОИСКА (search_screen).
 Полная копия SongDetailScreen с возвратом в SearchScreen (С ЛАЙКОМ).
