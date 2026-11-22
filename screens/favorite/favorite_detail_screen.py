@@ -1235,9 +1235,12 @@ class FavoriteDetailScreen(BaseScreen):
                 self.chords_carousel.load_slide(self.chord_slides[0])
 
     def _on_carousel_slide(self, instance, slide):
-        if not self.chord_slides: return
+        if not self.chord_slides or not self._song_chords:
+            return
         try:
             index = self.chord_slides.index(slide)
+            if index >= len(self._song_chords):
+                index = index % len(self._song_chords)
             if index != self._current_chord_index:
                 self._current_chord_index = index
                 self._update_chords_display()
@@ -1583,12 +1586,13 @@ class FavoriteDetailScreen(BaseScreen):
     def _update_chords_display(self):
         if not self._song_chords:
             return
+        if self._current_chord_index >= len(self._song_chords):
+            self._current_chord_index = 0
         chord_name = self._song_chords[self._current_chord_index]
         if self.chord_name_label:
             self.chord_name_label.text = chord_name
 
         if not self._batch_chords_data:
-            # Данных ещё нет — не очищаем гриф, просто ждём
             return
 
         self._load_chord_variants(chord_name)
