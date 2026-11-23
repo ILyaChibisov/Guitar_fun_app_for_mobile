@@ -6,7 +6,9 @@ from state.settings_state import settings_state, SettingsState
 from state.favorites_state import favorites_state, FavoritesStateManager
 from state.search_state import search_state, SearchStateManager
 from state.subscription_state import subscription_state, SubscriptionState
-from state.chords_state import chords_state, ChordsStateManager   # ← добавили
+from state.chords_state import chords_state, ChordsStateManager
+from state.favorite_detail_state import favorite_detail_state, FavoriteDetailStateManager
+
 
 __all__ = [
     'songs_state', 'SongsStateManager',
@@ -16,5 +18,6 @@ __all__ = [
     'favorites_state', 'FavoritesStateManager',
     'SearchStateManager', 'search_state',
     'subscription_state', 'SubscriptionState',
-    'chords_state', 'ChordsStateManager',   # ← добавили
+    'chords_state', 'ChordsStateManager',
+    'favorite_detail_state', 'FavoriteDetailStateManager',
 ]

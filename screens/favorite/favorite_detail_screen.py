@@ -49,6 +49,9 @@ from chord_utils.chord_highlighter import (
     extract_chords_from_text_wrapper as extract_chords_from_text,
 )
 from chord_utils.transposer import transpose_text, transpose_chord_list
+from state.favorite_detail_state import favorite_detail_state
+from screens.components.loading_spinner import LoadingSpinner
+
 
 logger = screen_logger('FavoriteDetail')
 
@@ -210,7 +213,7 @@ def clean_text(text):
 # ============================================================
 # КОМПОНЕНТЫ ПАНЕЛИ
 # ============================================================
-class PanelIcon(ButtonBehavior, AnchorLayout):
+class PanelIcon(AnchorLayout):
     def __init__(self, icon, on_click=None, action_name=None, asset_name=None, **kwargs):
         kwargs.setdefault('size_hint', (1, 1))
         super().__init__(**kwargs)
@@ -221,6 +224,7 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
         self.action_name = action_name
         self.asset_name = asset_name
         self.is_image = False
+        self._touch_down_pos = None
 
         texture = None
         if asset_name and HAS_ASSETS:
@@ -252,11 +256,25 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
             )
 
         self.add_widget(self.icon_widget)
-        self.bind(on_release=self._on_click)
 
-    def _on_click(self, instance):
-        if self.on_click_callback:
-            self.on_click_callback()
+    def on_touch_down(self, touch):
+        if self.disabled or not self.collide_point(*touch.pos):
+            return False
+        self._touch_down_pos = touch.pos
+        touch.grab(self)
+        return True
+
+    def on_touch_up(self, touch):
+        if touch.grab_current is not self:
+            return False
+        touch.ungrab(self)
+        start_pos = self._touch_down_pos
+        self._touch_down_pos = None
+        if start_pos and self.collide_point(*touch.pos):
+            if abs(touch.x - start_pos[0]) < dp(12) and abs(touch.y - start_pos[1]) < dp(12):
+                if self.on_click_callback:
+                    self.on_click_callback()
+        return True
 
     def set_color(self, color):
         if self.is_image:
@@ -268,6 +286,7 @@ class PanelIcon(ButtonBehavior, AnchorLayout):
         self.icon_name = icon_name
         if not self.is_image:
             self.icon_widget.icon = icon_name
+
 
 
 
@@ -1058,6 +1077,36 @@ class FavoriteDetailScreen(BaseScreen):
                     self.content_label.markup = True
                     self._update_content_height()
 
+    def prepare_clean_screen(self, song_id, artist="", title=""):
+        """Мгновенно очищает старую песню до начала перехода на экран."""
+        self.stop_scroll()
+        self.song_id = song_id
+        self.song_artist = artist
+        self.song_title = title
+        self.tabs = []
+        self.current_tab_index = 0
+        self.current_tonality = 0
+        self.original_cleaned_text = ""
+        self.transposed_text_cache = {}
+        self.transposed_chords_cache = {}
+        self._song_chords = []
+
+        if self.content_label:
+            self.content_label.text = ""
+            self.content_label.height = dp(100)
+        if self.content_scroll:
+            self.content_scroll.scroll_y = 1.0
+
+        if self.is_chords_mode:
+            self.close_chords_section()
+        self.eye_active = False
+        if self._floating_panel:
+            self._floating_panel._build_menu()
+
+        self.update_top_nav_title()
+        self.show_loading()
+
+
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1))
         top_offset = layout_config.get_top_padding(include_top_nav=True)
@@ -1649,57 +1698,63 @@ class FavoriteDetailScreen(BaseScreen):
                 chords.update(extract_chords_from_text(clean_text(content)))
         self._song_chords = sorted(list(chords))
 
-    def apply_tonality(self, step):
-        if isinstance(self.transposed_text_cache, dict):
-            transposed = self.transposed_text_cache.get(step)
-            if transposed is None and step == 0 and self.original_cleaned_text:
-                transposed = highlight_chords_in_text(
-                    self.original_cleaned_text,
-                    theme_id=settings_manager.theme
-                )
-            if transposed:
-                self.content_label.text = transposed
-                self.content_label.markup = True
-
-                if isinstance(self.transposed_chords_cache, dict):
-                    self._song_chords = list(self.transposed_chords_cache.get(step, []))
-
-                self._schedule_missing_chords_load()
-
-                if (self.is_chords_mode or getattr(self, 'eye_active', False)) and self._song_chords:
-                    self.is_chords_mode = True
-                    if not self._griff_added:
-                        self._show_chords_layer()
-                        return
-                    if len(self.chord_slides) != len(self._song_chords):
-                        self._hide_chords_layer()
-                        self._show_chords_layer()
-                        self.is_chords_mode = True
-                    else:
-                        if self._current_chord_index >= len(self._song_chords):
-                            self._current_chord_index = 0
-                        self._update_chords_display()
 
     def precompute_transpositions(self, cleaned_text):
         theme_id = settings_manager.theme
         self.original_cleaned_text = cleaned_text
         self._extract_and_cache_chords()
 
-        self.transposed_text_cache = {}
-        self.transposed_text_cache[0] = highlight_chords_in_text(cleaned_text, theme_id=theme_id)
-        self.transposed_chords_cache = {}
-        self.transposed_chords_cache[0] = self._song_chords.copy()
+        self.transposed_text_cache = {
+            0: highlight_chords_in_text(cleaned_text, theme_id=theme_id)
+        }
+        self.transposed_chords_cache = {
+            0: self._song_chords.copy()
+        }
 
-        all_chords = set(self._song_chords)
-        for step in [-3, -2.5, -2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3]:
-            raw_transposed = transpose_text(cleaned_text, step, theme_id=theme_id)
-            self.transposed_text_cache[step] = raw_transposed
-            plain_transposed = re.sub(r'\[/?[a-z]+.*?\]', '', raw_transposed)
-            step_chords = extract_chords_from_text(plain_transposed)
-            self.transposed_chords_cache[step] = step_chords
-            all_chords.update(step_chords)
+        # Остальные шаги (-3 ... +3) вычисляются лениво в _get_or_compute_tonality
+        self._all_possible_chords = list(self._song_chords)
 
-        self._all_possible_chords = list(all_chords)
+    def apply_tonality(self, step):
+        transposed = self._get_or_compute_tonality(step)
+        if transposed:
+            self.content_label.text = transposed
+            self.content_label.markup = True
+
+            if isinstance(self.transposed_chords_cache, dict):
+                self._song_chords = list(self.transposed_chords_cache.get(step, []))
+
+            self._schedule_missing_chords_load()
+
+            if (self.is_chords_mode or getattr(self, 'eye_active', False)) and self._song_chords:
+                self.is_chords_mode = True
+                if not self._griff_added:
+                    self._show_chords_layer()
+                    return
+                if len(self.chord_slides) != len(self._song_chords):
+                    self._hide_chords_layer()
+                    self._show_chords_layer()
+                    self.is_chords_mode = True
+                else:
+                    if self._current_chord_index >= len(self._song_chords):
+                        self._current_chord_index = 0
+                    self._update_chords_display()
+
+    def _get_or_compute_tonality(self, step):
+        if step in self.transposed_text_cache:
+            return self.transposed_text_cache[step]
+        if not self.original_cleaned_text:
+            return None
+        theme_id = settings_manager.theme
+        if step == 0:
+            markup = highlight_chords_in_text(self.original_cleaned_text, theme_id=theme_id)
+            chords = self._song_chords.copy()
+        else:
+            markup = transpose_text(self.original_cleaned_text, step, theme_id=theme_id)
+            plain = re.sub(r'\[/?[a-z]+.*?\]', '', markup)
+            chords = extract_chords_from_text(plain)
+        self.transposed_text_cache[step] = markup
+        self.transposed_chords_cache[step] = chords
+        return markup
 
     def _get_font_multiplier(self, font_size):
         ratio = round(font_size / self.STANDARD_FONT_SIZE * 10) / 10
@@ -1791,27 +1846,24 @@ class FavoriteDetailScreen(BaseScreen):
         if self.tabs and self.current_tab_index < len(self.tabs):
             cleaned = clean_text(self.tabs[self.current_tab_index].get('content', ''))
             if cleaned:
-                # Сбрасываем тональность в 0 для нового варианта подбора
                 self.current_tonality = 0
                 self.transposed_text_cache = {}
                 self.transposed_chords_cache = {}
 
-                # Пересчитываем аккорды и кэш строго для нового варианта
                 self.precompute_transpositions(cleaned)
 
-                self.content_label.text = self.transposed_text_cache.get(0, cleaned)
-                self._song_chords = self.transposed_chords_cache.get(0, [])
+                self.content_label.text = self._get_or_compute_tonality(0) or cleaned
+                self._song_chords = list(self.transposed_chords_cache.get(0, []))
                 self.content_label.markup = True
                 self._current_chord_index = 0
 
-                # Догружаем аппликатуры новых аккордов в batch-кеш
-                self._schedule_missing_chords_load()
+                self._load_chords_batch()
 
-                # Если гриф открыт — перестраиваем карусель под исходные аккорды нового варианта
-                if self.is_chords_mode:
+                if self.is_chords_mode or getattr(self, 'eye_active', False):
                     self._hide_chords_layer()
                     if self._song_chords:
                         self._show_chords_layer()
+                        self.is_chords_mode = True
                     else:
                         self.is_chords_mode = False
             else:
@@ -1853,21 +1905,82 @@ class FavoriteDetailScreen(BaseScreen):
             self._floating_panel.hide()
 
     def load_song_data(self):
+        saved = favorite_detail_state.get_song_state(self.song_id)
+        if saved and saved.get('tabs'):
+            self.song_artist = saved.get('artist') or self.song_artist
+            self.song_title = saved.get('title') or self.song_title
+            self.tabs = saved.get('tabs', [])
+            self.current_tab_index = saved.get('current_tab_index', 0)
+            self.current_tonality = saved.get('current_tonality', 0)
+            self.original_cleaned_text = saved.get('original_cleaned_text', '')
+            self.transposed_text_cache = saved.get('transposed_text_cache', {})
+            self.transposed_chords_cache = saved.get('transposed_chords_cache', {})
+            self._song_chords = list(self.transposed_chords_cache.get(self.current_tonality, []))
+            self._batch_chords_data = saved.get('batch_chords_data', {})
+
+            text_to_show = self._get_or_compute_tonality(self.current_tonality)
+            if text_to_show:
+                self.content_label.text = text_to_show
+                self.content_label.markup = True
+                self._update_content_height()
+
+            self.update_top_nav_title()
+            self.hide_loading()
+            if self._floating_panel:
+                self._floating_panel.update_theme_colors()
+            self._load_chords_batch()
+            saved_scroll = saved.get('scroll_y', 1.0)
+            Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', saved_scroll), 0.05)
+            return
+
         self.show_loading()
-        api.get_tab(song_id=self.song_id, on_success=self.on_song_loaded, on_failure=self.on_load_failed,
-                    force_refresh=False)
+        api.get_tab(
+            song_id=self.song_id,
+            on_success=self.on_song_loaded,
+            on_failure=self.on_load_failed,
+            force_refresh=False
+        )
 
     def show_loading(self):
-        if self.is_loading: return
+        if self.is_loading:
+            return
         self.is_loading = True
-        self.loading_spinner = MDBoxLayout()
-        self.add_widget(self.loading_spinner)
+        spinner = LoadingSpinner(text=get_text('loading', 'Загрузка'))
+        spinner.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.loading_spinner = spinner
+        self.add_widget(spinner)
+        spinner.start_animation()
 
     def hide_loading(self):
         self.is_loading = False
         if self.loading_spinner:
-            self.remove_widget(self.loading_spinner)
+            if hasattr(self.loading_spinner, 'stop_animation'):
+                self.loading_spinner.stop_animation()
+            if self.loading_spinner.parent:
+                self.remove_widget(self.loading_spinner)
             self.loading_spinner = None
+
+    def _save_current_song_state(self):
+        if not self.song_id or not self.tabs:
+            return
+        favorite_detail_state.save_song_state(self.song_id, {
+            'artist': self.song_artist,
+            'title': self.song_title,
+            'tabs': self.tabs,
+            'current_tab_index': self.current_tab_index,
+            'current_tonality': self.current_tonality,
+            'original_cleaned_text': self.original_cleaned_text,
+            'transposed_text_cache': self.transposed_text_cache,
+            'transposed_chords_cache': self.transposed_chords_cache,
+            'batch_chords_data': self._batch_chords_data,
+            'scroll_y': self.content_scroll.scroll_y if self.content_scroll else 1.0,
+        })
+
+    def on_leave(self):
+        self.stop_scroll()
+        self._save_current_song_state()
+        logger.info("Выход из FavoriteDetailScreen")
+
 
     def on_song_loaded(self, data):
         self.song_artist = data.get('artist') or self.song_artist or get_text('unknown_artist')
@@ -2038,5 +2151,3 @@ class FavoriteDetailScreen(BaseScreen):
 
             Clock.schedule_once(_init_panel, 0.1)
 
-    def on_leave(self):
-        logger.info("Выход из FavoriteDetailScreen")

@@ -1397,13 +1397,10 @@ class FavoritesScreen(BaseScreen):
             if hasattr(self, 'manager') and self.manager:
                 if self.manager.has_screen('favorite_detail'):
                     screen = self.manager.get_screen('favorite_detail')
+                    if hasattr(screen, 'prepare_clean_screen'):
+                        screen.prepare_clean_screen(song_id, artist, song_title)
                     screen.set_song(song_id, artist, song_title)
                     self.manager.current = 'favorite_detail'
-                elif self.manager.has_screen('song_detail'):
-                    screen = self.manager.get_screen('song_detail')
-                    screen.set_previous_screen('favorites')
-                    screen.set_song(song_id)
-                    self.manager.current = 'song_detail'
 
     def refresh_favorites(self):
         self.load_favorites(force_refresh=True)
