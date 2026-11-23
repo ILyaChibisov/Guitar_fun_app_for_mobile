@@ -322,12 +322,24 @@ def transpose_chord(chord: str, semitones: int, use_h: bool = False) -> str:
 
 # ============ ИЗВЛЕЧЕНИЕ АККОРДОВ ИЗ ТЕКСТА ============
 
+def _canonical_chord_key(chord: str) -> str:
+    """Единый ключ для сравнения аккордов (Bm и Hm -> 'B|m', Eb и D# -> 'D#|')."""
+    parsed = parse_chord(chord)
+    if not parsed:
+        return chord
+    root, quality, bass = parsed
+    canon_root = normalize_note(root, use_h=False, preserve_original=False)
+    canon_bass = normalize_note(bass, use_h=False, preserve_original=False) if bass else ''
+    return f"{canon_root}|{quality}|{canon_bass}"
+
+
 def extract_chords_from_text(text: str) -> List[str]:
-    """Извлекает уникальные аккорды только из аккордовых строк текста."""
+    """Извлекает уникальные аккорды (без дублей Bm/Hm и Eb/D#), сохраняя их вид из текста."""
     if not text:
         return []
 
-    chords = set()
+    chords = []
+    seen_keys = set()
     lines = text.splitlines()
     for i, line in enumerate(lines):
         next_line = lines[i + 1] if i + 1 < len(lines) else None
@@ -336,6 +348,10 @@ def extract_chords_from_text(text: str) -> List[str]:
         for match in CHORD_PATTERN.finditer(line):
             chord = normalize_chord_case(match.group(0))
             chord = clean_chord_name(chord)
-            chords.add(chord)
+            key = _canonical_chord_key(chord)
+            if key not in seen_keys:
+                seen_keys.add(key)
+                chords.append(chord)
 
-    return sorted(list(chords))
+    return chords
+

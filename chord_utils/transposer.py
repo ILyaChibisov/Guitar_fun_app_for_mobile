@@ -15,13 +15,16 @@ def set_transpose_system(chords_list):
 
 def _detect_use_h(text: str) -> bool:
     lines = text.splitlines()
+    h_count = 0
+    b_count = 0
     for i, line in enumerate(lines):
         next_line = lines[i + 1] if i + 1 < len(lines) else None
         if not is_chord_line(line, next_line=next_line):
             continue
-        if re.search(r'(?<![A-Za-zА-Яа-я])[HН](?![a-zа-я])', line):
-            return True
-    return False
+        h_count += len(re.findall(r'(?<![A-Za-zА-Яа-я])[HН](?![a-zа-я])', line))
+        b_count += len(re.findall(r'(?<![A-Za-zА-Яа-я])[BВ](?![a-zа-я])', line))
+    return h_count > b_count
+
 
 
 

@@ -7,27 +7,32 @@ ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
 API = "https://guitarfans.ru/api"
-song_id = 153371
 
-url = f"{API}/songs/tab/{song_id}"
-req = urllib.request.Request(url, headers={"User-Agent": "GuitarFuns/1.0"})
+# Ввод song_id через терминал
+while True:
+    raw = input("Введите ID песни (или 'q' для выхода): ").strip()
+    if raw.lower() in ("q", "quit", "exit"):
+        print("Выход.")
+        break
+    if not raw.isdigit():
+        print("Ошибка: ID должен быть числом. Попробуйте ещё раз.")
+        continue
 
-with urllib.request.urlopen(req, context=ctx, timeout=15) as r:
-    data = json.loads(r.read().decode("utf-8"))
+    song_id = int(raw)
+    url = f"{API}/songs/tab/{song_id}"
+    req = urllib.request.Request(url, headers={"User-Agent": "GuitarFuns/1.0"})
 
-with open(f"song_{song_id}.json", "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=15) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except Exception as e:
+        print(f"Ошибка загрузки песни {song_id}: {e}")
+        continue
 
-print(f"Сохранено в song_{song_id}.json")
-print("=== CONTENT ===")
-print(data.get("content", ""))
+    filename = f"song_{song_id}.json"
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-# Диагностика проблемных строк
-from chord_utils.chord_parser import is_chord_line, CHORD_PATTERN
-
-print("\n=== ДИАГНОСТИКА ===")
-for i, line in enumerate(data.get("content", "").splitlines()):
-    if "C#" in line or "С#" in line:
-        print(f"Строка {i}: {repr(line)}")
-        print(f"  is_chord_line: {is_chord_line(line)}")
-        print(f"  matches: {CHORD_PATTERN.findall(line)}")
+    print(f"Сохранено в {filename}")
+    print("=== CONTENT ===")
+    print(data.get("content", ""))

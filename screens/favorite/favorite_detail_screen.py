@@ -1375,32 +1375,44 @@ class FavoriteDetailScreen(BaseScreen):
         self._chords_client.search_by_synonym(requested_name, on_success=_on_syn_results)
 
     def _find_chord_group(self, main_name: str, chord_type: str):
-        """
-        Универсально ищет группу аккордов в _batch_chords_data:
-        1) по прямому ключу (с учётом / и \\),
-        2) по requested_main_name или списку synonyms у вариантов (без жёсткой привязки к chord_type).
-        """
         if not self._batch_chords_data:
             return None
 
-        norm_req = main_name.replace('/', '\\').lower()
+        enharmonic_map = {
+            'H': 'B', 'B': 'H',
+            'A#': 'Bb', 'Bb': 'A#',
+            'C#': 'Db', 'Db': 'C#',
+            'D#': 'Eb', 'Eb': 'D#',
+            'F#': 'Gb', 'Gb': 'F#',
+            'G#': 'Ab', 'Ab': 'G#',
+        }
+        candidates = [main_name]
+        for src, dst in enharmonic_map.items():
+            if main_name.startswith(src) and (len(main_name) == len(src) or main_name[len(src)] not in ('#', 'b')):
+                candidates.append(dst + main_name[len(src):])
 
-        for alt_name in (main_name, main_name.replace('/', '\\'), main_name.replace('\\', '/')):
-            key = f"{alt_name}|{chord_type}"
-            if key in self._batch_chords_data:
-                return self._batch_chords_data[key]
+        norm_candidates = {c.replace('/', '\\').lower() for c in candidates}
+        target_type = (chord_type or "").lower()
+
+        for key, group in self._batch_chords_data.items():
+            if not isinstance(group, dict):
+                continue
+            if '|' in key:
+                k_name, k_type = key.split('|', 1)
+                if k_name.replace('/', '\\').lower() in norm_candidates and k_type.lower() == target_type:
+                    return group
 
         for key, group in self._batch_chords_data.items():
             if not isinstance(group, dict):
                 continue
             req_name = (group.get("requested_main_name") or "").replace('/', '\\').lower()
-            if req_name == norm_req:
+            if req_name in norm_candidates:
                 return group
 
             for v in group.get("variants", []):
                 v_main = (v.get("main_name") or "").replace('/', '\\').lower()
-                syns = [s.replace('/', '\\').lower() for s in v.get("synonyms", [])]
-                if norm_req == v_main or norm_req in syns:
+                syns = {s.replace('/', '\\').lower() for s in v.get("synonyms", [])}
+                if v_main in norm_candidates or (norm_candidates & syns):
                     return group
 
         return None
@@ -1618,15 +1630,23 @@ class FavoriteDetailScreen(BaseScreen):
                 self.content_label.markup = True
 
                 if isinstance(self.transposed_chords_cache, dict):
-                    self._song_chords = self.transposed_chords_cache.get(step, [])
+                    self._song_chords = list(self.transposed_chords_cache.get(step, []))
 
-                # Всегда догружаем новые аккорды в кеш, даже если панель закрыта
                 self._schedule_missing_chords_load()
 
-                if self.is_chords_mode and self.chord_name_label and self._song_chords:
-                    if self._current_chord_index >= len(self._song_chords):
-                        self._current_chord_index = 0
-                    self._update_chords_display()
+                if (self.is_chords_mode or getattr(self, 'eye_active', False)) and self._song_chords:
+                    self.is_chords_mode = True
+                    if not self._griff_added:
+                        self._show_chords_layer()
+                        return
+                    if len(self.chord_slides) != len(self._song_chords):
+                        self._hide_chords_layer()
+                        self._show_chords_layer()
+                        self.is_chords_mode = True
+                    else:
+                        if self._current_chord_index >= len(self._song_chords):
+                            self._current_chord_index = 0
+                        self._update_chords_display()
 
     def precompute_transpositions(self, cleaned_text):
         theme_id = settings_manager.theme
@@ -1638,9 +1658,16 @@ class FavoriteDetailScreen(BaseScreen):
         self.transposed_chords_cache = {}
         self.transposed_chords_cache[0] = self._song_chords.copy()
 
+        all_chords = set(self._song_chords)
         for step in [-3, -2.5, -2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3]:
-            self.transposed_text_cache[step] = transpose_text(cleaned_text, step, theme_id=theme_id)
-            self.transposed_chords_cache[step] = transpose_chord_list(self._song_chords, step)
+            raw_transposed = transpose_text(cleaned_text, step, theme_id=theme_id)
+            self.transposed_text_cache[step] = raw_transposed
+            plain_transposed = re.sub(r'\[/?[a-z]+.*?\]', '', raw_transposed)
+            step_chords = extract_chords_from_text(plain_transposed)
+            self.transposed_chords_cache[step] = step_chords
+            all_chords.update(step_chords)
+
+        self._all_possible_chords = list(all_chords)
 
     def _get_font_multiplier(self, font_size):
         ratio = round(font_size / self.STANDARD_FONT_SIZE * 10) / 10
