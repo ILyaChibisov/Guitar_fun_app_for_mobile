@@ -16,6 +16,9 @@ from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.text import LabelBase
 
+from screens.favorite.favorite_detail_screen import preload_panel_textures
+preload_panel_textures()
+
 # Путь к папке с проектом
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FONTS_DIR = os.path.join(BASE_DIR, 'fonts')

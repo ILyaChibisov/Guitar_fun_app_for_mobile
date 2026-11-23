@@ -1389,18 +1389,15 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
 
     def on_song_selected(self, song_id, song_title, artist=""):
-        with perf('favorites.action.on_song_selected', log_every=False):
-            if not song_id:
-                notify.error(get_text('load_error'))
-                return
-            self._save_state()
-            if hasattr(self, 'manager') and self.manager:
-                if self.manager.has_screen('favorite_detail'):
-                    screen = self.manager.get_screen('favorite_detail')
-                    if hasattr(screen, 'prepare_clean_screen'):
-                        screen.prepare_clean_screen(song_id, artist, song_title)
-                    screen.set_song(song_id, artist, song_title)
-                    self.manager.current = 'favorite_detail'
+        if not song_id:
+            notify.error(get_text('load_error'))
+            return
+        self._save_state()
+        if hasattr(self, 'manager') and self.manager and self.manager.has_screen('favorite_detail'):
+            screen = self.manager.get_screen('favorite_detail')
+            screen.prepare_clean_screen(song_id, artist, song_title)
+            self.manager.current = 'favorite_detail'
+            Clock.schedule_once(lambda dt: screen.set_song(song_id, artist, song_title), 0.05)
 
     def refresh_favorites(self):
         self.load_favorites(force_refresh=True)

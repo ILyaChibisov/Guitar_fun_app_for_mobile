@@ -66,6 +66,21 @@ except ImportError:
 ASSET_CHORDS_2_PNG = "chords_2_png"
 ASSET_LOUPE_PNG = "loupe_png"
 ASSET_OK_PNG = "ok_png"
+_PANEL_ASSET_TEXTURES = {}
+
+
+def preload_panel_textures():
+    """Предзагружает текстуры иконок меню один раз при старте приложения."""
+    if not HAS_ASSETS:
+        return
+    for asset_name in (ASSET_CHORDS_2_PNG, ASSET_LOUPE_PNG, ASSET_OK_PNG):
+        if asset_name not in _PANEL_ASSET_TEXTURES:
+            try:
+                img_bytes = load_asset_as_bytes(asset_name)
+                if img_bytes:
+                    _PANEL_ASSET_TEXTURES[asset_name] = CoreImage(BytesIO(img_bytes), ext="png").texture
+            except Exception as e:
+                logger.error(f"Ошибка предзагрузки ассета {asset_name}: {e}")
 
 
 # ============================================================
@@ -227,13 +242,10 @@ class PanelIcon(AnchorLayout):
         self._touch_down_pos = None
 
         texture = None
-        if asset_name and HAS_ASSETS:
-            try:
-                img_bytes = load_asset_as_bytes(asset_name)
-                if img_bytes:
-                    texture = CoreImage(BytesIO(img_bytes), ext="png").texture
-            except Exception as e:
-                logger.error(f"Ошибка загрузки ассета {asset_name}: {e}")
+        if asset_name:
+            if asset_name not in _PANEL_ASSET_TEXTURES:
+                preload_panel_textures()
+            texture = _PANEL_ASSET_TEXTURES.get(asset_name)
 
         if texture is not None:
             self.is_image = True
@@ -292,7 +304,7 @@ class PanelIcon(AnchorLayout):
 
 class FloatingPanel(MDCard):
     PANEL_WIDTH = dp(55)
-    VISIBLE_MARGIN = 0  # Прижимаем вплотную к правому краю экрана
+    VISIBLE_MARGIN = 0
     FIXED_HEIGHT = dp(280)
 
     def __init__(self, parent_screen=None, on_action=None, **kwargs):
@@ -306,7 +318,6 @@ class FloatingPanel(MDCard):
         self.size_hint = (None, None)
         self.width = self.PANEL_WIDTH
         self.height = self.FIXED_HEIGHT
-
         self.md_bg_color = [0, 0, 0, 0]
         self.radius = [0, 0, 0, 0]
         self.elevation = 0
@@ -314,7 +325,6 @@ class FloatingPanel(MDCard):
 
         with self.canvas.before:
             self.bg_color_inst = Color(*panel_bg)
-            # Скругляем ТОЛЬКО левые углы: [top-left, top-right, bottom-right, bottom-left]
             self.bg_rect = RoundedRectangle(
                 pos=(self.x, self.y),
                 size=(self.PANEL_WIDTH, self.height),
@@ -323,13 +333,7 @@ class FloatingPanel(MDCard):
 
         with self.canvas.after:
             self.line_color_inst = Color(*DetailColors.get_panel_line(theme_id))
-            # Открытая линия: рисуем рамку только сверху, слева и снизу (без правой грани)
-            self.outline_line = Line(
-                points=[],
-                width=1.5,
-                cap='round',
-                joint='round'
-            )
+            self.outline_line = Line(points=[], width=1.5, cap='round', joint='round')
 
         self.bind(pos=self._update_bg, size=self._update_bg)
 
@@ -338,8 +342,10 @@ class FloatingPanel(MDCard):
         self.is_open = False
         self._anim = None
         self.mode = 'menu'
-        self.items = []
-        self._active_slider = None
+        self._mode_views = {}
+        self._mode_items = {m: [] for m in ('menu', 'chords', 'tonality', 'scroll', 'font')}
+        self._mode_dividers = {m: [] for m in ('menu', 'chords', 'tonality', 'scroll', 'font')}
+        self._slider_labels = {}
 
         self.content = MDBoxLayout(
             orientation='vertical',
@@ -352,37 +358,29 @@ class FloatingPanel(MDCard):
         )
         self.add_widget(self.content)
 
-        self._build_menu()
+        self._build_all_modes()
+        self._switch_mode('menu')
         Clock.schedule_once(lambda dt: self._init_position(), 0.5)
 
     def _build_open_border_points(self):
-        """Строит координаты открытой П-образной рамки со скруглёнными левыми углами."""
         import math
         x, y = self.x, self.y
         w, h = self.PANEL_WIDTH, self.height
         r = min(dp(16), w / 2, h / 2)
-        segments = 12  # плавность скругления углов
+        segments = 12
 
-        pts = []
-        # 1. Начинаем от правого верхнего края -> идём влево до начала скругления
-        pts.extend([x + w, y + h, x + r, y + h])
-
-        # 2. Верхний левый угол (дуга от 90° до 180°)
+        pts = [x + w, y + h, x + r, y + h]
         cx_tl, cy_tl = x + r, y + h - r
         for i in range(1, segments + 1):
             angle = math.pi / 2 + (math.pi / 2) * (i / segments)
             pts.extend([cx_tl + r * math.cos(angle), cy_tl + r * math.sin(angle)])
 
-        # 3. Левая вертикальная грань вниз до нижнего левого скругления
         pts.extend([x, y + r])
-
-        # 4. Нижний левый угол (дуга от 180° до 270°)
         cx_bl, cy_bl = x + r, y + r
         for i in range(1, segments + 1):
             angle = math.pi + (math.pi / 2) * (i / segments)
             pts.extend([cx_bl + r * math.cos(angle), cy_bl + r * math.sin(angle)])
 
-        # 5. Нижняя горизонтальная грань вправо до края экрана
         pts.extend([x + w, y])
         return pts
 
@@ -399,14 +397,12 @@ class FloatingPanel(MDCard):
         self.is_open = False
 
     def _recenter(self):
-        """Размещаем панель ровно по центру рабочей области экрана."""
         if self._hidden_x is None:
             return
         top_offset = layout_config.get_top_padding(include_top_nav=True)
         nav_bottom = layout_config.get_bottom_nav_total_height()
         work_area_height = Window.height - top_offset - nav_bottom
         self.y = nav_bottom + (work_area_height - self.height) / 2
-
 
     def toggle(self):
         if self.is_open:
@@ -427,43 +423,68 @@ class FloatingPanel(MDCard):
         if not self.is_open:
             return
         self.is_open = False
-
-        if self.parent_screen:
-            if not getattr(self.parent_screen, 'eye_active', False):
-                if hasattr(self.parent_screen, 'close_chords_section'):
-                    self.parent_screen.close_chords_section()
-
+        if self.parent_screen and not getattr(self.parent_screen, 'eye_active', False):
+            if hasattr(self.parent_screen, 'close_chords_section'):
+                self.parent_screen.close_chords_section()
         if self._anim:
             self._anim.cancel(self)
         self._anim = Animation(x=self._hidden_x, duration=0.25, t='in_quad')
         self._anim.start(self)
 
-    def _add_divider(self, color=None):
+    def _add_divider_to(self, container, mode_key):
         div = MDBoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(1.2),
             padding=[dp(8), 0, dp(8), 0]
         )
-        inner = MDSeparator(
-            color=color or DetailColors.get_divider(settings_manager.theme)
-        )
+        inner = MDSeparator(color=DetailColors.get_divider(settings_manager.theme))
         div.add_widget(inner)
-        div._inner_line = inner
-        self.content.add_widget(div)
+        self._mode_dividers[mode_key].append(inner)
+        container.add_widget(div)
 
-    # ============ ГЛАВНОЕ МЕНЮ ============
+    def _build_all_modes(self):
+        for m in ('menu', 'chords', 'tonality', 'scroll', 'font'):
+            self._mode_views[m] = MDBoxLayout(
+                orientation='vertical',
+                size_hint=(1, 1),
+                spacing=0,
+                padding=0
+            )
+        self._populate_menu(self._mode_views['menu'])
+        self._populate_chords_panel(self._mode_views['chords'])
+        self._populate_slider_panel(self._mode_views['tonality'], 'tonality')
+        self._populate_slider_panel(self._mode_views['scroll'], 'scroll')
+        self._populate_slider_panel(self._mode_views['font'], 'font')
+
+    def _switch_mode(self, mode_name):
+        self.mode = mode_name
+        self.content.clear_widgets()
+        view = self._mode_views.get(mode_name)
+        if view:
+            self.content.add_widget(view)
+
+        if mode_name == 'chords':
+            if self.parent_screen and hasattr(self.parent_screen, 'show_chords_section'):
+                self.parent_screen.show_chords_section()
+        else:
+            if self.parent_screen and not getattr(self.parent_screen, 'eye_active', False):
+                if hasattr(self.parent_screen, 'close_chords_section'):
+                    self.parent_screen.close_chords_section()
+
+        self._sync_mode_values(mode_name)
+        self.update_theme_colors()
 
     def _build_menu(self):
-        self.content.clear_widgets()
-        self.mode = 'menu'
-        self.items = []
-        self._active_slider = None
+        self._switch_mode('menu')
 
-        if self.parent_screen and not getattr(self.parent_screen, 'eye_active', False):
-            if hasattr(self.parent_screen, 'close_chords_section'):
-                self.parent_screen.close_chords_section()
+    def _build_chords_panel(self):
+        self._switch_mode('chords')
 
+    def _build_slider_panel(self, type_str):
+        self._switch_mode(type_str)
+
+    def _populate_menu(self, container):
         items = [
             ('music', 'chords', ASSET_CHORDS_2_PNG),
             ('music-note', 'tonality', None),
@@ -471,62 +492,45 @@ class FloatingPanel(MDCard):
             ('folder-music', 'tabs', None),
             ('magnify', 'font', ASSET_LOUPE_PNG),
         ]
-
-        has_multiple_tabs = len(getattr(self.parent_screen, 'tabs', [])) > 1
         for i, (icon, action, asset) in enumerate(items):
-            actual_action = 'tabs_disabled' if (action == 'tabs' and not has_multiple_tabs) else action
             item = PanelIcon(
                 icon=icon,
                 on_click=lambda a=action: self._on_menu_item(a),
-                action_name=actual_action,
+                action_name=action,
                 asset_name=asset
             )
-            self.items.append(item)
-            self.content.add_widget(item)
-
+            self._mode_items['menu'].append(item)
+            container.add_widget(item)
             if i < len(items) - 1:
-                self._add_divider()
+                self._add_divider_to(container, 'menu')
 
-        self.update_theme_colors()
-
-
-    # ============ ВЕРТИКАЛЬНОЕ МЕНЮ АККОРДОВ ============
-
-    def _build_chords_panel(self):
-        self.content.clear_widgets()
-        self.mode = 'chords'
-        self._active_slider = None
-
-        if self.parent_screen and hasattr(self.parent_screen, 'show_chords_section'):
-            self.parent_screen.show_chords_section()
-
+    def _populate_chords_panel(self, container):
         self.variant_item = PanelIcon(
             icon="format-list-bulleted-square",
             on_click=lambda: self._on_menu_item('variant'),
             action_name='variant'
         )
-        self.content.add_widget(self.variant_item)
-        self._add_divider()
+        self._mode_items['chords'].append(self.variant_item)
+        container.add_widget(self.variant_item)
+        self._add_divider_to(container, 'chords')
 
-        parent_mode = getattr(self.parent_screen, 'display_mode', 'finger')
-        mode_icon = "music-note" if parent_mode == "notes" else "gesture-tap"
-        mode_action = 'mode_notes' if parent_mode == 'notes' else 'mode'
         self.mode_item = PanelIcon(
-            icon=mode_icon,
+            icon="gesture-tap",
             on_click=lambda: self._on_menu_item('mode'),
-            action_name=mode_action
+            action_name='mode'
         )
-        self.content.add_widget(self.mode_item)
-        self._add_divider()
+        self._mode_items['chords'].append(self.mode_item)
+        container.add_widget(self.mode_item)
+        self._add_divider_to(container, 'chords')
 
-        is_eye = getattr(self.parent_screen, 'eye_active', False)
         self.eye_item = PanelIcon(
-            icon="eye" if is_eye else "eye-off",
+            icon="eye-off",
             on_click=lambda: self._on_menu_item('eye'),
-            action_name='eye' if is_eye else 'eye_off'
+            action_name='eye_off'
         )
-        self.content.add_widget(self.eye_item)
-        self._add_divider()
+        self._mode_items['chords'].append(self.eye_item)
+        container.add_widget(self.eye_item)
+        self._add_divider_to(container, 'chords')
 
         self.griff_zoom_item = PanelIcon(
             icon="magnify",
@@ -534,112 +538,36 @@ class FloatingPanel(MDCard):
             action_name='zoom',
             asset_name=ASSET_LOUPE_PNG
         )
-
-        self.content.add_widget(self.griff_zoom_item)
-        self._add_divider()
-
-        menu_slot_height = (self.FIXED_HEIGHT - dp(16) - dp(1.2) * 4) / 5
+        self._mode_items['chords'].append(self.griff_zoom_item)
+        container.add_widget(self.griff_zoom_item)
+        self._add_divider_to(container, 'chords')
 
         back_btn = PanelIcon(
             icon="check",
-            on_click=lambda: self._build_menu(),
+            on_click=lambda: self._switch_mode('menu'),
             action_name='back',
             asset_name=ASSET_OK_PNG
         )
-        self.content.add_widget(back_btn)
+        self._mode_items['chords'].append(back_btn)
+        container.add_widget(back_btn)
 
-        self.update_theme_colors()
-
-    def _switch_chord(self, direction):
-        parent = self.parent_screen
-        if not parent or not hasattr(parent, '_song_chords'):
-            return
-        song_chords = parent._song_chords
-        if not song_chords:
-            return
-        current = parent._current_chord_index
-        new_idx = (current + direction) % len(song_chords)
-        parent._current_chord_index = new_idx
-        if hasattr(parent, '_update_chords_display'):
-            parent._update_chords_display()
-        if parent.chords_carousel and parent.chord_slides:
-            if new_idx < len(parent.chord_slides):
-                parent.chords_carousel.load_slide(parent.chord_slides[new_idx])
-
-    def _on_menu_item(self, action):
-        if action == 'chords':
-            self._build_chords_panel()
-        elif action == 'variant':
-            if self.parent_screen and hasattr(self.parent_screen, '_next_chord_variant'):
-                self.parent_screen._next_chord_variant()
-        elif action == 'mode':
-            if self.parent_screen and hasattr(self.parent_screen, '_toggle_display_mode'):
-                self.parent_screen._toggle_display_mode()
-                parent_mode = getattr(self.parent_screen, 'display_mode', 'finger')
-                theme_id = settings_manager.theme
-                mode_key = 'mode_notes' if parent_mode == 'notes' else 'mode'
-                self.mode_item.action_name = mode_key
-                self.mode_item.set_icon("music-note" if parent_mode == "notes" else "gesture-tap")
-                self.mode_item.set_color(DetailColors.get_icon_color(theme_id, mode_key))
-        elif action == 'eye':
-            if self.parent_screen and hasattr(self.parent_screen, '_toggle_eye'):
-                self.parent_screen._toggle_eye()
-                is_active = getattr(self.parent_screen, 'eye_active', False)
-                theme_id = settings_manager.theme
-                eye_key = 'eye' if is_active else 'eye_off'
-                self.eye_item.action_name = eye_key
-                self.eye_item.set_icon("eye" if is_active else "eye-off")
-                self.eye_item.set_color(DetailColors.get_icon_color(theme_id, eye_key))
-                if is_active and not getattr(self.parent_screen, 'is_chords_mode', False):
-                    self.parent_screen.show_chords_section()
-        elif action == 'zoom':
-            if self.parent_screen and hasattr(self.parent_screen, '_toggle_griff_zoom'):
-                self.parent_screen._toggle_griff_zoom()
-                new_scale = getattr(self.parent_screen, 'griff_scale', 0.8)
-                self.griff_zoom_item.set_icon("magnify" if new_scale == 0.8 else "magnify-plus")
-        elif action == 'tonality':
-            self._build_slider_panel('tonality')
-        elif action == 'scroll':
-            self._build_slider_panel('scroll')
-        elif action == 'font':
-            self._build_slider_panel('font')
-        elif action == 'tabs':
-            if self.parent_screen:
-                self.parent_screen._next_song_tab()
-            else:
-                self.parent_screen.show_tabs_picker()
-
-    # ============ ПОД-ПАНЕЛИ (ШРИФТ / ПРОКРУТКА / ТОНАЛЬНОСТЬ) ============
-
-    def _build_slider_panel(self, type_str):
-        self.content.clear_widgets()
-        self.mode = type_str
-        self._active_slider = None
-
-        if self.parent_screen and not getattr(self.parent_screen, 'eye_active', False):
-            if hasattr(self.parent_screen, 'close_chords_section'):
-                self.parent_screen.close_chords_section()
-
+    def _populate_slider_panel(self, container, type_str):
         parent = self.parent_screen
         theme_id = settings_manager.theme
         accent = DetailColors.get_accent(theme_id)
-        div_color = DetailColors.get_divider(theme_id)
 
-        # 1. Для режима прокрутки: кнопка Play/Stop перенесена в самый верх над показаниями
         if type_str == 'scroll':
-            is_scrolling = getattr(parent, 'is_scrolling', False)
-            action_key = 'stop' if is_scrolling else 'play'
             self.scroll_toggle_item = PanelIcon(
-                icon="stop" if is_scrolling else "play",
+                icon="play",
                 on_click=self._on_scroll_toggle_click,
-                action_name=action_key,
+                action_name='play',
                 size_hint=(1, None),
                 height=dp(38)
             )
-            self.content.add_widget(self.scroll_toggle_item)
-            self._add_divider(div_color)
+            self._mode_items['scroll'].append(self.scroll_toggle_item)
+            container.add_widget(self.scroll_toggle_item)
+            self._add_divider_to(container, 'scroll')
 
-        # 2. Компактный блок показаний (без нижней перегородки)
         header_box = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -648,19 +576,8 @@ class FloatingPanel(MDCard):
             padding=[0, dp(2), 0, 0],
             pos_hint={'center_x': 0.5}
         )
-
-        if type_str == 'tonality':
-            current_val = getattr(parent, 'current_tonality', 0)
-            current_val_str = "0" if current_val == 0 else f"{current_val:+g}"
-        elif type_str == 'font':
-            curr_size = getattr(parent, 'current_font_size', 20)
-            current_val_str = self._get_font_multiplier(curr_size)
-        else:
-            curr_speed = getattr(parent, 'scroll_speed', 1.0)
-            current_val_str = f"{curr_speed:.1f}x"
-
-        self._sub_val_label = MDLabel(
-            text=current_val_str,
+        val_label = MDLabel(
+            text="0",
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -669,24 +586,16 @@ class FloatingPanel(MDCard):
             size_hint=(1, 1),
             font_size=sp(16)
         )
-        header_box.add_widget(self._sub_val_label)
-        self.content.add_widget(header_box)
+        self._slider_labels[type_str] = val_label
+        header_box.add_widget(val_label)
+        container.add_widget(header_box)
 
-        # 3. Контейнер шкалы
         slider_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             padding=[0, dp(2), 0, dp(2)],
             spacing=0
         )
-
-        center_box = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=0,
-            spacing=0
-        )
-
         plus_label = MDLabel(
             text="+",
             halign="center",
@@ -700,7 +609,7 @@ class FloatingPanel(MDCard):
             font_size=sp(15)
         )
         plus_label.bind(size=plus_label.setter('text_size'))
-        center_box.add_widget(plus_label)
+        slider_container.add_widget(plus_label)
 
         slider_wrap = AnchorLayout(
             anchor_x='center',
@@ -710,9 +619,8 @@ class FloatingPanel(MDCard):
         )
 
         if type_str == 'tonality':
-            current_val_int = int(round(getattr(parent, 'current_tonality', 0) * 2))
             self.ton_slider = MDSlider(
-                min=-6.01, max=6.01, value=current_val_int, step=1,
+                min=-6.01, max=6.01, value=0, step=1,
                 orientation='vertical', size_hint=(None, 1), width=dp(36),
                 hint=False, padding=0
             )
@@ -723,7 +631,7 @@ class FloatingPanel(MDCard):
                 if self.ton_slider.value != int_val:
                     self.ton_slider.value = int_val
                 val_half = int_val / 2
-                self._sub_val_label.text = "0" if val_half == 0 else f"{val_half:+g}"
+                val_label.text = "0" if val_half == 0 else f"{val_half:+g}"
                 if parent and val_half != getattr(parent, 'current_tonality', 0):
                     parent.current_tonality = val_half
                     if hasattr(parent, 'apply_tonality'):
@@ -732,28 +640,26 @@ class FloatingPanel(MDCard):
             self.ton_slider.bind(value=on_ton_change)
             slider_wrap.add_widget(self.ton_slider)
 
-
         elif type_str == 'font':
             std_size = getattr(parent, 'STANDARD_FONT_SIZE', 42 if platform == 'android' else 20)
-            multipliers = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6]
-            font_sizes = [int(round(std_size * m)) for m in multipliers]
-            total_steps = len(font_sizes) - 1
-            curr_size = getattr(parent, 'current_font_size', font_sizes[3])
-            # Находим ближайший шаг (по умолчанию индекс 3 -> 1.0x)
-            current_val = min(range(len(font_sizes)), key=lambda i: abs(font_sizes[i] - curr_size))
+            self._font_multipliers = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6]
+            self._font_sizes = [int(round(std_size * m)) for m in self._font_multipliers]
+            total_steps = len(self._font_sizes) - 1
+
             self.font_slider = MDSlider(
-                min=-0.01, max=float(total_steps + 0.01), value=current_val, step=1,
+                min=-0.01, max=float(total_steps + 0.01), value=3, step=1,
                 orientation='vertical', size_hint=(None, 1), width=dp(36),
                 hint=False, padding=0
             )
             self._style_slider(self.font_slider, accent)
+
             def on_font_change(instance, value):
                 int_val = max(0, min(total_steps, int(round(value))))
                 if self.font_slider.value != int_val:
                     self.font_slider.value = int_val
-                new_size = font_sizes[int_val]
-                mult = multipliers[int_val]
-                self._sub_val_label.text = f"{int(mult)}x" if mult == int(mult) else f"{mult:.1f}x"
+                new_size = self._font_sizes[int_val]
+                mult = self._font_multipliers[int_val]
+                val_label.text = f"{int(mult)}x" if mult == int(mult) else f"{mult:.1f}x"
                 if parent and getattr(parent, 'current_font_size', 0) != new_size:
                     parent.current_font_size = new_size
                     if hasattr(parent, 'content_label'):
@@ -765,17 +671,11 @@ class FloatingPanel(MDCard):
             slider_wrap.add_widget(self.font_slider)
 
         elif type_str == 'scroll':
-            def speed_to_slider(s):
-                return int(1 + (s - 0.2) / 0.03) if s <= 0.5 else int(10 + (s - 0.5) / 0.1)
-
             def slider_to_speed(v):
                 return 0.2 + (v - 1) * 0.03 if v <= 10 else 0.5 + (v - 10) * 0.1
 
-            curr_speed = getattr(parent, 'scroll_speed', 1.0)
-            current_val = speed_to_slider(curr_speed)
-
             self.scroll_slider = MDSlider(
-                min=0.99, max=28.01, value=current_val, step=1,
+                min=0.99, max=28.01, value=15, step=1,
                 orientation='vertical', size_hint=(None, 1), width=dp(36),
                 hint=False, padding=0
             )
@@ -786,14 +686,14 @@ class FloatingPanel(MDCard):
                 if self.scroll_slider.value != int_val:
                     self.scroll_slider.value = int_val
                 new_speed = slider_to_speed(int_val)
-                self._sub_val_label.text = f"{new_speed:.1f}x"
+                val_label.text = f"{new_speed:.1f}x"
                 if parent:
                     parent.scroll_speed = new_speed
 
             self.scroll_slider.bind(value=on_scroll_change)
             slider_wrap.add_widget(self.scroll_slider)
 
-        center_box.add_widget(slider_wrap)
+        slider_container.add_widget(slider_wrap)
 
         minus_label = MDLabel(
             text="−",
@@ -807,54 +707,101 @@ class FloatingPanel(MDCard):
             bold=True,
             font_size=sp(15)
         )
-
         minus_label.bind(size=minus_label.setter('text_size'))
-        center_box.add_widget(minus_label)
+        slider_container.add_widget(minus_label)
 
-        slider_container.add_widget(center_box)
-        self.content.add_widget(slider_container)
-        self._add_divider(div_color)
+        container.add_widget(slider_container)
 
-        # 4. Внизу во всех режимах остаётся единая кнопка Принять (check)
+        self._add_divider_to(container, type_str)
+
         menu_slot_height = (self.FIXED_HEIGHT - dp(16) - dp(1.2) * 4) / 5
         back_btn = PanelIcon(
             icon="check",
-            on_click=lambda: self._build_menu(),
+            on_click=lambda: self._switch_mode('menu'),
             action_name='back',
             asset_name=ASSET_OK_PNG,
             size_hint=(1, None),
             height=menu_slot_height
         )
-        self.content.add_widget(back_btn)
+        self._mode_items[type_str].append(back_btn)
+        container.add_widget(back_btn)
 
-        self.update_theme_colors()
+    def _sync_mode_values(self, mode_name):
+        parent = self.parent_screen
+        if not parent:
+            return
+        if mode_name == 'chords':
+            parent_mode = getattr(parent, 'display_mode', 'finger')
+            self.mode_item.action_name = 'mode_notes' if parent_mode == 'notes' else 'mode'
+            self.mode_item.set_icon("music-note" if parent_mode == "notes" else "gesture-tap")
+            is_eye = getattr(parent, 'eye_active', False)
+            self.eye_item.action_name = 'eye' if is_eye else 'eye_off'
+            self.eye_item.set_icon("eye" if is_eye else "eye-off")
+            new_scale = getattr(parent, 'griff_scale', 0.8)
+            self.griff_zoom_item.set_icon("magnify" if new_scale == 0.8 else "magnify-plus")
+        elif mode_name == 'tonality':
+            cur_ton = getattr(parent, 'current_tonality', 0)
+            self.ton_slider.value = int(round(cur_ton * 2))
+            self._slider_labels['tonality'].text = "0" if cur_ton == 0 else f"{cur_ton:+g}"
+        elif mode_name == 'font':
+            curr_size = getattr(parent, 'current_font_size', self._font_sizes[3])
+            idx = min(range(len(self._font_sizes)), key=lambda i: abs(self._font_sizes[i] - curr_size))
+            self.font_slider.value = idx
+            mult = self._font_multipliers[idx]
+            self._slider_labels['font'].text = f"{int(mult)}x" if mult == int(mult) else f"{mult:.1f}x"
+        elif mode_name == 'scroll':
+            curr_speed = getattr(parent, 'scroll_speed', 1.0)
+            idx = int(1 + (curr_speed - 0.2) / 0.03) if curr_speed <= 0.5 else int(10 + (curr_speed - 0.5) / 0.1)
+            self.scroll_slider.value = max(1, min(28, idx))
+            self._slider_labels['scroll'].text = f"{curr_speed:.1f}x"
+
+    def _on_menu_item(self, action):
+        if action == 'chords':
+            self._switch_mode('chords')
+        elif action == 'variant':
+            if self.parent_screen and hasattr(self.parent_screen, '_next_chord_variant'):
+                self.parent_screen._next_chord_variant()
+        elif action == 'mode':
+            if self.parent_screen and hasattr(self.parent_screen, '_toggle_display_mode'):
+                self.parent_screen._toggle_display_mode()
+            self._sync_mode_values('chords')
+            self.update_theme_colors()
+        elif action == 'eye':
+            if self.parent_screen and hasattr(self.parent_screen, '_toggle_eye'):
+                self.parent_screen._toggle_eye()
+            self._sync_mode_values('chords')
+            self.update_theme_colors()
+            if getattr(self.parent_screen, 'eye_active', False) and not getattr(self.parent_screen, 'is_chords_mode', False):
+                self.parent_screen.show_chords_section()
+        elif action == 'zoom':
+            if self.parent_screen and hasattr(self.parent_screen, '_toggle_griff_zoom'):
+                self.parent_screen._toggle_griff_zoom()
+            self._sync_mode_values('chords')
+        elif action in ('tonality', 'scroll', 'font'):
+            self._switch_mode(action)
+        elif action == 'tabs':
+            if self.parent_screen:
+                self.parent_screen._next_song_tab()
 
     def _on_scroll_toggle_click(self):
         parent = self.parent_screen
         if not parent:
             return
         theme_id = settings_manager.theme
-        is_scrolling = getattr(parent, 'is_scrolling', False)
-
-        if is_scrolling:
-            # Нажали Stop: останавливаем прокрутку (и сбрасываем, если нужно, или просто ставим на паузу)
+        if getattr(parent, 'is_scrolling', False):
             if hasattr(parent, 'stop_scroll'):
                 parent.stop_scroll()
-            if hasattr(self, 'scroll_toggle_item') and self.scroll_toggle_item:
-                self.scroll_toggle_item.action_name = 'play'
-                self.scroll_toggle_item.set_icon("play")
-                self.scroll_toggle_item.set_color(DetailColors.get_icon_color(theme_id, 'play'))
+            self.scroll_toggle_item.action_name = 'play'
+            self.scroll_toggle_item.set_icon("play")
+            self.scroll_toggle_item.set_color(DetailColors.get_icon_color(theme_id, 'play'))
         else:
-            # Нажали Play: запускаем автопрокрутку
             if hasattr(parent, 'toggle_scroll'):
                 parent.toggle_scroll()
             elif hasattr(parent, 'start_scroll'):
                 parent.start_scroll()
-            if hasattr(self, 'scroll_toggle_item') and self.scroll_toggle_item:
-                self.scroll_toggle_item.action_name = 'stop'
-                self.scroll_toggle_item.set_icon("stop")
-                self.scroll_toggle_item.set_color(DetailColors.get_icon_color(theme_id, 'stop'))
-
+            self.scroll_toggle_item.action_name = 'stop'
+            self.scroll_toggle_item.set_icon("stop")
+            self.scroll_toggle_item.set_color(DetailColors.get_icon_color(theme_id, 'stop'))
 
     def _style_slider(self, slider, accent):
         slider.ripple_scale = 0
@@ -869,81 +816,39 @@ class FloatingPanel(MDCard):
         except Exception:
             pass
 
-    def _get_font_multiplier(self, font_size):
-        parent = self.parent_screen
-        if parent is None:
-            return f"{int(font_size)}px"
-        std = getattr(parent, 'STANDARD_FONT_SIZE', None)
-        if std is None:
-            return f"{int(font_size)}px"
-        ratio = round(font_size / std * 10) / 10
-        return f"{int(ratio)}x" if ratio == int(ratio) else f"{ratio:.1f}x"
-
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        panel_bg = DetailColors.get_panel_bg(theme_id)
-        panel_line = DetailColors.get_panel_line(theme_id)
+        accent = DetailColors.get_accent(theme_id)
         div_color = DetailColors.get_divider(theme_id)
 
-        self.bg_color_inst.rgba = panel_bg
-        self.line_color_inst.rgba = panel_line
+        self.bg_color_inst.rgba = DetailColors.get_panel_bg(theme_id)
+        self.line_color_inst.rgba = DetailColors.get_panel_line(theme_id)
 
-        for child in self.content.children:
-            if hasattr(child, '_inner_line'):
-                child._inner_line.color = div_color
+        for divs in self._mode_dividers.values():
+            for d in divs:
+                d.color = div_color
 
-        if self.mode == 'menu':
-            has_multiple_tabs = len(getattr(self.parent_screen, 'tabs', [])) > 1
-            for item in self.items:
-                if item.action_name in ('tabs', 'tabs_disabled'):
-                    item.action_name = 'tabs' if has_multiple_tabs else 'tabs_disabled'
-                color = DetailColors.get_icon_color(theme_id, item.action_name)
-                item.set_color(color)
+        has_multiple_tabs = len(getattr(self.parent_screen, 'tabs', [])) > 1
+        for item in self._mode_items['menu']:
+            if item.action_name in ('tabs', 'tabs_disabled'):
+                item.action_name = 'tabs' if has_multiple_tabs else 'tabs_disabled'
+            item.set_color(DetailColors.get_icon_color(theme_id, item.action_name))
 
-        elif self.mode == 'chords':
-            if hasattr(self, 'variant_item'):
-                self.variant_item.set_color(DetailColors.get_icon_color(theme_id, 'variant'))
-            if hasattr(self, 'mode_item'):
-                parent_mode = getattr(self.parent_screen, 'display_mode', 'finger')
-                mode_key = 'mode_notes' if parent_mode == 'notes' else 'mode'
-                self.mode_item.action_name = mode_key
-                self.mode_item.set_icon("music-note" if parent_mode == "notes" else "gesture-tap")
-                self.mode_item.set_color(DetailColors.get_icon_color(theme_id, mode_key))
-            if hasattr(self, 'griff_zoom_item'):
-                self.griff_zoom_item.set_color(DetailColors.get_icon_color(theme_id, 'zoom'))
-            if hasattr(self, 'eye_item'):
-                is_active = getattr(self.parent_screen, 'eye_active', False)
-                eye_key = 'eye' if is_active else 'eye_off'
-                self.eye_item.action_name = eye_key
-                self.eye_item.set_icon("eye" if is_active else "eye-off")
-                self.eye_item.set_color(DetailColors.get_icon_color(theme_id, eye_key))
-            for child in self.content.children:
-                if isinstance(child, PanelIcon) and getattr(child, 'action_name', '') == 'back':
-                    child.set_color(DetailColors.get_icon_color(theme_id, 'back'))
-
-        elif self.mode in ['font', 'scroll', 'tonality']:
-            if hasattr(self, 'scroll_toggle_item') and self.scroll_toggle_item and self.scroll_toggle_item.parent:
-                is_scrolling = getattr(self.parent_screen, 'is_scrolling', False)
-                key = 'stop' if is_scrolling else 'play'
+        for m in ('chords', 'tonality', 'scroll', 'font'):
+            if m == 'scroll' and hasattr(self, 'scroll_toggle_item'):
+                is_scr = getattr(self.parent_screen, 'is_scrolling', False)
+                key = 'stop' if is_scr else 'play'
                 self.scroll_toggle_item.action_name = key
                 self.scroll_toggle_item.set_icon(key)
-            for child in self.content.children:
-                if isinstance(child, PanelIcon):
-                    color = DetailColors.get_icon_color(theme_id, getattr(child, 'action_name', ''))
-                    child.set_color(color)
-                elif isinstance(child, MDBoxLayout):
-                    for sub in child.children:
-                        if isinstance(sub, MDIconButton):
-                            sub.icon_color = DetailColors.get_accent(theme_id)
-                        elif isinstance(sub, MDSlider):
-                            sub.thumb_color_active = DetailColors.get_accent(theme_id)
-                            sub.thumb_color_inactive = DetailColors.get_accent(theme_id)
-                            sub.thumb_color_disabled = DetailColors.get_accent(theme_id)
-                            sub.track_color_active = DetailColors.get_accent(theme_id)[:3] + [0.6]
-                            sub.color = DetailColors.get_accent(theme_id)
-                        elif isinstance(sub, PanelIcon):
-                            color = DetailColors.get_icon_color(theme_id, getattr(sub, 'action_name', ''))
-                            sub.set_color(color)
+            for item in self._mode_items[m]:
+                item.set_color(DetailColors.get_icon_color(theme_id, item.action_name))
+
+        for lbl in self._slider_labels.values():
+            lbl.text_color = accent
+
+        for sl_name in ('ton_slider', 'font_slider', 'scroll_slider'):
+            if hasattr(self, sl_name):
+                self._style_slider(getattr(self, sl_name), accent)
 
 
 # ============================================================
@@ -1422,12 +1327,6 @@ class FavoriteDetailScreen(BaseScreen):
             missing_pairs, on_success=_on_success, on_error=_on_error
         )
 
-        def _on_error(err):
-            logger.warning(f"FavoriteDetail: batch failed: {err}")
-
-        self._chords_client.get_chords_batch(
-            missing_pairs, on_success=_on_success, on_error=_on_error
-        )
 
     def _fetch_synonym_fallback(self, requested_name: str):
         """Универсальный дозапрос аппликатуры по синониму (Eb -> D#, H7 -> B7, A5min7 -> Aadd7)."""
