@@ -2050,3 +2050,5 @@ class FavoriteDetailScreen(BaseScreen):
 
             Clock.schedule_once(_init_panel, 0.1)
 
+
+

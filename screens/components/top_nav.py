@@ -167,6 +167,26 @@ class TopNav(MDCard):
         if self.screen_title and self.screen_title in self.container.children:
             self._adjust_title_width()
 
+
+    def force_update_title(self, title_text: str, show_back: bool = False):
+        """Принудительно обновляет заголовок и левую кнопку навигации."""
+        if self.logo_widget in self.container.children:
+            self.container.remove_widget(self.logo_widget)
+        self.restore_default_title()
+        self.screen_title.text = title_text
+        self._adjust_title_width()
+
+        if self.back_btn in self.container.children:
+            self.container.remove_widget(self.back_btn)
+        if self.settings_btn in self.container.children:
+            self.container.remove_widget(self.settings_btn)
+
+        if show_back:
+            self.container.add_widget(self.back_btn)
+        else:
+            self.container.add_widget(self.settings_btn)
+
+
     def load_logo_texture(self):
         if not HAS_ASSETS:
             logger.warning("⚠️ Модуль data недоступен, логотип будет текстовым")
@@ -486,7 +506,7 @@ class TopNav(MDCard):
         if hasattr(app, 'sidebar') and app.sidebar:
             app.sidebar.toggle()
 
-    def _on_back_click(self, instance):
+    def _on_back_click(self, instance=None):
         if self._custom_back_callback:
             self._custom_back_callback()
             return
@@ -498,10 +518,12 @@ class TopNav(MDCard):
             if hasattr(screen, 'go_back') and callable(screen.go_back):
                 screen.go_back()
                 return
-
         prev = previous_screen_state.get_previous()
         if prev and self.sm.has_screen(prev):
             self.sm.current = prev
+            return
+        if current == 'favorite_detail' and self.sm.has_screen('favorites'):
+            self.sm.current = 'favorites'
             return
         self.sm.current = 'home'
 
