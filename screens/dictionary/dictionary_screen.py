@@ -1339,13 +1339,16 @@ class DictionaryScreen(BaseScreen):
         self._load_batch(letter=letter, batch_offset=0, target_page=0, token=my_token)
 
     def on_term_selected(self, term_id, term_name):
+        if not term_id:
+            return
         self.save_current_state()
-        # ✅ Прямой вызов previous_screen_state
         previous_screen_state.set_previous('dictionary')
         if self.manager and self.manager.has_screen('term_detail'):
             scr = self.manager.get_screen('term_detail')
-            scr.set_term(term_id, previous_screen='dictionary')
+            if hasattr(scr, 'prepare_clean_screen'):
+                scr.prepare_clean_screen(term_id, term_name, previous_screen='dictionary')
             self.manager.current = 'term_detail'
+            Clock.schedule_once(lambda dt: scr.set_term(term_id, previous_screen='dictionary'), 0.05)
 
     def on_letter_press(self, letter):
         self._load_token += 1

@@ -1,27 +1,35 @@
 # screens/term_detail_screen.py
 """
 Экран определения термина.
-Загружает данные с сервера по ID, в стиле song_detail_screen.
+- Без верхней панели настроек (текст до TopNav).
+- Справа в TopNav: домик + шестерёнка, открывающая боковую шкалу масштаба текста (0.7x–1.6x) с галочкой.
+- Кэширование открытых терминов через term_detail_state и мгновенная очистка экрана при переходе.
 """
-from kivy.metrics import dp, sp
-from kivy.graphics import Color, Rectangle
-from kivy.core.image import Image as CoreImage
-from kivy.clock import Clock
+import math
 from io import BytesIO
+from kivy.metrics import dp, sp
+from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
+from kivy.core.image import Image as CoreImage
+from kivy.core.window import Window
+from kivy.clock import Clock
+from kivy.animation import Animation
 from kivy.utils import platform
-
-from kivymd.uix.label import MDLabel
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton
-from kivymd.app import MDApp
 from kivy.uix.widget import Widget
+from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.image import Image as KivyImage
+
+from kivymd.uix.label import MDLabel, MDIcon
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.card import MDCard, MDSeparator
+from kivymd.uix.slider import MDSlider
 from kivymd.uix.scrollview import MDScrollView
+from kivymd.app import MDApp
 
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
 from state.settings_state import settings_state as settings_manager
+from state.term_detail_state import term_detail_state
 from utils.localization import get_text
 from api.client import api
 from utils.notifications import notify
@@ -31,14 +39,28 @@ logger = screen_logger('TermDetail')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
-
     def load_asset_as_bytes(name):
         return None
+
+ASSET_OK_PNG = "ok_png"
+_OK_TEXTURE = None
+
+
+def _get_ok_texture():
+    global _OK_TEXTURE
+    if _OK_TEXTURE is not None:
+        return _OK_TEXTURE
+    if HAS_ASSETS:
+        try:
+            img_bytes = load_asset_as_bytes(ASSET_OK_PNG)
+            if img_bytes:
+                _OK_TEXTURE = CoreImage(BytesIO(img_bytes), ext="png").texture
+        except Exception as e:
+            logger.error(f"Ошибка загрузки {ASSET_OK_PNG}: {e}")
+    return _OK_TEXTURE
 
 
 class DetailColors:
@@ -48,48 +70,346 @@ class DetailColors:
             return [0.1, 0.55, 0.3, 1]
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 1]
-        else:
-            return [0.46, 0.70, 0.71, 1]
+        return [0.46, 0.70, 0.71, 1]
 
     @staticmethod
     def get_text_primary(theme_id):
-        if theme_id == 'light': return [0.1, 0.1, 0.1, 0.95]
+        if theme_id == 'light':
+            return [0.1, 0.1, 0.1, 0.95]
         return [1, 1, 1, 0.95]
-
-    @staticmethod
-    def get_text_secondary(theme_id):
-        if theme_id == 'light': return [0.4, 0.4, 0.4, 1]
-        return [1, 1, 1, 0.7]
 
     @staticmethod
     def get_panel_bg(theme_id):
         if theme_id == 'light':
-            return [1, 1, 1, 0.9]
+            return [0.95, 0.95, 0.95, 1]
         elif theme_id == 'dark':
-            return [1, 1, 1, 0.08]
-        return [0, 0, 0, 0.06]
+            return [0.13, 0.13, 0.13, 1]
+        return [0.05, 0.17, 0.11, 1]
+
+    @staticmethod
+    def get_panel_line(theme_id):
+        if theme_id == 'light':
+            return [0.1, 0.55, 0.3, 0.5]
+        elif theme_id == 'dark':
+            return [1.0, 0.5, 0.0, 0.5]
+        return [0.46, 0.70, 0.71, 0.4]
 
     @staticmethod
     def get_divider(theme_id):
-        if theme_id == 'light': return [0, 0, 0, 0.1]
-        return [0.5, 0.5, 0.5, 0.3]
+        if theme_id == 'light':
+            return [0.1, 0.55, 0.3, 0.6]
+        elif theme_id == 'dark':
+            return [1.0, 0.5, 0.0, 0.6]
+        return [0.46, 0.70, 0.71, 0.55]
 
 
-class IconActionButton(MDIconButton):
-    def __init__(self, icon_name, on_press_callback=None, icon_color=None, **kwargs):
+class FastPanelIcon(AnchorLayout):
+    def __init__(self, icon, on_click=None, asset_name=None, **kwargs):
+        kwargs.setdefault('size_hint', (1, 1))
         super().__init__(**kwargs)
-        self.on_press_callback = on_press_callback
-        self.size_hint = (1, None)
-        self.height = dp(40)
-        self.theme_icon_color = "Custom"
-        self.icon_color = icon_color if icon_color else [0.5, 0.5, 0.5, 0.9]
-        self.md_bg_color = [0, 0, 0, 0]
-        self.icon = icon_name
-        self.bind(on_release=self._on_press)
+        self.anchor_x = 'center'
+        self.anchor_y = 'center'
+        self.on_click_callback = on_click
+        self.is_image = False
+        self._touch_down_pos = None
 
-    def _on_press(self, instance):
-        if self.on_press_callback:
-            self.on_press_callback()
+        tex = _get_ok_texture() if asset_name == ASSET_OK_PNG else None
+        if tex is not None:
+            self.is_image = True
+            self.icon_widget = KivyImage(
+                texture=tex,
+                size_hint=(None, None),
+                size=(dp(28), dp(28)),
+                color=[1, 1, 1, 1],
+                allow_stretch=True,
+                keep_ratio=True
+            )
+        else:
+            self.icon_widget = MDIcon(
+                icon=icon,
+                size_hint=(None, None),
+                size=(dp(26), dp(26)),
+                font_size=sp(26),
+                theme_text_color="Custom",
+                text_color=[0.25, 0.78, 0.55, 1]
+            )
+        self.add_widget(self.icon_widget)
+
+    def on_touch_down(self, touch):
+        if self.disabled or not self.collide_point(*touch.pos):
+            return False
+        self._touch_down_pos = touch.pos
+        touch.grab(self)
+        return True
+
+    def on_touch_up(self, touch):
+        if touch.grab_current is not self:
+            return False
+        touch.ungrab(self)
+        start_pos = self._touch_down_pos
+        self._touch_down_pos = None
+        if start_pos and self.collide_point(*touch.pos):
+            if abs(touch.x - start_pos[0]) < dp(12) and abs(touch.y - start_pos[1]) < dp(12):
+                if self.on_click_callback:
+                    self.on_click_callback()
+        return True
+
+
+class TermFontPanel(MDCard):
+    """Выезжающая справа панель со шкалой масштаба текста и галочкой подтверждения."""
+    PANEL_WIDTH = dp(55)
+    FIXED_HEIGHT = dp(280)
+
+    def __init__(self, parent_screen=None, **kwargs):
+        super().__init__(**kwargs)
+        self.parent_screen = parent_screen
+        theme_id = settings_manager.theme
+
+        self.size_hint = (None, None)
+        self.width = self.PANEL_WIDTH
+        self.height = self.FIXED_HEIGHT
+        self.md_bg_color = [0, 0, 0, 0]
+        self.radius = [0, 0, 0, 0]
+        self.elevation = 0
+        self.padding = [0, 0, 0, 0]
+
+        with self.canvas.before:
+            self.bg_color_inst = Color(*DetailColors.get_panel_bg(theme_id))
+            self.bg_rect = RoundedRectangle(
+                pos=(self.x, self.y),
+                size=(self.PANEL_WIDTH, self.height),
+                radius=[dp(16), 0, 0, dp(16)]
+            )
+        with self.canvas.after:
+            self.line_color_inst = Color(*DetailColors.get_panel_line(theme_id))
+            self.outline_line = Line(points=[], width=1.5, cap='round', joint='round')
+
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
+        self._visible_x = None
+        self._hidden_x = None
+        self.is_open = False
+        self._anim = None
+
+        self._build_ui()
+        Clock.schedule_once(lambda dt: self._init_position(), 0.2)
+
+    def _build_open_border_points(self):
+        x, y = self.x, self.y
+        w, h = self.PANEL_WIDTH, self.height
+        r = min(dp(16), w / 2, h / 2)
+        segments = 12
+        pts = [x + w, y + h, x + r, y + h]
+        for i in range(1, segments + 1):
+            a = math.pi / 2 + (math.pi / 2) * (i / segments)
+            pts.extend([x + r + r * math.cos(a), y + h - r + r * math.sin(a)])
+        pts.extend([x, y + r])
+        for i in range(1, segments + 1):
+            a = math.pi + (math.pi / 2) * (i / segments)
+            pts.extend([x + r + r * math.cos(a), y + r + r * math.sin(a)])
+        pts.extend([x + w, y])
+        return pts
+
+    def _update_bg(self, *args):
+        self.bg_rect.pos = (self.x, self.y)
+        self.bg_rect.size = (self.PANEL_WIDTH, self.height)
+        self.outline_line.points = self._build_open_border_points()
+
+    def _init_position(self):
+        self._hidden_x = Window.width + dp(4)
+        self._visible_x = Window.width - self.PANEL_WIDTH
+        self.x = self._hidden_x
+        top_offset = layout_config.get_top_padding(include_top_nav=True)
+        nav_bottom = layout_config.get_bottom_nav_total_height()
+        work_h = Window.height - top_offset - nav_bottom
+        self.y = nav_bottom + (work_h - self.height) / 2
+        self.is_open = False
+
+    def toggle(self):
+        if self.is_open:
+            self.hide()
+        else:
+            self.show()
+
+    def show(self):
+        if self._hidden_x is None:
+            self._init_position()
+        self._sync_value()
+        if self.is_open:
+            return
+        self.is_open = True
+        if self._anim:
+            self._anim.cancel(self)
+        self._anim = Animation(x=self._visible_x, duration=0.22, t='out_quad')
+        self._anim.start(self)
+
+    def hide(self):
+        if not self.is_open:
+            return
+        self.is_open = False
+        if self._anim:
+            self._anim.cancel(self)
+        self._anim = Animation(x=self._hidden_x, duration=0.22, t='in_quad')
+        self._anim.start(self)
+
+    def _build_ui(self):
+        parent = self.parent_screen
+        theme_id = settings_manager.theme
+        accent = DetailColors.get_accent(theme_id)
+
+        content = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(None, None),
+            width=self.PANEL_WIDTH,
+            height=self.FIXED_HEIGHT,
+            pos_hint={'right': 1, 'center_y': 0.5},
+            spacing=0,
+            padding=[0, dp(8), 0, dp(8)]
+        )
+
+        header_box = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(26),
+            padding=[0, dp(2), 0, 0]
+        )
+        self.val_label = MDLabel(
+            text="1x",
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=accent,
+            bold=True,
+            size_hint=(1, 1),
+            font_size=sp(16)
+        )
+        header_box.add_widget(self.val_label)
+        content.add_widget(header_box)
+
+        slider_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[0, dp(2), 0, dp(2)],
+            spacing=0
+        )
+
+        plus_label = MDLabel(
+            text="+",
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.3, 0.7, 0.3, 0.9],
+            size_hint=(1, None),
+            height=dp(22),
+            padding=[dp(1), 0, 0, dp(4)],
+            bold=True,
+            font_size=sp(15)
+        )
+        plus_label.bind(size=plus_label.setter('text_size'))
+        slider_container.add_widget(plus_label)
+
+        slider_wrap = AnchorLayout(
+            anchor_x='center',
+            anchor_y='center',
+            size_hint=(1, 1),
+            padding=[dp(4), 0, 0, 0]
+        )
+
+        std_size = getattr(parent, 'STANDARD_FONT_SIZE', 42 if platform == 'android' else 20)
+        self._font_multipliers = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6]
+        self._font_sizes = [int(round(std_size * m)) for m in self._font_multipliers]
+        total_steps = len(self._font_sizes) - 1
+
+        self.font_slider = MDSlider(
+            min=-0.01, max=float(total_steps + 0.01), value=3, step=1,
+            orientation='vertical', size_hint=(None, 1), width=dp(36),
+            hint=False, padding=0
+        )
+        self._style_slider(self.font_slider, accent)
+
+        def on_font_change(instance, value):
+            int_val = max(0, min(total_steps, int(round(value))))
+            if self.font_slider.value != int_val:
+                self.font_slider.value = int_val
+            new_size = self._font_sizes[int_val]
+            mult = self._font_multipliers[int_val]
+            self.val_label.text = f"{int(mult)}x" if mult == int(mult) else f"{mult:.1f}x"
+            if parent and getattr(parent, 'current_font_size', 0) != new_size:
+                parent.apply_font_size(new_size)
+
+        self.font_slider.bind(value=on_font_change)
+        slider_wrap.add_widget(self.font_slider)
+        slider_container.add_widget(slider_wrap)
+
+        minus_label = MDLabel(
+            text="−",
+            halign="center",
+            valign="middle",
+            theme_text_color="Custom",
+            text_color=[0.8, 0.3, 0.3, 0.9],
+            size_hint=(1, None),
+            height=dp(18),
+            padding=[dp(0.5), 0, 0, 0],
+            bold=True,
+            font_size=sp(15)
+        )
+        minus_label.bind(size=minus_label.setter('text_size'))
+        slider_container.add_widget(minus_label)
+
+        content.add_widget(slider_container)
+
+        div = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=dp(1.2),
+            padding=[dp(8), 0, dp(8), 0]
+        )
+        self.divider = MDSeparator(color=DetailColors.get_divider(theme_id))
+        div.add_widget(self.divider)
+        content.add_widget(div)
+
+        menu_slot_height = (self.FIXED_HEIGHT - dp(16) - dp(1.2) * 4) / 5
+        back_btn = FastPanelIcon(
+            icon="check",
+            on_click=self.hide,
+            asset_name=ASSET_OK_PNG,
+            size_hint=(1, None),
+            height=menu_slot_height
+        )
+        content.add_widget(back_btn)
+
+        self.add_widget(content)
+
+    def _sync_value(self):
+        if not self.parent_screen:
+            return
+        curr_size = getattr(self.parent_screen, 'current_font_size', self._font_sizes[3])
+        idx = min(range(len(self._font_sizes)), key=lambda i: abs(self._font_sizes[i] - curr_size))
+        self.font_slider.value = idx
+        mult = self._font_multipliers[idx]
+        self.val_label.text = f"{int(mult)}x" if mult == int(mult) else f"{mult:.1f}x"
+
+    def _style_slider(self, slider, accent):
+        slider.ripple_scale = 0
+        slider.thumb_color_active = accent
+        slider.thumb_color_inactive = accent
+        slider.thumb_color_disabled = accent
+        slider.track_color_active = accent[:3] + [0.5]
+        slider.track_color_inactive = [1, 1, 1, 0.3]
+        slider.color = accent
+        try:
+            slider.cursor_size = (dp(20), dp(20))
+        except Exception:
+            pass
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        accent = DetailColors.get_accent(theme_id)
+        self.bg_color_inst.rgba = DetailColors.get_panel_bg(theme_id)
+        self.line_color_inst.rgba = DetailColors.get_panel_line(theme_id)
+        self.divider.color = DetailColors.get_divider(theme_id)
+        self.val_label.text_color = accent
+        self._style_slider(self.font_slider, accent)
 
 
 class TermDetailScreen(BaseScreen):
@@ -97,7 +417,6 @@ class TermDetailScreen(BaseScreen):
         super().__init__(**kwargs)
         self.name = 'term_detail'
         self._manage_padding_manually = True
-
         self.bg_color_inst = None
         self.bg_rect = None
         self.texture = None
@@ -106,18 +425,9 @@ class TermDetailScreen(BaseScreen):
         self.previous_screen = 'dictionary'
         self.is_loading = False
         self.loading_spinner = None
-
-        if platform == 'android':
-            self.STANDARD_FONT_SIZE = 42
-            self._font_sizes = [30, 34, 38, 42, 46, 50, 54, 58, 60]
-        else:
-            self.STANDARD_FONT_SIZE = 20
-            self._font_sizes = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
+        self.STANDARD_FONT_SIZE = 42 if platform == 'android' else 20
         self.current_font_size = self.STANDARD_FONT_SIZE
-
-        self.panel_container = None
-        self.current_panel_type = 'main'
-
+        self._floating_panel = None
         self.load_background()
         self.init_ui()
         logger.info('Экран термина создан')
@@ -132,8 +442,7 @@ class TermDetailScreen(BaseScreen):
                 for name in ["background_jpg", "background", "bg", "BACKGROUND_JPG"]:
                     bg_data = load_asset_as_bytes(name)
                     if bg_data:
-                        img = CoreImage(BytesIO(bg_data), ext="jpg")
-                        self.texture = img.texture
+                        self.texture = CoreImage(BytesIO(bg_data), ext="jpg").texture
                         break
         except Exception as e:
             logger.error(f'Ошибка загрузки фона: {e}')
@@ -145,7 +454,8 @@ class TermDetailScreen(BaseScreen):
             self.bg_rect.size = self.size
 
     def update_screen_background(self):
-        if not hasattr(self, 'bg_color_inst') or not hasattr(self, 'bg_rect'): return
+        if not hasattr(self, 'bg_color_inst') or not hasattr(self, 'bg_rect'):
+            return
         theme_id = settings_manager.theme
         if theme_id == 'green':
             if self.texture:
@@ -166,73 +476,89 @@ class TermDetailScreen(BaseScreen):
         theme_id = settings_manager.theme
         text_p = DetailColors.get_text_primary(theme_id)
         div_color = DetailColors.get_divider(theme_id)
-        panel_bg = DetailColors.get_panel_bg(theme_id)
-
-        if hasattr(self, 'content_label'): self.content_label.text_color = text_p
-        if hasattr(self, 'term_title_label'): self.term_title_label.text_color = text_p
-        for div in (getattr(self, 'top_divider', None), getattr(self, 'panel_divider', None),
-                    getattr(self, 'bottom_divider', None)):
-            if div: div.md_bg_color = div_color
-        if self.panel_container: self.panel_container.md_bg_color = panel_bg
-        self._create_main_panel()
+        if hasattr(self, 'content_label'):
+            self.content_label.text_color = text_p
+        if hasattr(self, 'term_title_label'):
+            self.term_title_label.text_color = text_p
+        for div in (getattr(self, 'top_divider', None), getattr(self, 'bottom_divider', None)):
+            if div:
+                div.md_bg_color = div_color
+        if self._floating_panel:
+            self._floating_panel.update_theme_colors()
 
     def update_language(self):
         self._update_top_nav()
-
-    def _toggle_theme(self, *args):
-        from state.settings_state import settings_state
-        order = ['green', 'light', 'dark']
-        cur = settings_state.theme
-        try:
-            idx = order.index(cur)
-        except ValueError:
-            idx = 0
-        new_theme = order[(idx + 1) % len(order)]
-        settings_state.set_theme(new_theme)
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'apply_theme'):
-            app.apply_theme(new_theme)
-        else:
-            self.update_theme_colors()
-        self._applied_theme_version = settings_state.theme_version
 
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1))
         top_padding_for_nav = layout_config.get_top_padding(include_top_nav=True)
         bottom_padding_for_card = layout_config.get_bottom_padding()
 
-        card_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1), padding=[0, top_padding_for_nav, 0, 0])
+        card_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[0, top_padding_for_nav, 0, 0]
+        )
 
-        self.term_card = MDCard(orientation='vertical', size_hint=(1, 1), padding=[0, 0, 0, bottom_padding_for_card],
-                                spacing=0, radius=[0, 0, 0, 0], md_bg_color=[0, 0, 0, 0], elevation=0)
+        self.term_card = MDCard(
+            orientation='vertical',
+            size_hint=(1, 1),
+            padding=[0, 0, 0, bottom_padding_for_card],
+            spacing=0,
+            radius=[0, 0, 0, 0],
+            md_bg_color=[0, 0, 0, 0],
+            elevation=0
+        )
 
         self.top_divider = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(2))
         self.term_card.add_widget(self.top_divider)
 
-        self.panel_container = MDCard(orientation='vertical', size_hint=(1, None), height=dp(52),
-                                      elevation=0, radius=[0, 0, 0, 0], padding=[0, 0, 0, 0], spacing=0)
-        self.term_card.add_widget(self.panel_container)
+        self.content_scroll = MDScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_width=3,
+            bar_color=[0.5, 0.5, 0.5, 0.3],
+            bar_inactive_color=[0.5, 0.5, 0.5, 0.1]
+        )
 
-        self.panel_divider = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(2))
-        self.term_card.add_widget(self.panel_divider)
+        self._text_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            spacing=dp(6),
+            padding=[dp(16), dp(12), dp(16), dp(8)],
+            adaptive_height=True,
+            md_bg_color=[0, 0, 0, 0]
+        )
 
-        self.content_scroll = MDScrollView(size_hint=(1, 1), do_scroll_x=False, bar_width=3,
-                                           bar_color=[0.5, 0.5, 0.5, 0.3], bar_inactive_color=[0.5, 0.5, 0.5, 0.1])
-
-        self._text_container = MDBoxLayout(orientation='vertical', size_hint_y=None, spacing=4,
-                                           padding=[dp(16), dp(16), dp(16), dp(8)],
-                                           adaptive_height=True, md_bg_color=[0, 0, 0, 0])
-
-        self.term_title_label = MDLabel(text="", font_size=self.current_font_size + dp(6), size_hint_y=None,
-                                        height=dp(50),
-                                        theme_text_color="Custom", bold=True, valign="middle", halign="center",
-                                        shorten=False)
+        self.term_title_label = MDLabel(
+            text="",
+            font_size=self.current_font_size + dp(6),
+            size_hint_y=None,
+            height=dp(46),
+            theme_text_color="Custom",
+            bold=True,
+            valign="middle",
+            halign="center",
+            shorten=False
+        )
+        self.term_title_label.bind(
+            width=lambda inst, w: setattr(inst, 'text_size', (w, None))
+        )
         self._text_container.add_widget(self.term_title_label)
 
-        self.content_label = MDLabel(text="", font_size=self.current_font_size, size_hint_y=None,
-                                     theme_text_color="Custom",
-                                     valign="top", halign="left", line_height=1.6)
-        self.content_label.bind(texture_size=self._update_content_height)
+        self.content_label = MDLabel(
+            text="",
+            font_size=self.current_font_size,
+            size_hint_y=None,
+            theme_text_color="Custom",
+            valign="top",
+            halign="left",
+            line_height=1.6
+        )
+        self.content_label.bind(
+            width=lambda inst, w: setattr(inst, 'text_size', (w, None)),
+            texture_size=self._update_content_height
+        )
         self._text_container.add_widget(self.content_label)
 
         self.content_scroll.add_widget(self._text_container)
@@ -245,96 +571,16 @@ class TermDetailScreen(BaseScreen):
         main_container.add_widget(card_container)
         self.add_widget(main_container)
 
-        self._create_main_panel()
-        Clock.schedule_once(lambda dt: self.update_theme_colors(), 0.2)
-        logger.info("TermDetailScreen: init_ui completed")
+        self._floating_panel = TermFontPanel(parent_screen=self)
+        self.add_widget(self._floating_panel)
+        Clock.schedule_once(lambda dt: self.update_theme_colors(), 0.1)
 
-    def _create_main_panel(self):
-        if not self.panel_container: return
-        self.panel_container.clear_widgets()
-        theme_id = settings_manager.theme
-        accent = DetailColors.get_accent(theme_id)
+    def toggle_settings_panel(self):
+        if self._floating_panel:
+            self._floating_panel.toggle()
 
-        panel = MDBoxLayout(orientation='horizontal', size_hint=(1, 1), padding=[dp(4), dp(2), dp(4), dp(2)],
-                            spacing=dp(2))
-        center_container = MDBoxLayout(orientation='vertical', size_hint_x=1, spacing=0)
-        from kivymd.uix.slider import MDSlider
-
-        total_steps = len(self._font_sizes) - 1
-        current_slider_value = self._size_to_slider(self.current_font_size)
-
-        top_row = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(14), spacing=0)
-        top_row.add_widget(MDLabel(text="", size_hint_x=None, width=dp(2)))
-        self.font_value_label = MDLabel(text=self._get_font_multiplier(self.current_font_size), font_size=sp(10),
-                                        halign="center", valign="bottom", size_hint_x=1, theme_text_color="Custom",
-                                        text_color=accent, bold=True)
-        top_row.add_widget(self.font_value_label)
-        top_row.add_widget(MDLabel(text="", size_hint_x=None, width=dp(2)))
-
-        slider_container = MDBoxLayout(orientation='horizontal', size_hint_x=1, size_hint_y=None, height=dp(28),
-                                       padding=[dp(2), 0, dp(2), 0])
-        self.font_slider = MDSlider(min=-0.01, max=float(total_steps + 0.01), value=current_slider_value, step=1,
-                                    size_hint_x=1, size_hint_y=None, height=dp(28), hint=False)
-        self.font_slider.ripple_scale = 0
-        self.font_slider.thumb_color_active = accent
-        self.font_slider.thumb_color_inactive = accent
-        self.font_slider.thumb_color_disabled = accent
-        self.font_slider.track_color_active = accent[:3] + [0.6]
-        self.font_slider.track_color_inactive = [1, 1, 1, 0.3]
-        self.font_slider.color = accent
-
-        def on_slider_change(instance, value):
-            int_value = max(0, min(total_steps, int(round(value))))
-            if self.font_slider.value != int_value: self.font_slider.value = int_value
-            new_size = self._slider_to_size(int_value)
-            if self.current_font_size != new_size:
-                self.current_font_size = new_size
-                self.font_value_label.text = self._get_font_multiplier(new_size)
-                if hasattr(self, 'term_title_label'): self.term_title_label.font_size = self.current_font_size + dp(6)
-                if hasattr(self, 'content_label'):
-                    self.content_label.font_size = self.current_font_size
-                    self._update_content_height()
-                for delay in [0.0, 0.05, 0.1, 0.2]: Clock.schedule_once(
-                    lambda dt: setattr(self.content_scroll, 'scroll_y', 1.0), delay)
-
-        self.font_slider.bind(value=on_slider_change)
-        slider_container.add_widget(self.font_slider)
-        center_container.add_widget(top_row)
-        center_container.add_widget(slider_container)
-
-        self.theme_btn = IconActionButton("weather-sunny", self._toggle_theme, accent)
-        self.theme_btn.size_hint = (None, None)
-        self.theme_btn.size = (dp(36), dp(36))
-
-        panel.add_widget(center_container)
-        panel.add_widget(self.theme_btn)
-        self.panel_container.add_widget(panel)
-        self.current_panel_type = 'main'
-        Clock.schedule_once(lambda dt: self._fix_slider_thumb(self.font_slider), 0.1)
-
-    def _size_to_slider(self, size):
-        try:
-            return self._font_sizes.index(size)
-        except ValueError:
-            return self._font_sizes.index(min(self._font_sizes, key=lambda x: abs(x - size)))
-
-    def _slider_to_size(self, slider_value):
-        idx = max(0, min(len(self._font_sizes) - 1, int(round(slider_value))))
-        return self._font_sizes[idx]
-
-    def _fix_slider_thumb(self, slider):
-        if slider:
-            accent = DetailColors.get_accent(settings_manager.theme)
-            slider.thumb_color_active = accent
-            slider.thumb_color_inactive = accent
-            slider.thumb_color_disabled = accent
-            current = slider.value
-            slider.value = current + 0.01
-            Clock.schedule_once(lambda dt: setattr(slider, 'value', current), 0.01)
-
-    def _get_font_multiplier(self, font_size):
-        ratio = round(font_size / self.STANDARD_FONT_SIZE * 10) / 10
-        return f"{int(ratio)}x" if ratio == int(ratio) else f"{ratio:.1f}x"
+    def toggle_actions_panel(self):
+        self.toggle_settings_panel()
 
     def _update_content_height(self, *args):
         if not self.content_label.texture:
@@ -344,30 +590,51 @@ class TermDetailScreen(BaseScreen):
         title_height = self.term_title_label.texture_size[1] if self.term_title_label.text else dp(20)
         self.content_label.height = max(dp(50), text_height + dp(8))
         self.term_title_label.height = max(dp(40), title_height + dp(8))
-        total_height = self.term_title_label.height + self.content_label.height + dp(16)
-        if self.content_label.parent:
-            self.content_label.parent.height = total_height
-            if hasattr(self.content_label.parent,
-                       'minimum_height'): self.content_label.parent.minimum_height = total_height
+        total_height = self.term_title_label.height + self.content_label.height + dp(20)
+        if self._text_container:
+            self._text_container.height = total_height
+            self._text_container.minimum_height = total_height
 
-    def _reset_to_defaults(self):
+    def prepare_clean_screen(self, term_id, term_name="", previous_screen='dictionary'):
+        """Мгновенно очищает старый термин до начала анимации перехода на экран."""
+        self.term_id = term_id
+        self.term_name = term_name
+        self.previous_screen = previous_screen
         self.current_font_size = self.STANDARD_FONT_SIZE
-        if hasattr(self, 'term_title_label'): self.term_title_label.font_size = self.current_font_size + dp(6)
+        if hasattr(self, 'term_title_label'):
+            self.term_title_label.text = ""
+            self.term_title_label.font_size = self.current_font_size + dp(6)
         if hasattr(self, 'content_label'):
+            self.content_label.text = ""
             self.content_label.font_size = self.current_font_size
-            self._update_content_height()
-        if hasattr(self, 'font_value_label'): self.font_value_label.text = self._get_font_multiplier(
-            self.current_font_size)
-        if hasattr(self, 'font_slider'): self.font_slider.value = self._size_to_slider(self.current_font_size)
-        if hasattr(self, 'term_title_label'): self.term_title_label.text = ""
+            self.content_label.height = dp(50)
+        if hasattr(self, 'content_scroll'):
+            self.content_scroll.scroll_y = 1.0
+        if self._floating_panel:
+            self._floating_panel.hide()
+        self._update_top_nav()
+        self.show_loading()
 
     def set_term(self, term_id, previous_screen='dictionary'):
-        self._reset_to_defaults()
         self.term_id = term_id
         self.previous_screen = previous_screen
         self.load_term_data()
 
     def load_term_data(self):
+        saved = term_detail_state.get_term_state(self.term_id)
+        if saved and saved.get('description') is not None:
+            self.term_name = saved.get('name', get_text('term_not_found'))
+            description = saved.get('description', '')
+            saved_font = saved.get('font_size', self.STANDARD_FONT_SIZE)
+            self.apply_font_size(saved_font)
+            self.term_title_label.text = self.term_name.capitalize() if self.term_name else get_text('dictionary')
+            self.content_label.text = description
+            self._update_content_height()
+            self._update_top_nav()
+            self.hide_loading()
+            saved_scroll = saved.get('scroll_y', 1.0)
+            Clock.schedule_once(lambda dt: setattr(self.content_scroll, 'scroll_y', saved_scroll), 0.05)
+            return
         self.show_loading()
         api.get_term(
             term_id=self.term_id,
@@ -375,31 +642,43 @@ class TermDetailScreen(BaseScreen):
             on_failure=self.on_load_failed
         )
 
+    def apply_font_size(self, new_size):
+        """Изменяет размер шрифта заголовка и описания термина с пересчётом высоты."""
+        self.current_font_size = new_size
+        if hasattr(self, 'term_title_label') and self.term_title_label:
+            self.term_title_label.font_size = new_size + dp(6)
+        if hasattr(self, 'content_label') and self.content_label:
+            self.content_label.font_size = new_size
+        self._update_content_height()
+
+
     def show_loading(self):
-        if self.is_loading: return
+        if self.is_loading:
+            return
         self.is_loading = True
-        self.loading_spinner = LoadingSpinner()
-        self.add_widget(self.loading_spinner)
-        self.loading_spinner.start_animation()
+        spinner = LoadingSpinner(text=get_text('loading', 'Загрузка'))
+        spinner.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.loading_spinner = spinner
+        self.add_widget(spinner)
+        spinner.start_animation()
 
     def hide_loading(self):
         self.is_loading = False
         if self.loading_spinner:
-            self.loading_spinner.stop_animation()
-            self.remove_widget(self.loading_spinner)
+            if hasattr(self.loading_spinner, 'stop_animation'):
+                self.loading_spinner.stop_animation()
+            if self.loading_spinner.parent:
+                self.remove_widget(self.loading_spinner)
             self.loading_spinner = None
 
     def on_term_loaded(self, data):
         self.term_name = data.get('name', get_text('term_not_found'))
         description = data.get('description', '')
-
-        formatted_title = self.term_name.capitalize() if self.term_name else get_text('dictionary')
-        self.term_title_label.text = formatted_title
+        self.term_title_label.text = self.term_name.capitalize() if self.term_name else get_text('dictionary')
         self.content_label.text = description
-
+        self._update_content_height()
         self._update_top_nav()
         self.hide_loading()
-
         Clock.schedule_once(self._scroll_to_top, 0.1)
         Clock.schedule_once(self._scroll_to_top, 0.3)
 
@@ -409,7 +688,8 @@ class TermDetailScreen(BaseScreen):
         notify.error(get_text('loading_error'))
 
     def _scroll_to_top(self, dt):
-        if hasattr(self, 'content_scroll'): self.content_scroll.scroll_y = 1.0
+        if hasattr(self, 'content_scroll'):
+            self.content_scroll.scroll_y = 1.0
 
     def _update_top_nav(self):
         try:
@@ -417,8 +697,20 @@ class TermDetailScreen(BaseScreen):
             if app and hasattr(app, 'top_nav'):
                 app.top_nav.set_custom_title(get_text('dictionary'))
                 app.top_nav.back_btn.on_release = self.go_back
+                if hasattr(app.top_nav, '_update_right_buttons'):
+                    app.top_nav._update_right_buttons('term_detail')
         except Exception as e:
             logger.error(f"Ошибка обновления TopNav: {e}")
+
+    def _save_current_term_state(self):
+        if not self.term_id or not self.content_label.text:
+            return
+        term_detail_state.save_term_state(self.term_id, {
+            'name': self.term_name,
+            'description': self.content_label.text,
+            'font_size': self.current_font_size,
+            'scroll_y': self.content_scroll.scroll_y if self.content_scroll else 1.0,
+        })
 
     def go_back(self, instance=None):
         if hasattr(self, 'manager') and self.manager:
@@ -429,12 +721,16 @@ class TermDetailScreen(BaseScreen):
 
     def on_enter(self):
         super().on_enter()
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.set_custom_title(get_text('dictionary'))
-            app.top_nav.back_btn.on_release = self.go_back
-        if self.term_name: Clock.schedule_once(self._scroll_to_top, 0.2)
+        self._update_top_nav()
         self.update_theme_colors()
+        if self._floating_panel:
+            def _init_p(dt):
+                self._floating_panel._init_position()
+                self._floating_panel.hide()
+            Clock.schedule_once(_init_p, 0.1)
 
     def on_leave(self):
         self.hide_loading()
+        self._save_current_term_state()
+        if self._floating_panel:
+            self._floating_panel.hide()

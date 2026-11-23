@@ -1,150 +1,272 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации с поддержкой тем и языков.
+Верхняя панель навигации с поддержкой:
+- 3 тем (green, dark, light)
+- Логотипа из assets на главном экране
+- Кнопки меню (tune) на основных экранах и кнопки «Назад» на вложенных
+- Избранного и меню действий на экранах песен (звезда + шестерёнка)
+- Кнопки «Домой» и шестерёнки на экранах терминов (term_detail, search_term_detail)
 """
+from io import BytesIO
 from kivy.metrics import dp, sp
 from kivy.utils import platform
+from kivy.graphics import Color, Rectangle
+from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle
-
+from kivy.uix.image import Image as KivyImage
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.behaviors import ButtonBehavior
+from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
-from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.app import MDApp
 
-from config.theme import theme
-from config.logger_config import get_logger
-from config.system_bars import get_status_bar_height, get_screen_density
+from config.logger_config import screen_logger
+from config.system_bars import get_status_bar_height
 from config.top_nav_config import top_nav_config
-from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
-from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
+from state.settings_state import settings_state as settings_manager
+from state.previous_screen import previous_screen_state
+from api.client import api
 
-logger = get_logger('TopNav')
+logger = screen_logger('TopNav')
+
+try:
+    from data import load_asset_as_bytes
+    HAS_ASSETS = True
+except ImportError:
+    HAS_ASSETS = False
+
+    def load_asset_as_bytes(name):
+        return None
+
+
+class TopNavColors:
+    @staticmethod
+    def get_text_color(theme_id):
+        if theme_id == 'light':
+            return [0.1, 0.55, 0.3, 1]
+        else:
+            return [1, 1, 1, 1]
+
+    @staticmethod
+    def get_icon_color(theme_id):
+        if theme_id == 'light':
+            return [0.1, 0.55, 0.3, 1]
+        else:
+            return [1, 1, 1, 1]
+
+    @staticmethod
+    def get_line_color(theme_id):
+        if theme_id == 'light':
+            return [0.1, 0.55, 0.3, 0.5]
+        elif theme_id == 'dark':
+            return [1.0, 0.5, 0.0, 0.5]
+        else:
+            return [0.46, 0.70, 0.71, 0.4]
+
+    @staticmethod
+    def get_favorite_active_color(theme_id):
+        if theme_id == 'light':
+            return [0.9, 0.7, 0.0, 1]
+        elif theme_id == 'dark':
+            return [1.0, 0.85, 0.0, 1]
+        else:
+            return [1.0, 0.84, 0.0, 1]
+
+
+class ClickableLogo(ButtonBehavior, KivyImage):
+    pass
 
 
 class TopNav(MDCard):
-    """Верхняя панель навигации с конфигом"""
-
-    def __init__(self, screen_manager, **kwargs):
+    def __init__(self, screen_manager=None, **kwargs):
         super().__init__(**kwargs)
-        self.sm = screen_manager
         self.app = None
-        self.current_screen_name = 'home'
-        self._is_back_mode = False
-        self._previous_screen = None
-        self._custom_back_callback = None
-        self._old_title_widget = None
-        self.custom_title_widget = None
-
-        # Флаги для управления навигацией
-        self._just_returned_from_song_detail = False
-        self._block_navigation = False
-        self._going_back = False
-        self._navigating = False
+        self.sm = screen_manager
+        self.current_screen_name = None
 
         self.orientation = 'vertical'
         self.size_hint = (1, None)
         self.pos_hint = {'top': 1}
-
-        # ============ ПРАВИЛЬНЫЙ РАСЧЁТ ВЫСОТЫ ============
-        status_h = get_status_bar_height()
-
-        if platform == 'android':
-            panel_height = dp(52)
-            self.height = status_h + panel_height
-            top_padding = status_h
-        else:
-            panel_height = dp(64)
-            self.height = panel_height
-            top_padding = status_h + dp(4)
-
-        # ✅ ПРОЗРАЧНЫЙ ФОН
-        self.padding = [0, 0, 0, 0]
-        self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]
         self.elevation = 0
+        self.radius = [0, 0, 0, 0]
+        self.padding = [0, 0, 0, 0]
         self.spacing = 0
+        self.md_bg_color = [0, 0, 0, 0]
 
-        # ============ ЗЕЛЁНАЯ ПОЛОСКА СНИЗУ ============
+        status_h = get_status_bar_height()
+        if platform == 'android':
+            self.height = status_h + dp(52)
+        else:
+            self.height = dp(64)
+
+        # Нижняя разделительная линия
         with self.canvas.before:
             self.line_color_inst = Color(0.46, 0.70, 0.71, 0.4)
             self.bottom_line = Rectangle(
                 pos=(self.x, self.y),
                 size=(self.width, dp(1.5))
             )
-
         self.bind(pos=self._update_bottom_line, size=self._update_bottom_line)
 
-        # ============ КОНТЕЙНЕР ============
-        self.container = MDFloatLayout(
-            size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0]
-        )
+        self.logo_texture = None
+        self.load_logo_texture()
 
-        # ============ ЛЕВАЯ ЧАСТЬ (АДАПТИВНАЯ) ============
-        self.left_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(None, 1),
-            adaptive_width=True,
-            spacing=dp(4),
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'x': 0, 'center_y': 0.5}
-        )
+        self.current_song_id = None
+        self.is_favorite = False
+        self.custom_title_widget = None
+        self._custom_back_callback = None
 
-        # Кнопка настроек (шестерёнка)
+        self.build_ui()
+        self.update_theme_colors()
+
+        # Подписка на смену экранов в ScreenManager
+        if self.sm:
+            if hasattr(self.sm, 'add_observer'):
+                self.sm.add_observer(self._on_screen_changed)
+            elif hasattr(self.sm, 'bind'):
+                self.sm.bind(current=self._on_screen_changed)
+            self.set_screen(self.sm.current or 'home')
+        else:
+            self.set_screen('home')
+
+        Window.bind(on_resize=self._on_window_resize)
+        logger.info("✅ TopNav создан")
+
+    def _update_bottom_line(self, *args):
+        if hasattr(self, 'bottom_line'):
+            self.bottom_line.pos = (self.x, self.y)
+            self.bottom_line.size = (self.width, dp(1.5))
+
+    def set_app(self, app):
+        self.app = app
+
+    def update_title(self, screen_name: str):
+        self.set_screen(screen_name)
+
+    def set_back_button(self, callback):
+        self._custom_back_callback = callback
+        if self.back_btn:
+            self.back_btn.on_release = callback
+
+    def clear_back_button(self):
+        self._custom_back_callback = None
+        if self.back_btn:
+            self.back_btn.on_release = self._on_back_click
+
+    def set_custom_back_callback(self, callback):
+        self.set_back_button(callback)
+
+    def clear_custom_back_callback(self):
+        self.clear_back_button()
+
+    def _on_window_resize(self, instance, width, height):
+        if self.screen_title and self.screen_title in self.container.children:
+            self._adjust_title_width()
+
+    def load_logo_texture(self):
+        if not HAS_ASSETS:
+            logger.warning("⚠️ Модуль data недоступен, логотип будет текстовым")
+            return
+        try:
+            logo_bytes = load_asset_as_bytes("logo_png")
+            if logo_bytes:
+                self.logo_texture = CoreImage(BytesIO(logo_bytes), ext="png").texture
+                logger.info("✅ Текстура logo_png загружена")
+            else:
+                logger.warning("⚠️ Ассет logo_png не найден")
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки logo_png: {e}")
+
+    def build_ui(self):
+        self.container = FloatLayout(size_hint=(1, 1))
+
+        # Кнопка «Меню / Настройки» (слева на основных экранах)
         self.settings_btn = MDIconButton(
             icon="tune",
             size_hint=(None, None),
             size=(dp(44), dp(44)),
+            pos_hint={'x': 0.015, 'center_y': 0.5},
             theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
+            on_release=self._on_settings_click
         )
-        self.settings_btn.bind(on_release=self._on_settings_press)
 
-        # Кнопка назад (стрелка)
+        # Кнопка «Назад» (слева на вложенных экранах)
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
             size=(dp(44), dp(44)),
+            pos_hint={'x': 0.015, 'center_y': 0.5},
             theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
+            on_release=self._on_back_click
         )
-        self.back_btn.bind(on_release=self._on_back_press)
 
-        self.left_container.add_widget(self.settings_btn)
+        # Логотип (только для главного экрана home)
+        if self.logo_texture:
+            self.logo_widget = ClickableLogo(
+                texture=self.logo_texture,
+                size_hint=(None, None),
+                size=(dp(260), dp(52)),
+                allow_stretch=True,
+                keep_ratio=True,
+                pos_hint={'center_x': 0.5, 'center_y': 0.5},
+                on_release=self._on_logo_click
+            )
+        else:
+            fallback_title = get_text('home')
+            if fallback_title == 'home':
+                fallback_title = "GuitarFuns"
+            self.logo_widget = MDLabel(
+                text=fallback_title,
+                font_size=sp(20),
+                bold=True,
+                halign="center",
+                valign="middle",
+                size_hint=(None, None),
+                size=(dp(240), dp(48)),
+                pos_hint={'center_x': 0.5, 'center_y': 0.5},
+                theme_text_color="Custom"
+            )
 
-        # ============ ЗАГОЛОВОК ============
+        # Заголовок для остальных экранов (по центру)
         self.screen_title = MDLabel(
-            text=get_text('home'),
+            text="",
             font_size=sp(20),
+            bold=True,
             halign="center",
             valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True,
             size_hint=(None, None),
-            width=dp(250),
+            height=dp(48),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            theme_text_color="Custom",
             shorten=True,
-            shorten_from="right"
+            shorten_from='right',
+            max_lines=1
         )
+        self.screen_title.bind(size=self._update_title_text_size)
 
-        # ============ ПРАВАЯ ЧАСТЬ (АДАПТИВНАЯ) ============
-        self.right_container = MDBoxLayout(
+        # Контейнер для правых кнопок
+        self.right_container = BoxLayout(
             orientation='horizontal',
-            size_hint=(None, 1),
-            adaptive_width=True,
+            size_hint=(None, None),
+            height=dp(48),
             spacing=dp(4),
+            pos_hint={'right': 0.985, 'center_y': 0.5}
+        )
+        self.right_container.bind(minimum_width=self.right_container.setter('width'))
+
+        self.search_btn = MDIconButton(
+            icon="magnify",
+            size_hint=(None, None),
+            size=(dp(44), dp(44)),
+            theme_icon_color="Custom",
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'right': 1, 'center_y': 0.5}
+            on_release=self._on_search_click
         )
 
         self.home_btn = MDIconButton(
@@ -152,116 +274,38 @@ class TopNav(MDCard):
             size_hint=(None, None),
             size=(dp(44), dp(44)),
             theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
+            on_release=self._on_home_click
         )
-        self.home_btn.bind(on_release=self._on_home_press)
 
-        self.search_btn = MDIconButton(
-            icon="magnify",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
-        )
-        self.search_btn.bind(on_release=self._on_search_press)
-
-        # ============ НОВЫЕ КНОПКИ ДЛЯ ИЗБРАННОГО ============
         self.favorite_btn = MDIconButton(
             icon="star-outline",
             size_hint=(None, None),
             size=(dp(44), dp(44)),
             theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
+            on_release=self._on_favorite_click
         )
-        self.favorite_btn.bind(on_release=self._on_favorite_press)
 
         self.actions_btn = MDIconButton(
             icon="cog",
             size_hint=(None, None),
             size=(dp(44), dp(44)),
             theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
             md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
+            on_release=self._on_actions_click
         )
-        self.actions_btn.bind(on_release=self._on_actions_press)
 
-        self.right_container.add_widget(self.search_btn)
-
-        # Добавляем всё во FloatLayout
-        self.container.add_widget(self.left_container)
-        self.container.add_widget(self.screen_title)
         self.container.add_widget(self.right_container)
-
         self.add_widget(self.container)
 
-        if hasattr(self.sm, 'add_observer'):
-            self.sm.add_observer(self._on_screen_changed)
-        elif hasattr(self.sm, 'bind'):
-            self.sm.bind(current=self._on_screen_changed)
-
-        if self.sm:
-            self._on_screen_changed(self.sm, self.sm.current)
-
-        # ============ ПРИМЕНЯЕМ ЦВЕТА ТЕМЫ ============
-        self.update_theme_colors()
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        logger.info(f"🎨 TopNav: обновление цветов для темы {theme_id}")
-
-        if theme_id == 'light':
-            color = [0.1, 0.55, 0.3, 1]
-            self.line_color_inst.rgba = [0.1, 0.55, 0.3, 0.5]
-        elif theme_id == 'dark':
-            color = [1, 1, 1, 1]
-            self.line_color_inst.rgba = [1.0, 0.5, 0.0, 0.5]
-        else:  # green
-            color = [1, 1, 1, 1]
-            self.line_color_inst.rgba = [0.46, 0.70, 0.71, 0.4]
-
-        self.settings_btn.icon_color = color
-        self.back_btn.icon_color = color
-        self.home_btn.icon_color = color
-        self.search_btn.icon_color = color
-        self.screen_title.text_color = color
-        self.favorite_btn.icon_color = color
-        self.actions_btn.icon_color = color
-
-    def _update_bottom_line(self, *args):
-        if hasattr(self, 'bottom_line'):
-            self.bottom_line.pos = (self.x, self.y)
-            self.bottom_line.size = (self.width, dp(1.5))
+    def _update_title_text_size(self, instance, value):
+        instance.text_size = (instance.width, None)
 
     def _get_screen_title(self, screen_name: str) -> str:
         if screen_name not in top_nav_config.SCREENS:
             return get_text(screen_name, screen_name)
         return get_text(screen_name, top_nav_config.get_title(screen_name))
-
-    def update_title(self, screen_name: str):
-        title = self._get_screen_title(screen_name)
-        self.screen_title.text = title
-        self._adjust_title_width()
-
-    def set_custom_title(self, title: str):
-        self.screen_title.text = title
-        self._adjust_title_width()
-
-        if title == "Избранное" or title == "Favorites":
-            if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
-                if self.custom_title_widget in self.container.children:
-                    self.container.remove_widget(self.custom_title_widget)
-                self.custom_title_widget = None
-
-            if self.screen_title not in self.container.children:
-                self.container.add_widget(self.screen_title)
-                self._adjust_title_width()
 
     def _adjust_title_width(self):
         text = self.screen_title.text
@@ -274,23 +318,16 @@ class TopNav(MDCard):
         padding = dp(32)
 
         current = self.sm.current if self.sm else 'home'
-        if current in ['favorite_detail', 'song_detail']:
+        if current in ['favorite_detail', 'song_detail', 'term_detail', 'search_term_detail']:
             right_width = dp(96)
 
         max_width = window_width - left_width - right_width - padding
-
         if max_width < dp(100):
             max_width = dp(100)
 
         char_width = sp(12)
         text_width = len(text) * char_width + dp(16)
-
-        if text_width > max_width:
-            text_width = max_width
-
-        if text_width < dp(80):
-            text_width = dp(80)
-
+        text_width = max(dp(80), min(text_width, max_width))
         self.screen_title.width = text_width
 
     def set_custom_title_widget(self, widget):
@@ -302,6 +339,9 @@ class TopNav(MDCard):
         if self.screen_title in self.container.children:
             self.container.remove_widget(self.screen_title)
 
+        if self.logo_widget in self.container.children:
+            self.container.remove_widget(self.logo_widget)
+
         widget.size_hint = (None, None)
 
         window_width = Window.width
@@ -310,13 +350,10 @@ class TopNav(MDCard):
         padding = dp(32)
 
         current = self.sm.current if self.sm else 'home'
-        if current in ['favorite_detail', 'song_detail']:
+        if current in ['favorite_detail', 'song_detail', 'term_detail', 'search_term_detail']:
             right_width = dp(96)
 
-        max_width = window_width - left_width - right_width - padding
-
-        if max_width < dp(100):
-            max_width = dp(100)
+        max_width = max(dp(100), window_width - left_width - right_width - padding)
 
         widget.width = max_width
         widget.height = dp(48)
@@ -327,9 +364,8 @@ class TopNav(MDCard):
 
         self.container.add_widget(widget)
         self.custom_title_widget = widget
-        logger.info(f"✅ Установлен кастомный виджет заголовка")
 
-    def clear_custom_title_widget(self):
+    def restore_default_title(self):
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
@@ -337,39 +373,75 @@ class TopNav(MDCard):
 
         if self.screen_title not in self.container.children:
             self.container.add_widget(self.screen_title)
-            self._adjust_title_width()
+        self._adjust_title_width()
 
-    def set_custom_back_callback(self, callback):
-        self._custom_back_callback = callback
+    def clear_custom_title_widget(self):
+        self.restore_default_title()
 
-    def clear_custom_back_callback(self):
-        self._custom_back_callback = None
+    def _on_screen_changed(self, instance, screen_name):
+        if self.current_screen_name and self.current_screen_name != screen_name:
+            if not (screen_name == 'artist_songs' and self.current_screen_name == 'song_detail'):
+                previous_screen_state.set_previous(self.current_screen_name)
+        self.current_screen_name = screen_name
+        self.set_screen(screen_name)
 
     def _update_left_button(self, screen_name: str):
-        self.left_container.clear_widgets()
+        if self.back_btn in self.container.children:
+            self.container.remove_widget(self.back_btn)
+        if self.settings_btn in self.container.children:
+            self.container.remove_widget(self.settings_btn)
 
-        nav_screens_with_hamburger = [
-            'songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary',
-            'profile', 'help', 'promo', 'feedback',
-            'admin'
+        nav_screens_with_menu = [
+            'home', 'songs', 'chords', 'tuner', 'metronome',
+            'favorites', 'dictionary', 'profile', 'help',
+            'promo', 'feedback', 'admin'
         ]
 
-        if screen_name in nav_screens_with_hamburger:
-            self.left_container.add_widget(self.settings_btn)
+        if screen_name in nav_screens_with_menu:
+            self.container.add_widget(self.settings_btn)
         else:
-            left_type = top_nav_config.get_left_button(screen_name)
-            if left_type == top_nav_config.LEFT_BUTTON_BACK:
-                self.left_container.add_widget(self.back_btn)
-            elif left_type == top_nav_config.LEFT_BUTTON_HAMBURGER:
-                self.left_container.add_widget(self.settings_btn)
+            self.container.add_widget(self.back_btn)
+            if not self._custom_back_callback:
+                self.back_btn.on_release = self._on_back_click
+
+    def set_screen(self, screen_name: str):
+        logger.debug(f"🔄 TopNav переключён на экран: {screen_name}")
+
+        # Убираем кастомный виджет заголовка, если был
+        if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
+            if self.custom_title_widget in self.container.children:
+                self.container.remove_widget(self.custom_title_widget)
+            self.custom_title_widget = None
+
+        # Строго разделяем: на 'home' только логотип, на остальных экранах только заголовок
+        if screen_name == 'home':
+            if self.screen_title in self.container.children:
+                self.container.remove_widget(self.screen_title)
+            if self.logo_widget not in self.container.children:
+                self.container.add_widget(self.logo_widget)
+        else:
+            if self.logo_widget in self.container.children:
+                self.container.remove_widget(self.logo_widget)
+            if self.screen_title not in self.container.children:
+                self.container.add_widget(self.screen_title)
+            self.screen_title.text = self._get_screen_title(screen_name)
+            self._adjust_title_width()
+
+        self._update_left_button(screen_name)
+        self._update_right_buttons(screen_name)
+        self.update_theme_colors()
 
     def _update_right_buttons(self, screen_name: str):
         self.right_container.clear_widgets()
 
-        # Специальные экраны, где нужны звезда и шестеренка
         if screen_name in ['favorite_detail', 'song_detail']:
             self._update_favorite_icon()
             self.right_container.add_widget(self.favorite_btn)
+            self.right_container.add_widget(self.actions_btn)
+            return
+
+        if screen_name in ['term_detail', 'search_term_detail']:
+            self.right_container.add_widget(self.home_btn)
             self.right_container.add_widget(self.actions_btn)
             return
 
@@ -384,878 +456,137 @@ class TopNav(MDCard):
                 self.right_container.add_widget(self.home_btn)
 
     def _update_favorite_icon(self):
-        """Обновляет иконку звезды в зависимости от статуса избранного."""
-        app = MDApp.get_running_app()
-        if not app or not self.sm: return
-
-        screen = self.sm.current_screen
-        if hasattr(screen, 'song_id') and hasattr(screen, 'is_favorite'):
-            if screen.is_favorite:
-                self.favorite_btn.icon = "star"
-            else:
-                self.favorite_btn.icon = "star-outline"
-
-    def _on_favorite_press(self, *args):
-        app = MDApp.get_running_app()
-        if hasattr(app, 'toggle_favorite_from_top_nav'):
-            app.toggle_favorite_from_top_nav()
-
-    def _on_actions_press(self, *args):
-        app = MDApp.get_running_app()
-        if not app or not self.sm:
-            return
-
-        screen = self.sm.current_screen
-        if hasattr(screen, 'toggle_settings_panel'):
-            screen.toggle_settings_panel()
+        theme_id = settings_manager.theme
+        if self.is_favorite:
+            self.favorite_btn.icon = "star"
+            self.favorite_btn.icon_color = TopNavColors.get_favorite_active_color(theme_id)
         else:
-            if hasattr(app, 'sidebar') and app.sidebar:
-                app.sidebar.toggle()
+            self.favorite_btn.icon = "star-outline"
+            self.favorite_btn.icon_color = TopNavColors.get_icon_color(theme_id)
 
-    def _set_artist_songs_mode(self):
-        self.left_container.clear_widgets()
-        self.left_container.add_widget(self.back_btn)
-        self.back_btn.on_release = self._on_back_press
+    def set_song_favorite_state(self, song_id: int, is_favorite: bool):
+        self.current_song_id = song_id
+        self.is_favorite = is_favorite
+        if self.sm and self.sm.current in ['favorite_detail', 'song_detail']:
+            self._update_favorite_icon()
 
-        self.right_container.clear_widgets()
-        self.right_container.add_widget(self.home_btn)
+    def set_custom_title(self, title_text: str):
+        if self.logo_widget in self.container.children:
+            self.container.remove_widget(self.logo_widget)
+        self.restore_default_title()
+        self.screen_title.text = title_text
+        self._adjust_title_width()
 
-        self.set_custom_title("Песни исполнителя")
-
-    def _on_screen_changed(self, instance, screen_name):
-        if self._block_navigation:
-            return
-        old = self.current_screen_name
-        if old == screen_name:
-            return
-
-        self.current_screen_name = screen_name
-
-        if old and old != screen_name:
-            if screen_name == 'artist_songs' and old == 'song_detail':
-                pass
-            else:
-                # ✅ Заменено на previous_screen_state
-                previous_screen_state.set_previous(old)
-
-        if old and old != screen_name:
-            self._previous_screen = old
-
-        if screen_name == 'artist_songs':
-            self._set_artist_songs_mode()
-        else:
-            self._update_left_button(screen_name)
-            self._update_right_buttons(screen_name)
-
-        if screen_name == 'artist_songs':
-            pass
-        else:
-            title_type = top_nav_config.get_custom_title_widget_type(screen_name)
-            if title_type == 'vertical' and screen_name not in ['song_detail']:
-                pass
-            elif top_nav_config.is_title_custom(screen_name):
-                if self.custom_title_widget:
-                    self.clear_custom_title_widget()
-                self.update_title(screen_name)
-            else:
-                if self.custom_title_widget:
-                    self.clear_custom_title_widget()
-                self.update_title(screen_name)
-
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'bottom_nav') and app.bottom_nav:
-            nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
-            if screen_name in nav_screens:
-                for item, (_, _, screen) in zip(app.bottom_nav.items, app.bottom_nav.nav_items):
-                    item.active = (screen == screen_name)
-            else:
-                app.bottom_nav.clear_active()
-
-    def _on_back_press(self, *args):
-        if self._block_navigation:
-            return
-
-        if self._custom_back_callback:
-            self._custom_back_callback()
-            return
-
-        if not self.sm:
-            return
-
-        current = self.sm.current
-        # ✅ Заменено на previous_screen_state
-        prev_from_state = previous_screen_state.get_previous()
-
-        nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary']
-
-        parser_screens = [
-            'amdm_parser', 'mytabs_parser', 'accord_pro_parser',
-            'akkordus_parser', 'muzland_parser', 'chordie_parser',
-            'fivelad_parser', 'akkordbard_parser', 'domhve_parser',
-            'rushsound_parser'
-        ]
-
-        if current in nav_screens:
-            return
-
-        if current in parser_screens:
-            if self.sm.has_screen('admin'):
-                self._block_navigation = True
-                self.sm.current = 'admin'
-                Clock.schedule_once(lambda dt: setattr(self, '_block_navigation', False), 0.5)
-            else:
-                self.sm.current = 'home'
-            return
-
-        if current == 'artist_songs':
-            if hasattr(self, '_just_returned_from_song_detail') and self._just_returned_from_song_detail:
-                self._just_returned_from_song_detail = False
-                return
-
-            if self._navigating:
-                return
-            self._navigating = True
-
-            if self.sm.has_screen('artist_songs'):
-                artist_screen = self.sm.get_screen('artist_songs')
-                if hasattr(artist_screen, 'go_back'):
-                    artist_screen.go_back()
-                    Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
-                    return
-
-            if self.sm.has_screen('songs'):
-                songs_screen = self.sm.get_screen('songs')
-                Clock.schedule_once(lambda dt: songs_screen.restore_state(), 0.1)
-                self.sm.current = 'songs'
-                Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
-                return
-            else:
-                self.sm.current = 'home'
-                Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
-                return
-
-        if current == 'song_detail':
-            self._just_returned_from_song_detail = True
-
-            if self.sm.has_screen('song_detail'):
-                song_detail = self.sm.get_screen('song_detail')
-                if hasattr(song_detail, 'go_back'):
-                    song_detail.go_back()
-                    Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
-                    return
-
-            if prev_from_state and self.sm.has_screen(prev_from_state):
-                self.sm.current = prev_from_state
-                Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
-                return
-
-            if self.sm.has_screen('home'):
-                self.sm.current = 'home'
-                Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
-                return
-
-        if current == 'chord_detail':
-            if self.sm.has_screen('search'):
-                # ✅ Заменено на previous_screen_state
-                previous_screen_state.clear_pending_chord()
-                self.sm.current = 'search'
-                return
-            elif self.sm.has_screen('chords'):
-                self.sm.current = 'chords'
-                return
-            else:
-                self.sm.current = 'home'
-                return
-
-        if top_nav_config.show_back_button(current):
-            if prev_from_state and self.sm.has_screen(prev_from_state):
-                self.sm.current = prev_from_state
-                return
-
-        if self.sm.has_screen('home'):
+    def _on_logo_click(self, instance):
+        if self.sm and self.sm.current != 'home':
             self.sm.current = 'home'
 
-    def _on_settings_press(self, *args):
+    def _on_settings_click(self, instance):
         app = MDApp.get_running_app()
         if hasattr(app, 'sidebar') and app.sidebar:
             app.sidebar.toggle()
 
-    def _on_home_press(self, *args):
-        if self.sm and self.sm.has_screen('home'):
+    def _on_back_click(self, instance):
+        if self._custom_back_callback:
+            self._custom_back_callback()
+            return
+        if not self.sm:
+            return
+        current = self.sm.current
+        if self.sm.has_screen(current):
+            screen = self.sm.get_screen(current)
+            if hasattr(screen, 'go_back') and callable(screen.go_back):
+                screen.go_back()
+                return
+
+        prev = previous_screen_state.get_previous()
+        if prev and self.sm.has_screen(prev):
+            self.sm.current = prev
+            return
+        self.sm.current = 'home'
+
+    def _on_search_click(self, instance):
+        if self.sm and self.sm.has_screen('search'):
+            self.sm.current = 'search'
+
+    def _on_home_click(self, instance):
+        if self.sm:
             self.sm.current = 'home'
 
-    def _on_search_press(self, *args):
-        app = MDApp.get_running_app()
-        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
+    def _on_favorite_click(self, instance):
+        if not self.sm:
             return
-
-        if self.sm and self.sm.has_screen('search'):
-            if self.sm.current == 'search':
-                search_screen = self.sm.get_screen('search')
-                if hasattr(search_screen, 'search_bar') and search_screen.search_bar:
-                    search_screen.search_bar.search_field.focus = True
+        current = self.sm.current
+        if current in ['favorite_detail', 'song_detail'] and self.sm.has_screen(current):
+            screen = self.sm.get_screen(current)
+            if hasattr(screen, 'toggle_favorite') and callable(screen.toggle_favorite):
+                screen.toggle_favorite()
+                return
+        if self.current_song_id:
+            if self.is_favorite:
+                api.remove_favorite(
+                    self.current_song_id,
+                    on_success=lambda r: self._on_fav_toggled(False),
+                    on_failure=lambda req, err: logger.error(f"Ошибка удаления из избранного: {err}")
+                )
             else:
-                self.sm.current = 'search'
+                api.add_favorite(
+                    self.current_song_id,
+                    on_success=lambda r: self._on_fav_toggled(True),
+                    on_failure=lambda req, err: logger.error(f"Ошибка добавления в избранное: {err}")
+                )
 
-    def set_app(self, app):
-        self.app = app
+    def _on_fav_toggled(self, new_state: bool):
+        self.is_favorite = new_state
+        self._update_favorite_icon()
+        if self.sm and self.sm.has_screen('favorites'):
+            fav_screen = self.sm.get_screen('favorites')
+            if hasattr(fav_screen, 'load_favorites'):
+                fav_screen.load_favorites()
 
-    def reset_to_default(self):
-        self.clear_custom_title_widget()
-        self._update_left_button('home')
-        self._update_right_buttons('home')
-        self.update_title('home')
-
-    def on_size(self, *args):
-        Clock.schedule_once(lambda dt: self._adjust_title_width(), 0.1)
-
-    def force_update_title(self, title, show_back=False):
-        if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
-            if self.custom_title_widget in self.container.children:
-                self.container.remove_widget(self.custom_title_widget)
-            self.custom_title_widget = None
-
-        self.screen_title.text = title
-        self._adjust_title_width()
-
-        if self.screen_title not in self.container.children:
-            self.container.add_widget(self.screen_title)
-
-        if show_back:
-            self.left_container.clear_widgets()
-            self.left_container.add_widget(self.back_btn)
-
-        self.container.do_layout()
-
-    def is_transparent(self):
-        return True# screens/components/top_nav.py
-"""
-Верхняя панель навигации с поддержкой тем и языков.
-"""
-from kivy.metrics import dp, sp
-from kivy.utils import platform
-from kivy.core.window import Window
-from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle
-
-from kivymd.uix.button import MDIconButton
-from kivymd.uix.label import MDLabel
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
-from kivymd.uix.floatlayout import MDFloatLayout
-from kivymd.app import MDApp
-
-from config.theme import theme
-from config.logger_config import get_logger
-from config.system_bars import get_status_bar_height, get_screen_density
-from config.top_nav_config import top_nav_config
-from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
-from state.settings_state import settings_state as settings_manager
-from utils.localization import get_text
-
-logger = get_logger('TopNav')
-
-
-class TopNav(MDCard):
-    """Верхняя панель навигации с конфигом"""
-
-    def __init__(self, screen_manager, **kwargs):
-        super().__init__(**kwargs)
-        self.sm = screen_manager
-        self.app = None
-        self.current_screen_name = 'home'
-        self._is_back_mode = False
-        self._previous_screen = None
-        self._custom_back_callback = None
-        self._old_title_widget = None
-        self.custom_title_widget = None
-
-        # Флаги для управления навигацией
-        self._just_returned_from_song_detail = False
-        self._block_navigation = False
-        self._going_back = False
-        self._navigating = False
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, None)
-        self.pos_hint = {'top': 1}
-
-        # ============ ПРАВИЛЬНЫЙ РАСЧЁТ ВЫСОТЫ ============
-        status_h = get_status_bar_height()
-
-        if platform == 'android':
-            panel_height = dp(52)
-            self.height = status_h + panel_height
-            top_padding = status_h
-        else:
-            panel_height = dp(64)
-            self.height = panel_height
-            top_padding = status_h + dp(4)
-
-        # ✅ ПРОЗРАЧНЫЙ ФОН
-        self.padding = [0, 0, 0, 0]
-        self.radius = [0, 0, 0, 0]
-        self.md_bg_color = [0, 0, 0, 0]
-        self.elevation = 0
-        self.spacing = 0
-
-        # ============ ЗЕЛЁНАЯ ПОЛОСКА СНИЗУ ============
-        with self.canvas.before:
-            self.line_color_inst = Color(0.46, 0.70, 0.71, 0.4)
-            self.bottom_line = Rectangle(
-                pos=(self.x, self.y),
-                size=(self.width, dp(1.5))
-            )
-
-        self.bind(pos=self._update_bottom_line, size=self._update_bottom_line)
-
-        # ============ КОНТЕЙНЕР ============
-        self.container = MDFloatLayout(
-            size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0]
-        )
-
-        # ============ ЛЕВАЯ ЧАСТЬ (АДАПТИВНАЯ) ============
-        self.left_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(None, 1),
-            adaptive_width=True,
-            spacing=dp(4),
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'x': 0, 'center_y': 0.5}
-        )
-
-        # Кнопка настроек (шестерёнка)
-        self.settings_btn = MDIconButton(
-            icon="tune",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
-        )
-        self.settings_btn.bind(on_release=self._on_settings_press)
-
-        # Кнопка назад (стрелка)
-        self.back_btn = MDIconButton(
-            icon="arrow-left",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
-        )
-        self.back_btn.bind(on_release=self._on_back_press)
-
-        self.left_container.add_widget(self.settings_btn)
-
-        # ============ ЗАГОЛОВОК ============
-        self.screen_title = MDLabel(
-            text=get_text('home'),
-            font_size=sp(20),
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            bold=True,
-            size_hint=(None, None),
-            width=dp(250),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            shorten=True,
-            shorten_from="right"
-        )
-
-        # ============ ПРАВАЯ ЧАСТЬ (АДАПТИВНАЯ) ============
-        self.right_container = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(None, 1),
-            adaptive_width=True,
-            spacing=dp(4),
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'right': 1, 'center_y': 0.5}
-        )
-
-        self.home_btn = MDIconButton(
-            icon="home",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
-        )
-        self.home_btn.bind(on_release=self._on_home_press)
-
-        self.search_btn = MDIconButton(
-            icon="magnify",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
-        )
-        self.search_btn.bind(on_release=self._on_search_press)
-
-        # ============ НОВЫЕ КНОПКИ ДЛЯ ИЗБРАННОГО ============
-        self.favorite_btn = MDIconButton(
-            icon="star-outline",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
-        )
-        self.favorite_btn.bind(on_release=self._on_favorite_press)
-
-        self.actions_btn = MDIconButton(
-            icon="cog",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            icon_color=[1, 1, 1, 1],
-            md_bg_color=[0, 0, 0, 0],
-            pos_hint={'center_y': 0.5}
-        )
-        self.actions_btn.bind(on_release=self._on_actions_press)
-
-        self.right_container.add_widget(self.search_btn)
-
-        # Добавляем всё во FloatLayout
-        self.container.add_widget(self.left_container)
-        self.container.add_widget(self.screen_title)
-        self.container.add_widget(self.right_container)
-
-        self.add_widget(self.container)
-
-        if hasattr(self.sm, 'add_observer'):
-            self.sm.add_observer(self._on_screen_changed)
-        elif hasattr(self.sm, 'bind'):
-            self.sm.bind(current=self._on_screen_changed)
-
-        if self.sm:
-            self._on_screen_changed(self.sm, self.sm.current)
-
-        # ============ ПРИМЕНЯЕМ ЦВЕТА ТЕМЫ ============
-        self.update_theme_colors()
+    def _on_actions_click(self, instance):
+        if not self.sm:
+            return
+        current = self.sm.current
+        if self.sm.has_screen(current):
+            screen = self.sm.get_screen(current)
+            if hasattr(screen, 'toggle_settings_panel') and callable(screen.toggle_settings_panel):
+                screen.toggle_settings_panel()
+            elif hasattr(screen, 'toggle_actions_panel') and callable(screen.toggle_actions_panel):
+                screen.toggle_actions_panel()
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
-        logger.info(f"🎨 TopNav: обновление цветов для темы {theme_id}")
+        self.md_bg_color = [0, 0, 0, 0]
+        self.line_color_inst.rgba = TopNavColors.get_line_color(theme_id)
 
-        if theme_id == 'light':
-            color = [0.1, 0.55, 0.3, 1]
-            self.line_color_inst.rgba = [0.1, 0.55, 0.3, 0.5]
-        elif theme_id == 'dark':
-            color = [1, 1, 1, 1]
-            self.line_color_inst.rgba = [1.0, 0.5, 0.0, 0.5]
-        else:  # green
-            color = [1, 1, 1, 1]
-            self.line_color_inst.rgba = [0.46, 0.70, 0.71, 0.4]
+        text_color = TopNavColors.get_text_color(theme_id)
+        icon_color = TopNavColors.get_icon_color(theme_id)
 
-        self.settings_btn.icon_color = color
-        self.back_btn.icon_color = color
-        self.home_btn.icon_color = color
-        self.search_btn.icon_color = color
-        self.screen_title.text_color = color
-        self.favorite_btn.icon_color = color
-        self.actions_btn.icon_color = color
+        if self.screen_title:
+            self.screen_title.text_color = text_color
 
-    def _update_bottom_line(self, *args):
-        if hasattr(self, 'bottom_line'):
-            self.bottom_line.pos = (self.x, self.y)
-            self.bottom_line.size = (self.width, dp(1.5))
+        if not self.logo_texture and hasattr(self, 'logo_widget'):
+            self.logo_widget.text_color = text_color
 
-    def _get_screen_title(self, screen_name: str) -> str:
-        if screen_name not in top_nav_config.SCREENS:
-            return get_text(screen_name, screen_name)
-        return get_text(screen_name, top_nav_config.get_title(screen_name))
+        for btn in [self.settings_btn, self.back_btn, self.search_btn, self.home_btn, self.actions_btn]:
+            if btn:
+                btn.icon_color = icon_color
 
-    def update_title(self, screen_name: str):
-        title = self._get_screen_title(screen_name)
-        self.screen_title.text = title
-        self._adjust_title_width()
-
-    def set_custom_title(self, title: str):
-        self.screen_title.text = title
-        self._adjust_title_width()
-
-        if title == "Избранное" or title == "Favorites":
-            if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
-                if self.custom_title_widget in self.container.children:
-                    self.container.remove_widget(self.custom_title_widget)
-                self.custom_title_widget = None
-
-            if self.screen_title not in self.container.children:
-                self.container.add_widget(self.screen_title)
-                self._adjust_title_width()
-
-    def _adjust_title_width(self):
-        text = self.screen_title.text
-        if not text:
-            return
-
-        window_width = Window.width
-        left_width = dp(48)
-        right_width = dp(48)
-        padding = dp(32)
-
-        current = self.sm.current if self.sm else 'home'
-        if current in ['favorite_detail', 'song_detail']:
-            right_width = dp(96)
-
-        max_width = window_width - left_width - right_width - padding
-
-        if max_width < dp(100):
-            max_width = dp(100)
-
-        char_width = sp(12)
-        text_width = len(text) * char_width + dp(16)
-
-        if text_width > max_width:
-            text_width = max_width
-
-        if text_width < dp(80):
-            text_width = dp(80)
-
-        self.screen_title.width = text_width
-
-    def set_custom_title_widget(self, widget):
-        if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
-            if self.custom_title_widget in self.container.children:
-                self.container.remove_widget(self.custom_title_widget)
-            self.custom_title_widget = None
-
-        if self.screen_title in self.container.children:
-            self.container.remove_widget(self.screen_title)
-
-        widget.size_hint = (None, None)
-
-        window_width = Window.width
-        left_width = dp(48)
-        right_width = dp(48)
-        padding = dp(32)
-
-        current = self.sm.current if self.sm else 'home'
-        if current in ['favorite_detail', 'song_detail']:
-            right_width = dp(96)
-
-        max_width = window_width - left_width - right_width - padding
-
-        if max_width < dp(100):
-            max_width = dp(100)
-
-        widget.width = max_width
-        widget.height = dp(48)
-        widget.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-
-        if hasattr(widget, 'padding'):
-            widget.padding = [dp(8), dp(4), dp(8), dp(4)]
-
-        self.container.add_widget(widget)
-        self.custom_title_widget = widget
-        logger.info(f"✅ Установлен кастомный виджет заголовка")
-
-    def clear_custom_title_widget(self):
-        if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
-            if self.custom_title_widget in self.container.children:
-                self.container.remove_widget(self.custom_title_widget)
-            self.custom_title_widget = None
-
-        if self.screen_title not in self.container.children:
-            self.container.add_widget(self.screen_title)
-            self._adjust_title_width()
-
-    def set_custom_back_callback(self, callback):
-        self._custom_back_callback = callback
-
-    def clear_custom_back_callback(self):
-        self._custom_back_callback = None
-
-    def _update_left_button(self, screen_name: str):
-        self.left_container.clear_widgets()
-
-        nav_screens_with_hamburger = [
-            'songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary',
-            'profile', 'help', 'promo', 'feedback',
-            'admin'
-        ]
-
-        if screen_name in nav_screens_with_hamburger:
-            self.left_container.add_widget(self.settings_btn)
-        else:
-            left_type = top_nav_config.get_left_button(screen_name)
-            if left_type == top_nav_config.LEFT_BUTTON_BACK:
-                self.left_container.add_widget(self.back_btn)
-            elif left_type == top_nav_config.LEFT_BUTTON_HAMBURGER:
-                self.left_container.add_widget(self.settings_btn)
-
-    def _update_right_buttons(self, screen_name: str):
-        self.right_container.clear_widgets()
-
-        # Специальные экраны, где нужны звезда и шестеренка
-        if screen_name in ['favorite_detail', 'song_detail']:
+        if self.sm and self.sm.current in ['favorite_detail', 'song_detail']:
             self._update_favorite_icon()
-            self.right_container.add_widget(self.favorite_btn)
-            self.right_container.add_widget(self.actions_btn)
-            return
+        elif self.favorite_btn:
+            self.favorite_btn.icon_color = icon_color
 
-        nav_screens_with_home = ['songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary']
-        if screen_name in nav_screens_with_home:
-            self.right_container.add_widget(self.home_btn)
-        else:
-            right_type = top_nav_config.get_right_button(screen_name)
-            if right_type == top_nav_config.RIGHT_BUTTON_SEARCH:
-                self.right_container.add_widget(self.search_btn)
-            elif right_type == top_nav_config.RIGHT_BUTTON_HOME:
-                self.right_container.add_widget(self.home_btn)
-
-    def _update_favorite_icon(self):
-        """Обновляет иконку звезды в зависимости от статуса избранного."""
-        app = MDApp.get_running_app()
-        if not app or not self.sm: return
-
-        screen = self.sm.current_screen
-        if hasattr(screen, 'song_id') and hasattr(screen, 'is_favorite'):
-            if screen.is_favorite:
-                self.favorite_btn.icon = "star"
-            else:
-                self.favorite_btn.icon = "star-outline"
-
-    def _on_favorite_press(self, *args):
-        app = MDApp.get_running_app()
-        if hasattr(app, 'toggle_favorite_from_top_nav'):
-            app.toggle_favorite_from_top_nav()
-
-    def _on_actions_press(self, *args):
-        app = MDApp.get_running_app()
-        if not app or not self.sm:
-            return
-
-        screen = self.sm.current_screen
-        if hasattr(screen, 'toggle_settings_panel'):
-            screen.toggle_settings_panel()
-        else:
-            if hasattr(app, 'sidebar') and app.sidebar:
-                app.sidebar.toggle()
-
-    def _set_artist_songs_mode(self):
-        self.left_container.clear_widgets()
-        self.left_container.add_widget(self.back_btn)
-        self.back_btn.on_release = self._on_back_press
-
-        self.right_container.clear_widgets()
-        self.right_container.add_widget(self.home_btn)
-
-        self.set_custom_title("Песни исполнителя")
-
-    def _on_screen_changed(self, instance, screen_name):
-        if self._block_navigation:
-            return
-        old = self.current_screen_name
-        if old == screen_name:
-            return
-
-        self.current_screen_name = screen_name
-
-        if old and old != screen_name:
-            if screen_name == 'artist_songs' and old == 'song_detail':
-                pass
-            else:
-                # ✅ Заменено на previous_screen_state
-                previous_screen_state.set_previous(old)
-
-        if old and old != screen_name:
-            self._previous_screen = old
-
-        if screen_name == 'artist_songs':
-            self._set_artist_songs_mode()
-        else:
-            self._update_left_button(screen_name)
-            self._update_right_buttons(screen_name)
-
-        if screen_name == 'artist_songs':
-            pass
-        else:
-            title_type = top_nav_config.get_custom_title_widget_type(screen_name)
-            if title_type == 'vertical' and screen_name not in ['song_detail']:
-                pass
-            elif top_nav_config.is_title_custom(screen_name):
-                if self.custom_title_widget:
-                    self.clear_custom_title_widget()
-                self.update_title(screen_name)
-            else:
-                if self.custom_title_widget:
-                    self.clear_custom_title_widget()
-                self.update_title(screen_name)
-
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'bottom_nav') and app.bottom_nav:
-            nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
-            if screen_name in nav_screens:
-                for item, (_, _, screen) in zip(app.bottom_nav.items, app.bottom_nav.nav_items):
-                    item.active = (screen == screen_name)
-            else:
-                app.bottom_nav.clear_active()
-
-    def _on_back_press(self, *args):
-        if self._block_navigation:
-            return
-
-        if self._custom_back_callback:
-            self._custom_back_callback()
-            return
-
-        if not self.sm:
-            return
-
-        current = self.sm.current
-        # ✅ Заменено на previous_screen_state
-        prev_from_state = previous_screen_state.get_previous()
-
-        nav_screens = ['songs', 'chords', 'tuner', 'metronome', 'favorites', 'dictionary']
-
-        parser_screens = [
-            'amdm_parser', 'mytabs_parser', 'accord_pro_parser',
-            'akkordus_parser', 'muzland_parser', 'chordie_parser',
-            'fivelad_parser', 'akkordbard_parser', 'domhve_parser',
-            'rushsound_parser'
-        ]
-
-        if current in nav_screens:
-            return
-
-        if current in parser_screens:
-            if self.sm.has_screen('admin'):
-                self._block_navigation = True
-                self.sm.current = 'admin'
-                Clock.schedule_once(lambda dt: setattr(self, '_block_navigation', False), 0.5)
-            else:
-                self.sm.current = 'home'
-            return
-
-        if current == 'artist_songs':
-            if hasattr(self, '_just_returned_from_song_detail') and self._just_returned_from_song_detail:
-                self._just_returned_from_song_detail = False
-                return
-
-            if self._navigating:
-                return
-            self._navigating = True
-
-            if self.sm.has_screen('artist_songs'):
-                artist_screen = self.sm.get_screen('artist_songs')
-                if hasattr(artist_screen, 'go_back'):
-                    artist_screen.go_back()
-                    Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
-                    return
-
-            if self.sm.has_screen('songs'):
-                songs_screen = self.sm.get_screen('songs')
-                Clock.schedule_once(lambda dt: songs_screen.restore_state(), 0.1)
-                self.sm.current = 'songs'
-                Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
-                return
-            else:
-                self.sm.current = 'home'
-                Clock.schedule_once(lambda dt: setattr(self, '_navigating', False), 0.5)
-                return
-
-        if current == 'song_detail':
-            self._just_returned_from_song_detail = True
-
-            if self.sm.has_screen('song_detail'):
-                song_detail = self.sm.get_screen('song_detail')
-                if hasattr(song_detail, 'go_back'):
-                    song_detail.go_back()
-                    Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
-                    return
-
-            if prev_from_state and self.sm.has_screen(prev_from_state):
-                self.sm.current = prev_from_state
-                Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
-                return
-
-            if self.sm.has_screen('home'):
-                self.sm.current = 'home'
-                Clock.schedule_once(lambda dt: setattr(self, '_just_returned_from_song_detail', False), 0.5)
-                return
-
-        if current == 'chord_detail':
-            if self.sm.has_screen('search'):
-                # ✅ Заменено на previous_screen_state
-                previous_screen_state.clear_pending_chord()
-                self.sm.current = 'search'
-                return
-            elif self.sm.has_screen('chords'):
-                self.sm.current = 'chords'
-                return
-            else:
-                self.sm.current = 'home'
-                return
-
-        if top_nav_config.show_back_button(current):
-            if prev_from_state and self.sm.has_screen(prev_from_state):
-                self.sm.current = prev_from_state
-                return
-
-        if self.sm.has_screen('home'):
-            self.sm.current = 'home'
-
-    def _on_settings_press(self, *args):
-        app = MDApp.get_running_app()
-        if hasattr(app, 'sidebar') and app.sidebar:
-            app.sidebar.toggle()
-
-    def _on_home_press(self, *args):
-        if self.sm and self.sm.has_screen('home'):
-            self.sm.current = 'home'
-
-    def _on_search_press(self, *args):
-        app = MDApp.get_running_app()
-        if hasattr(app, 'is_auth_blocking') and app.is_auth_blocking:
-            return
-
-        if self.sm and self.sm.has_screen('search'):
-            if self.sm.current == 'search':
-                search_screen = self.sm.get_screen('search')
-                if hasattr(search_screen, 'search_bar') and search_screen.search_bar:
-                    search_screen.search_bar.search_field.focus = True
-            else:
-                self.sm.current = 'search'
-
-    def set_app(self, app):
-        self.app = app
-
-    def reset_to_default(self):
-        self.clear_custom_title_widget()
-        self._update_left_button('home')
-        self._update_right_buttons('home')
-        self.update_title('home')
-
-    def on_size(self, *args):
-        Clock.schedule_once(lambda dt: self._adjust_title_width(), 0.1)
-
-    def force_update_title(self, title, show_back=False):
-        if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
-            if self.custom_title_widget in self.container.children:
-                self.container.remove_widget(self.custom_title_widget)
-            self.custom_title_widget = None
-
-        self.screen_title.text = title
-        self._adjust_title_width()
-
-        if self.screen_title not in self.container.children:
-            self.container.add_widget(self.screen_title)
-
-        if show_back:
-            self.left_container.clear_widgets()
-            self.left_container.add_widget(self.back_btn)
-
-        self.container.do_layout()
+    def update_language(self):
+        if self.sm:
+            current = self.sm.current
+            if current != 'home':
+                self.screen_title.text = self._get_screen_title(current)
+                self._adjust_title_width()
+            elif not self.logo_texture and hasattr(self, 'logo_widget'):
+                fallback = get_text('home')
+                self.logo_widget.text = "GuitarFuns" if fallback == 'home' else fallback
 
     def is_transparent(self):
         return True
