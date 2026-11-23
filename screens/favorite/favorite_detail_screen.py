@@ -33,7 +33,7 @@ from kivy.utils import platform
 from kivy.logger import Logger
 from io import BytesIO
 import re
-
+from chord_utils.chord_parser import is_chord_line
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
@@ -149,30 +149,62 @@ class DetailColors:
 
 
 def clean_text(text):
-    if not text: return ""
+    if not text:
+        return ""
+
+    # Нормализуем переносы строк и убираем невидимые спецсимволы
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    text = text.replace('\xa0', ' ').replace('\u200b', '').replace('\ufeff', '')
+
+    # В строках с аккордами заменяем \t на пробел (чтобы аккорды не слиплись),
+    # а в строках текста просто удаляем \t, чтобы не разрывать слова
+    processed_tabs = []
+    for raw_line in text.split('\n'):
+        if '\t' in raw_line:
+            line_with_single_spaces = re.sub(r'[ \t]+', ' ', raw_line).strip()
+            if is_chord_line(line_with_single_spaces):
+                # В строках аккордов заменяем \t на 2 пробела, чтобы сохранялся сдвиг над текстом
+                processed_tabs.append(raw_line.replace('\t', '  ').rstrip())
+            else:
+                # В строках текста заменяем табуляции и лишние пробелы на один обычный пробел
+                processed_tabs.append(line_with_single_spaces)
+        else:
+            processed_tabs.append(raw_line)
+    text = '\n'.join(processed_tabs)
+
+    # Удаляем HTML-теги и декодируем HTML-сущности
     temp_text = re.sub(r'<[^>]+>', '', text)
     html_entities = {
         '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"',
         '&apos;': "'", '&nbsp;': ' ', '&#39;': "'", '&#34;': '"',
-        '&#38;': '&', '&#60;': '<', '&#62;': '>', '&#171;': '«',
-        '&#187;': '»', '&#169;': '©', '&#174;': '®', '&#8364;': '€',
-        '&#8470;': '№', '&#8211;': '–', '&#8212;': '—', '&#8216;': "'",
-        '&#8217;': "'", '&#8220;': '"', '&#8221;': '"', '&#8230;': '…',
+        '&#38;': '&', '&#60;': '<', '&#62;': '>', '&laquo;': '«',
+        '&raquo;': '»', '&copy;': '©', '&reg;': '®', '&euro;': '€',
+        '&#8470;': '№', '&ndash;': '–', '&mdash;': '—', '&lsquo;': "'",
+        '&rsquo;': "'", '&ldquo;': '"', '&rdquo;': '"', '&hellip;': '…',
         '&#35;': '#', '%23': '#',
     }
     for entity, char in html_entities.items():
         temp_text = temp_text.replace(entity, char)
+
+    # Убираем первые 4 строки заголовка и строки с источником
     lines = temp_text.split('\n')
     cleaned_lines = []
     for i, line in enumerate(lines):
-        if i < 4: continue
-        if 'источник:' in line.lower() or 'source:' in line.lower(): continue
+        if i < 4:
+            continue
+        if 'источник:' in line.lower() or 'source:' in line.lower():
+            continue
         cleaned_lines.append(line)
+
     while cleaned_lines and not cleaned_lines[-1].strip():
         cleaned_lines.pop()
+
     result = '\n'.join(cleaned_lines)
-    if not result.strip(): result = '\n'.join(lines[4:])
+    if not result.strip():
+        result = '\n'.join(lines[4:])
     return result
+
+
 
 
 # ============================================================
