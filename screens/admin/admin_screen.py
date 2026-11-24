@@ -488,10 +488,6 @@ class AdminScreen(BaseScreen):
 
         logger.info("Вход в админ панель")
 
-    def go_back(self, instance=None):
-        logger.info("🔙 Возврат на home")
-        if hasattr(self, 'manager') and self.manager:
-            self.manager.current = 'home'
 
     def on_leave(self):
         """При выходе с экрана"""

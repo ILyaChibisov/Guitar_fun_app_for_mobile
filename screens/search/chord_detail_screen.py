@@ -24,39 +24,27 @@ class ChordDetailScreen(ChordsScreen):
         self._chord_to_load = None
 
     def go_back(self, instance=None):
-        """Возврат обратно на экран поиска."""
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.clear_custom_title_widget()
-        if self.manager:
-            if self.manager.has_screen('search'):
-                self.manager.current = 'search'
-            else:
-                self.manager.current = 'home'
+        """Возврат обратно на экран поиска по жёсткому маршруту."""
+        from config.navigation_config import navigate_back
+        navigate_back(self.manager, 'chord_detail')
 
     def on_enter(self):
-        # ❌ НЕ ВЫЗЫВАЕМ super().on_enter(), чтобы не сработала логика ChordsScreen
-        # Вместо этого вручную делаем только базовые вещи для UI
-
         self.update_theme_colors()
         self._update_griff_size()
 
         app = MDApp.get_running_app()
         if app and hasattr(app, 'top_nav'):
             app.top_nav.set_custom_title(get_text('chords', 'Аккорды'))
-            app.top_nav.back_btn.on_release = self.go_back
 
         pending_chord = previous_screen_state.get_pending_chord()
         if pending_chord:
             logger.info(f"ChordDetail: авто-загрузка '{pending_chord}'")
 
-            # 1. Сбрасываем карусель (чтобы не было старых слайдов)
             if self.swipe_container:
                 self.swipe_container.clear_slides()
             self.current_variants = []
             self.current_variant_index = 0
 
-            # 2. Сразу грузим с сервера (не ищем в локальном кеше)
             self._load_chord_from_server(pending_chord)
             previous_screen_state.clear_pending_chord()
 

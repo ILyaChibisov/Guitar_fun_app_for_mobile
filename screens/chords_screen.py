@@ -3135,10 +3135,6 @@ class ChordsScreen(BaseScreen):
                     Clock.schedule_once(lambda dt: self.select_chord_by_name(pending_chord), 0.1)
                     previous_screen_state.clear_pending_chord()
 
-            previous_screen = previous_screen_state.get_previous()
-            if previous_screen:
-                Clock.schedule_once(lambda dt: self._show_back_button(), 0.3)
-
             self._close_tonality_selector()
             self._close_type_selector()
             self._close_chord_selector()

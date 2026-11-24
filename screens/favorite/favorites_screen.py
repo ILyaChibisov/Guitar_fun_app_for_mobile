@@ -1395,16 +1395,14 @@ class FavoritesScreen(BaseScreen):
         self._save_state()
         if hasattr(self, 'manager') and self.manager and self.manager.has_screen('favorite_detail'):
             screen = self.manager.get_screen('favorite_detail')
+            screen.set_previous_screen('favorites')
             screen.prepare_clean_screen(song_id, artist, song_title)
+            screen.set_song(song_id, artist, song_title)
             self.manager.current = 'favorite_detail'
-            Clock.schedule_once(lambda dt: screen.set_song(song_id, artist, song_title), 0.05)
 
     def refresh_favorites(self):
         self.load_favorites(force_refresh=True)
 
-    def go_back(self, instance=None):
-        if hasattr(self, 'manager') and self.manager:
-            self.manager.current = 'home'
 
     def on_login_success(self):
         self.load_favorites(force_refresh=True)

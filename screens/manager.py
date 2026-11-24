@@ -16,7 +16,7 @@ from screens.favorite.favorites_screen import FavoritesScreen
 from .profile_screen import ProfileScreen
 from screens.admin.admin_screen import AdminScreen
 from screens.search.search_screen import SearchScreen
-from .admin_promo_screen import AdminPromoScreen
+from screens.admin.admin_promo_screen import AdminPromoScreen
 # === ЭКРАНЫ ДЕТАЛЬНОГО ПРОСМОТРА ===
 from screens.songs.song_detail_screen import SongDetailScreen
 from screens.dictionary.term_detail_screen import TermDetailScreen

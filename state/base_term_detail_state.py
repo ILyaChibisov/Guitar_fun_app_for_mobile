@@ -1,4 +1,4 @@
-# state/term_detail_state.py
+# state/base_term_detail_state.py
 """
 Состояние экрана «Детали термина».
 Кэширует название, описание, размер шрифта и позицию скролла по term_id (LRU до 20 терминов).

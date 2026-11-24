@@ -16,7 +16,7 @@ from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.text import LabelBase
 
-from screens.favorite.favorite_detail_screen import preload_panel_textures
+from screens.songs.base_song_detail_screen import preload_panel_textures
 preload_panel_textures()
 
 # Путь к папке с проектом
@@ -572,34 +572,9 @@ class GuitarFunsApp(MDApp):
         """Добавляет/удаляет текущую песню из избранного по нажатию на звезду в TopNav."""
         if not self.screen_manager:
             return
-
         current_screen = self.screen_manager.current_screen
-        if not hasattr(current_screen, 'song_id') or not current_screen.song_id:
-            return
-
-        song_id = current_screen.song_id
-        is_fav = current_screen.is_favorite
-
-        if is_fav:
-            # Удаляем из избранного
-            api.remove_from_favorites(
-                song_id=song_id,
-                on_success=lambda _: self._on_favorite_toggled(current_screen, False),
-                on_failure=lambda _, err: notify.error(f"Ошибка удаления: {err}")
-            )
-        else:
-            # Добавляем в избранное
-            song_data = {
-                'id': song_id,
-                'artist': getattr(current_screen, 'song_artist', ''),
-                'title': getattr(current_screen, 'song_title', ''),
-            }
-            api.add_to_favorites(
-                song_id=song_id,
-                song_data=song_data,
-                on_success=lambda _: self._on_favorite_toggled(current_screen, True),
-                on_failure=lambda _, err: notify.error(f"Ошибка добавления: {err}")
-            )
+        if hasattr(current_screen, 'toggle_favorite') and callable(current_screen.toggle_favorite):
+            current_screen.toggle_favorite()
 
     def _on_favorite_toggled(self, screen, new_state):
         """Вызывается после успешного изменения статуса избранного."""
@@ -922,6 +897,7 @@ class GuitarFunsApp(MDApp):
 
         network_manager.start_monitoring()
         Window.bind(on_resize=self.on_window_resize)
+        Window.bind(on_keyboard=self._on_keyboard)
 
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
@@ -1094,6 +1070,14 @@ class GuitarFunsApp(MDApp):
                 self._bottom_nav_visible = False
 
     def _on_keyboard(self, window, key, scancode, codepoint, modifier):
+        # 27 — клавиша Esc на ПК и аппаратная кнопка Back на Android
+        if key == 27:
+            if self.sidebar and getattr(self.sidebar, 'is_open', False):
+                self.sidebar.close()
+                return True
+            if self.top_nav:
+                self.top_nav._on_back_click()
+                return True
         return False
 
 

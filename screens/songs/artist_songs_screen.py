@@ -23,7 +23,7 @@ from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.animation import Animation
 from kivy.properties import StringProperty, NumericProperty, ObjectProperty
-
+from config.navigation_config import navigate_back
 from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -1430,32 +1430,25 @@ class ArtistSongsScreen(BaseScreen):
                 return
             self._saved_scroll_position = 1.0
             self._save_state()
-            # ✅ Прямой вызов previous_screen_state
             previous_screen_state.set_previous('artist_songs')
-            # ✅ artist_songs_state уже импортирован напрямую
             artist_songs_state.set(self.artist_name, self._saved_scroll_position)
             if hasattr(self, 'manager') and self.manager:
                 if self.manager.has_screen('song_detail'):
                     screen = self.manager.get_screen('song_detail')
                     screen.set_previous_screen('artist_songs')
-                    screen.set_song(song_id)
+                    if hasattr(screen, 'prepare_clean_screen'):
+                        screen.prepare_clean_screen(
+                            song_id, artist=self.artist_name, title=song_title
+                        )
+                    screen.set_song(song_id, artist=self.artist_name, title=song_title)
                     self.manager.current = 'song_detail'
 
     def go_back(self, instance=None):
         if self._going_back:
             return
         self._going_back = True
-        Clock.schedule_once(lambda dt: setattr(self, '_going_back', False), 0.8)
-        app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            app.top_nav.clear_custom_title_widget()
-        if hasattr(self, 'manager') and self.manager:
-            if self.manager.has_screen('songs'):
-                songs_screen = self.manager.get_screen('songs')
-                Clock.schedule_once(lambda dt: songs_screen.restore_state(), 0.1)
-                self.manager.current = 'songs'
-            else:
-                self.manager.current = 'home'
+        Clock.schedule_once(lambda dt: setattr(self, '_going_back', False), 0.5)
+        navigate_back(self.manager, 'artist_songs')
 
     # ============================================================
     # STATE
@@ -1509,6 +1502,10 @@ class ArtistSongsScreen(BaseScreen):
             if self._last_display_key is not None and self.artist_name:
                 self._update_top_nav_title(self.artist_name)
                 self._update_count_label(self._total_songs)
+                self._show_pagination_bar()
+                Clock.schedule_once(
+                    lambda dt: self._update_cards_layout(len(self.cards_container.cards)), 0
+                )
                 return
             if self._restore_state():
                 return

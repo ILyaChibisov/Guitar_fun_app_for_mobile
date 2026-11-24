@@ -1199,9 +1199,11 @@ class SearchScreen(BaseScreen):
                 artist = getattr(child, 'title', '')
                 title = getattr(child, 'subtitle', '')
                 break
-        previous_screen_state.set_previous('search')
         if self.manager and self.manager.has_screen('search_screen_detail'):
             scr = self.manager.get_screen('search_screen_detail')
+            scr.set_previous_screen('search')
+            if hasattr(scr, 'prepare_clean_screen'):
+                scr.prepare_clean_screen(song_id, artist, title)
             scr.set_song(song_id, artist, title)
             self.manager.current = 'search_screen_detail'
 

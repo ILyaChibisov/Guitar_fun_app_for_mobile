@@ -13,7 +13,6 @@ from kivy.utils import platform
 from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
-from kivy.clock import Clock
 from kivy.uix.image import Image as KivyImage
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
@@ -28,9 +27,8 @@ from config.system_bars import get_status_bar_height
 from config.top_nav_config import top_nav_config
 from utils.localization import get_text
 from state.settings_state import settings_state as settings_manager
-from state.previous_screen import previous_screen_state
 from api.client import api
-
+from config.navigation_config import navigate_back, ROOT_SCREENS
 logger = screen_logger('TopNav')
 
 try:
@@ -43,20 +41,26 @@ except ImportError:
         return None
 
 
+SONG_DETAIL_SCREENS = (
+    'favorite_detail',
+    'song_detail',
+    'search_detail',
+    'search_screen_detail',
+)
+
+
 class TopNavColors:
     @staticmethod
     def get_text_color(theme_id):
         if theme_id == 'light':
             return [0.1, 0.55, 0.3, 1]
-        else:
-            return [1, 1, 1, 1]
+        return [1, 1, 1, 1]
 
     @staticmethod
     def get_icon_color(theme_id):
         if theme_id == 'light':
             return [0.1, 0.55, 0.3, 1]
-        else:
-            return [1, 1, 1, 1]
+        return [1, 1, 1, 1]
 
     @staticmethod
     def get_line_color(theme_id):
@@ -64,8 +68,7 @@ class TopNavColors:
             return [0.1, 0.55, 0.3, 0.5]
         elif theme_id == 'dark':
             return [1.0, 0.5, 0.0, 0.5]
-        else:
-            return [0.46, 0.70, 0.71, 0.4]
+        return [0.46, 0.70, 0.71, 0.4]
 
     @staticmethod
     def get_favorite_active_color(theme_id):
@@ -73,8 +76,7 @@ class TopNavColors:
             return [0.9, 0.7, 0.0, 1]
         elif theme_id == 'dark':
             return [1.0, 0.85, 0.0, 1]
-        else:
-            return [1.0, 0.84, 0.0, 1]
+        return [1.0, 0.84, 0.0, 1]
 
 
 class ClickableLogo(ButtonBehavior, KivyImage):
@@ -103,7 +105,6 @@ class TopNav(MDCard):
         else:
             self.height = dp(64)
 
-        # Нижняя разделительная линия
         with self.canvas.before:
             self.line_color_inst = Color(0.46, 0.70, 0.71, 0.4)
             self.bottom_line = Rectangle(
@@ -123,7 +124,6 @@ class TopNav(MDCard):
         self.build_ui()
         self.update_theme_colors()
 
-        # Подписка на смену экранов в ScreenManager
         if self.sm:
             if hasattr(self.sm, 'add_observer'):
                 self.sm.add_observer(self._on_screen_changed)
@@ -167,9 +167,7 @@ class TopNav(MDCard):
         if self.screen_title and self.screen_title in self.container.children:
             self._adjust_title_width()
 
-
     def force_update_title(self, title_text: str, show_back: bool = False):
-        """Принудительно обновляет заголовок и левую кнопку навигации."""
         if self.logo_widget in self.container.children:
             self.container.remove_widget(self.logo_widget)
         self.restore_default_title()
@@ -185,7 +183,6 @@ class TopNav(MDCard):
             self.container.add_widget(self.back_btn)
         else:
             self.container.add_widget(self.settings_btn)
-
 
     def load_logo_texture(self):
         if not HAS_ASSETS:
@@ -204,7 +201,6 @@ class TopNav(MDCard):
     def build_ui(self):
         self.container = FloatLayout(size_hint=(1, 1))
 
-        # Кнопка «Меню / Настройки» (слева на основных экранах)
         self.settings_btn = MDIconButton(
             icon="tune",
             size_hint=(None, None),
@@ -215,7 +211,6 @@ class TopNav(MDCard):
             on_release=self._on_settings_click
         )
 
-        # Кнопка «Назад» (слева на вложенных экранах)
         self.back_btn = MDIconButton(
             icon="arrow-left",
             size_hint=(None, None),
@@ -226,7 +221,6 @@ class TopNav(MDCard):
             on_release=self._on_back_click
         )
 
-        # Логотип (только для главного экрана home)
         if self.logo_texture:
             self.logo_widget = ClickableLogo(
                 texture=self.logo_texture,
@@ -253,7 +247,6 @@ class TopNav(MDCard):
                 theme_text_color="Custom"
             )
 
-        # Заголовок для остальных экранов (по центру)
         self.screen_title = MDLabel(
             text="",
             font_size=sp(20),
@@ -270,7 +263,6 @@ class TopNav(MDCard):
         )
         self.screen_title.bind(size=self._update_title_text_size)
 
-        # Контейнер для правых кнопок
         self.right_container = BoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
@@ -338,7 +330,7 @@ class TopNav(MDCard):
         padding = dp(32)
 
         current = self.sm.current if self.sm else 'home'
-        if current in ['favorite_detail', 'song_detail', 'term_detail', 'search_term_detail']:
+        if current in SONG_DETAIL_SCREENS or current in ('term_detail', 'search_term_detail'):
             right_width = dp(96)
 
         max_width = window_width - left_width - right_width - padding
@@ -370,7 +362,7 @@ class TopNav(MDCard):
         padding = dp(32)
 
         current = self.sm.current if self.sm else 'home'
-        if current in ['favorite_detail', 'song_detail', 'term_detail', 'search_term_detail']:
+        if current in SONG_DETAIL_SCREENS or current in ('term_detail', 'search_term_detail'):
             right_width = dp(96)
 
         max_width = max(dp(100), window_width - left_width - right_width - padding)
@@ -399,9 +391,6 @@ class TopNav(MDCard):
         self.restore_default_title()
 
     def _on_screen_changed(self, instance, screen_name):
-        if self.current_screen_name and self.current_screen_name != screen_name:
-            if not (screen_name == 'artist_songs' and self.current_screen_name == 'song_detail'):
-                previous_screen_state.set_previous(self.current_screen_name)
         self.current_screen_name = screen_name
         self.set_screen(screen_name)
 
@@ -411,29 +400,21 @@ class TopNav(MDCard):
         if self.settings_btn in self.container.children:
             self.container.remove_widget(self.settings_btn)
 
-        nav_screens_with_menu = [
-            'home', 'songs', 'chords', 'tuner', 'metronome',
-            'favorites', 'dictionary', 'profile', 'help',
-            'promo', 'feedback', 'admin'
-        ]
+        self._custom_back_callback = None
 
-        if screen_name in nav_screens_with_menu:
+        if screen_name in ROOT_SCREENS:
             self.container.add_widget(self.settings_btn)
         else:
             self.container.add_widget(self.back_btn)
-            if not self._custom_back_callback:
-                self.back_btn.on_release = self._on_back_click
 
     def set_screen(self, screen_name: str):
         logger.debug(f"🔄 TopNav переключён на экран: {screen_name}")
 
-        # Убираем кастомный виджет заголовка, если был
         if hasattr(self, 'custom_title_widget') and self.custom_title_widget:
             if self.custom_title_widget in self.container.children:
                 self.container.remove_widget(self.custom_title_widget)
             self.custom_title_widget = None
 
-        # Строго разделяем: на 'home' только логотип, на остальных экранах только заголовок
         if screen_name == 'home':
             if self.screen_title in self.container.children:
                 self.container.remove_widget(self.screen_title)
@@ -447,20 +428,26 @@ class TopNav(MDCard):
             self.screen_title.text = self._get_screen_title(screen_name)
             self._adjust_title_width()
 
+        # Откладываем перестановку кнопок на следующий кадр (0 сек),
+        # чтобы текущее событие on_touch_up не прокликнуло только что добавленную кнопку
+        from kivy.clock import Clock
+        Clock.schedule_once(lambda dt, s=screen_name: self._apply_nav_buttons(s), 0)
+        self.update_theme_colors()
+
+    def _apply_nav_buttons(self, screen_name: str):
         self._update_left_button(screen_name)
         self._update_right_buttons(screen_name)
-        self.update_theme_colors()
 
     def _update_right_buttons(self, screen_name: str):
         self.right_container.clear_widgets()
 
-        if screen_name in ['favorite_detail', 'song_detail']:
+        if screen_name in SONG_DETAIL_SCREENS:
             self._update_favorite_icon()
             self.right_container.add_widget(self.favorite_btn)
             self.right_container.add_widget(self.actions_btn)
             return
 
-        if screen_name in ['term_detail', 'search_term_detail']:
+        if screen_name in ('term_detail', 'search_term_detail'):
             self.right_container.add_widget(self.home_btn)
             self.right_container.add_widget(self.actions_btn)
             return
@@ -484,10 +471,16 @@ class TopNav(MDCard):
             self.favorite_btn.icon = "star-outline"
             self.favorite_btn.icon_color = TopNavColors.get_icon_color(theme_id)
 
+    def update_favorite_icon(self, is_favorite: bool = None):
+        """Публичный метод для обновления иконки избранного из экранов-наследников."""
+        if is_favorite is not None:
+            self.is_favorite = is_favorite
+        self._update_favorite_icon()
+
     def set_song_favorite_state(self, song_id: int, is_favorite: bool):
         self.current_song_id = song_id
         self.is_favorite = is_favorite
-        if self.sm and self.sm.current in ['favorite_detail', 'song_detail']:
+        if self.sm and self.sm.current in SONG_DETAIL_SCREENS:
             self._update_favorite_icon()
 
     def set_custom_title(self, title_text: str):
@@ -507,25 +500,25 @@ class TopNav(MDCard):
             app.sidebar.toggle()
 
     def _on_back_click(self, instance=None):
-        if self._custom_back_callback:
-            self._custom_back_callback()
+        import time
+        now = time.monotonic()
+        if now - getattr(self, '_last_back_click_time', 0.0) < 0.35:
             return
+        self._last_back_click_time = now
+
         if not self.sm:
             return
+
         current = self.sm.current
-        if self.sm.has_screen(current):
-            screen = self.sm.get_screen(current)
-            if hasattr(screen, 'go_back') and callable(screen.go_back):
-                screen.go_back()
-                return
-        prev = previous_screen_state.get_previous()
-        if prev and self.sm.has_screen(prev):
-            self.sm.current = prev
+        if current in ROOT_SCREENS:
             return
-        if current == 'favorite_detail' and self.sm.has_screen('favorites'):
-            self.sm.current = 'favorites'
+
+        current_screen = self.sm.current_screen
+        if current_screen and hasattr(current_screen, 'go_back') and callable(current_screen.go_back):
+            current_screen.go_back()
             return
-        self.sm.current = 'home'
+
+        navigate_back(self.sm, current)
 
     def _on_search_click(self, instance):
         if self.sm and self.sm.has_screen('search'):
@@ -539,7 +532,7 @@ class TopNav(MDCard):
         if not self.sm:
             return
         current = self.sm.current
-        if current in ['favorite_detail', 'song_detail'] and self.sm.has_screen(current):
+        if current in SONG_DETAIL_SCREENS and self.sm.has_screen(current):
             screen = self.sm.get_screen(current)
             if hasattr(screen, 'toggle_favorite') and callable(screen.toggle_favorite):
                 screen.toggle_favorite()
@@ -595,7 +588,7 @@ class TopNav(MDCard):
             if btn:
                 btn.icon_color = icon_color
 
-        if self.sm and self.sm.current in ['favorite_detail', 'song_detail']:
+        if self.sm and self.sm.current in SONG_DETAIL_SCREENS:
             self._update_favorite_icon()
         elif self.favorite_btn:
             self.favorite_btn.icon_color = icon_color

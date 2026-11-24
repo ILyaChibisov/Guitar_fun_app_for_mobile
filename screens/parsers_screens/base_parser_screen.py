@@ -72,3 +72,8 @@ class BaseParserScreen(MDScreen):
     def get_content_layout(self):
         """Возвращает контейнер для добавления контента (если нужно)"""
         return self._content_layout
+
+    def go_back(self, instance=None):
+        """Возврат в панель администратора по жёсткому маршруту."""
+        from config.navigation_config import navigate_back
+        navigate_back(self.manager, self.name)

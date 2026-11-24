@@ -30,6 +30,7 @@ from state.dictionary_state import dictionary_state
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 from screens.components.loading_spinner import LoadingSpinner
+from utils.perf import perf
 
 logger = screen_logger('Dictionary')
 
@@ -1565,50 +1566,46 @@ class DictionaryScreen(BaseScreen):
         return super().on_pre_leave()
 
     def on_enter(self):
-        super().on_enter()
+        with perf('dictionary.on_enter.total'):
+            super().on_enter()
 
-        new_lang = self._get_dict_lang()
-        if self.current_language != new_lang:
-            self.current_language = new_lang
-            self._terms_cache.clear()
-            self._last_display_key = None
-            self.current_letter = None
-            self.is_search_mode = False
-            self._all_search_results = []
-            if self.dictionary_menu:
-                self.dictionary_menu.set_language(self.current_language)
-                self.dictionary_menu.set_current_letter(None)
-            if self.cards_container:
+            new_lang = self._get_dict_lang()
+            if self.current_language != new_lang:
+                self.current_language = new_lang
+                self._terms_cache.clear()
+                self._last_display_key = None
+                self.current_letter = None
+                self.is_search_mode = False
+                self._all_search_results = []
+                if self.dictionary_menu:
+                    self.dictionary_menu.set_language(self.current_language)
+                    self.dictionary_menu.set_current_letter(None)
+                if self.cards_container:
+                    self.cards_container.clear()
+                self._hide_pagination()
+                self._hide_search_pagination()
+                self._hide_result_label()
+
+            try:
+                app = MDApp.get_running_app()
+                if app and hasattr(app, 'top_nav'):
+                    app.top_nav.set_custom_title(get_text('dictionary'))
+            except Exception:
+                pass
+
+            if self._last_search_display_key is not None and self.is_search_mode:
+                return
+
+            restored = self.restore_state()
+            if not restored:
+                self._restore_hint()
+                self._hide_result_label()
                 self.cards_container.clear()
-            self._hide_pagination()
-            self._hide_search_pagination()
-            self._hide_result_label()
-
-        try:
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'top_nav'):
-                app.top_nav.set_custom_title(get_text('dictionary'))
-                app.top_nav.back_btn.on_release = self.go_back
-        except Exception:
-            pass
-
-        if self._last_search_display_key is not None and self.is_search_mode:
-            return
-
-        restored = self.restore_state()
-        if not restored:
-            self._restore_hint()
-            self._hide_result_label()
-            self.cards_container.clear()
-            self._hide_pagination()
-            self._hide_search_pagination()
+                self._hide_pagination()
+                self._hide_search_pagination()
 
     def on_leave(self):
         self.save_current_state()
         if hasattr(self, '_hint_timer') and self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
-
-    def go_back(self, instance=None):
-        if self.manager:
-            self.manager.current = 'home'

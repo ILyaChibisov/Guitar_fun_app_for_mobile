@@ -1923,16 +1923,21 @@ class SongsScreen(BaseScreen):
                 return
             self.save_search_state()
             self.save_current_state()
-            # ✅ Прямой вызов
             previous_screen_state.set_previous('songs')
             if self.manager:
                 if self.manager.has_screen('search_detail'):
-                    self.manager.get_screen('search_detail').set_song(song_id)
+                    scr = self.manager.get_screen('search_detail')
+                    scr.set_previous_screen('songs')
+                    if hasattr(scr, 'prepare_clean_screen'):
+                        scr.prepare_clean_screen(song_id, title=title)
+                    scr.set_song(song_id, title=title)
                     self.manager.current = 'search_detail'
                 elif self.manager.has_screen('song_detail'):
                     scr = self.manager.get_screen('song_detail')
                     scr.set_previous_screen('songs')
-                    scr.set_song(song_id)
+                    if hasattr(scr, 'prepare_clean_screen'):
+                        scr.prepare_clean_screen(song_id, title=title)
+                    scr.set_song(song_id, title=title)
                     self.manager.current = 'song_detail'
 
     def on_letter_press(self, letter):
@@ -2288,7 +2293,8 @@ class SongsScreen(BaseScreen):
         with perf('songs.on_enter.total'):
             super().on_enter()
 
-            if self._last_display_key is not None and not self.is_search_mode:
+            if self._last_display_key is not None and not self.is_search_mode and self._all_artists:
+                self._show_pagination_bar()
                 self._update_result_label_for_artists()
                 Clock.schedule_once(
                     lambda dt: self._update_cards_layout(len(self.cards_container.cards)), 0
@@ -2326,7 +2332,3 @@ class SongsScreen(BaseScreen):
         if self._hint_timer:
             Clock.unschedule(self._hint_timer)
             self._hint_timer = None
-
-    def go_back(self, instance=None):
-        if self.manager:
-            self.manager.current = 'home'
