@@ -8,7 +8,7 @@ from config.logger_config import get_logger
 # === ОСНОВНЫЕ ЭКРАНЫ ===
 from .home_screen import HomeScreen
 from screens.songs.songs_screen import SongsScreen
-from .chords_screen import ChordsScreen
+from screens.chords.chords_screen import ChordsScreen
 from screens.dictionary.dictionary_screen import DictionaryScreen
 from .tuner_screen import TunerScreen
 from .metronome_screen import MetronomeScreen

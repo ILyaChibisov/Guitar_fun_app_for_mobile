@@ -243,29 +243,22 @@ class BottomNav(BoxLayout):
     def __init__(self, screen_manager, **kwargs):
         super().__init__(**kwargs)
         self.sm = screen_manager
+        self.screen_manager = screen_manager
+        self.orientation = 'horizontal'
         self.size_hint = (1, None)
-        self.pos_hint = {'y': 0}
 
         nav_bar_height = get_navigation_bar_height()
         self.nav_height = dp(52)
-
-        if platform == 'android':
-            bottom_padding = 0
-        else:
-            bottom_padding = nav_bar_height
-
+        bottom_padding = 0 if platform == 'android' else nav_bar_height
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
-        side_padding = dp(4)
-        self.padding = [side_padding, dp(2), side_padding, bottom_padding]
+        self.padding = [dp(4), dp(2), dp(4), bottom_padding]
         self.spacing = 0
-        self.md_bg_color = [0, 0, 0, 0]
 
-        with self.canvas.before:
+        with self.canvas.after:
             self.line_color_inst = Color(1, 1, 1, 0.08)
-            self.line = Rectangle(pos=(self.x, self.y + self.height - dp(1)),
-                                  size=(self.width, dp(1)))
+            self.line = Rectangle(pos=(self.x, self.y + self.height - dp(1)), size=(self.width, dp(1)))
 
         self.bind(pos=self._update_line, size=self._update_line)
 
@@ -278,13 +271,16 @@ class BottomNav(BoxLayout):
         ]
 
         self.items = []
+        current_sm_screen = getattr(screen_manager, 'current', '')
         for icon, text_key, screen in self.nav_items:
             item = NavItem(icon, text_key, screen)
-            item.active = (screen == 'songs')
+            item.active = (screen == current_sm_screen)
             item.size_hint = (1, 1)
             self.add_widget(item)
             self.items.append(item)
 
+        if hasattr(screen_manager, 'bind'):
+            screen_manager.bind(current=self._on_sm_current_changed)
         if hasattr(screen_manager, 'add_observer'):
             screen_manager.add_observer(self.on_screen_changed)
 
@@ -314,6 +310,9 @@ class BottomNav(BoxLayout):
             item.text = translated_text
             item.text_label.text = translated_text
             item._adjust_font_size()
+
+    def _on_sm_current_changed(self, instance, screen_name):
+        self._update_active_state(screen_name)
 
     def on_screen_changed(self, screen_name):
         self._update_active_state(screen_name)

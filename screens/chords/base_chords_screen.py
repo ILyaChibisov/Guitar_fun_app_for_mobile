@@ -52,7 +52,7 @@ from api.chords_client import get_chords_client
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 from state.chords_state import chords_state
-
+from pathlib import Path
 from utils.perf import perf, perf_registry
 
 logger = screen_logger('Chords')
@@ -293,6 +293,20 @@ class SwipeContainer(MDBoxLayout):
         self._programmatic_slide = False
 
         self.update_theme_colors()
+
+    def set_variants(self, variants, mode='finger', start_index=0, griff_texture=None):
+        self.clear_slides()
+        for v in variants:
+            mod = v.get('module')
+            if mod is None and v.get('server_data') and self.screen:
+                mod = self.screen._dict_to_module(v['server_data'])
+            if mod:
+                self.add_slide(mod)
+        if variants:
+            self.set_current_slide(start_index, animate=False)
+        self.update_renderer_mode(mode)
+        self.update_fret_color(settings_manager.theme)
+
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
@@ -1907,14 +1921,27 @@ class UnifiedMenu(MDBoxLayout):
 
 
 
-class ChordsScreen(BaseScreen):
+class BaseChordsScreen(BaseScreen):
     TONALITIES = TONALITIES
     CHORD_TYPES = CHORD_TYPES
 
+    SCREEN_NAME = 'base_chords'
+    USE_SHARED_STATE = False
+    AUTO_SCAN_ON_INIT = False
+
     def __init__(self, **kwargs):
-        with perf('chords.init.total'):
+        with perf(f'{self.SCREEN_NAME}.init.total'):
             super().__init__(**kwargs)
-            self.name = 'chords'
+            self.name = self.SCREEN_NAME
+
+            if self.USE_SHARED_STATE:
+                self.state_manager = chords_state
+            else:
+                from state.chords_state import ChordsStateManager
+                self.state_manager = object.__new__(ChordsStateManager)
+                self.state_manager._initialized = False
+                self.state_manager.__init__()
+
             self.all_chords = []
             self.current_chord_module = None
             self.is_search_mode = False
@@ -1959,35 +1986,34 @@ class ChordsScreen(BaseScreen):
             self._request_id = 0
             self._pending_chord_list = None
 
-            saved = chords_state.get(allow_stale=True)
-            if saved:
-                self.current_tonality = saved.get('current_tonality', 'A')
-                self.current_type = saved.get('current_type', 'Major')
-                self.current_chord_name = saved.get('current_chord_name', 'A')
-                self.current_variant_index = saved.get('current_variant_index', 0)
-                self.current_mode = saved.get('current_mode', 'finger')
+            if self.USE_SHARED_STATE:
+                saved = self.state_manager.get(allow_stale=True)
+                if saved:
+                    self.current_tonality = saved.get('current_tonality', 'A')
+                    self.current_type = saved.get('current_type', 'Major')
+                    self.current_chord_name = saved.get('current_chord_name', 'A')
+                    self.current_variant_index = saved.get('current_variant_index', 0)
+                    self.current_mode = saved.get('current_mode', 'finger')
+                    try:
+                        self.current_tonality_index = TONALITIES.index(self.current_tonality)
+                        self.current_type_index = CHORD_TYPES.index(self.current_type)
+                    except ValueError:
+                        pass
+
                 try:
-                    self.current_tonality_index = TONALITIES.index(self.current_tonality)
-                    self.current_type_index = CHORD_TYPES.index(self.current_type)
-                except ValueError:
-                    pass
-                logger.info(f"♻️ Chords: восстановлено из state: ton={self.current_tonality}, "
-                            f"type={self.current_type}, chord={self.current_chord_name}, "
-                            f"mode={self.current_mode}")
+                    self.state_manager.invalidate_scan()
+                except AttributeError:
+                    self.state_manager._scan_done = False
+                    self.state_manager._all_chords = []
 
-            try:
-                chords_state.invalidate_scan()
-            except AttributeError:
-                chords_state._scan_done = False
-                chords_state._all_chords = []
-
-            with perf('chords.init.init_ui'):
+            with perf(f'{self.SCREEN_NAME}.init.init_ui'):
                 self.init_ui()
-            with perf('chords.init.load_background'):
+            with perf(f'{self.SCREEN_NAME}.init.load_background'):
                 self.load_background()
 
-            Clock.schedule_once(lambda dt: self.scan_chords(), 0.1)
-        logger.info('Экран аккордов создан')
+            if self.AUTO_SCAN_ON_INIT:
+                Clock.schedule_once(lambda dt: self.scan_chords(), 0.1)
+        logger.info(f'Экран {self.__class__.__name__} создан')
 
     def _is_local_pair(self, tonality: str, chord_type: str) -> bool:
         return tonality == self._local_tonality and chord_type == self._local_type
@@ -2121,24 +2147,22 @@ class ChordsScreen(BaseScreen):
         return True
 
     def _rebuild_slides_for_current_chord(self):
-        if not self.swipe_container:
+        if not self.swipe_container or not self.current_variants:
             return
-        with perf('chords.rebuild_slides.local'):
-            with perf('chords.rebuild_slides.local.clear', log_every=False):
-                self.swipe_container.clear_slides()
-            for variant in self.current_variants:
-                module = variant.get('module')
-                if module:
-                    with perf('chords.rebuild_slides.local.add_slide', log_every=False):
-                        self.swipe_container.add_slide(module)
-            if self.current_variants:
-                with perf('chords.rebuild_slides.local.set_current', log_every=False):
-                    self.swipe_container.set_current_slide(self.current_variant_index)
-            chords_state.mark_slides_built(
-                settings_manager.theme,
-                self.current_chord_name,
-                self.current_variants,
-            )
+        from chord_utils.assets import get_griff_texture
+        griff_texture = get_griff_texture()
+        saved_idx = self.current_variant_index
+        self.swipe_container.set_variants(
+            self.current_variants,
+            self.current_mode,
+            start_index=saved_idx,
+            griff_texture=griff_texture,
+        )
+        self.state_manager.mark_slides_built(
+            settings_manager.theme,
+            self.current_chord_name,
+            self.current_variants,
+        )
 
     def _dict_to_module(self, data: dict):
         class _FakeModule:
@@ -2160,27 +2184,22 @@ class ChordsScreen(BaseScreen):
         return m
 
     def _rebuild_server_slides(self):
-        if not self.swipe_container:
+        if not self.swipe_container or not self.current_variants:
             return
-        with perf('chords.rebuild_slides.server'):
-            with perf('chords.rebuild_slides.server.clear', log_every=False):
-                self.swipe_container.clear_slides()
-            for variant in self.current_variants:
-                server_data = variant.get("server_data")
-                if not server_data:
-                    continue
-                with perf('chords.rebuild_slides.server.dict_to_module', log_every=False):
-                    module = self._dict_to_module(server_data)
-                with perf('chords.rebuild_slides.server.add_slide', log_every=False):
-                    self.swipe_container.add_slide(module)
-            if self.current_variants:
-                with perf('chords.rebuild_slides.server.set_current', log_every=False):
-                    self.swipe_container.set_current_slide(self.current_variant_index)
-            chords_state.mark_slides_built(
-                settings_manager.theme,
-                self.current_chord_name,
-                self.current_variants,
-            )
+        from chord_utils.assets import get_griff_texture
+        griff_texture = get_griff_texture()
+        saved_idx = self.current_variant_index
+        self.swipe_container.set_variants(
+            self.current_variants,
+            self.current_mode,
+            start_index=saved_idx,
+            griff_texture=griff_texture,
+        )
+        self.state_manager.mark_slides_built(
+            settings_manager.theme,
+            self.current_chord_name,
+            self.current_variants,
+        )
 
     def _update_display(self):
         if not self.current_variants:
@@ -2191,13 +2210,14 @@ class ChordsScreen(BaseScreen):
             with perf('chords.update_display.parse_names', log_every=False):
                 if variant.get("module") is not None:
                     self.current_chord_module = variant["module"]
-                    chord_name = variant["name"].replace('!', ' | ').replace('$', '/')
+                    clean_stem = re.sub(r'_\d+$', '', variant["name"])
+                    chord_name = clean_stem.replace('!', ' | ').replace('$', '/')
                     name_parts = [p.strip() for p in chord_name.split('|') if p.strip()]
                 else:
                     self.current_chord_module = None
                     server_data = variant.get("server_data") or {}
                     synonyms = server_data.get("synonyms") or [server_data.get("main_name", "?")]
-                    name_parts = [s.replace('!', ' | ').replace('$', '/') for s in synonyms]
+                    name_parts = [re.sub(r'_\d+$', '', s).replace('!', ' | ').replace('$', '/') for s in synonyms]
 
                 unique_names = []
                 for n in name_parts:
@@ -2749,28 +2769,41 @@ class ChordsScreen(BaseScreen):
             self.update_available_chords()
 
     def scan_chords(self):
-        with perf('chords.scan.total'):
-            if chords_state.is_scan_done():
-                self.all_chords = chords_state.get_all_chords()
-                logger.info(f"♻️ Chords: восстановлено {len(self.all_chords)} локальных модулей из кэша")
-                with perf('chords.scan.update_available (from cache)'):
-                    self.update_available_chords()
-                self._data_loaded = True
+        with perf('chords.scan_chords'):
+            if self.state_manager.is_scan_done():
+                self.all_chords = self.state_manager.get_all_chords()
+                logger.info(f"⚡ Аккорды из кэша: {len(self.all_chords)}")
+                self.update_available_chords()
                 return
 
             self.all_chords = []
-            try:
-                with perf('chords.scan.pkgutil_importlib'):
-                    import chords
-                    self._scan_module_recursive(chords, 'chords')
-            except Exception as e:
-                logger.error(f"Chords: ошибка сканирования пакета: {e}")
+            local_dir = Path(__file__).parent.parent.parent / 'chords' / self._local_type
+            if not local_dir.exists():
+                local_dir = Path(__file__).parent.parent.parent / 'chords' / self._local_tonality / self._local_type
 
-            chords_state.set_all_chords(self.all_chords)
-            logger.info(f"🔍 Chords: просканировано {len(self.all_chords)} локальных модулей")
-            with perf('chords.scan.update_available (from scan)'):
-                self.update_available_chords()
-            self._data_loaded = True
+            if local_dir.exists():
+                for file_path in sorted(local_dir.glob('*.py')):
+                    if file_path.name.startswith('__'):
+                        continue
+                    stem = file_path.stem
+                    raw_part = stem.split('!')[0].split('_')[0]
+                    main_name = raw_part.replace('$', '/').replace('sharp', '#')
+                    if main_name != self._local_tonality:
+                        continue
+
+                    self.all_chords.append({
+                        'file': str(file_path),
+                        'name': stem,
+                        'short_name': main_name,
+                        'tonality': self._local_tonality,
+                        'type': self._local_type,
+                        'is_local': True,
+                    })
+
+            self.state_manager.set_all_chords(self.all_chords)
+            logger.info(
+                f"📁 Локально найдено {len(self.all_chords)} файлов для {self._local_tonality} {self._local_type}")
+            self.update_available_chords()
 
     def _scan_module_recursive(self, module, module_path):
         if hasattr(module, '__path__'):
@@ -2904,136 +2937,234 @@ class ChordsScreen(BaseScreen):
         match = re.match(r'^([A-H][#b]?)', chord_name)
         return match.group(1) if match else (chord_name[0] if chord_name else "")
 
-    def load_chord_variants(self, variants):
-        if not variants:
+    def _load_module_from_file(self, file_path_str):
+        import importlib.util
+        import sys
+        p = Path(file_path_str)
+        if not p.exists():
+            return None
+        mod_name = f"local_chord_{p.stem}"
+        if mod_name in sys.modules:
+            return sys.modules[mod_name]
+        spec = importlib.util.spec_from_file_location(mod_name, str(p))
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules[mod_name] = mod
+            spec.loader.exec_module(mod)
+            return mod
+        return None
+
+    def _fetch_chord_from_server(self, chord_name, chord_type, preserve_variant=False):
+        if not self._chords_client:
             return
-        with perf('chords.load_chord_variants.local', log_every=False):
-            variants.sort(key=lambda x: x['variant'])
-            same = self._variants_equal(variants, self.current_variants)
-            self.current_variants = variants
-            self.current_variant_index = 0
-            self.current_position = 1
-            if self.unified_menu:
-                self.unified_menu.update_variants(len(variants))
+        self._server_loading = True
+        self._request_id += 1
+        my_id = self._request_id
 
-            can_reuse = same and chords_state.can_reuse_slides(
-                settings_manager.theme, self.current_chord_name, variants
-            )
-            if can_reuse:
-                logger.debug(f"♻️ Chords: локальные слайды переиспользованы ({self.current_chord_name})")
-            else:
-                with perf('chords.load_chord_variants.rebuild_slides'):
-                    self._rebuild_slides_for_current_chord()
-
-            with perf('chords.load_chord_variants.update_display'):
-                self._update_display()
-
-    def _load_variants_for_chord(self, chord_name):
-        mode = 'local' if self._is_local_pair(self.current_tonality, self.current_type) else 'server'
-        with perf(f'chords.load_variants.{mode}'):
-            if mode == 'local':
-                with perf('chords.load_variants.local.filter', log_every=False):
-                    variants = []
-                    for chord in self.all_chords:
-                        if chord['short_name'] != chord_name:
-                            continue
-                        if self.extract_tonality(chord['name']) != self.current_tonality:
-                            continue
-                        chord_types = chord['type'].split('|') if chord['type'] else []
-                        if self.current_type in chord_types or self.current_type == chord.get('type', ''):
-                            variants.append(chord)
-                if variants:
-                    variants.sort(key=lambda x: x['variant'])
-                    same = self._variants_equal(variants, self.current_variants)
-                    self.current_variants = variants
-                    self.current_variant_index = 0
-                    self.current_position = 1
-                    if self.unified_menu:
-                        self.unified_menu.update_variants(len(variants))
-
-                    can_reuse = same and chords_state.can_reuse_slides(
-                        settings_manager.theme, self.current_chord_name, variants
-                    )
-                    if can_reuse:
-                        logger.debug(f"♻️ Chords: локальные слайды переиспользованы ({chord_name})")
-                    else:
-                        with perf('chords.load_variants.local.rebuild_slides'):
-                            self._rebuild_slides_for_current_chord()
-
-                    with perf('chords.load_variants.local.update_display'):
-                        self._update_display()
-                else:
-                    self.current_variants = []
-                    self.current_variant_index = 0
-                    self.current_position = 1
-                    if self.unified_menu:
-                        self.unified_menu.update_variants(0)
+        def _on_variants(items):
+            if my_id != self._request_id:
                 return
-
-            self._server_loading = True
-            self._request_id += 1
-            my_id = self._request_id
-            t_net = time.perf_counter()
-
-            def _on_success(variants):
-                dt_net = (time.perf_counter() - t_net) * 1000.0
-                _perf_log.info(
-                    f"🌐 GET chord {chord_name}/{self.current_type} "
-                    f"OK {dt_net:.1f} ms variants={len(variants or [])}"
-                )
-                perf_registry.add('chords.net.chord_variants', dt_net)
-
-                if my_id != self._request_id:
-                    return
-                with perf('chords.load_variants.server.on_success'):
-                    self._server_loading = False
-                    normalized = []
-                    for v in variants:
-                        syn = v.get("synonyms") or [v.get("main_name", "?")]
-                        normalized.append({
-                            "name": " | ".join(syn), "short_name": v.get("main_name", "?"),
-                            "variant": v.get("variant", 1), "type": v.get("chord_type", ""),
-                            "description": v.get("description", ""), "module": None, "server_data": v,
-                        })
-                    normalized.sort(key=lambda x: x["variant"])
-                    same = self._variants_equal(normalized, self.current_variants)
-                    self.current_variants = normalized
-                    self.current_variant_index = 0
-                    self.current_position = 1
-                    if self.unified_menu:
-                        self.unified_menu.update_variants(len(normalized))
-
-                    can_reuse = same and chords_state.can_reuse_slides(
-                        settings_manager.theme, self.current_chord_name, normalized
-                    )
-                    if can_reuse:
-                        logger.debug(f"♻️ Chords: серверные слайды переиспользованы ({chord_name}/{self.current_type})")
-                    else:
-                        with perf('chords.load_variants.server.rebuild_slides'):
-                            self._rebuild_server_slides()
-
-                    with perf('chords.load_variants.server.update_display'):
-                        self._update_display()
-
-            def _on_error(msg):
-                dt_net = (time.perf_counter() - t_net) * 1000.0
-                _perf_log.warning(
-                    f"🌐 GET chord {chord_name}/{self.current_type} "
-                    f"FAIL {dt_net:.1f} ms err={msg}"
-                )
-                if my_id != self._request_id:
-                    return
-                self._server_loading = False
+            self._server_loading = False
+            if not items:
+                if self.swipe_container:
+                    self.swipe_container.clear_slides()
                 self.current_variants = []
-                self.current_variant_index = 0
-                self.current_position = 1
                 if self.unified_menu:
                     self.unified_menu.update_variants(0)
-                self._show_temporary_hint(get_text('loading_error', 'Ошибка загрузки'), 2.0)
+                return
 
-            self._chords_client.get_chord(
-                chord_name, self.current_type,
-                on_success=_on_success, on_error=_on_error
+            variants = []
+            for v in items:
+                variants.append({
+                    'name': v.get('main_name', chord_name),
+                    'short_name': v.get('main_name', chord_name),
+                    'variant': v.get('variant', 1),
+                    'description': v.get('description', ''),
+                    'module': None,
+                    'server_data': v,
+                })
+            variants.sort(key=lambda x: x['variant'])
+            self.current_variants = variants
+            if not preserve_variant or self.current_variant_index >= len(variants):
+                self.current_variant_index = 0
+            self.current_position = self.current_variant_index + 1
+            if self.unified_menu:
+                self.unified_menu.update_variants(len(variants))
+            self._rebuild_server_slides()
+            self._update_display()
+
+        def _on_err(msg):
+            if my_id != self._request_id:
+                return
+            self._server_loading = False
+            self._show_temporary_hint(get_text('loading_error', 'Ошибка загрузки'), 2.0)
+
+        self._chords_client.get_chord(
+            chord_name, chord_type,
+            on_success=_on_variants, on_error=_on_err
+        )
+
+    def _extract_alt_names_from_filename(self, filename: str) -> list:
+        """Извлекает альтернативные имена из имени файла вида 'A!Amaj_1' -> ['Amaj']."""
+        if not filename:
+            return []
+        clean_stem = re.sub(r'_\d+$', '', filename)
+        parts = clean_stem.split('!')
+        if len(parts) <= 1:
+            return []
+        main_name = parts[0].replace('$', '/').replace('sharp', '#').strip()
+        alt_names = []
+        for p in parts[1:]:
+            alt = p.replace('$', '/').replace('sharp', '#').strip()
+            if alt and alt != main_name and alt not in alt_names:
+                alt_names.append(alt)
+        return alt_names
+
+
+    def load_chord_variants(self, chord_files=None):
+        self.current_variants = []
+
+        if self._is_local_pair(self.current_tonality, self.current_type):
+            if chord_files is None:
+                chord_files = [
+                    c for c in self.all_chords
+                    if c['tonality'] == self.current_tonality and c['type'] == self.current_type
+                ]
+            for cf in chord_files:
+                module = cf.get('module') or self._load_module_from_file(cf['file'])
+                if module:
+                    meta = getattr(module, 'METADATA', {})
+                    self.current_variants.append({
+                        'file': cf.get('file', ''),
+                        'name': cf.get('name', self.current_chord_name),
+                        'short_name': cf.get('short_name', self.current_chord_name),
+                        'variant': meta.get('variant', 1),
+                        'description': meta.get('description', ''),
+                        'module': module,
+                    })
+
+            if not self.current_variants:
+                if self.swipe_container:
+                    self.swipe_container.clear_slides()
+                return
+
+            self.current_variants.sort(key=lambda x: x.get('variant', 1))
+
+            if self.current_variant_index >= len(self.current_variants):
+                self.current_variant_index = 0
+            self.current_position = self.current_variant_index + 1
+
+            if self.unified_menu:
+                self.unified_menu.update_variants(len(self.current_variants))
+
+            first_variant = self.current_variants[0]
+            first_mod = first_variant.get('module')
+            meta = getattr(first_mod, 'METADATA', {}) if first_mod else {}
+            main_name = meta.get('name', self.current_chord_name)
+            alt_names = self._extract_alt_names_from_filename(first_variant.get('name', ''))
+            if not alt_names:
+                alt_names = [
+                    a.split('_')[0].replace('$', '/').replace('sharp', '#')
+                    for a in meta.get('alt_names', [])
+                ]
+
+            self._current_main_name = main_name
+            self._current_alt_names = alt_names
+            self._current_all_names = [main_name] + [a for a in alt_names if a != main_name]
+
+            if self.swipe_container:
+                self.swipe_container.update_chord_name(main_name, alt_names)
+                theme_id = settings_manager.theme
+                has_slides = bool(self.swipe_container.slides)
+                if not (has_slides and self.state_manager.can_reuse_slides(
+                        theme_id, self.current_chord_name, self.current_variants
+                )):
+                    from chord_utils.assets import get_griff_texture
+                    griff_texture = get_griff_texture()
+                    self.swipe_container.set_variants(
+                        self.current_variants,
+                        self.current_mode,
+                        start_index=self.current_variant_index,
+                        griff_texture=griff_texture
+                    )
+                    self.state_manager.mark_slides_built(
+                        theme_id, self.current_chord_name, self.current_variants
+                    )
+            self._update_display()
+        else:
+            self._fetch_chord_from_server(
+                self.current_chord_name,
+                self.current_type,
+                preserve_variant=True
+            )
+
+    def _load_variants_for_chord(self, chord_name, preserve_variant=False):
+        self.current_variants = []
+
+        if self._is_local_pair(self.current_tonality, self.current_type):
+            chord_files = [
+                c for c in self.all_chords
+                if c['tonality'] == self.current_tonality and c['type'] == self.current_type
+            ]
+            for cf in chord_files:
+                module = self._load_module_from_file(cf['file'])
+                if module:
+                    meta = getattr(module, 'METADATA', {})
+                    self.current_variants.append({
+                        'file': cf['file'],
+                        'name': cf['name'],
+                        'short_name': cf.get('short_name', chord_name),
+                        'variant': meta.get('variant', 1),
+                        'description': meta.get('description', ''),
+                        'module': module,
+                    })
+
+            if not self.current_variants:
+                if self.swipe_container:
+                    self.swipe_container.clear_slides()
+                return
+
+            self.current_variants.sort(key=lambda x: x.get('variant', 1))
+            if not preserve_variant or self.current_variant_index >= len(self.current_variants):
+                self.current_variant_index = 0
+
+            first_variant = self.current_variants[0]
+            first_mod = first_variant.get('module')
+            meta = getattr(first_mod, 'METADATA', {}) if first_mod else {}
+            main_name = meta.get('name', chord_name)
+            alt_names = self._extract_alt_names_from_filename(first_variant.get('name', ''))
+            if not alt_names:
+                alt_names = [
+                    a.split('_')[0].replace('$', '/').replace('sharp', '#')
+                    for a in meta.get('alt_names', [])
+                ]
+
+            self._current_main_name = main_name
+            self._current_alt_names = alt_names
+            self._current_all_names = [main_name] + [a for a in alt_names if a != main_name]
+
+            if self.swipe_container:
+                self.swipe_container.update_chord_name(main_name, alt_names)
+                theme_id = settings_manager.theme
+                has_slides = bool(self.swipe_container.slides)
+                if not (has_slides and self.state_manager.can_reuse_slides(
+                        theme_id, chord_name, self.current_variants
+                )):
+                    from chord_utils.assets import get_griff_texture
+                    griff_texture = get_griff_texture()
+                    self.swipe_container.set_variants(
+                        self.current_variants,
+                        self.current_mode,
+                        start_index=self.current_variant_index,
+                        griff_texture=griff_texture
+                    )
+                    self.state_manager.mark_slides_built(theme_id, chord_name, self.current_variants)
+            self._update_display()
+        else:
+            self._fetch_chord_from_server(
+                chord_name,
+                self.current_type,
+                preserve_variant=preserve_variant
             )
 
     def select_chord_by_name(self, chord_name):
@@ -3100,7 +3231,9 @@ class ChordsScreen(BaseScreen):
             self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.15)
 
     def _save_state(self):
-        chords_state.save({
+        if not self.USE_SHARED_STATE:
+            return
+        self.state_manager.save({
             'current_tonality': self.current_tonality,
             'current_type': self.current_type,
             'current_chord_name': self.current_chord_name,
@@ -3109,51 +3242,12 @@ class ChordsScreen(BaseScreen):
         })
 
     def on_enter(self):
-        with perf('chords.on_enter.total'):
-            super().on_enter()
+        super().on_enter()
 
-            with perf('chords.on_enter.update_theme'):
-                self.update_theme_colors()
 
-            theme_id = settings_manager.theme
-            can_reuse = chords_state.can_reuse_slides(
-                theme_id, self.current_chord_name, self.current_variants
-            )
-            if self.swipe_container and self.current_variants and not can_reuse:
-                with perf('chords.on_enter.rebuild_slides'):
-                    Clock.schedule_once(lambda dt: self._rebuild_slides_for_current_chord(), 0.05)
-                logger.info(f"🔄 Chords: пересоздание слайдов (theme={theme_id}, chord={self.current_chord_name})")
-            else:
-                logger.debug(f"♻️ Chords: слайды переиспользованы (theme={theme_id}, chord={self.current_chord_name})")
-
-            Clock.schedule_once(self._update_griff_size, 0.1)
-            Clock.schedule_once(self._update_griff_size, 0.3)
-
-            with perf('chords.on_enter.pending_chord', log_every=False):
-                pending_chord = previous_screen_state.get_pending_chord()
-                if pending_chord:
-                    Clock.schedule_once(lambda dt: self.select_chord_by_name(pending_chord), 0.1)
-                    previous_screen_state.clear_pending_chord()
-
-            self._close_tonality_selector()
-            self._close_type_selector()
-            self._close_chord_selector()
-            if self.swipe_container and self._current_alt_names:
-                self.swipe_container.update_chord_name(self._current_main_name, self._current_alt_names)
-
-            self._save_state()
-
-    def _show_back_button(self):
-        try:
-            app = MDApp.get_running_app()
-            if app and hasattr(app, 'top_nav'):
-                app.top_nav._custom_back_callback = self.go_back
-                app.top_nav.screen_title.text = get_text('chords', 'Аккорды')
-        except Exception:
-            pass
 
     def on_leave(self):
-        perf_registry.dump(prefix='[chords]')
+        perf_registry.dump(prefix=f'[{self.SCREEN_NAME}]')
         self._close_tonality_selector()
         self._close_type_selector()
         self._close_chord_selector()
@@ -3162,14 +3256,13 @@ class ChordsScreen(BaseScreen):
             self._hint_timer = None
         if self.swipe_container:
             self.swipe_container._stop_alt_cycle()
+            if self.swipe_container._fullscreen_overlay is not None:
+                self.swipe_container._close_fullscreen_griff()
         self._save_state()
 
-    def go_back(self, instance=None):
-        if self.manager and self.manager.has_screen('home'):
-            self.manager.current = 'home'
 
     def on_size(self, *args):
-        with perf('chords.on_size', log_every=False):
+        with perf(f'{self.SCREEN_NAME}.on_size', log_every=False):
             if hasattr(self, '_update_griff_timer') and self._update_griff_timer:
                 Clock.unschedule(self._update_griff_timer)
             self._update_griff_timer = Clock.schedule_once(lambda dt: self._update_griff_size(), 0.15)
