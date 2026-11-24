@@ -19,8 +19,9 @@ from kivy.graphics import Color, Rectangle
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.graphics import Color, RoundedRectangle, Line
 from kivymd.app import MDApp
-
+from kivy.graphics.texture import Texture
 from config.theme import theme
 from config.logger_config import get_logger
 from config.system_bars import get_navigation_bar_height
@@ -92,7 +93,7 @@ class NavItem(ButtonBehavior, BoxLayout):
             size=(icon_size, icon_size),
             theme_icon_color="Custom",
             icon_color=theme.TEXT_SECONDARY,
-            md_bg_color=[0, 0, 0, 0],
+            md_bg_color=(0, 0, 0, 0),
             pos_hint={'center_x': 0.5, 'center_y': 0.62},
             ripple_scale=0
         )
@@ -119,7 +120,6 @@ class NavItem(ButtonBehavior, BoxLayout):
 
         self.inner_layout.add_widget(self.icon_btn)
         self.inner_layout.add_widget(self.text_label)
-
         self.add_widget(self.inner_layout)
 
         self.update_state(self, self.active)
@@ -136,12 +136,11 @@ class NavItem(ButtonBehavior, BoxLayout):
             return
 
         available_width = self.text_label.width - dp(2)
-
         if available_width < dp(14):
             self.text_label.font_size = sp(8)
             return
 
-        test_sizes = [12, 11, 10, 9, 8, 7]
+        test_sizes = [11, 10.5, 10, 9.5, 9, 8.5, 8]
         for size in test_sizes:
             from kivy.core.text import Label as CoreLabel
             test_label = CoreLabel(
@@ -151,9 +150,7 @@ class NavItem(ButtonBehavior, BoxLayout):
                 bold=False
             )
             test_label.refresh()
-            text_width = test_label.texture.width
-
-            if text_width <= available_width:
+            if test_label.texture.width <= available_width:
                 self.text_label.font_size = sp(size)
                 self.text_label.text_size = (available_width, None)
                 return
@@ -173,7 +170,6 @@ class NavItem(ButtonBehavior, BoxLayout):
         theme_id = settings_manager.theme
 
         if theme_id == 'light':
-            active_color = [0.1, 0.55, 0.3, 1]
             inactive_color = [0.1, 0.55, 0.3, 0.7]
             if value:
                 self.icon_btn.icon_color = [0.05, 0.4, 0.2, 1]
@@ -184,7 +180,7 @@ class NavItem(ButtonBehavior, BoxLayout):
                 self.text_label.text_color = inactive_color
                 self.text_label.bold = False
         elif theme_id == 'dark':
-            active_color = [1, 1, 1, 1]
+            active_color = [1.0, 0.65, 0.0, 1]
             inactive_color = [1.0, 0.5, 0.0, 0.7]
             if value:
                 self.icon_btn.icon_color = active_color
@@ -235,8 +231,10 @@ class NavItem(ButtonBehavior, BoxLayout):
                 logger.info(f"✅ TopNav обновлён ДО перехода: {titles[screen_name]}")
 
 
+
+
 class BottomNav(BoxLayout):
-    """Нижняя панель навигации - 5 разделов"""
+    """Нижняя панель навигации с приподнятой поверхностью и плавным переходом"""
 
     NAV_SCREENS = ['songs', 'chords', 'tuner', 'metronome', 'favorites']
 
@@ -253,14 +251,35 @@ class BottomNav(BoxLayout):
         self.total_height = self.nav_height + bottom_padding
         self.height = self.total_height
 
+        # Сохраняем нижний отступ для имитации системного бара на Windows
         self.padding = [dp(4), dp(2), dp(4), bottom_padding]
         self.spacing = 0
 
-        with self.canvas.after:
-            self.line_color_inst = Color(1, 1, 1, 0.08)
-            self.line = Rectangle(pos=(self.x, self.y + self.height - dp(1)), size=(self.width, dp(1)))
+        # Мягкая градиентная тень над панелью (плавный переход от контента к бару)
+        self.shadow_tex = self._create_top_fade_texture()
 
-        self.bind(pos=self._update_line, size=self._update_line)
+        with self.canvas.before:
+            # 1. Фон всей панели (отличается от основного фона по тону)
+            self.bg_color_inst = Color(0.02, 0.13, 0.08, 0.92)
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+
+            # 2. Плавный градиентный переход над верхней границей (высота 6 dp)
+            self.fade_color_inst = Color(0, 0, 0, 0.22)
+            self.fade_rect = Rectangle(
+                pos=(self.x, self.y + self.height),
+                size=(self.width, dp(6)),
+                texture=self.shadow_tex
+            )
+
+        with self.canvas.after:
+            # 3. Тонкая нейтральная разделительная полоска (1 dp)
+            self.line_color_inst = Color(0.75, 0.90, 0.85, 0.16)
+            self.line = Rectangle(
+                pos=(self.x, self.y + self.height - dp(1)),
+                size=(self.width, dp(1))
+            )
+
+        self.bind(pos=self._update_graphics, size=self._update_graphics)
 
         self.nav_items = [
             ('guitar-electric', 'songs', 'songs'),
@@ -286,7 +305,24 @@ class BottomNav(BoxLayout):
 
         self.update_theme_colors()
 
-    def _update_line(self, *args):
+    @staticmethod
+    def _create_top_fade_texture():
+        """Создаёт вертикальный градиент прозрачности для мягкого перехода сверху."""
+        tex = Texture.create(size=(1, 16), colorfmt='rgba')
+        buf = bytearray()
+        for i in range(16):
+            alpha = int(((15 - i) / 15.0) ** 1.8 * 255)
+            buf.extend([255, 255, 255, alpha])
+        tex.blit_buffer(bytes(buf), colorfmt='rgba', bufferfmt='ubyte')
+        return tex
+
+    def _update_graphics(self, *args):
+        if hasattr(self, 'bg_rect'):
+            self.bg_rect.pos = self.pos
+            self.bg_rect.size = self.size
+        if hasattr(self, 'fade_rect'):
+            self.fade_rect.pos = (self.x, self.y + self.height)
+            self.fade_rect.size = (self.width, dp(6))
         if hasattr(self, 'line'):
             self.line.pos = (self.x, self.y + self.height - dp(1))
             self.line.size = (self.width, dp(1))
@@ -295,11 +331,17 @@ class BottomNav(BoxLayout):
         theme_id = settings_manager.theme
 
         if theme_id == 'light':
-            self.line_color_inst.rgba = (0.1, 0.55, 0.3, 0.3)
+            self.bg_color_inst.rgba = (0.97, 0.99, 0.98, 0.96)
+            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.08)
+            self.line_color_inst.rgba = (0.15, 0.35, 0.25, 0.18)
         elif theme_id == 'dark':
-            self.line_color_inst.rgba = (1.0, 0.5, 0.0, 0.3)
-        else:
-            self.line_color_inst.rgba = (1, 1, 1, 0.08)
+            self.bg_color_inst.rgba = (0.09, 0.09, 0.11, 0.96)
+            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.35)
+            self.line_color_inst.rgba = (1.0, 1.0, 1.0, 0.12)
+        else:  # green
+            self.bg_color_inst.rgba = (0.02, 0.13, 0.08, 0.88)
+            self.fade_color_inst.rgba = (0.0, 0.06, 0.03, 0.28)
+            self.line_color_inst.rgba = (0.75, 0.92, 0.86, 0.16)
 
         for item in self.items:
             item.update_state(item, item.active)
@@ -368,4 +410,4 @@ class BottomNav(BoxLayout):
         self.padding = [side_padding, dp(2), side_padding, bottom_padding]
         self.spacing = 0
 
-        self._update_line()
+        self._update_graphics()
