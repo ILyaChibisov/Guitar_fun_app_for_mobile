@@ -424,19 +424,26 @@ class SwipeContainer(MDBoxLayout):
         self.renderers = []
         self.current_index = 0
 
-    def set_current_slide(self, index, animate=True):
-        if 0 <= index < len(self.slides):
-            self._programmatic_slide = True
-            if animate:
-                self.carousel.load_slide(self.slides[index])
-                Clock.schedule_once(lambda dt: setattr(self, '_programmatic_slide', False), 0.35)
+    def set_current_slide(self, index, animate=True, direction_step=0):
+        if not (0 <= index < len(self.slides)):
+            return
+
+        self._programmatic_slide = True
+        if animate:
+            if direction_step > 0:
+                self.carousel.load_next(mode='next')
+            elif direction_step < 0:
+                self.carousel.load_previous()
             else:
-                old_duration = self.carousel.anim_move_duration
-                self.carousel.anim_move_duration = 0
                 self.carousel.load_slide(self.slides[index])
-                self.carousel.anim_move_duration = old_duration
-                self._programmatic_slide = False
-            self.current_index = index
+            Clock.schedule_once(lambda dt: setattr(self, '_programmatic_slide', False), 0.35)
+        else:
+            old_duration = self.carousel.anim_move_duration
+            self.carousel.anim_move_duration = 0
+            self.carousel.load_slide(self.slides[index])
+            self.carousel.anim_move_duration = old_duration
+            self._programmatic_slide = False
+        self.current_index = index
 
     def _on_carousel_slide(self, instance, slide):
         if not self.slides:
@@ -614,9 +621,9 @@ class SwipeContainer(MDBoxLayout):
             scr.current_position = scr.current_variant_index + 1
 
             if scr.swipe_container:
-                scr.swipe_container.set_current_slide(scr.current_variant_index)
+                scr.swipe_container.set_current_slide(scr.current_variant_index, direction_step=step)
             if self._big_swipe:
-                self._big_swipe.set_current_slide(scr.current_variant_index)
+                self._big_swipe.set_current_slide(scr.current_variant_index, direction_step=step)
 
             scr._update_display()
             self._update_overlay_name()
@@ -2375,7 +2382,7 @@ class BaseChordsScreen(BaseScreen):
 
             with perf('chords.on_swipe.set_current', log_every=False):
                 if self.swipe_container:
-                    self.swipe_container.set_current_slide(self.current_variant_index)
+                    self.swipe_container.set_current_slide(self.current_variant_index, direction_step=step)
 
             with perf('chords.on_swipe.update_display', log_every=False):
                 self._update_display()
@@ -2606,7 +2613,7 @@ class BaseChordsScreen(BaseScreen):
             self.current_variant_index = (self.current_variant_index + 1) % total
             self.current_position = self.current_variant_index + 1
             if self.swipe_container:
-                self.swipe_container.set_current_slide(self.current_variant_index)
+                self.swipe_container.set_current_slide(self.current_variant_index, direction_step=1)
             self._update_display()
             msg = f"{get_text('variant', 'Вариант')} {self.current_position}"
             self._show_temporary_hint(msg, 1.2)
