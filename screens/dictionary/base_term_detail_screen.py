@@ -20,7 +20,7 @@ from kivy.uix.image import Image as KivyImage
 from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard, MDSeparator
-from kivymd.uix.slider import MDSlider
+from songs_utils.fader_widget import SongsPanelFader
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.app import MDApp
 
@@ -282,38 +282,16 @@ class TermFontPanel(MDCard):
             text_color=accent,
             bold=True,
             size_hint=(1, 1),
-            font_size=sp(16)
+            font_size=sp(15)
         )
         header_box.add_widget(self.val_label)
         content.add_widget(header_box)
-
-        slider_container = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            padding=[0, dp(2), 0, dp(2)],
-            spacing=0
-        )
-
-        plus_label = MDLabel(
-            text="+",
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[0.3, 0.7, 0.3, 0.9],
-            size_hint=(1, None),
-            height=dp(22),
-            padding=[dp(1), 0, 0, dp(4)],
-            bold=True,
-            font_size=sp(15)
-        )
-        plus_label.bind(size=plus_label.setter('text_size'))
-        slider_container.add_widget(plus_label)
 
         slider_wrap = AnchorLayout(
             anchor_x='center',
             anchor_y='center',
             size_hint=(1, 1),
-            padding=[dp(4), 0, 0, 0]
+            padding=[0, dp(4), 0, dp(4)]
         )
 
         std_size = getattr(parent, 'STANDARD_FONT_SIZE', 42 if platform == 'android' else 20)
@@ -321,10 +299,9 @@ class TermFontPanel(MDCard):
         self._font_sizes = [int(round(std_size * m)) for m in self._font_multipliers]
         total_steps = len(self._font_sizes) - 1
 
-        self.font_slider = MDSlider(
-            min=-0.01, max=float(total_steps + 0.01), value=3, step=1,
-            orientation='vertical', size_hint=(None, 1), width=dp(36),
-            hint=False, padding=0
+        self.font_slider = SongsPanelFader(
+            min_value=0, max_value=total_steps, value=3, step=1,
+            size_hint=(None, 1), width=dp(46),
         )
         self._style_slider(self.font_slider, accent)
 
@@ -340,24 +317,7 @@ class TermFontPanel(MDCard):
 
         self.font_slider.bind(value=on_font_change)
         slider_wrap.add_widget(self.font_slider)
-        slider_container.add_widget(slider_wrap)
-
-        minus_label = MDLabel(
-            text="−",
-            halign="center",
-            valign="middle",
-            theme_text_color="Custom",
-            text_color=[0.8, 0.3, 0.3, 0.9],
-            size_hint=(1, None),
-            height=dp(18),
-            padding=[dp(0.5), 0, 0, 0],
-            bold=True,
-            font_size=sp(15)
-        )
-        minus_label.bind(size=minus_label.setter('text_size'))
-        slider_container.add_widget(minus_label)
-
-        content.add_widget(slider_container)
+        content.add_widget(slider_wrap)
 
         div = MDBoxLayout(
             orientation='horizontal',
@@ -381,6 +341,9 @@ class TermFontPanel(MDCard):
 
         self.add_widget(content)
 
+    def _style_slider(self, slider, accent):
+        slider.accent_color = accent
+
     def _sync_value(self):
         if not self.parent_screen:
             return
@@ -390,18 +353,6 @@ class TermFontPanel(MDCard):
         mult = self._font_multipliers[idx]
         self.val_label.text = f"{int(mult)}x" if mult == int(mult) else f"{mult:.1f}x"
 
-    def _style_slider(self, slider, accent):
-        slider.ripple_scale = 0
-        slider.thumb_color_active = accent
-        slider.thumb_color_inactive = accent
-        slider.thumb_color_disabled = accent
-        slider.track_color_active = accent[:3] + [0.5]
-        slider.track_color_inactive = [1, 1, 1, 0.3]
-        slider.color = accent
-        try:
-            slider.cursor_size = (dp(20), dp(20))
-        except Exception:
-            pass
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
