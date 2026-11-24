@@ -11,7 +11,7 @@
   - Промежуток между карточкой и меню — dp(10), как в тюнере.
 """
 from kivy.metrics import dp, sp
-from kivy.graphics import Color, Rectangle, Line, Mesh
+from kivy.graphics import Color, Rectangle, Line
 from kivy.core.image import Image as CoreImage
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
@@ -20,7 +20,7 @@ from kivy.clock import Clock
 from kivy.animation import Animation
 from kivy.properties import NumericProperty, BooleanProperty, ListProperty
 from kivy.core.audio import SoundLoader
-from kivy.utils import get_color_from_hex, platform
+from kivy.utils import platform
 from io import BytesIO
 import math
 import array
@@ -28,21 +28,21 @@ import struct
 import tempfile
 import os
 import random
-
+from kivy.uix.anchorlayout import AnchorLayout
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.slider import MDSlider
 from kivy.uix.behaviors import ButtonBehavior
-
+from kivy.graphics import Ellipse
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
-from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
-
+from metronome_utils.pendulum_widget import MetronomePendulumWidget
+from metronome_utils.fader_widget import StudioVerticalSlider
 logger = screen_logger('Metronome')
 
 try:
@@ -343,120 +343,6 @@ def generate_mechanical_click(is_accent=False, sample_rate=44100, volume=0.8):
     return sound
 
 
-# ============ РЕАЛИСТИЧНЫЙ МАЯТНИК ============
-class RealisticMetronome(Widget):
-    angle = NumericProperty(0)
-    bpm_value = NumericProperty(120)
-    is_running = BooleanProperty(False)
-    pendulum_color = ListProperty([0.46, 0.70, 0.71, 1])
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._animation = None
-        self.size_hint = (1, 1)
-        self.bind(pos=self.render, size=self.render, angle=self.render, bpm_value=self.render)
-
-    def render(self, *args):
-        self.canvas.clear()
-        cx = self.center_x
-        base_y = self.y + 10
-        w_base = min(self.width, self.height) * 0.7
-        h_body = self.height - 30
-        top_x, top_y = cx, base_y + h_body
-        left_x, left_y = cx - w_base / 2, base_y
-        right_x, right_y = cx + w_base / 2, base_y
-        pivot_y = base_y + h_body * 0.22
-
-        with self.canvas:
-            Color(*get_color_from_hex('#3a1d11'))
-            Mesh(vertices=[left_x, left_y, 0, 0, right_x, right_y, 0, 0, top_x, top_y, 0, 0],
-                 indices=[0, 1, 2], mode='triangles')
-
-            Color(0, 0, 0, 0.4)
-            Line(points=[left_x, left_y, top_x, top_y, right_x, right_y], width=3)
-
-            Color(*get_color_from_hex('#cd9a62'))
-            scale_w = w_base * 0.22
-            scale_ly, scale_hy = pivot_y - 10, top_y - 30
-            Mesh(vertices=[cx - scale_w / 2, scale_ly, 0, 0, cx + scale_w / 2, scale_ly, 0, 0,
-                           cx + scale_w / 3, scale_hy, 0, 0, cx - scale_w / 3, scale_hy, 0, 0],
-                 indices=[0, 1, 2, 2, 3, 0], mode='triangles')
-
-            Color(0.2, 0.1, 0, 0.6)
-            for i in range(10):
-                y_pos = scale_ly + (i / 9) * (scale_hy - scale_ly - 15)
-                curr_w = (scale_w / 2) - (i / 9) * (scale_w / 6)
-                Line(points=[cx - curr_w, y_pos, cx + curr_w, y_pos], width=1.2)
-
-            rad = math.radians(self.angle + 90)
-            rod_len = h_body * 0.65
-            end_x = cx + rod_len * math.cos(rad)
-            end_y = pivot_y + rod_len * math.sin(rad)
-
-            Color(*get_color_from_hex('#7f8c8d'))
-            Line(points=[cx, pivot_y, end_x, end_y], width=2.5)
-            Color(*get_color_from_hex('#ffffff'))
-            Line(points=[cx, pivot_y, end_x, end_y], width=0.8)
-
-            bpm_pct = max(0, min(1, (self.bpm_value - 40) / (210 - 40)))
-            weight_dist = rod_len * (0.9 - (bpm_pct * 0.55))
-            wx = cx + weight_dist * math.cos(rad)
-            wy = pivot_y + weight_dist * math.sin(rad)
-
-            color = self.pendulum_color
-            Color(color[0], color[1], color[2], 1)
-            Line(circle=(wx, wy, 10), width=14, joint='round')
-            Color(*get_color_from_hex('#fef08a'))
-            Line(circle=(wx - 2, wy + 2, 5), width=5, joint='round')
-            Color(*get_color_from_hex('#78350f'))
-            Line(circle=(wx, wy, 11), width=1.5, joint='round')
-
-            Color(*get_color_from_hex('#5c2e16'))
-            Mesh(vertices=[left_x, left_y, 0, 0, cx - scale_w / 2 - 4, scale_ly, 0, 0,
-                           cx - scale_w / 3 - 4, scale_hy, 0, 0, top_x, top_y, 0, 0],
-                 indices=[0, 1, 2, 2, 3, 0], mode='triangles')
-            Mesh(vertices=[right_x, right_y, 0, 0, cx + scale_w / 2 + 4, scale_ly, 0, 0,
-                           cx + scale_w / 3 + 4, scale_hy, 0, 0, top_x, top_y, 0, 0],
-                 indices=[0, 1, 2, 2, 3, 0], mode='triangles')
-            Mesh(vertices=[left_x, left_y, 0, 0, right_x, right_y, 0, 0,
-                           cx + scale_w / 2 + 4, scale_ly, 0, 0, cx - scale_w / 2 - 4, scale_ly, 0, 0],
-                 indices=[0, 1, 2, 2, 3, 0], mode='triangles')
-
-            Color(*get_color_from_hex('#1a1a1a'))
-            Line(circle=(cx, pivot_y, 7), width=8, joint='round')
-            Color(*get_color_from_hex('#8a8a8a'))
-            Line(circle=(cx, pivot_y, 3), width=4, joint='round')
-
-    def start(self):
-        self.is_running = True
-        self._animate_swing()
-
-    def stop(self):
-        self.is_running = False
-        if self._animation:
-            self._animation.cancel_all(self)
-            self._animation = None
-        Animation(angle=0, duration=0.2, transition='out_quad').start(self)
-
-    def _animate_swing(self):
-        if not self.is_running:
-            return
-        duration = 60.0 / self.bpm_value
-        target_angle = 28 if self.angle <= 0 else -28
-        self._animation = Animation(angle=target_angle, duration=duration, transition='in_out_quad')
-        self._animation.bind(on_complete=self._on_swing_complete)
-        self._animation.start(self)
-
-    def _on_swing_complete(self, animation, widget):
-        if self.is_running:
-            self._animate_swing()
-
-    def on_bpm_value(self, instance, value):
-        if self.is_running:
-            self.stop()
-            Clock.schedule_once(lambda dt: self.start(), 0.1)
-
-
 # ============ ВЕРТИКАЛЬНЫЙ СЛАЙДЕР ============
 class VerticalSlider(MDBoxLayout):
     value = NumericProperty(60)
@@ -745,6 +631,89 @@ class MetronomeMenu(MDCard):
                 child.update_theme_colors()
 
 
+# ============ СВЕТОДИОДНЫЕ ИНДИКАТОРЫ ДОЛЕЙ ============
+class BeatLedIndicator(Widget):
+    """Объёмный LED-шарик доли такта с яркой обводкой, бликом и плавным затуханием."""
+    led_color = ListProperty([0.18, 0.88, 0.28, 1.0])
+    is_active = BooleanProperty(False)
+    is_accent_beat = BooleanProperty(False)
+    glow_alpha = NumericProperty(0.0)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, None)
+        self.size = (dp(28), dp(28))
+        self.bind(
+            pos=self._redraw,
+            size=self._redraw,
+            led_color=self._redraw,
+            is_active=self._on_active_changed,
+            is_accent_beat=self._redraw,
+            glow_alpha=self._redraw,
+        )
+
+    def _on_active_changed(self, instance, value):
+        Animation.cancel_all(self, 'glow_alpha')
+        if value:
+            self.glow_alpha = 1.0
+        else:
+            Animation(glow_alpha=0.0, duration=0.14, transition='out_quad').start(self)
+
+    def _redraw(self, *args):
+        self.canvas.clear()
+        if self.opacity <= 0.01 or self.width <= 2:
+            return
+
+        cx, cy = self.center
+        r = min(self.width, self.height) * 0.5
+        cr, cg, cb, _ = self.led_color
+        theme_id = settings_manager.theme
+        g = max(0.0, min(1.0, self.glow_alpha))
+
+        with self.canvas:
+            # 1. Внешний неоновый ореол с плавным затуханием
+            if g > 0.01:
+                Color(cr, cg, cb, 0.28 * g)
+                Line(circle=(cx, cy, r + dp(2.2)), width=dp(2.5))
+
+            # 2. Внешнее кольцо-подложка
+            if theme_id == 'light':
+                Color(0.88, 0.90, 0.89, 1.0)
+            else:
+                Color(0.11, 0.13, 0.14, 0.95)
+            Line(circle=(cx, cy, r - dp(1)), width=dp(2.0))
+
+            # 3. Заливка шарика: плавно гаснет от 1.0 до базового уровня ожидания
+            base_alpha = 0.34 if self.is_accent_beat else 0.16
+            fill_alpha = base_alpha + (1.0 - base_alpha) * g
+            Color(cr, cg, cb, fill_alpha)
+            inner_r = r - dp(2.2)
+            Ellipse(pos=(cx - inner_r, cy - inner_r), size=(inner_r * 2, inner_r * 2))
+
+            # 4. Яркая цветная обводка по контуру шарика
+            base_border = 0.95 if self.is_accent_beat else 0.72
+            border_alpha = base_border + (1.0 - base_border) * g
+            Color(
+                min(1.0, cr + 0.18),
+                min(1.0, cg + 0.18),
+                min(1.0, cb + 0.18),
+                border_alpha,
+            )
+            Line(circle=(cx, cy, r - dp(1.2)), width=dp(1.6))
+
+            # 5. Стеклянный световой блик сверху для объёма
+            hl_alpha = (0.25 if self.is_accent_beat else 0.0) + 0.55 * g
+            if hl_alpha > 0.02:
+                Color(1.0, 1.0, 1.0, min(0.65, hl_alpha))
+                hl_w = inner_r * 0.85
+                hl_h = inner_r * 0.42
+                Ellipse(
+                    pos=(cx - hl_w * 0.5, cy + inner_r * 0.22),
+                    size=(hl_w, hl_h),
+                )
+
+
+
 # ============ ОСНОВНОЙ ЭКРАН ============
 class MetronomeScreen(BaseScreen):
     DEFAULT_BPM = 120
@@ -778,6 +747,7 @@ class MetronomeScreen(BaseScreen):
         self.is_accent_enabled = self.DEFAULT_ACCENT
         self.is_running = False
         self.tick_count = 0
+        self.total_beats = 0
         self.subdivision_count = 0
         self.click_sound = None
         self.accent_sound = None
@@ -833,7 +803,6 @@ class MetronomeScreen(BaseScreen):
         self.update_screen_background()
         theme_id = settings_manager.theme
         accent = MetronomeColors.get_accent(theme_id)
-        text_s = MetronomeColors.get_text_secondary(theme_id)
 
         if hasattr(self, 'bpm_slider'): self.bpm_slider.update_theme_colors()
         if hasattr(self, 'beat_slider'): self.beat_slider.update_theme_colors()
@@ -848,9 +817,6 @@ class MetronomeScreen(BaseScreen):
             self.unified_card.line_color = MetronomeColors.get_card_line(theme_id)
             self.unified_card.line_width = MetronomeColors.get_card_line_width(theme_id)
 
-        if hasattr(self, 'sliders_divider'):
-            self.sliders_divider.md_bg_color = MetronomeColors.get_divider_color(theme_id)
-
         if hasattr(self, '_hint_label'):
             self._hint_label.text_color = MetronomeColors.get_hint_color(theme_id)
 
@@ -860,14 +826,12 @@ class MetronomeScreen(BaseScreen):
             self.indicator_card.line_width = 1
 
         if hasattr(self, 'pendulum'):
-            self.pendulum.pendulum_color = accent
+            self.pendulum.pendulum_color = (
+                accent if self.is_accent_enabled else [0.6, 0.6, 0.6, 1]
+            )
 
         if hasattr(self, 'beat_indicators'):
-            for i in range(self.beats_per_measure):
-                if i == 0 and self.is_accent_enabled:
-                    self.beat_indicators[i].md_bg_color = accent[:3] + [0.7]
-                else:
-                    self.beat_indicators[i].md_bg_color = [0.3, 0.3, 0.3, 0.3]
+            self._update_beat_indicators()
 
     def update_language(self):
         if hasattr(self, '_hint_label') and self._hint_label.opacity > 0:
@@ -876,16 +840,19 @@ class MetronomeScreen(BaseScreen):
     def load_sounds(self):
         try:
             tone = self.SOUND_TONES.get(self.sound_tone, self.SOUND_TONES['mechanical'])
-            accent_volume = 1.0 if self.is_accent_enabled else 0.0
+            accent_volume = min(1.0, self.volume * 1.25) if self.is_accent_enabled else self.volume
             if self.sound_tone == 'mechanical':
                 self.click_sound = generate_mechanical_click(is_accent=False, volume=self.volume)
-                self.accent_sound = generate_mechanical_click(is_accent=True, volume=accent_volume)
+                self.accent_sound = generate_mechanical_click(is_accent=True,
+                                                              volume=accent_volume) if self.is_accent_enabled else self.click_sound
                 self.subdivision_sound = generate_mechanical_click(is_accent=False, volume=self.volume * 0.5)
             else:
                 waveform = tone['waveform']
                 self.click_sound = generate_click_sound(tone['freq'], 0.05, 44100, self.volume, waveform)
-                self.accent_sound = generate_accent_sound(tone['accent_freq'], 0.08, 44100, accent_volume, waveform)
-                self.subdivision_sound = generate_subdivision_sound(tone['freq'] * 0.7, 0.03, 44100, self.volume * 0.6, waveform)
+                self.accent_sound = generate_accent_sound(tone['accent_freq'], 0.08, 44100, accent_volume,
+                                                          waveform) if self.is_accent_enabled else self.click_sound
+                self.subdivision_sound = generate_subdivision_sound(tone['freq'] * 0.7, 0.03, 44100, self.volume * 0.6,
+                                                                    waveform)
             logger.info(f"Звуки загружены ({self.sound_tone})")
         except Exception as e:
             logger.error(f"Ошибка загрузки звуков: {e}")
@@ -913,7 +880,7 @@ class MetronomeScreen(BaseScreen):
         # 1. КАРТОЧКА СО ШКАЛАМИ — высота dp(330) и отступы точно как у main_tuner_card
         self.unified_card = MDCard(
             orientation='vertical', size_hint=(1, None), height=dp(330),
-            padding=[dp(16), dp(14), dp(16), dp(14)],
+            padding=[dp(12), dp(12), dp(12), dp(12)],
             radius=[dp(16)], elevation=0, spacing=0,
             md_bg_color=MetronomeColors.get_card_bg(settings_manager.theme),
             line_color=MetronomeColors.get_card_line(settings_manager.theme),
@@ -922,26 +889,40 @@ class MetronomeScreen(BaseScreen):
 
         sliders_layout = MDBoxLayout(
             orientation='horizontal', size_hint=(1, 1),
-            spacing=dp(2)
+            spacing=dp(4)
         )
 
-        self.bpm_slider = VerticalSlider("BPM", 30, 250, self.DEFAULT_BPM, 1)
-        self.bpm_slider.bind(value=self._on_bpm_change)
+        self.bpm_slider = StudioVerticalSlider(
+            label_text="BPM", min_value=30, max_value=250,
+            initial=self.DEFAULT_BPM, step=1,
+            on_value_change=self._on_bpm_change
+        )
 
-        self.beat_slider = VerticalSlider("BEAT", 2, 12, self.DEFAULT_BEATS, 1)
-        self.beat_slider.bind(value=self._on_beat_change)
+        self.beat_slider = StudioVerticalSlider(
+            label_text="BEAT", min_value=2, max_value=12,
+            initial=self.DEFAULT_BEATS, step=1,
+            on_value_change=self._on_beat_change
+        )
 
-        self.subdivision_slider = VerticalSlider("SUB", 0, 3, self.DEFAULT_SUBDIVISION, 1)
-        self.subdivision_slider.bind(value=self._on_subdivision_change)
+        self.subdivision_slider = StudioVerticalSlider(
+            label_text="SUB", min_value=0, max_value=3,
+            initial=self.DEFAULT_SUBDIVISION, step=1,
+            on_value_change=self._on_subdivision_change
+        )
 
-        self.volume_slider = VerticalSlider("VOL", 0, 100, self.DEFAULT_VOLUME, 5)
-        self.volume_slider.bind(value=self._on_volume_change)
+        self.volume_slider = StudioVerticalSlider(
+            label_text="VOL", min_value=0, max_value=100,
+            initial=self.DEFAULT_VOLUME, step=5,
+            on_value_change=self._on_volume_change
+        )
 
-        for w in (Widget(size_hint_x=1), self.bpm_slider,
-                  Widget(size_hint_x=1), self.beat_slider,
-                  Widget(size_hint_x=1), self.subdivision_slider,
-                  Widget(size_hint_x=1), self.volume_slider,
-                  Widget(size_hint_x=1)):
+        for w in (
+                Widget(size_hint_x=1), self.bpm_slider,
+                Widget(size_hint_x=1), self.beat_slider,
+                Widget(size_hint_x=1), self.subdivision_slider,
+                Widget(size_hint_x=1), self.volume_slider,
+                Widget(size_hint_x=1),
+        ):
             sliders_layout.add_widget(w)
 
         self.unified_card.add_widget(sliders_layout)
@@ -963,55 +944,46 @@ class MetronomeScreen(BaseScreen):
         top_section.add_widget(self._hint_label)
         content_container.add_widget(top_section)
 
-        # 3. ИНДИКАТОРЫ
+        # 3. ИНДИКАТОРЫ (строго по центру по количеству долей)
         indicator_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, None),
-            height=dp(44), padding=[dp(4), dp(2), dp(4), dp(2)]
+            height=dp(46), padding=[dp(4), dp(2), dp(4), dp(2)]
         )
         self.indicator_card = MDCard(
             orientation='horizontal', size_hint=(1, 1),
-            padding=[dp(4), dp(3), dp(4), dp(3)],
-            radius=[dp(10)], elevation=0, opacity=0,
+            padding=[dp(4), dp(2), dp(4), dp(2)],
+            radius=[dp(12)], elevation=0, opacity=0,
             md_bg_color=[0, 0, 0, 0],
             line_color=[0, 0, 0, 0],
             line_width=1
         )
 
-        indicator_wrapper = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, 1),
-            padding=[dp(4)] * 4
+        indicator_wrapper = AnchorLayout(
+            anchor_x='center', anchor_y='center', size_hint=(1, 1)
         )
         self.indicator_layout = MDBoxLayout(
             orientation='horizontal',
-            size_hint=(None, 1),
-            pos_hint={'center_x': 0.5},
+            size_hint=(None, None),
+            height=dp(34),
             spacing=dp(8),
-            padding=[dp(2)] * 4
         )
         self.beat_indicators = []
         for i in range(12):
-            ind = MDCard(
-                size_hint=(None, None), size=(dp(30), dp(30)),
-                radius=[dp(15)] * 4,
-                md_bg_color=[0.3, 0.3, 0.3, 0.3],
-                elevation=0, opacity=0,
-                line_color=[0, 0, 0, 0],
-                line_width=1
-            )
+            ind = BeatLedIndicator(opacity=0)
             self.beat_indicators.append(ind)
-            self.indicator_layout.add_widget(ind)
+
         indicator_wrapper.add_widget(self.indicator_layout)
         self.indicator_card.add_widget(indicator_wrapper)
         indicator_container.add_widget(self.indicator_card)
         content_container.add_widget(indicator_container)
 
-        # 4. МАЯТНИК (уменьшенный размер на Android и аккуратная посадка снизу)
+        # 4. МАЯТНИК (анимированный 3D-маятник в стиле матового графита)
         pendulum_container = FloatLayout(size_hint=(1, 1))
-        pendulum_scale = 0.34 if platform == 'android' else 0.38
-        self.pendulum = RealisticMetronome(
+        pendulum_scale = 0.88 if platform == 'android' else 0.92
+        self.pendulum = MetronomePendulumWidget(
             bpm_value=self.DEFAULT_BPM,
             size_hint=(pendulum_scale, pendulum_scale),
-            pos_hint={'center_x': 0.5, 'y': 0.02}
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
         pendulum_container.add_widget(self.pendulum)
         content_container.add_widget(pendulum_container)
@@ -1022,6 +994,7 @@ class MetronomeScreen(BaseScreen):
         self._update_indicators(self.beats_per_measure)
         self._update_beat_indicators()
         self._hide_indicators()
+        self._update_subdivision_label(self.DEFAULT_SUBDIVISION)
         self.update_theme_colors()
         self._update_display()
 
@@ -1066,84 +1039,127 @@ class MetronomeScreen(BaseScreen):
             self._hint_label.opacity = 0
             self._hint_timer = None
 
+    def _get_led_palette(self):
+        """Яркие цвета индикаторов под текущую тему: (акцент 1-й доли, обычные доли)."""
+        theme_id = settings_manager.theme
+        if theme_id == 'light':
+            # На светлой теме: насыщенный изумрудный акцент + яркий лаймово-бирюзовый
+            return [0.06, 0.65, 0.32, 1.0], [0.12, 0.75, 0.45, 1.0]
+        elif theme_id == 'dark':
+            # На тёмной теме: ярко-оранжевый акцент + тёплый янтарно-золотой
+            return [1.0, 0.45, 0.0, 1.0], [1.0, 0.72, 0.15, 1.0]
+        # На зелёной теме: неоново-лаймовый акцент + яркий изумрудно-мятный
+        return [0.22, 0.96, 0.36, 1.0], [0.18, 0.85, 0.58, 1.0]
+
     def _update_indicators(self, count):
         count = max(2, min(12, count))
         from kivy.core.window import Window
-        available_width = Window.width - dp(32) - dp(16) - dp(16) - dp(8)
-        if available_width < dp(100):
-            available_width = dp(100)
+        available_width = Window.width - dp(48)
+        if available_width < dp(120):
+            available_width = dp(120)
 
-        spacing = dp(8)
+        spacing = dp(8) if count <= 8 else dp(5)
+        self.indicator_layout.spacing = spacing
+
         total_spacing = (count - 1) * spacing
         calculated_size = (available_width - total_spacing) / count
 
         if count <= 6:
-            max_size, min_size = dp(32), dp(20)
+            max_size, min_size = dp(30), dp(20)
         elif count <= 8:
-            max_size, min_size = dp(30), dp(18)
+            max_size, min_size = dp(26), dp(18)
         elif count <= 10:
-            max_size, min_size = dp(26), dp(16)
+            max_size, min_size = dp(22), dp(15)
         else:
-            max_size, min_size = dp(22), dp(14)
+            max_size, min_size = dp(19), dp(13)
 
         final_size = max(min(calculated_size, max_size), min_size)
-        for i in range(12):
-            if i < count:
-                self.beat_indicators[i].size = (final_size, final_size)
-                self.beat_indicators[i].radius = [final_size / 2] * 4
-                self.beat_indicators[i].opacity = 1 if self.is_running else 0
-                self.beat_indicators[i].disabled = False
-            else:
-                self.beat_indicators[i].opacity = 0
-                self.beat_indicators[i].disabled = True
 
-        container_width = (
-            count * final_size
-            + (count - 1) * spacing
-            + dp(4)
-        )
-        self.indicator_layout.width = container_width
+        # Пересобираем только активное количество шариков — AnchorLayout центрирует их идеально
+        self.indicator_layout.clear_widgets()
+        for i in range(count):
+            ind = self.beat_indicators[i]
+            ind.size = (final_size, final_size)
+            ind.opacity = 1 if self.is_running else 0
+            self.indicator_layout.add_widget(ind)
 
+        self.indicator_layout.height = final_size
+        self.indicator_layout.width = count * final_size + (count - 1) * spacing
         self.indicator_card.opacity = 1 if self.is_running and count > 0 else 0
         self._update_beat_indicators()
 
     def _update_beat_indicators(self):
-        theme_id = settings_manager.theme
-        accent = MetronomeColors.get_accent(theme_id)
+        accent_col, normal_col = self._get_led_palette()
         for i in range(self.beats_per_measure):
-            if i == 0 and self.is_accent_enabled:
-                self.beat_indicators[i].md_bg_color = accent[:3] + [0.7]
-            else:
-                self.beat_indicators[i].md_bg_color = [0.3, 0.3, 0.3, 0.3]
-        for i in range(self.beats_per_measure, 12):
-            self.beat_indicators[i].opacity = 0
+            ind = self.beat_indicators[i]
+            is_acc = (i == 0 and self.is_accent_enabled)
+            ind.is_accent_beat = is_acc
+            ind.is_active = False
+            ind.led_color = accent_col if is_acc else normal_col
 
     def _highlight_beat(self, beat_index):
         self._update_beat_indicators()
-        theme_id = settings_manager.theme
-        accent = MetronomeColors.get_accent(theme_id)
-        if beat_index == 0 and self.is_accent_enabled:
-            color = accent[:3] + [1.0]
-        else:
-            color = [0.6, 0.6, 0.6, 0.8]
-        if beat_index < len(self.beat_indicators):
-            self.beat_indicators[beat_index].md_bg_color = color
+        if 0 <= beat_index < self.beats_per_measure:
+            ind = self.beat_indicators[beat_index]
+            ind.is_active = True
+            Clock.unschedule(self._deactivate_leds)
+            Clock.schedule_once(self._deactivate_leds, 0.12)
+
+    def _deactivate_leds(self, dt=None):
+        for ind in self.beat_indicators:
+            ind.is_active = False
+
+    def _hide_indicators(self):
+        Clock.unschedule(self._deactivate_leds)
+        for ind in self.beat_indicators:
+            Animation.cancel_all(ind, 'glow_alpha')
+            ind.glow_alpha = 0.0
+            ind.opacity = 0
+            ind.is_active = False
+        self.indicator_card.opacity = 0
 
     def _show_indicators(self):
         self._update_indicators(self.beats_per_measure)
+        self._update_beat_indicators()
+        self.indicator_card.opacity = 1
+        for i in range(self.beats_per_measure):
+            self.beat_indicators[i].opacity = 1
 
-    def _hide_indicators(self):
-        for ind in self.beat_indicators:
-            ind.opacity = 0
-            ind.md_bg_color = [0.3, 0.3, 0.3, 0.3]
-        self.indicator_card.opacity = 0
+
+    def _tick(self, dt=None):
+        if not self.is_running:
+            return
+        subs = self._get_subdivisions_per_beat()
+        is_main_beat = (self.subdivision_count == 0)
+        is_accent = (is_main_beat and self.tick_count == 0)
+        try:
+            if is_accent and self.is_accent_enabled:
+                if self.accent_sound:
+                    self.accent_sound.play()
+            elif is_main_beat:
+                if self.click_sound:
+                    self.click_sound.play()
+            else:
+                if self.subdivision_sound:
+                    self.subdivision_sound.play()
+        except Exception as e:
+            logger.error(f"Ошибка воспроизведения: {e}")
+
+        if is_main_beat:
+            beat_index = self.tick_count % self.beats_per_measure
+            if hasattr(self, 'pendulum'):
+                self.pendulum.sync_beat(self.total_beats)
+            self.total_beats += 1
+            self._highlight_beat(beat_index)
+            self.tick_count = (self.tick_count + 1) % self.beats_per_measure
+
+        self.subdivision_count = (self.subdivision_count + 1) % subs
 
     def _update_subdivision_label(self, value):
         names = [get_text('sub_none'), get_text('sub_eighth'),
                  get_text('sub_triplet'), get_text('sub_sixteenth')]
         if 0 <= int(value) <= 3:
-            self.subdivision_slider.value_label.text = names[int(value)]
-            self.subdivision_slider.value_below.text = names[int(value)]
+            self.subdivision_slider.set_display_text(names[int(value)])
 
     def _update_display(self):
         sub_names = {'none': get_text('sub_none'), 'eighth': get_text('sub_eighth'),
@@ -1158,9 +1174,14 @@ class MetronomeScreen(BaseScreen):
         if hasattr(self, 'pendulum'):
             self.pendulum.bpm_value = self.bpm
         self._update_display()
-        if self.is_running:
-            self.stop_metronome()
-            self.start_metronome()
+        self._restart_tick_timer()
+
+    def _on_subdivision_change(self, instance, value):
+        self.subdivision = ['none', 'eighth', 'triplet', 'sixteenth'][int(value)]
+        self._update_subdivision_label(value)
+        self._update_display()
+        self.subdivision_count = 0
+        self._restart_tick_timer()
 
     def _on_beat_change(self, instance, value):
         self.beats_per_measure = int(value)
@@ -1170,10 +1191,6 @@ class MetronomeScreen(BaseScreen):
         if self.is_running:
             self._update_beat_indicators()
 
-    def _on_subdivision_change(self, instance, value):
-        self.subdivision = ['none', 'eighth', 'triplet', 'sixteenth'][int(value)]
-        self._update_subdivision_label(value)
-        self._update_display()
 
     def _on_volume_change(self, instance, value):
         self.volume = float(value) / 100.0
@@ -1183,9 +1200,12 @@ class MetronomeScreen(BaseScreen):
         self.is_accent_enabled = not self.is_accent_enabled
         self.metronome_menu.update_state(self.is_running, self.is_accent_enabled)
         self.load_sounds()
-        if self.is_running:
-            self.stop_metronome()
-            self.start_metronome()
+        self._update_beat_indicators()
+        if hasattr(self, 'pendulum'):
+            self.pendulum.pendulum_color = (
+                MetronomeColors.get_accent(settings_manager.theme)
+                if self.is_accent_enabled else [0.6, 0.6, 0.6, 1]
+            )
         state = get_text('on') if self.is_accent_enabled else get_text('off')
         self._show_temporary_hint(f"{get_text('accent')}: {state}", 1.2)
 
@@ -1225,6 +1245,7 @@ class MetronomeScreen(BaseScreen):
                 return
         self.is_running = True
         self.tick_count = 0
+        self.total_beats = 0
         self.subdivision_count = 0
         if hasattr(self, 'pendulum'):
             self.pendulum.start()
@@ -1234,12 +1255,31 @@ class MetronomeScreen(BaseScreen):
             )
         self._show_indicators()
         self.metronome_menu.update_state(self.is_running, self.is_accent_enabled)
-        interval = 60.0 / self.bpm
         self._tick()
-        self.tick_event = Clock.schedule_interval(self._tick, interval)
+        self._restart_tick_timer()
         self._show_temporary_hint(
             get_text('started', 'Запущен') + f": {self.bpm} BPM", 1.2
         )
+
+
+    def _get_subdivisions_per_beat(self):
+        mapping = {
+            'none': 1,
+            'eighth': 2,
+            'triplet': 3,
+            'sixteenth': 4,
+        }
+        return mapping.get(self.subdivision, 1)
+
+    def _restart_tick_timer(self):
+        if not self.is_running:
+            return
+        if self.tick_event:
+            self.tick_event.cancel()
+        subs = self._get_subdivisions_per_beat()
+        interval = (60.0 / self.bpm) / subs
+        self.tick_event = Clock.schedule_interval(self._tick, interval)
+
 
     def stop_metronome(self):
         if self.tick_event:
@@ -1251,31 +1291,10 @@ class MetronomeScreen(BaseScreen):
         if hasattr(self, 'pendulum'):
             self.pendulum.stop()
         self.tick_count = 0
+        self.total_beats = 0
         self.subdivision_count = 0
         self._show_temporary_hint(get_text('stopped', 'Остановлен'), 1.2)
 
-    def _tick(self, dt=None):
-        if not self.is_running:
-            return
-        is_main_beat = (self.subdivision_count == 0)
-        is_accent = (is_main_beat and self.tick_count == 0)
-        try:
-            if is_accent and self.is_accent_enabled:
-                if self.accent_sound: self.accent_sound.play()
-            elif is_main_beat:
-                if self.click_sound: self.click_sound.play()
-            else:
-                if self.subdivision_sound: self.subdivision_sound.play()
-        except Exception as e:
-            logger.error(f"Ошибка воспроизведения: {e}")
-        if is_main_beat:
-            beat_index = self.tick_count % self.beats_per_measure
-            self._highlight_beat(beat_index)
-            if beat_index < len(self.beat_indicators):
-                ind = self.beat_indicators[beat_index]
-                anim = Animation(opacity=1.0, duration=0.05) + Animation(opacity=0.7, duration=0.1)
-                anim.start(ind)
-            self.tick_count = (self.tick_count + 1) % self.beats_per_measure
 
     def on_enter(self):
         super().on_enter()
