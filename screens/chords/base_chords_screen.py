@@ -81,7 +81,43 @@ CHORD_TYPES = [
 
 LOCAL_TONALITY = "A"
 LOCAL_TYPE = "Major"
+_CHORDS_TEXTURES_PRELOADED = False
 
+def preload_chords_textures():
+    """Предзагружает текстуру грифа и прогревает глифы иконок меню аккордов до показа UI."""
+    global _CHORDS_TEXTURES_PRELOADED
+    if _CHORDS_TEXTURES_PRELOADED:
+        return
+    _CHORDS_TEXTURES_PRELOADED = True
+
+    try:
+        from chord_utils.assets import get_griff_texture
+        get_griff_texture()
+    except Exception as e:
+        logger.debug(f"preload_chords_textures (griff): {e}")
+
+    try:
+        # Прогреваем атлас шрифта иконок MDIcon для всех кнопок меню и селекторов аккордов
+        menu_icons = (
+            "music-note-eighth",
+            "tag",
+            "music-circle",
+            "format-list-numbered",
+            "gesture-tap",
+            "music-note",
+            "phone-rotate-landscape",
+            "phone-rotate-portrait",
+            "chevron-left",
+            "chevron-right",
+            "chevron-up",
+            "chevron-down",
+            "close-circle-outline",
+        )
+        for icon_name in menu_icons:
+            ic = MDIcon(icon=icon_name, font_size=sp(24))
+            ic.texture_update()
+    except Exception as e:
+        logger.debug(f"preload_chords_textures (icons): {e}")
 
 class ChordsColors:
     @staticmethod

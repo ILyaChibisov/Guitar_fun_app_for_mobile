@@ -17,7 +17,9 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.core.text import LabelBase
 
 from screens.songs.base_song_detail_screen import preload_panel_textures
+from screens.chords.base_chords_screen import preload_chords_textures
 preload_panel_textures()
+preload_chords_textures()
 
 # Путь к папке с проектом
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
