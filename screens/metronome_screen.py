@@ -863,21 +863,22 @@ class MetronomeScreen(BaseScreen):
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
         nav_bottom = layout_config.get_bottom_nav_total_height()
-        padding_bottom = nav_bottom
 
-        # Боковые отступы dp(16) — точно как в TunerScreen
+        # ИЗМЕНЕНО: компенсируем прозрачный отступ внутри картинки метронома,
+        # чтобы он оказался так же близко к меню, как гриф тюнера.
+        # Если нужно еще ближе — увеличьте вычитаемое число (например, dp(25)).
+        padding_bottom = max(0, nav_bottom - dp(10))
+
         content_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, 1),
             padding=[dp(16), dp(4), dp(16), padding_bottom]
         )
 
-        # Верхняя секция: карточка dp(330) + отступ dp(10) + меню dp(60) + отступ dp(10) + подсказка dp(18) = dp(428)
         top_section = MDBoxLayout(
             orientation='vertical', size_hint=(1, None),
             height=dp(428), spacing=dp(10)
         )
 
-        # 1. КАРТОЧКА СО ШКАЛАМИ — высота dp(330) и отступы точно как у main_tuner_card
         self.unified_card = MDCard(
             orientation='vertical', size_hint=(1, None), height=dp(330),
             padding=[dp(12), dp(12), dp(12), dp(12)],
@@ -927,7 +928,6 @@ class MetronomeScreen(BaseScreen):
 
         self.unified_card.add_widget(sliders_layout)
 
-        # 2. МЕНЮ — высота dp(60) и отступ dp(10) от верхней карточки, как в тюнере
         self.metronome_menu = MetronomeMenu(
             on_play_press=self.toggle_metronome,
             on_reset_press=self._reset_to_defaults,
@@ -944,7 +944,6 @@ class MetronomeScreen(BaseScreen):
         top_section.add_widget(self._hint_label)
         content_container.add_widget(top_section)
 
-        # 3. ИНДИКАТОРЫ (строго по центру по количеству долей)
         indicator_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, None),
             height=dp(46), padding=[dp(4), dp(2), dp(4), dp(2)]
@@ -977,9 +976,8 @@ class MetronomeScreen(BaseScreen):
         indicator_container.add_widget(self.indicator_card)
         content_container.add_widget(indicator_container)
 
-        # 4. МАЯТНИК (анимированный 3D-маятник в стиле матового графита)
         pendulum_container = FloatLayout(size_hint=(1, 1))
-        pendulum_scale = 0.88 if platform == 'android' else 0.92
+        pendulum_scale = 0.95 if platform == 'android' else 0.98
         self.pendulum = MetronomePendulumWidget(
             bpm_value=self.DEFAULT_BPM,
             size_hint=(pendulum_scale, pendulum_scale),

@@ -67,42 +67,41 @@ def generate_track_png():
 
 
 def generate_knob_png():
-    """Генерирует объёмную металлическую ручку фейдера с фасками, бликом и тенью."""
+    """Генерирует компактную объёмную металлическую ручку фейдера с фасками и тенью."""
     W, H = 136, 152
     cx = W // 2
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
-    kw, kh = 92, 102
+    # Уменьшенный размер ручки (было 92x102 -> стало 66x72)
+    kw, kh = 66, 72
     kx1 = cx - kw // 2
-    ky1 = 18
+    ky1 = (H - kh) // 2 - 4
     kx2 = kx1 + kw
     ky2 = ky1 + kh
-    radius = 16
+    radius = 12
 
-    # 1. Глубокая падающая тень вниз от ручки
+    # 1. Мягкая падающая тень вниз от ручки
     shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).rounded_rectangle([kx1 + 2, ky1 + 14, kx2 + 2, ky2 + 18], radius=radius, fill=(0, 0, 0, 210))
-    canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(radius=9)))
+    ImageDraw.Draw(shadow).rounded_rectangle(
+        [kx1 + 2, ky1 + 10, kx2 + 2, ky2 + 13], radius=radius, fill=(0, 0, 0, 200)
+    )
+    canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(radius=7)))
 
-    # 2. Основа корпуса ручки (металлический вертикальный градиент как на фото)
+    # 2. Основа корпуса ручки (металлический вертикальный градиент)
     body = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     b_draw = ImageDraw.Draw(body)
     for y in range(ky1, ky2 + 1):
         t = (y - ky1) / max(1, (ky2 - ky1))
         if t < 0.14:
-            # Яркий верхний хромированный блик
             k = t / 0.14
             v = int(195 - 75 * k)
         elif t < 0.52:
-            # Переход к тёмному полированному графиту в центре
             k = (t - 0.14) / 0.38
             v = int(120 - 88 * k)
         elif t < 0.86:
-            # Глубокая тёмная середина -> нижний отсвет
             k = (t - 0.52) / 0.34
             v = int(32 + 78 * k)
         else:
-            # Нижний скос (тёмная грань толщи)
             k = (t - 0.86) / 0.14
             v = int(110 - 85 * k)
         b_draw.line([(kx1, y), (kx2, y)], fill=(v, v + 2, v + 5, 255))
@@ -128,16 +127,22 @@ def generate_knob_png():
     bv_draw.rounded_rectangle([kx1 + 2, ky1 + 2, kx2 - 2, ky2 - 2], radius=radius - 2, outline=(255, 255, 255, 65), width=1)
     canvas.paste(Image.alpha_composite(canvas, bevel), (0, 0), knob_mask)
 
-    # 4. Углублённое окошко под светодиодный индикатор по центру ручки
-    led_w, led_h = 34, 10
-    cy_knob = (ky1 + ky2) // 2 - 2
+    # 4. Компактное окошко под светодиодный индикатор по центру ручки
+    led_w, led_h = 26, 8
+    cy_knob = (ky1 + ky2) // 2 - 1
     lx1 = cx - led_w // 2
     ly1 = cy_knob - led_h // 2
     lx2 = cx + led_w // 2
     ly2 = cy_knob + led_h // 2
 
     draw = ImageDraw.Draw(canvas)
-    draw.rounded_rectangle([lx1 - 2, ly1 - 2, lx2 + 2, ly2 + 2], radius=4, fill=(10, 12, 14, 240), outline=(180, 190, 200, 90), width=1)
+    draw.rounded_rectangle(
+        [lx1 - 2, ly1 - 2, lx2 + 2, ly2 + 2],
+        radius=3,
+        fill=(10, 12, 14, 240),
+        outline=(180, 190, 200, 90),
+        width=1,
+    )
 
     meta = {
         "knob_center_y_norm": round(1.0 - cy_knob / H, 4),
@@ -149,6 +154,7 @@ def generate_knob_png():
         ],
     }
     return canvas, meta
+
 
 
 def save_fader_assets():
