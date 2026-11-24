@@ -680,7 +680,6 @@ class SwipeContainer(MDBoxLayout):
             has_variants = bool(self.screen and self.screen.current_variants and len(self.screen.current_variants) > 1)
 
             if is_rot:
-                # 1. Меню вдоль ЛЕВОГО края с названием аккорда ровно по середине (3 + Название + 3)
                 menu_thickness = dp(52)
                 left_pad = dp(10)
                 v_margin = dp(20)
@@ -693,18 +692,16 @@ class SwipeContainer(MDBoxLayout):
                     menu_scatter.rotation = -90
                     menu_scatter.center = (left_pad + menu_thickness / 2.0, h / 2.0)
 
-                # 2. Скрываем отдельный заголовок справа (теперь он в центральной ячейке меню)
                 if name_scatter is not None:
                     name_scatter.opacity = 0
                     name_scatter.disabled = True
 
-                # 3. Максимально крупный гриф занимает всю правую область от меню до края экрана
                 griff_left_limit = left_pad + menu_thickness + dp(8)
                 griff_right_limit = w - dp(8)
                 avail_w = max(dp(220), griff_right_limit - griff_left_limit)
 
-                arrow_space = dp(24) if has_variants else dp(10)
-                avail_h = max(dp(260), h - arrow_space * 2 - dp(12))
+                arrow_space = dp(32) if has_variants else dp(10)
+                avail_h = max(dp(260), h - arrow_space * 2)
 
                 center_x = griff_left_limit + avail_w / 2.0
                 center_y = h / 2.0
@@ -716,26 +713,27 @@ class SwipeContainer(MDBoxLayout):
                     scatter.rotation = -90
                     scatter.center = (center_x, center_y)
 
-                # 4. Стрелки пагинации вплотную к верхнему и нижнему торцам грифа
-                griff_top = center_y + avail_h / 2.0
-                griff_bottom = center_y - avail_h / 2.0
+                # Реальная высота отрисованного грифа с учётом пропорций, чтобы стрелки стояли вплотную
+                visual_griff_h = min(avail_h, avail_w * 1.68)
+                griff_top = center_y + visual_griff_h / 2.0
+                griff_bottom = center_y - visual_griff_h / 2.0
+
                 if self._overlay_side_left is not None and self._overlay_side_right is not None:
-                    arrow_w, arrow_h = dp(64), dp(22)
+                    arrow_w, arrow_h = dp(64), dp(28)
                     arrow_x = center_x - arrow_w / 2.0
 
                     self._overlay_side_left.icon.icon = "chevron-up"
                     self._overlay_side_left.size = (arrow_w, arrow_h)
-                    self._overlay_side_left.pos = (arrow_x, min(h - arrow_h - dp(2), griff_top - dp(4)))
+                    self._overlay_side_left.pos = (arrow_x, griff_top - dp(2))
                     self._overlay_side_left.opacity = 1 if has_variants else 0
                     self._overlay_side_left.disabled = not has_variants
 
                     self._overlay_side_right.icon.icon = "chevron-down"
                     self._overlay_side_right.size = (arrow_w, arrow_h)
-                    self._overlay_side_right.pos = (arrow_x, max(dp(2), griff_bottom - arrow_h + dp(4)))
+                    self._overlay_side_right.pos = (arrow_x, griff_bottom - arrow_h + dp(2))
                     self._overlay_side_right.opacity = 1 if has_variants else 0
                     self._overlay_side_right.disabled = not has_variants
             else:
-                # Стандартный горизонтальный оверлей (название вверху, меню из 6 кнопок без центральной ячейки)
                 if name_scatter is not None:
                     name_scatter.opacity = 1
                     name_scatter.disabled = False
