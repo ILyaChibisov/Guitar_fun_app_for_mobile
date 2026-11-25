@@ -166,7 +166,7 @@ jobs:
           if not apks:
               raise FileNotFoundError("APK не найден в папке bin/")
 
-          src_apk = apks
+          src_apk = apks[0]
           dst_apk = f"bin/GuitarFans-{ver}.apk"
           if src_apk != dst_apk:
               shutil.move(src_apk, dst_apk)
@@ -197,7 +197,6 @@ jobs:
           api_upload = 'https://yandex.net'
           api_mkdir  = 'https://yandex.net'
 
-          # Создаём корневую папку и папку сборки
           for folder in [remote_dir, f'{remote_dir}/run-{run_number}']:
               r = requests.put(api_mkdir, headers=headers, params={'path': folder})
               if r.status_code not in (200, 201, 409):
@@ -217,9 +216,8 @@ jobs:
               if r.status_code != 200:
                   print(f"❌ Ошибка получения ссылки загрузки: {r.status_code} {r.text}")
                   sys.exit(1)
-              data = r.json()
               with open(apk, 'rb') as f:
-                  up = requests.put(data['href'], data=f)
+                  up = requests.put(r.json()['href'], data=f)
               if up.status_code not in (200, 201, 202):
                   print(f"❌ Ошибка загрузки файла: {up.status_code} {up.text}")
                   sys.exit(1)
@@ -258,4 +256,5 @@ jobs:
               up = requests.put(r.json()['href'], data=f)
           print(f"📄 Лог загружен: статус {up.status_code}")
           EOF
+      
       
