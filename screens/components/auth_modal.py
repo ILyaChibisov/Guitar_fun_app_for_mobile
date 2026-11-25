@@ -61,13 +61,13 @@ class AuthModal(ModalView):
         self.card = MDCard(
             orientation='vertical',
             size_hint=(0.9, None),
-            height=dp(540),  # Увеличили высоту из-за кнопки "Забыли пароль"
+            height=dp(540),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             padding=[dp(24), dp(16), dp(24), dp(24)],
             spacing=dp(8),
             radius=[dp(24)] * 4,
             md_bg_color=[0.12, 0.25, 0.22, 0.95],
-            elevation=15,
+            elevation=0,
             line_color=[0.46, 0.70, 0.71, 0.4],
             line_width=1.5
         )
