@@ -307,7 +307,7 @@ class HomeScreen(BaseScreen):
         )
 
         self.app_name_label = MDLabel(
-            text="GuitarFuns",
+            text="GuitarFans",
             font_size=sp(32),
             halign="center",
             size_hint_y=None,

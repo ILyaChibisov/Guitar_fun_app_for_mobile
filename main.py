@@ -369,10 +369,10 @@ class RootWidget(MDFloatLayout):
             self.load_background()
 
 
-class GuitarFunsApp(MDApp):
+class GuitarFansApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.title = "GuitarFuns"
+        self.title = "GuitarFans"
         self.screen_manager = None
         self.bottom_nav = None
         self.top_nav = None
@@ -393,7 +393,7 @@ class GuitarFunsApp(MDApp):
         settings_state.load(settings_file)
 
         logger.info('🎸 ' + '=' * 50)
-        logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
+        logger.info(f'🎸 ЗАПУСК GuitarFans v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
         logger.info(f'🎸 Тема: {settings_state.theme}')
         logger.info(f'🎸 Язык: {settings_state.language}')
@@ -993,7 +993,7 @@ class GuitarFunsApp(MDApp):
     # ============ ЖИЗНЕННЫЙ ЦИКЛ ============
 
     def on_start(self):
-        logger.info('Приложение GuitarFuns запущено')
+        logger.info('Приложение GuitarFans запущено')
         check_audio_support()
 
         # Подписка: первая проверка СРАЗУ + периодический опрос
@@ -1084,4 +1084,4 @@ class GuitarFunsApp(MDApp):
 
 
 if __name__ == '__main__':
-    GuitarFunsApp().run()
+    GuitarFansApp().run()

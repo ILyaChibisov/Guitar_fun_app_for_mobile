@@ -48,7 +48,7 @@ log_level = 2
 
 # --- ПОДПИСЬ ---
 android.keystore = guitarfuns_keystore.jks
-android.keystore_alias = guitarfuns
+android.keystore_alias = guitarfans
 android.keystore_key_password = lexx311285
 # Пароль самого хранилища (добавлено, чтобы не было рассинхрона)
 android.keystore_store_password = lexx311285
