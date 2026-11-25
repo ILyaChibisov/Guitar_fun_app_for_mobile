@@ -156,13 +156,13 @@ class TopNav(MDCard):
 
     @staticmethod
     def _create_bottom_fade_texture():
-        """Создаёт вертикальный градиент прозрачности для мягкого перехода снизу."""
-        tex = Texture.create(size=(1, 16), colorfmt='rgba')
+        """Создаёт вертикальный градиент прозрачности (ширина 4px для выравнивания OpenGL)."""
+        tex = Texture.create(size=(4, 16), colorfmt='rgba')
         buf = bytearray()
         for i in range(16):
-            # В Kivy текстура заполняется снизу вверх: вверху (i=15) плотно, внизу (i=0) прозрачно
             alpha = int((i / 15.0) ** 1.8 * 255)
-            buf.extend([255, 255, 255, alpha])
+            for _ in range(4):
+                buf.extend([255, 255, 255, alpha])
         tex.blit_buffer(bytes(buf), colorfmt='rgba', bufferfmt='ubyte')
         return tex
 

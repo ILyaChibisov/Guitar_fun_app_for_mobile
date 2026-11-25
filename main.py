@@ -1,7 +1,5 @@
 # main.py
 import os
-if os.name == 'nt':
-    os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
 import sys
 import warnings
 import traceback
