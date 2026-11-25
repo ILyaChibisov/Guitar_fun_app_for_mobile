@@ -2,11 +2,11 @@
 """
 Единое состояние настроек приложения — единственный источник правды.
 
-- Тема, язык, авторизация.
-- Версии (theme_version, language_version) — чтобы экраны знали,
+- Тема, язык, аватар, авторизация.
+- Версии (theme_version, language_version, avatar_version) — чтобы экраны знали,
   что их отображение устарело, и перекрашивались только при входе.
 - Подписчики (listeners) — для «горячих» компонентов
-  (TopNav, BottomNav), которые должны обновиться мгновенно.
+  (TopNav, BottomNav, Sidebar), которые должны обновиться мгновенно.
 - Асинхронное сохранение в файл (без fsync в UI-потоке).
 """
 import json
@@ -36,15 +36,18 @@ class SettingsState:
         # --- Значения ---
         self._theme = 'green'
         self._language = 'ru'
+        self._avatar = ''
         self._is_authenticated = False
 
         # --- Версии (растут при каждом изменении) ---
         self._theme_version = 0
         self._language_version = 0
+        self._avatar_version = 0
 
         # --- Подписчики ---
         self._theme_listeners = []
         self._language_listeners = []
+        self._avatar_listeners = []
 
         # --- Файл ---
         self._file_path = None
@@ -62,10 +65,11 @@ class SettingsState:
                     data = json.load(f)
                 self._theme = data.get('theme', 'green')
                 self._language = data.get('language', 'ru')
+                self._avatar = data.get('avatar', '')
                 self._is_authenticated = data.get('is_authenticated', False)
                 logger.info(
                     f"⚙️ Настройки загружены: theme={self._theme}, "
-                    f"lang={self._language}, auth={self._is_authenticated}"
+                    f"lang={self._language}, avatar={self._avatar!r}, auth={self._is_authenticated}"
                 )
             else:
                 logger.info("⚙️ Файл настроек не найден, используем дефолт")
@@ -81,6 +85,7 @@ class SettingsState:
             data = {
                 'theme': self._theme,
                 'language': self._language,
+                'avatar': self._avatar,
                 'is_authenticated': self._is_authenticated,
             }
             parent = os.path.dirname(self._file_path)
@@ -179,6 +184,41 @@ class SettingsState:
                 cb(lang_code)
             except Exception as e:
                 logger.error(f"Ошибка в language-listener: {e}")
+
+    # ============ АВАТАР ============
+
+    @property
+    def avatar(self):
+        return self._avatar
+
+    @property
+    def avatar_version(self):
+        return self._avatar_version
+
+    def set_avatar(self, avatar_name: str):
+        if avatar_name == self._avatar:
+            return
+        with self._lock:
+            self._avatar = avatar_name
+            self._avatar_version += 1
+            self._schedule_save()
+        logger.info(f"🖼️ Аватар → {avatar_name!r} (v{self._avatar_version})")
+        self._notify_avatar(avatar_name)
+
+    def add_avatar_listener(self, callback):
+        if callback not in self._avatar_listeners:
+            self._avatar_listeners.append(callback)
+
+    def remove_avatar_listener(self, callback):
+        if callback in self._avatar_listeners:
+            self._avatar_listeners.remove(callback)
+
+    def _notify_avatar(self, avatar_name):
+        for cb in list(self._avatar_listeners):
+            try:
+                cb(avatar_name)
+            except Exception as e:
+                logger.error(f"Ошибка в avatar-listener: {e}")
 
     # ============ АВТОРИЗАЦИЯ ============
 

@@ -28,6 +28,7 @@ from config.logger_config import get_logger
 from config.system_bars import get_status_bar_height, get_navigation_bar_height
 from api.client import api
 from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
+from state.settings_state import settings_state
 
 try:
     from version import __version__ as APP_VERSION
@@ -187,6 +188,20 @@ class SidebarHeader(MDBoxLayout):
 
     def _load_logo(self):
         if HAS_ASSETS:
+            # 1. Проверяем выбранный пользователем аватар из settings_state
+            selected_avatar = settings_state.avatar
+            if selected_avatar:
+                try:
+                    avatar_data = load_asset_as_bytes(selected_avatar)
+                    if avatar_data:
+                        img = CoreImage(BytesIO(avatar_data), ext="png")
+                        self.logo_image.texture = img.texture
+                        logger.info(f"✅ Аватар загружен из ассета: {selected_avatar}")
+                        return
+                except Exception as e:
+                    logger.error(f"Ошибка загрузки аватара {selected_avatar}: {e}")
+
+            # 2. Если аватар не выбран — загружаем стандартный логотип
             try:
                 logo_data = load_asset_as_bytes(ASSET_LOGO_NAME_PNG)
                 if logo_data:
@@ -200,6 +215,7 @@ class SidebarHeader(MDBoxLayout):
         self.logo_image.text = "🎸"
         self.logo_image.color = [0.46, 0.70, 0.71, 1]
         self.logo_image.font_size = sp(48)
+
 
     def _get_username(self):
         if api.is_authenticated() and api.user_data:
@@ -221,6 +237,7 @@ class SidebarHeader(MDBoxLayout):
     def update_user_info(self):
         self.username_label.text = self._get_username()
         self.status_label.text = self._get_status_text()
+        self._load_logo()
 
 
 class SidebarOverlay(Widget):
@@ -402,6 +419,7 @@ class Sidebar(FloatLayout):
         self.bind(panel_x=self._on_panel_x_changed)
 
         Clock.schedule_once(self._update_menu_state, 0.3)
+        settings_state.add_avatar_listener(self._on_avatar_changed)
 
         if self.sm:
             logger.info(f"✅ Sidebar создан, ширина={self.panel_width}dp")
@@ -447,6 +465,10 @@ class Sidebar(FloatLayout):
         if not self.is_open:
             self.panel.pos = (-self.panel_width, 0)
             self.panel_x = -self.panel_width
+
+    def _on_avatar_changed(self, avatar_name):
+        if hasattr(self, 'header') and self.header:
+            self.header.update_user_info()
 
     def add_menu_item(self, icon, title, screen_name, is_admin=False):
         item = SidebarItem(
