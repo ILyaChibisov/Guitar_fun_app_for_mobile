@@ -191,6 +191,11 @@ def _to_java_int(argb_hex):
     return argb_hex - 0x100000000 if argb_hex >= 0x80000000 else argb_hex
 
 
+def _to_java_int(argb_hex):
+    """Преобразует беззнаковый 0xAARRGGBB в знаковый 32-битный int для Java/pyjnius."""
+    return argb_hex - 0x100000000 if argb_hex >= 0x80000000 else argb_hex
+
+
 def update_android_system_bars(theme_id):
     """Окрашивает верхний статус-бар и нижнюю системную панель Android/Xiaomi под текущую тему."""
     if platform != 'android':
@@ -211,9 +216,11 @@ def update_android_system_bars(theme_id):
                 window = mActivity.getWindow()
                 decorView = window.getDecorView()
 
-                # Обязательно снимаем полупрозрачность и включаем прямую покраску баров
+                # Снимаем полноэкранный режим SDL2, иначе Android игнорирует цвета статус-бара и нав-бара
+                window.clearFlags(WindowManager.FLAG_FULLSCREEN)
                 window.clearFlags(WindowManager.FLAG_TRANSLUCENT_STATUS)
                 window.clearFlags(WindowManager.FLAG_TRANSLUCENT_NAVIGATION)
+                window.addFlags(WindowManager.FLAG_FORCE_NOT_FULLSCREEN)
                 window.addFlags(WindowManager.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
 
                 if Build.VERSION.SDK_INT >= 29:
@@ -283,6 +290,7 @@ def update_android_system_bars(theme_id):
         _apply_bars()
     except Exception as e:
         logger.error(f"❌ Ошибка доступа к Android Window: {e}")
+
 
 
 
