@@ -122,6 +122,7 @@ except ImportError:
 if platform == 'android':
     try:
         from android.permissions import request_permissions, Permission
+        Window.fullscreen = False
 
         request_permissions([
             Permission.INTERNET,
@@ -191,11 +192,6 @@ def _to_java_int(argb_hex):
     return argb_hex - 0x100000000 if argb_hex >= 0x80000000 else argb_hex
 
 
-def _to_java_int(argb_hex):
-    """Преобразует беззнаковый 0xAARRGGBB в знаковый 32-битный int для Java/pyjnius."""
-    return argb_hex - 0x100000000 if argb_hex >= 0x80000000 else argb_hex
-
-
 def update_android_system_bars(theme_id):
     """Окрашивает верхний статус-бар и нижнюю системную панель Android/Xiaomi под текущую тему."""
     if platform != 'android':
@@ -216,7 +212,16 @@ def update_android_system_bars(theme_id):
                 window = mActivity.getWindow()
                 decorView = window.getDecorView()
 
-                # Снимаем полноэкранный режим SDL2, иначе Android игнорирует цвета статус-бара и нав-бара
+                # 1. Разрешаем рисовать в области выреза камеры (убирает чёрную полосу сверху на Redmi Note 13)
+                if Build.VERSION.SDK_INT >= 28:
+                    try:
+                        lp = window.getAttributes()
+                        lp.layoutInDisplayCutoutMode = 1  # LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                        window.setAttributes(lp)
+                    except Exception:
+                        pass
+
+                # 2. Снимаем полноэкранный режим SDL2 и включаем покраску системных баров
                 window.clearFlags(WindowManager.FLAG_FULLSCREEN)
                 window.clearFlags(WindowManager.FLAG_TRANSLUCENT_STATUS)
                 window.clearFlags(WindowManager.FLAG_TRANSLUCENT_NAVIGATION)
@@ -230,68 +235,63 @@ def update_android_system_bars(theme_id):
                     except Exception:
                         pass
 
-                # Цвета под каждую тему (в тон TopNav и BottomNav)
+                # 3. Цвета под каждую тему
                 if theme_id == 'light':
-                    status_color = _to_java_int(0xFFF2F7F4)   # Светлый мятно-белый
+                    status_color = _to_java_int(0xFFF2F7F4)
                     nav_color = _to_java_int(0xFFF2F7F4)
                     use_dark_icons = True
                 elif theme_id == 'dark':
-                    status_color = _to_java_int(0xFF141417)   # Тёмный графит
+                    status_color = _to_java_int(0xFF141417)
                     nav_color = _to_java_int(0xFF141417)
                     use_dark_icons = False
                 else:  # green
-                    status_color = _to_java_int(0xFF0A2E20)   # Тёмно-изумрудный (как TopNav/BottomNav)
-                    nav_color = _to_java_int(0xFF061E14)      # Чуть глубже книзу в тон градиента
+                    status_color = _to_java_int(0xFF0A2E20)
+                    nav_color = _to_java_int(0xFF061E14)
                     use_dark_icons = False
 
                 window.setStatusBarColor(status_color)
                 window.setNavigationBarColor(nav_color)
 
-                # Не используем LAYOUT_FULLSCREEN, чтобы бары не становились прозрачными/чёрными
-                flags = View.SYSTEM_UI_FLAG_VISIBLE
-
+                # 4. Специальный вызов для Xiaomi MIUI (переключает цвет иконок нав-бара и статус-бара)
                 manufacturer = Build.MANUFACTURER.lower()
-                MIUI_DARK_ICONS = 0x00000010
+                if "xiaomi" in manufacturer:
+                    try:
+                        # В MIUI: 0x10 = тёмные иконки статус-бара, 0x40 = тёмные иконки нав-бара
+                        miui_flags = (0x10 | 0x40) if use_dark_icons else 0
+                        window.setExtraFlags(miui_flags, 0x10 | 0x40)
+                    except Exception:
+                        pass
 
+                flags = View.SYSTEM_UI_FLAG_VISIBLE
                 if use_dark_icons:
                     if Build.VERSION.SDK_INT >= 23:
                         flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                     if Build.VERSION.SDK_INT >= 26:
                         flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    if "xiaomi" in manufacturer:
-                        flags |= MIUI_DARK_ICONS
                 else:
                     if Build.VERSION.SDK_INT >= 23:
                         flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                     if Build.VERSION.SDK_INT >= 26:
                         flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    if "xiaomi" in manufacturer:
-                        flags &= ~MIUI_DARK_ICONS
 
                 decorView.setSystemUiVisibility(flags)
 
-                # Для Android 11+ (MIUI 12.5 / MIUI 13 / MIUI 14 / HyperOS)
                 if Build.VERSION.SDK_INT >= 30:
                     try:
                         insets_controller = window.getInsetsController()
                         if insets_controller is not None:
-                            APPEARANCE_LIGHT_STATUS_BARS = 8
-                            APPEARANCE_LIGHT_NAVIGATION_BARS = 16
-                            mask = APPEARANCE_LIGHT_STATUS_BARS | APPEARANCE_LIGHT_NAVIGATION_BARS
+                            mask = 8 | 16  # APPEARANCE_LIGHT_STATUS_BARS | APPEARANCE_LIGHT_NAVIGATION_BARS
                             appearance = mask if use_dark_icons else 0
                             insets_controller.setSystemBarsAppearance(appearance, mask)
                     except Exception:
                         pass
 
-                logger.info(f"📱 Системные панели Android обновлены под тему '{theme_id}'")
             except Exception as inner_e:
                 logger.error(f"❌ Ошибка применения цветов системных панелей: {inner_e}", exc_info=True)
 
         _apply_bars()
     except Exception as e:
         logger.error(f"❌ Ошибка доступа к Android Window: {e}")
-
-
 
 
 class RootWidget(MDFloatLayout):
@@ -819,6 +819,7 @@ class GuitarFansApp(MDApp):
         network_manager.start_monitoring()
         Window.bind(on_resize=self.on_window_resize)
         Window.bind(on_keyboard=self._on_keyboard)
+        Window.bind(on_focus=self._on_window_focus)
 
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
@@ -880,9 +881,16 @@ class GuitarFansApp(MDApp):
     def _on_settings_press(self, *args):
         logger.info("⚙️ Нажата иконка настроек → открываем Sidebar")
 
+    def _on_window_focus(self, window, focus):
+        if focus and platform == 'android':
+            update_android_system_bars(settings_state.theme)
+            Clock.schedule_once(lambda dt: update_android_system_bars(settings_state.theme), 0.15)
+
     def on_window_resize(self, window, width, height):
         from config.layout_config import layout_config
         logger.info(f"🔄 Поворот экрана: {width}x{height}")
+        if platform == 'android':
+            update_android_system_bars(settings_state.theme)
         layout_config.force_update()
         Clock.schedule_once(lambda dt: self._reload_nav_bars(), 0.1)
         Clock.schedule_once(lambda dt: self._reload_content_screens(), 0.2)
