@@ -331,17 +331,17 @@ class BottomNav(BoxLayout):
         theme_id = settings_manager.theme
 
         if theme_id == 'light':
-            self.bg_color_inst.rgba = (0.10, 0.45, 0.28, 0.08)
-            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.03)
+            self.bg_color_inst.rgba = (0.05, 0.25, 0.15, 0.06)
+            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.02)
             self.line_color_inst.rgba = (0.15, 0.35, 0.25, 0.22)
         elif theme_id == 'dark':
-            self.bg_color_inst.rgba = (1.0, 1.0, 1.0, 0.06)
-            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.15)
+            self.bg_color_inst.rgba = (0.0, 0.0, 0.0, 0.32)
+            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.12)
             self.line_color_inst.rgba = (1.0, 1.0, 1.0, 0.14)
-        else:  # green (прозрачный стеклянный тинт 1-в-1 как у меню аккордов)
-            self.bg_color_inst.rgba = (0.75, 0.95, 0.88, 0.09)
-            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.06)
-            self.line_color_inst.rgba = (0.46, 0.70, 0.71, 0.32)
+        else:  # green (1-в-1 затемняющий тинт как у меню аккордов)
+            self.bg_color_inst.rgba = (0.0, 0.05, 0.03, 0.26)
+            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.05)
+            self.line_color_inst.rgba = (0.46, 0.70, 0.71, 0.38)
 
         for item in self.items:
             item.update_state(item, item.active)
