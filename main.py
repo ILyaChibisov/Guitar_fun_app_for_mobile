@@ -1,9 +1,12 @@
 # main.py
 import os
+if os.name == 'nt':
+    os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
 import sys
 import warnings
 import traceback
 from kivy.core.window import Window
+from kivy.uix.relativelayout import RelativeLayout
 from kivy.utils import platform
 from kivy.metrics import dp
 from kivy.animation import Animation
@@ -16,10 +19,9 @@ from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.text import LabelBase
 
+from config import theme
 from screens.songs.base_song_detail_screen import preload_panel_textures
 from screens.chords.base_chords_screen import preload_chords_textures
-preload_panel_textures()
-preload_chords_textures()
 
 # Путь к папке с проектом
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -150,8 +152,6 @@ except ImportError:
 # ============ НАСТРОЙКА ОКНА ============
 if platform == 'android':
     try:
-        from android import mActivity
-        from jnius import autoclass
         from android.permissions import request_permissions, Permission
 
         request_permissions([
@@ -163,79 +163,11 @@ if platform == 'android':
             Permission.WRITE_EXTERNAL_STORAGE,
             Permission.RECORD_AUDIO
         ])
-        print("✅ Разрешения запрошены")
-
         Window.clearcolor = (0, 0, 0, 1)
-
-        View = autoclass('android.view.View')
-        WindowManager = autoclass('android.view.WindowManager$LayoutParams')
-        Build = autoclass('android.os.Build')
-        window = mActivity.getWindow()
-        decorView = window.getDecorView()
-
-        window.setStatusBarColor(0xFF000000)
-        window.setNavigationBarColor(0xFF000000)
-
-        flags = (
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        )
-
-        if Build.VERSION.SDK_INT >= 23:
-            try:
-                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                print("✅ API 23+: светлые значки статус-бара")
-            except AttributeError:
-                pass
-
-        if Build.VERSION.SDK_INT >= 26:
-            try:
-                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                print("✅ API 26+: светлые значки навигации")
-            except AttributeError:
-                pass
-
-        decorView.setSystemUiVisibility(flags)
-
-        try:
-            params = window.getAttributes()
-            if hasattr(WindowManager, 'FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS'):
-                params.flags |= WindowManager.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
-                window.setAttributes(params)
-                print("✅ FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS")
-        except Exception as e:
-            print(f"⚠️ FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS: {e}")
-
-        manufacturer = Build.MANUFACTURER.lower()
-
-        if "xiaomi" in manufacturer:
-            try:
-                MIUI_NAVIGATION_BAR_DARK = 0x00000010
-                decorView.setSystemUiVisibility(
-                    decorView.getSystemUiVisibility() | MIUI_NAVIGATION_BAR_DARK
-                )
-                print("✅ Xiaomi: тёмная навигация")
-            except:
-                pass
-
-        if "samsung" in manufacturer:
-            try:
-                if Build.VERSION.SDK_INT >= 26:
-                    decorView.setSystemUiVisibility(
-                        decorView.getSystemUiVisibility() |
-                        View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    )
-                print("✅ Samsung: светлые значки")
-            except:
-                pass
-
-        print(f"🔍 Статус-бар: #{window.getStatusBarColor():08X}")
-        print(f"🔍 Навигация: #{window.getNavigationBarColor():08X}")
-        print("✅ Системные панели: ЧЁРНЫЕ + СВЕТЛЫЕ ЗНАЧКИ")
-
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"❌ Ошибка инициализации Android: {e}")
         Window.clearcolor = (0, 0, 0, 1)
+
 else:
     Window.clearcolor = (0, 0, 0, 1)
     Window.borderless = False
@@ -269,7 +201,6 @@ from kivymd.uix.button import MDIconButton
 
 MDIconButton.ripple_scale = 0
 MDIconButton.ripple_alpha = 0
-
 # Импортируем ассеты
 try:
     from data import load_asset_as_bytes
@@ -291,6 +222,102 @@ def check_audio_support():
     except Exception as e:
         logger.warning(f"⚠️ Звук может не работать: {e}")
     return False
+
+def update_android_system_bars(theme_id):
+    """Окрашивает верхний статус-бар и нижнюю системную панель Android под текущую тему."""
+    if platform != 'android':
+        return
+
+    try:
+        from android import mActivity
+        from android.runnable import run_on_ui_thread
+        from jnius import autoclass
+
+        @run_on_ui_thread
+        def _apply_bars():
+            try:
+                View = autoclass('android.view.View')
+                WindowManager = autoclass('android.view.WindowManager$LayoutParams')
+                Build = autoclass('android.os.Build')
+
+                window = mActivity.getWindow()
+                decorView = window.getDecorView()
+
+                # Включаем отрисовку фонов системных баров и отключаем авто-контраст Android 10+
+                window.addFlags(WindowManager.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                window.clearFlags(WindowManager.FLAG_TRANSLUCENT_NAVIGATION)
+                window.clearFlags(WindowManager.FLAG_TRANSLUCENT_STATUS)
+
+                if Build.VERSION.SDK_INT >= 29:
+                    try:
+                        window.setNavigationBarContrastEnforced(False)
+                        window.setStatusBarContrastEnforced(False)
+                    except Exception:
+                        pass
+
+                # Цвета точно совпадают с фоном TopNav и BottomNav
+                if theme_id == 'light':
+                    bar_color = 0xFFF7FCFA       # Светлый фон (#F7FCFA)
+                    use_dark_icons = True        # Тёмные системные значки
+                elif theme_id == 'dark':
+                    bar_color = 0xFF17171C       # Тёмный графит (#17171C)
+                    use_dark_icons = False       # Светлые системные значки
+                else:  # green
+                    bar_color = 0xFF052114       # Тёмно-изумрудный (#052114)
+                    use_dark_icons = False       # Светлые системные значки
+
+                window.setStatusBarColor(bar_color)
+                window.setNavigationBarColor(bar_color)
+
+                # Базовые флаги
+                flags = (
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                )
+
+                manufacturer = Build.MANUFACTURER.lower()
+                MIUI_DARK_ICONS = 0x00000010  # На Xiaomi включает тёмные значки (белый фон)
+
+                if use_dark_icons:
+                    if Build.VERSION.SDK_INT >= 23:
+                        flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    if Build.VERSION.SDK_INT >= 26:
+                        flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                    if "xiaomi" in manufacturer:
+                        flags |= MIUI_DARK_ICONS
+                else:
+                    # Явно снимаем флаги светлых баров, чтобы фон оставался тёмным, а значки — белыми
+                    if Build.VERSION.SDK_INT >= 23:
+                        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    if Build.VERSION.SDK_INT >= 26:
+                        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                    if "xiaomi" in manufacturer:
+                        flags &= ~MIUI_DARK_ICONS
+
+                decorView.setSystemUiVisibility(flags)
+
+                # Поддержка Android 11+ (API 30+)
+                if Build.VERSION.SDK_INT >= 30:
+                    try:
+                        insets_controller = window.getInsetsController()
+                        if insets_controller is not None:
+                            APPEARANCE_LIGHT_STATUS_BARS = 8
+                            APPEARANCE_LIGHT_NAVIGATION_BARS = 16
+                            mask = APPEARANCE_LIGHT_STATUS_BARS | APPEARANCE_LIGHT_NAVIGATION_BARS
+                            appearance = mask if use_dark_icons else 0
+                            insets_controller.setSystemBarsAppearance(appearance, mask)
+                    except Exception:
+                        pass
+
+                logger.info(f"📱 Системные панели Android обновлены под тему '{theme_id}': #{bar_color:08X}")
+            except Exception as inner_e:
+                logger.error(f"❌ Ошибка применения цветов системных панелей: {inner_e}")
+
+        _apply_bars()
+    except Exception as e:
+        logger.error(f"❌ Ошибка доступа к Android Window: {e}")
+
+
 
 
 class RootWidget(MDFloatLayout):
@@ -369,10 +396,10 @@ class RootWidget(MDFloatLayout):
             self.load_background()
 
 
-class GuitarFunsApp(MDApp):
+class GuitarFansApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.title = "GuitarFuns"
+        self.title = "GuitarFans"
         self.screen_manager = None
         self.bottom_nav = None
         self.top_nav = None
@@ -393,7 +420,7 @@ class GuitarFunsApp(MDApp):
         settings_state.load(settings_file)
 
         logger.info('🎸 ' + '=' * 50)
-        logger.info(f'🎸 ЗАПУСК GuitarFuns v{config.VERSION}')
+        logger.info(f'🎸 ЗАПУСК GuitarFans v{config.VERSION}')
         logger.info(f'🎸 Платформа: {platform}')
         logger.info(f'🎸 Тема: {settings_state.theme}')
         logger.info(f'🎸 Язык: {settings_state.language}')
@@ -403,6 +430,7 @@ class GuitarFunsApp(MDApp):
 
     def apply_theme(self, theme_id):
         logger.info(f"🎨 apply_theme({theme_id})")
+        update_android_system_bars(theme_id)
 
         if self.root:
             try:
@@ -765,63 +793,31 @@ class GuitarFunsApp(MDApp):
     # ============ BUILD ============
 
     def build(self):
-        logger.debug('Создание интерфейса...')
-
-        if platform == 'android':
-            try:
-                from android import mActivity
-                from jnius import autoclass
-                View = autoclass('android.view.View')
-                window = mActivity.getWindow()
-                window.setSoftInputMode(0x00000020)
-                logger.info("⌨️ Android: клавиатура настроена в режиме PAN")
-            except Exception as e:
-                logger.error(f"Ошибка настройки клавиатуры: {e}")
-
-        self.theme_cls.primary_palette = "Teal"
-        self.theme_cls.primary_hue = "300"
-        self.theme_cls.material_style = "M3"
-
-        saved_theme = settings_state.theme
-        saved_language = settings_state.language
-
-        if saved_theme == "dark":
-            self.theme_cls.theme_style = "Dark"
-        else:
-            self.theme_cls.theme_style = "Light"
-
-        if saved_theme == "green":
-            self.theme_cls.primary_palette = "Teal"
-        elif saved_theme == "light":
-            self.theme_cls.primary_palette = "Gray"
-
-        logger.info(f"⚙️ Загружены настройки: тема={saved_theme}, язык={saved_language}")
+        self.title = 'GuitarFans'
+        logger.info("🚀 Запуск приложения GuitarFans")
 
         self.root = RootWidget()
 
-        try:
-            from screens.splash_screen import SplashScreen
-            self.splash_screen = SplashScreen(
-                on_complete=self._on_splash_complete
-            )
-            self.root.add_widget(self.splash_screen)
-            logger.info("✅ SplashScreen создан и добавлен")
-        except ImportError as e:
-            logger.error(f"❌ Ошибка импорта SplashScreen: {e}")
+        if self._has_valid_saved_session():
+            # Мгновенный запуск без сплеш-скрина при восстановлении из трея
             self._components_created = True
             self._create_app_components()
             self._show_app_components()
-
-        Clock.schedule_once(self._preload_app, 0.1)
-
-        try:
-            from utils.icon_cache import preload_icons
-            preload_icons()
-            logger.info("🚀 Запущена предзагрузка иконок")
-        except ImportError:
-            logger.warning("⚠️ Модуль icon_cache не найден")
-
-        logger.info("📡 Режим работы: все данные загружаются с сервера по запросу")
+            Clock.schedule_once(lambda dt: self._restore_session_state(), 0.05)
+        else:
+            # Стандартный запуск через SplashScreen
+            try:
+                from screens.splash_screen import SplashScreen
+                self.splash_screen = SplashScreen(
+                    on_complete=self._on_splash_complete
+                )
+                self.root.add_widget(self.splash_screen)
+                logger.info("✅ SplashScreen создан и добавлен")
+            except ImportError as e:
+                logger.error(f"❌ Ошибка импорта SplashScreen: {e}")
+                self._components_created = True
+                self._create_app_components()
+                self._show_app_components()
 
         return self.root
 
@@ -835,6 +831,13 @@ class GuitarFunsApp(MDApp):
         Clock.schedule_once(lambda dt: self._preload_favorites(), 0.5)
 
     def _create_app_components(self):
+        if self.screen_manager is not None:
+            return
+        try:
+            preload_panel_textures()
+            preload_chords_textures()
+        except Exception as e:
+            logger.error(f"Ошибка предзагрузки текстур: {e}")
         logger.info("📦 Создание компонентов приложения...")
 
         self.screen_manager = setup_screen_manager()
@@ -910,6 +913,7 @@ class GuitarFunsApp(MDApp):
         logger.info("✅ Компоненты приложения показаны")
 
     def _on_theme_changed_hot(self, theme_id):
+        update_android_system_bars(theme_id)
         if self.root:
             try:
                 self.root.apply_theme(theme_id)
@@ -993,7 +997,8 @@ class GuitarFunsApp(MDApp):
     # ============ ЖИЗНЕННЫЙ ЦИКЛ ============
 
     def on_start(self):
-        logger.info('Приложение GuitarFuns запущено')
+        logger.info('Приложение GuitarFans запущено')
+        update_android_system_bars(settings_state.theme)
         check_audio_support()
 
         # Подписка: первая проверка СРАЗУ + периодический опрос
@@ -1013,8 +1018,24 @@ class GuitarFunsApp(MDApp):
             except Exception as e:
                 logger.error(f'Ошибка получения списка ассетов: {e}')
 
+    def _stop_subscription_poller(self):
+        if self._subscription_poll_event:
+            self._subscription_poll_event.cancel()
+            self._subscription_poll_event = None
+            logger.info("⏸️ Опрос подписки приостановлен")
+
     def on_pause(self):
         logger.debug('Приложение свернуто')
+        # 1. Останавливаем фоновые таймеры и сеть, чтобы Android не убил процесс за активность в фоне
+        self._stop_subscription_poller()
+        try:
+            network_manager.stop_monitoring()
+        except Exception as e:
+            logger.debug(f"network_manager.stop_monitoring on_pause: {e}")
+
+        # 2. Сохраняем текущее состояние экрана, чтобы мгновенно восстановить его при перезапуске
+        self._save_session_state()
+
         try:
             settings_state.flush()
         except Exception as e:
@@ -1023,6 +1044,13 @@ class GuitarFunsApp(MDApp):
 
     def on_resume(self):
         logger.debug('Приложение восстановлено')
+        update_android_system_bars(settings_state.theme)
+
+        try:
+            network_manager.start_monitoring()
+        except Exception as e:
+            logger.debug(f"network_manager.start_monitoring on_resume: {e}")
+
         try:
             api.reset_session()
             logger.info("🔌 Пул соединений API сброшен после resume")
@@ -1031,11 +1059,130 @@ class GuitarFunsApp(MDApp):
 
         Clock.schedule_once(self._delayed_session_reset, 1.0)
 
-        # Проверка подписки после возврата
+        # Возобновляем опрос подписки
         if api.access_token:
             Clock.schedule_once(lambda dt: self._poll_subscription(0), 0.5)
+            self._start_subscription_poller()
 
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
+
+    SESSION_TTL_SECONDS = 6 * 3600  # 6 часов: в пределах этого времени восстанавливаем из трея без сплеша
+
+    def _get_session_file_path(self):
+        return os.path.join(config.CACHE_DIR, 'last_session.json')
+
+    def _clear_session_state(self):
+        """Удаляет файл сохранённой сессии."""
+        try:
+            path = self._get_session_file_path()
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception as e:
+            logger.debug(f"Ошибка удаления файла сессии: {e}")
+
+    def _has_valid_saved_session(self):
+        """Проверяет, есть ли актуальная сессия для мгновенного восстановления из трея."""
+        path = self._get_session_file_path()
+        if not os.path.exists(path):
+            return False
+        try:
+            import json
+            import time
+            with open(path, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+
+            saved_at = state.get('timestamp', 0)
+            if (time.time() - saved_at) > self.SESSION_TTL_SECONDS:
+                self._clear_session_state()
+                return False
+
+            target_screen = state.get('screen')
+            return bool(target_screen and target_screen != 'home')
+        except Exception:
+            self._clear_session_state()
+            return False
+
+    def _save_session_state(self):
+        """Атомарно сохраняет текущий экран и открытую песню/термин при сворачивании."""
+        if not self.screen_manager:
+            return
+        try:
+            import json
+            import time
+
+            current_name = self.screen_manager.current
+            if not current_name or current_name == 'home':
+                self._clear_session_state()
+                return
+
+            current_screen = self.screen_manager.current_screen
+            state = {
+                'screen': current_name,
+                'timestamp': time.time(),
+            }
+
+            if current_screen and hasattr(current_screen, 'current_song_id') and current_screen.current_song_id:
+                state['song_id'] = current_screen.current_song_id
+            if current_screen and hasattr(current_screen, 'song_data') and isinstance(current_screen.song_data, dict):
+                state['song_data'] = current_screen.song_data
+
+            final_path = self._get_session_file_path()
+            tmp_path = final_path + '.tmp'
+            with open(tmp_path, 'w', encoding='utf-8') as f:
+                json.dump(state, f, ensure_ascii=False)
+            os.replace(tmp_path, final_path)
+            logger.debug(f"💾 Сессия сохранена: {current_name}")
+        except Exception as e:
+            logger.debug(f"Не удалось сохранить сессию: {e}")
+
+    def _restore_session_state(self):
+        """Восстанавливает последний экран после выгрузки процесса системой Android."""
+        path = self._get_session_file_path()
+        if not os.path.exists(path):
+            return False
+        try:
+            import json
+            import time
+            with open(path, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+
+            if (time.time() - state.get('timestamp', 0)) > self.SESSION_TTL_SECONDS:
+                self._clear_session_state()
+                return False
+
+            target_screen = state.get('screen')
+            if not target_screen or target_screen == 'home' or not self.screen_manager.has_screen(target_screen):
+                self._clear_session_state()
+                return False
+
+            screen = self.screen_manager.get_screen(target_screen)
+            song_data = state.get('song_data')
+
+            if song_data and hasattr(screen, 'load_song'):
+                screen.load_song(song_data)
+            elif target_screen in (
+            'song_detail', 'favorite_detail', 'term_detail', 'search_term_detail', 'artist_songs'):
+                # Если детальных данных нет — безопасно возвращаем на родительский список
+                fallback_map = {
+                    'song_detail': 'songs',
+                    'artist_songs': 'songs',
+                    'favorite_detail': 'favorites',
+                    'term_detail': 'dictionary',
+                    'search_term_detail': 'dictionary',
+                }
+                target_screen = fallback_map.get(target_screen, 'home')
+
+            self.screen_manager.current = target_screen
+            if self.top_nav:
+                self.top_nav.set_screen(target_screen)
+
+            self._clear_session_state()
+            logger.info(f"⚡ Сессия восстановлена на экран: {target_screen}")
+            return True
+        except Exception as e:
+            logger.debug(f"Не удалось восстановить сессию: {e}")
+            self._clear_session_state()
+            return False
 
     def _delayed_session_reset(self, dt):
         try:
@@ -1045,6 +1192,8 @@ class GuitarFunsApp(MDApp):
             logger.error(f"reset_session delayed: {e}")
 
     def on_stop(self):
+        # При ручном закрытии приложения очищаем сохранённую сессию
+        self._clear_session_state()
         logger.info('Приложение закрыто')
         network_manager.stop_monitoring()
 
@@ -1084,4 +1233,4 @@ class GuitarFunsApp(MDApp):
 
 
 if __name__ == '__main__':
-    GuitarFunsApp().run()
+    GuitarFansApp().run()

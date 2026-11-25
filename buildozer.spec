@@ -27,6 +27,8 @@ android.api = 33
 android.minapi = 24
 android.enable_androidx = True
 android.accept_sdk_license = True
+# Режим запуска: открывает существующий экземпляр приложения из трея вместо создания нового
+android.launch_mode = singleTask
 
 # --- СТАБИЛЬНЫЕ ВЕРСИИ GRADLE И AGP ---
 # Фиксируем, чтобы GitHub Actions не тянул нестабильные зависимости

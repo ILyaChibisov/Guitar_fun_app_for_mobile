@@ -1,5 +1,5 @@
 # .github/workflows/build.yml
-name: Android Build
+name: Android Build (GuitarFans)
 
 on:
   push:
@@ -19,6 +19,30 @@ jobs:
         run: |
           echo "date=$(date -u '+%Y%m%d')" >> $GITHUB_ENV
         shell: bash
+
+      - name: Read App Version from version.py
+        id: app-version
+        run: |
+          APP_VER=$(python3 -c "import version; print(version.__version__)")
+          echo "version=$APP_VER" >> $GITHUB_ENV
+          echo "📦 Версия сборки: $APP_VER"
+
+      - name: Sync version and title in buildozer.spec
+        run: |
+          python3 - <<'EOF'
+          import os, re
+
+          ver = os.environ['version']
+          with open('buildozer.spec', 'r', encoding='utf-8') as f:
+              spec = f.read()
+
+          spec = re.sub(r'(?m)^title\s*=.*$', 'title = GuitarFans', spec)
+          spec = re.sub(r'(?m)^version\s*=.*$', f'version = {ver}', spec)
+
+          with open('buildozer.spec', 'w', encoding='utf-8') as f:
+              f.write(spec)
+          print(f"✅ buildozer.spec обновлён: title = GuitarFans, version = {ver}")
+          EOF
 
       - name: Cache Buildozer global directory
         uses: actions/cache@v4
@@ -82,7 +106,6 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.37 requests
 
-
       - name: Create keystore directory
         run: |
           mkdir -p ./.buildozer/android/platform/
@@ -98,50 +121,57 @@ jobs:
               -keyalg RSA \
               -keysize 2048 \
               -validity 10000 \
-              -dname "CN=GuitarFuns, OU=GuitarFuns, O=GuitarFuns, L=City, S=State, C=RU" \
+              -dname "CN=GuitarFans, OU=GuitarFans, O=GuitarFans, L=City, S=State, C=RU" \
               -storepass lexx311285 \
               -keypass lexx311285 \
               -noprompt
           fi
 
-      # --- БЕЗОПАСНЫЙ ПАТЧ ГОТОВОГО МАНИФЕСТА ---
-      - name: Patch Generated AndroidManifest.xml
-        run: |
-          # Ищем сгенерированный файл манифеста
-          MANIFEST_PATH=$(find .buildozer -name "AndroidManifest.xml" -path "*/src/main/*" | head -n 1)
-          
-          if [ -n "$MANIFEST_PATH" ]; then
-            echo "Найден готовый манифест: $MANIFEST_PATH"
-            
-            # Используем Python для 100% безопасной вставки
-            python3 -c "
-          path = '$MANIFEST_PATH'
-          with open(path, 'r') as f:
-              content = f.read()
-          
-          if 'networkSecurityConfig' not in content:
-              # Ищем тег <application и аккуратно вставляем атрибут
-              if '<application ' in content:
-                  content = content.replace('<application ', '<application android:networkSecurityConfig=\"@xml/network_security_config\" ', 1)
-                  with open(path, 'w') as f:
-                      f.write(content)
-                  print('✅ Атрибут networkSecurityConfig успешно добавлен.')
-              else:
-                  print('❌ ОШИБКА: Тег <application> не найден в манифесте!')
-          else:
-              print('ℹ️ Атрибут уже присутствует.')
-          "
-            
-            echo "--- Проверка результата ---"
-            grep '<application' "$MANIFEST_PATH"
-            echo "---------------------------"
-          else
-            echo "⚠️ Файл AndroidManifest.xml не найден. Это нормально для первой сборки."
-          fi
-
-      - name: Build with Buildozer
+      - name: Build with Buildozer (Initial)
         run: |
           yes | buildozer android debug 2>&1 | tee buildozer_build.log
+
+      - name: Patch Generated AndroidManifest.xml and Repackage
+        run: |
+          MANIFEST_PATH=$(find .buildozer -name "AndroidManifest.xml" -path "*/src/main/*" | head -n 1)
+          if [ -n "$MANIFEST_PATH" ]; then
+            echo "Найден готовый манифест: $MANIFEST_PATH"
+            python3 - <<EOF
+          path = '$MANIFEST_PATH'
+          with open(path, 'r', encoding='utf-8') as f:
+              content = f.read()
+
+          if 'networkSecurityConfig' not in content and '<application ' in content:
+              content = content.replace(
+                  '<application ',
+                  '<application android:networkSecurityConfig="@xml/network_security_config" ',
+                  1
+              )
+              with open(path, 'w', encoding='utf-8') as f:
+                  f.write(content)
+              print('✅ Атрибут networkSecurityConfig добавлен, переупаковываем APK...')
+          else:
+              print('ℹ️ Атрибут networkSecurityConfig уже на месте.')
+          EOF
+            yes | buildozer android debug 2>&1 | tee -a buildozer_build.log
+          fi
+
+      - name: Rename APK with GuitarFans and Version
+        run: |
+          python3 - <<'EOF'
+          import glob, os, shutil
+
+          ver = os.environ['version']
+          apks = glob.glob('bin/*.apk')
+          if not apks:
+              raise FileNotFoundError("APK не найден в папке bin/")
+
+          src_apk = apks
+          dst_apk = f"bin/GuitarFans-{ver}.apk"
+          if src_apk != dst_apk:
+              shutil.move(src_apk, dst_apk)
+          print(f"✅ Итоговый APK переименован в: {dst_apk}")
+          EOF
 
       - name: Upload APK to Yandex Disk
         if: success()
@@ -158,8 +188,8 @@ jobs:
           remote_dir = os.environ['REMOTE_DIR']
           run_number = os.environ['RUN_NUMBER']
           headers = {'Authorization': f'OAuth {token}'}
-          api_upload = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
-          api_mkdir  = 'https://cloud-api.yandex.net/v1/disk/resources'
+          api_upload = 'https://yandex.net'
+          api_mkdir  = 'https://yandex.net'
           run_dir = f'{remote_dir}/run-{run_number}'
           r = requests.put(api_mkdir, headers=headers, params={'path': run_dir})
           if r.status_code not in (200, 201, 409):
@@ -191,7 +221,7 @@ jobs:
           remote_path = f'/github-artifacts/run-{run_number}/{log_file}'
           if not os.path.exists(log_file): sys.exit(0)
           headers = {'Authorization': f'OAuth {token}'}
-          r = requests.get('https://cloud-api.yandex.net/v1/disk/resources/upload', headers=headers, params={'path': remote_path, 'overwrite': 'true'})
+          r = requests.get('https://yandex.net', headers=headers, params={'path': remote_path, 'overwrite': 'true'})
           if r.status_code != 200: sys.exit(1)
           with open(log_file, 'rb') as f:
               up = requests.put(r.json()['href'], data=f)

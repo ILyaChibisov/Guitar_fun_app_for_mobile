@@ -29,6 +29,11 @@ from config.system_bars import get_status_bar_height, get_navigation_bar_height
 from api.client import api
 from state.previous_screen import previous_screen_state  # ✅ Прямой импорт
 
+try:
+    from version import __version__ as APP_VERSION
+except ImportError:
+    APP_VERSION = getattr(api.config, 'VERSION', '1.0.0')
+
 logger = get_logger('Sidebar')
 
 try:
@@ -370,7 +375,7 @@ class Sidebar(FloatLayout):
         )
 
         version_label = MDLabel(
-            text=f"Версия {api.config.VERSION}",
+            text=f"GuitarFans v{APP_VERSION}",
             font_size=sp(11),
             halign="center",
             size_hint_y=None,
@@ -378,6 +383,7 @@ class Sidebar(FloatLayout):
             theme_text_color="Custom",
             text_color=[1, 1, 1, 0.25]
         )
+
         self.menu_container.add_widget(version_label)
 
         self.scroll.add_widget(self.menu_container)
