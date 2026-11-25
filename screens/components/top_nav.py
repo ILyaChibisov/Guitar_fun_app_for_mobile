@@ -611,17 +611,17 @@ class TopNav(MDCard):
         self.md_bg_color = (0, 0, 0, 0)
 
         if theme_id == 'light':
-            self.bg_color_inst.rgba = (0.05, 0.25, 0.15, 0.06)
-            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.02)
-            self.line_color_inst.rgba = (0.15, 0.35, 0.25, 0.22)
+            self.bg_color_inst.rgba = (0.97, 0.99, 0.98, 0.96)
+            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.08)
+            self.line_color_inst.rgba = (0.15, 0.35, 0.25, 0.18)
         elif theme_id == 'dark':
-            self.bg_color_inst.rgba = (0.0, 0.0, 0.0, 0.32)
-            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.12)
-            self.line_color_inst.rgba = (1.0, 1.0, 1.0, 0.14)
-        else:  # green (1-в-1 затемняющий тинт как у меню аккордов)
+            self.bg_color_inst.rgba = (0.09, 0.09, 0.11, 0.96)
+            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.35)
+            self.line_color_inst.rgba = (1.0, 1.0, 1.0, 0.12)
+        else:  # green (1-в-1 как в BottomNav)
             self.bg_color_inst.rgba = (0.0, 0.05, 0.03, 0.26)
-            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.05)
-            self.line_color_inst.rgba = (0.46, 0.70, 0.71, 0.38)
+            self.fade_color_inst.rgba = (0.0, 0.06, 0.03, 0.28)
+            self.line_color_inst.rgba = (0.75, 0.92, 0.86, 0.16)
 
         text_color = TopNavColors.get_text_color(theme_id)
         icon_color = TopNavColors.get_icon_color(theme_id)
