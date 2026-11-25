@@ -446,8 +446,8 @@ class BaseTermDetailScreen(BaseScreen):
 
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1))
-        top_padding_for_nav = layout_config.get_top_padding(include_top_nav=True)
-        bottom_padding_for_card = layout_config.get_bottom_padding()
+        top_padding_for_nav = layout_config.get_top_nav_height()
+        bottom_padding_for_card = layout_config.get_bottom_nav_total_height()
 
         card_container = MDBoxLayout(
             orientation='vertical',
