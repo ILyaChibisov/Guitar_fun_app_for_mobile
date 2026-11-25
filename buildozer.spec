@@ -3,7 +3,7 @@
 [app]
 
 # --- ОСНОВНЫЕ НАСТРОЙКИ ---
-title = GuitarFuns
+title = GuitarFans
 package.name = guitarfuns
 package.domain = com.guitarfuns
 source.dir = .
@@ -12,7 +12,7 @@ source.include_patterns = chords/**, data/**, android_res/**, fonts/**, **/*.py
 source.exclude_patterns = **/__pycache__, **/*.pyc, .venv, .git, test_*.py, check_*.py, create_icons.py, prepare_icons.py
 
 version = 1.0.3
-version.code = 2
+version.code = 3
 orientation = portrait
 
 # --- ИКОНКА ПРИЛОЖЕНИЯ ---
@@ -22,7 +22,7 @@ icon.filename = android_res/drawable/icon.png
 requirements = python3,kivy==2.3.1,kivymd==1.2.0,requests,pillow,plyer,openssl,pyopenssl,asynckivy,asyncgui,certifi,urllib3
 
 # --- ПРАВА ---
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,RECORD_AUDIO
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,RECORD_AUDIO,MODIFY_AUDIO_SETTINGS
 android.api = 33
 android.minapi = 24
 android.enable_androidx = True
@@ -48,7 +48,7 @@ log_level = 2
 
 # --- ПОДПИСЬ ---
 android.keystore = guitarfuns_keystore.jks
-android.keystore_alias = guitarfans
+android.keystore_alias = guitarfuns
 android.keystore_key_password = lexx311285
 # Пароль самого хранилища (добавлено, чтобы не было рассинхрона)
 android.keystore_store_password = lexx311285
