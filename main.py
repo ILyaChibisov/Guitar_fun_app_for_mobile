@@ -186,8 +186,13 @@ def check_audio_support():
     return False
 
 
+def _to_java_int(argb_hex):
+    """Преобразует беззнаковый 0xAARRGGBB в знаковый 32-битный int для Java/pyjnius."""
+    return argb_hex - 0x100000000 if argb_hex >= 0x80000000 else argb_hex
+
+
 def update_android_system_bars(theme_id):
-    """Окрашивает верхний статус-бар и нижнюю системную панель Android под текущую тему."""
+    """Окрашивает верхний статус-бар и нижнюю системную панель Android/Xiaomi под текущую тему."""
     if platform != 'android':
         return
 
@@ -206,9 +211,10 @@ def update_android_system_bars(theme_id):
                 window = mActivity.getWindow()
                 decorView = window.getDecorView()
 
-                window.addFlags(WindowManager.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                window.clearFlags(WindowManager.FLAG_TRANSLUCENT_NAVIGATION)
+                # Обязательно снимаем полупрозрачность и включаем прямую покраску баров
                 window.clearFlags(WindowManager.FLAG_TRANSLUCENT_STATUS)
+                window.clearFlags(WindowManager.FLAG_TRANSLUCENT_NAVIGATION)
+                window.addFlags(WindowManager.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
 
                 if Build.VERSION.SDK_INT >= 29:
                     try:
@@ -217,24 +223,25 @@ def update_android_system_bars(theme_id):
                     except Exception:
                         pass
 
-                # Цвета под каждую тему (совпадают с фоном TopNav и BottomNav)
+                # Цвета под каждую тему (в тон TopNav и BottomNav)
                 if theme_id == 'light':
-                    bar_color = 0xFFF2F7F4       # Светлый мятно-белый
-                    use_dark_icons = True        # Тёмные системные значки
+                    status_color = _to_java_int(0xFFF2F7F4)   # Светлый мятно-белый
+                    nav_color = _to_java_int(0xFFF2F7F4)
+                    use_dark_icons = True
                 elif theme_id == 'dark':
-                    bar_color = 0xFF121212       # Тёмный графит
-                    use_dark_icons = False       # Светлые системные значки
+                    status_color = _to_java_int(0xFF141417)   # Тёмный графит
+                    nav_color = _to_java_int(0xFF141417)
+                    use_dark_icons = False
                 else:  # green
-                    bar_color = 0xFF061F15       # Тёмно-изумрудный в тон градиента
-                    use_dark_icons = False       # Светлые системные значки
+                    status_color = _to_java_int(0xFF0A2E20)   # Тёмно-изумрудный (как TopNav/BottomNav)
+                    nav_color = _to_java_int(0xFF061E14)      # Чуть глубже книзу в тон градиента
+                    use_dark_icons = False
 
-                window.setStatusBarColor(bar_color)
-                window.setNavigationBarColor(bar_color)
+                window.setStatusBarColor(status_color)
+                window.setNavigationBarColor(nav_color)
 
-                flags = (
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                )
+                # Не используем LAYOUT_FULLSCREEN, чтобы бары не становились прозрачными/чёрными
+                flags = View.SYSTEM_UI_FLAG_VISIBLE
 
                 manufacturer = Build.MANUFACTURER.lower()
                 MIUI_DARK_ICONS = 0x00000010
@@ -256,6 +263,7 @@ def update_android_system_bars(theme_id):
 
                 decorView.setSystemUiVisibility(flags)
 
+                # Для Android 11+ (MIUI 12.5 / MIUI 13 / MIUI 14 / HyperOS)
                 if Build.VERSION.SDK_INT >= 30:
                     try:
                         insets_controller = window.getInsetsController()
@@ -268,13 +276,14 @@ def update_android_system_bars(theme_id):
                     except Exception:
                         pass
 
-                logger.info(f"📱 Системные панели Android обновлены под тему '{theme_id}': #{bar_color:08X}")
+                logger.info(f"📱 Системные панели Android обновлены под тему '{theme_id}'")
             except Exception as inner_e:
-                logger.error(f"❌ Ошибка применения цветов системных панелей: {inner_e}")
+                logger.error(f"❌ Ошибка применения цветов системных панелей: {inner_e}", exc_info=True)
 
         _apply_bars()
     except Exception as e:
         logger.error(f"❌ Ошибка доступа к Android Window: {e}")
+
 
 
 class RootWidget(MDFloatLayout):
@@ -853,6 +862,8 @@ class GuitarFansApp(MDApp):
             self._components_created = True
 
         self._show_app_components()
+        update_android_system_bars(settings_state.theme)
+        Clock.schedule_once(lambda dt: update_android_system_bars(settings_state.theme), 0.3)
 
         self.root.opacity = 1
         logger.info("✅ Приложение полностью загружено")

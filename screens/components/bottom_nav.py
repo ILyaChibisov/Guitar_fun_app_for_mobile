@@ -52,7 +52,7 @@ GREEN_ACTIVE_COLORS = {
 }
 
 # Цвет для неактивных кнопок (мятный, как тюнер)
-GREEN_INACTIVE_COLOR = [0.66, 0.90, 0.85, 0.7]
+GREEN_INACTIVE_COLOR = [0.84, 0.90, 0.88, 0.78]
 
 # Активный тюнер — белый
 GREEN_TUNER_ACTIVE = [1, 1, 1, 1]
