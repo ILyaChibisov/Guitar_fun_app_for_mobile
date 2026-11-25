@@ -255,20 +255,16 @@ class BottomNav(BoxLayout):
         self.padding = [dp(4), dp(2), dp(4), bottom_padding]
         self.spacing = 0
 
-        # Мягкая градиентная тень над панелью (плавный переход от контента к бару)
-        self.shadow_tex = self._create_top_fade_texture()
-
         with self.canvas.before:
             # 1. Фон всей панели (отличается от основного фона по тону)
             self.bg_color_inst = Color(0.02, 0.13, 0.08, 0.92)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
 
-            # 2. Плавный градиентный переход над верхней границей (высота 6 dp)
-            self.fade_color_inst = Color(0, 0, 0, 0.22)
+            # 2. Лёгкая полоска тени над панелью (без Texture.create)
+            self.fade_color_inst = Color(0, 0, 0, 0.12)
             self.fade_rect = Rectangle(
                 pos=(self.x, self.y + self.height),
-                size=(self.width, dp(6)),
-                texture=self.shadow_tex
+                size=(self.width, dp(3))
             )
 
         with self.canvas.after:
@@ -305,6 +301,36 @@ class BottomNav(BoxLayout):
 
         self.update_theme_colors()
 
+    def _update_graphics(self, *args):
+        if hasattr(self, 'bg_rect'):
+            self.bg_rect.pos = self.pos
+            self.bg_rect.size = self.size
+        if hasattr(self, 'fade_rect'):
+            self.fade_rect.pos = (self.x, self.y + self.height)
+            self.fade_rect.size = (self.width, dp(3))
+        if hasattr(self, 'line'):
+            self.line.pos = (self.x, self.y + self.height - dp(1))
+            self.line.size = (self.width, dp(1))
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+
+        if theme_id == 'light':
+            self.bg_color_inst.rgba = (0.97, 0.99, 0.98, 0.96)
+            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.05)
+            self.line_color_inst.rgba = (0.15, 0.35, 0.25, 0.18)
+        elif theme_id == 'dark':
+            self.bg_color_inst.rgba = (0.09, 0.09, 0.11, 0.96)
+            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.20)
+            self.line_color_inst.rgba = (1.0, 1.0, 1.0, 0.12)
+        else:  # green
+            self.bg_color_inst.rgba = (0.02, 0.13, 0.08, 0.88)
+            self.fade_color_inst.rgba = (0.0, 0.06, 0.03, 0.15)
+            self.line_color_inst.rgba = (0.75, 0.92, 0.86, 0.16)
+
+        for item in self.items:
+            item.update_state(item, item.active)
+
     @staticmethod
     def _create_top_fade_texture():
         """Создаёт вертикальный градиент прозрачности (ширина 4px для выравнивания OpenGL)."""
@@ -317,35 +343,6 @@ class BottomNav(BoxLayout):
         tex.blit_buffer(bytes(buf), colorfmt='rgba', bufferfmt='ubyte')
         return tex
 
-    def _update_graphics(self, *args):
-        if hasattr(self, 'bg_rect'):
-            self.bg_rect.pos = self.pos
-            self.bg_rect.size = self.size
-        if hasattr(self, 'fade_rect'):
-            self.fade_rect.pos = (self.x, self.y + self.height)
-            self.fade_rect.size = (self.width, dp(6))
-        if hasattr(self, 'line'):
-            self.line.pos = (self.x, self.y + self.height - dp(1))
-            self.line.size = (self.width, dp(1))
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-
-        if theme_id == 'light':
-            self.bg_color_inst.rgba = (0.97, 0.99, 0.98, 0.96)
-            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.08)
-            self.line_color_inst.rgba = (0.15, 0.35, 0.25, 0.18)
-        elif theme_id == 'dark':
-            self.bg_color_inst.rgba = (0.09, 0.09, 0.11, 0.96)
-            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.35)
-            self.line_color_inst.rgba = (1.0, 1.0, 1.0, 0.12)
-        else:  # green
-            self.bg_color_inst.rgba = (0.02, 0.13, 0.08, 0.88)
-            self.fade_color_inst.rgba = (0.0, 0.06, 0.03, 0.28)
-            self.line_color_inst.rgba = (0.75, 0.92, 0.86, 0.16)
-
-        for item in self.items:
-            item.update_state(item, item.active)
 
     def update_language(self):
         for item, (_, text_key, _) in zip(self.items, self.nav_items):

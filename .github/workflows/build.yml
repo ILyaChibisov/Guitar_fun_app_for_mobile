@@ -181,30 +181,49 @@ jobs:
           REMOTE_DIR: /github-artifacts
           RUN_NUMBER: ${{ github.run_number }}
         run: |
-          python - <<'EOF'
+          python3 - <<'EOF'
           import os, glob, requests, sys
-          token = os.environ['YANDEX_DISK_TOKEN']
+
+          token = os.environ.get('YANDEX_DISK_TOKEN', '').strip()
+          if not token:
+              print("❌ Секрет YANDEX_DISK_TOKEN пустой!")
+              sys.exit(1)
+
           local_dir = os.environ['ARTIFACT_PATH']
           remote_dir = os.environ['REMOTE_DIR']
           run_number = os.environ['RUN_NUMBER']
           headers = {'Authorization': f'OAuth {token}'}
+
           api_upload = 'https://yandex.net'
           api_mkdir  = 'https://yandex.net'
+
+          # Создаём корневую папку и папку сборки
+          for folder in [remote_dir, f'{remote_dir}/run-{run_number}']:
+              r = requests.put(api_mkdir, headers=headers, params={'path': folder})
+              if r.status_code not in (200, 201, 409):
+                  print(f"❌ Ошибка создания папки {folder}: {r.status_code} {r.text}")
+                  sys.exit(1)
+
           run_dir = f'{remote_dir}/run-{run_number}'
-          r = requests.put(api_mkdir, headers=headers, params={'path': run_dir})
-          if r.status_code not in (200, 201, 409):
-              sys.exit(1)
           apks = glob.glob(os.path.join(local_dir, '*.apk'))
           if not apks:
+              print("❌ APK файлы не найдены в bin/")
               sys.exit(1)
+
           for apk in apks:
               name = os.path.basename(apk)
               remote_path = f'{run_dir}/{name}'
               r = requests.get(api_upload, headers=headers, params={'path': remote_path, 'overwrite': 'true'})
-              if r.status_code != 200: sys.exit(1)
+              if r.status_code != 200:
+                  print(f"❌ Ошибка получения ссылки загрузки: {r.status_code} {r.text}")
+                  sys.exit(1)
+              data = r.json()
               with open(apk, 'rb') as f:
-                  up = requests.put(r.json()['href'], data=f)
-              if up.status_code not in (200, 201, 202): sys.exit(1)
+                  up = requests.put(data['href'], data=f)
+              if up.status_code not in (200, 201, 202):
+                  print(f"❌ Ошибка загрузки файла: {up.status_code} {up.text}")
+                  sys.exit(1)
+              print(f"✅ Успешно загружен на Яндекс.Диск: {remote_path}")
           EOF
 
       - name: Upload build log to Yandex Disk
@@ -213,17 +232,30 @@ jobs:
           YANDEX_DISK_TOKEN: ${{ secrets.YANDEX_DISK_TOKEN }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
-          python - <<'EOF'
+          python3 - <<'EOF'
           import os, requests, sys
-          token = os.environ['YANDEX_DISK_TOKEN']
+
+          token = os.environ.get('YANDEX_DISK_TOKEN', '').strip()
+          if not token:
+              sys.exit(0)
+
           run_number = os.environ['RUN_NUMBER']
           log_file = 'buildozer_build.log'
-          remote_path = f'/github-artifacts/run-{run_number}/{log_file}'
-          if not os.path.exists(log_file): sys.exit(0)
+          if not os.path.exists(log_file):
+              sys.exit(0)
+
           headers = {'Authorization': f'OAuth {token}'}
+          api_mkdir = 'https://yandex.net'
+          for folder in ['/github-artifacts', f'/github-artifacts/run-{run_number}']:
+              requests.put(api_mkdir, headers=headers, params={'path': folder})
+
+          remote_path = f'/github-artifacts/run-{run_number}/{log_file}'
           r = requests.get('https://yandex.net', headers=headers, params={'path': remote_path, 'overwrite': 'true'})
-          if r.status_code != 200: sys.exit(1)
+          if r.status_code != 200:
+              print(f"⚠️ Не удалось получить ссылку для лога: {r.status_code} {r.text}")
+              sys.exit(0)
           with open(log_file, 'rb') as f:
               up = requests.put(r.json()['href'], data=f)
-          if up.status_code not in (200, 201, 202): sys.exit(1)
+          print(f"📄 Лог загружен: статус {up.status_code}")
           EOF
+      

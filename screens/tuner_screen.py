@@ -938,7 +938,7 @@ class TunerScreen(BaseScreen):
         self.load_background()
         self.init_ui()
         self._set_debug_callback()
-        Clock.schedule_once(self._init_audio, 0.5)
+        _audio_initialized = False
         logger.info('Экран тюнера создан')
 
     def load_background(self):
@@ -1139,47 +1139,66 @@ class TunerScreen(BaseScreen):
             try:
                 for i, d in enumerate(sd.query_devices()):
                     if d['max_input_channels'] > 0:
-                        all_devices.append({'library': 'sounddevice', 'index': i, 'name': d['name'],
-                                            'channels': d['max_input_channels'],
-                                            'rate': int(d.get('default_samplerate', 0))})
-            except Exception:
-                pass
-        if HAS_PYAUDIO:
+                        all_devices.append({
+                            'library': 'sounddevice', 'index': i, 'name': d['name'],
+                            'channels': d['max_input_channels'],
+                            'rate': int(d.get('default_samplerate', 0))
+                        })
+            except Exception as e:
+                logger.error(f"Ошибка опроса sounddevice: {e}")
+
+        # Запускаем PyAudio только если sounddevice не нашёл ни одного устройства
+        if not all_devices and HAS_PYAUDIO:
             try:
                 p = pyaudio.PyAudio()
                 for i in range(p.get_device_count()):
                     info = p.get_device_info_by_index(i)
                     if info.get('maxInputChannels', 0) > 0:
-                        all_devices.append({'library': 'pyaudio', 'index': i,
-                                            'name': info.get('name', 'Unknown'),
-                                            'channels': info.get('maxInputChannels', 0),
-                                            'rate': int(info.get('defaultSampleRate', 0))})
+                        all_devices.append({
+                            'library': 'pyaudio', 'index': i,
+                            'name': info.get('name', 'Unknown'),
+                            'channels': info.get('maxInputChannels', 0),
+                            'rate': int(info.get('defaultSampleRate', 0))
+                        })
                 p.terminate()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Ошибка опроса PyAudio: {e}")
+
         if not all_devices:
             self._audio_backend = 'none'
             return
+
         all_devices.sort(key=lambda d: 0 if 'realtek' in d['name'].lower() and 'mic' in d['name'].lower() else 1)
         for dev in all_devices:
             for fmt_name in (['float32'] if dev['library'] == 'sounddevice' else ['paInt16', 'paInt32']):
-                for rate in [48000, 44100, 22050, 16000, 11025, 8000]:
+                for rate in (44100, 48000):
                     try:
                         if dev['library'] == 'sounddevice':
-                            s = sd.InputStream(device=dev['index'], samplerate=rate, channels=1,
-                                               blocksize=CHUNK_SIZE, dtype='float32', latency='high')
+                            s = sd.InputStream(
+                                device=dev['index'], samplerate=rate, channels=1,
+                                blocksize=CHUNK_SIZE, dtype='float32', latency='high'
+                            )
+                            s.start()
+                            s.stop()
+                            s.close()
                         else:
                             p = pyaudio.PyAudio()
                             fmt = pyaudio.paInt16 if fmt_name == 'paInt16' else pyaudio.paInt32
-                            s = p.open(format=fmt, channels=1, rate=rate, input=True,
-                                       input_device_index=dev['index'],
-                                       frames_per_buffer=CHUNK_SIZE, start=False)
-                        s.start()
-                        s.stop()
-                        s.close()
-                        self._working_params = {'library': dev['library'], 'device_index': dev['index'],
-                                                'device_name': dev['name'], 'rate': rate,
-                                                'channels': 1, 'fmt_name': fmt_name}
+                            s = p.open(
+                                format=fmt, channels=1, rate=rate, input=True,
+                                input_device_index=dev['index'],
+                                frames_per_buffer=CHUNK_SIZE, start=False
+                            )
+                            s.start()
+                            s.stop()
+                            s.close()
+                            p.terminate()
+
+                        self._working_params = {
+                            'library': dev['library'], 'device_index': dev['index'],
+                            'device_name': dev['name'], 'rate': rate,
+                            'channels': 1, 'fmt_name': fmt_name
+                        }
                         self._audio_backend = dev['library']
                         return
                     except Exception:
@@ -1710,6 +1729,9 @@ class TunerScreen(BaseScreen):
         if app and hasattr(app, 'top_nav'):
             app.top_nav.set_custom_back_callback(self.go_back)
         self.update_theme_colors()
+        if not getattr(self, '_audio_initialized', False):
+            self._audio_initialized = True
+            Clock.schedule_once(self._init_audio, 0.1)
 
     def go_back(self, instance=None):
         if self.is_listening:

@@ -1,10 +1,14 @@
 # main.py
 import os
 import sys
+
+if os.name == 'nt':
+    os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
+os.environ['KIVY_AUDIO'] = 'sdl2'
+
 import warnings
 import traceback
 from kivy.core.window import Window
-from kivy.uix.relativelayout import RelativeLayout
 from kivy.utils import platform
 from kivy.metrics import dp
 from kivy.animation import Animation
@@ -17,7 +21,6 @@ from io import BytesIO
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.text import LabelBase
 
-from config import theme
 from screens.songs.base_song_detail_screen import preload_panel_textures
 from screens.chords.base_chords_screen import preload_chords_textures
 
@@ -25,25 +28,8 @@ from screens.chords.base_chords_screen import preload_chords_textures
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FONTS_DIR = os.path.join(BASE_DIR, 'fonts')
 
-# --- ОТЛАДКА ШРИФТОВ ---
-print("=" * 60)
-print(f"DEBUG: BASE_DIR = {BASE_DIR}")
-print(f"DEBUG: FONTS_DIR = {FONTS_DIR}")
-print(f"DEBUG: Папка fonts существует? {os.path.exists(FONTS_DIR)}")
-
-if os.path.exists(FONTS_DIR):
-    files_in_fonts = os.listdir(FONTS_DIR)
-    print(f"DEBUG: Файлы в папке fonts: {files_in_fonts}")
-    for f in files_in_fonts:
-        if f.endswith('.ttf') or f.endswith('.otf'):
-            print(f"DEBUG:   Найден шрифт: {f}")
-
 font_symbols_path = os.path.join(FONTS_DIR, 'NotoSansSymbols2-Regular.ttf')
 font_emoji_path = os.path.join(FONTS_DIR, 'NotoColorEmoji-Regular.ttf')
-
-print(f"DEBUG: NotoSansSymbols2 существует? {os.path.exists(font_symbols_path)}")
-print(f"DEBUG: NotoColorEmoji существует? {os.path.exists(font_emoji_path)}")
-# -------------------------
 
 # Регистрируем шрифты
 try:
@@ -52,42 +38,26 @@ try:
             name='NotoSansSymbols2',
             fn_regular=font_symbols_path
         )
-        print("DEBUG: ✅ Шрифт NotoSansSymbols2 успешно зарегистрирован")
-    else:
-        print("DEBUG: ❌ Не удалось зарегистрировать NotoSansSymbols2 (файл не найден)")
-
     if os.path.exists(font_emoji_path):
         LabelBase.register(
             name='NotoColorEmoji',
             fn_regular=font_emoji_path
         )
-        print("DEBUG: ✅ Шрифт NotoColorEmoji успешно зарегистрирован")
-    else:
-        print("DEBUG: ❌ Не удалось зарегистрировать NotoColorEmoji (файл не найден)")
 except Exception as e:
     print(f"DEBUG: ❌ ОШИБКА при регистрации шрифтов: {e}")
-
-print("=" * 60)
 
 from kivymd.font_definitions import theme_font_styles
 
 # --- ПРИНУДИТЕЛЬНАЯ ПОДМЕНА ШРИФТА В KIVYMD 1.2.0 ---
 try:
-    # В KivyMD 1.2.0 theme_font_styles — это СПИСОК словарей
     for style_dict in theme_font_styles:
         if "font-name" in style_dict and style_dict["font-name"] == "Roboto":
             style_dict["font-name"] = "NotoSansSymbols2"
-    print("DEBUG: ✅ Шрифт NotoSansSymbols2 применён ко всем стилям KivyMD")
 except Exception as e:
     print(f"DEBUG: ⚠️ Не удалось применить шрифт глобально: {e}")
-# ---------------------------------------------------
 
 import kivy
-
 kivy.require('2.3.0')
-
-# ============ ПРИНУДИТЕЛЬНОЕ ИСПОЛЬЗОВАНИЕ SDL2 ДЛЯ ЗВУКА ============
-os.environ['KIVY_AUDIO'] = 'sdl2'
 
 
 # ============ ФУНКЦИЯ ДЛЯ ПУТЕЙ К ЗВУКАМ (ANDROID/ПК) ============
@@ -142,7 +112,6 @@ sys.excepthook = handle_exception
 warnings.filterwarnings("ignore", category=Warning)
 try:
     import urllib3
-
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
     pass
@@ -165,7 +134,6 @@ if platform == 'android':
     except Exception as e:
         print(f"❌ Ошибка инициализации Android: {e}")
         Window.clearcolor = (0, 0, 0, 1)
-
 else:
     Window.clearcolor = (0, 0, 0, 1)
     Window.borderless = False
@@ -174,7 +142,6 @@ else:
     Window.left = 50
 
 from config.logger_config import setup_logging, app_logger
-
 setup_logging(level='debug')
 
 from kivymd.app import MDApp
@@ -190,21 +157,15 @@ from screens.components.sidebar import Sidebar
 from screens.components.blocking_layer import BlockingLayer
 from config.system_bars import get_navigation_bar_height, get_status_bar_height, get_screen_density, get_all_system_info
 from utils.notifications import notify
-
-# ============ НАСТРОЙКИ (единый источник правды) ============
 from state.settings_state import settings_state
-
-# ============ ОТКЛЮЧЕНИЕ RIPPLE ЭФФЕКТА ============
 from kivymd.uix.button import MDIconButton
 
 MDIconButton.ripple_scale = 0
 MDIconButton.ripple_alpha = 0
-# Импортируем ассеты
+
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
-    print("✅ Модуль ассетов загружен")
 except ImportError as e:
     HAS_ASSETS = False
     print(f"⚠️ Модуль ассетов не найден: {e}")
@@ -220,6 +181,7 @@ def check_audio_support():
     except Exception as e:
         logger.warning(f"⚠️ Звук может не работать: {e}")
     return False
+
 
 def update_android_system_bars(theme_id):
     """Окрашивает верхний статус-бар и нижнюю системную панель Android под текущую тему."""
@@ -241,7 +203,6 @@ def update_android_system_bars(theme_id):
                 window = mActivity.getWindow()
                 decorView = window.getDecorView()
 
-                # Включаем отрисовку фонов системных баров и отключаем авто-контраст Android 10+
                 window.addFlags(WindowManager.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
                 window.clearFlags(WindowManager.FLAG_TRANSLUCENT_NAVIGATION)
                 window.clearFlags(WindowManager.FLAG_TRANSLUCENT_STATUS)
@@ -253,28 +214,26 @@ def update_android_system_bars(theme_id):
                     except Exception:
                         pass
 
-                # Цвета точно совпадают с фоном TopNav и BottomNav
                 if theme_id == 'light':
-                    bar_color = 0xFFF7FCFA       # Светлый фон (#F7FCFA)
-                    use_dark_icons = True        # Тёмные системные значки
+                    bar_color = 0xFFF7FCFA
+                    use_dark_icons = True
                 elif theme_id == 'dark':
-                    bar_color = 0xFF17171C       # Тёмный графит (#17171C)
-                    use_dark_icons = False       # Светлые системные значки
+                    bar_color = 0xFF17171C
+                    use_dark_icons = False
                 else:  # green
-                    bar_color = 0xFF052114       # Тёмно-изумрудный (#052114)
-                    use_dark_icons = False       # Светлые системные значки
+                    bar_color = 0xFF052114
+                    use_dark_icons = False
 
                 window.setStatusBarColor(bar_color)
                 window.setNavigationBarColor(bar_color)
 
-                # Базовые флаги
                 flags = (
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
                     View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 )
 
                 manufacturer = Build.MANUFACTURER.lower()
-                MIUI_DARK_ICONS = 0x00000010  # На Xiaomi включает тёмные значки (белый фон)
+                MIUI_DARK_ICONS = 0x00000010
 
                 if use_dark_icons:
                     if Build.VERSION.SDK_INT >= 23:
@@ -284,7 +243,6 @@ def update_android_system_bars(theme_id):
                     if "xiaomi" in manufacturer:
                         flags |= MIUI_DARK_ICONS
                 else:
-                    # Явно снимаем флаги светлых баров, чтобы фон оставался тёмным, а значки — белыми
                     if Build.VERSION.SDK_INT >= 23:
                         flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                     if Build.VERSION.SDK_INT >= 26:
@@ -294,7 +252,6 @@ def update_android_system_bars(theme_id):
 
                 decorView.setSystemUiVisibility(flags)
 
-                # Поддержка Android 11+ (API 30+)
                 if Build.VERSION.SDK_INT >= 30:
                     try:
                         insets_controller = window.getInsetsController()
@@ -316,8 +273,6 @@ def update_android_system_bars(theme_id):
         logger.error(f"❌ Ошибка доступа к Android Window: {e}")
 
 
-
-
 class RootWidget(MDFloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -328,7 +283,6 @@ class RootWidget(MDFloatLayout):
 
         self._init_canvas()
         self.load_background()
-
         self.apply_theme(settings_state.theme)
 
         logger.info("RootWidget создан")
@@ -337,7 +291,7 @@ class RootWidget(MDFloatLayout):
         with self.canvas.before:
             self.bg_color = Color(0.05, 0.05, 0.05, 1)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-        self.bind(pos=self._update_rect, size=self._update_rect)
+            self.bind(pos=self._update_rect, size=self._update_rect)
 
     def _update_rect(self, *args):
         if self.bg_rect:
@@ -371,7 +325,6 @@ class RootWidget(MDFloatLayout):
 
     def apply_theme(self, theme_id):
         logger.info(f"🖼️ Применение фона для темы: {theme_id}")
-
         self.canvas.before.clear()
         self.bg_image = None
         self.img_color = None
@@ -395,6 +348,8 @@ class RootWidget(MDFloatLayout):
 
 
 class GuitarFansApp(MDApp):
+    SESSION_TTL_SECONDS = 6 * 3600
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.title = "GuitarFans"
@@ -425,7 +380,6 @@ class GuitarFansApp(MDApp):
         logger.info('🎸 ' + '=' * 50)
 
     # ============ ПРИМЕНЕНИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ============
-
     def apply_theme(self, theme_id):
         logger.info(f"🎨 apply_theme({theme_id})")
         update_android_system_bars(theme_id)
@@ -441,6 +395,7 @@ class GuitarFansApp(MDApp):
                 self.top_nav.update_theme_colors()
             except Exception as e:
                 logger.debug(f"top_nav theme: {e}")
+
         if self.bottom_nav:
             try:
                 self.bottom_nav.update_theme_colors()
@@ -487,7 +442,6 @@ class GuitarFansApp(MDApp):
                     )
 
     # ============ АВТОРИЗАЦИЯ ============
-
     def set_blocking(self, blocked):
         logger.info(f"set_blocking вызван: blocked={blocked}")
         self.is_auth_blocking = blocked
@@ -505,16 +459,13 @@ class GuitarFansApp(MDApp):
 
     def _show_auth_modal_on_screen(self, screen):
         from screens.components.auth_modal import AuthModal
-
         if self.current_auth_modal:
             return
-
         self.current_auth_modal = AuthModal(
             parent_screen=screen,
             on_close=self._on_auth_modal_close,
             on_login_success=self._on_auth_success
         )
-
         self.current_auth_modal.open()
 
     def _on_auth_modal_close(self):
@@ -538,10 +489,7 @@ class GuitarFansApp(MDApp):
                 on_success=self._on_user_data_loaded,
                 on_failure=lambda req, err: None
             )
-
-            # Первичная проверка подписки через subscription_state
-            Clock.schedule_once(lambda dt: self._poll_subscription(0), 0.5)
-
+        Clock.schedule_once(lambda dt: self._poll_subscription(0), 0.5)
         Clock.schedule_once(self._refresh_current_screen, 0.3)
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
 
@@ -549,6 +497,7 @@ class GuitarFansApp(MDApp):
         api.user_data = user
         username = user.get('username', 'Гость')
         logger.info(f"Данные пользователя загружены: {username}")
+
         Clock.schedule_once(lambda dt: self._preload_favorites(), 0.5)
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
@@ -562,28 +511,23 @@ class GuitarFansApp(MDApp):
             if current_screen:
                 screen_name = current_screen.name
                 logger.info(f"Обновление экрана после авторизации: {screen_name}")
-
                 if hasattr(current_screen, 'on_login_success'):
                     current_screen.on_login_success()
                 elif screen_name == 'favorites' and hasattr(current_screen, 'refresh_favorites'):
                     current_screen.refresh_favorites()
 
-                if self.screen_manager.has_screen('home'):
-                    home_screen = self.screen_manager.get_screen('home')
-                    if hasattr(home_screen, 'on_login_success'):
-                        home_screen.on_login_success()
+        if self.screen_manager.has_screen('home'):
+            home_screen = self.screen_manager.get_screen('home')
+            if hasattr(home_screen, 'on_login_success'):
+                home_screen.on_login_success()
 
     def _preload_favorites(self):
         if self._favorites_preloaded:
-            logger.debug("ℹ️ Избранное уже предзагружено")
             return
-
         if not api.is_authenticated():
             logger.info("ℹ️ Пользователь не авторизован, предзагрузка избранного пропущена")
             return
-
         logger.info("🔄 Фоновая предзагрузка избранного...")
-
         api.get_favorites(
             on_success=self._on_favorites_preloaded,
             on_failure=lambda req, err: logger.warning(f"⚠️ Предзагрузка избранного не удалась: {err}"),
@@ -595,9 +539,7 @@ class GuitarFansApp(MDApp):
         logger.info(f"✅ Избранное предзагружено: {len(favorites)} песен")
 
     # ============ УПРАВЛЕНИЕ ИЗБРАННЫМ ИЗ TOPNAV ============
-
     def toggle_favorite_from_top_nav(self):
-        """Добавляет/удаляет текущую песню из избранного по нажатию на звезду в TopNav."""
         if not self.screen_manager:
             return
         current_screen = self.screen_manager.current_screen
@@ -605,28 +547,18 @@ class GuitarFansApp(MDApp):
             current_screen.toggle_favorite()
 
     def _on_favorite_toggled(self, screen, new_state):
-        """Вызывается после успешного изменения статуса избранного."""
         screen.is_favorite = new_state
         if new_state:
             notify.success("Добавлено в избранное")
         else:
             notify.info("Удалено из избранного")
-
-        # Обновляем иконку в TopNav
         if self.top_nav:
             self.top_nav._update_favorite_icon()
 
     # ============ ПОДПИСКА ============
-
     def _poll_subscription(self, dt):
-        """Запрос /users/me/subscription → subscription_state."""
         from state.subscription_state import subscription_state
-
-        if not api.access_token:
-            logger.debug("📊 poll: нет токена, пропуск")
-            return
-        if subscription_state.is_admin:
-            logger.debug("📊 poll: админ, пропуск")
+        if not api.access_token or subscription_state.is_admin:
             return
 
         def _on_status(status_data):
@@ -644,27 +576,23 @@ class GuitarFansApp(MDApp):
         self._subscription_poll_event = Clock.schedule_interval(self._poll_subscription, 30)
         logger.info("🔄 Запущен периодический опрос подписки (30 сек)")
 
-    def _on_subscription_snapshot(self, snapshot: dict):
-        """
-        Реакция на изменение статуса подписки.
-        - status='exhausted' → блокирующая модалка сразу (Вариант B).
-        - status='active'    → закрыть модалку + warning при <=3 дней.
-        - admin/unlimited    → ничего.
-        """
-        logger.info(f"🔔 _on_subscription_snapshot: {snapshot}")
+    def _stop_subscription_poller(self):
+        if self._subscription_poll_event:
+            self._subscription_poll_event.cancel()
+            self._subscription_poll_event = None
+            logger.info("⏸️ Опрос подписки приостановлен")
 
+    def _on_subscription_snapshot(self, snapshot: dict):
         status = snapshot.get("status")
         days_left = snapshot.get("days_left", 0)
         is_admin = snapshot.get("is_admin", False)
 
         from utils.subscription_warnings import subscription_warnings
 
-        # Админ / безлимит
         if is_admin or status == "unlimited":
             self._close_paywall_modal()
             return
 
-        # Плашка на Home
         try:
             if self.screen_manager and self.screen_manager.has_screen('home'):
                 home = self.screen_manager.get_screen('home')
@@ -675,34 +603,23 @@ class GuitarFansApp(MDApp):
         except Exception as e:
             logger.debug(f"home.show_subscription_status: {e}")
 
-        # --- ЖЁСТКАЯ БЛОКИРОВКА ---
         if status == "exhausted":
-            logger.info("🔔 status=exhausted → показываем paywall-modal")
             self._show_paywall_modal(can_dismiss=False)
             return
 
-        # --- Активная ---
         if status == "active":
             self._close_paywall_modal()
             if 0 < days_left <= 3:
                 subscription_warnings.maybe_show_days_warning(days_left)
 
     def _show_paywall_modal(self, can_dismiss=False):
-        """Глобальная блокирующая модалка «Подписка закончилась»."""
-        logger.info(f"🚧 _show_paywall_modal(can_dismiss={can_dismiss}) вызван")
-
         if self._paywall_modal:
-            logger.info("🚧 Модалка уже открыта — пропускаем")
             return
-
         if not self.screen_manager:
-            logger.warning("🚧 screen_manager ещё не готов — откладываем")
             Clock.schedule_once(lambda dt: self._show_paywall_modal(can_dismiss), 0.5)
             return
-
         try:
             from screens.components.subscription_paywall_modal import SubscriptionPaywallModal
-            logger.info("🚧 Импорт SubscriptionPaywallModal OK")
         except Exception as e:
             logger.error(f"🚧 Ошибка импорта SubscriptionPaywallModal: {e}", exc_info=True)
             return
@@ -730,7 +647,6 @@ class GuitarFansApp(MDApp):
                 on_dismiss=lambda: setattr(self, '_paywall_modal', None),
             )
             self._paywall_modal.open()
-            logger.info(f"🚧 Paywall-modal показан (can_dismiss={can_dismiss})")
         except Exception as e:
             logger.error(f"🚧 Ошибка при показе модалки: {e}", exc_info=True)
             self._paywall_modal = None
@@ -744,14 +660,12 @@ class GuitarFansApp(MDApp):
             self._paywall_modal = None
 
     def _show_paywall(self):
-        """Fallback-переход на экран paywall."""
         if self.screen_manager and self.screen_manager.has_screen('paywall'):
             self.screen_manager.current = 'paywall'
         else:
             notify.warning("Экран оплаты временно недоступен")
 
     def _on_logout_done(self):
-        """Вызывать при успешном logout: сброс состояния подписки."""
         from state.subscription_state import subscription_state
         try:
             subscription_state.reset()
@@ -760,50 +674,59 @@ class GuitarFansApp(MDApp):
         self._close_paywall_modal()
 
     def _logout_and_open_auth(self):
-        """
-        Выход из аккаунта + открытие AuthModal.
-        Используется из paywall-модалки «Выйти из аккаунта».
-        """
-        logger.info("🚪 Выход из аккаунта через paywall-модалку")
-
-        # 1) Сбросить токены и данные
         try:
             api._clear_tokens()
         except Exception as e:
             logger.error(f"_clear_tokens: {e}")
-
         api.user_data = None
         settings_state.set_authenticated(False)
-
-        # 2) Сбросить состояние подписки (снимает всех слушателей из памяти)
         self._on_logout_done()
-
-        # 3) Вернуться на home
         if self.screen_manager and self.screen_manager.has_screen('home'):
             self.screen_manager.current = 'home'
-
-        # 4) Обновить сайдбар и экраны
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.2)
-
-        # 5) Открыть AuthModal
         Clock.schedule_once(lambda dt: self.open_profile(), 0.4)
 
     # ============ BUILD ============
-
     def build(self):
-        self.title = 'GuitarFans'
-        logger.info("🚀 Запуск приложения GuitarFans")
+        logger.debug('Создание интерфейса...')
+
+        if platform == 'android':
+            try:
+                from android import mActivity
+                window = mActivity.getWindow()
+                window.setSoftInputMode(0x00000020)
+                logger.info("⌨️ Android: клавиатура настроена в режиме PAN")
+            except Exception as e:
+                logger.error(f"Ошибка настройки клавиатуры: {e}")
+
+        # Обязательная инициализация темы KivyMD до создания виджетов
+        self.theme_cls.primary_palette = "Teal"
+        self.theme_cls.primary_hue = "300"
+        self.theme_cls.material_style = "M3"
+
+        saved_theme = settings_state.theme
+        saved_language = settings_state.language
+
+        if saved_theme == "dark":
+            self.theme_cls.theme_style = "Dark"
+        else:
+            self.theme_cls.theme_style = "Light"
+
+        if saved_theme == "green":
+            self.theme_cls.primary_palette = "Teal"
+        elif saved_theme == "light":
+            self.theme_cls.primary_palette = "Gray"
+
+        logger.info(f"⚙️ Загружены настройки: тема={saved_theme}, язык={saved_language}")
 
         self.root = RootWidget()
 
         if self._has_valid_saved_session():
-            # Мгновенный запуск без сплеш-скрина при восстановлении из трея
             self._components_created = True
             self._create_app_components()
             self._show_app_components()
             Clock.schedule_once(lambda dt: self._restore_session_state(), 0.05)
         else:
-            # Стандартный запуск через SplashScreen
             try:
                 from screens.splash_screen import SplashScreen
                 self.splash_screen = SplashScreen(
@@ -816,16 +739,22 @@ class GuitarFansApp(MDApp):
                 self._components_created = True
                 self._create_app_components()
                 self._show_app_components()
+                Clock.schedule_once(self._preload_app, 0.1)
+
+        try:
+            from utils.icon_cache import preload_icons
+            preload_icons()
+            logger.info("🚀 Запущена предзагрузка иконок")
+        except ImportError:
+            logger.warning("⚠️ Модуль icon_cache не найден")
 
         return self.root
 
     def _preload_app(self, dt):
         logger.info("🔄 Фоновая предзагрузка приложения...")
-
         if not self._components_created:
             self._create_app_components()
             self._components_created = True
-
         Clock.schedule_once(lambda dt: self._preload_favorites(), 0.5)
 
     def _create_app_components(self):
@@ -836,8 +765,8 @@ class GuitarFansApp(MDApp):
             preload_chords_textures()
         except Exception as e:
             logger.error(f"Ошибка предзагрузки текстур: {e}")
-        logger.info("📦 Создание компонентов приложения...")
 
+        logger.info("📦 Создание компонентов приложения...")
         self.screen_manager = setup_screen_manager()
         self.screen_manager.current = 'home'
         self.screen_manager.md_bg_color = [0, 0, 0, 0]
@@ -864,7 +793,6 @@ class GuitarFansApp(MDApp):
 
     def _show_app_components(self):
         logger.info("🎬 Показываем компоненты приложения")
-
         self.root.add_widget(self.screen_manager)
         self.root.add_widget(self.bottom_nav)
         self.root.add_widget(self.top_nav)
@@ -874,14 +802,10 @@ class GuitarFansApp(MDApp):
         settings_state.add_theme_listener(self._on_theme_changed_hot)
         settings_state.add_language_listener(self._on_language_changed_hot)
 
-        # ============ ПОДПИСКА ============
         from state.subscription_state import subscription_state
         self._subscription_listener = self._on_subscription_snapshot
         subscription_state.add_listener(self._subscription_listener)
-        logger.info("✅ Подписка: слушатель subscription_state подключён")
 
-        # Если статус уже был получен ДО подписки (например, в on_start) —
-        # продублируем его вручную, иначе модалка не появится.
         if subscription_state.status:
             snapshot = {
                 "status": subscription_state.status,
@@ -890,15 +814,14 @@ class GuitarFansApp(MDApp):
                 "is_admin": subscription_state.is_admin,
                 "subscription_end_date": subscription_state.subscription_end_date,
             }
-            logger.info(f"📊 Продублируем известный снапшот: {snapshot}")
             Clock.schedule_once(
                 lambda dt, s=snapshot: self._on_subscription_snapshot(s), 0.3
             )
 
-        # Форсированная проверка после подключения слушателя
         Clock.schedule_once(lambda dt: self._poll_subscription(0), 0.5)
 
         network_manager.start_monitoring()
+
         Window.bind(on_resize=self.on_window_resize)
         Window.bind(on_keyboard=self._on_keyboard)
 
@@ -942,7 +865,6 @@ class GuitarFansApp(MDApp):
 
     def _on_splash_complete(self):
         logger.info("🎬 Сплеш-скрин завершён, показываем приложение")
-
         if self.splash_screen and self.splash_screen.parent:
             self.root.remove_widget(self.splash_screen)
             self.splash_screen = None
@@ -960,13 +882,11 @@ class GuitarFansApp(MDApp):
         logger.info("✅ Приложение полностью загружено")
 
     # ============ ОБРАБОТЧИКИ ============
-
     def _on_settings_press(self, *args):
         logger.info("⚙️ Нажата иконка настроек → открываем Sidebar")
 
     def on_window_resize(self, window, width, height):
         from config.layout_config import layout_config
-        from kivy.clock import Clock
         logger.info(f"🔄 Поворот экрана: {width}x{height}")
         layout_config.force_update()
         Clock.schedule_once(lambda dt: self._reload_nav_bars(), 0.1)
@@ -978,7 +898,6 @@ class GuitarFansApp(MDApp):
         if hasattr(self, 'top_nav') and self.top_nav:
             if hasattr(self.top_nav, 'reload_config'):
                 self.top_nav.reload_config()
-        logger.info("✅ Панели навигации обновлены после поворота")
 
     def _reload_content_screens(self):
         if hasattr(self, 'screen_manager') and self.screen_manager:
@@ -992,20 +911,17 @@ class GuitarFansApp(MDApp):
     def change_language(self, lang_code):
         logger.info(f"Смена языка на: {lang_code}")
 
-    # ============ ЖИЗНЕННЫЙ ЦИКЛ ============
-
+    # ============ ЖИЗНЕННЫЙ ЦИКЛ И СЕССИЯ ============
     def on_start(self):
         logger.info('Приложение GuitarFans запущено')
         update_android_system_bars(settings_state.theme)
         check_audio_support()
 
-        # Подписка: первая проверка СРАЗУ + периодический опрос
         if api.access_token:
-            logger.info("📊 on_start: форсированная проверка подписки")
             self._poll_subscription(0)
             self._start_subscription_poller()
+            Clock.schedule_once(lambda dt: self._preload_favorites(), 1.0)
 
-        Clock.schedule_once(lambda dt: self._preload_favorites(), 1.0)
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.5)
 
         if HAS_ASSETS:
@@ -1016,24 +932,14 @@ class GuitarFansApp(MDApp):
             except Exception as e:
                 logger.error(f'Ошибка получения списка ассетов: {e}')
 
-    def _stop_subscription_poller(self):
-        if self._subscription_poll_event:
-            self._subscription_poll_event.cancel()
-            self._subscription_poll_event = None
-            logger.info("⏸️ Опрос подписки приостановлен")
-
     def on_pause(self):
         logger.debug('Приложение свернуто')
-        # 1. Останавливаем фоновые таймеры и сеть, чтобы Android не убил процесс за активность в фоне
         self._stop_subscription_poller()
         try:
             network_manager.stop_monitoring()
         except Exception as e:
             logger.debug(f"network_manager.stop_monitoring on_pause: {e}")
-
-        # 2. Сохраняем текущее состояние экрана, чтобы мгновенно восстановить его при перезапуске
         self._save_session_state()
-
         try:
             settings_state.flush()
         except Exception as e:
@@ -1043,34 +949,26 @@ class GuitarFansApp(MDApp):
     def on_resume(self):
         logger.debug('Приложение восстановлено')
         update_android_system_bars(settings_state.theme)
-
         try:
             network_manager.start_monitoring()
         except Exception as e:
             logger.debug(f"network_manager.start_monitoring on_resume: {e}")
-
         try:
             api.reset_session()
-            logger.info("🔌 Пул соединений API сброшен после resume")
         except Exception as e:
             logger.error(f"reset_session on_resume: {e}")
-
         Clock.schedule_once(self._delayed_session_reset, 1.0)
 
-        # Возобновляем опрос подписки
         if api.access_token:
             Clock.schedule_once(lambda dt: self._poll_subscription(0), 0.5)
             self._start_subscription_poller()
 
         Clock.schedule_once(lambda dt: self._update_sidebar(), 0.3)
 
-    SESSION_TTL_SECONDS = 6 * 3600  # 6 часов: в пределах этого времени восстанавливаем из трея без сплеша
-
     def _get_session_file_path(self):
         return os.path.join(config.CACHE_DIR, 'last_session.json')
 
     def _clear_session_state(self):
-        """Удаляет файл сохранённой сессии."""
         try:
             path = self._get_session_file_path()
             if os.path.exists(path):
@@ -1079,7 +977,6 @@ class GuitarFansApp(MDApp):
             logger.debug(f"Ошибка удаления файла сессии: {e}")
 
     def _has_valid_saved_session(self):
-        """Проверяет, есть ли актуальная сессия для мгновенного восстановления из трея."""
         path = self._get_session_file_path()
         if not os.path.exists(path):
             return False
@@ -1088,12 +985,9 @@ class GuitarFansApp(MDApp):
             import time
             with open(path, 'r', encoding='utf-8') as f:
                 state = json.load(f)
-
-            saved_at = state.get('timestamp', 0)
-            if (time.time() - saved_at) > self.SESSION_TTL_SECONDS:
+            if (time.time() - state.get('timestamp', 0)) > self.SESSION_TTL_SECONDS:
                 self._clear_session_state()
                 return False
-
             target_screen = state.get('screen')
             return bool(target_screen and target_screen != 'home')
         except Exception:
@@ -1101,24 +995,20 @@ class GuitarFansApp(MDApp):
             return False
 
     def _save_session_state(self):
-        """Атомарно сохраняет текущий экран и открытую песню/термин при сворачивании."""
         if not self.screen_manager:
             return
         try:
             import json
             import time
-
             current_name = self.screen_manager.current
             if not current_name or current_name == 'home':
                 self._clear_session_state()
                 return
-
             current_screen = self.screen_manager.current_screen
             state = {
                 'screen': current_name,
                 'timestamp': time.time(),
             }
-
             if current_screen and hasattr(current_screen, 'current_song_id') and current_screen.current_song_id:
                 state['song_id'] = current_screen.current_song_id
             if current_screen and hasattr(current_screen, 'song_data') and isinstance(current_screen.song_data, dict):
@@ -1129,12 +1019,10 @@ class GuitarFansApp(MDApp):
             with open(tmp_path, 'w', encoding='utf-8') as f:
                 json.dump(state, f, ensure_ascii=False)
             os.replace(tmp_path, final_path)
-            logger.debug(f"💾 Сессия сохранена: {current_name}")
         except Exception as e:
             logger.debug(f"Не удалось сохранить сессию: {e}")
 
     def _restore_session_state(self):
-        """Восстанавливает последний экран после выгрузки процесса системой Android."""
         path = self._get_session_file_path()
         if not os.path.exists(path):
             return False
@@ -1143,7 +1031,6 @@ class GuitarFansApp(MDApp):
             import time
             with open(path, 'r', encoding='utf-8') as f:
                 state = json.load(f)
-
             if (time.time() - state.get('timestamp', 0)) > self.SESSION_TTL_SECONDS:
                 self._clear_session_state()
                 return False
@@ -1155,12 +1042,9 @@ class GuitarFansApp(MDApp):
 
             screen = self.screen_manager.get_screen(target_screen)
             song_data = state.get('song_data')
-
             if song_data and hasattr(screen, 'load_song'):
                 screen.load_song(song_data)
-            elif target_screen in (
-            'song_detail', 'favorite_detail', 'term_detail', 'search_term_detail', 'artist_songs'):
-                # Если детальных данных нет — безопасно возвращаем на родительский список
+            elif target_screen in ('song_detail', 'favorite_detail', 'term_detail', 'search_term_detail', 'artist_songs'):
                 fallback_map = {
                     'song_detail': 'songs',
                     'artist_songs': 'songs',
@@ -1173,7 +1057,6 @@ class GuitarFansApp(MDApp):
             self.screen_manager.current = target_screen
             if self.top_nav:
                 self.top_nav.set_screen(target_screen)
-
             self._clear_session_state()
             logger.info(f"⚡ Сессия восстановлена на экран: {target_screen}")
             return True
@@ -1185,16 +1068,13 @@ class GuitarFansApp(MDApp):
     def _delayed_session_reset(self, dt):
         try:
             api.reset_session()
-            logger.debug("🔌 Пул соединений API сброшен повторно (delayed)")
         except Exception as e:
             logger.error(f"reset_session delayed: {e}")
 
     def on_stop(self):
-        # При ручном закрытии приложения очищаем сохранённую сессию
         self._clear_session_state()
         logger.info('Приложение закрыто')
         network_manager.stop_monitoring()
-
         try:
             settings_state.flush()
         except Exception as e:
@@ -1204,7 +1084,6 @@ class GuitarFansApp(MDApp):
         if hasattr(self, 'bottom_nav') and self.bottom_nav and self.bottom_nav.parent:
             self._bottom_nav_visible = True
             self.bottom_nav.parent.remove_widget(self.bottom_nav)
-            logger.info("🔻 BottomNav скрыт")
 
     def show_bottom_nav(self):
         if hasattr(self, 'bottom_nav') and self.bottom_nav:
@@ -1212,14 +1091,12 @@ class GuitarFansApp(MDApp):
                 root = self.root
                 if root and self.bottom_nav.parent is None:
                     root.add_widget(self.bottom_nav)
-                    if hasattr(self, 'top_nav') and self.top_nav and self.top_nav.parent:
-                        self.top_nav.parent.remove_widget(self.top_nav)
-                        root.add_widget(self.top_nav)
-                    logger.info("🔺 BottomNav восстановлен")
+                if hasattr(self, 'top_nav') and self.top_nav and self.top_nav.parent:
+                    self.top_nav.parent.remove_widget(self.top_nav)
+                    root.add_widget(self.top_nav)
                 self._bottom_nav_visible = False
 
     def _on_keyboard(self, window, key, scancode, codepoint, modifier):
-        # 27 — клавиша Esc на ПК и аппаратная кнопка Back на Android
         if key == 27:
             if self.sidebar and getattr(self.sidebar, 'is_open', False):
                 self.sidebar.close()

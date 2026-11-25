@@ -106,19 +106,16 @@ class TopNav(MDCard):
         else:
             self.height = dp(64)
 
-        self.shadow_tex = self._create_bottom_fade_texture()
-
         with self.canvas.before:
             # 1. Фон панели (как в BottomNav)
             self.bg_color_inst = Color(0.02, 0.13, 0.08, 0.88)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
 
-            # 2. Плавный градиентный переход под нижней границей (высота 6 dp)
-            self.fade_color_inst = Color(0.0, 0.06, 0.03, 0.28)
+            # 2. Лёгкая полоска тени под нижней границей (без Texture.create)
+            self.fade_color_inst = Color(0.0, 0.06, 0.03, 0.15)
             self.fade_rect = Rectangle(
-                pos=(self.x, self.y - dp(6)),
-                size=(self.width, dp(6)),
-                texture=self.shadow_tex
+                pos=(self.x, self.y - dp(3)),
+                size=(self.width, dp(3))
             )
 
         with self.canvas.after:
@@ -154,6 +151,52 @@ class TopNav(MDCard):
         Window.bind(on_resize=self._on_window_resize)
         logger.info("✅ TopNav создан")
 
+    def _update_bottom_line(self, *args):
+        if hasattr(self, 'bg_rect'):
+            self.bg_rect.pos = self.pos
+            self.bg_rect.size = self.size
+        if hasattr(self, 'fade_rect'):
+            self.fade_rect.pos = (self.x, self.y - dp(3))
+            self.fade_rect.size = (self.width, dp(3))
+        if hasattr(self, 'bottom_line'):
+            self.bottom_line.pos = (self.x, self.y)
+            self.bottom_line.size = (self.width, dp(1))
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        self.md_bg_color = [0, 0, 0, 0]
+
+        if theme_id == 'light':
+            self.bg_color_inst.rgba = (0.97, 0.99, 0.98, 0.96)
+            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.05)
+            self.line_color_inst.rgba = (0.15, 0.35, 0.25, 0.18)
+        elif theme_id == 'dark':
+            self.bg_color_inst.rgba = (0.09, 0.09, 0.11, 0.96)
+            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.20)
+            self.line_color_inst.rgba = (1.0, 1.0, 1.0, 0.12)
+        else:  # green
+            self.bg_color_inst.rgba = (0.02, 0.13, 0.08, 0.88)
+            self.fade_color_inst.rgba = (0.0, 0.06, 0.03, 0.15)
+            self.line_color_inst.rgba = (0.75, 0.92, 0.86, 0.16)
+
+        text_color = TopNavColors.get_text_color(theme_id)
+        icon_color = TopNavColors.get_icon_color(theme_id)
+
+        if self.screen_title:
+            self.screen_title.text_color = text_color
+
+        if not self.logo_texture and hasattr(self, 'logo_widget'):
+            self.logo_widget.text_color = text_color
+
+        for btn in [self.settings_btn, self.back_btn, self.search_btn, self.home_btn, self.actions_btn]:
+            if btn:
+                btn.icon_color = icon_color
+
+        if self.sm and self.sm.current in SONG_DETAIL_SCREENS:
+            self._update_favorite_icon()
+        elif self.favorite_btn:
+            self.favorite_btn.icon_color = icon_color
+
     @staticmethod
     def _create_bottom_fade_texture():
         """Создаёт вертикальный градиент прозрачности (ширина 4px для выравнивания OpenGL)."""
@@ -166,16 +209,6 @@ class TopNav(MDCard):
         tex.blit_buffer(bytes(buf), colorfmt='rgba', bufferfmt='ubyte')
         return tex
 
-    def _update_bottom_line(self, *args):
-        if hasattr(self, 'bg_rect'):
-            self.bg_rect.pos = self.pos
-            self.bg_rect.size = self.size
-        if hasattr(self, 'fade_rect'):
-            self.fade_rect.pos = (self.x, self.y - dp(6))
-            self.fade_rect.size = (self.width, dp(6))
-        if hasattr(self, 'bottom_line'):
-            self.bottom_line.pos = (self.x, self.y)
-            self.bottom_line.size = (self.width, dp(1))
 
     def set_app(self, app):
         self.app = app
