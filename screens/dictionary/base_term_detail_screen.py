@@ -430,14 +430,10 @@ class BaseTermDetailScreen(BaseScreen):
         self.update_screen_background()
         theme_id = settings_manager.theme
         text_p = TermDetailColors.get_text_primary(theme_id)
-        div_color = TermDetailColors.get_divider(theme_id)
         if hasattr(self, 'content_label'):
             self.content_label.text_color = text_p
         if hasattr(self, 'term_title_label'):
             self.term_title_label.text_color = text_p
-        for div in (getattr(self, 'top_divider', None), getattr(self, 'bottom_divider', None)):
-            if div:
-                div.md_bg_color = div_color
         if self._floating_panel:
             self._floating_panel.update_theme_colors()
 
@@ -464,9 +460,6 @@ class BaseTermDetailScreen(BaseScreen):
             md_bg_color=[0, 0, 0, 0],
             elevation=0
         )
-
-        self.top_divider = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(2))
-        self.term_card.add_widget(self.top_divider)
 
         self.content_scroll = MDScrollView(
             size_hint=(1, 1),
@@ -519,8 +512,6 @@ class BaseTermDetailScreen(BaseScreen):
         self.content_scroll.add_widget(self._text_container)
         self.term_card.add_widget(self.content_scroll)
 
-        self.bottom_divider = MDBoxLayout(orientation='horizontal', size_hint=(1, None), height=dp(2))
-        self.term_card.add_widget(self.bottom_divider)
 
         card_container.add_widget(self.term_card)
         main_container.add_widget(card_container)
@@ -647,9 +638,8 @@ class BaseTermDetailScreen(BaseScreen):
 
     def _update_top_nav(self):
         app = MDApp.get_running_app()
-        if app and hasattr(app, 'top_nav'):
-            title = self.term_name.capitalize() if self.term_name else get_text('dictionary', 'Словарь')
-            app.top_nav.set_custom_title(title)
+        if app and hasattr(app, 'top_nav') and app.top_nav:
+            app.top_nav.set_custom_title(get_text('dictionary', 'Словарь'))
 
     def _save_current_term_state(self):
         if not self.term_id or not self.content_label.text:

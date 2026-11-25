@@ -424,7 +424,7 @@ class FloatingPanel(MDCard):
     def _recenter(self):
         if self._hidden_x is None:
             return
-        top_offset = layout_config.get_top_padding(include_top_nav=True)
+        top_offset = layout_config.get_top_nav_height()
         nav_bottom = layout_config.get_bottom_nav_total_height()
         work_area_height = Window.height - top_offset - nav_bottom
         self.y = nav_bottom + (work_area_height - self.height) / 2
@@ -1014,7 +1014,7 @@ class BaseSongDetailScreen(BaseScreen):
 
     def init_ui(self):
         main_container = MDBoxLayout(orientation='vertical', size_hint=(1, 1))
-        top_offset = layout_config.get_top_padding(include_top_nav=True)
+        top_offset = layout_config.get_top_nav_height()
         bottom_nav_total = layout_config.get_bottom_nav_total_height()
 
         card_container = MDBoxLayout(

@@ -174,7 +174,7 @@ class TopNavConfig:
         },
 
         'term_detail': {
-            'title': 'Термин',
+            'title': 'Словарь',
             'title_type': TITLE_TYPE_STATIC,
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
@@ -184,7 +184,7 @@ class TopNavConfig:
         },
 
         'search_term_detail': {
-            'title': 'Термин',
+            'title': 'Словарь',
             'title_type': TITLE_TYPE_STATIC,
             'left_button': LEFT_BUTTON_BACK,
             'right_button': RIGHT_BUTTON_HOME,
@@ -192,6 +192,7 @@ class TopNavConfig:
             'custom_back_callback': 'go_back',
             'custom_title_widget': None,
         },
+
 
         'chord_detail': {
             'title': 'Аккорд',

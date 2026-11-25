@@ -351,6 +351,8 @@ class TopNav(MDCard):
         instance.text_size = (instance.width, None)
 
     def _get_screen_title(self, screen_name: str) -> str:
+        if screen_name in ('term_detail', 'search_term_detail'):
+            return get_text('dictionary', 'Словарь')
         if screen_name not in top_nav_config.SCREENS:
             return get_text(screen_name, screen_name)
         return get_text(screen_name, top_nav_config.get_title(screen_name))
