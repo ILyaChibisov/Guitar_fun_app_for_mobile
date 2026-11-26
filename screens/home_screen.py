@@ -356,7 +356,7 @@ class HomeScreen(BaseScreen):
         self.update_language()
 
         if self.app_name_label:
-            self.app_name_label.start_periodic_animation()
+            Clock.schedule_once(lambda dt: self.app_name_label.start_periodic_animation(), 0.05)
 
         try:
             app = MDApp.get_running_app()

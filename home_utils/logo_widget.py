@@ -102,7 +102,7 @@ class StudioFuturisticLogo(ButtonBehavior, Widget):
 
     def _redraw(self, *args):
         self.canvas.clear()
-        if self.width <= 4 or self.height <= 4:
+        if self.width <= 105 or self.height <= 4:
             return
 
         theme_id = settings_manager.theme

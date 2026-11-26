@@ -1,35 +1,38 @@
 # screens/components/top_nav.py
 """
-Верхняя панель навигации с поддержкой:
+Верхняя панель навигации в едином студийном стиле с BottomNav:
 - 3 тем (green, dark, light)
-- Логотипа из assets на главном экране
-- Кнопки меню (tune) на основных экранах и кнопки «Назад» на вложенных
-- Избранного и меню действий на экранах песен (звезда + шестерёнка)
-- Кнопки «Домой» и шестерёнки на экранах терминов (term_detail, search_term_detail)
+- Металлическая нижняя планка разделения (как верхняя планка у BottomNav)
+- Металлизированные иконки с неоновой подсветкой при нажатии
+- Цвета заголовков и значков синхронизированы с BottomNav
 """
+import base64
+import io
 from io import BytesIO
-from kivy.metrics import dp, sp
-from kivy.utils import platform
-from kivy.graphics import Color, Rectangle
+
+from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
-from kivy.uix.image import Image as KivyImage
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.boxlayout import BoxLayout
+from kivy.graphics import Color, Rectangle
+from kivy.metrics import dp, sp
 from kivy.uix.behaviors import ButtonBehavior
-from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton
-from kivymd.uix.label import MDLabel
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.image import Image as KivyImage
+from kivy.utils import platform
 from kivymd.app import MDApp
-from kivy.graphics.texture import Texture
+from kivymd.uix.card import MDCard
+from kivymd.uix.label import MDLabel
 
 from config.logger_config import screen_logger
+from config.navigation_config import ROOT_SCREENS, navigate_back
 from config.system_bars import get_status_bar_height
 from config.top_nav_config import top_nav_config
-from utils.localization import get_text
+from data.top_nav import top_nav_assets
 from state.settings_state import settings_state as settings_manager
-from api.client import api
-from config.navigation_config import navigate_back, ROOT_SCREENS
+from top_nav_utils.top_nav_item_widget import StudioTopNavButton
+from utils.localization import get_text
+
 logger = screen_logger('TopNav')
 
 try:
@@ -53,31 +56,18 @@ SONG_DETAIL_SCREENS = (
 class TopNavColors:
     @staticmethod
     def get_text_color(theme_id):
+        """Цвет текста заголовка в тон металлизированным значкам для каждой темы."""
         if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 1]
-        return [1, 1, 1, 1]
-
-    @staticmethod
-    def get_icon_color(theme_id):
-        if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 1]
-        return [1, 1, 1, 1]
-
-    @staticmethod
-    def get_line_color(theme_id):
-        if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 0.5]
-        elif theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 0.5]
-        return [0.46, 0.70, 0.71, 0.4]
+            return [0.18, 0.22, 0.20, 1.0]  # Тёмный полированный титан (в тон значкам светлой темы)
+        return [0.86, 0.90, 0.92, 1.0]
 
     @staticmethod
     def get_favorite_active_color(theme_id):
         if theme_id == 'light':
-            return [0.9, 0.7, 0.0, 1]
+            return [0.90, 0.68, 0.0, 1.0]
         elif theme_id == 'dark':
-            return [1.0, 0.85, 0.0, 1]
-        return [1.0, 0.84, 0.0, 1]
+            return [1.0, 0.85, 0.0, 1.0]
+        return [1.0, 0.88, 0.10, 1.0]
 
 
 class ClickableLogo(ButtonBehavior, KivyImage):
@@ -85,6 +75,9 @@ class ClickableLogo(ButtonBehavior, KivyImage):
 
 
 class TopNav(MDCard):
+    _bot_bar_dark_tex = None
+    _bot_bar_light_tex = None
+
     def __init__(self, screen_manager=None, **kwargs):
         super().__init__(**kwargs)
         self.app = None
@@ -100,33 +93,34 @@ class TopNav(MDCard):
         self.spacing = 0
         self.md_bg_color = [0, 0, 0, 0]
 
+        if TopNav._bot_bar_dark_tex is None:
+            TopNav._bot_bar_dark_tex = CoreImage(
+                io.BytesIO(base64.b64decode(top_nav_assets.BOT_BAR_DARK_B64)), ext="png"
+            ).texture
+            TopNav._bot_bar_light_tex = CoreImage(
+                io.BytesIO(base64.b64decode(top_nav_assets.BOT_BAR_LIGHT_B64)), ext="png"
+            ).texture
+
         status_h = get_status_bar_height()
         if platform == 'android':
             self.height = status_h + dp(52)
         else:
             self.height = dp(64)
 
-        self.shadow_tex = self._create_bottom_fade_texture()
+        self.bar_height = dp(5)
 
         with self.canvas.before:
-            # 1. Фон панели (как в BottomNav)
-            self.bg_color_inst = Color(0.02, 0.13, 0.08, 0.88)
+            # 1. Фон панели (1-в-1 как в BottomNav)
+            self.bg_color_inst = Color(0.0, 0.05, 0.03, 0.26)
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
 
-            # 2. Плавный градиентный переход под нижней границей (высота 6 dp)
-            self.fade_color_inst = Color(0.0, 0.06, 0.03, 0.28)
-            self.fade_rect = Rectangle(
-                pos=(self.x, self.y - dp(6)),
-                size=(self.width, dp(6)),
-                texture=self.shadow_tex
-            )
-
         with self.canvas.after:
-            # 3. Тонкая нейтральная разделительная полоска (1 dp)
-            self.line_color_inst = Color(0.75, 0.92, 0.86, 0.16)
-            self.bottom_line = Rectangle(
+            # 2. Металлическая нижняя планка разделения (зеркально верхней планке BottomNav)
+            self.bot_bar_color = Color(1, 1, 1, 1)
+            self.bot_bar_rect = Rectangle(
+                texture=self._bot_bar_dark_tex,
                 pos=(self.x, self.y),
-                size=(self.width, dp(1))
+                size=(self.width, self.bar_height),
             )
 
         self.bind(pos=self._update_bottom_line, size=self._update_bottom_line)
@@ -152,30 +146,15 @@ class TopNav(MDCard):
             self.set_screen('home')
 
         Window.bind(on_resize=self._on_window_resize)
-        logger.info("✅ TopNav создан")
-
-    @staticmethod
-    def _create_bottom_fade_texture():
-        """Создаёт вертикальный градиент прозрачности для мягкого перехода снизу."""
-        tex = Texture.create(size=(1, 16), colorfmt='rgba')
-        buf = bytearray()
-        for i in range(16):
-            # В Kivy текстура заполняется снизу вверх: вверху (i=15) плотно, внизу (i=0) прозрачно
-            alpha = int((i / 15.0) ** 1.8 * 255)
-            buf.extend([255, 255, 255, alpha])
-        tex.blit_buffer(bytes(buf), colorfmt='rgba', bufferfmt='ubyte')
-        return tex
+        logger.info("✅ TopNav создан (в едином студийном стиле с BottomNav)")
 
     def _update_bottom_line(self, *args):
         if hasattr(self, 'bg_rect'):
             self.bg_rect.pos = self.pos
             self.bg_rect.size = self.size
-        if hasattr(self, 'fade_rect'):
-            self.fade_rect.pos = (self.x, self.y - dp(6))
-            self.fade_rect.size = (self.width, dp(6))
-        if hasattr(self, 'bottom_line'):
-            self.bottom_line.pos = (self.x, self.y)
-            self.bottom_line.size = (self.width, dp(1))
+        if hasattr(self, 'bot_bar_rect'):
+            self.bot_bar_rect.pos = (self.x, self.y)
+            self.bot_bar_rect.size = (self.width, self.bar_height)
 
     def set_app(self, app):
         self.app = app
@@ -236,36 +215,29 @@ class TopNav(MDCard):
 
     def build_ui(self):
         self.container = FloatLayout(size_hint=(1, 1))
+        self.container.bind(pos=self._reposition_container_children, size=self._reposition_container_children)
 
-        self.settings_btn = MDIconButton(
+        self.settings_btn = StudioTopNavButton(
             icon="tune",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            pos_hint={'x': 0.015, 'center_y': 0.5},
-            theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_settings_click
+            pos_hint={'x': 0.015, 'center_y': 0.52},
+            on_release=self._on_settings_click,
         )
 
-        self.back_btn = MDIconButton(
+        self.back_btn = StudioTopNavButton(
             icon="arrow-left",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            pos_hint={'x': 0.015, 'center_y': 0.5},
-            theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_back_click
+            pos_hint={'x': 0.015, 'center_y': 0.52},
+            on_release=self._on_back_click,
         )
 
         if self.logo_texture:
             self.logo_widget = ClickableLogo(
                 texture=self.logo_texture,
                 size_hint=(None, None),
-                size=(dp(260), dp(52)),
+                size=(dp(260), dp(50)),
                 allow_stretch=True,
                 keep_ratio=True,
-                pos_hint={'center_x': 0.5, 'center_y': 0.5},
-                on_release=self._on_logo_click
+                pos_hint={'center_x': 0.5, 'center_y': 0.52},
+                on_release=self._on_logo_click,
             )
         else:
             fallback_title = get_text('home')
@@ -279,8 +251,8 @@ class TopNav(MDCard):
                 valign="middle",
                 size_hint=(None, None),
                 size=(dp(240), dp(48)),
-                pos_hint={'center_x': 0.5, 'center_y': 0.5},
-                theme_text_color="Custom"
+                pos_hint={'center_x': 0.5, 'center_y': 0.52},
+                theme_text_color="Custom",
             )
 
         self.screen_title = MDLabel(
@@ -291,61 +263,67 @@ class TopNav(MDCard):
             valign="middle",
             size_hint=(None, None),
             height=dp(48),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            pos_hint={'center_x': 0.5, 'center_y': 0.52},
             theme_text_color="Custom",
             shorten=True,
             shorten_from='right',
-            max_lines=1
+            max_lines=1,
         )
         self.screen_title.bind(size=self._update_title_text_size)
 
         self.right_container = BoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            height=dp(48),
+            height=dp(46),
             spacing=dp(4),
-            pos_hint={'right': 0.985, 'center_y': 0.5}
+            pos_hint={'right': 0.985, 'center_y': 0.52},
         )
         self.right_container.bind(minimum_width=self.right_container.setter('width'))
 
-        self.search_btn = MDIconButton(
+        self.search_btn = StudioTopNavButton(
             icon="magnify",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_search_click
+            on_release=self._on_search_click,
         )
 
-        self.home_btn = MDIconButton(
+        self.home_btn = StudioTopNavButton(
             icon="home",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_home_click
+            on_release=self._on_home_click,
         )
 
-        self.favorite_btn = MDIconButton(
+        self.favorite_btn = StudioTopNavButton(
             icon="star-outline",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_favorite_click
+            on_release=self._on_favorite_click,
         )
 
-        self.actions_btn = MDIconButton(
+        self.actions_btn = StudioTopNavButton(
             icon="cog",
-            size_hint=(None, None),
-            size=(dp(44), dp(44)),
-            theme_icon_color="Custom",
-            md_bg_color=[0, 0, 0, 0],
-            on_release=self._on_actions_click
+            on_release=self._on_actions_click,
         )
 
         self.container.add_widget(self.right_container)
+        self.container.bind(
+            pos=self._reposition_container_children,
+            size=self._reposition_container_children,
+        )
         self.add_widget(self.container)
+
+    def _reposition_container_children(self, *args):
+        if not hasattr(self, 'container'):
+            return
+        cy = self.container.y + self.container.height * 0.52
+        lx = self.container.x + self.container.width * 0.015
+        for btn in (self.settings_btn, self.back_btn):
+            if btn:
+                btn.x = lx
+                btn.center_y = cy
+        if self.right_container:
+            self.right_container.right = self.container.x + self.container.width * 0.985
+            self.right_container.center_y = cy
+        for title_w in (self.logo_widget, self.screen_title, self.custom_title_widget):
+            if title_w and title_w in self.container.children:
+                title_w.center_x = self.container.center_x
+                title_w.center_y = cy
+
 
     def _update_title_text_size(self, instance, value):
         instance.text_size = (instance.width, None)
@@ -404,10 +382,9 @@ class TopNav(MDCard):
             right_width = dp(96)
 
         max_width = max(dp(100), window_width - left_width - right_width - padding)
-
         widget.width = max_width
         widget.height = dp(48)
-        widget.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        widget.pos_hint = {'center_x': 0.5, 'center_y': 0.52}
 
         if hasattr(widget, 'padding'):
             widget.padding = [dp(8), dp(4), dp(8), dp(4)]
@@ -444,6 +421,7 @@ class TopNav(MDCard):
             self.container.add_widget(self.settings_btn)
         else:
             self.container.add_widget(self.back_btn)
+        self._reposition_container_children()
 
     def set_screen(self, screen_name: str):
         logger.debug(f"🔄 TopNav переключён на экран: {screen_name}")
@@ -466,9 +444,6 @@ class TopNav(MDCard):
             self.screen_title.text = self._get_screen_title(screen_name)
             self._adjust_title_width()
 
-        # Откладываем перестановку кнопок на следующий кадр (0 сек),
-        # чтобы текущее событие on_touch_up не прокликнуло только что добавленную кнопку
-        from kivy.clock import Clock
         Clock.schedule_once(lambda dt, s=screen_name: self._apply_nav_buttons(s), 0)
         self.update_theme_colors()
 
@@ -504,10 +479,10 @@ class TopNav(MDCard):
         theme_id = settings_manager.theme
         if self.is_favorite:
             self.favorite_btn.icon = "star"
-            self.favorite_btn.icon_color = TopNavColors.get_favorite_active_color(theme_id)
+            self.favorite_btn.custom_tint = TopNavColors.get_favorite_active_color(theme_id)
         else:
             self.favorite_btn.icon = "star-outline"
-            self.favorite_btn.icon_color = TopNavColors.get_icon_color(theme_id)
+            self.favorite_btn.custom_tint = []
 
     def update_favorite_icon(self, is_favorite: bool = None):
         """Публичный метод для обновления иконки избранного из экранов-наследников."""
@@ -543,10 +518,8 @@ class TopNav(MDCard):
         if now - getattr(self, '_last_back_click_time', 0.0) < 0.35:
             return
         self._last_back_click_time = now
-
         if not self.sm:
             return
-
         current = self.sm.current
         if current in ROOT_SCREENS:
             return
@@ -555,7 +528,6 @@ class TopNav(MDCard):
         if current_screen and hasattr(current_screen, 'go_back') and callable(current_screen.go_back):
             current_screen.go_back()
             return
-
         navigate_back(self.sm, current)
 
     def _on_search_click(self, instance):
@@ -575,23 +547,25 @@ class TopNav(MDCard):
             if hasattr(screen, 'toggle_favorite') and callable(screen.toggle_favorite):
                 screen.toggle_favorite()
                 return
+
         if self.current_song_id:
             if self.is_favorite:
                 api.remove_favorite(
                     self.current_song_id,
                     on_success=lambda r: self._on_fav_toggled(False),
-                    on_failure=lambda req, err: logger.error(f"Ошибка удаления из избранного: {err}")
+                    on_failure=lambda req, err: logger.error(f"Ошибка удаления из избранного: {err}"),
                 )
             else:
                 api.add_favorite(
                     self.current_song_id,
                     on_success=lambda r: self._on_fav_toggled(True),
-                    on_failure=lambda req, err: logger.error(f"Ошибка добавления в избранное: {err}")
+                    on_failure=lambda req, err: logger.error(f"Ошибка добавления в избранное: {err}"),
                 )
 
     def _on_fav_toggled(self, new_state: bool):
         self.is_favorite = new_state
         self._update_favorite_icon()
+
         if self.sm and self.sm.has_screen('favorites'):
             fav_screen = self.sm.get_screen('favorites')
             if hasattr(fav_screen, 'load_favorites'):
@@ -610,38 +584,43 @@ class TopNav(MDCard):
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
+        is_light = theme_id == 'light'
         self.md_bg_color = (0, 0, 0, 0)
 
-        if theme_id == 'light':
+        # Фон 1-в-1 как в BottomNav
+        if is_light:
             self.bg_color_inst.rgba = (0.97, 0.99, 0.98, 0.96)
-            self.fade_color_inst.rgba = (0.05, 0.25, 0.15, 0.08)
-            self.line_color_inst.rgba = (0.15, 0.35, 0.25, 0.18)
         elif theme_id == 'dark':
             self.bg_color_inst.rgba = (0.09, 0.09, 0.11, 0.96)
-            self.fade_color_inst.rgba = (0.0, 0.0, 0.0, 0.35)
-            self.line_color_inst.rgba = (1.0, 1.0, 1.0, 0.12)
-        else:  # green (1-в-1 как в BottomNav)
+        else:  # green
             self.bg_color_inst.rgba = (0.0, 0.05, 0.03, 0.26)
-            self.fade_color_inst.rgba = (0.0, 0.06, 0.03, 0.28)
-            self.line_color_inst.rgba = (0.75, 0.92, 0.86, 0.16)
+
+        if hasattr(self, 'bot_bar_rect'):
+            self.bot_bar_rect.texture = (
+                self._bot_bar_light_tex if is_light else self._bot_bar_dark_tex
+            )
 
         text_color = TopNavColors.get_text_color(theme_id)
-        icon_color = TopNavColors.get_icon_color(theme_id)
-
         if self.screen_title:
             self.screen_title.text_color = text_color
-
         if not self.logo_texture and hasattr(self, 'logo_widget'):
             self.logo_widget.text_color = text_color
 
-        for btn in [self.settings_btn, self.back_btn, self.search_btn, self.home_btn, self.actions_btn]:
+        for btn in (
+            self.settings_btn,
+            self.back_btn,
+            self.search_btn,
+            self.home_btn,
+            self.favorite_btn,
+            self.actions_btn,
+        ):
             if btn:
-                btn.icon_color = icon_color
+                btn.update_theme_colors()
 
         if self.sm and self.sm.current in SONG_DETAIL_SCREENS:
             self._update_favorite_icon()
         elif self.favorite_btn:
-            self.favorite_btn.icon_color = icon_color
+            self.favorite_btn.custom_tint = []
 
     def update_language(self):
         if self.sm:
