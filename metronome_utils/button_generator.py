@@ -34,14 +34,6 @@ def generate_panel_png(light_theme=False):
     x2, y2 = W - pad, H - pad
     radius = 34
 
-    # 1. Мягкая падающая тень всей консоли
-    sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(sh).rounded_rectangle(
-        [x1, y1 + 4, x2, y2 + 7],
-        radius=radius,
-        fill=(0, 0, 0, 110 if light_theme else 210),
-    )
-    canvas.alpha_composite(sh.filter(ImageFilter.GaussianBlur(radius=5)))
 
     # 2. Металлическая плита корпуса (Faceplate)
     plate = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -205,14 +197,6 @@ def generate_keycap_png(pressed=False, light_theme=False):
     kx2, ky2 = W - inset_x, H - inset_y + offset_y
     radius = 26
 
-    if not pressed:
-        sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        ImageDraw.Draw(sh).rounded_rectangle(
-            [kx1 + 1, ky1 + 8, kx2 - 1, ky2 + 11],
-            radius=radius,
-            fill=(0, 0, 0, 120 if light_theme else 225),
-        )
-        canvas.alpha_composite(sh.filter(ImageFilter.GaussianBlur(radius=6)))
 
     body = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     b_draw = ImageDraw.Draw(body)

@@ -33,14 +33,6 @@ def generate_fader_panel_png(light_theme=False):
     x2, y2 = W - pad, H - pad
     radius = 34
 
-    # 1. Падающая тень всей секции
-    sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(sh).rounded_rectangle(
-        [x1, y1 + 4, x2, y2 + 8],
-        radius=radius,
-        fill=(0, 0, 0, 110 if light_theme else 210),
-    )
-    canvas.alpha_composite(sh.filter(ImageFilter.GaussianBlur(radius=6)))
 
     # 2. Металлическая плита корпуса (Faceplate)
     plate = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -228,13 +220,6 @@ def generate_knob_png(light_theme=False):
     ky2 = ky1 + kh
     radius = 12
 
-    shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).rounded_rectangle(
-        [kx1 + 2, ky1 + 10, kx2 + 2, ky2 + 13],
-        radius=radius,
-        fill=(0, 0, 0, 125 if light_theme else 200),
-    )
-    canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(radius=7)))
 
     body = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     b_draw = ImageDraw.Draw(body)
