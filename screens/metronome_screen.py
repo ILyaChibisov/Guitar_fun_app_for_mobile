@@ -43,6 +43,9 @@ from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
 from metronome_utils.pendulum_widget import MetronomePendulumWidget
 from metronome_utils.fader_widget import StudioVerticalSlider
+from metronome_utils.button_widget import StudioHardwareButton
+import io
+import base64
 logger = screen_logger('Metronome')
 
 try:
@@ -530,22 +533,28 @@ class IconMenuItem(ButtonBehavior, MDBoxLayout):
         self.icon_btn.icon_color = color
 
 
-class MetronomeMenu(MDCard):
-    """
-    Меню метронома — теперь отдельная карточка с теми же фоном/обводкой/радиусом,
-    что и меню аккордов / тюнера. Разделители — «рваные» короткие линии.
-    """
-    def __init__(self, on_play_press=None, on_reset_press=None,
-                 on_accent_press=None, on_tone_press=None,
-                 is_running=False, is_accent_enabled=True, **kwargs):
+class MetronomeMenu(MDBoxLayout):
+    """Студийная рэковая панель с 4 триггер-пэдами в едином стиле со шкалами."""
+
+    _panel_dark_tex = None
+    _panel_light_tex = None
+
+    def __init__(
+        self,
+        on_play_press=None,
+        on_reset_press=None,
+        on_accent_press=None,
+        on_tone_press=None,
+        is_running=False,
+        is_accent_enabled=True,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
-        self.orientation = 'horizontal'
+        self.orientation = "horizontal"
         self.size_hint = (1, None)
-        self.height = dp(60)
-        self.radius = [dp(16)]
-        self.elevation = 0
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
-        self.spacing = dp(0)
+        self.height = dp(74)
+        self.padding = [dp(22), dp(9), dp(22), dp(9)]
+        self.spacing = dp(8)
 
         self.on_play_press = on_play_press
         self.on_reset_press = on_reset_press
@@ -554,81 +563,97 @@ class MetronomeMenu(MDCard):
         self.is_running = is_running
         self.is_accent_enabled = is_accent_enabled
 
+        if MetronomeMenu._panel_dark_tex is None:
+            from data.metronome import button_assets
+            MetronomeMenu._panel_dark_tex = CoreImage(
+                io.BytesIO(base64.b64decode(button_assets.PANEL_DARK_B64)), ext="png"
+            ).texture
+            MetronomeMenu._panel_light_tex = CoreImage(
+                io.BytesIO(base64.b64decode(button_assets.PANEL_LIGHT_B64)), ext="png"
+            ).texture
+
+        with self.canvas.before:
+            self._bg_color = Color(1, 1, 1, 1)
+            self._bg_rect = Rectangle(
+                texture=self._panel_dark_tex,
+                pos=self.pos,
+                size=self.size,
+            )
+
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
         self._build_ui()
         self.update_theme_colors()
 
+    def _update_bg(self, *args):
+        self._bg_rect.pos = self.pos
+        self._bg_rect.size = self.size
+
     def _build_ui(self):
-        play_icon = "stop" if self.is_running else "play"
-        play_color = [0.8, 0.3, 0.3, 1] if self.is_running else [0.13, 0.59, 0.95, 1]
-        self.play_item = IconMenuItem(play_icon, on_press=self._on_play,
-                                      icon_color=play_color, fixed_color=True)
-
-        self.reset_item = IconMenuItem("refresh", on_press=self._on_reset,
-                                       icon_color=[0.9, 0.4, 0.2, 1], fixed_color=True)
-
-        accent_icon = "music-note" if self.is_accent_enabled else "music-note-off"
-        accent_color = [1.0, 0.7, 0.0, 1] if self.is_accent_enabled else [0.6, 0.6, 0.6, 0.5]
-        self.accent_item = IconMenuItem(accent_icon, on_press=self._on_accent,
-                                        icon_color=accent_color, fixed_color=True)
-
-        self.tone_item = IconMenuItem("speaker", on_press=self._on_tone,
-                                      icon_color=[0.61, 0.15, 0.69, 1], fixed_color=True)
+        self.play_item = StudioHardwareButton(
+            icon_type="stop" if self.is_running else "play",
+            is_active=self.is_running,
+            on_press=self._on_play,
+        )
+        self.reset_item = StudioHardwareButton(
+            icon_type="reset",
+            is_active=False,
+            on_press=self._on_reset,
+        )
+        self.accent_item = StudioHardwareButton(
+            icon_type="accent",
+            is_active=self.is_accent_enabled,
+            on_press=self._on_accent,
+        )
+        self.tone_item = StudioHardwareButton(
+            icon_type="tone",
+            is_active=True,
+            on_press=self._on_tone,
+        )
 
         self.add_widget(self.play_item)
-        self.add_widget(self._create_divider())
         self.add_widget(self.reset_item)
-        self.add_widget(self._create_divider())
         self.add_widget(self.accent_item)
-        self.add_widget(self._create_divider())
         self.add_widget(self.tone_item)
 
-    def _create_divider(self):
-        """Рваный разделитель — короткая линия по центру."""
-        return DashedDivider()
-
     def _on_play(self):
-        if self.on_play_press: self.on_play_press()
+        if self.on_play_press:
+            self.on_play_press()
 
     def _on_reset(self):
-        if self.on_reset_press: self.on_reset_press()
+        if self.on_reset_press:
+            self.on_reset_press()
 
     def _on_accent(self):
-        if self.on_accent_press: self.on_accent_press()
+        if self.on_accent_press:
+            self.on_accent_press()
 
     def _on_tone(self):
-        if self.on_tone_press: self.on_tone_press()
+        if self.on_tone_press:
+            self.on_tone_press()
 
     def update_state(self, is_running, is_accent_enabled):
         self.is_running = is_running
         self.is_accent_enabled = is_accent_enabled
 
-        play_icon = "stop" if is_running else "play"
-        play_color = [0.8, 0.3, 0.3, 1] if is_running else [0.13, 0.59, 0.95, 1]
-        self.play_item.set_icon(play_icon)
-        self.play_item.set_color(play_color)
+        self.play_item.icon_type = "stop" if is_running else "play"
+        self.play_item.is_active = is_running
+        self.play_item.custom_glow_color = [0.95, 0.28, 0.28, 1.0] if is_running else []
 
-        accent_icon = "music-note" if is_accent_enabled else "music-note-off"
-        self.accent_item.set_icon(accent_icon)
-        self.accent_item.set_color([1.0, 0.7, 0.0, 1] if is_accent_enabled else [0.6, 0.6, 0.6, 0.5])
+        self.accent_item.is_active = is_accent_enabled
 
     def update_tone_color(self, color):
-        self.tone_item.set_color(color)
+        self.tone_item.custom_glow_color = list(color)
+        self.tone_item.is_active = True
 
     def update_theme_colors(self):
-        theme_id = settings_manager.theme
+        is_light = settings_manager.theme == "light"
+        self._bg_rect.texture = self._panel_light_tex if is_light else self._panel_dark_tex
 
-        # Фон и обводка карточки — как у меню аккордов и тюнера
-        self.md_bg_color = MetronomeColors.get_card_bg(theme_id)
-        self.line_color = MetronomeColors.get_card_line(theme_id)
-        self.line_width = MetronomeColors.get_card_line_width(theme_id)
+        for btn in (self.play_item, self.reset_item, self.accent_item, self.tone_item):
+            btn.update_theme_colors()
 
-        self.play_item.set_color([0.8, 0.3, 0.3, 1] if self.is_running else [0.13, 0.59, 0.95, 1])
-        self.reset_item.set_color([0.9, 0.4, 0.2, 1])
-        self.accent_item.set_color([1.0, 0.7, 0.0, 1] if self.is_accent_enabled else [0.6, 0.6, 0.6, 0.5])
 
-        for child in self.children:
-            if isinstance(child, DashedDivider):
-                child.update_theme_colors()
 
 
 # ============ СВЕТОДИОДНЫЕ ИНДИКАТОРЫ ДОЛЕЙ ============
@@ -812,10 +837,11 @@ class MetronomeScreen(BaseScreen):
         if hasattr(self, 'metronome_menu'):
             self.metronome_menu.update_theme_colors()
 
-        if hasattr(self, 'unified_card'):
-            self.unified_card.md_bg_color = MetronomeColors.get_card_bg(theme_id)
-            self.unified_card.line_color = MetronomeColors.get_card_line(theme_id)
-            self.unified_card.line_width = MetronomeColors.get_card_line_width(theme_id)
+        if hasattr(self, '_fader_panel_rect'):
+            is_light = (theme_id == 'light')
+            self._fader_panel_rect.texture = (
+                self._fader_panel_light_tex if is_light else self._fader_panel_dark_tex
+            )
 
         if hasattr(self, '_hint_label'):
             self._hint_label.text_color = MetronomeColors.get_hint_color(theme_id)
@@ -863,15 +889,11 @@ class MetronomeScreen(BaseScreen):
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
         nav_bottom = layout_config.get_bottom_nav_total_height()
-
-        # ИЗМЕНЕНО: компенсируем прозрачный отступ внутри картинки метронома,
-        # чтобы он оказался так же близко к меню, как гриф тюнера.
-        # Если нужно еще ближе — увеличьте вычитаемое число (например, dp(25)).
         padding_bottom = max(0, nav_bottom - dp(10))
 
         content_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, 1),
-            padding=[dp(16), dp(4), dp(16), padding_bottom]
+            padding=[dp(16), dp(14), dp(16), padding_bottom]
         )
 
         top_section = MDBoxLayout(
@@ -879,13 +901,29 @@ class MetronomeScreen(BaseScreen):
             height=dp(428), spacing=dp(10)
         )
 
-        self.unified_card = MDCard(
+        from data.metronome import fader_assets
+        self._fader_panel_dark_tex = CoreImage(
+            io.BytesIO(base64.b64decode(fader_assets.PANEL_DARK_B64)), ext="png"
+        ).texture
+        self._fader_panel_light_tex = CoreImage(
+            io.BytesIO(base64.b64decode(fader_assets.PANEL_LIGHT_B64)), ext="png"
+        ).texture
+
+        self.unified_card = MDBoxLayout(
             orientation='vertical', size_hint=(1, None), height=dp(330),
-            padding=[dp(12), dp(12), dp(12), dp(12)],
-            radius=[dp(16)], elevation=0, spacing=0,
-            md_bg_color=MetronomeColors.get_card_bg(settings_manager.theme),
-            line_color=MetronomeColors.get_card_line(settings_manager.theme),
-            line_width=MetronomeColors.get_card_line_width(settings_manager.theme),
+            padding=[dp(22), dp(14), dp(22), dp(14)],
+            spacing=0
+        )
+        with self.unified_card.canvas.before:
+            Color(1, 1, 1, 1)
+            self._fader_panel_rect = Rectangle(
+                texture=self._fader_panel_dark_tex,
+                pos=self.unified_card.pos,
+                size=self.unified_card.size,
+            )
+        self.unified_card.bind(
+            pos=lambda inst, val: setattr(self._fader_panel_rect, 'pos', val),
+            size=lambda inst, val: setattr(self._fader_panel_rect, 'size', val),
         )
 
         sliders_layout = MDBoxLayout(
