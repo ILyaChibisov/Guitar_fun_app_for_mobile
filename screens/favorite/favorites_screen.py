@@ -1,64 +1,57 @@
 # screens/favorites_screen.py
 """
-Экран избранного — в стиле songs_screen / artist_songs_screen.
+Экран избранного — в стиле студийной консоли.
 - PageCardsContainer с невидимыми заполнителями.
+- Карточки StudioFavoriteSongCard с металлической гитаркой и анимацией нажатия.
+- Мини-консоль пагинации StudioPaginationBar со светящимся LED-дисплеем.
 - Свайп вверх/вниз.
-- Пагинация снизу.
 - Динамический page_size.
 - Лейбл "Избранное: X из Y".
 - 3 попытки авто-загрузки, при провале — текст ошибки в верхнем лейбле.
 - Логирование через perf('favorites.*').
 """
 import time
-from kivy.metrics import dp, sp
+from io import BytesIO
+
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle
 from kivy.core.image import Image as CoreImage
 from kivy.core.window import Window
-from kivy.utils import platform
-from kivy.uix.image import Image
-from kivy.uix.widget import Widget
-from io import BytesIO
+from kivy.graphics import Color, Rectangle
+from kivy.metrics import dp, sp
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.anchorlayout import AnchorLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.animation import Animation
-from kivy.properties import StringProperty, NumericProperty, ObjectProperty
+from kivy.uix.widget import Widget
 
 from kivymd.app import MDApp
-from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton
+from kivymd.uix.label import MDLabel
 
-from config.logger_config import screen_logger
+from api.client import api
 from config.layout_config import layout_config
-from config.system_bars import get_navigation_bar_height
+from config.logger_config import screen_logger
+from favorites_utils.card_widget import StudioFavoriteSongCard as FavoriteSongCard
+from favorites_utils.pagination_widget import StudioPaginationBar as PaginationBar
 from screens.base_screen import BaseScreen
 from screens.components.loading_spinner import LoadingSpinner
-from api.client import api
-from utils.notifications import notify
+from state.favorites_state import favorites_state
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
-from state.favorites_state import favorites_state
+from utils.notifications import notify
 from utils.perf import perf, perf_registry
 
 logger = screen_logger('Favorites')
 
 try:
     from data import load_asset_as_bytes
-
     HAS_ASSETS = True
 except ImportError:
     HAS_ASSETS = False
-
 
     def load_asset_as_bytes(name):
         return None
 
 
 # ============================================================
-# ЦВЕТА — аналог SongsColors
+# ЦВЕТА
 # ============================================================
 
 class FavoritesColors:
@@ -83,26 +76,6 @@ class FavoritesColors:
         return [1, 1, 1, 0.7]
 
     @staticmethod
-    def get_card_bg(theme_id):
-        if theme_id == 'light':
-            return [1, 1, 1, 1]
-        elif theme_id == 'dark':
-            return [1, 1, 1, 0.1]
-        return [0, 0, 0, 0.10]
-
-    @staticmethod
-    def get_card_line(theme_id):
-        if theme_id == 'light':
-            return [0.1, 0.55, 0.3, 0.5]
-        elif theme_id == 'dark':
-            return [1.0, 0.5, 0.0, 0.5]
-        return [1, 1, 1, 0.25]
-
-    @staticmethod
-    def get_card_line_width(theme_id):
-        return 2.0
-
-    @staticmethod
     def get_hint_color(theme_id):
         if theme_id == 'light':
             return [0.1, 0.1, 0.1, 1]
@@ -119,253 +92,6 @@ class FavoritesColors:
         if theme_id == 'light':
             return [0, 0, 0, 1]
         return [1, 1, 1, 1]
-
-
-# ============================================================
-# ГЛОБАЛЬНЫЕ ТЕКСТУРЫ
-# ============================================================
-
-_shared_song_texture = None
-
-
-def init_shared_song_icon():
-    global _shared_song_texture
-    if _shared_song_texture is not None:
-        return _shared_song_texture
-    if HAS_ASSETS:
-        try:
-            icon_data = load_asset_as_bytes('song_png')
-            if icon_data:
-                img = CoreImage(BytesIO(icon_data), ext="png")
-                _shared_song_texture = img.texture
-                return _shared_song_texture
-        except Exception as e:
-            logger.error(f"Ошибка загрузки иконки песни: {e}")
-    return None
-
-
-# ============================================================
-# LONG PRESS + СВАЙП
-# ============================================================
-
-class LongPressCardMixin:
-    TAP_THRESHOLD = dp(15)
-    LONG_PRESS_TIME = 0.5
-    LONG_PRESS_MOVE_TOLERANCE = dp(10)
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._touch_down_pos = None
-        self._long_press_event = None
-        self._long_press_triggered = False
-
-    def on_touch_down(self, touch):
-        if getattr(self, 'disabled', False) or self.opacity < 0.1:
-            return False
-        if not self.collide_point(*touch.pos):
-            return super().on_touch_down(touch)
-        self._touch_down_pos = touch.pos
-        self._long_press_triggered = False
-        self._long_press_event = Clock.schedule_once(
-            self._trigger_long_press, self.LONG_PRESS_TIME
-        )
-        touch.grab(self)
-        return True
-
-    def on_touch_move(self, touch):
-        if touch.grab_current is not self:
-            return False
-        if getattr(self, 'disabled', False) or self.opacity < 0.1:
-            return False
-        if self._touch_down_pos is None:
-            return False
-        dx = touch.x - self._touch_down_pos[0]
-        dy = touch.y - self._touch_down_pos[1]
-        if (abs(dx) > self.LONG_PRESS_MOVE_TOLERANCE
-                or abs(dy) > self.LONG_PRESS_MOVE_TOLERANCE):
-            self._cancel_long_press()
-            touch.ungrab(self)
-            return False
-        return False
-
-    def on_touch_up(self, touch):
-        if touch.grab_current is not self:
-            return False
-        touch.ungrab(self)
-        if getattr(self, 'disabled', False) or self.opacity < 0.1:
-            return False
-        if self._touch_down_pos is None:
-            return False
-        self._cancel_long_press()
-        dx = touch.x - self._touch_down_pos[0]
-        dy = touch.y - self._touch_down_pos[1]
-        was_long = self._long_press_triggered
-        self._touch_down_pos = None
-        self._long_press_triggered = False
-        if was_long:
-            return True
-        if abs(dx) < self.TAP_THRESHOLD and abs(dy) < self.TAP_THRESHOLD:
-            self._handle_normal_click()
-        return True
-
-    def _trigger_long_press(self, dt):
-        self._long_press_event = None
-        if self._touch_down_pos is None:
-            return
-        self._long_press_triggered = True
-        self._handle_long_press()
-
-    def _cancel_long_press(self):
-        if self._long_press_event:
-            self._long_press_event.cancel()
-            self._long_press_event = None
-
-    def _flash_feedback(self):
-        if not hasattr(self, 'md_bg_color'):
-            return
-        accent = FavoritesColors.get_accent(settings_manager.theme)
-        bright = [min(1.0, c * 1.4 + 0.15) for c in accent[:3]] + [0.7]
-        original = list(self.md_bg_color)
-        anim = (
-                Animation(md_bg_color=bright, duration=0.1, t='out_quad') +
-                Animation(md_bg_color=original, duration=0.3, t='in_quad')
-        )
-        anim.start(self)
-
-    def _handle_normal_click(self):
-        pass
-
-    def _handle_long_press(self):
-        pass
-
-
-# ============================================================
-# КАРТОЧКА ИЗБРАННОЙ ПЕСНИ (крупнее обычной — 58dp)
-# ============================================================
-
-class FavoriteSongCard(LongPressCardMixin, MDCard):
-    CARD_HEIGHT = dp(58)
-
-    def __init__(self, song_id=0, artist='', title='', tabs_count=0, on_click=None, **kwargs):
-        super().__init__(**kwargs)
-        self.song_id = song_id
-        self.artist = artist
-        self.title = title
-        self.tabs_count = tabs_count
-        self.on_click_callback = on_click
-
-
-        self.size_hint_y = None
-        self.height = self.CARD_HEIGHT
-
-        self.radius = [dp(12)] * 4
-        self.elevation = 0
-        self.ripple_behavior = False
-        self.clip = True
-        self.theme_line_color = "Custom"
-        self.theme_bg_color = "Custom"
-        self.padding = [0, 0, 0, 0]
-        self.spacing = dp(8)
-
-        content = MDBoxLayout(
-            orientation='horizontal',
-            padding=[dp(12), 0, dp(12), 0],
-            spacing=dp(10),
-            md_bg_color=[0, 0, 0, 0]
-        )
-        self.icon = Image(
-            size_hint=(None, 1), width=dp(28),
-            allow_stretch=True, keep_ratio=True
-        )
-        if _shared_song_texture:
-            self.icon.texture = _shared_song_texture
-        else:
-            self.icon.text = "🎵"
-
-        # --- БЛОК С ТЕКСТОМ ---
-        text_layout = MDBoxLayout(
-            orientation='vertical',
-            size_hint_x=1,
-            size_hint_y=None,
-            height=dp(42),  # Фиксированная высота под два лейбла
-            spacing=dp(2),
-            pos_hint={'center_y': 0.5},  # Центрируем блок по вертикали
-            padding=[0, 0, 0, 0]
-        )
-
-        self.artist_label = MDLabel(
-            font_size=sp(15), size_hint_y=None, height=dp(22),
-            theme_text_color="Custom", bold=True,
-            valign="middle", halign="center",  # Центрируем текст внутри лейбла
-            shorten=True, shorten_from="right"
-        )
-        self.title_label = MDLabel(
-            font_size=sp(12), size_hint_y=None, height=dp(18),
-            theme_text_color="Custom",
-            valign="middle", halign="center",  # Центрируем текст внутри лейбла
-            shorten=True, shorten_from="right"
-        )
-
-        # Привязываем ширину текста к ширине лейбла, чтобы центрирование работало
-        self.artist_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
-        self.title_label.bind(width=lambda inst, val: setattr(inst, 'text_size', (val, inst.height)))
-
-        text_layout.add_widget(self.artist_label)
-        text_layout.add_widget(self.title_label)
-
-        self.count_label = MDLabel(
-            text="", font_size=sp(12), size_hint_x=None, width=dp(40),
-            halign="right", valign="middle", theme_text_color="Custom"
-        )
-        self.arrow = MDLabel(
-            text="›", font_size=sp(22), size_hint_x=None, width=dp(24),
-            halign="center", valign="middle", theme_text_color="Custom"
-        )
-
-        content.add_widget(self.icon)
-        content.add_widget(text_layout)
-        content.add_widget(self.count_label)
-        content.add_widget(self.arrow)
-        self.add_widget(content)
-
-        self.artist_label.text = artist
-        self.title_label.text = title
-        self.count_label.text = str(tabs_count) if tabs_count and tabs_count > 1 else ""
-
-        self.update_theme_colors()
-
-    def _handle_normal_click(self):
-        if self.on_click_callback:
-            self.on_click_callback(self.song_id, self.title, self.artist)
-
-    def _handle_long_press(self):
-        self._flash_feedback()
-        if self.on_click_callback:
-            Clock.schedule_once(
-                lambda dt: self.on_click_callback(self.song_id, self.title, self.artist),
-                0.15
-            )
-
-    def update_data(self, song_id, artist, title, tabs_count=1, on_click=None):
-        self.song_id = song_id
-        self.artist = artist
-        self.title = title
-        self.tabs_count = tabs_count
-        self.on_click_callback = on_click
-        self.artist_label.text = artist
-        self.title_label.text = title
-        self.count_label.text = str(tabs_count) if tabs_count and tabs_count > 1 else ""
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        accent = FavoritesColors.get_accent(theme_id)
-        self.md_bg_color = FavoritesColors.get_card_bg(theme_id)
-        self.line_color = FavoritesColors.get_card_line(theme_id)
-        self.line_width = FavoritesColors.get_card_line_width(theme_id)
-        self.artist_label.text_color = FavoritesColors.get_text_primary(theme_id)
-        self.title_label.text_color = FavoritesColors.get_text_secondary(theme_id)
-        self.count_label.text_color = FavoritesColors.get_text_secondary(theme_id)
-        self.arrow.text_color = accent
 
 
 # ============================================================
@@ -403,8 +129,8 @@ class PageCardsContainer(MDBoxLayout):
         self.max_cards = max_cards
         self._ensure_pool(max_cards)
         self.height = (
-                self.max_cards * FavoriteSongCard.CARD_HEIGHT
-                + (self.max_cards - 1) * self.spacing
+            self.max_cards * FavoriteSongCard.CARD_HEIGHT
+            + (self.max_cards - 1) * self.spacing
         ) if self.max_cards > 0 else 0
 
     def _apply_pool(self, items, on_click):
@@ -433,8 +159,8 @@ class PageCardsContainer(MDBoxLayout):
         self.cards = self._card_pool[:len(items)]
 
         self.height = (
-                self.max_cards * FavoriteSongCard.CARD_HEIGHT
-                + (self.max_cards - 1) * self.spacing
+            self.max_cards * FavoriteSongCard.CARD_HEIGHT
+            + (self.max_cards - 1) * self.spacing
         ) if self.max_cards > 0 else 0
 
         if self.parent and hasattr(self.parent, '_update_cards_layout'):
@@ -452,8 +178,8 @@ class PageCardsContainer(MDBoxLayout):
             card.disabled = True
         self.cards = []
         self.height = (
-                self.max_cards * FavoriteSongCard.CARD_HEIGHT
-                + (self.max_cards - 1) * self.spacing
+            self.max_cards * FavoriteSongCard.CARD_HEIGHT
+            + (self.max_cards - 1) * self.spacing
         ) if self.max_cards > 0 else 0
         if self.parent and hasattr(self.parent, '_update_cards_layout'):
             Clock.schedule_once(
@@ -514,233 +240,31 @@ class SwipeableCardsWrapper(FloatLayout):
 
 
 # ============================================================
-# ПАГИНАЦИЯ
-# ============================================================
-
-class PaginationArrow(MDBoxLayout):
-    DEFAULT_WIDTH = dp(40)
-
-    def __init__(self, icon_name, on_press=None, icon_color=None, width=None, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (None, 1)
-        self.width = width if width else self.DEFAULT_WIDTH
-        self.padding = [dp(2)] * 4
-        self.md_bg_color = [0, 0, 0, 0]
-        self._on_press = on_press
-        self._enabled = True
-        self._pressed = False
-
-        container = AnchorLayout(anchor_x='center', anchor_y='center', size_hint=(1, 1))
-        self.icon_widget = MDIcon(
-            icon=icon_name, font_size=sp(22),
-            theme_text_color="Custom",
-            text_color=icon_color if icon_color else [1, 1, 1, 1],
-            size_hint=(None, None), size=(dp(24), dp(24)),
-        )
-        container.add_widget(self.icon_widget)
-        self.add_widget(container)
-
-    def set_enabled(self, enabled):
-        self._enabled = enabled
-        self.opacity = 1.0 if enabled else 0.3
-
-    def set_color(self, color):
-        self.icon_widget.text_color = color
-
-    def on_touch_down(self, touch):
-        if not self.collide_point(*touch.pos):
-            return super().on_touch_down(touch)
-        if not self._enabled:
-            return True
-        self._pressed = True
-        touch.grab(self)
-        return True
-
-    def on_touch_up(self, touch):
-        if touch.grab_current is not self:
-            return super().on_touch_up(touch)
-        touch.ungrab(self)
-        if self._pressed:
-            self._pressed = False
-            if self._enabled and self.collide_point(*touch.pos) and self._on_press:
-                self._on_press()
-        return True
-
-
-class PaginationBar(MDBoxLayout):
-    def __init__(self, on_page_select=None, **kwargs):
-        super().__init__(**kwargs)
-        self.on_page_select = on_page_select
-        self.current_page_index = 0
-        self.total_pages = 1
-        self._last_total = None
-        self._last_per_page = None
-
-        self.orientation = 'horizontal'
-        self.size_hint = (None, None)
-        self.height = dp(48)
-        self.padding = [dp(4), 0, dp(4), 0]
-        self.spacing = dp(4)
-        self.md_bg_color = [0, 0, 0, 0]
-
-        self.jump_back_arrow = PaginationArrow(
-            icon_name="chevron-double-left", on_press=self._go_back_10, width=dp(36)
-        )
-        self.add_widget(self.jump_back_arrow)
-
-        self.prev_arrow = PaginationArrow(
-            icon_name="chevron-left", on_press=self._go_prev_page, width=dp(36)
-        )
-        self.add_widget(self.prev_arrow)
-
-        self.page_label = MDLabel(
-            text="1", font_size=sp(16), halign="center", valign="middle",
-            theme_text_color="Custom", text_color=[1, 1, 1, 1], bold=True,
-            size_hint=(None, 1), width=dp(40),
-        )
-        self.add_widget(self.page_label)
-
-        self.next_arrow = PaginationArrow(
-            icon_name="chevron-right", on_press=self._go_next_page, width=dp(36)
-        )
-        self.add_widget(self.next_arrow)
-
-        self.jump_forward_arrow = PaginationArrow(
-            icon_name="chevron-double-right", on_press=self._go_forward_10, width=dp(36)
-        )
-        self.add_widget(self.jump_forward_arrow)
-
-        self._update_width()
-        self.update_theme_colors()
-
-    def on_touch_down(self, touch):
-        if self.parent is not None and self.parent.height < dp(10):
-            return False
-        return super().on_touch_down(touch)
-
-    def _update_width(self):
-        self.width = (
-                dp(4) + dp(4)
-                + self.jump_back_arrow.width + self.spacing
-                + self.prev_arrow.width + self.spacing
-                + self.page_label.width + self.spacing
-                + self.next_arrow.width + self.spacing
-                + self.jump_forward_arrow.width
-        )
-
-    def set_total(self, total_items, per_page, current_page=0, on_click=None):
-        if on_click:
-            self.on_page_select = on_click
-        new_total_pages = max(1, (total_items + per_page - 1) // per_page)
-
-        if (self._last_total == total_items
-                and self._last_per_page == per_page
-                and self.total_pages == new_total_pages):
-            self.set_current_page(current_page)
-            return
-
-        self._last_total = total_items
-        self._last_per_page = per_page
-        self.total_pages = new_total_pages
-        self.current_page_index = max(0, min(current_page, self.total_pages - 1))
-        self._apply_page()
-        self.update_theme_colors()
-
-    def set_current_page(self, page):
-        self.current_page_index = max(0, min(page, self.total_pages - 1))
-        self._apply_page()
-
-    def _apply_page(self):
-        self.page_label.text = str(self.current_page_index + 1)
-        digits = len(str(self.total_pages))
-        self.page_label.width = dp(12) * max(2, digits) + dp(4)
-
-        at_first = self.current_page_index == 0
-        at_last = self.current_page_index >= self.total_pages - 1
-
-        self.jump_back_arrow.set_enabled(not at_first)
-        self.prev_arrow.set_enabled(not at_first)
-        self.next_arrow.set_enabled(not at_last)
-        self.jump_forward_arrow.set_enabled(not at_last)
-        self._update_width()
-
-    def _go_back_10(self):
-        if self.current_page_index <= 0:
-            return
-        new_index = max(0, self.current_page_index - 10)
-        self.current_page_index = new_index
-        self._apply_page()
-        if self.on_page_select:
-            self.on_page_select(new_index)
-
-    def _go_prev_page(self):
-        if self.current_page_index <= 0:
-            return
-        new_index = self.current_page_index - 1
-        self.current_page_index = new_index
-        self._apply_page()
-        if self.on_page_select:
-            self.on_page_select(new_index)
-
-    def _go_next_page(self):
-        if self.current_page_index >= self.total_pages - 1:
-            return
-        new_index = self.current_page_index + 1
-        self.current_page_index = new_index
-        self._apply_page()
-        if self.on_page_select:
-            self.on_page_select(new_index)
-
-    def _go_forward_10(self):
-        if self.current_page_index >= self.total_pages - 1:
-            return
-        new_index = min(self.total_pages - 1, self.current_page_index + 10)
-        self.current_page_index = new_index
-        self._apply_page()
-        if self.on_page_select:
-            self.on_page_select(new_index)
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        arrow_color = FavoritesColors.get_arrow_color(theme_id)
-        self.jump_back_arrow.set_color(arrow_color)
-        self.jump_forward_arrow.set_color(arrow_color)
-        self.prev_arrow.set_color(arrow_color)
-        self.next_arrow.set_color(arrow_color)
-        self.page_label.text_color = FavoritesColors.get_text_primary(theme_id)
-
-
-# ============================================================
 # ОСНОВНОЙ ЭКРАН
 # ============================================================
 
 class FavoritesScreen(BaseScreen):
     MIN_PAGE_SIZE = 3
     MAX_PAGE_SIZE = 15
-    PAGINATION_HEIGHT = dp(48) + dp(1) + dp(2)
+    PAGINATION_HEIGHT = dp(40) + dp(2)
     MAX_RETRIES = 3  # Максимальное количество попыток авто-загрузки
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = 'favorites'
-
         self._all_favorites = []
         self._page = 0
         self._page_size = 6
         self._page_size_locked = False
         self._total = 0
-
         self._load_token = 0
         self._last_display_key = None
         self._retry_count = 0
-
         self.cards_container = None
         self._cards_wrapper = None
         self._cards_top_offset = dp(6)
         self._cards_left_pad = dp(0)
         self._cards_right_pad = dp(0)
-
         self._main_layout = None
         self.count_label = None
         self.bg_color_inst = None
@@ -755,20 +279,16 @@ class FavoritesScreen(BaseScreen):
         self._listener_registered = False
         self._count_label_is_status = False
         self._status_key = None
-
         self._initialized = False
         self._going_back = False
         self._last_window_size = None
 
-        init_shared_song_icon()
         self.load_background()
         self.init_ui()
-
         Clock.schedule_once(lambda dt: self._register_listener(), 0.1)
         Clock.schedule_once(lambda dt: self._restore_state(), 0.15)
         Clock.schedule_once(lambda dt: self._recalc_page_size(force=True), 0.3)
-
-        logger.info('Экран избранного создан (PageCardsContainer)')
+        logger.info('Экран избранного создан (PageCardsContainer + StudioFavoriteSongCard + StudioPaginationBar)')
 
     def load_background(self):
         with self.canvas.before:
@@ -833,7 +353,6 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # UI
     # ============================================================
-
     def init_ui(self):
         with perf('favorites.init_ui', log_every=False):
             main_layout = MDBoxLayout(orientation='vertical', spacing=0)
@@ -863,7 +382,6 @@ class FavoritesScreen(BaseScreen):
                 size_hint=(1, 1),
             )
             self._cards_wrapper.clip = True
-
             self._cards_top_offset = dp(6)
             self._cards_left_pad = padding[0]
             self._cards_right_pad = padding[2]
@@ -871,12 +389,10 @@ class FavoritesScreen(BaseScreen):
             self.cards_container = PageCardsContainer()
             self.cards_container.sync_max_cards(self._page_size)
             self._cards_wrapper.add_widget(self.cards_container)
-
             self._cards_wrapper.bind(
                 size=lambda *a: self._update_cards_layout(len(self.cards_container.cards)),
                 pos=lambda *a: self._update_cards_layout(len(self.cards_container.cards)),
             )
-
             main_layout.add_widget(self._cards_wrapper)
 
             self._pagination_container = MDBoxLayout(
@@ -889,7 +405,6 @@ class FavoritesScreen(BaseScreen):
             self._pagination_container.clip = True
 
             self._pagination_anchor = FloatLayout(size_hint=(1, 1))
-
             self._pagination_bar = PaginationBar(
                 on_page_select=self._on_page_selected_from_bar,
             )
@@ -898,7 +413,7 @@ class FavoritesScreen(BaseScreen):
             self._pagination_container.add_widget(self._pagination_anchor)
             main_layout.add_widget(self._pagination_container)
 
-            bottom_padding = layout_config.get_pagination_bottom_padding()
+            bottom_padding = layout_config.get_bottom_nav_total_height() + dp(4)
             main_layout.add_widget(Widget(size_hint_y=None, height=bottom_padding))
 
             self.add_widget(main_layout)
@@ -915,7 +430,6 @@ class FavoritesScreen(BaseScreen):
             self.cards_container.sync_max_cards(self._page_size)
 
         h_card = FavoriteSongCard.CARD_HEIGHT
-
         self.cards_container.x = self._cards_wrapper.x + self._cards_left_pad
         self.cards_container.width = max(
             dp(50),
@@ -955,10 +469,8 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # РАЗМЕР СТРАНИЦЫ
     # ============================================================
-
     def _calc_page_size(self):
-        bottom_pad = layout_config.get_pagination_bottom_padding()
-
+        bottom_pad = layout_config.get_bottom_nav_total_height() + dp(4)
         fixed_h = (
                 layout_config.get_top_padding()
                 + dp(24)
@@ -969,10 +481,8 @@ class FavoritesScreen(BaseScreen):
         available_h = Window.height - fixed_h
         if available_h <= 0:
             return self.MIN_PAGE_SIZE
-
         card_h = FavoriteSongCard.CARD_HEIGHT + dp(6)
         n = int(available_h / card_h)
-
         return max(self.MIN_PAGE_SIZE, min(self.MAX_PAGE_SIZE, n))
 
     def _recalc_page_size(self, force=False):
@@ -986,10 +496,8 @@ class FavoritesScreen(BaseScreen):
                 return
             self._page_size = new_size
             self._page_size_locked = True
-
             if self.cards_container:
                 self.cards_container.sync_max_cards(new_size)
-
             if self._all_favorites:
                 self._ensure_valid_page()
                 self._display_page()
@@ -1026,21 +534,17 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # ЛЕЙБЛ
     # ============================================================
-
     def _update_count_label(self, total):
         if not self.count_label:
             return
         self._count_label_is_status = False
         self._status_key = None
-
         hint_color = FavoritesColors.get_hint_color(settings_manager.theme)
-
         if total == 0:
             self.count_label.text = get_text('no_favorites')
             self.count_label.text_color = hint_color
             self.count_label.opacity = 1
             return
-
         page_size = self._page_size
         if total > page_size:
             current_count = min((self._page + 1) * page_size, total)
@@ -1052,7 +556,6 @@ class FavoritesScreen(BaseScreen):
             self.count_label.text = f"{get_text('favorites')}: 1 {get_text('of')} 1"
         else:
             self.count_label.text = f"{get_text('favorites')}: {total} {get_text('of')} {total}"
-
         self.count_label.text_color = hint_color
         self.count_label.opacity = 1
 
@@ -1066,7 +569,6 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # ПАГИНАЦИЯ
     # ============================================================
-
     def _hide_pagination(self):
         if not self._pagination_container:
             return
@@ -1092,7 +594,6 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # СВАЙПЫ
     # ============================================================
-
     def _on_swipe_up(self):
         with perf('favorites.action.swipe_up', log_every=False):
             if self._total <= 0:
@@ -1113,7 +614,6 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # ДАННЫЕ
     # ============================================================
-
     def _format_favorites(self, favorites):
         formatted = []
         for item in favorites:
@@ -1137,22 +637,18 @@ class FavoritesScreen(BaseScreen):
         with perf('favorites._render_favorites', log_every=False):
             self._hide_loading()
             self._retry_count = 0
-
             if not api.is_authenticated():
                 self._show_auth_message()
                 return
-
             formatted = self._format_favorites(favorites)
             self._all_favorites = formatted
             self._total = len(formatted)
             self._update_top_nav()
             self._ensure_valid_page()
             self._update_count_label(self._total)
-
             if not self._all_favorites:
                 self._show_empty()
                 return
-
             self._display_page()
 
     def _display_page(self):
@@ -1162,7 +658,6 @@ class FavoritesScreen(BaseScreen):
             start = self._page * self._page_size
             end = min(start + self._page_size, self._total)
             page_slice = self._all_favorites[start:end]
-
             first_id = page_slice[0].get('song_id', 0) if page_slice else 0
             tabs_sig = tuple(s.get('tabs_count', 1) for s in page_slice)
             display_key = (self._page, len(page_slice), first_id, tabs_sig)
@@ -1171,10 +666,8 @@ class FavoritesScreen(BaseScreen):
                     self.cards_container.sync_max_cards(self._page_size)
                     self.cards_container.set_songs(page_slice, self.on_song_selected)
                 self._last_display_key = display_key
-
             self._show_pagination_bar()
             self._update_count_label(self._total)
-
             Clock.schedule_once(
                 lambda dt: self._update_cards_layout(len(page_slice)), 0
             )
@@ -1185,7 +678,6 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # EMPTY / AUTH / ERROR  (текст всегда в верхнем count_label)
     # ============================================================
-
     def _clear_extra_widgets(self):
         self._count_label_is_status = False
         self._status_key = None
@@ -1193,7 +685,6 @@ class FavoritesScreen(BaseScreen):
     def _apply_status_text(self, key):
         self._status_key = key
         self._count_label_is_status = True
-
         if key == 'auth':
             text = get_text(
                 'favorites_no_songs',
@@ -1209,7 +700,6 @@ class FavoritesScreen(BaseScreen):
         else:  # 'empty'
             text = get_text('no_favorites')
             color = FavoritesColors.get_hint_color(settings_manager.theme)
-
         if self.count_label:
             self.count_label.text = text
             self.count_label.text_color = color
@@ -1249,7 +739,6 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # СПИННЕР
     # ============================================================
-
     def _show_loading(self):
         if self._loading_spinner or self._spinner_pending:
             return
@@ -1295,18 +784,14 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # ЗАГРУЗКА (с 3 попытками)
     # ============================================================
-
     def load_favorites(self, force_refresh=False):
         with perf('favorites.load_favorites', log_every=False):
             if not api.is_authenticated():
                 self._show_auth_message()
                 return
-
             if not force_refresh:
                 self._retry_count = 0
-
             cached = api._load_favorites_cache(allow_stale=True)
-
             if cached is not None and not force_refresh:
                 self._render_favorites(cached)
                 api.get_favorites(
@@ -1314,10 +799,8 @@ class FavoritesScreen(BaseScreen):
                     on_failure=lambda req, err: logger.warning(f"Фон: {err}"),
                     force_refresh=True)
                 return
-
             if cached is None:
                 self._show_loading()
-
             self._attempt_fetch()
 
     def _attempt_fetch(self):
@@ -1337,12 +820,10 @@ class FavoritesScreen(BaseScreen):
     def _on_load_failed(self, req, error):
         self._retry_count += 1
         error_str = str(error)
-
         if "401" in error_str or "Unauthorized" in error_str:
             self._hide_loading()
             self._show_auth_message()
             return
-
         if self._retry_count < self.MAX_RETRIES:
             logger.info(f"Попытка загрузки {self._retry_count}/{self.MAX_RETRIES} не удалась. Повтор...")
             delay = self._retry_count * 1.0
@@ -1358,7 +839,6 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # СОСТОЯНИЕ
     # ============================================================
-
     def _save_state(self):
         favorites_state.save({
             'page': self._page,
@@ -1387,7 +867,6 @@ class FavoritesScreen(BaseScreen):
     # ============================================================
     # ДЕЙСТВИЯ
     # ============================================================
-
     def on_song_selected(self, song_id, song_title, artist=""):
         if not song_id:
             notify.error(get_text('load_error'))
@@ -1403,14 +882,12 @@ class FavoritesScreen(BaseScreen):
     def refresh_favorites(self):
         self.load_favorites(force_refresh=True)
 
-
     def on_login_success(self):
         self.load_favorites(force_refresh=True)
 
     # ============================================================
     # LIFECYCLE
     # ============================================================
-
     def on_pre_enter(self):
         self._update_top_nav()
 
