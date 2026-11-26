@@ -1,25 +1,21 @@
 # screens/home_screen.py
-from io import BytesIO
-
 from kivy.clock import Clock
 from kivy.animation import Animation
-from kivy.core.image import Image as CoreImage
 from kivy.metrics import dp, sp
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivy.utils import platform
 from kivy.graphics import Color, RoundedRectangle
 
 from kivymd.app import MDApp
-from kivymd.uix.behaviors import CircularRippleBehavior
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
 
 from config.theme import theme
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
+from home_utils.card_widget import StudioHomeGridCard as GridCard
+from home_utils.logo_widget import StudioFuturisticLogo
 from screens.base_screen import BaseScreen
 from api.client import api
 from state.settings_state import settings_state as settings_manager
@@ -27,202 +23,10 @@ from utils.localization import get_text
 
 logger = screen_logger('Home')
 
-try:
-    from data import load_asset_as_bytes
-
-    HAS_ASSETS = True
-except ImportError:
-    HAS_ASSETS = False
-
-    def load_asset_as_bytes(name):
-        return None
-
 
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
     return [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
-
-
-def hex_to_rgba(hex_color, alpha=1.0):
-    return hex_to_rgb(hex_color) + [alpha]
-
-
-# ============================================================
-# КАРТОЧКА РАЗДЕЛА
-# ============================================================
-
-class GridCard(CircularRippleBehavior, MDCard):
-    """
-    Карточка раздела с адаптивными цветами под темы.
-    Всегда цветная, но оттенки подстраиваются под фон.
-    """
-
-    GREEN_SECTION_COLORS = {
-        'songs': '#E53935',
-        'chords': '#43A047',
-        'tuner': '#1E88E5',
-        'metronome': '#FB8C00',
-        'dictionary': '#8E24AA',
-        'favorites': '#EC407A',
-    }
-
-    LIGHT_SECTION_COLORS = {
-        'songs': '#EF9A9A',
-        'chords': '#A5D6A7',
-        'tuner': '#90CAF9',
-        'metronome': '#FFCC80',
-        'dictionary': '#CE93D8',
-        'favorites': '#F48FB1',
-    }
-
-    DARK_SECTION_COLORS = {
-        'songs': '#B71C1C',
-        'chords': '#1B5E20',
-        'tuner': '#0D47A1',
-        'metronome': '#E65100',
-        'dictionary': '#4A148C',
-        'favorites': '#880E4F',
-    }
-
-    def __init__(self, section_id, title, icon_asset, on_click=None, **kwargs):
-        super().__init__(**kwargs)
-        self.section_id = section_id
-        self.title_text = title
-        self.icon_asset = icon_asset
-        self.on_click_callback = on_click
-        self._current_theme = settings_manager.theme
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.radius = [dp(24)]
-        self.elevation = 4
-        self.ripple_scale = 0.9
-        self.padding = [dp(10), dp(14), dp(10), dp(14)]
-        self.spacing = 0
-
-        content = MDBoxLayout(
-            orientation='vertical',
-            size_hint=(1, 1),
-            md_bg_color=[0, 0, 0, 0],
-            padding=0,
-            spacing=0,
-        )
-
-        content.add_widget(Widget(size_hint_y=0.35))
-
-        self.icon_image = Image(
-            size_hint=(None, None),
-            size=(dp(64), dp(64)),
-            pos_hint={'center_x': 0.5},
-            fit_mode="contain",
-            mipmap=True,
-        )
-        content.add_widget(self.icon_image)
-
-        content.add_widget(Widget(size_hint_y=None, height=dp(10)))
-
-        font_size = sp(14) if len(title) > 8 else (sp(15) if len(title) > 6 else sp(16))
-
-        self.title_label = MDLabel(
-            text=title,
-            font_size=font_size,
-            halign="center",
-            valign="middle",
-            bold=True,
-            size_hint=(1, None),
-            height=dp(26),
-            theme_text_color="Custom",
-            shorten=True,
-            shorten_from="right",
-        )
-        content.add_widget(self.title_label)
-
-        content.add_widget(Widget(size_hint_y=0.6))
-
-        self.add_widget(content)
-
-        self._load_icon()
-        self._setup_colors()
-
-        self.bind(on_release=self._on_click)
-        self.bind(on_enter=self._on_enter, on_leave=self._on_leave)
-
-    def _setup_colors(self):
-        theme_id = self._current_theme
-
-        if theme_id == 'dark':
-            self.base_color_hex = self.DARK_SECTION_COLORS.get(self.section_id, '#424242')
-            self.base_color = hex_to_rgba(self.base_color_hex, 1.0)
-            self.hover_color = [min(1.0, c + 0.1) for c in self.base_color[:3]] + [1.0]
-            self.md_bg_color = self.base_color
-            self.title_label.text_color = [1, 1, 1, 1]
-            self.icon_color = [1, 1, 1, 1]
-        elif theme_id == 'light':
-            self.base_color_hex = self.LIGHT_SECTION_COLORS.get(self.section_id, '#E0E0E0')
-            self.base_color = hex_to_rgba(self.base_color_hex, 1.0)
-            self.hover_color = [min(1.0, c + 0.05) for c in self.base_color[:3]] + [1.0]
-            self.md_bg_color = self.base_color
-            self.title_label.text_color = [0.15, 0.15, 0.15, 1]
-
-            rich_hex = self.GREEN_SECTION_COLORS.get(self.section_id, '#546E7A')
-            rich_rgb = hex_to_rgb(rich_hex)
-            self.icon_color = [
-                min(1.0, rich_rgb[0] * 0.7 + 0.3),
-                min(1.0, rich_rgb[1] * 0.7 + 0.3),
-                min(1.0, rich_rgb[2] * 0.7 + 0.3),
-                1.0
-            ]
-        else:  # green
-            self.base_color_hex = self.GREEN_SECTION_COLORS.get(self.section_id, '#546E7A')
-            self.base_color = hex_to_rgba(self.base_color_hex, 1.0)
-            self.hover_color = [min(1.0, c + 0.06) for c in self.base_color[:3]] + [1.0]
-            self.md_bg_color = self.base_color
-            self.title_label.text_color = [1, 1, 1, 1]
-            self.icon_color = [1, 1, 1, 1]
-
-        if hasattr(self, 'icon_image') and self.icon_image:
-            self.icon_image.color = self.icon_color
-
-    def update_theme(self, theme_id):
-        self._current_theme = theme_id
-        self._setup_colors()
-
-    def update_language(self, new_title):
-        self.title_text = new_title
-        self.title_label.text = new_title
-        font_size = sp(14) if len(new_title) > 8 else (sp(15) if len(new_title) > 6 else sp(16))
-        self.title_label.font_size = font_size
-
-    def _load_icon(self):
-        if HAS_ASSETS and self.icon_asset:
-            try:
-                icon_data = load_asset_as_bytes(self.icon_asset)
-                if icon_data:
-                    img = CoreImage(BytesIO(icon_data), ext="png")
-                    self.icon_image.texture = img.texture
-                    self.icon_image.color = getattr(self, 'icon_color', [1, 1, 1, 1])
-                    return
-            except Exception as e:
-                logger.error(f"Ошибка загрузки иконки {self.icon_asset}: {e}")
-        self.icon_image.opacity = 0
-
-    def _on_enter(self, *args):
-        Animation(elevation=12, duration=0.15).start(self)
-        Animation(md_bg_color=self.hover_color, duration=0.15).start(self)
-
-    def _on_leave(self, *args):
-        Animation(elevation=4, duration=0.15).start(self)
-        Animation(md_bg_color=self.base_color, duration=0.15).start(self)
-
-    def _on_click(self, instance):
-        if self.on_click_callback:
-            Animation(elevation=0, duration=0.08).start(self)
-            Clock.schedule_once(self._restore_and_navigate, 0.09)
-
-    def _restore_and_navigate(self, dt):
-        Animation(elevation=4, duration=0.18).start(self)
-        if self.on_click_callback:
-            self.on_click_callback(self.section_id)
 
 
 # ============================================================
@@ -253,18 +57,13 @@ class HomeScreen(BaseScreen):
         Clock.schedule_once(self._check_auth, 0.7)
         Clock.schedule_once(self._apply_current_theme, 0.2)
 
-        logger.info('Главный экран создан')
+        logger.info('Главный экран создан (StudioHomeGridCard + StudioFuturisticLogo)')
 
     def _apply_current_theme(self, dt):
         current_theme = settings_manager.theme
 
         if self.app_name_label:
-            if current_theme == 'dark':
-                self.app_name_label.text_color = [1.0, 0.5, 0.0, 1]
-            elif current_theme == 'light':
-                self.app_name_label.text_color = [0.1, 0.55, 0.3, 1]
-            else:
-                self.app_name_label.text_color = hex_to_rgb(theme.PRIMARY) + [1]
+            self.app_name_label.update_theme_colors()
 
         for card in self._cards.values():
             card.update_theme(current_theme)
@@ -306,22 +105,13 @@ class HomeScreen(BaseScreen):
             padding=[content_padding[0], 0, content_padding[2], 0],
         )
 
-        self.app_name_label = MDLabel(
-            text="GuitarFans",
-            font_size=sp(32),
-            halign="center",
-            size_hint_y=None,
-            height=dp(60),
-            theme_text_color="Custom",
-            text_color=hex_to_rgb(theme.PRIMARY) + [1],
-            bold=True,
-        )
+        self.app_name_label = StudioFuturisticLogo()
         content_wrapper.add_widget(self.app_name_label)
         content_wrapper.add_widget(Widget(size_hint_y=None, height=dp(8)))
 
         self._grid = GridLayout(
             cols=3,
-            spacing=dp(14),
+            spacing=dp(10),
             size_hint=(1, None),
             height=dp(320),
         )
@@ -390,8 +180,11 @@ class HomeScreen(BaseScreen):
 
         with self.sub_label.canvas.before:
             self.sub_bg_color = Color(0, 0, 0, 0)
-            self.sub_bg_rect = RoundedRectangle(pos=self.sub_label.pos, size=self.sub_label.size,
-                                                radius=[dp(8)])
+            self.sub_bg_rect = RoundedRectangle(
+                pos=self.sub_label.pos,
+                size=self.sub_label.size,
+                radius=[dp(8)]
+            )
 
         self.sub_label.bind(
             pos=lambda inst, val: setattr(self.sub_bg_rect, 'pos', val),
@@ -418,7 +211,6 @@ class HomeScreen(BaseScreen):
         status = status_data.get("status")
         is_admin = bool(status_data.get("is_admin", False))
 
-        # --- Админ / unlimited ---
         if is_admin or status == "unlimited":
             self.sub_label.text = "Безлимитный доступ (Админ)"
             self.sub_bg_color.rgba = [0.2, 0.2, 0.2, 0.95]
@@ -431,13 +223,11 @@ class HomeScreen(BaseScreen):
             )
             return
 
-        # --- exhausted: подписка закончилась ---
         if status == "exhausted":
             self.sub_label.text = "Подписка закончилась. Оформите или введите промокод."
             self.sub_bg_color.rgba = [0.7, 0.1, 0.1, 0.95]
             self.sub_label.text_color = [1, 1, 1, 1]
 
-        # --- active ---
         elif status == "active":
             days_left = int(status_data.get("days_left", 0) or 0)
             if days_left <= 3:
@@ -451,16 +241,7 @@ class HomeScreen(BaseScreen):
         else:
             return
 
-        # Анимация появления
         Animation(opacity=1, duration=0.3).start(self.sub_label)
-
-        def hide_label(dt):
-            Animation(opacity=0, duration=0.5).start(self.sub_label)
-
-        if self._sub_hide_event:
-            self._sub_hide_event.cancel()
-
-        self._sub_hide_event = Clock.schedule_once(hide_label, 4.0)
 
         def hide_label(dt):
             Animation(opacity=0, duration=0.5).start(self.sub_label)
@@ -526,9 +307,6 @@ class HomeScreen(BaseScreen):
         self._reset_top_nav_to_home()
         self._refresh_favorites_if_needed()
 
-        # Плашку подписки отрисует main._on_subscription_snapshot
-        # (subscription_state уже подписан). Здесь — не дублируем.
-
     def _on_auth_failure(self, req, error):
         logger.warning(f'Авторизация не пройдена: {error}')
         self._update_user_info()
@@ -572,11 +350,13 @@ class HomeScreen(BaseScreen):
 
     def on_enter(self):
         super().on_enter()
-
         logger.info("Вход в главный экран")
 
         self._apply_current_theme(0)
         self.update_language()
+
+        if self.app_name_label:
+            self.app_name_label.start_periodic_animation()
 
         try:
             app = MDApp.get_running_app()
@@ -604,4 +384,6 @@ class HomeScreen(BaseScreen):
                 self._update_user_info()
 
     def on_leave(self):
+        if self.app_name_label:
+            self.app_name_label.stop_periodic_animation()
         return super().on_leave()
