@@ -23,8 +23,26 @@ def _add_brushed_metal_grain(img, x1, y1, x2, y2, strength=4):
     return Image.alpha_composite(img, grain)
 
 
+def _draw_screw(draw, sx, sy, r=8, light_theme=False):
+    """Рисует аппаратный винт под крест (в стиле мини-консоли пагинации)."""
+    draw.ellipse(
+        [sx - r - 2, sy - r - 2, sx + r + 2, sy + r + 2],
+        fill=(115, 121, 127, 220) if light_theme else (8, 10, 12, 240),
+    )
+    draw.ellipse(
+        [sx - r, sy - r, sx + r, sy + r],
+        fill=(198, 205, 211, 255) if light_theme else (88, 94, 102, 255),
+        outline=(245, 248, 250, 200) if light_theme else (150, 158, 168, 160),
+        width=1,
+    )
+    slot_col = (85, 90, 96, 230) if light_theme else (22, 25, 28, 240)
+    half = max(3, r // 2)
+    draw.line([(sx - half, sy), (sx + half, sy)], fill=slot_col, width=2)
+    draw.line([(sx, sy - half), (sx, sy + half)], fill=slot_col, width=2)
+
+
 def generate_song_card_panel_png(light_theme=False, green_theme=False):
-    """Генерирует студийную металлическую рамку-консоль карточки песни (без внешних теней и разделителя)."""
+    """Генерирует рэковую рамку карточки с толстыми боковыми ушами и 4 винтами (как у пагинации)."""
     W, H = 960, 148
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
@@ -43,10 +61,10 @@ def generate_song_card_panel_png(light_theme=False, green_theme=False):
         else:
             if t < 0.14:
                 k = t / 0.14
-                v = int(76 - 24 * k)
+                v = int(78 - 25 * k)
             elif t < 0.88:
                 k = (t - 0.14) / 0.74
-                v = int(52 - 22 * k)
+                v = int(53 - 23 * k)
             else:
                 k = (t - 0.88) / 0.12
                 v = int(30 - 8 * k)
@@ -76,9 +94,11 @@ def generate_song_card_panel_png(light_theme=False, green_theme=False):
     )
     canvas.paste(Image.alpha_composite(canvas, bevel), (0, 0), mask)
 
-    # 3. Утопленная внутренняя ниша (Recessed Bay)
-    bay_x1, bay_y1 = x1 + 14, y1 + 11
-    bay_x2, bay_y2 = x2 - 14, y2 - 11
+    # 3. Утопленная внутренняя ниша с широкими боковыми полями под винты (как на панели пагинации)
+    side_ear_w = 46
+    top_bot_h = 13
+    bay_x1, bay_y1 = x1 + side_ear_w, y1 + top_bot_h
+    bay_x2, bay_y2 = x2 - side_ear_w, y2 - top_bot_h
     bay_r = 20
 
     draw = ImageDraw.Draw(canvas)
@@ -109,6 +129,16 @@ def generate_song_card_panel_png(light_theme=False, green_theme=False):
     bay_mask = Image.new("L", (W, H), 0)
     ImageDraw.Draw(bay_mask).rounded_rectangle([bay_x1, bay_y1, bay_x2, bay_y2], radius=bay_r, fill=255)
     canvas.paste(bay, (0, 0), bay_mask)
+
+    # 4. Четыре аппаратных винта под крест на боковых планках
+    screw_x = x1 + side_ear_w // 2
+    for sx, sy in [
+        (screw_x, y1 + 27),
+        (W - screw_x, y1 + 27),
+        (screw_x, y2 - 27),
+        (W - screw_x, y2 - 27),
+    ]:
+        _draw_screw(draw, sx, sy, r=8, light_theme=light_theme)
 
     meta = {
         "rim_box_norm": [
@@ -179,7 +209,7 @@ def _stylize_metallic_sprite(alpha_mask, light_theme=False):
 
 
 def generate_song_guitar_icon_png():
-    """Генерирует 4x SSAA иконку акустической гитары с нотками (как на референсе) в металле."""
+    """Генерирует 4x SSAA иконку акустической гитары с нотками в металле."""
     OUT = 192
     SS = 4
     S = OUT * SS  # 768x768
@@ -188,26 +218,21 @@ def generate_song_guitar_icon_png():
     W = (255, 255, 255, 255)
     T = (0, 0, 0, 0)
 
-    # 1. Рисуем гитару вертикально и поворачиваем на -42°
     g = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     gd = ImageDraw.Draw(g)
 
-    # Нижний и верхний овалы деки
     gd.ellipse([cx - 148, cy + 16, cx + 148, cy + 284], fill=W)
     gd.ellipse([cx - 114, cy - 108, cx + 114, cy + 106], fill=W)
-    # Талия деки
     gd.rectangle([cx - 100, cy - 12, cx + 100, cy + 122], fill=W)
     gd.ellipse([cx - 190, cy - 28, cx - 90, cy + 76], fill=T)
     gd.ellipse([cx + 90, cy - 28, cx + 190, cy + 76], fill=T)
 
-    # Гриф и голова грифа с колками
     gd.rectangle([cx - 22, cy - 302, cx + 22, cy - 92], fill=W)
     gd.rounded_rectangle([cx - 36, cy - 380, cx + 36, cy - 288], radius=14, fill=W)
     for peg_y in (cy - 360, cy - 332, cy - 304):
         gd.rounded_rectangle([cx - 56, peg_y - 7, cx - 32, peg_y + 7], radius=4, fill=W)
         gd.rounded_rectangle([cx + 32, peg_y - 7, cx + 56, peg_y + 7], radius=4, fill=W)
 
-    # Розетка с кольцом-окантовкой и струнодержатель (бридж)
     gd.ellipse([cx - 46, cy - 40, cx + 46, cy + 48], fill=T)
     gd.ellipse([cx - 32, cy - 26, cx + 32, cy + 34], fill=W)
     gd.ellipse([cx - 22, cy - 16, cx + 22, cy + 24], fill=T)
@@ -216,7 +241,6 @@ def generate_song_guitar_icon_png():
     canvas = g.rotate(-42, resample=Image.BICUBIC, center=(cx - 10, cy + 10))
     d = ImageDraw.Draw(canvas)
 
-    # 2. Парящая двойная нотка сверху слева от гитары (как на скрине 2)
     n1x, n1y = cx - 235, cy - 135
     d.ellipse([n1x - 28, n1y - 20, n1x + 28, n1y + 20], fill=W)
     d.ellipse([n1x + 56 - 28, n1y - 14 - 20, n1x + 56 + 28, n1y - 14 + 20], fill=W)
@@ -232,7 +256,6 @@ def generate_song_guitar_icon_png():
         fill=W,
     )
 
-    # 3. Парящая двойная нотка снизу справа от гитары (как на скрине 2)
     n2x, n2y = cx + 145, cy + 235
     d.ellipse([n2x - 28, n2y - 20, n2x + 28, n2y + 20], fill=W)
     d.ellipse([n2x + 58 - 28, n2y + 12 - 20, n2x + 58 + 28, n2y + 12 + 20], fill=W)
@@ -261,6 +284,7 @@ def save_favorites_assets():
     card_dark, card_meta = generate_song_card_panel_png(light_theme=False, green_theme=False)
     card_green, _ = generate_song_card_panel_png(light_theme=False, green_theme=True)
     card_light, _ = generate_song_card_panel_png(light_theme=True, green_theme=False)
+
     guitar_dark, guitar_light, guitar_mask = generate_song_guitar_icon_png()
 
     def to_b64(img):
@@ -270,7 +294,7 @@ def save_favorites_assets():
 
     out_path = os.path.join(OUTPUT_DIR, "card_assets.py")
     with open(out_path, "w", encoding="utf-8") as f:
-        f.write('"""HD-текстуры студийной карточки песни и металлической иконки гитары."""\n\n')
+        f.write('"""HD-текстуры студийной карточки песни с винтами и металлической иконки гитары."""\n\n')
         f.write(f"CARD_SIZE = {card_dark.size}\n")
         f.write(f"CARD_META = {repr(card_meta)}\n\n")
         f.write(f'CARD_DARK_B64 = "{to_b64(card_dark)}"\n')
@@ -282,10 +306,9 @@ def save_favorites_assets():
 
     init_path = os.path.join(OUTPUT_DIR, "__init__.py")
     with open(init_path, "w", encoding="utf-8") as f:
-        f.write("from . import card_assets\n")
+        f.write("from . import card_assets, pagination_assets\n")
 
-    print(f"[OK] Сгенерированы HD-текстуры карточки избранного: {out_path}")
-
+    print(f"[OK] Сгенерированы HD-текстуры карточки избранного с винтами: {out_path}")
 
 
 if __name__ == "__main__":

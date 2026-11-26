@@ -7,13 +7,14 @@ from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
 from kivy.graphics import Color, Line, PushMatrix, PopMatrix, Rectangle, Rotate, Scale
 from kivy.metrics import dp, sp
-from kivy.properties import ListProperty, NumericProperty
+from kivy.properties import ListProperty, NumericProperty, StringProperty
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 
-from data.favorites import card_assets
+from data.favorites import card_assets, pagination_assets
 from state.settings_state import settings_state as settings_manager
 
 
@@ -33,7 +34,7 @@ class MetallicGuitarSongIcon(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, 1)
-        self.width = dp(44)
+        self.width = dp(40)
 
         if not MetallicGuitarSongIcon._textures_loaded:
             def _load(b64_str):
@@ -112,8 +113,107 @@ class MetallicGuitarSongIcon(Widget):
             PopMatrix()
 
 
+class TabsCountLedBox(FloatLayout):
+    """Мини-квадратик LED-дисплея микшера с количеством подборов (в стиле номера страницы пагинации)."""
+
+    text = StringProperty("")
+    led_color = ListProperty([0.18, 0.95, 0.38, 1.0])
+
+    _disp_dark = None
+    _disp_light = None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, None)
+        self.size = (dp(30), dp(30))
+        self.pos_hint = {"center_y": 0.5}
+
+        if TabsCountLedBox._disp_dark is None:
+            TabsCountLedBox._disp_dark = CoreImage(
+                io.BytesIO(base64.b64decode(pagination_assets.DISP_DARK_B64)), ext="png"
+            ).texture
+            TabsCountLedBox._disp_light = CoreImage(
+                io.BytesIO(base64.b64decode(pagination_assets.DISP_LIGHT_B64)), ext="png"
+            ).texture
+
+        self.glow_label = Label(
+            text="",
+            font_size=sp(14),
+            bold=True,
+            halign="center",
+            valign="middle",
+            size_hint=(1, 1),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+        )
+        self.main_label = Label(
+            text="",
+            font_size=sp(13),
+            bold=True,
+            halign="center",
+            valign="middle",
+            size_hint=(1, 1),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+        )
+
+        self.add_widget(self.glow_label)
+        self.add_widget(self.main_label)
+
+        self.bind(
+            pos=self._redraw,
+            size=self._redraw,
+            text=self._on_text_changed,
+            opacity=self._redraw,
+            led_color=self._apply_led_colors,
+        )
+
+        self._apply_led_colors()
+
+    def _on_text_changed(self, inst, val):
+        val_str = str(val) if val else ""
+        self.glow_label.text = val_str
+        self.main_label.text = val_str
+        self.opacity = 1.0 if val_str else 0.0
+
+    def _apply_led_colors(self, *args):
+        r, g, b, _ = self.led_color
+        self.glow_label.color = [r, g, b, 0.42]
+        self.main_label.color = [
+            min(1.0, r + 0.28),
+            min(1.0, g + 0.28),
+            min(1.0, b + 0.28),
+            1.0,
+        ]
+        self._redraw()
+
+    def _redraw(self, *args):
+        self.canvas.before.clear()
+        if self.width <= 4 or self.height <= 4 or self.opacity < 0.05:
+            return
+
+        is_light = settings_manager.theme == "light"
+        disp_tex = self._disp_light if is_light else self._disp_dark
+        r, g, b, _ = self.led_color
+
+        with self.canvas.before:
+            Color(1, 1, 1, 1)
+            Rectangle(texture=disp_tex, pos=self.pos, size=self.size)
+
+            gx_n, gy_n, gw_n, gh_n = pagination_assets.DISP_META["glass_box_norm"]
+            gx = self.x + gx_n * self.width
+            gy = self.y + gy_n * self.height
+            gw = gw_n * self.width
+            gh = gh_n * self.height
+            gr = pagination_assets.DISP_META["glass_radius_norm"] * self.height
+
+            Color(r, g, b, 0.12)
+            Rectangle(pos=(gx, gy), size=(gw, gh))
+
+            Color(r, g, b, 0.55)
+            Line(rounded_rectangle=(gx, gy, gw, gh, gr), width=dp(1.0))
+
+
 class StudioFavoriteSongCard(FloatLayout):
-    """Студийная металлическая карточка песни с анимацией нажатия и неоновым световодом."""
+    """Студийная рэковая карточка песни с винтами, LED-счётчиком подборов и анимацией нажатия."""
 
     CARD_HEIGHT = dp(58)
     TAP_THRESHOLD = dp(15)
@@ -127,7 +227,6 @@ class StudioFavoriteSongCard(FloatLayout):
     _panel_dark_tex = None
     _panel_light_tex = None
     _panel_green_tex = None
-
 
     def __init__(self, song_id=0, artist="", title="", tabs_count=0, on_click=None, **kwargs):
         super().__init__(**kwargs)
@@ -155,12 +254,13 @@ class StudioFavoriteSongCard(FloatLayout):
                 io.BytesIO(base64.b64decode(card_assets.CARD_LIGHT_B64)), ext="png"
             ).texture
 
+        # Отступы по бокам увеличены с учётом толстых рамок с винтами
         content = MDBoxLayout(
             orientation="horizontal",
             size_hint=(1, 1),
             pos_hint={"x": 0, "y": 0},
-            padding=[dp(10), dp(4), dp(12), dp(4)],
-            spacing=dp(8),
+            padding=[dp(22), dp(4), dp(22), dp(4)],
+            spacing=dp(6),
             md_bg_color=[0, 0, 0, 0],
         )
 
@@ -204,20 +304,13 @@ class StudioFavoriteSongCard(FloatLayout):
         text_layout.add_widget(self.artist_label)
         text_layout.add_widget(self.title_label)
 
-        self.count_label = MDLabel(
-            text="",
-            font_size=sp(12),
-            size_hint_x=None,
-            width=dp(32),
-            halign="right",
-            valign="middle",
-            theme_text_color="Custom",
-        )
+        # Квадратик LED-дисплея с количеством подборов (как в пагинации)
+        self.count_box = TabsCountLedBox()
         self.arrow = MDLabel(
             text="›",
             font_size=sp(22),
             size_hint_x=None,
-            width=dp(20),
+            width=dp(18),
             halign="center",
             valign="middle",
             theme_text_color="Custom",
@@ -225,13 +318,14 @@ class StudioFavoriteSongCard(FloatLayout):
 
         content.add_widget(self.icon)
         content.add_widget(text_layout)
-        content.add_widget(self.count_label)
+        content.add_widget(self.count_box)
         content.add_widget(self.arrow)
         self.add_widget(content)
 
         self.artist_label.text = artist
         self.title_label.text = title
-        self.count_label.text = str(tabs_count) if tabs_count and tabs_count > 1 else ""
+        self.count_box.text = str(tabs_count) if tabs_count else "1"
+
 
         self.bind(
             pos=self._redraw_frame,
@@ -245,22 +339,26 @@ class StudioFavoriteSongCard(FloatLayout):
 
     @staticmethod
     def _get_theme_palette(theme_id):
+        """Палитра цветов в точности как в LED-дисплее пагинации."""
         if theme_id == "light":
             return {
-                "accent": [0.08, 0.58, 0.30, 1.0],
-                "primary": [0.12, 0.16, 0.14, 1.0],
-                "secondary": [0.30, 0.36, 0.33, 1.0],
+                "accent": [0.06, 0.56, 0.28, 1.0],
+                "led": [0.12, 0.85, 0.45, 1.0],
+                "artist": [0.06, 0.54, 0.28, 1.0],     # Зелёный для светлой темы
+                "secondary": [0.22, 0.28, 0.25, 1.0],
             }
         elif theme_id == "dark":
             return {
                 "accent": [1.0, 0.52, 0.04, 1.0],
-                "primary": [0.96, 0.97, 0.98, 1.0],
-                "secondary": [0.75, 0.78, 0.82, 0.85],
+                "led": [1.0, 0.52, 0.04, 1.0],
+                "artist": [1.0, 0.62, 0.14, 1.0],      # Оранжевый для тёмной темы (как в пагинации)
+                "secondary": [0.80, 0.83, 0.86, 0.88],
             }
         return {
-            "accent": [0.22, 0.92, 0.38, 1.0],
-            "primary": [0.95, 0.99, 0.97, 1.0],
-            "secondary": [0.78, 0.88, 0.84, 0.85],
+            "accent": [0.18, 0.95, 0.38, 1.0],
+            "led": [0.18, 0.95, 0.38, 1.0],
+            "artist": [0.32, 0.98, 0.52, 1.0],         # Ярко-зелёный для зелёной темы (как в пагинации)
+            "secondary": [0.84, 0.92, 0.88, 0.88],
         }
 
     def update_data(self, song_id, artist, title, tabs_count=1, on_click=None):
@@ -271,16 +369,16 @@ class StudioFavoriteSongCard(FloatLayout):
         self.on_click_callback = on_click
         self.artist_label.text = artist
         self.title_label.text = title
-        self.count_label.text = str(tabs_count) if tabs_count and tabs_count > 1 else ""
+        self.count_box.text = str(tabs_count) if tabs_count and tabs_count > 1 else ""
 
     def update_theme_colors(self):
         theme_id = settings_manager.theme
         pal = self._get_theme_palette(theme_id)
         self.accent_color = pal["accent"]
         self.icon.accent_color = pal["accent"]
-        self.artist_label.text_color = pal["primary"]
+        self.count_box.led_color = pal["led"]
+        self.artist_label.text_color = pal["artist"]
         self.title_label.text_color = pal["secondary"]
-        self.count_label.text_color = pal["secondary"]
         self.arrow.text_color = pal["accent"]
         self._redraw_frame()
 
@@ -292,6 +390,7 @@ class StudioFavoriteSongCard(FloatLayout):
 
         theme_id = settings_manager.theme
         is_light = theme_id == "light"
+
         if is_light:
             panel_tex = self._panel_light_tex
         elif theme_id == "green":
@@ -321,13 +420,11 @@ class StudioFavoriteSongCard(FloatLayout):
             Color(1, 1, 1, 1)
             Rectangle(texture=panel_tex, pos=(x, y), size=(w, h))
 
-            # Лёгкая внутренняя вспышка ниши при нажатии
             if pg > 0.01:
                 Color(r, g, b, 0.14 * pg)
                 Rectangle(pos=(rim_x, rim_y), size=(rim_w, rim_h))
 
         with self.canvas.after:
-            # Тонкий световод по периметру внутренней ниши (усиливается при нажатии)
             if pg > 0.01:
                 Color(r, g, b, 0.35 * pg)
                 Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(2.4))
