@@ -46,7 +46,7 @@ from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
-from tuner_utils.menu_widget import StudioTunerMenu
+from tuner_utils.menu_widget import StudioTunerMenu, StudioTunerCard
 from utils.notifications import notify
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
@@ -401,11 +401,17 @@ class ModernHorizontalTuner(Widget):
         self.bind(animated_deviation=self.update_gauge)
 
     def _build_tick_textures(self):
+        is_light = (settings_manager.theme == 'light')
         ticks = [(-50, "-50"), (-25, "-25"), (0, "0"), (25, "+25"), (50, "+50")]
         for val, text in ticks:
             is_zero = (val == 0)
             r, g, b = self._get_segment_color(val, 50)
-            rgba = (0.2, 0.95, 0.65, 1.0) if is_zero else (r * 0.85 + 0.15, g * 0.85 + 0.15, b * 0.85 + 0.15, 0.9)
+            if is_zero:
+                rgba = (0.06, 0.58, 0.30, 1.0) if is_light else (0.2, 0.95, 0.65, 1.0)
+            elif is_light:
+                rgba = (r * 0.62, g * 0.55, b * 0.55, 0.95)
+            else:
+                rgba = (r * 0.85 + 0.15, g * 0.85 + 0.15, b * 0.85 + 0.15, 0.92)
             lbl = CoreLabel(text=text, font_size=sp(12 if is_zero else 11), bold=True, color=rgba)
             lbl.refresh()
             self._tick_textures[val] = lbl.texture
@@ -482,7 +488,6 @@ class ModernHorizontalTuner(Widget):
         # Точная настройка: центральный сегмент И отклонение в пределах ±3
         is_tuned = (nearest_idx == num_segments // 2) and abs(dev) <= 3.0
 
-
         if is_tuned:
             active_rgb = (0.2, 0.95, 0.65)
         else:
@@ -490,7 +495,10 @@ class ModernHorizontalTuner(Widget):
             active_rgb = (min(1.0, sr * 0.9 + 0.1), min(1.0, sg * 0.9 + 0.1), min(1.0, sb * 0.9 + 0.1))
         self.indicator_color = [active_rgb[0], active_rgb[1], active_rgb[2], 1.0]
 
+        is_light = (settings_manager.theme == 'light')
+
         with self.canvas:
+            # Деления -50, -25, 0, +25, +50
             ticks_indices = [(0, -50), (5, -25), (10, 0), (15, 25), (20, 50)]
             label_y = scale_y + max_h / 2 + dp(6)
             Color(1, 1, 1, 1)
@@ -500,13 +508,10 @@ class ModernHorizontalTuner(Widget):
                     cx = scale_x + (seg_idx + 0.5) * segment_width
                     Rectangle(texture=tex, pos=(cx - tex.width / 2, label_y), size=tex.size)
 
-            theme_id = settings_manager.theme
-            if theme_id == 'light':
-                outline_color = (0, 0, 0, 0.4)
-            elif theme_id == 'dark':
-                outline_color = (1.0, 0.5, 0.0, 0.6)
+            if is_light:
+                outline_color = (0.25, 0.30, 0.28, 0.45)
             else:
-                outline_color = (0.0, 0.2, 0.1, 0.8)
+                outline_color = (0.04, 0.05, 0.06, 0.92)
 
             for i in range(num_segments):
                 value = -50 + i * step
@@ -517,52 +522,78 @@ class ModernHorizontalTuner(Widget):
                 r, g, b = self._get_segment_color(value, 50)
                 seg_w = max(dp(1), segment_width - gap)
 
-                with self.canvas:
-                    Color(*outline_color)
-                    if seg_w > 0:
-                        Line(rounded_rectangle=(x, scale_y - curr_height / 2, seg_w, curr_height, dp(4)), width=1.5)
+                # Тёмный колодец LED-ячейки
+                Color(0.05, 0.06, 0.07, 0.65 if not is_light else 0.22)
+                if seg_w > 0:
+                    RoundedRectangle(
+                        pos=(x - dp(0.6), scale_y - curr_height / 2 - dp(0.6)),
+                        size=(seg_w + dp(1.2), curr_height + dp(1.2)),
+                        radius=[dp(4.5)],
+                    )
 
                 # Мягкое затухание соседних сегментов:
-                # главный (nearest) — яркий, соседний (±1) — слабый glow, остальные — обычные
+                # главный (nearest) — яркий, соседний (±1) — слабый glow, остальные — спокойные
                 if i == nearest_idx:
-                    Color(r, g, b, 0.35)
-                    RoundedRectangle(pos=(x - dp(2), scale_y - curr_height / 2 - dp(3)),
-                                     size=(seg_w + dp(4), curr_height + dp(6)), radius=[dp(6)])
+                    Color(r, g, b, 0.38)
+                    RoundedRectangle(
+                        pos=(x - dp(2.2), scale_y - curr_height / 2 - dp(3)),
+                        size=(seg_w + dp(4.4), curr_height + dp(6)),
+                        radius=[dp(6)],
+                    )
                     brightness = 1.0
                     alpha = 1.0
                 elif abs(i - nearest_idx) == 1:
-                    Color(r, g, b, 0.08)
-                    RoundedRectangle(pos=(x - dp(1), scale_y - curr_height / 2 - dp(1)),
-                                     size=(seg_w + dp(2), curr_height + dp(2)), radius=[dp(5)])
+                    Color(r, g, b, 0.10)
+                    RoundedRectangle(
+                        pos=(x - dp(1), scale_y - curr_height / 2 - dp(1)),
+                        size=(seg_w + dp(2), curr_height + dp(2)),
+                        radius=[dp(5)],
+                    )
                     brightness = 0.78 + 0.10 * (1.0 - norm_dist)
                     alpha = 0.88
                 else:
-                    brightness = 0.62 + 0.25 * (1.0 - norm_dist)
-                    alpha = 0.78
+                    brightness = 0.56 + 0.24 * (1.0 - norm_dist)
+                    alpha = 0.76
 
-                Color(r * brightness, g * brightness, b * brightness, alpha)
                 if seg_w > 0:
+                    # Основное тело LED-сегмента
+                    Color(r * brightness, g * brightness, b * brightness, alpha)
                     RoundedRectangle(pos=(x, scale_y - curr_height / 2), size=(seg_w, curr_height), radius=[dp(4)])
 
+                    # Верхний студийный блик стекла LED-ячейки
+                    Color(1.0, 1.0, 1.0, 0.26 if i == nearest_idx else 0.12)
+                    RoundedRectangle(
+                        pos=(x + dp(1), scale_y + curr_height * 0.06),
+                        size=(max(dp(1), seg_w - dp(2)), curr_height * 0.38),
+                        radius=[dp(3)],
+                    )
+
+                    # Чёткая окантовка ячейки
+                    Color(*outline_color)
+                    Line(rounded_rectangle=(x, scale_y - curr_height / 2, seg_w, curr_height, dp(4)), width=1.1)
+
+            # Указатель-медиатор под шкалой
             ix = scale_x + ((dev + 50.0) / 100.0) * scale_w
             bar_bottom = scale_y - max_h / 2
             tip_y = bar_bottom - dp(8)
             base_y = tip_y - dp(15)
             half_w = dp(9)
 
-            Color(active_rgb[0], active_rgb[1], active_rgb[2], 0.28)
+            Color(active_rgb[0], active_rgb[1], active_rgb[2], 0.30)
             Triangle(
-                points=[ix, tip_y + dp(3), ix - half_w - dp(4), base_y - dp(2), ix + half_w + dp(4), base_y - dp(2)])
-
-            Color(*outline_color)
-            Line(points=[ix, tip_y, ix - half_w, base_y, ix, base_y + dp(4)], width=1.5)
-            Line(points=[ix, tip_y, ix + half_w, base_y, ix, base_y + dp(4)], width=1.5)
+                points=[ix, tip_y + dp(3), ix - half_w - dp(4), base_y - dp(2), ix + half_w + dp(4), base_y - dp(2)]
+            )
 
             Color(active_rgb[0], active_rgb[1], active_rgb[2], 1.0)
             Triangle(points=[ix, tip_y, ix - half_w, base_y, ix, base_y + dp(4)])
 
-            Color(active_rgb[0] * 0.78, active_rgb[1] * 0.78, active_rgb[2] * 0.78, 1.0)
+            Color(active_rgb[0] * 0.76, active_rgb[1] * 0.76, active_rgb[2] * 0.76, 1.0)
             Triangle(points=[ix, tip_y, ix + half_w, base_y, ix, base_y + dp(4)])
+
+            Color(0.95, 0.98, 0.97, 0.55) if not is_light else Color(0.15, 0.20, 0.18, 0.65)
+            Line(points=[ix, tip_y, ix - half_w, base_y, ix, base_y + dp(4)], width=1.2)
+            Line(points=[ix, tip_y, ix + half_w, base_y, ix, base_y + dp(4)], width=1.2)
+
 
 # ============ КНОПКА НОТЫ ============
 
@@ -783,21 +814,24 @@ class TunerScreen(BaseScreen):
 
     def update_theme_colors(self):
         self.update_screen_background()
+        self.tuner_gauge._build_tick_textures()
+        self.tuner_gauge.update_gauge()
         theme_id = settings_manager.theme
         text_p = TunerColors.get_text_primary(theme_id)
         text_s = TunerColors.get_text_secondary(theme_id)
 
         if hasattr(self, 'main_tuner_card'):
-            self.main_tuner_card.md_bg_color = TunerColors.get_card_bg(theme_id)
-            self.main_tuner_card.line_color = TunerColors.get_card_line(theme_id)
-            self.main_tuner_card.line_width = TunerColors.get_card_line_width(theme_id)
+            self.main_tuner_card.update_theme_colors()
 
         if hasattr(self, 'tuning_name_label'):
             self.tuning_name_label.text_color = text_s
 
         if hasattr(self, 'note_label'):
             is_tuned = abs(self.current_deviation) <= 3.0 and self.is_listening
-            self.note_label.text_color = [0.2, 0.95, 0.65, 1.0] if is_tuned else text_p
+            if is_tuned:
+                self.note_label.text_color = [0.06, 0.62, 0.34, 1.0] if theme_id == 'light' else [0.2, 0.95, 0.65, 1.0]
+            else:
+                self.note_label.text_color = text_p
             self.note_label.font_size = sp(88)
 
         if hasattr(self, 'freq_label'):
@@ -1350,8 +1384,7 @@ class TunerScreen(BaseScreen):
             spacing=dp(6),
         )
 
-        # Верхняя секция идентична по размерам MetronomeScreen:
-        # карточка dp(330) + отступ dp(10) + меню dp(60) + отступ dp(10) + подсказка dp(18) = dp(428)
+        # Верхняя секция: карточка dp(330) + отступ dp(10) + меню dp(74) + отступ dp(10) + подсказка dp(18) = dp(442)
         top_section = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
@@ -1359,19 +1392,8 @@ class TunerScreen(BaseScreen):
             spacing=dp(10),
         )
 
-        # 1. КАРТОЧКА ТЮНЕРА — фиксированная высота dp(330), как у метронома
-        self.main_tuner_card = MDCard(
-            orientation='vertical',
-            size_hint=(1, None),
-            height=dp(330),
-            radius=[dp(16)],
-            md_bg_color=TunerColors.get_card_bg(settings_manager.theme),
-            line_color=TunerColors.get_card_line(settings_manager.theme),
-            line_width=TunerColors.get_card_line_width(settings_manager.theme),
-            elevation=0,
-            padding=[dp(16), dp(14), dp(16), dp(14)],
-            spacing=dp(0),
-        )
+        # 1. КАРТОЧКА ТЮНЕРА — студийная металлическая консоль dp(330)
+        self.main_tuner_card = StudioTunerCard()
 
         self.tuning_name_label = MDLabel(
             text=get_text(TUNINGS[self.current_tuning]['name_key']),

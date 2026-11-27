@@ -355,3 +355,54 @@ class StudioTunerMenu(MDBoxLayout):
         self._bg_rect.texture = self._panel_light_tex if is_light else self._panel_dark_tex
         for btn in (self.play_item, self.reset_item, self.tune_item, self.instrument_item):
             btn.update_theme_colors()
+
+class StudioTunerCard(MDBoxLayout):
+    """Студийная металлическая карточка тюнера (высота dp(330)) с полупрозрачной нишей для зелёной темы."""
+
+    _card_dark_tex = None
+    _card_green_tex = None
+    _card_light_tex = None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = "vertical"
+        self.size_hint = (1, None)
+        self.height = dp(330)
+        self.padding = [dp(22), dp(14), dp(22), dp(14)]
+        self.spacing = dp(0)
+
+        if StudioTunerCard._card_dark_tex is None:
+            StudioTunerCard._card_dark_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.CARD_DARK_B64)), ext="png"
+            ).texture
+            StudioTunerCard._card_green_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.CARD_GREEN_B64)), ext="png"
+            ).texture
+            StudioTunerCard._card_light_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.CARD_LIGHT_B64)), ext="png"
+            ).texture
+
+        with self.canvas.before:
+            self._bg_color = Color(1, 1, 1, 1)
+            self._bg_rect = Rectangle(
+                texture=self._card_dark_tex,
+                pos=self.pos,
+                size=self.size,
+            )
+
+        self.bind(pos=self._update_bg, size=self._update_bg)
+        self.update_theme_colors()
+
+    def _update_bg(self, *args):
+        self._bg_rect.pos = self.pos
+        self._bg_rect.size = self.size
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        if theme_id == "light":
+            self._bg_rect.texture = self._card_light_tex
+        elif theme_id == "green":
+            self._bg_rect.texture = self._card_green_tex
+        else:
+            self._bg_rect.texture = self._card_dark_tex
+
