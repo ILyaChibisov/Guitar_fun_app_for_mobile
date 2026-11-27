@@ -357,9 +357,9 @@ def generate_tuner_card_png(theme="dark"):
         bay_fill = (182, 188, 194, 255)
         shadow_alpha = 120
     elif green_theme:
-        # Полупрозрачный изумрудный тон 1-в-1 как в BottomNav: (0.0, 0.05, 0.03, 0.26)
-        bay_fill = (0, 13, 8, 66)
-        shadow_alpha = 155
+        # Плотный графитовый экран как в TopNav тёмной темы, но на тон мягче для контраста
+        bay_fill = (25, 29, 32, 246)
+        shadow_alpha = 215
     else:
         bay_fill = (15, 17, 21, 255)
         shadow_alpha = 235
@@ -476,8 +476,9 @@ def generate_headstock_card_png(theme="dark"):
         bay_fill = (182, 188, 194, 255)
         shadow_alpha = 120
     elif green_theme:
-        bay_fill = (0, 13, 8, 66)
-        shadow_alpha = 155
+        # Плотный графитовый экран под гриф (чётко выделяет дерево, струны и металлические пэды)
+        bay_fill = (25, 29, 32, 246)
+        shadow_alpha = 215
     else:
         bay_fill = (15, 17, 21, 255)
         shadow_alpha = 235
