@@ -23,7 +23,9 @@ from kivy.uix.label import Label
 from kivy.animation import Animation
 from kivy.properties import NumericProperty, StringProperty, BooleanProperty, ListProperty
 from kivy.utils import platform
+import io
 from io import BytesIO
+import base64
 import math
 import threading
 import struct
@@ -33,7 +35,7 @@ import os
 import array
 import tempfile
 from kivy.core.audio import SoundLoader
-
+from data.tuner import tuner_assets
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -1374,22 +1376,25 @@ class TunerScreen(BaseScreen):
 
     def init_ui(self):
         main_layout = MDBoxLayout(orientation='vertical', spacing=0)
-        main_layout.add_widget(Widget(size_hint_y=None, height=layout_config.get_top_padding()))
+        top_padding = layout_config.get_top_padding()
+        main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
         nav_bottom = layout_config.get_bottom_nav_total_height()
+        padding_bottom = nav_bottom + dp(6)
+
         content_container = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
-            padding=[dp(16), dp(4), dp(16), nav_bottom],
-            spacing=dp(6),
+            padding=[dp(16), dp(8), dp(16), padding_bottom],
+            spacing=dp(4),
         )
 
-        # Верхняя секция: карточка dp(330) + отступ dp(10) + меню dp(74) + отступ dp(10) + подсказка dp(18) = dp(442)
+        # Верхняя секция: карточка dp(330) + меню dp(74) в упор (spacing=0) + подсказка dp(22) = dp(426)
         top_section = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(442),
-            spacing=dp(10),
+            height=dp(426),
+            spacing=0,
         )
 
         # 1. КАРТОЧКА ТЮНЕРА — студийная металлическая консоль dp(330)
@@ -1453,7 +1458,7 @@ class TunerScreen(BaseScreen):
         self.main_tuner_card.add_widget(labels_box)
         top_section.add_widget(self.main_tuner_card)
 
-        # 2. МЕНЮ ТЮНЕРА — рэковая панель dp(74) как у метронома (Play -> Reset -> Tune -> Instrument)
+        # 2. МЕНЮ ТЮНЕРА — в упор к верхней карточке (Play -> Reset -> Tune -> Instrument)
         self.menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(74))
         self.menu_stack = StudioTunerMenu(
             on_play=self.toggle_tuner,
@@ -1467,15 +1472,17 @@ class TunerScreen(BaseScreen):
         top_section.add_widget(self.menu_container)
 
         # 3. СТРОКА ПОДСКАЗОК СРАЗУ ПОД МЕНЮ
+        hint_box = MDBoxLayout(orientation='vertical', size_hint_y=None, height=dp(22), padding=[0, dp(4), 0, 0])
         self._hint_label = MDLabel(
             text="", font_size=sp(11), halign="center",
             size_hint_y=None, height=dp(18),
             theme_text_color="Custom", opacity=0
         )
-        top_section.add_widget(self._hint_label)
+        hint_box.add_widget(self._hint_label)
+        top_section.add_widget(hint_box)
         content_container.add_widget(top_section)
 
-        # 4. ГРИФ ГИТАРЫ — занимает всё оставшееся пространство снизу до bottom_nav
+        # 4. ГРИФ ГИТАРЫ — увеличен и поднят с аккуратным отступом от bottom_nav
         self.headstock_widget = HeadstockWidget(
             on_note_press=self.on_reference_note_pressed,
             theme_name=settings_manager.theme,

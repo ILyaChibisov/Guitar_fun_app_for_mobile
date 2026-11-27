@@ -1,3 +1,4 @@
+# tuner_utils/headstock_widget.py
 import base64
 import importlib
 import io
@@ -5,7 +6,8 @@ import math
 
 from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
-from kivy.graphics import Color, Line, RoundedRectangle
+from kivy.core.text import Label as CoreLabel
+from kivy.graphics import Color, Line, Rectangle
 from kivy.metrics import dp, sp
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
 from kivy.uix.behaviors import ButtonBehavior
@@ -13,9 +15,15 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.widget import Widget
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.label import MDLabel
 
 from data.grifs import bass_4, bass_5, guitar_6, ukulele_4
+
+try:
+    from data.tuner import menu_assets
+except ImportError:
+    from tuner_utils.menu_generator import save_tuner_menu_assets
+    save_tuner_menu_assets()
+    from data.tuner import menu_assets
 
 ASSETS_MAP = {
     "guitar_6": guitar_6,
@@ -26,44 +34,38 @@ ASSETS_MAP = {
 
 THEME_STYLES = {
     "green": {
-        "btn_bg": (0.0, 0.0, 0.0, 0.22),
-        "btn_border": (0.46, 0.70, 0.71, 0.55),
-        "btn_active_bg": (0.46, 0.70, 0.71, 0.85),
-        "btn_active_border": (0.65, 0.95, 0.85, 1.0),
-        "btn_text": (1.0, 1.0, 1.0, 0.95),
-        "btn_active_text": (1.0, 1.0, 1.0, 1.0),
-        "string_active": (0.2, 0.95, 0.65, 1.0),
+        "glow": (0.18, 0.88, 0.28, 1.0),
+        "string_active": (0.20, 0.95, 0.65, 1.0),
     },
     "dark": {
-        "btn_bg": (0.15, 0.15, 0.15, 0.90),
-        "btn_border": (1.0, 0.5, 0.0, 0.55),
-        "btn_active_bg": (1.0, 0.5, 0.0, 0.85),
-        "btn_active_border": (1.0, 0.75, 0.3, 1.0),
-        "btn_text": (1.0, 1.0, 1.0, 0.95),
-        "btn_active_text": (1.0, 1.0, 1.0, 1.0),
-        "string_active": (1.0, 0.55, 0.1, 1.0),
+        "glow": (1.0, 0.50, 0.0, 1.0),
+        "string_active": (1.0, 0.55, 0.10, 1.0),
     },
     "light": {
-        "btn_bg": (1.0, 1.0, 1.0, 0.95),
-        "btn_border": (0.1, 0.55, 0.3, 0.55),
-        "btn_active_bg": (0.1, 0.55, 0.3, 0.88),
-        "btn_active_border": (0.08, 0.45, 0.24, 1.0),
-        "btn_text": (0.1, 0.1, 0.1, 1.0),
-        "btn_active_text": (1.0, 1.0, 1.0, 1.0),
-        "string_active": (0.1, 0.65, 0.35, 1.0),
+        "glow": (0.08, 0.58, 0.30, 1.0),
+        "string_active": (0.10, 0.65, 0.35, 1.0),
     },
 }
 
 
-class PegNoteButton(ButtonBehavior, MDBoxLayout):
-    """Кнопка ноты сбоку от колка с воспроизведением эталонного звука."""
+class PegNoteButton(ButtonBehavior, Widget):
+    """Студийный триггер-пэд ноты сбоку от колка с неоновым световодом и звуком струны."""
 
     note_name = StringProperty("")
     display_name = StringProperty("")
     frequency = NumericProperty(0.0)
     string_index = NumericProperty(0)
     is_active = BooleanProperty(False)
+    is_pressed = BooleanProperty(False)
     is_playing = BooleanProperty(False)
+
+    _textures_loaded = False
+    _well_dark = None
+    _up_dark = None
+    _down_dark = None
+    _well_light = None
+    _up_light = None
+    _down_light = None
 
     def __init__(self, note_name, display_name, frequency, string_index, tuning_id="standard_6", theme_name="green", **kwargs):
         super().__init__(**kwargs)
@@ -75,21 +77,28 @@ class PegNoteButton(ButtonBehavior, MDBoxLayout):
         self.theme_name = theme_name
         self._sound = None
 
-        self.orientation = "vertical"
         self.size_hint = (None, None)
-        self.size = (dp(48), dp(42))
-        self.padding = [dp(4), dp(2)]
+        self.size = (dp(54), dp(46))
 
-        self.label = MDLabel(
-            text=display_name,
-            halign="center",
-            valign="middle",
-            font_size=sp(16),
-            bold=True,
+        if not PegNoteButton._textures_loaded:
+            def _load_b64(b64_str):
+                return CoreImage(io.BytesIO(base64.b64decode(b64_str)), ext="png").texture
+
+            PegNoteButton._well_dark = _load_b64(menu_assets.WELL_DARK_B64)
+            PegNoteButton._up_dark = _load_b64(menu_assets.KEY_UP_DARK_B64)
+            PegNoteButton._down_dark = _load_b64(menu_assets.KEY_DOWN_DARK_B64)
+
+            PegNoteButton._well_light = _load_b64(menu_assets.WELL_LIGHT_B64)
+            PegNoteButton._up_light = _load_b64(menu_assets.KEY_UP_LIGHT_B64)
+            PegNoteButton._down_light = _load_b64(menu_assets.KEY_DOWN_LIGHT_B64)
+            PegNoteButton._textures_loaded = True
+
+        self.bind(
+            pos=self._redraw,
+            size=self._redraw,
+            is_active=self._redraw,
+            is_pressed=self._redraw,
         )
-        self.add_widget(self.label)
-
-        self.bind(pos=self._redraw, size=self._redraw, is_active=self._redraw)
         self._redraw()
         Clock.schedule_once(self._load_sound, 0.05)
 
@@ -121,26 +130,84 @@ class PegNoteButton(ButtonBehavior, MDBoxLayout):
         except Exception:
             self.is_playing = False
 
+    def on_press(self):
+        Clock.unschedule(self._reset_press_state)
+        self.is_pressed = True
+
+    def on_release(self):
+        Clock.schedule_once(self._reset_press_state, 0.14)
+        super().on_release()
+
+    def _reset_press_state(self, dt):
+        self.is_pressed = False
+
     def set_theme(self, theme_name):
         self.theme_name = theme_name
         self._redraw()
 
     def _redraw(self, *args):
-        style = THEME_STYLES.get(self.theme_name, THEME_STYLES["green"])
-        bg = style["btn_active_bg"] if self.is_active else style["btn_bg"]
-        border = style["btn_active_border"] if self.is_active else style["btn_border"]
-        self.label.theme_text_color = "Custom"
-        self.label.text_color = style["btn_active_text"] if self.is_active else style["btn_text"]
+        self.canvas.clear()
+        if self.width <= 4 or self.height <= 4:
+            return
 
-        self.canvas.before.clear()
-        with self.canvas.before:
-            Color(*bg)
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(11)] * 4)
-            Color(*border)
-            Line(
-                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(11)),
-                width=dp(1.5) if self.is_active else dp(1.2),
-            )
+        is_light = self.theme_name == "light"
+        pressed = self.is_pressed
+        lit = pressed or self.is_active
+        meta = menu_assets.DOWN_META if pressed else menu_assets.UP_META
+
+        style = THEME_STYLES.get(self.theme_name, THEME_STYLES["green"])
+        r, g, b, _ = style["glow"]
+
+        well_tex = self._well_light if is_light else self._well_dark
+        key_tex = (self._down_light if pressed else self._up_light) if is_light else (self._down_dark if pressed else self._up_dark)
+
+        bx, by = round(self.x), round(self.y)
+        btn_w, btn_h = round(self.width), round(self.height)
+
+        with self.canvas:
+            # 1. Шахта пэда
+            Color(1, 1, 1, 1)
+            Rectangle(texture=well_tex, pos=(bx, by), size=(btn_w, btn_h))
+
+            # 2. Клавиша пэда
+            Rectangle(texture=key_tex, pos=(bx, by), size=(btn_w, btn_h))
+
+            # 3. Неоновый световод по периметру
+            rx_n, ry_n, rw_n, rh_n = meta["rim_box_norm"]
+            rim_x = bx + rx_n * btn_w
+            rim_y = by + ry_n * btn_h
+            rim_w = rw_n * btn_w
+            rim_h = rh_n * btn_h
+            rim_r = meta["rim_radius_norm"] * btn_h
+
+            if lit:
+                Color(r, g, b, 0.32)
+                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(2.5))
+                Color(min(1.0, r + 0.2), min(1.0, g + 0.2), min(1.0, b + 0.2), 0.96)
+                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(1.25))
+            else:
+                Color(r, g, b, 0.24 if is_light else 0.18)
+                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(1.0))
+
+            # 4. Контрастная буква ноты по центру клавиши
+            font_px = max(sp(13), min(sp(17), btn_h * 0.44))
+            if lit:
+                txt_col = (min(1.0, r + 0.25), min(1.0, g + 0.25), min(1.0, b + 0.25), 1.0)
+            else:
+                txt_col = (0.18, 0.22, 0.20, 0.92) if is_light else (0.90, 0.93, 0.95, 0.90)
+
+            lbl = CoreLabel(text=self.display_name, font_size=font_px, bold=True, color=txt_col)
+            lbl.refresh()
+            tex = lbl.texture
+            if tex:
+                tcx = bx + btn_w * 0.5
+                tcy = by + meta["center_y_norm"] * btn_h
+                Color(1, 1, 1, 1)
+                Rectangle(
+                    texture=tex,
+                    pos=(round(tcx - tex.width * 0.5), round(tcy - tex.height * 0.5)),
+                    size=tex.size,
+                )
 
 
 class StringsOverlay(Widget):
@@ -203,7 +270,7 @@ class StringsOverlay(Widget):
                 peg_y = iy + py_norm * ih
                 nut_x = ix + nx_norm * iw
                 nut_y = iy + ny_norm * ih
-                bottom_y = iy + dp(2)
+                bottom_y = iy + dp(1)
 
                 ratio = s_idx / max(1, total_strings - 1)
                 thickness = dp(2.1 - 1.0 * ratio)
@@ -232,7 +299,11 @@ class StringsOverlay(Widget):
 
 
 class HeadstockWidget(FloatLayout):
-    """Виджет головы грифа с кнопками нот по бокам и анимацией струн."""
+    """Студийная рэковая карточка головы грифа с кнопками-пэдами по бокам и анимацией струн."""
+
+    _bg_dark_tex = None
+    _bg_green_tex = None
+    _bg_light_tex = None
 
     def __init__(self, on_note_press=None, theme_name="green", **kwargs):
         super().__init__(**kwargs)
@@ -242,13 +313,30 @@ class HeadstockWidget(FloatLayout):
         self.note_buttons = {}
         self._textures_cache = {}
 
+        if HeadstockWidget._bg_dark_tex is None:
+            HeadstockWidget._bg_dark_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.HEADSTOCK_DARK_B64)), ext="png"
+            ).texture
+            HeadstockWidget._bg_green_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.HEADSTOCK_GREEN_B64)), ext="png"
+            ).texture
+            HeadstockWidget._bg_light_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.HEADSTOCK_LIGHT_B64)), ext="png"
+            ).texture
+
+        with self.canvas.before:
+            self._bg_color = Color(1, 1, 1, 1)
+            self._bg_rect = Rectangle(
+                texture=self._bg_dark_tex,
+                pos=self.pos,
+                size=self.size,
+            )
+
         self.head_image = Image(
             allow_stretch=True,
             keep_ratio=True,
-            size_hint=(0.76, 0.94),
-            pos_hint={"center_x": 0.5, "y": 0.02},
+            size_hint=(None, None),
         )
-
         self.add_widget(self.head_image)
 
         self.strings_overlay = StringsOverlay(size_hint=(1, 1), pos_hint={"x": 0, "y": 0})
@@ -257,22 +345,30 @@ class HeadstockWidget(FloatLayout):
         self.left_col = MDBoxLayout(
             orientation="vertical",
             size_hint=(None, None),
-            width=dp(50),
-            spacing=dp(12),
+            width=dp(56),
+            spacing=dp(10),
         )
         self.add_widget(self.left_col)
 
         self.right_col = MDBoxLayout(
             orientation="vertical",
             size_hint=(None, None),
-            width=dp(50),
-            spacing=dp(12),
+            width=dp(56),
+            spacing=dp(10),
         )
         self.add_widget(self.right_col)
 
-        # Жесткая привязка перерисовки струн и кнопок к реальным координатам картинки
+        self._update_bg_texture()
         self.bind(pos=self._sync_layout, size=self._sync_layout)
         self.head_image.bind(pos=self._sync_layout, size=self._sync_layout, texture=self._sync_layout)
+
+    def _update_bg_texture(self):
+        if self.theme_name == "light":
+            self._bg_rect.texture = self._bg_light_tex
+        elif self.theme_name == "green":
+            self._bg_rect.texture = self._bg_green_tex
+        else:
+            self._bg_rect.texture = self._bg_dark_tex
 
     def _get_texture(self, asset_key):
         if asset_key not in self._textures_cache:
@@ -284,6 +380,7 @@ class HeadstockWidget(FloatLayout):
 
     def set_theme(self, theme_name):
         self.theme_name = theme_name
+        self._update_bg_texture()
         for btn in self.note_buttons.values():
             btn.set_theme(theme_name)
         self._sync_layout()
@@ -291,7 +388,6 @@ class HeadstockWidget(FloatLayout):
     def set_tuning(self, full_notes, display_names, freqs, tuning_id="standard_6", asset_key="guitar_6"):
         if asset_key not in ASSETS_MAP:
             asset_key = "guitar_6"
-
         self.current_asset_key = asset_key
         module = ASSETS_MAP[asset_key]
 
@@ -321,10 +417,7 @@ class HeadstockWidget(FloatLayout):
         self.right_col.opacity = 1.0 if has_right else 0.0
         self.right_col.disabled = not has_right
 
-        # Обновляем pos_hint ДО смены текстуры, чтобы Kivy сразу пересчитал геометрию
-        self.head_image.pos_hint = {"center_x": 0.50 if has_right else 0.55, "y": 0.02}
         self.head_image.texture = self._get_texture(asset_key)
-
         self._sync_layout()
         Clock.schedule_once(self._sync_layout, 0)
         Clock.schedule_once(self._sync_layout, 0.05)
@@ -360,6 +453,7 @@ class HeadstockWidget(FloatLayout):
             btn.is_active = active
             if active:
                 target_idx = idx
+
         self.strings_overlay.active_string = target_idx
         if pluck and target_idx >= 0:
             self.strings_overlay.pluck_string(target_idx, amplitude=dp(2.5))
@@ -367,28 +461,43 @@ class HeadstockWidget(FloatLayout):
             self.strings_overlay.redraw()
 
     def _sync_layout(self, *args):
+        self._bg_rect.pos = self.pos
+        self._bg_rect.size = self.size
+
         module = ASSETS_MAP.get(self.current_asset_key)
         if not module or self.height <= dp(20):
             return
 
+        # Координаты внутренней утопленной ниши консоли (bay_x1=56/960, bay_y1=26/480)
+        bay_x = self.x + self.width * (56.0 / 960.0)
+        bay_w = self.width * (848.0 / 960.0)
+        bay_y = self.y + self.height * (26.0 / 480.0)
+        bay_h = self.height * (428.0 / 480.0)
+        bay_right = bay_x + bay_w
+        bay_top = bay_y + bay_h
+
         has_right = len(self.right_col.children) > 0
 
-        # Вычисляем точный прямоугольник отрисованной текстуры внутри self.head_image
+        # Размещаем голову грифа строго внутри утопленной ниши, упирая основание в её нижнюю кромку
+        target_h = max(dp(40), bay_h - dp(10))
+        target_w = bay_w * (0.64 if has_right else 0.72)
+        self.head_image.size = (target_w, target_h)
+        self.head_image.center_x = bay_x + bay_w * (0.50 if has_right else 0.56)
+        self.head_image.y = bay_y + dp(1)
+
         norm_w, norm_h = self.head_image.norm_image_size
         img_x = self.head_image.center_x - norm_w * 0.5
-        img_y = self.head_image.center_y - norm_h * 0.5
+        img_y = self.head_image.y
         img_rect = (img_x, img_y, norm_w, norm_h)
-
         self.strings_overlay.configure(module.PEGS_DATA, img_rect, self.theme_name)
 
         pegs = module.PEGS_DATA
         if not pegs:
             return
 
-        # Жесткие границы внутри виджета, чтобы кнопки НИКОГДА не наползали на верхнее меню
-        top_limit = self.top - dp(10)
-        bottom_limit = self.y + dp(8)
-        avail_h = max(dp(110), top_limit - bottom_limit)
+        top_limit = bay_top - dp(8)
+        bottom_limit = bay_y + dp(8)
+        avail_h = max(dp(96), top_limit - bottom_limit)
 
         ys = [img_y + p["peg_pos"][1] * norm_h for p in pegs]
         min_y, max_y = min(ys), max(ys)
@@ -399,35 +508,36 @@ class HeadstockWidget(FloatLayout):
             if count == 0:
                 continue
 
-            # Подбираем высоту кнопки и интервал строго под доступную высоту
             if count >= 5:
                 btn_h = min(dp(34), (avail_h - dp(16)) / 5.0)
-                spacing = min(dp(7), max(dp(3), (avail_h - 5 * btn_h) / 4.0))
+                spacing = min(dp(6), max(dp(3), (avail_h - 5 * btn_h) / 4.0))
             elif count == 4:
                 btn_h = min(dp(38), (avail_h - dp(18)) / 4.0)
-                spacing = min(dp(10), max(dp(4), (avail_h - 4 * btn_h) / 3.0))
+                spacing = min(dp(8), max(dp(4), (avail_h - 4 * btn_h) / 3.0))
             else:
-                btn_h = dp(42)
+                btn_h = min(dp(44), (avail_h - dp(16)) / 3.0)
                 if count > 1:
                     raw_sp = (max_y - min_y) / (count - 1) - btn_h
                     max_sp = (avail_h - count * btn_h) / (count - 1)
-                    spacing = max(dp(8), min(raw_sp, max_sp))
+                    spacing = max(dp(6), min(raw_sp, max_sp))
                 else:
                     spacing = 0
 
+            btn_w = dp(56)
+            col.width = btn_w
+
             for btn in col.children:
-                btn.size = (dp(48), btn_h)
+                btn.size = (btn_w, btn_h)
 
             exact_h = count * btn_h + max(0, count - 1) * spacing
             col.spacing = spacing
             col.height = exact_h
 
-            # Центрируем по колкам, но зажимаем внутри [bottom_limit, top_limit]
             half_h = exact_h * 0.5
             clamped_cy = max(bottom_limit + half_h, min(top_limit - half_h, pegs_center_y))
             col.center_y = clamped_cy
 
             if side_mult == -1:
-                col.right = max(self.x + dp(52), img_x - dp(6))
+                col.x = bay_x + dp(10)
             else:
-                col.x = min(self.right - dp(52), img_x + norm_w + dp(6))
+                col.right = bay_right - dp(10)
