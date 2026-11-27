@@ -16,13 +16,12 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "data", "chords")
 
 
 def generate_chords_panel_png(theme="dark"):
-    """Генерирует рэковую металлическую панель 960x148 под кнопки меню аккордов."""
+    """Генерирует рэковую металлическую панель 960x148 под крупные кнопки аккордов (чёрная ниша для зелёной темы)."""
     W, H = 960, 148
     light_theme = theme == "light"
-    green_theme = theme == "green"
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
-    pad = 6
+    pad = 4
     x1, y1 = pad, pad
     x2, y2 = W - pad, H - pad
     radius = 28
@@ -34,10 +33,10 @@ def generate_chords_panel_png(theme="dark"):
         t = (y - y1) / max(1, (y2 - y1))
         if light_theme:
             v = int(226 - 30 * t)
-            col = (v, v + 2, v + 4, 248)
+            col = (v, v + 2, v + 4, 255)
         else:
             v = int(72 - 36 * t)
-            col = (v, v + 2, v + 4, 248)
+            col = (v, v + 2, v + 4, 255)
         p_draw.line([(x1, y), (x2, y)], fill=col)
 
     plate = _add_brushed_metal_grain(plate, x1, y1, x2, y2, strength=4)
@@ -62,9 +61,9 @@ def generate_chords_panel_png(theme="dark"):
     )
     canvas.paste(Image.alpha_composite(canvas, bevel), (0, 0), mask)
 
-    # 3. Утопленная ниша под пэды и селекторы
-    bay_x1, bay_y1 = x1 + 42, y1 + 12
-    bay_x2, bay_y2 = x2 - 42, y2 - 12
+    # 3. Широкая утопленная ниша под крупные пэды (тёмно-чёрный фон в dark и green темах)
+    bay_x1, bay_y1 = x1 + 36, y1 + 9
+    bay_x2, bay_y2 = x2 - 36, y2 - 9
     bay_r = 20
 
     draw = ImageDraw.Draw(canvas)
@@ -80,12 +79,10 @@ def generate_chords_panel_png(theme="dark"):
     if light_theme:
         bay_fill = (182, 188, 194, 255)
         shadow_alpha = 115
-    elif green_theme:
-        bay_fill = (0, 13, 8, 66)
-        shadow_alpha = 150
     else:
-        bay_fill = (15, 17, 21, 255)
-        shadow_alpha = 230
+        # И для dark, и для green темы — плотный чёрный фон между кнопками, как в тюнере
+        bay_fill = (13, 15, 18, 255)
+        shadow_alpha = 240
 
     b_draw.rounded_rectangle([bay_x1, bay_y1, bay_x2, bay_y2], radius=bay_r, fill=bay_fill)
     bay_sh = Image.new("RGBA", (W, H), (0, 0, 0, shadow_alpha))
@@ -99,12 +96,12 @@ def generate_chords_panel_png(theme="dark"):
     canvas.paste(bay, (0, 0), bay_mask)
 
     # 4. Четыре аппаратных винта по углам
-    screw_r = 9
+    screw_r = 8
     screws = [
-        (x1 + 21, y1 + 24),
-        (x2 - 21, y1 + 24),
-        (x1 + 21, y2 - 24),
-        (x2 - 21, y2 - 24),
+        (x1 + 18, y1 + 22),
+        (x2 - 18, y1 + 22),
+        (x1 + 18, y2 - 22),
+        (x2 - 18, y2 - 22),
     ]
     for sx, sy in screws:
         draw.ellipse(
@@ -122,6 +119,7 @@ def generate_chords_panel_png(theme="dark"):
         draw.line([(sx, sy - 4), (sx, sy + 4)], fill=slot_col, width=2)
 
     return canvas
+
 
 
 def generate_chord_icon_png(icon_name):
@@ -229,12 +227,122 @@ def generate_chord_icon_png(icon_name):
     return img.resize((OUT, OUT), Image.LANCZOS)
 
 
+def generate_chords_search_png(theme="dark"):
+    """Генерирует рэковую металлическую панель 960x104 для строки поиска аккордов."""
+    W, H = 960, 104
+    light_theme = theme == "light"
+    canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+
+    pad = 4
+    x1, y1 = pad, pad
+    x2, y2 = W - pad, H - pad
+    radius = 24
+
+    # 1. Металлическая плита
+    plate = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    p_draw = ImageDraw.Draw(plate)
+    for y in range(y1, y2 + 1):
+        t = (y - y1) / max(1, (y2 - y1))
+        if light_theme:
+            v = int(226 - 30 * t)
+            col = (v, v + 2, v + 4, 255)
+        else:
+            v = int(72 - 36 * t)
+            col = (v, v + 2, v + 4, 255)
+        p_draw.line([(x1, y), (x2, y)], fill=col)
+
+    plate = _add_brushed_metal_grain(plate, x1, y1, x2, y2, strength=4)
+    mask = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=255)
+    canvas.paste(plate, (0, 0), mask)
+
+    # 2. Фаска
+    bevel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    bv_draw = ImageDraw.Draw(bevel)
+    bv_draw.rounded_rectangle(
+        [x1, y1, x2, y2],
+        radius=radius,
+        outline=(255, 255, 255, 190 if light_theme else 85),
+        width=2,
+    )
+    bv_draw.rounded_rectangle(
+        [x1 + 2, y1 + 2, x2 - 2, y2 - 2],
+        radius=radius - 2,
+        outline=(0, 0, 0, 60 if light_theme else 170),
+        width=2,
+    )
+    canvas.paste(Image.alpha_composite(canvas, bevel), (0, 0), mask)
+
+    # 3. Утопленная ниша под поле ввода и кнопку поиска
+    bay_x1, bay_y1 = x1 + 34, y1 + 9
+    bay_x2, bay_y2 = x2 - 34, y2 - 9
+    bay_r = 16
+
+    draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle(
+        [bay_x1 - 2, bay_y1 - 1, bay_x2 + 2, bay_y2 + 3],
+        radius=bay_r + 2,
+        outline=(255, 255, 255, 160 if light_theme else 48),
+        width=2,
+    )
+
+    bay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    b_draw = ImageDraw.Draw(bay)
+    if light_theme:
+        bay_fill = (232, 236, 238, 255)
+        shadow_alpha = 95
+    else:
+        bay_fill = (13, 15, 18, 255)
+        shadow_alpha = 235
+
+    b_draw.rounded_rectangle([bay_x1, bay_y1, bay_x2, bay_y2], radius=bay_r, fill=bay_fill)
+    bay_sh = Image.new("RGBA", (W, H), (0, 0, 0, shadow_alpha))
+    ImageDraw.Draw(bay_sh).rounded_rectangle(
+        [bay_x1 + 3, bay_y1 + 5, bay_x2 - 2, bay_y2 + 4], radius=bay_r, fill=(0, 0, 0, 0)
+    )
+    bay.alpha_composite(bay_sh.filter(ImageFilter.GaussianBlur(radius=5)))
+
+    bay_mask = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(bay_mask).rounded_rectangle([bay_x1, bay_y1, bay_x2, bay_y2], radius=bay_r, fill=255)
+    canvas.paste(bay, (0, 0), bay_mask)
+
+    # 4. Четыре аппаратных винта по углам
+    screw_r = 7
+    screws = [
+        (x1 + 17, y1 + 19),
+        (x2 - 17, y1 + 19),
+        (x1 + 17, y2 - 19),
+        (x2 - 17, y2 - 19),
+    ]
+    for sx, sy in screws:
+        draw.ellipse(
+            [sx - screw_r - 2, sy - screw_r - 2, sx + screw_r + 2, sy + screw_r + 2],
+            fill=(110, 116, 122, 220) if light_theme else (8, 10, 12, 240),
+        )
+        draw.ellipse(
+            [sx - screw_r, sy - screw_r, sx + screw_r, sy + screw_r],
+            fill=(195, 202, 208, 255) if light_theme else (88, 94, 102, 255),
+            outline=(245, 248, 250, 200) if light_theme else (150, 158, 168, 160),
+            width=1,
+        )
+        slot_col = (85, 90, 96, 230) if light_theme else (22, 25, 28, 240)
+        draw.line([(sx - 3, sy), (sx + 3, sy)], fill=slot_col, width=2)
+        draw.line([(sx, sy - 3), (sx, sy + 3)], fill=slot_col, width=2)
+
+    return canvas
+
+
+
 def save_chords_menu_assets():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     panel_dark = generate_chords_panel_png(theme="dark")
     panel_green = generate_chords_panel_png(theme="green")
     panel_light = generate_chords_panel_png(theme="light")
+
+    search_dark = generate_chords_search_png(theme="dark")
+    search_green = generate_chords_search_png(theme="green")
+    search_light = generate_chords_search_png(theme="light")
 
     well_dark = generate_button_well_png(light_theme=False)
     up_dark, up_meta = generate_keycap_png(pressed=False, light_theme=False)
@@ -262,6 +370,9 @@ def save_chords_menu_assets():
         f.write(f"BUTTON_SIZE = {well_dark.size}\n")
         f.write(f"UP_META = {repr(up_meta)}\n")
         f.write(f"DOWN_META = {repr(down_meta)}\n\n")
+        f.write(f'SEARCH_DARK_B64 = "{to_b64(search_dark)}"\n')
+        f.write(f'SEARCH_GREEN_B64 = "{to_b64(search_green)}"\n')
+        f.write(f'SEARCH_LIGHT_B64 = "{to_b64(search_light)}"\n\n')
         f.write(f'PANEL_DARK_B64 = "{to_b64(panel_dark)}"\n')
         f.write(f'PANEL_GREEN_B64 = "{to_b64(panel_green)}"\n')
         f.write(f'PANEL_LIGHT_B64 = "{to_b64(panel_light)}"\n\n')

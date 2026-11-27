@@ -41,7 +41,7 @@ from kivy.uix.anchorlayout import AnchorLayout
 from kivy.graphics import Color, Rectangle, Line
 from kivy.uix.scatter import Scatter
 from kivy.logger import Logger
-from chord_utils.menu_widget import StudioChordsConsole, StudioChordsMenu
+from chord_utils.menu_widget import StudioChordsConsole, StudioChordsMenu, StudioSearchBar
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
@@ -2281,51 +2281,76 @@ class BaseChordsScreen(BaseScreen):
             self._data_loaded = True
 
     def init_ui(self):
-        with perf('chords.init_ui.build'):
-            padding = layout_config.get_content_padding()
-            content = MDBoxLayout(orientation='vertical', spacing=0, size_hint=(1, 1))
+        try:
+            self.clear_widgets()
+            main = MDBoxLayout(orientation='vertical', spacing=0)
 
-            content.add_widget(Widget(size_hint_y=None, height=dp(48)))
+            top_padding = layout_config.get_top_padding()
+            main.add_widget(Widget(size_hint_y=None, height=top_padding))
 
-            search_container = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(48),
-                padding=[padding[0], 0, padding[2], 0],
+            nav_bottom = layout_config.get_bottom_nav_total_height()
+            padding_bottom = max(0, nav_bottom - dp(10))
+
+            content = MDBoxLayout(
+                orientation='vertical',
+                size_hint=(1, 1),
+                padding=[0, dp(4), 0, padding_bottom],
+                spacing=dp(4),
             )
-            self.search_bar = SearchBar(on_search=self.do_search, on_clear=self.clear_search)
-            search_container.add_widget(self.search_bar)
-            content.add_widget(search_container)
 
-            content.add_widget(Widget(size_hint_y=None, height=dp(4)))
+            self.top_spacer = Widget(size_hint_y=None, height=dp(12))
+            content.add_widget(self.top_spacer)
+
+            # 1. ПОИСК АККОРДОВ (в едином рэковом стиле с консолью)
+            self.search_wrapper = MDBoxLayout(
+                orientation='vertical', size_hint=(1, None), height=dp(68),
+                padding=[dp(16), 0, dp(16), 0],
+            )
+            self.search_bar = StudioSearchBar(
+                on_search=self.do_search,
+                on_clear=self.clear_search,
+            )
+            self.search_bar.size_hint = (1, None)
+            self.search_bar.height = dp(54)
+            self.search_wrapper.add_widget(self.search_bar)
 
             self.search_status_label = MDLabel(
-                text="", font_size=sp(11), halign="center", valign="middle",
-                size_hint=(1, None), height=0, opacity=0, theme_text_color="Custom",
+                text="",
+                font_size=sp(12),
+                halign="center",
+                valign="middle",
+                size_hint=(1, None),
+                height=0,
+                opacity=0,
+                theme_text_color="Custom",
+                text_color=ChordsColors.get_hint_color(settings_manager.theme),
             )
-            self.search_status_label.text_size = (None, None)
-            content.add_widget(self.search_status_label)
+            self.search_status_label.bind(size=lambda inst, val: setattr(inst, 'text_size', val))
+            self.search_wrapper.add_widget(self.search_status_label)
+            content.add_widget(self.search_wrapper)
 
-            content.add_widget(Widget(size_hint_y=None, height=dp(24)))
+            content.add_widget(Widget(size_hint_y=1))
 
+            # 2. ГРИФ С НАЗВАНИЕМ АККОРДА И БОКОВЫМИ СТРЕЛКАМИ
             self.swipe_container = SwipeContainer(
                 on_swipe_horizontal=self._on_swipe_horizontal,
+                show_arrows=True,
+                show_name=True,
                 screen=self,
             )
-            self.swipe_container.size_hint = (1, None)
-            self.swipe_container.height = self._griff_height + dp(90)
             content.add_widget(self.swipe_container)
 
-            Window.bind(on_resize=self._on_window_resize)
+            content.add_widget(Widget(size_hint_y=0.35))
 
-            content.add_widget(Widget(size_hint_y=None, height=dp(18)))
-
-            menu_padding_side = dp(38)
+            # 3. ЕДИНОЕ МЕНЮ (оптимальный размер dp(74) и полная ширина как в тюнере)
+            menu_h = dp(74)
             menu_padding_side = dp(16)
             menu_wrapper = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(74),
+                orientation='vertical', size_hint=(1, None), height=menu_h,
                 padding=[menu_padding_side, 0, menu_padding_side, 0],
             )
 
-            self.menu_card = StudioChordsConsole()
+            self.menu_card = StudioChordsConsole(height=menu_h)
             self._menu_container = self.menu_card.inner_container
 
             self.unified_menu = StudioChordsMenu(
@@ -2348,29 +2373,43 @@ class BaseChordsScreen(BaseScreen):
             menu_wrapper.add_widget(self.menu_card)
             content.add_widget(menu_wrapper)
 
-            content.add_widget(Widget(size_hint_y=None, height=dp(2)))
-
-            self._info_label = MDLabel(
-                text="", font_size=sp(12), halign="center", size_hint_y=None,
-                height=dp(30), theme_text_color="Custom",
+            # 4. ОПИСАНИЕ / ПОДСКАЗКИ ПОД МЕНЮ
+            desc_box = MDBoxLayout(
+                orientation='vertical', size_hint=(1, None), height=dp(26),
+                padding=[dp(16), 0, dp(16), 0],
             )
-            self._info_label.text_size = (None, None)
-            self._info_label.bind(texture_size=self._update_desc_height)
-            content.add_widget(self._info_label)
+            self._info_label = MDLabel(
+                text="",
+                font_size=sp(14),
+                bold=False,
+                halign="center",
+                valign="middle",
+                size_hint=(1, None),
+                height=dp(22),
+                theme_text_color="Custom",
+                text_color=ChordsColors.get_hint_color(settings_manager.theme),
+            )
+            self._info_label.bind(
+                size=lambda inst, val: setattr(inst, 'text_size', (inst.width, None)),
+                texture_size=self._update_desc_height,
+            )
+
+            desc_box.add_widget(self._info_label)
+            content.add_widget(desc_box)
 
             content.add_widget(Widget(size_hint_y=1))
 
-            self.build_ui(
-                content_widget=content,
-                use_scroll=False,
-                custom_padding=[0, 0, 0, 0],
-            )
+            main.add_widget(content)
+            self.add_widget(main)
 
-            Clock.schedule_once(self._update_griff_size, 0.1)
-            Clock.schedule_once(self._update_griff_size, 0.3)
-            Clock.schedule_once(self._update_griff_size, 0.5)
-            Clock.schedule_once(lambda dt: self._update_display(), 0.2)
-            Clock.schedule_once(lambda dt: self.update_theme_colors(), 0.3)
+            self._update_griff_size()
+            Window.bind(size=self._on_window_resize)
+            self.update_theme_colors()
+
+        except Exception as e:
+            logger.error(f"Ошибка init_ui в BaseChordsScreen: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _set_search_status(self, status):
         if not self.search_status_label:
