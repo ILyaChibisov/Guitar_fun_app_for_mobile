@@ -698,3 +698,205 @@ class StudioSearchBar(FloatLayout):
 
     def focus(self):
         self.search_field.focus = True
+
+
+class GriffSideArrowButton(ButtonBehavior, Widget):
+    """Вертикальная клавиша пагинации, встроенная в боковую стойку рамы грифа."""
+
+    direction = StringProperty("left")  # "left" или "right"
+    is_active = BooleanProperty(True)
+    is_pressed = BooleanProperty(False)
+    accent_color = ListProperty([0.18, 0.88, 0.28, 1.0])
+
+    def __init__(self, direction="left", on_press=None, is_active=True, **kwargs):
+        super().__init__(**kwargs)
+        self.direction = direction
+        self.is_active = is_active
+        self._callback = on_press
+        self.size_hint = (None, None)
+
+        self.bind(
+            pos=self.update_canvas,
+            size=self.update_canvas,
+            direction=self.update_canvas,
+            is_active=self.update_canvas,
+            is_pressed=self.update_canvas,
+            accent_color=self.update_canvas,
+        )
+        self.update_theme_colors()
+
+    def update_theme_colors(self):
+        self.accent_color = ChordHardwareButton._get_theme_glow(settings_manager.theme)
+        self.update_canvas()
+
+    def on_press(self):
+        Clock.unschedule(self._reset_press)
+        self.is_pressed = True
+
+    def on_release(self):
+        Clock.schedule_once(self._reset_press, 0.14)
+        if self._callback and self.is_active:
+            self._callback()
+
+    def _reset_press(self, dt):
+        self.is_pressed = False
+
+    def update_canvas(self, *args):
+        self.canvas.clear()
+        if self.width <= 4 or self.height <= 4:
+            return
+
+        if not ChordHardwareButton._textures_loaded:
+            ChordHardwareButton()
+
+        btn_w = round(self.width)
+        btn_h = round(self.height)
+        bx = round(self.x)
+        by = round(self.y)
+
+        is_light = settings_manager.theme == "light"
+        pressed = self.is_pressed
+        meta = menu_assets.DOWN_META if pressed else menu_assets.UP_META
+
+        well_tex = ChordHardwareButton._well_light if is_light else ChordHardwareButton._well_dark
+        key_tex = (
+            (ChordHardwareButton._down_light if pressed else ChordHardwareButton._up_light)
+            if is_light
+            else (ChordHardwareButton._down_dark if pressed else ChordHardwareButton._up_dark)
+        )
+
+        c = list(self.accent_color)
+        r, g, b = float(c[0]), float(c[1]), float(c[2])
+
+        with self.canvas:
+            Color(1, 1, 1, 1)
+            Rectangle(texture=well_tex, pos=(bx, by), size=(btn_w, btn_h))
+            Rectangle(texture=key_tex, pos=(bx, by), size=(btn_w, btn_h))
+
+            # Неоновый контур клавиши пагинации
+            rx_n, ry_n, rw_n, rh_n = meta["rim_box_norm"]
+            rim_x = bx + rx_n * btn_w
+            rim_y = by + ry_n * btn_h
+            rim_w = rw_n * btn_w
+            rim_h = rh_n * btn_h
+            rim_r = min(dp(10), min(rim_w, rim_h) * 0.35)
+
+            if pressed:
+                Color(r, g, b, 0.34)
+                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(2.4))
+                Color(min(1.0, r + 0.2), min(1.0, g + 0.2), min(1.0, b + 0.2), 0.98)
+                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(1.25))
+            elif self.is_active:
+                Color(r, g, b, 0.32 if is_light else 0.26)
+                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(1.1))
+            else:
+                Color(0.5, 0.5, 0.5, 0.14)
+                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(0.9))
+
+            # Чёткая стрелка-шеврон по центру стойки
+            cx = bx + btn_w * 0.5
+            cy = by + meta["center_y_norm"] * btn_h
+            aw = min(dp(6), btn_w * 0.24)
+            ah = min(dp(11), btn_h * 0.12)
+
+            if self.direction == "left":
+                pts = [cx + aw, cy + ah, cx - aw, cy, cx + aw, cy - ah]
+            else:
+                pts = [cx - aw, cy + ah, cx + aw, cy, cx - aw, cy - ah]
+
+            # Тень под стрелкой
+            Color(1, 1, 1, 0.65) if is_light else Color(0, 0, 0, 0.60)
+            Line(points=[pts[0], pts[1] - dp(1), pts[2], pts[3] - dp(1), pts[4], pts[5] - dp(1)], width=dp(2.1), cap="round", joint="round")
+
+            # Основная линия стрелки
+            if pressed:
+                Color(min(1.0, r + 0.25), min(1.0, g + 0.25), min(1.0, b + 0.25), 1.0)
+            elif self.is_active:
+                Color(0.18, 0.24, 0.21, 0.92) if is_light else Color(0.88, 0.92, 0.94, 0.92)
+            else:
+                Color(0.35, 0.38, 0.40, 0.35) if is_light else Color(0.84, 0.87, 0.90, 0.28)
+
+            Line(points=pts, width=dp(2.1), cap="round", joint="round")
+
+
+class StudioGriffCard(FloatLayout):
+    """Студийная рэковая рамка для грифа с боковыми кнопками пагинации в стойках."""
+
+    _bg_dark_tex = None
+    _bg_green_tex = None
+    _bg_light_tex = None
+
+    def __init__(self, on_prev=None, on_next=None, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (1, None)
+
+        if StudioGriffCard._bg_dark_tex is None:
+            StudioGriffCard._bg_dark_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.GRIFF_DARK_B64)), ext="png"
+            ).texture
+            StudioGriffCard._bg_green_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.GRIFF_GREEN_B64)), ext="png"
+            ).texture
+            StudioGriffCard._bg_light_tex = CoreImage(
+                io.BytesIO(base64.b64decode(menu_assets.GRIFF_LIGHT_B64)), ext="png"
+            ).texture
+
+        with self.canvas.before:
+            self._bg_color = Color(1, 1, 1, 1)
+            self._bg_rect = Rectangle(
+                texture=self._bg_dark_tex,
+                pos=self.pos,
+                size=self.size,
+            )
+
+        self.left_arrow_btn = GriffSideArrowButton(direction="left", on_press=on_prev, is_active=True)
+        self.right_arrow_btn = GriffSideArrowButton(direction="right", on_press=on_next, is_active=True)
+        self.inner_container = FloatLayout(size_hint=(None, None))
+
+        self.add_widget(self.left_arrow_btn)
+        self.add_widget(self.right_arrow_btn)
+        self.add_widget(self.inner_container)
+
+        self.bind(pos=self._sync_layout, size=self._sync_layout)
+        self.update_theme_colors()
+
+    def _sync_layout(self, *args):
+        self._bg_rect.pos = self.pos
+        self._bg_rect.size = self.size
+
+        # Посадка боковых клавиш пагинации в стойки рамы (x1+10..x1+66 -> 14..70 на холсте 960)
+        slot_w = max(dp(18), self.width * (56.0 / 960.0))
+        slot_y = self.y + self.height * (56.0 / 540.0)
+        slot_h = max(dp(40), self.height * (428.0 / 540.0))
+
+        self.left_arrow_btn.pos = (self.x + self.width * (14.0 / 960.0), slot_y)
+        self.left_arrow_btn.size = (slot_w, slot_h)
+
+        self.right_arrow_btn.pos = (self.x + self.width * (890.0 / 960.0), slot_y)
+        self.right_arrow_btn.size = (slot_w, slot_h)
+
+        # Центральная ниша под гриф (bay_x1=80/960, bay_y1=18/540)
+        bay_x = self.x + self.width * (80.0 / 960.0)
+        bay_w = self.width * (800.0 / 960.0)
+        bay_y = self.y + self.height * (18.0 / 540.0)
+        bay_h = self.height * (504.0 / 540.0)
+
+        self.inner_container.pos = (bay_x, bay_y)
+        self.inner_container.size = (max(dp(40), bay_w), max(dp(40), bay_h))
+
+    def set_arrows_active(self, is_active):
+        self.left_arrow_btn.is_active = is_active
+        self.right_arrow_btn.is_active = is_active
+
+    def update_theme_colors(self):
+        theme_id = settings_manager.theme
+        if theme_id == "light":
+            self._bg_rect.texture = self._bg_light_tex
+        elif theme_id == "green":
+            self._bg_rect.texture = self._bg_green_tex
+        else:
+            self._bg_rect.texture = self._bg_dark_tex
+
+        self.left_arrow_btn.update_theme_colors()
+        self.right_arrow_btn.update_theme_colors()
+

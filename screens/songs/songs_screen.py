@@ -35,7 +35,7 @@ from state.artist_songs_state import artist_songs_state    # ✅ Прямой и
 from state.songs_state import songs_state
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
-
+from songs_alfa_utils.menu_widget import StudioSongsHeaderBlock
 from screens.components.loading_spinner import LoadingSpinner
 
 from utils.perf import perf, perf_registry
@@ -1273,10 +1273,13 @@ class SongsScreen(BaseScreen):
     def update_theme_colors(self):
         with perf('songs.update_theme_colors', log_every=False):
             self.update_screen_background()
-            if self.search_bar:
-                self.search_bar.update_theme_colors()
-            if self.songs_menu:
-                self.songs_menu.update_theme_colors()
+            if getattr(self, 'header_block', None):
+                self.header_block.update_theme_colors()
+            else:
+                if self.search_bar:
+                    self.search_bar.update_theme_colors()
+                if self.songs_menu:
+                    self.songs_menu.update_theme_colors()
             if self._pagination_bar:
                 self._pagination_bar.update_theme_colors()
             if self._search_pagination_bar:
@@ -1307,31 +1310,24 @@ class SongsScreen(BaseScreen):
 
             padding = layout_config.get_content_padding()
 
-            # === АЛФАВИТ ===
-            menu_container = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(48),
-                md_bg_color=[0, 0, 0, 0],
-                padding=[padding[0], 0, padding[2], dp(8)]
+            # === ОБЪЕДИНЁННЫЙ СТУДИЙНЫЙ БЛОК: АЛФАВИТ + ПОИСК ===
+            header_container = MDBoxLayout(
+                orientation='vertical', size_hint=(1, None), height=dp(106),
+                padding=[padding[0], 0, padding[2], dp(2)],
             )
-            self.songs_menu = SongsMenu(
-                on_language_toggle=self._toggle_language,
+            self.header_block = StudioSongsHeaderBlock(
                 on_letter_press=self.on_letter_press,
-                current_language=self.current_language
+                on_search=self.do_search,
+                on_clear=self.clear_search,
+                current_language=self.current_language,
+                rus_tex=_shared_rus_flag_texture,
+                eng_tex=_shared_eng_flag_texture,
             )
-            self.songs_menu.height = dp(40)
-            menu_container.add_widget(self.songs_menu)
-            main_layout.add_widget(menu_container)
-
-            # === ПОИСК ===
-            search_container = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(48),
-                padding=[padding[0], 0, padding[2], 0]
-            )
-            self.search_bar = SearchBar(on_search=self.do_search, on_clear=self.clear_search)
-            search_container.add_widget(self.search_bar)
-            main_layout.add_widget(search_container)
-
-            main_layout.add_widget(Widget(size_hint_y=None, height=dp(4)))
+            # Сохраняем совместимость со всеми вызовами self.songs_menu и self.search_bar
+            self.songs_menu = self.header_block
+            self.search_bar = self.header_block
+            header_container.add_widget(self.header_block)
+            main_layout.add_widget(header_container)
 
             # === RESULT LABEL ===
             self._result_label = MDLabel(
