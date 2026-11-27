@@ -658,8 +658,8 @@ class MetronomeMenu(MDBoxLayout):
 
 # ============ СВЕТОДИОДНЫЕ ИНДИКАТОРЫ ДОЛЕЙ ============
 class BeatLedIndicator(Widget):
-    """Объёмный LED-шарик доли такта с яркой обводкой, бликом и плавным затуханием."""
-    led_color = ListProperty([0.18, 0.88, 0.28, 1.0])
+    """Полуобъёмная стеклянная лампочка микшерного пульта в металлическом ободке."""
+    led_color = ListProperty([0.18, 0.92, 0.34, 1.0])
     is_active = BooleanProperty(False)
     is_accent_beat = BooleanProperty(False)
     glow_alpha = NumericProperty(0.0)
@@ -667,7 +667,7 @@ class BeatLedIndicator(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, None)
-        self.size = (dp(28), dp(28))
+        self.size = (dp(26), dp(26))
         self.bind(
             pos=self._redraw,
             size=self._redraw,
@@ -686,56 +686,80 @@ class BeatLedIndicator(Widget):
 
     def _redraw(self, *args):
         self.canvas.clear()
-        if self.opacity <= 0.01 or self.width <= 2:
+        if self.width <= 2 or self.height <= 2:
             return
 
         cx, cy = self.center
         r = min(self.width, self.height) * 0.5
         cr, cg, cb, _ = self.led_color
-        theme_id = settings_manager.theme
+        is_light = (settings_manager.theme == 'light')
         g = max(0.0, min(1.0, self.glow_alpha))
 
         with self.canvas:
-            # 1. Внешний неоновый ореол с плавным затуханием
+            # 1. Широкий внешний ореол свечения при срабатывании доли
             if g > 0.01:
-                Color(cr, cg, cb, 0.28 * g)
-                Line(circle=(cx, cy, r + dp(2.2)), width=dp(2.5))
+                Color(cr, cg, cb, 0.24 * g)
+                r_halo2 = r + dp(4.0)
+                Ellipse(pos=(cx - r_halo2, cy - r_halo2), size=(r_halo2 * 2, r_halo2 * 2))
 
-            # 2. Внешнее кольцо-подложка
-            if theme_id == 'light':
-                Color(0.88, 0.90, 0.89, 1.0)
+                Color(cr, cg, cb, 0.42 * g)
+                r_halo1 = r + dp(1.8)
+                Ellipse(pos=(cx - r_halo1, cy - r_halo1), size=(r_halo1 * 2, r_halo1 * 2))
+
+            # 2. Тёмная посадочная шахта цоколя
+            Color(0.02, 0.03, 0.04, 0.96) if not is_light else Color(0.45, 0.48, 0.47, 0.95)
+            Ellipse(pos=(cx - r, cy - r), size=(r * 2, r * 2))
+
+            # 3. Металлический ободок (цоколь лампочки) с фаской
+            bezel_r = r - dp(0.8)
+            Color(0.46, 0.50, 0.54, 1.0) if not is_light else Color(0.82, 0.85, 0.84, 1.0)
+            Line(circle=(cx, cy, bezel_r), width=dp(1.5))
+
+            Color(0.82, 0.86, 0.90, 0.55) if not is_light else Color(1.0, 1.0, 1.0, 0.85)
+            Line(circle=(cx, cy + dp(0.3), bezel_r - dp(0.5)), width=dp(0.8))
+
+            # 4. Тёмная подложка стеклянной линзы (чтобы потухшая лампочка выглядела как тёмное стекло)
+            lens_r = r - dp(2.4)
+            if is_light:
+                Color(0.24, 0.28, 0.27, 0.92)
             else:
-                Color(0.11, 0.13, 0.14, 0.95)
-            Line(circle=(cx, cy, r - dp(1)), width=dp(2.0))
+                Color(0.08, 0.10, 0.11, 0.96)
+            Ellipse(pos=(cx - lens_r, cy - lens_r), size=(lens_r * 2, lens_r * 2))
 
-            # 3. Заливка шарика: плавно гаснет от 1.0 до базового уровня ожидания
-            base_alpha = 0.34 if self.is_accent_beat else 0.16
-            fill_alpha = base_alpha + (1.0 - base_alpha) * g
+            # 5. Основной цвет купола лампочки (в ожидании — приглушённое цветное стекло, при ударе — полная яркость)
+            idle_fill = 0.26 if self.is_accent_beat else 0.18
+            fill_alpha = idle_fill + (1.0 - idle_fill) * g
             Color(cr, cg, cb, fill_alpha)
-            inner_r = r - dp(2.2)
-            Ellipse(pos=(cx - inner_r, cy - inner_r), size=(inner_r * 2, inner_r * 2))
+            Ellipse(pos=(cx - lens_r, cy - lens_r), size=(lens_r * 2, lens_r * 2))
 
-            # 4. Яркая цветная обводка по контуру шарика
-            base_border = 0.95 if self.is_accent_beat else 0.72
-            border_alpha = base_border + (1.0 - base_border) * g
+            # 6. Яркое внутреннее ядро линзы (создаёт 3D-объём полусферы)
+            core_r = lens_r * 0.68
+            core_alpha = (0.14 if self.is_accent_beat else 0.08) + 0.78 * g
             Color(
-                min(1.0, cr + 0.18),
-                min(1.0, cg + 0.18),
-                min(1.0, cb + 0.18),
-                border_alpha,
+                min(1.0, cr + 0.25),
+                min(1.0, cg + 0.25),
+                min(1.0, cb + 0.25),
+                min(0.95, core_alpha),
             )
-            Line(circle=(cx, cy, r - dp(1.2)), width=dp(1.6))
+            Ellipse(pos=(cx - core_r, cy - core_r * 0.9), size=(core_r * 2, core_r * 2))
 
-            # 5. Стеклянный световой блик сверху для объёма
-            hl_alpha = (0.25 if self.is_accent_beat else 0.0) + 0.55 * g
-            if hl_alpha > 0.02:
-                Color(1.0, 1.0, 1.0, min(0.65, hl_alpha))
-                hl_w = inner_r * 0.85
-                hl_h = inner_r * 0.42
-                Ellipse(
-                    pos=(cx - hl_w * 0.5, cy + inner_r * 0.22),
-                    size=(hl_w, hl_h),
-                )
+            # 7. Нижний рефлекс стеклянной полусферы (внутреннее отражение света)
+            ref_w = lens_r * 1.15
+            ref_h = lens_r * 0.45
+            Color(
+                min(1.0, cr + 0.35),
+                min(1.0, cg + 0.35),
+                min(1.0, cb + 0.35),
+                0.14 + 0.42 * g,
+            )
+            Ellipse(pos=(cx - ref_w * 0.5, cy - lens_r * 0.78), size=(ref_w, ref_h))
+
+            # 8. Верхний глянцевый блик стекла (всегда виден на линзе как на реальном светодиоде)
+            hl_w = lens_r * 0.86
+            hl_h = lens_r * 0.42
+            Color(1.0, 1.0, 1.0, 0.28 + 0.58 * g)
+            Ellipse(pos=(cx - hl_w * 0.5, cy + lens_r * 0.26), size=(hl_w, hl_h))
+
 
 
 
@@ -846,10 +870,11 @@ class MetronomeScreen(BaseScreen):
         if hasattr(self, '_hint_label'):
             self._hint_label.text_color = MetronomeColors.get_hint_color(theme_id)
 
-        if hasattr(self, 'indicator_card'):
-            self.indicator_card.md_bg_color = [0, 0, 0, 0]
-            self.indicator_card.line_color = [0, 0, 0, 0]
-            self.indicator_card.line_width = 1
+        if hasattr(self, '_led_strip_rect'):
+            is_light = (theme_id == 'light')
+            self._led_strip_rect.texture = (
+                self._led_strip_light_tex if is_light else self._led_strip_dark_tex
+            )
 
         if hasattr(self, 'pendulum'):
             self.pendulum.pendulum_color = (
@@ -896,10 +921,11 @@ class MetronomeScreen(BaseScreen):
             padding=[dp(16), dp(8), dp(16), padding_bottom]
         )
 
+        # Верхний блок: шкалы dp(330) + LED-планка dp(42) + меню dp(74) + подсказка dp(22) = dp(468)
         top_section = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(426),
+            height=dp(468),
             spacing=0,
         )
 
@@ -911,6 +937,7 @@ class MetronomeScreen(BaseScreen):
             io.BytesIO(base64.b64decode(fader_assets.PANEL_LIGHT_B64)), ext="png"
         ).texture
 
+        # 1. КАРТОЧКА СО ШКАЛАМИ
         self.unified_card = MDBoxLayout(
             orientation='vertical', size_hint=(1, None), height=dp(330),
             padding=[dp(22), dp(14), dp(22), dp(14)],
@@ -967,17 +994,68 @@ class MetronomeScreen(BaseScreen):
             sliders_layout.add_widget(w)
 
         self.unified_card.add_widget(sliders_layout)
+        top_section.add_widget(self.unified_card)
 
+        # 2. LED-ПАНЕЛЬ ИНДИКАТОРОВ ДОЛЕЙ (между шкалами и кнопками меню)
+        from data.metronome import button_assets
+        self._led_strip_dark_tex = CoreImage(
+            io.BytesIO(base64.b64decode(button_assets.LED_STRIP_DARK_B64)), ext="png"
+        ).texture
+        self._led_strip_light_tex = CoreImage(
+            io.BytesIO(base64.b64decode(button_assets.LED_STRIP_LIGHT_B64)), ext="png"
+        ).texture
+
+        indicator_container = MDBoxLayout(
+            orientation='vertical', size_hint=(1, None),
+            height=dp(42), padding=[0, dp(1), 0, dp(1)]
+        )
+        self.indicator_card = MDBoxLayout(
+            orientation='horizontal', size_hint=(1, 1),
+            padding=[dp(22), dp(5), dp(22), dp(5)],
+        )
+        with self.indicator_card.canvas.before:
+            Color(1, 1, 1, 1)
+            self._led_strip_rect = Rectangle(
+                texture=self._led_strip_dark_tex,
+                pos=self.indicator_card.pos,
+                size=self.indicator_card.size,
+            )
+        self.indicator_card.bind(
+            pos=lambda inst, val: setattr(self._led_strip_rect, 'pos', val),
+            size=lambda inst, val: setattr(self._led_strip_rect, 'size', val),
+        )
+
+        indicator_wrapper = AnchorLayout(
+            anchor_x='center', anchor_y='center', size_hint=(1, 1)
+        )
+        self.indicator_layout = MDBoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            height=dp(26),
+            spacing=dp(10),
+        )
+        self.beat_indicators = []
+        for i in range(12):
+            ind = BeatLedIndicator(opacity=1)
+            self.beat_indicators.append(ind)
+
+        indicator_wrapper.add_widget(self.indicator_layout)
+        self.indicator_card.add_widget(indicator_wrapper)
+        indicator_container.add_widget(self.indicator_card)
+        top_section.add_widget(indicator_container)
+
+        # 3. МЕНЮ КНОПОК УПРАВЛЕНИЯ
         self.metronome_menu = MetronomeMenu(
             on_play_press=self.toggle_metronome,
             on_reset_press=self._reset_to_defaults,
             on_accent_press=self.toggle_accent,
             on_tone_press=self.cycle_tone,
-            is_running=self.is_running, is_accent_enabled=self.is_accent_enabled)
-
-        top_section.add_widget(self.unified_card)
+            is_running=self.is_running,
+            is_accent_enabled=self.is_accent_enabled
+        )
         top_section.add_widget(self.metronome_menu)
 
+        # 4. СТРОКА ПОДСКАЗОК ПОД МЕНЮ
         hint_box = MDBoxLayout(
             orientation='vertical',
             size_hint_y=None,
@@ -991,40 +1069,10 @@ class MetronomeScreen(BaseScreen):
         )
         hint_box.add_widget(self._hint_label)
         top_section.add_widget(hint_box)
+
         content_container.add_widget(top_section)
 
-        indicator_container = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None),
-            height=dp(46), padding=[dp(4), dp(2), dp(4), dp(2)]
-        )
-        self.indicator_card = MDCard(
-            orientation='horizontal', size_hint=(1, 1),
-            padding=[dp(4), dp(2), dp(4), dp(2)],
-            radius=[dp(12)], elevation=0, opacity=0,
-            md_bg_color=[0, 0, 0, 0],
-            line_color=[0, 0, 0, 0],
-            line_width=1
-        )
-
-        indicator_wrapper = AnchorLayout(
-            anchor_x='center', anchor_y='center', size_hint=(1, 1)
-        )
-        self.indicator_layout = MDBoxLayout(
-            orientation='horizontal',
-            size_hint=(None, None),
-            height=dp(34),
-            spacing=dp(8),
-        )
-        self.beat_indicators = []
-        for i in range(12):
-            ind = BeatLedIndicator(opacity=0)
-            self.beat_indicators.append(ind)
-
-        indicator_wrapper.add_widget(self.indicator_layout)
-        self.indicator_card.add_widget(indicator_wrapper)
-        indicator_container.add_widget(self.indicator_card)
-        content_container.add_widget(indicator_container)
-
+        # 5. МАЯТНИК МЕТРОНОМА
         pendulum_container = FloatLayout(size_hint=(1, 1))
         pendulum_scale = 0.95 if platform == 'android' else 0.98
         self.pendulum = MetronomePendulumWidget(
@@ -1040,7 +1088,7 @@ class MetronomeScreen(BaseScreen):
 
         self._update_indicators(self.beats_per_measure)
         self._update_beat_indicators()
-        self._hide_indicators()
+        self._show_indicators()
         self._update_subdivision_label(self.DEFAULT_SUBDIVISION)
         self.update_theme_colors()
         self._update_display()
@@ -1087,52 +1135,45 @@ class MetronomeScreen(BaseScreen):
             self._hint_timer = None
 
     def _get_led_palette(self):
-        """Яркие цвета индикаторов под текущую тему: (акцент 1-й доли, обычные доли)."""
+        """Цвета лампочек микшера: главная доля — зелёная, остальные — жёлтые."""
         theme_id = settings_manager.theme
         if theme_id == 'light':
-            # На светлой теме: насыщенный изумрудный акцент + яркий лаймово-бирюзовый
-            return [0.06, 0.65, 0.32, 1.0], [0.12, 0.75, 0.45, 1.0]
-        elif theme_id == 'dark':
-            # На тёмной теме: ярко-оранжевый акцент + тёплый янтарно-золотой
-            return [1.0, 0.45, 0.0, 1.0], [1.0, 0.72, 0.15, 1.0]
-        # На зелёной теме: неоново-лаймовый акцент + яркий изумрудно-мятный
-        return [0.22, 0.96, 0.36, 1.0], [0.18, 0.85, 0.58, 1.0]
+            return [0.06, 0.72, 0.28, 1.0], [0.95, 0.68, 0.04, 1.0]
+        return [0.16, 0.96, 0.34, 1.0], [1.0, 0.78, 0.10, 1.0]
 
     def _update_indicators(self, count):
         count = max(2, min(12, count))
         from kivy.core.window import Window
-        available_width = Window.width - dp(48)
-        if available_width < dp(120):
-            available_width = dp(120)
+        # Внутренняя ниша планки (с учётом боковых полей dp(32) и стоек планки ~dp(44))
+        available_width = max(dp(120), Window.width - dp(84))
 
-        spacing = dp(8) if count <= 8 else dp(5)
+        spacing = dp(10) if count <= 6 else (dp(7) if count <= 9 else dp(4.5))
         self.indicator_layout.spacing = spacing
 
         total_spacing = (count - 1) * spacing
         calculated_size = (available_width - total_spacing) / count
 
         if count <= 6:
-            max_size, min_size = dp(30), dp(20)
+            max_size, min_size = dp(24), dp(18)
         elif count <= 8:
-            max_size, min_size = dp(26), dp(18)
+            max_size, min_size = dp(22), dp(16)
         elif count <= 10:
-            max_size, min_size = dp(22), dp(15)
+            max_size, min_size = dp(19), dp(14)
         else:
-            max_size, min_size = dp(19), dp(13)
+            max_size, min_size = dp(17), dp(12)
 
         final_size = max(min(calculated_size, max_size), min_size)
 
-        # Пересобираем только активное количество шариков — AnchorLayout центрирует их идеально
         self.indicator_layout.clear_widgets()
         for i in range(count):
             ind = self.beat_indicators[i]
             ind.size = (final_size, final_size)
-            ind.opacity = 1 if self.is_running else 0
+            ind.opacity = 1
             self.indicator_layout.add_widget(ind)
 
         self.indicator_layout.height = final_size
         self.indicator_layout.width = count * final_size + (count - 1) * spacing
-        self.indicator_card.opacity = 1 if self.is_running and count > 0 else 0
+        self.indicator_card.opacity = 1
         self._update_beat_indicators()
 
     def _update_beat_indicators(self):
@@ -1157,13 +1198,13 @@ class MetronomeScreen(BaseScreen):
             ind.is_active = False
 
     def _hide_indicators(self):
+        """В режиме ожидания лампочки остаются видимыми на планке, но гаснут."""
         Clock.unschedule(self._deactivate_leds)
         for ind in self.beat_indicators:
             Animation.cancel_all(ind, 'glow_alpha')
             ind.glow_alpha = 0.0
-            ind.opacity = 0
             ind.is_active = False
-        self.indicator_card.opacity = 0
+        self.indicator_card.opacity = 1
 
     def _show_indicators(self):
         self._update_indicators(self.beats_per_measure)

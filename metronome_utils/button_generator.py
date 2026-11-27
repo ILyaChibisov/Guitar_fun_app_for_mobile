@@ -405,12 +405,115 @@ def generate_icon_png(icon_name):
 
     return img.resize((OUT, OUT), Image.LANCZOS)
 
+def generate_led_strip_png(light_theme=False):
+    """Генерирует узкую рэковую планку 960x104 для светодиодных индикаторов долей микшера."""
+    W, H = 960, 104
+    canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+
+    pad = 8
+    x1, y1 = pad, pad
+    x2, y2 = W - pad, H - pad
+    radius = 24
+
+    # 1. Металлическая плита планки
+    plate = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    p_draw = ImageDraw.Draw(plate)
+    for y in range(y1, y2 + 1):
+        t = (y - y1) / max(1, (y2 - y1))
+        if light_theme:
+            v = int(228 - 32 * t)
+            col = (v, v + 2, v + 4, 248)
+        else:
+            v = int(74 - 38 * t)
+            col = (v, v + 2, v + 4, 248)
+        p_draw.line([(x1, y), (x2, y)], fill=col)
+
+    plate = _add_brushed_metal_grain(plate, x1, y1, x2, y2, strength=4)
+    mask = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=255)
+    canvas.paste(plate, (0, 0), mask)
+
+    # 2. Двойная фаска плиты
+    bevel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    bv_draw = ImageDraw.Draw(bevel)
+    bv_draw.rounded_rectangle(
+        [x1, y1, x2, y2],
+        radius=radius,
+        outline=(255, 255, 255, 190 if light_theme else 85),
+        width=2,
+    )
+    bv_draw.rounded_rectangle(
+        [x1 + 2, y1 + 2, x2 - 2, y2 - 2],
+        radius=radius - 2,
+        outline=(0, 0, 0, 60 if light_theme else 170),
+        width=2,
+    )
+    canvas.paste(Image.alpha_composite(canvas, bevel), (0, 0), mask)
+
+    # 3. Утопленная ниша под индикаторные лампочки
+    bay_x1, bay_y1 = x1 + 44, y1 + 12
+    bay_x2, bay_y2 = x2 - 44, y2 - 12
+    bay_r = 16
+
+    draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle(
+        [bay_x1 - 2, bay_y1 - 1, bay_x2 + 2, bay_y2 + 3],
+        radius=bay_r + 2,
+        outline=(255, 255, 255, 160 if light_theme else 48),
+        width=2,
+    )
+
+    bay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    b_draw = ImageDraw.Draw(bay)
+    bay_fill = (165, 172, 178, 255) if light_theme else (12, 14, 17, 255)
+    b_draw.rounded_rectangle([bay_x1, bay_y1, bay_x2, bay_y2], radius=bay_r, fill=bay_fill)
+
+    bay_sh = Image.new("RGBA", (W, H), (0, 0, 0, 125 if light_theme else 235))
+    ImageDraw.Draw(bay_sh).rounded_rectangle(
+        [bay_x1 + 3, bay_y1 + 5, bay_x2 - 2, bay_y2 + 4], radius=bay_r, fill=(0, 0, 0, 0)
+    )
+    bay.alpha_composite(bay_sh.filter(ImageFilter.GaussianBlur(radius=5)))
+
+    bay_mask = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(bay_mask).rounded_rectangle([bay_x1, bay_y1, bay_x2, bay_y2], radius=bay_r, fill=255)
+    canvas.paste(bay, (0, 0), bay_mask)
+
+    # 4. Четыре винта по углам планки
+    screw_r = 8
+    screws = [
+        (x1 + 22, y1 + 20),
+        (x2 - 22, y1 + 20),
+        (x1 + 22, y2 - 20),
+        (x2 - 22, y2 - 20),
+    ]
+    for sx, sy in screws:
+        draw.ellipse(
+            [sx - screw_r - 2, sy - screw_r - 2, sx + screw_r + 2, sy + screw_r + 2],
+            fill=(110, 116, 122, 220) if light_theme else (8, 10, 12, 240),
+        )
+        draw.ellipse(
+            [sx - screw_r, sy - screw_r, sx + screw_r, sy + screw_r],
+            fill=(195, 202, 208, 255) if light_theme else (88, 94, 102, 255),
+            outline=(245, 248, 250, 200) if light_theme else (150, 158, 168, 160),
+            width=1,
+        )
+        slot_col = (85, 90, 96, 230) if light_theme else (22, 25, 28, 240)
+        draw.line([(sx - 4, sy), (sx + 4, sy)], fill=slot_col, width=2)
+        draw.line([(sx, sy - 4), (sx, sy + 4)], fill=slot_col, width=2)
+
+    return canvas
+
+
 
 def save_button_assets():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     panel_dark = generate_panel_png(light_theme=False)
     panel_light = generate_panel_png(light_theme=True)
+
+    led_strip_dark = generate_led_strip_png(light_theme=False)
+    led_strip_light = generate_led_strip_png(light_theme=True)
+
 
     well_dark = generate_button_well_png(light_theme=False)
     up_dark, up_meta = generate_keycap_png(pressed=False, light_theme=False)
@@ -435,6 +538,9 @@ def save_button_assets():
         f.write(f"BUTTON_SIZE = {well_dark.size}\n")
         f.write(f"UP_META = {repr(up_meta)}\n")
         f.write(f"DOWN_META = {repr(down_meta)}\n\n")
+        f.write(f'LED_STRIP_DARK_B64 = "{to_b64(led_strip_dark)}"\n')
+        f.write(f'LED_STRIP_LIGHT_B64 = "{to_b64(led_strip_light)}"\n\n')
+
         f.write(f'PANEL_DARK_B64 = "{to_b64(panel_dark)}"\n')
         f.write(f'PANEL_LIGHT_B64 = "{to_b64(panel_light)}"\n\n')
         f.write(f'WELL_DARK_B64 = "{to_b64(well_dark)}"\n')
