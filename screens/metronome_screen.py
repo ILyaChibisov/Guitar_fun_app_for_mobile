@@ -889,16 +889,18 @@ class MetronomeScreen(BaseScreen):
         main_layout.add_widget(Widget(size_hint_y=None, height=top_padding))
 
         nav_bottom = layout_config.get_bottom_nav_total_height()
-        padding_bottom = max(0, nav_bottom - dp(10))
+        padding_bottom = max(0, nav_bottom - dp(2))
 
         content_container = MDBoxLayout(
             orientation='vertical', size_hint=(1, 1),
-            padding=[dp(16), dp(14), dp(16), padding_bottom]
+            padding=[dp(16), dp(8), dp(16), padding_bottom]
         )
 
         top_section = MDBoxLayout(
-            orientation='vertical', size_hint=(1, None),
-            height=dp(428), spacing=dp(10)
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(426),
+            spacing=0,
         )
 
         from data.metronome import fader_assets
@@ -976,10 +978,19 @@ class MetronomeScreen(BaseScreen):
         top_section.add_widget(self.unified_card)
         top_section.add_widget(self.metronome_menu)
 
-        self._hint_label = MDLabel(text="", font_size=sp(11), halign="center",
-                                   size_hint_y=None, height=dp(18),
-                                   theme_text_color="Custom", opacity=0)
-        top_section.add_widget(self._hint_label)
+        hint_box = MDBoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            height=dp(22),
+            padding=[0, dp(6), 0, 0],
+        )
+        self._hint_label = MDLabel(
+            text="", font_size=sp(11), halign="center",
+            size_hint_y=None, height=dp(18),
+            theme_text_color="Custom", opacity=0
+        )
+        hint_box.add_widget(self._hint_label)
+        top_section.add_widget(hint_box)
         content_container.add_widget(top_section)
 
         indicator_container = MDBoxLayout(
