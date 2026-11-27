@@ -46,6 +46,7 @@ from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from config.system_bars import get_navigation_bar_height
 from screens.base_screen import BaseScreen
+from tuner_utils.menu_widget import StudioTunerMenu
 from utils.notifications import notify
 from state.settings_state import settings_state as settings_manager
 from utils.localization import get_text
@@ -563,34 +564,6 @@ class ModernHorizontalTuner(Widget):
             Color(active_rgb[0] * 0.78, active_rgb[1] * 0.78, active_rgb[2] * 0.78, 1.0)
             Triangle(points=[ix, tip_y, ix + half_w, base_y, ix, base_y + dp(4)])
 
-
-# ============ РАЗДЕЛИТЕЛЬ ============
-
-class DashedDivider(Widget):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.size_hint = (None, 1)
-        self.width = dp(2)
-        self._line_color = TunerColors.get_divider_color(settings_manager.theme)
-        self.bind(pos=self._update_line, size=self._update_line)
-        with self.canvas:
-            self._color = Color(*self._line_color)
-            self._line = Line(points=[], width=dp(1.2))
-        self._update_line()
-
-    def _update_line(self, *args):
-        if self.height <= 0:
-            return
-        pad = dp(8)
-        cx = self.center_x
-        self._line.points = [cx, self.y + pad, cx, self.top - pad]
-
-    def update_theme_colors(self):
-        self._line_color = TunerColors.get_divider_color(settings_manager.theme)
-        self._color.rgba = self._line_color
-        self._update_line()
-
-
 # ============ КНОПКА НОТЫ ============
 
 class NoteButton(MDCard):
@@ -722,178 +695,6 @@ class NoteButton(MDCard):
             self.update_theme_colors()
 
 
-# ============ МЕНЮ ============
-
-class IconMenuItem(ButtonBehavior, MDBoxLayout):
-    def __init__(self, icon_name, on_press=None, is_active=True, icon_color=None, asset_name=None, **kwargs):
-        super().__init__(**kwargs)
-        self.icon_name = icon_name
-        self.on_press_callback = on_press
-        self.is_active = is_active
-        self.icon_color = icon_color if icon_color else [1, 1, 1, 0.7]
-        self.asset_name = asset_name
-        self._texture_cache = {}
-
-        self.orientation = 'vertical'
-        self.size_hint = (1, 1)
-        self.padding = [0, dp(4), 0, dp(4)]
-        self.spacing = dp(0)
-        self.md_bg_color = [0, 0, 0, 0]
-
-        self._build_visual()
-
-    def _get_asset_texture(self, asset_name):
-        if not asset_name:
-            return None
-        if asset_name in self._texture_cache:
-            return self._texture_cache[asset_name]
-        try:
-            img_bytes = load_asset_as_bytes(asset_name) if HAS_ASSETS else None
-            if not img_bytes:
-                from data.assets import Assets
-                img_bytes = Assets.get_image_data(asset_name)
-            if img_bytes:
-                tex = CoreImage(BytesIO(img_bytes), ext="png").texture
-                self._texture_cache[asset_name] = tex
-                return tex
-        except Exception as e:
-            logger.error(f"Ошибка загрузки ассета {asset_name}: {e}")
-        return None
-
-    def _build_visual(self):
-        self.clear_widgets()
-        texture = self._get_asset_texture(self.asset_name)
-
-        if texture is not None:
-            # Центрируем PNG-картинку по вертикали и горизонтали
-            anchor = AnchorLayout(anchor_x='center', anchor_y='center', size_hint=(1, 1))
-            self.img_widget = KivyImage(
-                texture=texture,
-                size_hint=(None, None),
-                size=(dp(30), dp(30)),
-                color=[1, 1, 1, 1],
-                allow_stretch=True,
-                keep_ratio=True
-            )
-            anchor.add_widget(self.img_widget)
-            self.add_widget(anchor)
-        else:
-            self.icon_btn = MDIconButton(
-                icon=self.icon_name, size_hint=(None, None), size=(dp(28), dp(28)),
-                pos_hint={'center_x': 0.5}, theme_icon_color="Custom",
-                icon_color=self.icon_color, md_bg_color=[0, 0, 0, 0],
-                ripple_scale=0, ripple_alpha=0
-            )
-            self.icon_btn.bind(on_release=self._on_press)
-            self.add_widget(self.icon_btn)
-
-    def _on_press(self, instance=None):
-        if self.on_press_callback and self.is_active:
-            self.on_press_callback()
-
-    def on_release(self):
-        self._on_press()
-
-    def set_icon(self, icon_name, asset_name=None):
-        self.icon_name = icon_name
-        self.asset_name = asset_name
-        self._build_visual()
-
-    def set_color(self, color):
-        self.icon_color = color
-        if hasattr(self, 'icon_btn') and self.icon_btn in self.children:
-            self.icon_btn.icon_color = color
-
-
-
-class UnifiedTunerMenu(MDCard):
-    def __init__(self, on_play=None, on_tune=None, on_reset=None, on_instrument=None, current_instrument='guitar',
-                 is_listening=False, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'horizontal'
-        self.size_hint = (1, None)
-        self.height = dp(60)
-        self.radius = [dp(16)]
-        self.elevation = 0
-        self.padding = [dp(2), dp(2), dp(2), dp(2)]
-        self.spacing = dp(0)
-
-        self.play_item = IconMenuItem(
-            "stop" if is_listening else "play",
-            on_press=on_play,
-            icon_color=[0.8, 0.3, 0.3, 1] if is_listening else [0.13, 0.59, 0.95, 1]
-        )
-        self.tune_item = IconMenuItem(
-            "tune",
-            on_press=on_tune,
-            icon_color=[0.61, 0.15, 0.69, 1]
-        )
-        self.instrument_item = IconMenuItem(
-            self._get_instrument_icon(current_instrument),
-            on_press=on_instrument,
-            icon_color=self._get_instrument_color(current_instrument),
-            asset_name=self._get_instrument_asset(current_instrument)
-        )
-        self.reset_item = IconMenuItem(
-            "refresh",
-            on_press=on_reset,
-            icon_color=[0.9, 0.4, 0.2, 1]
-        )
-
-        self.add_widget(self.play_item)
-        self.add_widget(self._create_divider())
-        self.add_widget(self.tune_item)
-        self.add_widget(self._create_divider())
-        self.add_widget(self.instrument_item)
-        self.add_widget(self._create_divider())
-        self.add_widget(self.reset_item)
-        self.update_theme_colors()
-
-    def _get_instrument_asset(self, instrument):
-        if instrument == 'guitar':
-            return ASSET_ACOUSTIC_GUITAR_PNG
-        elif instrument == 'bass':
-            return ASSET_BASS_GUITAR_PNG
-        else:
-            return ASSET_UKELELE_GUITAR_PNG
-
-    def update_instrument(self, instrument):
-        self.instrument_item.set_icon(
-            self._get_instrument_icon(instrument),
-            asset_name=self._get_instrument_asset(instrument)
-        )
-        self.instrument_item.set_color(self._get_instrument_color(instrument))
-
-    def _get_instrument_icon(self, instrument):
-        if instrument == 'guitar': return "guitar-acoustic"
-        elif instrument == 'bass': return "guitar-electric"
-        else: return "guitar-acoustic"
-
-    def _get_instrument_color(self, instrument):
-        if instrument == 'guitar': return [1.0, 0.7, 0.0, 1]
-        elif instrument == 'bass': return [0.0, 0.8, 0.6, 1]
-        else: return [0.6, 0.2, 0.8, 1]
-
-    def _create_divider(self):
-        return DashedDivider()
-
-    def update_theme_colors(self):
-        theme_id = settings_manager.theme
-        self.md_bg_color = TunerColors.get_card_bg(theme_id)
-        self.line_color = TunerColors.get_card_line(theme_id)
-        self.line_width = TunerColors.get_card_line_width(theme_id)
-
-        for child in self.children:
-            if isinstance(child, DashedDivider):
-                child.update_theme_colors()
-
-    def update_state(self, is_listening):
-        if is_listening:
-            self.play_item.set_icon("stop")
-            self.play_item.set_color([0.8, 0.3, 0.3, 1])
-        else:
-            self.play_item.set_icon("play")
-            self.play_item.set_color([0.13, 0.59, 0.95, 1])
 
 
 
@@ -1554,7 +1355,7 @@ class TunerScreen(BaseScreen):
         top_section = MDBoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(428),
+            height=dp(442),
             spacing=dp(10),
         )
 
@@ -1630,15 +1431,15 @@ class TunerScreen(BaseScreen):
         self.main_tuner_card.add_widget(labels_box)
         top_section.add_widget(self.main_tuner_card)
 
-        # 2. МЕНЮ ТЮНЕРА — высота dp(60), позиция один в один как у метронома
-        self.menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(60))
-        self.menu_stack = UnifiedTunerMenu(
+        # 2. МЕНЮ ТЮНЕРА — рэковая панель dp(74) как у метронома (Play -> Reset -> Tune -> Instrument)
+        self.menu_container = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(74))
+        self.menu_stack = StudioTunerMenu(
             on_play=self.toggle_tuner,
+            on_reset=self.reset_tuner,
             on_tune=self._cycle_tuning,
             on_instrument=self._on_instrument_selected,
-            on_reset=self.reset_tuner,
             current_instrument=self.current_instrument,
-            is_listening=self.is_listening
+            is_listening=self.is_listening,
         )
         self.menu_container.add_widget(self.menu_stack)
         top_section.add_widget(self.menu_container)
