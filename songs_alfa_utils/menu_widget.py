@@ -6,7 +6,7 @@ from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
 from kivy.core.text import Label as CoreLabel
-from kivy.graphics import Color, Line, Rectangle
+from kivy.graphics import Color, Line, Rectangle, RoundedRectangle
 from kivy.metrics import dp, sp
 from kivy.properties import BooleanProperty, ListProperty, StringProperty
 from kivy.uix.anchorlayout import AnchorLayout
@@ -65,6 +65,52 @@ class _HardwareTextures:
             return [1.0, 0.50, 0.0, 1.0]
         return [0.18, 0.88, 0.28, 1.0]
 
+def _draw_crisp_hardware_key(canvas, x, y, w, h, radius, is_light, pressed, r, g, b):
+    """Рисует идеально ровную аппаратную клавишу без искажений растянутых текстур."""
+    x, y, w, h = round(x), round(y), round(w), round(h)
+    rad = min(radius, min(w, h) * 0.38)
+
+    with canvas:
+        # 1. Тёмная посадочная шахта (колодец)
+        Color(0.02, 0.03, 0.04, 0.96) if not is_light else Color(0.56, 0.60, 0.58, 0.92)
+        RoundedRectangle(pos=(x, y), size=(w, h), radius=[rad])
+
+        # 2. Тело металлической клавиши (при нажатии слегка утапливается вниз)
+        kx = x + dp(1.5)
+        ky = y + (dp(1.0) if pressed else dp(2.0))
+        kw = w - dp(3.0)
+        kh = h - dp(3.0)
+        kr = max(dp(3), rad - dp(1.5))
+
+        if is_light:
+            base_v = 0.80 if pressed else 0.88
+            Color(base_v, base_v + 0.01, base_v, 1.0)
+        else:
+            base_v = 0.16 if pressed else 0.22
+            Color(base_v, base_v + 0.015, base_v + 0.025, 1.0)
+        RoundedRectangle(pos=(kx, ky), size=(kw, kh), radius=[kr])
+
+        # 3. Верхний металлический градиент / блик клавиши
+        if not pressed:
+            Color(1.0, 1.0, 1.0, 0.28 if is_light else 0.09)
+            RoundedRectangle(
+                pos=(kx + dp(1), ky + kh * 0.48),
+                size=(kw - dp(2), kh * 0.48),
+                radius=[kr, kr, dp(2), dp(2)],
+            )
+
+        # 4. Внутренняя фаска и неоновый световод строго по краю клавиши (100% совпадение углов)
+        if pressed:
+            Color(r, g, b, 0.34)
+            Line(rounded_rectangle=(kx, ky, kw, kh, kr), width=dp(2.2))
+            Color(min(1.0, r + 0.2), min(1.0, g + 0.2), min(1.0, b + 0.2), 0.98)
+            Line(rounded_rectangle=(kx, ky, kw, kh, kr), width=dp(1.2))
+        else:
+            Color(r, g, b, 0.38 if is_light else 0.32)
+            Line(rounded_rectangle=(kx, ky, kw, kh, kr), width=dp(1.1))
+
+    return kx, ky, kw, kh
+
 
 class AlfaArrowPad(ButtonBehavior, Widget):
     """Аппаратная клавиша прокрутки алфавита (< / >) по краям верхней ниши."""
@@ -78,7 +124,7 @@ class AlfaArrowPad(ButtonBehavior, Widget):
         self.direction = direction
         self._callback = on_release
         self.size_hint = (None, 1)
-        self.width = dp(34)
+        self.width = dp(36)
         _HardwareTextures.ensure()
 
         self.bind(
@@ -110,50 +156,21 @@ class AlfaArrowPad(ButtonBehavior, Widget):
         if self.width <= 4 or self.height <= 4:
             return
 
-        btn_w = round(self.width * 0.96)
-        btn_h = round(self.height * 0.92)
-        bx = round(self.center_x - btn_w * 0.5)
-        by = round(self.center_y - btn_h * 0.5)
-
         is_light = settings_manager.theme == "light"
         pressed = self.is_pressed
-        meta = menu_assets.DOWN_META if pressed else menu_assets.UP_META
-
-        well_tex = _HardwareTextures.well_light if is_light else _HardwareTextures.well_dark
-        key_tex = (
-            (_HardwareTextures.down_light if pressed else _HardwareTextures.up_light)
-            if is_light
-            else (_HardwareTextures.down_dark if pressed else _HardwareTextures.up_dark)
-        )
-
         c = list(self.accent_color)
         r, g, b = float(c[0]), float(c[1]), float(c[2])
 
+        kx, ky, kw, kh = _draw_crisp_hardware_key(
+            self.canvas, self.x, self.y, self.width, self.height,
+            radius=dp(8), is_light=is_light, pressed=pressed, r=r, g=g, b=b,
+        )
+
         with self.canvas:
-            Color(1, 1, 1, 1)
-            Rectangle(texture=well_tex, pos=(bx, by), size=(btn_w, btn_h))
-            Rectangle(texture=key_tex, pos=(bx, by), size=(btn_w, btn_h))
-
-            rx_n, ry_n, rw_n, rh_n = meta["rim_box_norm"]
-            rim_x = bx + rx_n * btn_w
-            rim_y = by + ry_n * btn_h
-            rim_w = rw_n * btn_w
-            rim_h = rh_n * btn_h
-            rim_r = min(dp(8), min(rim_w, rim_h) * 0.35)
-
-            if pressed:
-                Color(r, g, b, 0.34)
-                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(2.2))
-                Color(min(1.0, r + 0.2), min(1.0, g + 0.2), min(1.0, b + 0.2), 0.98)
-                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(1.2))
-            else:
-                Color(r, g, b, 0.28 if is_light else 0.22)
-                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(1.0))
-
-            cx = bx + btn_w * 0.5
-            cy = by + meta["center_y_norm"] * btn_h
-            aw = min(dp(5), btn_w * 0.22)
-            ah = min(dp(7), btn_h * 0.24)
+            cx = kx + kw * 0.5
+            cy = ky + kh * 0.5
+            aw = min(dp(4.2), kw * 0.22)
+            ah = min(dp(6.0), kh * 0.25)
             pts = (
                 [cx + aw, cy + ah, cx - aw, cy, cx + aw, cy - ah]
                 if self.direction == "left"
@@ -162,8 +179,8 @@ class AlfaArrowPad(ButtonBehavior, Widget):
             if pressed:
                 Color(min(1.0, r + 0.25), min(1.0, g + 0.25), min(1.0, b + 0.25), 1.0)
             else:
-                Color(0.20, 0.26, 0.23, 0.90) if is_light else Color(0.86, 0.90, 0.92, 0.88)
-            Line(points=pts, width=dp(1.9), cap="round", joint="round")
+                Color(0.18, 0.24, 0.21, 0.94) if is_light else Color(0.88, 0.92, 0.94, 0.92)
+            Line(points=pts, width=dp(1.8), cap="round", joint="round")
 
 
 class StudioLetterKey(ButtonBehavior, Widget):
@@ -333,8 +350,8 @@ class StudioAlphabetRow(MDBoxLayout):
 
         self.orientation = "horizontal"
         self.size_hint = (None, None)
-        self.spacing = dp(2)
-        self.padding = [dp(1), 0, dp(1), 0]
+        self.spacing = dp(4)
+        self.padding = [dp(3), dp(3), dp(3), dp(3)]
 
         self.left_arrow = AlfaArrowPad(direction="left", on_release=lambda: self.scroll(-1))
         self.right_arrow = AlfaArrowPad(direction="right", on_release=lambda: self.scroll(1))
@@ -444,7 +461,7 @@ class StudioFindButton(ButtonBehavior, Widget):
         self.text = text
         self._callback = on_release
         self.size_hint = (None, 1)
-        self.width = dp(92)
+        self.width = dp(98)
         _HardwareTextures.ensure()
 
         self.bind(
@@ -477,57 +494,28 @@ class StudioFindButton(ButtonBehavior, Widget):
         if self.width <= 4 or self.height <= 4:
             return
 
-        btn_w = round(self.width * 0.98)
-        btn_h = round(self.height * 0.94)
-        bx = round(self.center_x - btn_w * 0.5)
-        by = round(self.center_y - btn_h * 0.5)
-
         is_light = settings_manager.theme == "light"
         pressed = self.is_pressed
-        meta = menu_assets.DOWN_META if pressed else menu_assets.UP_META
-
-        well_tex = _HardwareTextures.well_light if is_light else _HardwareTextures.well_dark
-        key_tex = (
-            (_HardwareTextures.down_light if pressed else _HardwareTextures.up_light)
-            if is_light
-            else (_HardwareTextures.down_dark if pressed else _HardwareTextures.up_dark)
-        )
-
         c = list(self.accent_color)
         r, g, b = float(c[0]), float(c[1]), float(c[2])
 
+        kx, ky, kw, kh = _draw_crisp_hardware_key(
+            self.canvas, self.x, self.y, self.width, self.height,
+            radius=dp(9), is_light=is_light, pressed=pressed, r=r, g=g, b=b,
+        )
+
         with self.canvas:
-            Color(1, 1, 1, 1)
-            Rectangle(texture=well_tex, pos=(bx, by), size=(btn_w, btn_h))
-            Rectangle(texture=key_tex, pos=(bx, by), size=(btn_w, btn_h))
-
-            rx_n, ry_n, rw_n, rh_n = meta["rim_box_norm"]
-            rim_x = bx + rx_n * btn_w
-            rim_y = by + ry_n * btn_h
-            rim_w = rw_n * btn_w
-            rim_h = rh_n * btn_h
-            rim_r = meta["rim_radius_norm"] * min(btn_w, btn_h)
-
-            if pressed:
-                Color(r, g, b, 0.34)
-                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(2.4))
-                Color(min(1.0, r + 0.2), min(1.0, g + 0.2), min(1.0, b + 0.2), 0.98)
-                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(1.2))
-            else:
-                Color(r, g, b, 0.38 if is_light else 0.32)
-                Line(rounded_rectangle=(rim_x, rim_y, rim_w, rim_h, rim_r), width=dp(1.1))
-
             txt_col = (
-                (0.14, 0.22, 0.18, 0.96)
+                (0.12, 0.22, 0.16, 0.96)
                 if is_light
                 else (min(1.0, r + 0.28), min(1.0, g + 0.28), min(1.0, b + 0.28), 0.98)
             )
-            lbl = CoreLabel(text=self.text, font_size=sp(15), bold=True, color=txt_col)
+            lbl = CoreLabel(text=self.text, font_size=sp(14.5), bold=True, color=txt_col)
             lbl.refresh()
             tex = lbl.texture
             if tex:
-                tcx = bx + btn_w * 0.5
-                tcy = by + meta["center_y_norm"] * btn_h
+                tcx = kx + kw * 0.5
+                tcy = ky + kh * 0.5
                 Color(1, 1, 1, 1)
                 Rectangle(
                     texture=tex,
@@ -589,12 +577,14 @@ class StudioSongsHeaderBlock(FloatLayout):
         self.add_widget(self.alphabet_row)
 
         # Нижний ярус: поиск
+        # Нижний ярус: поиск (одинаковые отступы dp(3) сверху, снизу и справа вокруг кнопки «Найти»)
         self.search_box = MDBoxLayout(
             orientation="horizontal",
             size_hint=(None, None),
-            padding=[dp(10), 0, 0, 0],
+            padding=[dp(10), dp(3), dp(3), dp(3)],
             spacing=dp(4),
         )
+
         self.search_field = TextInput(
             multiline=False,
             size_hint=(1, 1),
@@ -653,22 +643,20 @@ class StudioSongsHeaderBlock(FloatLayout):
         self._bg_rect.pos = self.pos
         self._bg_rect.size = self.size
 
-        # Координаты ниш на холсте 960x216:
-        # Верхняя ниша (алфавит): y = 116..202 в Kivy (от низа) -> 116/216..202/216
-        # Нижняя ниша (поиск): y = 14..100 в Kivy -> 14/216..100/216
+        # Обе ниши строго одинаковы: x = 40..920 (ширина 880), высота = 80/216
         bay_x = self.x + self.width * (40.0 / 960.0)
-        bay_w = self.width * (888.0 / 960.0)
+        bay_w = self.width * (880.0 / 960.0)
+        bay_h = self.height * (80.0 / 216.0)
 
+        # Верхняя ниша (алфавит): y = 116..196 (отступ сверху 20/216)
         top_y = self.y + self.height * (116.0 / 216.0)
-        top_h = self.height * (86.0 / 216.0)
         self.alphabet_row.pos = (bay_x, top_y)
-        self.alphabet_row.size = (max(dp(40), bay_w), max(dp(20), top_h))
+        self.alphabet_row.size = (max(dp(40), bay_w), max(dp(20), bay_h))
 
-        bot_y = self.y + self.height * (14.0 / 216.0)
-        bot_h = self.height * (86.0 / 216.0)
+        # Нижняя ниша (поиск): y = 20..100 (отступ снизу 20/216)
+        bot_y = self.y + self.height * (20.0 / 216.0)
         self.search_box.pos = (bay_x, bot_y)
-        self.search_box.size = (max(dp(40), bay_w), max(dp(20), bot_h))
-
+        self.search_box.size = (max(dp(40), bay_w), max(dp(20), bay_h))
         self._center_text_vertically()
 
     # --- Совместимость с API songs_menu и search_bar ---

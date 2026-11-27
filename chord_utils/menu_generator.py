@@ -228,15 +228,15 @@ def generate_chord_icon_png(icon_name):
 
 
 def generate_chords_search_png(theme="dark"):
-    """Генерирует рэковую металлическую панель 960x104 для строки поиска аккордов."""
-    W, H = 960, 104
+    """Генерирует строго симметричную рэковую панель 960x112 для строки поиска аккордов."""
+    W, H = 960, 112
     light_theme = theme == "light"
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
     pad = 4
     x1, y1 = pad, pad
     x2, y2 = W - pad, H - pad
-    radius = 24
+    radius = 26
 
     # 1. Металлическая плита
     plate = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -244,10 +244,10 @@ def generate_chords_search_png(theme="dark"):
     for y in range(y1, y2 + 1):
         t = (y - y1) / max(1, (y2 - y1))
         if light_theme:
-            v = int(226 - 30 * t)
+            v = int(228 - 32 * t)
             col = (v, v + 2, v + 4, 255)
         else:
-            v = int(72 - 36 * t)
+            v = int(74 - 38 * t)
             col = (v, v + 2, v + 4, 255)
         p_draw.line([(x1, y), (x2, y)], fill=col)
 
@@ -256,7 +256,7 @@ def generate_chords_search_png(theme="dark"):
     ImageDraw.Draw(mask).rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=255)
     canvas.paste(plate, (0, 0), mask)
 
-    # 2. Фаска
+    # 2. Двойная фаска плиты
     bevel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     bv_draw = ImageDraw.Draw(bevel)
     bv_draw.rounded_rectangle(
@@ -273,9 +273,11 @@ def generate_chords_search_png(theme="dark"):
     )
     canvas.paste(Image.alpha_composite(canvas, bevel), (0, 0), mask)
 
-    # 3. Утопленная ниша под поле ввода и кнопку поиска
-    bay_x1, bay_y1 = x1 + 34, y1 + 9
-    bay_x2, bay_y2 = x2 - 34, y2 - 9
+    # 3. Симметричная утопленная ниша:
+    # Верхняя и нижняя перекладины: по 12px (4..16 и 96..108), ниша: 80px (16..96),
+    # Вертикальные стойки: по 36px (4..40 и 920..956), ширина ниши: 880px.
+    bay_x1, bay_y1 = 40, 16
+    bay_x2, bay_y2 = 920, 96
     bay_r = 16
 
     draw = ImageDraw.Draw(canvas)
@@ -290,7 +292,7 @@ def generate_chords_search_png(theme="dark"):
     b_draw = ImageDraw.Draw(bay)
     if light_theme:
         bay_fill = (232, 236, 238, 255)
-        shadow_alpha = 95
+        shadow_alpha = 105
     else:
         bay_fill = (13, 15, 18, 255)
         shadow_alpha = 235
@@ -306,13 +308,13 @@ def generate_chords_search_png(theme="dark"):
     ImageDraw.Draw(bay_mask).rounded_rectangle([bay_x1, bay_y1, bay_x2, bay_y2], radius=bay_r, fill=255)
     canvas.paste(bay, (0, 0), bay_mask)
 
-    # 4. Четыре аппаратных винта по углам
-    screw_r = 7
+    # 4. Четыре симметричных винта ровно по центру вертикальных стоек (x = 22 и x = 938)
+    screw_r = 8
     screws = [
-        (x1 + 17, y1 + 19),
-        (x2 - 17, y1 + 19),
-        (x1 + 17, y2 - 19),
-        (x2 - 17, y2 - 19),
+        (22, 24),
+        (938, 24),
+        (22, 88),
+        (938, 88),
     ]
     for sx, sy in screws:
         draw.ellipse(
@@ -326,10 +328,11 @@ def generate_chords_search_png(theme="dark"):
             width=1,
         )
         slot_col = (85, 90, 96, 230) if light_theme else (22, 25, 28, 240)
-        draw.line([(sx - 3, sy), (sx + 3, sy)], fill=slot_col, width=2)
-        draw.line([(sx, sy - 3), (sx, sy + 3)], fill=slot_col, width=2)
+        draw.line([(sx - 4, sy), (sx + 4, sy)], fill=slot_col, width=2)
+        draw.line([(sx, sy - 4), (sx, sy + 4)], fill=slot_col, width=2)
 
     return canvas
+
 
 
 def generate_chords_griff_card_png(theme="dark"):

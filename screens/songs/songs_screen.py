@@ -1312,9 +1312,10 @@ class SongsScreen(BaseScreen):
 
             # === ОБЪЕДИНЁННЫЙ СТУДИЙНЫЙ БЛОК: АЛФАВИТ + ПОИСК ===
             header_container = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(106),
+                orientation='vertical', size_hint=(1, None), height=dp(112),
                 padding=[padding[0], 0, padding[2], dp(2)],
             )
+
             self.header_block = StudioSongsHeaderBlock(
                 on_letter_press=self.on_letter_press,
                 on_search=self.do_search,

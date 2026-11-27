@@ -2301,9 +2301,9 @@ class BaseChordsScreen(BaseScreen):
             self.top_spacer = Widget(size_hint_y=None, height=dp(12))
             content.add_widget(self.top_spacer)
 
-            # 1. ПОИСК АККОРДОВ (в едином рэковом стиле с консолью)
+            # 1. ПОИСК АККОРДОВ (симметричная рэковая панель, как в экране песен)
             self.search_wrapper = MDBoxLayout(
-                orientation='vertical', size_hint=(1, None), height=dp(68),
+                orientation='vertical', size_hint=(1, None), height=dp(70),
                 padding=[dp(16), 0, dp(16), 0],
             )
             self.search_bar = StudioSearchBar(
@@ -2311,7 +2311,7 @@ class BaseChordsScreen(BaseScreen):
                 on_clear=self.clear_search,
             )
             self.search_bar.size_hint = (1, None)
-            self.search_bar.height = dp(54)
+            self.search_bar.height = dp(56)
             self.search_wrapper.add_widget(self.search_bar)
 
             self.search_status_label = MDLabel(

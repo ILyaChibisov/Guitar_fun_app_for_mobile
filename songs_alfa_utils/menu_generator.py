@@ -15,7 +15,7 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "data", "songs_alfa")
 
 
 def generate_songs_header_png(theme="dark"):
-    """Генерирует двухъярусную рэковую консоль 960x216: верхний отсек — алфавит, нижний — поиск."""
+    """Генерирует строго симметричную двухъярусную рэковую консоль 960x216."""
     W, H = 960, 216
     light_theme = theme == "light"
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -25,7 +25,7 @@ def generate_songs_header_png(theme="dark"):
     x2, y2 = W - pad, H - pad
     radius = 28
 
-    # 1. Внешняя шлифованная металлическая плита
+    # 1. Сплошная внешняя шлифованная металлическая плита
     plate = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     p_draw = ImageDraw.Draw(plate)
     for y in range(y1, y2 + 1):
@@ -62,11 +62,13 @@ def generate_songs_header_png(theme="dark"):
 
     draw = ImageDraw.Draw(canvas)
 
-    # 3. Две утопленные ниши, разделённые металлической перемычкой консоли
-    # Верхняя ниша (алфавит): y = 14..100, нижняя ниша (поиск): y = 114..202
+    # 3. Строго симметричные ниши и перекладины:
+    # Верхняя перекладина: 16px (4..20), верхняя ниша: 80px (20..100),
+    # Средняя перемычка: 16px (100..116), нижняя ниша: 80px (116..196),
+    # Нижняя перекладина: 16px (196..212). Вертикальные стойки: по 36px (4..40 и 920..956).
     bays = [
-        (x1 + 36, 14, x2 - 36, 100, (186, 192, 198, 255) if light_theme else (13, 15, 18, 255)),
-        (x1 + 36, 114, x2 - 36, 202, (232, 236, 238, 255) if light_theme else (13, 15, 18, 255)),
+        (40, 20, 920, 100, (186, 192, 198, 255) if light_theme else (13, 15, 18, 255)),
+        (40, 116, 920, 196, (232, 236, 238, 255) if light_theme else (13, 15, 18, 255)),
     ]
     bay_r = 16
 
@@ -93,17 +95,13 @@ def generate_songs_header_png(theme="dark"):
         ImageDraw.Draw(bay_mask).rounded_rectangle([bx1, by1, bx2, by2], radius=bay_r, fill=255)
         canvas.paste(bay, (0, 0), bay_mask)
 
-    # Лёгкий световой блик на центральной металлической перемычке между ярусами
-    draw.line([(x1 + 42, 106), (x2 - 42, 106)], fill=(255, 255, 255, 130 if light_theme else 42), width=1)
-    draw.line([(x1 + 42, 108), (x2 - 42, 108)], fill=(0, 0, 0, 50 if light_theme else 160), width=1)
-
-    # 4. Четыре аппаратных винта по углам консоли
+    # 4. Четыре симметричных винта ровно по центру вертикальных стоек (x = 22 и x = 938)
     screw_r = 8
     screws = [
-        (x1 + 18, y1 + 22),
-        (x2 - 18, y1 + 22),
-        (x1 + 18, y2 - 22),
-        (x2 - 18, y2 - 22),
+        (22, 26),
+        (938, 26),
+        (22, 190),
+        (938, 190),
     ]
     for sx, sy in screws:
         draw.ellipse(
@@ -121,6 +119,8 @@ def generate_songs_header_png(theme="dark"):
         draw.line([(sx, sy - 4), (sx, sy + 4)], fill=slot_col, width=2)
 
     return canvas
+
+
 
 
 def save_songs_alfa_assets():
