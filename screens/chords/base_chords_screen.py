@@ -41,7 +41,7 @@ from kivy.uix.anchorlayout import AnchorLayout
 from kivy.graphics import Color, Rectangle, Line
 from kivy.uix.scatter import Scatter
 from kivy.logger import Logger
-
+from chord_utils.menu_widget import StudioChordsConsole, StudioChordsMenu
 from config.logger_config import screen_logger
 from config.layout_config import layout_config
 from screens.base_screen import BaseScreen
@@ -2119,11 +2119,8 @@ class BaseChordsScreen(BaseScreen):
             if self.chord_selector:
                 self.chord_selector.update_theme_colors()
 
-            if hasattr(self, 'menu_card'):
-                theme_id = settings_manager.theme
-                self.menu_card.md_bg_color = ChordsColors.get_menu_bg(theme_id)
-                self.menu_card.line_color = ChordsColors.get_card_line(theme_id)
-                self.menu_card.line_width = 1.5
+            if hasattr(self, 'menu_card') and hasattr(self.menu_card, 'update_theme_colors'):
+                self.menu_card.update_theme_colors()
 
             theme_id = settings_manager.theme
             hint_color = ChordsColors.get_hint_color(theme_id)
@@ -2322,18 +2319,18 @@ class BaseChordsScreen(BaseScreen):
             content.add_widget(Widget(size_hint_y=None, height=dp(18)))
 
             menu_padding_side = dp(38)
-            menu_wrapper = MDBoxLayout(orientation='vertical', size_hint=(1, None), height=dp(64),
-                                       padding=[menu_padding_side, 0, menu_padding_side, 0])
-
-            self.menu_card = MDCard(
-                orientation='horizontal', size_hint=(1, 1), radius=[dp(16)],
-                elevation=0, padding=[dp(2), dp(2), dp(2), dp(2)], spacing=dp(0)
+            menu_padding_side = dp(16)
+            menu_wrapper = MDBoxLayout(
+                orientation='vertical', size_hint=(1, None), height=dp(74),
+                padding=[menu_padding_side, 0, menu_padding_side, 0],
             )
 
-            self._menu_container = FloatLayout(size_hint=(1, 1))
+            self.menu_card = StudioChordsConsole()
+            self._menu_container = self.menu_card.inner_container
 
-            self.unified_menu = UnifiedMenu(
-                tonality_value=self.current_tonality, type_value=self.current_type,
+            self.unified_menu = StudioChordsMenu(
+                tonality_value=self.current_tonality,
+                type_value=self.current_type,
                 chord_value=self.current_chord_name,
                 on_tonality_press=self._open_tonality_selector,
                 on_type_press=self._open_type_selector,
@@ -2342,13 +2339,12 @@ class BaseChordsScreen(BaseScreen):
                 on_mode_toggle=self._toggle_mode,
                 variants_count=len(self.current_variants),
                 current_mode=self.current_mode,
-                chord_count=len(self.available_chords)
+                chord_count=len(self.available_chords),
             )
             self.unified_menu.size_hint = (1, 1)
             self.unified_menu.pos_hint = {'x': 0, 'y': 0}
             self._menu_container.add_widget(self.unified_menu)
 
-            self.menu_card.add_widget(self._menu_container)
             menu_wrapper.add_widget(self.menu_card)
             content.add_widget(menu_wrapper)
 
